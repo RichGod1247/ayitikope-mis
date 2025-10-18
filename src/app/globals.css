@@ -1,26 +1,31 @@
 @import "tailwindcss";
 
+/* ========== Brand tokens ========== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary brand (sky blue) */
+  --color-brand-50:  #eef4ff;
+  --color-brand-100: #dbe8ff;
+  --color-brand-200: #b7d0ff;
+  --color-brand-300: #8cb4ff;
+  --color-brand-400: #5d94ff;
+  --color-brand-500: #1f6fff; /* main */
+  --color-brand-600: #1858cc;
+  --color-brand-700: #1449a8;
+  --color-brand-800: #103a86;
+  --color-brand-900: #0c2d69;
+
+  /* Accents */
+  --color-accent-gold:  #f4c430;
+  --color-accent-green: #0e7a4d;
+
+  /* Subtle page background */
+  --bg-start: #ffffff;
+  --bg-end:   #f7fbff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+html, body { height: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: #111827; /* gray-900 */
+  background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
 }
