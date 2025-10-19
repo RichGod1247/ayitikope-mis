@@ -1,47 +1,75 @@
-export const metadata = {
-  title: "About • Ayitikope M/A Basic School",
-};
+export const metadata = { title: "About • Ayitikope M/A Basic School" };
 
 export default function AboutPage() {
   return (
-    <main className="container mx-auto px-6 py-12">
-      <h1 className="text-3xl sm:text-4xl font-bold mb-6">About Us</h1>
+    <main className="container mx-auto px-6 py-10">
+      {/* Title */}
+      <h1 className="text-3xl font-bold tracking-tight">About Our School</h1>
+      <p className="mt-2 text-gray-600 max-w-2xl">
+        Ayitikope M/A Basic School is committed to nurturing young minds with
+        excellence, discipline, and love — building knowledge, character, and service.
+      </p>
 
-      <section className="space-y-4 text-gray-700 leading-relaxed">
-        <p>
-          Ayitikope M/A Basic School is committed to academic excellence, good
-          character, and community service. Since our establishment, we’ve focused
-          on building lifelong learners and responsible citizens.
-        </p>
-        <p>
-          We provide a safe and caring environment, qualified teachers, and a
-          balanced curriculum that nurtures every child’s potential.
-        </p>
+      {/* Vision & Mission */}
+      <section className="mt-8 grid gap-6 sm:grid-cols-2">
+        <div className="rounded-xl border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold">Vision</h2>
+          <p className="mt-2 text-gray-700">
+            To be a model basic school in Ghana developing confident, creative,
+            and compassionate learners ready for a changing world.
+          </p>
+        </div>
+
+        <div className="rounded-xl border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold">Mission</h2>
+          <p className="mt-2 text-gray-700">
+            To provide a safe, stimulating environment with excellent teaching,
+            strong values, and modern tools that help every learner thrive.
+          </p>
+        </div>
       </section>
 
-      <div className="grid sm:grid-cols-2 gap-8 mt-10">
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-2">Our Mission</h2>
-          <p className="text-gray-700">
-            To deliver quality basic education that develops the mind, shapes
-            character, and inspires service.
-          </p>
-        </div>
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-2">Our Vision</h2>
-          <p className="text-gray-700">
-            To be a model basic school producing confident, compassionate, and
-            competent future leaders.
-          </p>
-        </div>
-      </div>
+      {/* Core Values */}
+      <section className="mt-8 rounded-xl border bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold">Core Values</h2>
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            "Discipline & Respect",
+            "Integrity & Service",
+            "Excellence in Learning",
+            "Teamwork & Leadership",
+            "Creativity & Innovation",
+            "Care & Community",
+          ].map((v) => (
+            <li key={v} className="flex items-start gap-2">
+              <span className="mt-1 inline-block h-2 w-2 rounded-full bg-[--color-brand-500]" />
+              <span className="text-gray-700">{v}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-      <section className="mt-10 rounded-xl border bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-2">Head Teacher’s Note</h2>
-        <p className="text-gray-700">
-          Welcome to Ayitikope M/A Basic School. Together with parents and the
-          community, we strive to build a solid foundation for every learner.
-        </p>
+      {/* Quick facts */}
+      <section className="mt-8">
+        <h2 className="text-xl font-semibold">At a Glance</h2>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Students", value: "420+" },
+            { label: "Teachers", value: "28" },
+            { label: "Classes", value: "16" },
+            { label: "Awards", value: "12" },
+          ].map((f) => (
+            <div
+              key={f.label}
+              className="rounded-xl border bg-white p-5 text-center shadow-sm"
+            >
+              <div className="text-2xl font-extrabold text-[--color-brand-600]">
+                {f.value}
+              </div>
+              <div className="mt-1 text-sm text-gray-700">{f.label}</div>
+            </div>
+          ))}
+        </div>
       </section>
     </main>
   );
