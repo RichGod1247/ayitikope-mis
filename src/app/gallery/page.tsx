@@ -3,14 +3,14 @@ export const metadata = { title: "Gallery • Ayitikope M/A Basic School" };
 type Item = { src: string; label: string; alt?: string };
 
 const items: Item[] = [
-  { src: "/gallery/gateway-arch.png", label: "Gateway Arch (Entrance)", alt: "School entrance gateway arch" },
-  { src: "/gallery/kg-learning.png",  label: "Kindergarten Learning",     alt: "KG pupils learning and playing" },
-  { src: "/gallery/jhs-classroom.png",label: "JHS Smart Classroom",      alt: "Modern JHS smart classroom" },
-  { src: "/gallery/ict-lab.png",      label: "ICT Laboratory",            alt: "Students working in ICT lab" },
-  { src: "/gallery/assembly.png",     label: "School Assembly",           alt: "Staff and students in assembly" },
-  { src: "/gallery/awards.png",       label: "Awards & Recognition",      alt: "Ayitikope M/A receiving award" },
-  { src: "/gallery/admin-block.png",  label: "Administration Block",      alt: "Administrative block exterior" },
+  { src: "/gallery/gateway-arch.png", label: "Gateway Arch (Entrance)" },
+  { src: "/gallery/kg-learning.png",  label: "Kindergarten Learning" },
+  { src: "/gallery/jhs-classroom.png",label: "JHS Smart Classroom" },
+  { src: "/gallery/ict-lab.png",      label: "ICT Laboratory" },
+  { src: "/gallery/awards.png",       label: "Awards & Recognition" },
+  { src: "/gallery/admin-block.png",  label: "Administration Block" }, // ensure this file exists
 ];
+
 
 export default function GalleryPage() {
   return (

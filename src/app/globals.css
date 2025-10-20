@@ -1,31 +1,35 @@
 @import "tailwindcss";
 
-/* ========== Brand tokens ========== */
+/* ---- Brand palette (you already have similar; keep if duplicates) ---- */
 :root {
-  /* Primary brand (sky blue) */
-  --color-brand-50:  #eef4ff;
-  --color-brand-100: #dbe8ff;
-  --color-brand-200: #b7d0ff;
-  --color-brand-300: #8cb4ff;
-  --color-brand-400: #5d94ff;
-  --color-brand-500: #1f6fff; /* main */
-  --color-brand-600: #1858cc;
-  --color-brand-700: #1449a8;
-  --color-brand-800: #103a86;
-  --color-brand-900: #0c2d69;
-
-  /* Accents */
-  --color-accent-gold:  #f4c430;
-  --color-accent-green: #0e7a4d;
-
-  /* Subtle page background */
-  --bg-start: #ffffff;
-  --bg-end:   #f7fbff;
+  --color-brand-50:  #e9f0ff;
+  --color-brand-200: #a9c6ff;
+  --color-brand-500: #1f6fff;
+  --color-brand-600: #195bd1;
+  --color-brand-700: #1346a4;
+  --color-brand-900: #0b2b63;
 }
 
-html, body { height: 100%; }
+/* Underline hover animation used in Header */
+.underline-anim {
+  position: relative;
+}
+.underline-anim::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -4px;
+  height: 2px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 200ms ease;
+}
+.underline-anim:hover::after {
+  transform: scaleX(1);
+}
 
-body {
-  color: #111827; /* gray-900 */
-  background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
+/* Slow ticker for the hero caption */
+@keyframes ticker {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-40%); }
 }

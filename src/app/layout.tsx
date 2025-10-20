@@ -11,31 +11,39 @@ export const viewport: Viewport = {
   themeColor: "#1f6fff",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className="min-h-screen">
+      <body className="min-h-screen bg-white text-gray-900">
         <Header />
-        <main className="container mx-auto px-6 py-10">
-          {children}
-        </main>
-        <footer className="mt-10 border-t bg-white/70">
+        {/* spacer to offset the fixed header (Header is h-16) */}
+        <div className="h-16" />
+        {children}
+        <footer className="mt-12 border-t bg-white/70">
   <div className="container mx-auto px-6 py-8 grid gap-6 sm:grid-cols-3">
     <div>
       <div className="font-semibold">Ayitikope M/A Basic School</div>
       <div className="mt-1 text-sm text-gray-600">
-        Ayitikope, Volta Region, Ghana
+        Ayitikope MA Basic School, P.O.Box 40, Akatsi South
       </div>
+      <div className="text-sm text-gray-600">WhatsApp: 0245444861</div>
       <div className="text-sm text-gray-600">Email: ayitikope.basic@example.com</div>
     </div>
 
     <div>
       <div className="font-semibold">Quick Links</div>
       <ul className="mt-2 space-y-1 text-sm text-gray-700">
-        <li><a className="hover:text-[--color-brand-600]" href="/">Home</a></li>
-        <li><a className="hover:text-[--color-brand-600]" href="/about">About</a></li>
-        <li><a className="hover:text-[--color-brand-600]" href="/gallery">Gallery</a></li>
-        <li><a className="hover:text-[--color-brand-600]" href="/contact">Contact</a></li>
+        <li><a className="hover:text-blue-700" href="/">Home</a></li>
+        <li><a className="hover:text-blue-700" href="/about">About</a></li>
+        <li><a className="hover:text-blue-700" href="/gallery">Gallery</a></li>
+        <li><a className="hover:text-blue-700" href="/anthem">School Anthem</a></li>
+        <li><a className="hover:text-blue-700" href="/parent-portal">Parents Portal</a></li>
+        <li><a className="hover:text-blue-700" href="/teacher-portal">Teachers Portal</a></li>
+        <li><a className="hover:text-blue-700" href="/contact">Contact</a></li>
       </ul>
     </div>
 
