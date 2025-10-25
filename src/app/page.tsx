@@ -1,6 +1,7 @@
 import CarouselHero from "@/components/CarouselHero";
 import NewStrip from "@/components/NewStrip";
 import NewsList from "@/components/NewsList";
+import MissionVision from "@/components/MissionVision";
 
 export default function Home() {
   return (
@@ -19,15 +20,18 @@ export default function Home() {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="rounded-xl border border-[--color-brand-200] bg-white p-5 text-center shadow-sm"
+              className="rounded-xl border border-blue-200 bg-white p-5 text-center shadow-sm"
             >
-              <div className="text-3xl font-extrabold text-[--color-brand-600]">
+              <div className="text-3xl font-extrabold text-blue-700">
                 {stat.value}
               </div>
               <div className="mt-1 text-sm text-gray-700">{stat.label}</div>
             </div>
           ))}
         </section>
+
+        {/* Mission & Vision (animated on scroll) */}
+        <MissionVision />
 
         {/* NEWS */}
         <NewsList max={3} />
