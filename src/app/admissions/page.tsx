@@ -1,159 +1,161 @@
 "use client";
 
 import { useState } from "react";
-import FormLogo from "@/components/FormLogo";
 
 type Level = "KG" | "Primary" | "JHS";
 
 export default function AdmissionsPage() {
   const [level, setLevel] = useState<Level>("KG");
-  const [studentName, setStudentName] = useState("");
+  const [name, setName] = useState("");
   const [dob, setDob] = useState("");
   const [parent, setParent] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState(""); // GPS
-  const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [contact, setContact] = useState("");
+  const [house, setHouse] = useState("");
+  const [gps, setGps] = useState("");
+  const [status, setStatus] = useState<null | string>(null);
+  const [busy, setBusy] = useState(false);
 
-  async function submit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setStatus(null);
 
+    if (!name.trim() || !dob.trim() || !parent.trim() || !contact.trim()) {
+      setStatus("Please fill all required fields.");
+      return;
+    }
+
+    setBusy(true);
     try {
       const res = await fetch("/api/admissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           level,
-          student_name: studentName,
-          dob,
-          parent,
-          phone,
-          address,
-          notes,
+          name_of_student: name,
+          date_of_birth: dob,
+          name_of_parent_or_guardian: parent,
+          contact_number: contact,
+          house_number: house,
+          digital_address: gps,
         }),
       });
-
-      const json = await res.json();
-      if (res.ok && json?.ok) {
-        setStatus({ ok: true, msg: "Application submitted successfully." });
-        // clear
-        setStudentName("");
-        setDob("");
-        setParent("");
-        setPhone("");
-        setAddress("");
-        setNotes("");
+      const data = await res.json();
+      if (data.ok) {
+        setStatus("✅ Application submitted successfully.");
+        // reset
+        setName(""); setDob(""); setParent(""); setContact(""); setHouse(""); setGps("");
       } else {
-        setStatus({ ok: false, msg: "Submission failed. Please try again." });
+        setStatus("⚠️ Submission failed. Try again.");
       }
-    } catch {
-      setStatus({ ok: false, msg: "Network error. Please try again." });
+    } catch (err) {
+      setStatus("⚠️ Network error. Check your internet and try again.");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
 
   return (
-    <main className="container mx-auto px-6 py-10 max-w-2xl">
-      <FormLogo subtitle="Admissions" />
-      <h1 className="text-3xl font-bold mb-6 text-blue-900">Admissions</h1>
+    <main className="container mx-auto px-6 py-10">
+      <h1 className="text-3xl font-bold">Admissions — Apply Online</h1>
+      <p className="mt-2 text-gray-700 max-w-2xl">
+        Fill the form for <strong>KG</strong>, <strong>Primary</strong>, or <strong>JHS</strong>.
+        We’ll confirm on WhatsApp and email.
+      </p>
 
-      <form onSubmit={submit} className="space-y-4 bg-white rounded-xl p-6 shadow">
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">Level</span>
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value as Level)}
-            className="border rounded-md px-3 py-2"
-          >
-            <option value="KG">KG</option>
-            <option value="Primary">Primary</option>
-            <option value="JHS">JHS</option>
-          </select>
-        </label>
+      <form onSubmit={onSubmit} className="mt-6 grid gap-4 rounded-xl border bg-white p-6 shadow-sm max-w-2xl">
+        {/* Level */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Level</label>
+          <div className="mt-1 flex gap-3">
+            {(["KG","Primary","JHS"] as Level[]).map(l => (
+              <label key={l} className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="level"
+                  value={l}
+                  checked={level === l}
+                  onChange={() => setLevel(l)}
+                />
+                <span>{l}</span>
+              </label>
+            ))}
+          </div>
+        </div>
 
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">Student Name</span>
-          <input
-            value={studentName}
-            onChange={(e) => setStudentName(e.target.value)}
-            className="border rounded-md px-3 py-2"
-            placeholder="Full name"
-            required
-          />
-        </label>
+        {/* Fields */}
+        <Field label="Name of Student *">
+          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={name} onChange={e => setName(e.target.value)} placeholder="Full name" />
+        </Field>
 
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">Date of Birth</span>
-          <input
-            type="date"
-            value={dob}
-            onChange={(e) => setDob(e.target.value)}
-            className="border rounded-md px-3 py-2"
-            required
-          />
-        </label>
+        <Field label="Date of Birth *">
+          <input type="date" className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={dob} onChange={e => setDob(e.target.value)} />
+        </Field>
 
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">Parent/Guardian</span>
-          <input
-            value={parent}
-            onChange={(e) => setParent(e.target.value)}
-            className="border rounded-md px-3 py-2"
-            placeholder="Parent/Guardian name"
-            required
-          />
-        </label>
+        <Field label="Name of Parent/Guardian *">
+          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={parent} onChange={e => setParent(e.target.value)} placeholder="Full name" />
+        </Field>
 
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">Phone</span>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="border rounded-md px-3 py-2"
-            placeholder="Phone number"
-            required
-          />
-        </label>
+        <Field label="Contact Number of Parent/Guardian *">
+          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={contact} onChange={e => setContact(e.target.value)} placeholder="024..." />
+        </Field>
 
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">Address (GPS)</span>
-          <input
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="border rounded-md px-3 py-2"
-            placeholder="e.g. GX-0123-4567"
-          />
-        </label>
+        <Field label="House Number">
+          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={house} onChange={e => setHouse(e.target.value)} placeholder="e.g., H/No. 12" />
+        </Field>
 
-        <label className="grid gap-1">
-          <span className="text-sm font-medium">Notes (optional)</span>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="border rounded-md px-3 py-2"
-            rows={3}
-            placeholder="Anything we should know?"
-          />
-        </label>
+        <Field label="Digital Address (GhanaPost GPS)">
+          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={gps} onChange={e => setGps(e.target.value)} placeholder="e.g., AK-123-4567" />
+        </Field>
 
         <button
           type="submit"
-          disabled={loading}
-          className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 rounded-md"
+          className="mt-2 inline-flex items-center justify-center rounded-lg bg-blue-700 px-5 py-2.5 font-semibold text-white transition hover:bg-blue-800 disabled:opacity-60"
+          disabled={busy}
         >
-          {loading ? "Submitting..." : "Submit Application"}
+          {busy ? "Submitting..." : "Submit Application"}
         </button>
 
-        {status && (
-          <p className={status.ok ? "text-green-700 mt-2" : "text-red-600 mt-2"}>
-            {status.msg}
-          </p>
-        )}
+        {status && <p className="text-sm">{status}</p>}
       </form>
+
+      {/* Payments box (optional quick access) */}
+      <div className="mt-8 rounded-xl border bg-white p-5 shadow-sm max-w-2xl">
+        <h2 className="text-lg font-semibold text-blue-800">Pay Fees & Dues</h2>
+        <p className="text-sm text-gray-700">Use our secure online payment partners.</p>
+        <div className="mt-3 flex gap-3">
+          <a
+            href={process.env.NEXT_PUBLIC_PAYSTACK_URL}
+            target="_blank"
+            className="rounded-lg bg-black text-white px-4 py-2 font-semibold"
+          >
+            Pay with Paystack
+          </a>
+          {process.env.NEXT_PUBLIC_HUBTEL_URL && (
+            <a
+              href={process.env.NEXT_PUBLIC_HUBTEL_URL}
+              target="_blank"
+              className="rounded-lg bg-green-700 text-white px-4 py-2 font-semibold"
+            >
+              Pay with Hubtel
+            </a>
+          )}
+        </div>
+      </div>
     </main>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <div className="mt-1">{children}</div>
+    </div>
   );
 }

@@ -1,0 +1,29 @@
+export default function PaymentsCTA() {
+  return (
+    <section className="mt-10 rounded-2xl border bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-semibold text-blue-800">Pay School Fees & Dues</h2>
+      <p className="mt-1 text-gray-700">Secure online payments via Paystack or Hubtel.</p>
+      <div className="mt-4 flex gap-3">
+        <a
+          href={process.env.NEXT_PUBLIC_PAYSTACK_URL}
+          target="_blank"
+          className="rounded-lg bg-black text-white px-5 py-2.5 font-semibold"
+        >
+          Pay with Paystack
+        </a>
+        {process.env.NEXT_PUBLIC_HUBTEL_URL && (
+          <a
+            href={process.env.NEXT_PUBLIC_HUBTEL_URL}
+            target="_blank"
+            className="rounded-lg bg-green-700 text-white px-5 py-2.5 font-semibold"
+          >
+            Pay with Hubtel
+          </a>
+        )}
+      </div>
+      <p className="mt-2 text-xs text-gray-500">
+        Supports MTN MoMo, Vodafone Cash, cards, and banks. Receipts sent instantly.
+      </p>
+    </section>
+  );
+}
