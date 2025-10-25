@@ -3,74 +3,63 @@ export const metadata = { title: "About • Ayitikope M/A Basic School" };
 export default function AboutPage() {
   return (
     <main className="container mx-auto px-6 py-10">
-      {/* Title */}
-      <h1 className="text-3xl font-bold tracking-tight">About Our School</h1>
-      <p className="mt-2 text-gray-600 max-w-2xl">
-        Ayitikope M/A Basic School is committed to nurturing young minds with
-        excellence, discipline, and love — building knowledge, character, and service. With Excellent, Committed, and Passionate staff who have your child's best interest at heart, your greatest desire of a bright future for your child is absolutely guarranteed.
+      <h1 className="text-3xl font-bold">About Ayitikope M/A Basic School</h1>
+      <p className="mt-3 max-w-3xl text-gray-700">
+        We are a community-focused basic school dedicated to nurturing young minds through
+        excellence, character formation, and service. Our vision is to equip every learner
+        with strong literacy, numeracy, digital skills, and values for life.
       </p>
 
-      {/* Vision & Mission */}
-      <section className="mt-8 grid gap-6 sm:grid-cols-2">
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold">Vision</h2>
-          <p className="mt-2 text-gray-700">
-            To be a model basic school in Ghana developing confident, creative,
-            and compassionate learners ready for a changing world.
-          </p>
-        </div>
-
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold">Mission</h2>
-          <p className="mt-2 text-gray-700">
-            To provide a safe, stimulating environment with excellent teaching,
-            strong values, and modern tools that help every learner thrive.
-          </p>
-        </div>
+      {/* Mission / Vision / Values */}
+      <section className="mt-8 grid gap-6 sm:grid-cols-3">
+        <Card title="Our Mission">
+          To provide a safe, inclusive, and inspiring environment where every child can thrive
+          academically, socially, and morally.
+        </Card>
+        <Card title="Our Vision">
+          To be a beacon of basic education in our district—innovative, values-driven, and future-ready.
+        </Card>
+        <Card title="Our Values">
+          Respect • Integrity • Hard Work • Service • Excellence
+        </Card>
       </section>
 
-      {/* Core Values */}
-      <section className="mt-8 rounded-xl border bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold">Core Values</h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            "Discipline & Respect",
-            "Integrity & Service",
-            "Excellence in Learning",
-            "Teamwork & Leadership",
-            "Creativity & Innovation",
-            "Care & Community",
-          ].map((v) => (
-            <li key={v} className="flex items-start gap-2">
-              <span className="mt-1 inline-block h-2 w-2 rounded-full bg-[--color-brand-500]" />
-              <span className="text-gray-700">{v}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* Facilities highlights */}
+      <section className="mt-10">
+        <h2 className="text-2xl font-semibold">Campus & Facilities</h2>
+        <p className="mt-2 text-gray-700">
+          Our campus features well-lit classrooms, a growing ICT laboratory, and play-based
+          learning spaces for KG. We continuously improve facilities through community
+          partnerships and stakeholder support.
+        </p>
 
-      {/* Quick facts */}
-      <section className="mt-8">
-        <h2 className="text-xl font-semibold">At a Glance</h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[
-            { label: "Students", value: "420+" },
-            { label: "Teachers", value: "28" },
-            { label: "Classes", value: "16" },
-            { label: "Awards", value: "12" },
-          ].map((f) => (
-            <div
-              key={f.label}
-              className="rounded-xl border bg-white p-5 text-center shadow-sm"
-            >
-              <div className="text-2xl font-extrabold text-[--color-brand-600]">
-                {f.value}
-              </div>
-              <div className="mt-1 text-sm text-gray-700">{f.label}</div>
+            { src: "/gallery/hero-campus.png", alt: "Campus" },
+            { src: "/gallery/jhs-classroom.png", alt: "Smart Classroom" },
+            { src: "/gallery/ict-lab.png", alt: "ICT Lab" },
+          ].map((img) => (
+            <div key={img.src} className="overflow-hidden rounded-xl border">
+              {/* plain img for speed */}
+              <img
+                src={img.src}
+                alt={img.alt}
+                className="w-full h-48 object-cover hover:scale-[1.02] transition"
+                loading="lazy"
+              />
             </div>
           ))}
         </div>
       </section>
     </main>
+  );
+}
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border bg-white p-5 shadow-sm">
+      <h3 className="font-semibold">{title}</h3>
+      <p className="mt-2 text-gray-700">{children}</p>
+    </div>
   );
 }

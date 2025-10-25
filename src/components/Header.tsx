@@ -1,131 +1,108 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import logo from "@/assets/ayitikope-logo.png";
 
+/**
+ * Fixed header (always visible), higher than hero (z-[100]),
+ * consistent height h-16 so our spacer can match it exactly.
+ */
 export default function Header() {
-  const [open, setOpen] = useState(false);
-
-  const linkBase =
-    "px-3 py-2 rounded-md transition hover:text-[--color-brand-100]";
-
-  const dropLink =
-    "block px-4 py-2 text-sm hover:bg-[--color-brand-600] hover:text-white rounded-md";
-
   return (
-    <header className="bg-[--color-brand-600] text-white shadow-lg sticky top-0 z-50">
-      <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 py-2">
-        {/* Logo + Title */}
-        <Link href="/" className="flex items-center gap-3">
-          <Image
-            src={logo}
-            alt="Ayitikope M/A Basic School"
-            width={36}
-            height={36}
-            className="rounded-md"
-            priority
-          />
-          <span className="font-semibold hidden sm:inline">
-            Ayitikope M/A Basic School
-          </span>
-        </Link>
-
-        {/* Desktop nav with hover dropdowns */}
-        <nav className="hidden md:flex items-center gap-2">
-          <Link href="/" className={linkBase}>
-            Home
+    <header
+      className="
+        fixed top-0 inset-x-0 h-16 z-[100]
+        bg-[--color-brand-500]/95 text-white
+        backdrop-blur supports-[backdrop-filter]:bg-[--color-brand-500]/85
+        shadow-md
+      "
+    >
+      <div className="container mx-auto h-full px-6">
+        <div className="flex items-center justify-between h-full">
+          {/* Left: logo + title */}
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src={logo}
+              alt="Ayitikope M/A Basic School"
+              width={36}
+              height={36}
+              className="rounded-md"
+              priority
+            />
+            <span className="font-semibold hidden sm:inline">
+              Ayitikope M/A Basic School
+            </span>
           </Link>
 
-          {/* About dropdown */}
-          <div className="relative group">
-            <button className={linkBase + " flex items-center gap-1"}>
-              About <span>▾</span>
-            </button>
-            <div className="invisible absolute left-0 mt-2 w-52 rounded-lg border bg-white p-2 text-gray-800 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
-              <Link href="/about" className={dropLink}>
-                Our Story
-              </Link>
-              <Link href="/about#leadership" className={dropLink}>
-                Leadership
-              </Link>
-              <Link href="/about#pta" className={dropLink}>
-                PTA & Community
-              </Link>
-            </div>
-          </div>
+          {/* Desktop nav + hover dropdowns */}
+          <nav className="hidden md:flex items-stretch gap-2">
+            <TopLink href="/">Home</TopLink>
 
-          {/* Academics */}
-          <div className="relative group">
-            <button className={linkBase + " flex items-center gap-1"}>
-              Academics <span>▾</span>
-            </button>
-            <div className="invisible absolute left-0 mt-2 w-56 rounded-lg border bg-white p-2 text-gray-800 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
-              <Link href="/about#curriculum" className={dropLink}>
-                Curriculum
-              </Link>
-              <Link href="/about#departments" className={dropLink}>
-                Departments
-              </Link>
-              <Link href="/about#timetable" className={dropLink}>
-                Timetable
-              </Link>
-            </div>
-          </div>
+            <Drop title="About">
+              <MenuLink href="/about">Overview</MenuLink>
+              <MenuLink href="/gallery">Gallery</MenuLink>
+              <MenuLink href="/contact">Headteacher’s Office</MenuLink>
+            </Drop>
 
-          {/* Admissions */}
-          <div className="relative group">
-            <button className={linkBase + " flex items-center gap-1"}>
-              Admissions <span>▾</span>
-            </button>
-            <div className="invisible absolute left-0 mt-2 w-56 rounded-lg border bg-white p-2 text-gray-800 opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
-              <Link href="/contact#apply" className={dropLink}>
-                How to Apply
-              </Link>
-              <Link href="/contact#fees" className={dropLink}>
-                Fees & Prospectus
-              </Link>
-            </div>
-          </div>
+            <Drop title="Academics">
+              <MenuLink href="/about">Curriculum Overview</MenuLink>
+              <MenuLink href="/gallery">Smart Classrooms</MenuLink>
+              <MenuLink href="/gallery">ICT Lab</MenuLink>
+            </Drop>
 
-          <Link href="/gallery" className={linkBase}>
-            Gallery
-          </Link>
-          <Link href="/contact" className={linkBase}>
-            Contact
-          </Link>
-        </nav>
+            <Drop title="School Life">
+              <MenuLink href="/gallery">Events & Assembly</MenuLink>
+              <MenuLink href="/gallery">Awards & Achievements</MenuLink>
+              <MenuLink href="/gallery">Campus & Facilities</MenuLink>
+            </Drop>
 
-        {/* Mobile burger */}
-        <button
-          className="md:hidden rounded-md px-3 py-2 hover:bg-white/10"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
-        >
-          ☰
-        </button>
-      </div>
-
-      {/* Mobile panel */}
-      {open && (
-        <div className="md:hidden border-t border-white/15 bg-[--color-brand-600]/95">
-          <div className="container mx-auto px-4 py-3 space-y-2">
-            <Link href="/" className="block" onClick={() => setOpen(false)}>
-              Home
-            </Link>
-            <Link href="/about" className="block" onClick={() => setOpen(false)}>
-              About
-            </Link>
-            <Link href="/gallery" className="block" onClick={() => setOpen(false)}>
-              Gallery
-            </Link>
-            <Link href="/contact" className="block" onClick={() => setOpen(false)}>
-              Contact
-            </Link>
-          </div>
+            <TopLink href="/contact">Contact</TopLink>
+          </nav>
         </div>
-      )}
+      </div>
     </header>
+  );
+}
+
+function TopLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="px-3 flex items-center hover:text-[--color-brand-200] relative"
+    >
+      <span className="underline-anim">{children}</span>
+    </Link>
+  );
+}
+
+function Drop({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="relative group">
+      <button className="px-3 h-full flex items-center hover:text-[--color-brand-200]">
+        <span className="underline-anim">{title}</span>
+      </button>
+      <div
+        className="
+          absolute left-0 mt-2 w-80 rounded-xl bg-white text-gray-900 shadow-xl p-3
+          opacity-0 translate-y-1 pointer-events-none
+          group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto
+          transition
+        "
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function MenuLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-lg px-3 py-2 hover:bg-[--color-brand-50] hover:text-[--color-brand-700] transition"
+    >
+      {children}
+    </Link>
   );
 }

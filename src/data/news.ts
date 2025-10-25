@@ -1,9 +1,9 @@
 export type NewsItem = {
   id: string;
-  date: string; // ISO date like "2025-10-01"
+  date: string; // ISO
   title: string;
   summary: string;
-  href?: string; // optional link
+  href?: string;
 };
 
 export const NEWS: NewsItem[] = [
@@ -13,7 +13,7 @@ export const NEWS: NewsItem[] = [
     title: "Ayitikope wins District Award of Excellence",
     summary:
       "The school received a district-level award for outstanding academic growth and community service.",
-    href: "/gallery",
+    href: "/gallery", // or external URL later
   },
   {
     id: "ict-lab",

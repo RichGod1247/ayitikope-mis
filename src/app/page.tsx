@@ -1,15 +1,16 @@
 import CarouselHero from "@/components/CarouselHero";
+import NewStrip from "@/components/NewStrip";
+import NewsList from "@/components/NewsList";
 
-export const metadata = { title: "Ayitikope M/A Basic School" };
-
-export default function HomePage() {
+export default function Home() {
   return (
-    <main className="container mx-auto px-6 py-8">
+    <>
       <CarouselHero />
+      <NewStrip />
 
-      {/* QUICK STATS (kept as-is, slightly spaced below the hero) */}
-      <section className="bg-white/70 mt-10 py-10 rounded-2xl">
-        <div className="container mx-auto px-6 grid grid-cols-2 sm:grid-cols-4 gap-6">
+      <main className="container mx-auto px-6 py-10">
+        {/* QUICK STATS */}
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-6">
           {[
             { label: "Students", value: "420+" },
             { label: "Teachers", value: "28" },
@@ -26,8 +27,11 @@ export default function HomePage() {
               <div className="mt-1 text-sm text-gray-700">{stat.label}</div>
             </div>
           ))}
-        </div>
-      </section>
-    </main>
+        </section>
+
+        {/* NEWS */}
+        <NewsList max={3} />
+      </main>
+    </>
   );
 }
