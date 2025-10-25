@@ -19,11 +19,11 @@ export default function ContactPage() {
         </div>
         <div className="rounded-xl border bg-white p-5 shadow-sm">
           <div className="text-sm font-semibold">Phone</div>
-          <div className="mt-1 text-gray-700">+233 (245444861)</div>
+          <div className="mt-1 text-gray-700">+233 … (update later)</div>
         </div>
         <div className="rounded-xl border bg-white p-5 shadow-sm">
           <div className="text-sm font-semibold">Email</div>
-          <div className="mt-1 text-gray-700">ayitikopebasic@gmail.com</div>
+          <div className="mt-1 text-gray-700">ayitikope.basic@example.com</div>
         </div>
       </div>
     </main>

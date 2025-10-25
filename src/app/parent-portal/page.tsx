@@ -1,18 +1,54 @@
-import SignInForm from "@/components/SignInForm";
+"use client";
 
-export const metadata = { title: "Parents Portal • Ayitikope M/A Basic School" };
+import { useState } from "react";
+import FormLogo from "@/components/FormLogo";
 
 export default function ParentPortalPage() {
-  return (
-    <main className="container mx-auto px-6 py-10">
-      <h1 className="text-3xl font-bold">Parents Portal</h1>
-      <p className="mt-2 max-w-2xl text-gray-700">
-        View attendance alerts, fees, results summaries, and notifications.
-      </p>
+  const [email, setEmail] = useState("");
+  const [pin, setPin] = useState("");
 
-      <div className="mt-6">
-        <SignInForm role="parent" />
-      </div>
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    alert("Parent login submitted (demo).");
+  }
+
+  return (
+    <main className="container mx-auto px-6 py-10 max-w-xl">
+      <FormLogo subtitle="Parent Portal" />
+      <h1 className="text-3xl font-bold mb-6 text-blue-900">Parent Portal</h1>
+
+      <form onSubmit={onSubmit} className="space-y-4 bg-white rounded-xl p-6 shadow">
+        <label className="grid gap-1">
+          <span className="text-sm font-medium">Email</span>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border rounded-md px-3 py-2"
+            type="email"
+            placeholder="parent@example.com"
+            required
+          />
+        </label>
+
+        <label className="grid gap-1">
+          <span className="text-sm font-medium">PIN</span>
+          <input
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            className="border rounded-md px-3 py-2"
+            type="password"
+            placeholder="****"
+            required
+          />
+        </label>
+
+        <button
+          type="submit"
+          className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2 rounded-md"
+        >
+          Sign In
+        </button>
+      </form>
     </main>
   );
 }

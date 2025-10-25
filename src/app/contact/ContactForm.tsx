@@ -7,7 +7,7 @@ export default function ContactForm() {
   const [fromEmail, setFromEmail] = useState("");
   const [message, setMessage] = useState("");
 
-  const schoolEmail = "ayitikopebasic@gmail.com"; // TODO: put your real email
+  const schoolEmail = "ayitikope.basic@example.com"; // TODO: put your real email
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();

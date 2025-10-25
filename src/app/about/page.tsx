@@ -7,7 +7,7 @@ export default function AboutPage() {
       <h1 className="text-3xl font-bold tracking-tight">About Our School</h1>
       <p className="mt-2 text-gray-600 max-w-2xl">
         Ayitikope M/A Basic School is committed to nurturing young minds with
-        excellence, discipline, and love — building knowledge, character, and service.
+        excellence, discipline, and love — building knowledge, character, and service. With Excellent, Committed, and Passionate staff who have your child's best interest at heart, your greatest desire of a bright future for your child is absolutely guarranteed.
       </p>
 
       {/* Vision & Mission */}
