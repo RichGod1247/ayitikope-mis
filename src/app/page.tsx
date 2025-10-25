@@ -2,6 +2,7 @@ import CarouselHero from "@/components/CarouselHero";
 import NewStrip from "@/components/NewStrip";
 import NewsList from "@/components/NewsList";
 import MissionVision from "@/components/MissionVision";
+import AdmissionsCTA from "@/components/AdmissionsCTA";
 
 export default function Home() {
   return (
@@ -30,8 +31,11 @@ export default function Home() {
           ))}
         </section>
 
-        {/* Mission & Vision (animated on scroll) */}
+        {/* Mission & Vision */}
         <MissionVision />
+
+        {/* Admissions */}
+        <AdmissionsCTA />
 
         {/* NEWS */}
         <NewsList max={3} />

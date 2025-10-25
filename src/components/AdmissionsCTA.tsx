@@ -20,7 +20,7 @@ export default function AdmissionsCTA() {
 
           <div className="mt-6 flex gap-3">
             <Link
-              href="/admissions"
+              href="/contact#apply"
               className="rounded-lg bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 font-semibold shadow"
             >
               Apply Now

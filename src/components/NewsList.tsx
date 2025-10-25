@@ -5,13 +5,14 @@ import { NEWS } from "@/data/news";
 
 export default function NewsList({ max = 3 }: { max?: number }) {
   const items = NEWS.slice(0, max);
+
   return (
     <section className="mt-12">
       <div className="flex items-baseline justify-between">
         <h2 className="text-2xl font-semibold">News & Events</h2>
         <Link
           href="/news"
-          className="text-[--color-brand-600] hover:text-[--color-brand-700]"
+          className="text-blue-700 hover:text-blue-800"
         >
           View all →
         </Link>
@@ -28,7 +29,7 @@ export default function NewsList({ max = 3 }: { max?: number }) {
             {n.href && (
               <Link
                 href={n.href}
-                className="mt-3 inline-block text-[--color-brand-600] hover:text-[--color-brand-700]"
+                className="mt-3 inline-block text-blue-700 hover:text-blue-800"
               >
                 Read more
               </Link>
