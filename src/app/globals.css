@@ -29,3 +29,13 @@ body {
   color: #111827; /* gray-900 */
   background: linear-gradient(180deg, var(--bg-start), var(--bg-end));
 }
+/* --- simple marquee/ticker for the hero captions --- */
+.ticker { position: relative; }
+@keyframes slideLeft {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); } /* because we duplicated content */
+}
+.ticker__move {
+  display: inline-block;
+  animation: slideLeft 18s linear infinite;
+}
