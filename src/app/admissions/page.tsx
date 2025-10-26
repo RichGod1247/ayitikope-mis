@@ -19,6 +19,7 @@ export default function AdmissionsPage() {
     e.preventDefault();
     setStatus(null);
 
+    // required fields
     if (!name.trim() || !dob.trim() || !parent.trim() || !contact.trim()) {
       setStatus("Please fill all required fields.");
       return;
@@ -43,11 +44,17 @@ export default function AdmissionsPage() {
       if (data.ok) {
         setStatus("✅ Application submitted successfully.");
         // reset
-        setName(""); setDob(""); setParent(""); setContact(""); setHouse(""); setGps("");
+        setLevel("KG");
+        setName("");
+        setDob("");
+        setParent("");
+        setContact("");
+        setHouse("");
+        setGps("");
       } else {
-        setStatus("⚠️ Submission failed. Try again.");
+        setStatus("⚠️ Submission failed. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setStatus("⚠️ Network error. Check your internet and try again.");
     } finally {
       setBusy(false);
@@ -58,16 +65,18 @@ export default function AdmissionsPage() {
     <main className="container mx-auto px-6 py-10">
       <h1 className="text-3xl font-bold">Admissions — Apply Online</h1>
       <p className="mt-2 text-gray-700 max-w-2xl">
-        Fill the form for <strong>KG</strong>, <strong>Primary</strong>, or <strong>JHS</strong>.
-        We’ll confirm on WhatsApp and email.
+        Apply for <strong>KG</strong>, <strong>Primary</strong>, or <strong>JHS</strong>. You’ll receive confirmation via WhatsApp and email.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-6 grid gap-4 rounded-xl border bg-white p-6 shadow-sm max-w-2xl">
+      <form
+        onSubmit={onSubmit}
+        className="mt-6 grid gap-4 rounded-xl border bg-white p-6 shadow-sm max-w-2xl"
+      >
         {/* Level */}
         <div>
           <label className="block text-sm font-medium text-gray-700">Level</label>
           <div className="mt-1 flex gap-3">
-            {(["KG","Primary","JHS"] as Level[]).map(l => (
+            {(["KG", "Primary", "JHS"] as Level[]).map((l) => (
               <label key={l} className="inline-flex items-center gap-2">
                 <input
                   type="radio"
@@ -82,35 +91,58 @@ export default function AdmissionsPage() {
           </div>
         </div>
 
-        {/* Fields */}
         <Field label="Name of Student *">
-          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
-            value={name} onChange={e => setName(e.target.value)} placeholder="Full name" />
+          <input
+            className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Full name"
+          />
         </Field>
 
         <Field label="Date of Birth *">
-          <input type="date" className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
-            value={dob} onChange={e => setDob(e.target.value)} />
+          <input
+            type="date"
+            className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+          />
         </Field>
 
         <Field label="Name of Parent/Guardian *">
-          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
-            value={parent} onChange={e => setParent(e.target.value)} placeholder="Full name" />
+          <input
+            className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={parent}
+            onChange={(e) => setParent(e.target.value)}
+            placeholder="Full name"
+          />
         </Field>
 
         <Field label="Contact Number of Parent/Guardian *">
-          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
-            value={contact} onChange={e => setContact(e.target.value)} placeholder="024..." />
+          <input
+            className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="024..."
+          />
         </Field>
 
         <Field label="House Number">
-          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
-            value={house} onChange={e => setHouse(e.target.value)} placeholder="e.g., H/No. 12" />
+          <input
+            className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={house}
+            onChange={(e) => setHouse(e.target.value)}
+            placeholder="e.g., H/No. 12"
+          />
         </Field>
 
         <Field label="Digital Address (GhanaPost GPS)">
-          <input className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
-            value={gps} onChange={e => setGps(e.target.value)} placeholder="e.g., AK-123-4567" />
+          <input
+            className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none"
+            value={gps}
+            onChange={(e) => setGps(e.target.value)}
+            placeholder="e.g., AK-123-4567"
+          />
         </Field>
 
         <button
@@ -123,30 +155,6 @@ export default function AdmissionsPage() {
 
         {status && <p className="text-sm">{status}</p>}
       </form>
-
-      {/* Payments box (optional quick access) */}
-      <div className="mt-8 rounded-xl border bg-white p-5 shadow-sm max-w-2xl">
-        <h2 className="text-lg font-semibold text-blue-800">Pay Fees & Dues</h2>
-        <p className="text-sm text-gray-700">Use our secure online payment partners.</p>
-        <div className="mt-3 flex gap-3">
-          <a
-            href={process.env.NEXT_PUBLIC_PAYSTACK_URL}
-            target="_blank"
-            className="rounded-lg bg-black text-white px-4 py-2 font-semibold"
-          >
-            Pay with Paystack
-          </a>
-          {process.env.NEXT_PUBLIC_HUBTEL_URL && (
-            <a
-              href={process.env.NEXT_PUBLIC_HUBTEL_URL}
-              target="_blank"
-              className="rounded-lg bg-green-700 text-white px-4 py-2 font-semibold"
-            >
-              Pay with Hubtel
-            </a>
-          )}
-        </div>
-      </div>
     </main>
   );
 }

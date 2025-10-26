@@ -1,46 +1,61 @@
-import Link from "next/link";
+// src/components/Footer.tsx
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 
 export default function Footer() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) setShow(true);
+        });
+      },
+      { threshold: 0.2 }
+    );
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <footer className="mt-16 bg-white border-t">
-      <div className="container mx-auto px-4 sm:px-6 py-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <h4 className="font-semibold text-ugBlue mb-3">About</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><Link href="/about">Overview</Link></li>
-            <li><Link href="/about">Mission & Values</Link></li>
-            <li><Link href="/contact">Leadership</Link></li>
-          </ul>
+    <footer
+      ref={ref}
+      className={`bg-[#e9f2ff] border-t
+        transition-all duration-700 ease-out
+        ${show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}
+    >
+      <div className="container mx-auto px-6 py-10">
+        <div className="grid sm:grid-cols-3 gap-8">
+          <div>
+            <div className="font-semibold">Ayitikope M/A Basic School</div>
+            <p className="text-sm text-gray-600 mt-2">
+              “Knowledge • Character • Service.”
+            </p>
+          </div>
+          <div>
+            <div className="font-semibold">Quick Links</div>
+            <ul className="text-sm mt-2 space-y-1">
+              <li><a href="/admissions" className="hover:underline">Admissions</a></li>
+              <li><a href="/parent-portal" className="hover:underline">Parents’ Portal</a></li>
+              <li><a href="/teacher-portal" className="hover:underline">Teachers’ Portal</a></li>
+              <li><a href="/gallery" className="hover:underline">Gallery</a></li>
+            </ul>
+          </div>
+          <div>
+            <div className="font-semibold">Contact</div>
+            <ul className="text-sm mt-2 space-y-1">
+              <li><span>Ayitikope, Ghana</span></li>
+              <li><span>+233 …</span></li>
+              <li><a href="/contact" className="hover:underline">Send a message</a></li>
+            </ul>
+          </div>
         </div>
-        <div>
-          <h4 className="font-semibold text-ugBlue mb-3">Admissions</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><Link href="/contact">How to Apply</Link></li>
-            <li><Link href="/gallery">Visit Campus</Link></li>
-            <li><Link href="/contact">Financial Aid</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-semibold text-ugBlue mb-3">Academics</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><Link href="/about">Curriculum</Link></li>
-            <li><Link href="/about">Departments</Link></li>
-            <li><Link href="/gallery">Clubs & Societies</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-semibold text-ugBlue mb-3">Connect</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><Link href="/contact">Contact</Link></li>
-            <li><a href="mailto:hehrichgod@gmail.com">Email us</a></li>
-            <li><Link href="/">News & Events</Link></li>
-          </ul>
-        </div>
-      </div>
-      <div className="bg-ugBlue text-white text-sm">
-        <div className="container mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>© {new Date().getFullYear()} Ayitikope M/A Basic School</span>
-          <span className="opacity-80">Powered by Next.js • Deployed on Vercel</span>
+        <div className="mt-8 text-center text-xs text-gray-600">
+          © {new Date().getFullYear()} Ayitikope M/A Basic School. All rights reserved.
         </div>
       </div>
     </footer>

@@ -1,182 +1,47 @@
+// src/components/Header.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
+import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
-export default function Header() {
-  const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+const linkBase =
+  "relative link-underline text-blue-50/95 hover:text-white transition-colors";
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    onScroll();
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <header
-      className={[
-        "sticky top-0 z-50 transition-colors",
-        // solid blue so text is always readable
-        scrolled ? "bg-blue-700" : "bg-blue-700",
-      ].join(" ")}
-    >
-      <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 py-2">
-        {/* Logo + title */}
-        <Link href="/" className="flex items-center gap-2">
-          {/* Use /public/logo.png */}
-          <Image
-            src="/logo.png"
-            alt="Ayitikope M/A Basic School"
-            width={36}
-            height={36}
-            className="rounded-md"
-            priority
-          />
-          <span className="text-blue-100 hover:text-white font-semibold tracking-wide whitespace-nowrap">
-            Ayitikope M/A Basic School
-          </span>
-        </Link>
-
-        {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-6 text-blue-100">
-          <TopLink href="/">Home</TopLink>
-
-          {/* About (mega-lite) */}
-          <Mega label="About">
-            <MegaCol
-              title="Our School"
-              links={[
-                { title: "About Us", href: "/about" },
-                { title: "Gallery", href: "/gallery" },
-                { title: "School Anthem", href: "/anthem" },
-              ]}
-            />
-            <MegaCol
-              title="Contacts"
-              links={[{ title: "Contact", href: "/contact" }]}
-            />
-          </Mega>
-
-          {/* Academics */}
-          <Mega label="Academics">
-            <MegaCol
-              title="Programmes"
-              links={[
-                { title: "Basic (Primary/JHS)", href: "/about" },
-                { title: "KG & Early Years", href: "/about" },
-              ]}
-            />
-            <MegaCol
-              title="Learning"
-              links={[
-                { title: "Smart Classrooms", href: "/gallery" },
-                { title: "ICT Lab", href: "/gallery" },
-              ]}
-            />
-          </Mega>
-
-          {/* Portals */}
-          <Mega label="Portals">
-            <MegaCol
-              title="Sign in"
-              links={[
-                { title: "Parents Portal", href: "/parent-portal" },
-                { title: "Teachers Portal", href: "/teacher-portal" },
-              ]}
-            />
-          </Mega>
-
-          <TopLink href="/contact">Contact</TopLink>
-        </nav>
-
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setOpen((s) => !s)}
-          className="md:hidden inline-flex items-center justify-center rounded-md px-2 py-1 text-blue-100 hover:text-white"
-          aria-label="Toggle menu"
-        >
-          <span className="i-[menu]">☰</span>
-        </button>
-      </div>
-
-      {/* Mobile menu */}
-      {open && (
-        <div className="md:hidden border-t border-blue-600/50 bg-blue-700">
-          <div className="container mx-auto px-4 py-3 space-y-2 text-blue-100">
-            <MobileLink href="/">Home</MobileLink>
-            <MobileLink href="/about">About</MobileLink>
-            <MobileLink href="/gallery">Gallery</MobileLink>
-            <MobileLink href="/anthem">School Anthem</MobileLink>
-            <MobileLink href="/parent-portal">Parents Portal</MobileLink>
-            <MobileLink href="/teacher-portal">Teachers Portal</MobileLink>
-            <MobileLink href="/contact">Contact</MobileLink>
-          </div>
-        </div>
-      )}
-    </header>
-  );
-}
-
-function TopLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="relative px-1 py-2 hover:text-white transition-colors"
-    >
-      {children}
-      <span className="absolute left-0 -bottom-0.5 h-0.5 w-0 bg-blue-200 transition-all duration-300 group-hover:w-full" />
-    </Link>
-  );
-}
-
-function Mega({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="group relative">
-      <button className="px-1 py-2 text-blue-100 hover:text-white">
-        {label}
-      </button>
-      <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 pt-2 opacity-0 transition group-hover:opacity-100 group-hover:pointer-events-auto">
-        <div className="grid grid-cols-2 gap-6 rounded-xl border border-blue-600/50 bg-white text-gray-900 p-5 shadow-2xl w-[520px]">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
+type MegaLink = { label: string; href: string };
 
 function MegaCol({
   title,
+  img,
   links,
 }: {
   title: string;
-  links: { title: string; href: string }[];
+  img?: string;
+  links: MegaLink[];
 }) {
+  // Make keys unique by combining label+href
   return (
-    <div>
-      <div className="text-sm font-semibold text-blue-700">{title}</div>
+    <div className="min-w-[220px]">
+      {img && (
+        <div className="mb-3 overflow-hidden rounded-md border">
+          <Image
+            src={img}
+            alt={title}
+            width={320}
+            height={180}
+            className="w-full h-28 object-cover"
+          />
+        </div>
+      )}
+      <div className="font-semibold text-gray-800">{title}</div>
       <ul className="mt-2 space-y-1">
         {links.map((l) => (
-          <li key={l.href}>
+          <li key={`${l.label}-${l.href}`}>
             <Link
               href={l.href}
-              className="text-sm text-gray-700 hover:text-blue-700"
+              className="text-sm text-gray-700 hover:text-blue-700 transition"
             >
-              {l.title}
+              {l.label}
             </Link>
           </li>
         ))}
@@ -185,19 +50,185 @@ function MegaCol({
   );
 }
 
-function MobileLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
+export default function Header() {
+  const [open, setOpen] = useState<string | null>(null);
+
+  const closeLater = () => setTimeout(() => setOpen(null), 150);
+
   return (
-    <Link
-      href={href}
-      className="block rounded-md px-2 py-2 hover:bg-blue-600/50 hover:text-white"
-    >
-      {children}
-    </Link>
+    <header className="sticky top-0 z-50 bg-[#0a55c3] shadow">
+      <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 py-2.5">
+        {/* logo + title */}
+        <Link href="/" className="flex items-center gap-3">
+          <Image
+            src="/logo.png" // <-- your public/logo.png
+            alt="Ayitikope M/A Basic School"
+            width={36}
+            height={36}
+            className="rounded-sm bg-white/90 p-0.5"
+          />
+          <span className="text-white font-semibold tracking-wide">
+            Ayitikope M/A Basic School
+          </span>
+        </Link>
+
+        {/* top strip links */}
+        <nav className="hidden md:flex items-center gap-6">
+          <Link href="/" className={linkBase}>
+            Home
+          </Link>
+
+          {/* ABOUT */}
+          <div
+            className="relative"
+            onMouseEnter={() => setOpen("about")}
+            onMouseLeave={closeLater}
+          >
+            <Link href="/about" className={linkBase}>
+              About
+            </Link>
+            {open === "about" && (
+              <div className="absolute left-1/2 -translate-x-1/2 mt-4 w-[900px] max-w-[92vw] rounded-lg bg-white p-6 shadow-2xl border">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <MegaCol
+                    title="Know Us"
+                    img="/gallery/hero-campus.png"
+                    links={[
+                      { label: "History of the School", href: "/about/history" },
+                      { label: "Heads’ Catalog", href: "/about/heads" },
+                      { label: "Achievements", href: "/about/achievements" },
+                      { label: "Contact", href: "/contact" },
+                    ]}
+                  />
+                  <MegaCol
+                    title="Admissions"
+                    links={[
+                      { label: "Apply Now", href: "/admissions" },
+                      { label: "Fees", href: "/about" },
+                    ]}
+                  />
+                  <MegaCol
+                    title="School Life"
+                    links={[
+                      { label: "School Anthem", href: "/anthem" },
+                      { label: "Parents’ Portal", href: "/parent-portal" },
+                      { label: "Teachers’ Portal", href: "/teacher-portal" },
+                    ]}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ACADEMICS */}
+          <div
+            className="relative"
+            onMouseEnter={() => setOpen("academics")}
+            onMouseLeave={closeLater}
+          >
+            <Link href="/about" className={linkBase}>
+              Academics
+            </Link>
+            {open === "academics" && (
+              <div className="absolute left-1/2 -translate-x-1/2 mt-4 w-[900px] max-w-[92vw] rounded-lg bg-white p-6 shadow-2xl border">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <MegaCol
+                    title="Programs"
+                    img="/gallery/ict-lab.png"
+                    links={[
+                      { label: "KG", href: "/about" },
+                      { label: "Primary", href: "/about" },
+                      { label: "JHS", href: "/about" },
+                    ]}
+                  />
+                  <MegaCol
+                    title="Resources"
+                    links={[
+                      { label: "Student TLRs", href: "/resources/tlrs" },
+                      { label: "Teachers’ PLCs", href: "/resources/plc" },
+                    ]}
+                  />
+                  <MegaCol
+                    title="Gallery"
+                    links={[
+                      { label: "Staff Gallery", href: "/gallery" },
+                      { label: "Students Gallery", href: "/gallery" },
+                      { label: "SMC/PTA Gallery", href: "/gallery" },
+                      { label: "Executives Gallery", href: "/gallery" },
+                    ]}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ADMISSIONS */}
+          <div
+            className="relative"
+            onMouseEnter={() => setOpen("admissions")}
+            onMouseLeave={closeLater}
+          >
+            <Link href="/admissions" className={linkBase}>
+              Admissions
+            </Link>
+            {open === "admissions" && (
+              <div className="absolute left-1/2 -translate-x-1/2 mt-4 w-[750px] max-w-[92vw] rounded-lg bg-white p-6 shadow-2xl border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <MegaCol
+                    title="Start Here"
+                    links={[
+                      { label: "How to Apply", href: "/admissions" },
+                      { label: "Fees & Support", href: "/about" },
+                    ]}
+                  />
+                  <MegaCol
+                    title="Portals"
+                    links={[
+                      { label: "Parents Portal", href: "/parent-portal" },
+                      { label: "Teachers Portal", href: "/teacher-portal" },
+                    ]}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RESOURCES */}
+          <div
+            className="relative"
+            onMouseEnter={() => setOpen("resources")}
+            onMouseLeave={closeLater}
+          >
+            <Link href="/resources/tlrs" className={linkBase}>
+              Resources
+            </Link>
+            {open === "resources" && (
+              <div className="absolute left-1/2 -translate-x-1/2 mt-4 w-[650px] max-w-[92vw] rounded-lg bg-white p-6 shadow-2xl border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <MegaCol
+                    title="Students"
+                    links={[
+                      { label: "TLRs (by AI)", href: "/resources/tlrs" },
+                      { label: "Clubs & Competitions", href: "/about" },
+                    ]}
+                  />
+                  <MegaCol
+                    title="Teachers"
+                    links={[
+                      { label: "PLCs (by AI)", href: "/resources/plc" },
+                      { label: "Policies & Guides", href: "/about" },
+                    ]}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Link href="/contact" className={linkBase}>
+            Contact
+          </Link>
+        </nav>
+      </div>
+    </header>
   );
 }
