@@ -358,7 +358,7 @@ export default function Header() {
 
       {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-[60]">
+        <div className="md:hidden fixed inset-0 z-60">
           {/* Backdrop */}
           <button
             aria-label="Close menu"
