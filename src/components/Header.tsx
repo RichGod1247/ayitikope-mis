@@ -51,7 +51,7 @@ const MENUS: Mega[] = [
     cols: [
       {
         title: "Start Here",
-        img: "/gallery/awards.png",
+        img: "/gallery/admissions.png",
         links: [
           { label: "Prospectus", href: "/admissions/prospectus" },
           { label: "Entry Requirements — KG", href: "/admissions/entry/kg" },
@@ -79,7 +79,7 @@ const MENUS: Mega[] = [
     cols: [
       {
         title: "Performance & Recognition",
-        img: "/gallery/jhs-classroom.png",
+        img: "/gallery/academics.png",
         links: [
           { label: "BECE Performance", href: "/academics/bece-performance" },
           { label: "Awards & Achievements", href: "/academics/awards" },
@@ -104,7 +104,7 @@ const MENUS: Mega[] = [
     cols: [
       {
         title: "Social Media",
-        img: "/gallery/ict-lab.png",
+        img: "/gallery/director.png",
         links: [
           { label: "Facebook", href: "/media/social/facebook" },
           { label: "Instagram", href: "/media/social/instagram" },
@@ -139,7 +139,7 @@ const MENUS: Mega[] = [
     cols: [
       {
         title: "Digital Library",
-        img: "/gallery/kg-learning.png",
+        img: "/gallery/library.png",
         links: [
           { label: "Textbooks & Notes", href: "/library/digital/textbooks-notes" },
           {
@@ -172,7 +172,7 @@ const MENUS: Mega[] = [
     cols: [
       {
         title: "Our People",
-        img: "/gallery/awards.png",
+        img: "/gallery/community.png",
         links: [
           { label: "PTA", href: "/community/pta" },
           { label: "Alumni", href: "/community/alumni" },
@@ -195,6 +195,7 @@ const MENUS: Mega[] = [
     cols: [
       {
         title: "User Portals",
+        img: "/gallery/portal.png",
         links: [
           { label: "Teachers Portal", href: "/teacher-portal" },
           { label: "Parents / Guardians Portal", href: "/parent-portal" },
