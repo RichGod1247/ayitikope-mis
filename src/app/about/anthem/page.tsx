@@ -27,103 +27,173 @@ const LYRICS = [
   "The school is ours, a spirit so devine",
 ];
 
-/** Evenly spread highlighting across duration (simple karaoke) */
-function useKaraokeIndex(audio: HTMLAudioElement | null, totalLines: number) {
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    if (!audio) return;
-    let raf = 0;
-    const update = () => {
-      if (audio.duration && isFinite(audio.duration)) {
-        const ratio = Math.min(audio.currentTime / audio.duration, 0.999999);
-        setIdx(Math.floor(ratio * totalLines));
-      }
-      raf = requestAnimationFrame(update);
-    };
-    raf = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(raf);
-  }, [audio, totalLines]);
-  return idx;
-}
-
-/** Smaller equalizer: reduce canvas height and keep bars modest */
-function useAudioVisualizer(audio: HTMLAudioElement | null, canvas: HTMLCanvasElement | null) {
-  useEffect(() => {
-    if (!audio || !canvas) return;
-    let audioCtx: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let source: MediaElementAudioSourceNode | null = null;
-    let raf = 0;
-
-    const start = () => {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        source = audioCtx.createMediaElementSource(audio);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
-      }
-      const ctx = canvas.getContext("2d");
-      if (!ctx || !analyser) return;
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      const barCount = 36; // fewer bars -> subtler look
-
-      const draw = () => {
-        if (!analyser || !ctx) return;
-        const { width, height } = canvas;
-        ctx.clearRect(0, 0, width, height);
-
-        analyser.getByteFrequencyData(dataArray);
-        const step = Math.floor(bufferLength / barCount);
-        const barWidth = width / barCount;
-
-        for (let i = 0; i < barCount; i++) {
-          const v = dataArray[i * step] / 255;
-          const barHeight = v * (height * 0.9);
-          const x = i * barWidth + 1;
-          const y = height - barHeight;
-          ctx.fillStyle = "#1f6fff";
-          ctx.fillRect(x, y, barWidth - 2, barHeight);
-        }
-        raf = requestAnimationFrame(draw);
-      };
-      draw();
-    };
-
-    const onPlay = () => start();
-    const onStop = () => { if (raf) cancelAnimationFrame(raf); };
-
-    audio.addEventListener("play", onPlay);
-    audio.addEventListener("pause", onStop);
-    audio.addEventListener("ended", onStop);
-
-    return () => {
-      audio.removeEventListener("play", onPlay);
-      audio.removeEventListener("pause", onStop);
-      audio.removeEventListener("ended", onStop);
-      if (raf) cancelAnimationFrame(raf);
-      try { source?.disconnect(); analyser?.disconnect(); audioCtx?.close(); } catch {}
-    };
-  }, [audio, canvas]);
-}
-
 export default function AnthemPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  const currentIdx = useKaraokeIndex(audioRef.current, LYRICS.length);
-  useAudioVisualizer(audioRef.current, canvasRef.current);
+  // Web Audio bits we keep in refs so we can create/cleanup safely.
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const rafRef = useRef<number>(0);
 
+  const [activeLine, setActiveLine] = useState(0);
+
+  /** Ensure AudioContext exists and is resumed after user gesture */
+  const ensureAudioContext = async () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === "suspended") {
+      try {
+        await audioCtxRef.current.resume();
+      } catch {
+        /* ignore */
+      }
+    }
+    return audioCtxRef.current;
+  };
+
+  /** Start or restart the visualizer + karaoke loop */
+  const startVisualizer = async () => {
+    const audio = audioRef.current;
+    const canvas = canvasRef.current;
+    if (!audio || !canvas) return;
+
+    const ctx = await ensureAudioContext();
+    if (!ctx) return;
+
+    // Create nodes once
+    if (!analyserRef.current) {
+      analyserRef.current = ctx.createAnalyser();
+      analyserRef.current.fftSize = 256;
+    }
+    if (!sourceRef.current) {
+      // Connect the HTMLAudioElement to analyser -> destination
+      sourceRef.current = ctx.createMediaElementSource(audio);
+      sourceRef.current.connect(analyserRef.current);
+      analyserRef.current.connect(ctx.destination);
+    }
+
+    const cnv = canvas.getContext("2d");
+    if (!cnv) return;
+
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    const barCount = 36; // subtle
+    const step = Math.floor(bufferLength / barCount);
+
+    const draw = () => {
+      // Stop drawing if audio paused/ended to save CPU
+      if (audio.paused || audio.ended) return;
+
+      // --- Visualizer ---
+      const width = canvas.width;
+      const height = canvas.height;
+      cnv.clearRect(0, 0, width, height);
+      analyser.getByteFrequencyData(dataArray);
+      const barWidth = width / barCount;
+
+      for (let i = 0; i < barCount; i++) {
+        const v = dataArray[i * step] / 255;
+        const barHeight = v * (height * 0.9);
+        const x = i * barWidth + 1;
+        const y = height - barHeight;
+        cnv.fillStyle = "#1f6fff";
+        cnv.fillRect(x, y, barWidth - 2, barHeight);
+      }
+
+      // --- Karaoke highlighting ---
+      if (audio.duration && isFinite(audio.duration)) {
+        const ratio = Math.min(audio.currentTime / audio.duration, 0.999999);
+        const idx = Math.floor(ratio * LYRICS.length);
+        if (idx !== activeLine) setActiveLine(idx);
+      }
+
+      rafRef.current = requestAnimationFrame(draw);
+    };
+
+    // Kick the loop if playing
+    if (!audio.paused && !audio.ended) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(draw);
+    }
+  };
+
+  /** Attach listeners once refs are ready */
+  useEffect(() => {
+    const audio = audioRef.current;
+    const canvas = canvasRef.current;
+    if (!audio || !canvas) return;
+
+    // Ensure canvas has proper pixel size (prevents blurry canvas on some devices)
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.floor(rect.width * (window.devicePixelRatio || 1));
+      canvas.height = Math.floor(90 * (window.devicePixelRatio || 1)); // keep your small height
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    // Start visualizer when user presses play
+    const onPlay = async () => {
+      await ensureAudioContext();
+      // resume context on iOS/Android after gesture
+      await audioCtxRef.current?.resume();
+      startVisualizer();
+    };
+    const onPauseOrEnd = () => {
+      cancelAnimationFrame(rafRef.current);
+    };
+
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPauseOrEnd);
+    audio.addEventListener("ended", onPauseOrEnd);
+
+    // Some browsers need a one-time user gesture to unlock audio
+    const unlock = async () => {
+      await ensureAudioContext();
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("touchstart", unlock);
+    };
+    document.addEventListener("click", unlock, { once: true, passive: true });
+    document.addEventListener("touchstart", unlock, { once: true, passive: true });
+
+    // Pause RAF when tab is hidden
+    const onVisibility = () => {
+      if (document.hidden) cancelAnimationFrame(rafRef.current);
+      else if (!audio.paused) startVisualizer();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPauseOrEnd);
+      audio.removeEventListener("ended", onPauseOrEnd);
+      document.removeEventListener("visibilitychange", onVisibility);
+      cancelAnimationFrame(rafRef.current);
+      try {
+        sourceRef.current?.disconnect();
+        analyserRef.current?.disconnect();
+        audioCtxRef.current?.close();
+      } catch {}
+      sourceRef.current = null;
+      analyserRef.current = null;
+      audioCtxRef.current = null;
+    };
+  }, []);
+
+  // Auto-scroll active line into view
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;
-    const active = list.querySelector<HTMLDivElement>(`[data-line="${currentIdx}"]`);
+    const active = list.querySelector<HTMLDivElement>(`[data-line="${activeLine}"]`);
     active?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [currentIdx]);
+  }, [activeLine]);
 
   return (
     <section className="container mx-auto px-6 py-8">
@@ -132,7 +202,7 @@ export default function AnthemPage() {
         <p className="text-gray-700 text-lg">Ayitikope M/A Basic School</p>
       </header>
 
-      {/* Composer credit (bigger photo) */}
+      {/* Composer credit */}
       <div className="flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm mb-6">
         <div className="w-20 h-20 rounded-full overflow-hidden border shrink-0">
           <Image
@@ -150,27 +220,26 @@ export default function AnthemPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] items-start">
-        {/* Player + (smaller) visualizer */}
+        {/* Player + (small) visualizer */}
         <div className="rounded-2xl border bg-white p-4 shadow-sm">
           <audio ref={audioRef} controls className="w-full" src="/media/anthem.m4a" />
           <div className="mt-3">
             <canvas
               ref={canvasRef}
-              width={800}
-              height={90}                      // ↓ smaller canvas height
               className="w-full h-[90px] rounded-lg bg-[#e9f0ff] border"
+              // width/height set dynamically for crisp rendering
             />
           </div>
           <p className="mt-2 text-xs text-gray-600">Bars animate while the song plays.</p>
         </div>
 
-        {/* Karaoke lyrics (bigger font) */}
+        {/* Karaoke lyrics */}
         <div
           ref={listRef}
           className="rounded-2xl border bg-white p-4 shadow-sm max-h-[360px] overflow-y-auto text-lg sm:text-xl"
         >
           {LYRICS.map((line, i) => {
-            const isActive = i === currentIdx;
+            const isActive = i === activeLine;
             const isChorus = line.startsWith("— Chorus —");
             return (
               <div
