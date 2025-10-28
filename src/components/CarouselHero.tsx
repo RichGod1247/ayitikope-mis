@@ -7,19 +7,20 @@ type Slide = { src: string; caption: string };
 
 const SLIDES: Slide[] = [
   { src: "/gallery/hero-campus.png", caption: "Welcome to Ayitikope M/A Basic School" },
-  { src: "/gallery/gateway-arch.png", caption: "Our new gateway concept — welcoming and proud" },
+  { src: "/gallery/headteacher.png", caption: "Our Competent Head Teacher" },
+   { src: "/gallery/director.png", caption: "" },
   { src: "/gallery/kg-learning.png", caption: "KG learning through play" },
-  { src: "/gallery/jhs-classroom.png", caption: "Smart JHS classroom — a vision of excellence" },
-  { src: "/gallery/ict-lab.png", caption: "Growing ICT laboratory for digital skills" },
-  { src: "/gallery/awards.png", caption: "Award of Excellence — community and hard work" },
+  { src: "/gallery/jhs-block.png", caption: "Our JHS Block — a vision of excellence" },
+  { src: "/gallery/kg1.jpg", caption: "KG1- The Genesis of Greatness" },
+  { src: "/gallery/kg2.jpg", caption: "KG2- The Cradle of a Great Future" },
 ];
 
 export default function CarouselHero() {
   const [i, setI] = useState(0);
 
-  // autoslide every 5.5s
+  // autoslide every 5.0s
   useEffect(() => {
-    const t = setInterval(() => setI((n) => (n + 1) % SLIDES.length), 5500);
+    const t = setInterval(() => setI((n) => (n + 1) % SLIDES.length), 5000);
     return () => clearInterval(t);
   }, []);
 
@@ -39,8 +40,8 @@ export default function CarouselHero() {
         />
       ))}
 
-      {/* dark gradient for readability */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-black/30 to-black/50" />
+      {/* dark gradient for readability (Tailwind v4 canonical class) */}
+      <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-black/30 via-black/30 to-black/50" />
 
       {/* captions & CTA */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
@@ -52,7 +53,7 @@ export default function CarouselHero() {
         </p>
         <div className="mt-6 flex gap-3">
           <Link
-            href="/about"
+            href="/about/mission-vision"  // ← point to the unified page
             className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-semibold shadow"
           >
             Learn More
