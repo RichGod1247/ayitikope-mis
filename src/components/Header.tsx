@@ -223,9 +223,9 @@ function MegaCol({ title, img, links }: Col) {
           <Image
             src={img}
             alt={title}
-            width={320}
-            height={180}
-            className="w-full h-28 object-cover"
+            width={200}
+            height={110}
+            className="w-full h-16 object-cover"
           />
         </div>
       )}

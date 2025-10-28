@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function AdmissionsCTA() {
   return (
-    <section className="mt-12 rounded-2xl border bg-gradient-to-br from-blue-50 to-white p-6 sm:p-10 shadow-sm">
+    <section className="mt-12 rounded-2xl border bg-linear-to-br from-blue-50 to-white p-6 sm:p-10 shadow-sm">
       <div className="grid gap-6 sm:grid-cols-[1.5fr_1fr] items-center">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-blue-800">
@@ -20,16 +20,16 @@ export default function AdmissionsCTA() {
 
           <div className="mt-6 flex gap-3">
             <Link
-              href="/admissions"
+              href="/admissions/apply"
               className="rounded-lg bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 font-semibold shadow"
             >
               Apply Now
             </Link>
             <Link
-              href="/contact"
+              href="/admissions/prospectus"
               className="rounded-lg bg-white hover:bg-gray-50 text-blue-700 px-6 py-3 font-semibold shadow border"
             >
-              Ask a Question
+              View Prospectus
             </Link>
           </div>
         </div>

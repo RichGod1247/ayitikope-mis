@@ -1,7 +1,8 @@
+// src/app/page.tsx
 import CarouselHero from "@/components/CarouselHero";
 import NewStrip from "@/components/NewStrip";
 import NewsList from "@/components/NewsList";
-import MissionVision from "@/components/MissionVision";
+import UnifiedMissionVision from "../components/UnifiedMissionVision";
 import AdmissionsCTA from "@/components/AdmissionsCTA";
 
 export default function Home() {
@@ -31,8 +32,8 @@ export default function Home() {
           ))}
         </section>
 
-        {/* Mission & Vision */}
-        <MissionVision />
+        {/* Mission & Vision (unified) */}
+        <UnifiedMissionVision />
 
         {/* Admissions */}
         <AdmissionsCTA />
