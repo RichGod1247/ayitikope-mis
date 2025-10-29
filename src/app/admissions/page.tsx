@@ -5,10 +5,12 @@ import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 type Level = "KG" | "Primary" | "JHS";
+type Gender = "Male" | "Female";
 
 export default function AdmissionsPage() {
   const [level, setLevel] = useState<Level>("KG");
   const [name, setName] = useState("");          // full name (we'll split)
+  const [gender, setGender] = useState<Gender | "">(""); // NEW
   const [dob, setDob] = useState("");
   const [parent, setParent] = useState("");
   const [contact, setContact] = useState("");    // parent/guardian phone (WhatsApp)
@@ -22,11 +24,12 @@ export default function AdmissionsPage() {
   const canSubmit = useMemo(() => {
     return (
       name.trim().length >= 3 &&
+      !!gender &&                               // NEW
       !!dob &&
       parent.trim().length >= 3 &&
       contact.trim().length >= 9 // simple Ghana length sanity
     );
-  }, [name, dob, parent, contact]);
+  }, [name, gender, dob, parent, contact]);
 
   function splitName(full: string) {
     const parts = full.trim().split(/\s+/);
@@ -55,7 +58,8 @@ export default function AdmissionsPage() {
       const payload = {
         first_name,
         last_name,
-        date_of_birth: dob,                 // yyyy-mm-dd
+        gender,                                 // NEW
+        date_of_birth: dob,                     // yyyy-mm-dd
         guardian_primary_name: parent,
         guardian_primary_phone: contact,
         house_number: house || null,
@@ -78,27 +82,27 @@ export default function AdmissionsPage() {
       // 2) Log a notification request (insert-only, safe under your RLS)
       const notify = {
         channel: "whatsapp",
-        template_key: "admissions_submitted", // you can create this template later
+        template_key: "admissions_submitted",
         recipient: contact,
-        student_id: null,                     // optional link; can be filled by an admin process later
+        student_id: null,
         status: "queued",
         meta: {
           parent_name: parent,
           student_full_name: name,
           applied_level: level,
+          gender,                               // NEW
           dob,
           gps,
         } as any,
       };
       const { error: notifErr } = await supabase.from("notifications_log").insert([notify]);
       if (notifErr) {
-        // Non-fatal — app already saved. We just surface the info for debugging.
         console.warn("[Admissions] notification log insert failed:", notifErr);
       }
 
       setSubmittedName(name);
       setStatus("✅ Application submitted successfully.");
-      setName(""); setDob(""); setParent(""); setContact(""); setHouse(""); setGps("");
+      setName(""); setGender(""); setDob(""); setParent(""); setContact(""); setHouse(""); setGps("");
       setLevel("KG");
     } catch (err: any) {
       console.error("[Admissions] unexpected error:", err);
@@ -195,6 +199,7 @@ export default function AdmissionsPage() {
               </p>
             </div>
 
+            {/* Name */}
             <Field
               label="Full Name of Student *"
               error={name.trim().length < 3 ? "Enter at least 3 characters" : ""}
@@ -208,6 +213,24 @@ export default function AdmissionsPage() {
               />
             </Field>
 
+            {/* Gender (NEW) */}
+            <Field
+              label="Gender *"
+              error={!gender ? "Required" : ""}
+            >
+              <select
+                className="w-full rounded-md border px-3 py-2 focus:border-blue-600 outline-none bg-white"
+                value={gender}
+                onChange={(e) => setGender(e.target.value as Gender)}
+                required
+              >
+                <option value="" disabled>Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </Field>
+
+            {/* DOB */}
             <Field label="Date of Birth *" error={!dob ? "Required" : ""}>
               <input
                 type="date"
@@ -218,6 +241,7 @@ export default function AdmissionsPage() {
               />
             </Field>
 
+            {/* Parent */}
             <Field
               label="Name of Parent/Guardian *"
               error={parent.trim().length < 3 ? "Enter at least 3 characters" : ""}
@@ -231,6 +255,7 @@ export default function AdmissionsPage() {
               />
             </Field>
 
+            {/* Contact */}
             <Field
               label="Parent/Guardian Phone (WhatsApp) *"
               hint="e.g., 0241234567"
@@ -246,6 +271,7 @@ export default function AdmissionsPage() {
               />
             </Field>
 
+            {/* Address extras */}
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="House Number">
                 <input
@@ -265,6 +291,7 @@ export default function AdmissionsPage() {
               </Field>
             </div>
 
+            {/* CTA */}
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <button
                 type="submit"
@@ -278,11 +305,16 @@ export default function AdmissionsPage() {
               >
                 {busy ? "Submitting…" : "Submit Application"}
               </button>
-              <span id="form-status" className="text-sm" aria-live="polite">
+              <span
+                id="form-status"
+                className="text-sm"
+                aria-live="polite"
+              >
                 {status ?? ""}
               </span>
             </div>
 
+            {/* Dev-only error reveal */}
             {debug && (
               <pre className="mt-3 rounded-md bg-gray-900 text-gray-100 text-xs p-3 overflow-auto">
                 {debug}
@@ -294,7 +326,7 @@ export default function AdmissionsPage() {
           <aside className="rounded-2xl border bg-white p-6 shadow-soft">
             <h3 className="text-lg font-semibold text-blue-800">What you’ll need</h3>
             <ul className="mt-3 space-y-2 text-sm text-gray-700">
-              <li>• Student’s full name & date of birth</li>
+              <li>• Student’s full name, gender & date of birth</li>
               <li>• Parent/Guardian name & WhatsApp number</li>
               <li>• House number & GhanaPost GPS (optional)</li>
             </ul>
@@ -308,6 +340,7 @@ export default function AdmissionsPage() {
               </ul>
             </div>
 
+            {/* Success panel */}
             {status?.startsWith("✅") && submittedName && (
               <div className="mt-6 rounded-xl border bg-blue-50 p-4">
                 <div className="text-blue-900 font-semibold">Thank you, {submittedName.split(" ")[0]}!</div>
