@@ -1,19 +1,18 @@
-// src/app/teacher-portal/page.tsx
+// src/app/smc-pta-portal/page.tsx
 import Image from "next/image";
 import SignInForm from "@/components/SignInForm";
 
-export default function TeacherPortalPage() {
+export default function SmcPtaPortalPage() {
   return (
     <main className="container mx-auto px-6 py-10">
       {/* Hero header */}
       <header className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
-        {/* soft gradient wash */}
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-blue-50 via-white to-blue-50" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-emerald-50 via-white to-emerald-50" />
         <div className="relative flex items-center gap-4 px-6 py-6">
           <div className="rounded-xl border bg-white p-3 shadow-sm">
             <Image
               src="/portal.png"
-              alt="Teachers Portal"
+              alt="SMC/PTA Portal"
               width={64}
               height={64}
               className="rounded-md object-cover"
@@ -21,11 +20,12 @@ export default function TeacherPortalPage() {
             />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-blue-900">
-              Teachers Portal
+            <h1 className="text-3xl font-extrabold tracking-tight text-emerald-900">
+              SMC / PTA Portal
             </h1>
             <p className="mt-1 text-gray-700">
-              Sign in to access your Smart Dashboard, Lesson Design Studio, Gradebook, and Analytics.
+              Collaborate on school development, track projects and finances, and
+              communicate with the school administration.
             </p>
           </div>
         </div>
@@ -35,31 +35,22 @@ export default function TeacherPortalPage() {
       <section className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         {/* Info card */}
         <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-blue-800">What you’ll find inside</h2>
+          <h2 className="text-xl font-semibold text-emerald-800">What you can do</h2>
           <ul className="mt-3 space-y-2 text-gray-700">
-            <li>
-              • <strong>Smart Dashboard</strong>: attendance, health snapshots, weekly health report, airtime due.
-            </li>
-            <li>
-              • <strong>Lesson Design Studio</strong>: AI Co-Tutor, learner notes, one-click export to PDF/PPT.
-            </li>
-            <li>
-              • <strong>Assessment & Gradebook</strong>: CAs, end-of-term reports, publish to Admin.
-            </li>
-            <li>
-              • <strong>Performance Analytics</strong>: strengths, gaps, and improvement strategies per class.
-            </li>
+            <li>• Review meeting agendas, minutes, and resolutions</li>
+            <li>• Track ongoing projects (infrastructure, learning resources)</li>
+            <li>• View finances: dues, levies, expenditures (read-only for now)</li>
+            <li>• Receive notices from the Headteacher and Admin</li>
           </ul>
           <p className="mt-4 text-sm text-gray-600">
-            (Demo only for now — after sign in, we’ll wire this to your Supabase roles.)
+            (Demo only for now — after sign in, we’ll connect roles & permissions.)
           </p>
         </div>
 
-        {/* Sign-in card with logo header */}
+        {/* Sign-in card with dual logos */}
         <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          {/* school logo on top of the form */}
           <div className="mb-4 flex items-center justify-center">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center gap-2">
               <Image
                 src="/logo.png"
                 alt="Ayitikope M/A Basic School"
@@ -68,22 +59,21 @@ export default function TeacherPortalPage() {
                 className="rounded-lg object-contain"
                 priority
               />
-              <div className="mt-2 text-sm font-semibold text-blue-900">
+              <div className="text-sm font-semibold text-emerald-900">
                 Ayitikope M/A Basic School
               </div>
             </div>
           </div>
 
-          {/* form */}
           <div className="flex items-start justify-center">
             <div className="w-full max-w-md">
-              <SignInForm role="teacher" />
+              {/* Using role='parent' to avoid changing SignInForm types right now */}
+              <SignInForm role="parent" />
             </div>
           </div>
 
-          {/* small note under form */}
           <p className="mt-4 text-center text-xs text-gray-500">
-            Need access? Request your onboarding code from the Head Teacher.
+            Need help? Contact the Headteacher or Admin.
           </p>
         </div>
       </section>

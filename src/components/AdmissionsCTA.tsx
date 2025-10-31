@@ -18,17 +18,23 @@ export default function AdmissionsCTA() {
             <li>• Caring teachers & safe environment</li>
           </ul>
 
-          <div className="mt-6 flex gap-3">
-            <Link
-              href="/admissions"  // ← changed from /admissions/apply
-              className="rounded-lg bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 font-semibold shadow"
-            >
-              Apply Now
-            </Link>
-            <Link
-              href="/contact"
-              className="rounded-lg bg-white hover:bg-gray-50 text-blue-700 px-6 py-3 font-semibold shadow border"
-            >
+          <div className="mt-6 flex flex-wrap gap-3">
+  <Link
+    href="/admissions/apply"
+    className="rounded-lg bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 font-semibold shadow"
+  >
+    Apply Now
+  </Link>
+  <Link
+    href="/admissions/how-to-apply"
+    className="rounded-lg bg-white hover:bg-gray-50 text-blue-700 px-6 py-3 font-semibold shadow border"
+  >
+    How to Apply
+  </Link>
+  <Link
+    href="/contact"
+    className="rounded-lg bg-white hover:bg-gray-50 text-blue-700 px-6 py-3 font-semibold shadow border"
+  >
               Ask a Question
             </Link>
           </div>

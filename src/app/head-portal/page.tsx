@@ -1,19 +1,20 @@
-// src/app/teacher-portal/page.tsx
+// src/app/head-portal/page.tsx
 import Image from "next/image";
 import SignInForm from "@/components/SignInForm";
 
-export default function TeacherPortalPage() {
+export const metadata = { title: "Headteacher’s Portal • Ayitikope M/A Basic School" };
+
+export default function HeadPortalPage() {
   return (
     <main className="container mx-auto px-6 py-10">
       {/* Hero header */}
       <header className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
-        {/* soft gradient wash */}
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-blue-50 via-white to-blue-50" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-indigo-50 via-white to-indigo-50" />
         <div className="relative flex items-center gap-4 px-6 py-6">
           <div className="rounded-xl border bg-white p-3 shadow-sm">
             <Image
               src="/portal.png"
-              alt="Teachers Portal"
+              alt="Headteacher Portal"
               width={64}
               height={64}
               className="rounded-md object-cover"
@@ -21,11 +22,11 @@ export default function TeacherPortalPage() {
             />
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-blue-900">
-              Teachers Portal
+            <h1 className="text-3xl font-extrabold tracking-tight text-indigo-900">
+              Headteacher’s Portal
             </h1>
             <p className="mt-1 text-gray-700">
-              Sign in to access your Smart Dashboard, Lesson Design Studio, Gradebook, and Analytics.
+              Approvals, admissions oversight, notifications, and school-wide analytics.
             </p>
           </div>
         </div>
@@ -35,29 +36,36 @@ export default function TeacherPortalPage() {
       <section className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         {/* Info card */}
         <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-blue-800">What you’ll find inside</h2>
+          <h2 className="text-xl font-semibold text-indigo-800">What you can do</h2>
           <ul className="mt-3 space-y-2 text-gray-700">
-            <li>
-              • <strong>Smart Dashboard</strong>: attendance, health snapshots, weekly health report, airtime due.
-            </li>
-            <li>
-              • <strong>Lesson Design Studio</strong>: AI Co-Tutor, learner notes, one-click export to PDF/PPT.
-            </li>
-            <li>
-              • <strong>Assessment & Gradebook</strong>: CAs, end-of-term reports, publish to Admin.
-            </li>
-            <li>
-              • <strong>Performance Analytics</strong>: strengths, gaps, and improvement strategies per class.
-            </li>
+            <li>• Review & approve admissions</li>
+            <li>• See notifications queue & delivery status</li>
+            <li>• View attendance, assessments, and fee snapshots</li>
+            <li>• Quick links to Admin dashboards</li>
           </ul>
-          <p className="mt-4 text-sm text-gray-600">
-            (Demo only for now — after sign in, we’ll wire this to your Supabase roles.)
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <a
+              href="/admin/admissions"
+              className="rounded-lg border px-4 py-3 text-sm font-semibold text-indigo-800 hover:bg-indigo-50"
+            >
+              Open Admissions Dashboard
+            </a>
+            <a
+              href="/admin/notifications"
+              className="rounded-lg border px-4 py-3 text-sm font-semibold text-indigo-800 hover:bg-indigo-50"
+            >
+              Open Notifications Log
+            </a>
+          </div>
+
+          <p className="mt-4 text-xs text-gray-500">
+            (Demo: these dashboards are dev-only for now; we’ll add proper auth/roles later.)
           </p>
         </div>
 
-        {/* Sign-in card with logo header */}
+        {/* Sign-in card (reuse teacher role for now) */}
         <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          {/* school logo on top of the form */}
           <div className="mb-4 flex items-center justify-center">
             <div className="flex flex-col items-center">
               <Image
@@ -68,22 +76,22 @@ export default function TeacherPortalPage() {
                 className="rounded-lg object-contain"
                 priority
               />
-              <div className="mt-2 text-sm font-semibold text-blue-900">
+              <div className="mt-2 text-sm font-semibold text-indigo-900">
                 Ayitikope M/A Basic School
               </div>
             </div>
           </div>
 
-          {/* form */}
+          {/* Using teacher role temporarily (both are staff).
+             We’ll introduce dedicated roles when we wire real auth. */}
           <div className="flex items-start justify-center">
             <div className="w-full max-w-md">
               <SignInForm role="teacher" />
             </div>
           </div>
 
-          {/* small note under form */}
           <p className="mt-4 text-center text-xs text-gray-500">
-            Need access? Request your onboarding code from the Head Teacher.
+            Demo sign-in. We’ll switch to real Headteacher credentials later.
           </p>
         </div>
       </section>

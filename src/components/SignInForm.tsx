@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Role = "parent" | "teacher";
+type Role = "parent" | "teacher" | "student" | "admin"; // ← added "student" (we did) and "admin"
 
 export default function SignInForm({ role }: { role: Role }) {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
@@ -11,7 +11,15 @@ export default function SignInForm({ role }: { role: Role }) {
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
 
-  const roleLabel = role === "parent" ? "Parent" : "Teacher";
+  const roleLabel =
+    role === "parent"
+      ? "Parent"
+      : role === "teacher"
+      ? "Teacher"
+      : role === "student"
+      ? "Student"
+      : "Administrator";
+
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,7 +30,7 @@ export default function SignInForm({ role }: { role: Role }) {
         return;
       }
       alert(`${roleLabel} sign in (demo):\nContact: ${contact}`);
-      // TODO: replace with real auth later
+      // TODO: hook up real auth later
     } else {
       if (!name.trim() || !contact.trim() || !password.trim() || !repeat.trim()) {
         alert("Please fill all fields.");
@@ -33,16 +41,19 @@ export default function SignInForm({ role }: { role: Role }) {
         return;
       }
       alert(`${roleLabel} sign up (demo):\nName: ${name}\nContact: ${contact}`);
-      // TODO: replace with real registration later
+      // TODO: hook up real registration later
     }
   }
 
   return (
     <div className="max-w-xl w-full rounded-xl border bg-white p-6 shadow-sm">
       {/* Tabs */}
-      <div className="mb-4 inline-flex rounded-lg bg-gray-100 p-1">
+      <div className="mb-4 inline-flex rounded-lg bg-gray-100 p-1" role="tablist" aria-label="Auth tabs">
         <button
+          type="button"
           onClick={() => setTab("signin")}
+          role="tab"
+          aria-selected={tab === "signin"}
           className={`px-4 py-2 rounded-md text-sm font-medium ${
             tab === "signin" ? "bg-white shadow" : "text-gray-600"
           }`}
@@ -50,7 +61,10 @@ export default function SignInForm({ role }: { role: Role }) {
           Sign In
         </button>
         <button
+          type="button"
           onClick={() => setTab("signup")}
+          role="tab"
+          aria-selected={tab === "signup"}
           className={`ml-1 px-4 py-2 rounded-md text-sm font-medium ${
             tab === "signup" ? "bg-white shadow" : "text-gray-600"
           }`}
@@ -60,7 +74,7 @@ export default function SignInForm({ role }: { role: Role }) {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="grid gap-4">
+      <form onSubmit={handleSubmit} className="grid gap-4" noValidate>
         {tab === "signup" && (
           <div>
             <label className="block text-sm font-medium text-gray-700">Full name</label>
@@ -69,6 +83,7 @@ export default function SignInForm({ role }: { role: Role }) {
               onChange={(e) => setName(e.target.value)}
               placeholder="Your full name"
               className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
+              autoComplete="name"
             />
           </div>
         )}
@@ -82,33 +97,33 @@ export default function SignInForm({ role }: { role: Role }) {
             onChange={(e) => setContact(e.target.value)}
             placeholder="e.g. you@example.com or 0245444861"
             className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
+            autoComplete="username"
+            inputMode="email"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
+          <label className="block text-sm font-medium text-gray-700">Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
+            autoComplete={tab === "signin" ? "current-password" : "new-password"}
           />
         </div>
 
         {tab === "signup" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Repeat Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Repeat Password</label>
             <input
               type="password"
               value={repeat}
               onChange={(e) => setRepeat(e.target.value)}
               placeholder="••••••••"
               className="mt-1 w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
+              autoComplete="new-password"
             />
           </div>
         )}

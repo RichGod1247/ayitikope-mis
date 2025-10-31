@@ -17,7 +17,7 @@ type Menu = {
 const linkBase =
   "relative underline-anim text-blue-50/95 hover:text-white transition-colors";
 
-// ------- MENUS CONFIG -------
+// ---------- MENUS ----------
 const MENUS: Menu[] = [
   {
     key: "about",
@@ -82,13 +82,14 @@ const MENUS: Menu[] = [
         title: "Start Here",
         img: "/admissions.png",
         links: [
-          { label: "Admissions Hub", href: "/admissions" },
-         { label: "Apply Online", href: "/admissions" },
-          { label: "Key Dates", href: "/admissions/dates" },
-          { label: "Fees & Levies", href: "/admissions/fees" },
-          { label: "Scholarships", href: "/admissions/scholarships" },
-          { label: "FAQ", href: "/admissions/faq" },
-        ],
+  { label: "Admissions Hub", href: "/admissions" },
+  { label: "Apply Online", href: "/admissions/apply" },
+  { label: "How to Apply", href: "/admissions/how-to-apply" },
+  { label: "Key Dates", href: "/admissions/dates" },
+  { label: "Fees & Levies", href: "/admissions/fees" },
+  { label: "Scholarships", href: "/admissions/scholarships" },
+  { label: "FAQ", href: "/admissions/faq" },
+],
       },
       {
         title: "Entry Requirements",
@@ -210,26 +211,26 @@ const MENUS: Menu[] = [
     ],
   },
   {
-    key: "portals",
-    label: "Portals",
-    href: "/portals",
-    columns: [
-      {
-        title: "User Portals",
-        img: "/portal.png",
-        links: [
-          { label: "Teachers’ Portal", href: "/teacher-portal" },
-          { label: "Parents’ Portal", href: "/parent-portal" },
-          { label: "Students’ Portal", href: "/student-portal" },
-        ],
-      },
-      {
-        title: "Administration",
-        links: [
-          { label: "Headteacher’s Portal", href: "/head-portal" },
-          { label: "SMC/PTA Portal", href: "/smc-pta-portal" },
-          { label: "Admin Portal", href: "/admin-portal" },
-        ],
+  key: "portals",
+  label: "Portals",
+  href: "/portals",
+  columns: [
+    {
+      title: "User Portals",
+      img: "/portal.png",
+      links: [
+        { label: "Teachers’ Portal", href: "/teacher-portal" },
+        { label: "Parents’ Portal",  href: "/parent-portal" },
+        { label: "Students’ Portal", href: "/student-portal" },
+      ],
+    },
+    {
+      title: "Administration",
+      links: [
+        { label: "Headteacher’s Portal", href: "/head-portal" },
+        { label: "SMC/PTA Portal",       href: "/smc-pta-portal" },
+        { label: "Admin Portal",         href: "/admin-portal" },
+      ],
       },
       {
         title: "Payments",
@@ -242,10 +243,10 @@ const MENUS: Menu[] = [
   },
 ];
 
-// ------- Mega UI (bigger images ~4cm and smart panel sizing) -------
+// ---------- Mega UI (square ~4cm images with rounded edges) ----------
 function MegaImage({ src, alt }: { src?: string; alt: string }) {
   if (!src) return null;
-  // ~4cm ≈ 152px at 96dpi
+  // ~4cm ≈ 152px @ 96dpi
   return (
     <div className="mb-3 overflow-hidden rounded-2xl border w-[152px] h-[152px] shadow-sm group-hover:shadow-md transition-all">
       <Image
@@ -266,7 +267,7 @@ function MegaColView({ col }: { col: MegaCol }) {
       <div className="font-semibold text-gray-800">{col.title}</div>
       <ul className="mt-2 space-y-1">
         {col.links.map((l, idx) => (
-  <li key={`${col.title}-${l.label}-${l.href}-${idx}`}>
+          <li key={`${col.title}-${l.label}-${l.href}-${idx}`}>
             <Link
               href={l.href}
               className="text-sm text-gray-700 hover:text-blue-700 transition"
@@ -281,8 +282,8 @@ function MegaColView({ col }: { col: MegaCol }) {
 }
 
 function MegaPanel({ menu, onClose }: { menu: Menu; onClose: () => void }) {
-  // Determine columns and width based on how many columns this menu has
   const count = menu.columns.length;
+
   const colClass =
     count >= 3
       ? "grid-cols-1 sm:grid-cols-3"
@@ -297,7 +298,7 @@ function MegaPanel({ menu, onClose }: { menu: Menu; onClose: () => void }) {
     <div
       role="menu"
       aria-label={`${menu.label} panel`}
-      className={`absolute left-1/2 -translate-x-1/2 mt-4 ${widthClass} max-w-[92vw] rounded-lg bg-white p-6 shadow-2xl border z-60`}
+      className={`absolute left-1/2 -translate-x-1/2 mt-4 ${widthClass} max-w-[92vw] rounded-lg bg-white p-6 shadow-2xl border z-50`}
       onMouseLeave={onClose}
     >
       <div className={`grid ${colClass} gap-6`}>
@@ -309,7 +310,7 @@ function MegaPanel({ menu, onClose }: { menu: Menu; onClose: () => void }) {
   );
 }
 
-// ------- Header -------
+// ---------- Header ----------
 export default function Header() {
   const [open, setOpen] = useState<string | null>(null);
   const closeLater = () => setTimeout(() => setOpen(null), 150);
