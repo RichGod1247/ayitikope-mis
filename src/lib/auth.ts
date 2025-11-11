@@ -1,40 +1,32 @@
-// src/lib/auth.ts (NextAuth v4)
-import type { NextAuthOptions, Session, User } from "next-auth";
-import type { JWT } from "next-auth/jwt";
-import Credentials from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
+// src/lib/auth.ts
+import { getServerSession } from "next-auth";
 import { prisma } from "./prisma";
-import { compare } from "bcryptjs";
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-  secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt" },
-  providers: [
-    Credentials({
-      name: "Email & Password",
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(creds) {
-        if (!creds?.email || !creds?.password) return null;
-        const user = await prisma.user.findUnique({ where: { email: creds.email } });
-        if (!user || !user.passwordHash) return null;
-        const ok = await compare(creds.password, user.passwordHash);
-        if (!ok) return null;
-        return { id: user.id, email: user.email, name: user.name || undefined } as any;
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: User | null }) {
-      if (user?.id) (token as any).uid = user.id;
-      return token;
+/**
+ * Returns the current authenticated user (row from DB),
+ * or throws a 401-style error if no session / no user.
+ */
+export async function getCurrentUserOrThrow() {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    throw new Error("Not signed in");
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      image: true,
+      locale: true,
+      timezone: true,
     },
-    async session({ session, token }: { session: Session; token: JWT }) {
-      if ((token as any)?.uid) (session as any).userId = (token as any).uid;
-      return session;
-    },
-  },
-};
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  return user;
+}

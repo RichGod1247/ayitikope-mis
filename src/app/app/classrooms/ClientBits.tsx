@@ -2,16 +2,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
-// Keep this in sync with page.tsx
-export type ClassroomItem = {
+type ClassroomItem = {
   id: string;
   name: string;
   grade: string | null;
   arm: string | null;
+  capacity: number | null;
   note: string | null;
-  createdAt: string;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
 };
 
 export default function ClientBits({
@@ -21,126 +21,146 @@ export default function ClientBits({
   items: ClassroomItem[];
   tenantSlug: string;
 }) {
-  const router = useRouter();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  // Form state
-  const [name, setName] = useState("");
-  const [grade, setGrade] = useState("");
-  const [arm, setArm] = useState("");
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
+  function safeDate(v: unknown): Date | null {
+    if (!v) return null;
+    const d = new Date(v as any);
+    return isNaN(d.getTime()) ? null : d;
+  }
 
-  async function onCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) {
-      alert("Please enter classroom name");
-      return;
-    }
-    setBusy(true);
+  function fmtDate(v: unknown): string {
+    const d = safeDate(v);
+    if (!d) return "—";
+    return new Intl.DateTimeFormat("en-GB", {
+      dateStyle: "short",
+      timeStyle: "medium",
+      hour12: false,
+      timeZone: "Africa/Accra",
+    }).format(d);
+  }
+
+  async function handleCreate(formData: FormData) {
+    if (creating) return;
+    setCreating(true);
     try {
-      const res = await fetch("/api/classrooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          grade: grade.trim() || null,
-          arm: arm.trim() || null,
-          note: note.trim() || null,
-        }),
-      });
+      formData.set("tenantSlug", tenantSlug || "");
+      const res = await fetch("/api/classrooms", { method: "POST", body: formData });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || "Failed to create classroom");
+        alert(j?.error || "Create failed");
+        return;
       }
-      // Clear form and refresh list
-      setName("");
-      setGrade("");
-      setArm("");
-      setNote("");
-      router.refresh();
-    } catch (err: any) {
-      alert(err?.message || String(err));
+      location.reload();
     } finally {
-      setBusy(false);
+      setCreating(false);
     }
   }
 
-  async function onDelete(id: string) {
+  async function handleDelete(id: string) {
     if (!confirm("Delete this classroom?")) return;
-    setBusy(true);
+    setBusyId(id);
     try {
       const res = await fetch(`/api/classrooms/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || "Delete failed");
+        alert(j?.error || "Delete failed");
+        return;
       }
-      router.refresh();
-    } catch (err: any) {
-      alert(err?.message || String(err));
+      location.reload();
     } finally {
-      setBusy(false);
+      setBusyId(null);
+    }
+  }
+
+  async function handleUpdate(
+    id: string,
+    payload: {
+      name: string;
+      grade?: string | null;
+      arm?: string | null;
+      capacity?: number | null;
+      note?: string | null;
+    }
+  ) {
+    setBusyId(id);
+    try {
+      const res = await fetch(`/api/classrooms/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert(j?.error || "Update failed");
+        return;
+      }
+      location.reload();
+    } finally {
+      setBusyId(null);
     }
   }
 
   return (
     <div className="space-y-6">
       {/* Create form */}
-      <form
-        onSubmit={onCreate}
-        className="rounded-xl border p-4 space-y-3 bg-white"
-      >
-        <h2 className="font-semibold">Add Classroom</h2>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-gray-600">Name *</span>
+      <form className="space-y-3" action={handleCreate}>
+        <div className="rounded-xl border p-4 grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="block text-sm text-gray-600">Name</label>
             <input
-              className="border rounded-md px-3 py-2"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., JHS 1"
+              name="name"
               required
+              className="mt-1 w-full rounded border px-3 py-2"
+              placeholder="e.g., JHS 1"
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-gray-600">Grade</span>
+          <div>
+            <label className="block text-sm text-gray-600">Grade</label>
             <input
-              className="border rounded-md px-3 py-2"
-              value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-              placeholder="e.g., JHS"
+              name="grade"
+              className="mt-1 w-full rounded border px-3 py-2"
+              placeholder="e.g., JHS 1 / P6"
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-gray-600">Arm</span>
+          <div>
+            <label className="block text-sm text-gray-600">Arm/Section</label>
             <input
-              className="border rounded-md px-3 py-2"
-              value={arm}
-              onChange={(e) => setArm(e.target.value)}
+              name="arm"
+              className="mt-1 w-full rounded border px-3 py-2"
               placeholder="e.g., A"
             />
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1 sm:col-span-2">
-            <span className="text-sm text-gray-600">Note</span>
+          <div>
+            <label className="block text-sm text-gray-600">Capacity</label>
             <input
-              className="border rounded-md px-3 py-2"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
+              name="capacity"
+              type="number"
+              min={0}
+              className="mt-1 w-full rounded border px-3 py-2"
+              placeholder="e.g., 45"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm text-gray-600">Note</label>
+            <input
+              name="note"
+              className="mt-1 w-full rounded border px-3 py-2"
               placeholder="Optional note"
             />
-          </label>
-        </div>
+          </div>
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-md border px-4 py-2 disabled:opacity-60"
-        >
-          {busy ? "Saving..." : "Add Classroom"}
-        </button>
+          <div className="sm:col-span-2">
+            <button type="submit" className="rounded-lg border px-4 py-2" disabled={creating}>
+              {creating ? "Creating..." : "Add Classroom"}
+            </button>
+          </div>
+        </div>
       </form>
 
       {/* List */}
@@ -148,32 +168,83 @@ export default function ClientBits({
         {items.length === 0 ? (
           <p className="text-gray-500">No classrooms yet.</p>
         ) : (
-          items.map((c) => (
-            <div key={c.id} className="rounded-xl border p-4 space-y-1">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{c.name}</h3>
-                <button
-                  className="rounded border px-3 py-1 text-sm"
-                  onClick={() => onDelete(c.id)}
-                  disabled={busy}
-                >
-                  Delete
-                </button>
+          items.map((c) => {
+            const created = safeDate(c.createdAt);
+            const updated = safeDate(c.updatedAt);
+            const isoCreated = created ? created.toISOString() : undefined;
+            const isoUpdated = updated ? updated.toISOString() : undefined;
+
+            return (
+              <div key={c.id} className="rounded-xl border p-4 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-lg">{c.name || "(unnamed)"}</div>
+                    <div className="text-sm text-gray-500">
+                      {[c.grade, c.arm, c.capacity ? `${c.capacity} seats` : null]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </div>
+
+                    <div className="text-xs text-gray-400">
+                      Created:{" "}
+                      <time dateTime={isoCreated} suppressHydrationWarning>
+                        {fmtDate(c.createdAt)}
+                      </time>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Updated:{" "}
+                      <time dateTime={isoUpdated} suppressHydrationWarning>
+                        {fmtDate(c.updatedAt)}
+                      </time>
+                    </div>
+
+                    {c.note ? <div className="mt-1 text-sm text-gray-600">{c.note}</div> : null}
+                  </div>
+
+                  <div className="shrink-0 flex gap-2">
+                    <button
+                      className="rounded-lg border px-3 py-1"
+                      onClick={() => {
+                        const name = prompt("New name", c.name || "") ?? c.name;
+                        if (name === null) return;
+
+                        const grade = prompt("Grade", c.grade || "") ?? c.grade ?? "";
+                        const arm = prompt("Arm/Section", c.arm || "") ?? c.arm ?? "";
+                        const capacityRaw =
+                          prompt("Capacity (number)", c.capacity != null ? String(c.capacity) : "") ??
+                          (c.capacity != null ? String(c.capacity) : "");
+                        const note = prompt("Note", c.note || "") ?? c.note ?? "";
+
+                        const capacity =
+                          capacityRaw && capacityRaw.trim() !== ""
+                            ? Number(capacityRaw)
+                            : null;
+
+                        handleUpdate(c.id, {
+                          name: name || "",
+                          grade: grade || null,
+                          arm: arm || null,
+                          capacity: Number.isFinite(capacity) ? capacity : null,
+                          note: note || null,
+                        });
+                      }}
+                      disabled={busyId === c.id}
+                    >
+                      {busyId === c.id ? "..." : "Edit"}
+                    </button>
+
+                    <button
+                      className="rounded-lg border px-3 py-1"
+                      onClick={() => handleDelete(c.id)}
+                      disabled={busyId === c.id}
+                    >
+                      {busyId === c.id ? "..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="text-sm text-gray-600">
-                {[
-                  c.grade ? `Grade: ${c.grade}` : null,
-                  c.arm ? `Arm: ${c.arm}` : null,
-                  c.note ? `Note: ${c.note}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" • ")}
-              </div>
-              <div className="text-xs text-gray-400">
-                Created: {new Date(c.createdAt).toLocaleString()}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

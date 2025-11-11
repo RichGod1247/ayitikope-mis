@@ -4,11 +4,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  // Prisma CLI will read these from prisma/.env (we already set that up)
-  url               = env("DATABASE_URL")
-  directUrl         = env("DIRECT_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  provider  = "postgresql"
+  // Use DATABASE_URL for normal runtime.
+  // Keep DIRECT_URL for prisma db pull / maintenance if you want.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /**
@@ -25,20 +25,20 @@ model User {
   timezone     String? @default("Africa/Accra")
   image        String?
 
-  // Relations
-  memberships Membership[]
-  auditLogs   AuditLog[]
-  invitesSent Invite[]     @relation("UserInvites")
+  // NEW
+  smsOptIn Boolean @default(false)
 
-  // Back-relation: announcements created by this user
-  announcementsCreated Announcement[] @relation("AnnouncementCreatedBy")
+  memberships          Membership[]
+  auditLogs            AuditLog[]
+  invitesSent          Invite[]              @relation("UserInvites")
+  announcementsCreated Announcement[]        @relation("AnnouncementCreatedBy")
+  teacherHealthWeekly  TeacherHealthWeekly[]
+  accounts             Account[]
+  sessions             Session[]
 
-  // NextAuth relations
-  accounts Account[]
-  sessions Session[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  AttendanceSession AttendanceSession[]
 }
 
 model Tenant {
@@ -48,14 +48,18 @@ model Tenant {
   timezone String? @default("Africa/Accra")
   locale   String? @default("en")
 
-  memberships Membership[]
-  roles       Role[]
-  invites     Invite[]
-  auditLogs   AuditLog[]
+  settings Json?
 
-  // Back-relations
-  announcements Announcement[] @relation("TenantAnnouncements")
-  classrooms    Classroom[]    @relation("TenantClassrooms")
+  // Relations
+  memberships         Membership[]
+  roles               Role[]
+  invites             Invite[]
+  auditLogs           AuditLog[]
+  announcements       Announcement[]        @relation("TenantAnnouncements")
+  classrooms          Classroom[]
+  students            Student[]
+  AttendanceSession   AttendanceSession[]
+  teacherHealthWeekly TeacherHealthWeekly[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -103,7 +107,7 @@ model Role {
 
 model Permission {
   id          String  @id @default(cuid())
-  name        String  @unique // e.g., "view:student", "edit:student", "manage:fees"
+  name        String  @unique
   description String?
 
   rolePerms RolePermission[]
@@ -169,7 +173,7 @@ model AuditLog {
 
 /**
  * =======================
- * NextAuth Adapter Tables
+ * NextAuth Adapter
  * =======================
  */
 model Account {
@@ -210,7 +214,7 @@ model VerificationToken {
 
 /**
  * =======================
- * Tenant-scoped content
+ * Tenant content
  * =======================
  */
 model Announcement {
@@ -232,24 +236,170 @@ model Announcement {
 
 /**
  * =======================
- * Tenant-scoped Classrooms
+ * Classrooms & Students
  * =======================
  */
 model Classroom {
-  id       String  @id @default(cuid())
-  tenantId String
-  tenant   Tenant  @relation("TenantClassrooms", fields: [tenantId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  grade     String?
+  arm       String?
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Basic fields — keep simple for Step 1
-  name   String   // e.g., "JHS 1", "Primary 3"
-  grade  String?  // optional tag like "JHS1", "P3"
-  arm    String?  // e.g., "A" / "B" if you split classes
-  note   String?  // any extra notes
+  tenant            Tenant              @relation(fields: [tenantId], references: [id])
+  students          Student[]
+  AttendanceSession AttendanceSession[]
+
+  @@index([tenantId, name])
+}
+
+model Student {
+  id            String    @id @default(cuid())
+  tenantId      String
+  classroomId   String?
+  firstName     String
+  lastName      String
+  sex           String?
+  dob           DateTime?
+  guardianName  String?
+  guardianPhone String?
+  note          String?
+
+  // NEW: consent flags
+  guardianSmsOptIn Boolean   @default(false)
+  healthConsentAt  DateTime?
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  AttendanceMark AttendanceMark[]
+
+  @@index([tenantId])
+  @@index([classroomId])
+}
+
+/**
+ * =======================
+ * Attendance
+ * =======================
+ */
+model AttendanceSession {
+  id            String   @id @default(cuid())
+  tenantId      String
+  classroomId   String
+  date          DateTime
+  takenByUserId String?
+
+  // Soft lock
+  isClosed    Boolean   @default(false)
+  closedAt    DateTime?
+  // Certification
+  certifiedAt DateTime?
+
+  tenant    Tenant           @relation(fields: [tenantId], references: [id])
+  classroom Classroom        @relation(fields: [classroomId], references: [id])
+  takenBy   User?            @relation(fields: [takenByUserId], references: [id])
+  marks     AttendanceMark[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Avoid duplicates per-tenant (same name)
-  @@unique([tenantId, name], name: "Classroom_tenant_name")
+  @@unique([tenantId, classroomId, date], name: "tenant_classroom_date_unique")
+  @@index([tenantId])
+  @@index([classroomId])
+  @@index([date])
+  @@index([isClosed])
+  @@index([certifiedAt])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+model AttendanceMark {
+  id        String           @id @default(cuid())
+  sessionId String
+  studentId String
+  status    AttendanceStatus
+  note      String?
+
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sessionId, studentId], name: "session_student_unique")
+  @@index([studentId])
+}
+
+/**
+ * =======================
+ * Student Daily Health
+ * =======================
+ */
+model StudentHealthDaily {
+  id             String    @id @default(cuid())
+  tenantId       String
+  classroomId    String
+  studentId      String
+  date           DateTime
+  temperatureC   Float?
+  symptoms       String?
+  notes          String?
+  sentToParentAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, date], name: "StudentHealthDaily_unique_student_date")
+  @@index([tenantId])
+  @@index([classroomId])
+  @@index([date])
+}
+
+/**
+ * =======================
+ * Teacher Weekly Health
+ * =======================
+ */
+model TeacherHealthWeekly {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String
+  weekStart   DateTime // Monday (UTC)
+  stressLevel Int
+  workload    Int
+  comments    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart], name: "TeacherHealthWeekly_unique_user_week")
+  @@index([tenantId, weekStart], name: "idx_thw_tenant_week")
+  @@index([userId, weekStart], name: "idx_thw_user_week")
+}
+
+/**
+ * =======================
+ * SMS Auditing
+ * =======================
+ */
+model SMSSendAudit {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String
+  toPhone   String
+  createdAt DateTime @default(now())
+
   @@index([tenantId, createdAt])
 }

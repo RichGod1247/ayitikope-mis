@@ -1,13 +1,32 @@
 // src/lib/tenant.ts
-import { cookies } from "next/headers";
 import { prisma } from "./prisma";
+import { getCurrentUserOrThrow } from "./auth";
 
-export async function getActiveTenantByCookie() {
-  const cookieStore = await cookies();
-  const slug = cookieStore.get("x-tenant")?.value || "ayitikope-basic";
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true, slug: true, name: true },
+/**
+ * Finds the tenant the current user belongs to.
+ * If the user has multiple, it returns the first one for now.
+ * (We can later enhance this to choose by slug in cookie/query/header.)
+ */
+export async function getCurrentTenantOrThrow() {
+  const user = await getCurrentUserOrThrow();
+
+  const membership = await prisma.membership.findFirst({
+    where: { userId: user.id, status: "ACTIVE" },
+    include: { tenant: true },
   });
-  return { slug, tenant };
+
+  if (!membership?.tenant) {
+    throw new Error("No tenant found for current user");
+  }
+
+  return {
+    user,
+    tenant: {
+      id: membership.tenant.id,
+      name: membership.tenant.name,
+      slug: membership.tenant.slug,
+      timezone: membership.tenant.timezone ?? "Africa/Accra",
+      locale: membership.tenant.locale ?? "en",
+    },
+  };
 }
