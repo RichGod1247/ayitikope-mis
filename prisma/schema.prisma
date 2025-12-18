@@ -39,6 +39,16 @@ model User {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   AttendanceSession AttendanceSession[]
+
+  // 🔽 back-relations for lesson notes
+  lessonNotesAsTeacher     LessonNote[] @relation("LessonNoteTeacher")
+  lessonNotesAsHeadteacher LessonNote[] @relation("LessonNoteHeadteacher")
+
+  // 🔽 curriculum trust: who last verified a subject
+  curriculumSubjectsVerified CurriculumSubject[] @relation("CurriculumSubjectLastVerifiedBy")
+
+  // 🔽 schemes of work created by this teacher
+  schemesOfWork SchemeOfWork[] @relation("SchemeOfWorkTeacher")
 }
 
 model Tenant {
@@ -47,6 +57,9 @@ model Tenant {
   slug     String  @unique
   timezone String? @default("Africa/Accra")
   locale   String? @default("en")
+
+  // Legacy invoice model (already existed)
+  feesInvoices FeesInvoice[]
 
   settings Json?
 
@@ -60,6 +73,26 @@ model Tenant {
   students            Student[]
   AttendanceSession   AttendanceSession[]
   teacherHealthWeekly TeacherHealthWeekly[]
+
+  // 🔽 all lesson notes belonging to this tenant/school
+  lessonNotes LessonNote[]
+
+  // 🔽 assessment items under this tenant (for gradebook)
+  assessmentItems AssessmentItem[]
+
+  // 🔽 national / tenant-scoped curriculum units
+  curriculumUnits CurriculumUnit[]
+
+  // 🔽 curriculum subjects (when tenant creates custom/local curricula)
+  curriculumSubjects CurriculumSubject[]
+
+  // 🔽 schemes of work under this tenant
+  schemesOfWork SchemeOfWork[]
+
+  // NEW fee/billing relations (Phase 1)
+  feeStructures FeeStructure[] @relation("TenantFeeStructures")
+  feeInvoices   FeeInvoice[]   @relation("TenantFeeInvoices")
+  feePayments   FeePayment[]   @relation("TenantFeePayments")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -253,6 +286,15 @@ model Classroom {
   students          Student[]
   AttendanceSession AttendanceSession[]
 
+  // 🔽 lesson notes linked to this classroom
+  lessonNotes LessonNote[]
+
+  // 🔽 assessment items linked to this classroom
+  assessmentItems AssessmentItem[]
+
+  // 🔽 schemes of work linked to this classroom
+  schemesOfWork SchemeOfWork[]
+
   @@index([tenantId, name])
 }
 
@@ -278,6 +320,12 @@ model Student {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   AttendanceMark AttendanceMark[]
+
+  // NEW: fees (modern fee invoices)
+  feeInvoices FeeInvoice[] @relation("StudentFeeInvoices")
+
+  // 🔽 scores under assessment items
+  assessmentScores AssessmentScore[]
 
   @@index([tenantId])
   @@index([classroomId])
@@ -402,4 +450,606 @@ model SMSSendAudit {
   createdAt DateTime @default(now())
 
   @@index([tenantId, createdAt])
+}
+
+model NotificationContact {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String   @unique
+  isInitialTest Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+}
+
+model SmsLog {
+  id        BigInt   @id @default(autoincrement())
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  to       String
+  from     String?
+  body     String
+  brand    String?
+  tenantId String?
+  actorId  String?
+
+  providerMessageId         String?
+  providerStatus            Int?
+  providerStatusDescription String?
+  providerRaw               Json?   @db.JsonB
+
+  @@map("SmsLog")
+}
+
+/**
+ * =======================
+ * Legacy FeesInvoice (existing)
+ * =======================
+ */
+model FeesInvoice {
+  id       Int    @id @default(autoincrement())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  studentId     String? @db.Text
+  studentName   String
+  guardianPhone String
+  className     String?
+  term          String?
+
+  amountDue Decimal   @db.Decimal(10, 2)
+  dueDate   DateTime? @db.Date
+
+  isPaid         Boolean   @default(false)
+  lastReminderAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@map("FeesInvoice")
+}
+
+// -------------------------------------
+// FEES & BILLING CORE MODELS (Phase 1)
+// -------------------------------------
+
+/// High-level definition of a fee item (e.g. "Term 1 PTA Levy", "Feeding Fee")
+model FeeStructure {
+  id            String  @id @default(cuid())
+  tenantId      String
+  name          String // e.g. "Term 1 School Fees"
+  description   String? // optional more detail
+  term          String // e.g. "1st Term"
+  academicYear  String // e.g. "2025/2026"
+  amountPesewas Int // store money as integer (pesewas)
+  isActive      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation("TenantFeeStructures", fields: [tenantId], references: [id])
+}
+
+/// A bill for one learner for a given term/year
+model FeeInvoice {
+  id                 String  @id @default(cuid())
+  tenantId           String
+  studentId          String
+  term               String // "1st Term"
+  academicYear       String // "2025/2026"
+  totalBilledPesewas Int // total billed in pesewas
+  totalWaivedPesewas Int     @default(0)
+  note               String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant       @relation("TenantFeeInvoices", fields: [tenantId], references: [id])
+  student  Student      @relation("StudentFeeInvoices", fields: [studentId], references: [id])
+  payments FeePayment[] @relation("InvoiceFeePayments")
+}
+
+/// A payment made against a fee invoice
+model FeePayment {
+  id            String  @id @default(cuid())
+  tenantId      String
+  invoiceId     String
+  amountPesewas Int // amount paid in pesewas
+  method        String // "cash", "paystack", "hubtel", etc.
+  reference     String? // transaction ref, receipt no, etc.
+  channel       String? // "office", "online", etc.
+
+  paidAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  tenant  Tenant     @relation("TenantFeePayments", fields: [tenantId], references: [id])
+  invoice FeeInvoice @relation("InvoiceFeePayments", fields: [invoiceId], references: [id])
+}
+
+// -------------------------------------
+// LESSON NOTES (NaCCA-aligned)
+// -------------------------------------
+
+model LessonNote {
+  id String @id @default(cuid())
+
+  tenantId          String
+  teacherUserId     String
+  headteacherUserId String?
+  classroomId       String?
+
+  // Where this lesson sits in the curriculum
+  phase String? // "KG", "PRIMARY", "JHS"
+  level String? // "KG1", "B2", "JHS1"
+
+  // Link to a specific curriculum unit (optional but powerful)
+  curriculumUnitId String?
+  curriculumUnit   CurriculumUnit? @relation(fields: [curriculumUnitId], references: [id], onDelete: SetNull)
+
+  // When & where this lesson lives
+  subject      String
+  term         String // e.g. "1st Term"
+  academicYear String // e.g. "2025/2026"
+  weekNumber   Int?
+  lessonDate   DateTime? // optional: the actual day
+
+  // NaCCA structure
+  strand          String // instead of "topic"
+  substrand       String? // instead of "subtopic"
+  contentStandard String?
+  indicator       String?
+  lessonTitle     String?
+
+  // Core lesson details (plain text for now)
+  objectives                String?
+  priorKnowledge            String?
+  teachingLearningResources String?
+  introduction              String?
+  lessonDevelopment         String?
+  conclusion                String?
+  assessment                String?
+  homework                  String?
+  differentiationNotes      String?
+  reflectionNotes           String?
+
+  // Status & review
+  status             String  @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | REJECTED
+  headteacherComment String?
+
+  submittedAt DateTime?
+  reviewedAt  DateTime?
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+
+  // AI agent support
+  aiPlanJson    Json?
+  aiPlanVersion Int   @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teacher     User       @relation("LessonNoteTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  headteacher User?      @relation("LessonNoteHeadteacher", fields: [headteacherUserId], references: [id])
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([teacherUserId])
+  @@index([headteacherUserId])
+  @@index([classroomId])
+  @@index([term, academicYear])
+}
+
+// -------------------------------------
+// NATIONAL CURRICULUM UNITS (NaCCA)
+// -------------------------------------
+//
+// One row ≈ one curriculum "unit":
+//   Level + Subject + Term + Week
+//   + Strand + Sub-strand
+//   + Content Standard + Indicator
+//
+model CurriculumUnit {
+  id String @id @default(cuid())
+
+  // e.g. link to tenant (optional for now)
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  // e.g. "KG", "PRIMARY", "JHS"
+  phase String
+
+  // e.g. "KG1", "KG2", "B1", "JHS1"
+  level String
+
+  // e.g. "Mathematics", "English Language"
+  subject String
+
+  // e.g. "1st Term"
+  term String
+
+  // e.g. 1, 2, 3... (week number)
+  weekNumber Int
+
+  // From curriculum: Strand / Sub-strand / Content Standard / Indicator
+  strandCode String?
+  strand     String
+
+  substrandCode String?
+  substrand     String
+
+  contentStandardCode String?
+  contentStandard     String
+
+  indicatorCode String?
+  indicator     String
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // back-relation: all lesson notes that reference this curriculum unit
+  lessonNotes LessonNote[]
+
+  // Helpful indexes for fast lookups
+  @@index([phase, level, subject])
+  @@index([subject, term, weekNumber])
+  @@index([strandCode, substrandCode])
+}
+
+// -------------------------------------
+// HIERARCHICAL NATIONAL CURRICULUM
+// (Subject -> Strand -> Sub-strand ->
+//  Content Standard -> Indicator -> Exemplar -> Media)
+// -------------------------------------
+
+model CurriculumSubject {
+  id String @id @default(cuid())
+
+  // OPTIONAL tenant: for custom/local curricula.
+  // All NaCCA national subjects will have tenantId = NULL and isGlobal = true.
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  phase       String? // e.g. "KG", "PRIMARY", "JHS"
+  level       String? // e.g. "KG1", "KG2", "Basic 7"
+  name        String  // e.g. "Our World and Our People"
+  slug        String  @unique
+  description String?
+  orderIndex  Int     @default(0)
+
+  // 🔍 Metadata for trust, provenance, and scalability
+  // e.g. "NaCCA Common Core Programme" / "NaCCA KG Curriculum"
+  curriculumFramework String  @default("NaCCA Common Core Programme")
+  frameworkVersion    String? // e.g. "2019", "2021"
+  countryCode         String  @default("GH") // ISO country code, "GH" for Ghana
+
+  // Optional official code from the framework (if any)
+  officialSubjectCode String?
+
+  // Source document information (for traceability)
+  sourceDocumentUrl   String? // link to NaCCA PDF or repo
+  sourceDocumentTitle String?
+  sourceDocumentYear  Int?
+
+  // Global vs tenant-specific
+  isGlobal Boolean @default(true)  // true = national/global curriculum
+  isActive Boolean @default(true)  // soft-disable subjects if needed
+
+  // Trust & verification
+  lastVerifiedAt       DateTime?
+  lastVerifiedByUserId String?
+  lastVerifiedBy       User? @relation("CurriculumSubjectLastVerifiedBy", fields: [lastVerifiedByUserId], references: [id])
+
+  strands CurriculumStrand[]
+  media   CurriculumMedia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([phase, level, name])
+  @@index([countryCode, curriculumFramework])
+  @@index([isActive])
+}
+
+model CurriculumStrand {
+  id        String            @id @default(cuid())
+  subjectId String
+  subject   CurriculumSubject @relation(fields: [subjectId], references: [id])
+
+  code        String? // e.g. "K1.1"
+  title       String // e.g. "All about me"
+  description String?
+  orderIndex  Int     @default(0)
+
+  subStrands CurriculumSubStrand[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subjectId])
+  @@index([code])
+}
+
+model CurriculumSubStrand {
+  id       String           @id @default(cuid())
+  strandId String
+  strand   CurriculumStrand @relation(fields: [strandId], references: [id])
+
+  code        String? // e.g. "K1.1.1"
+  title       String
+  description String?
+  orderIndex  Int     @default(0)
+
+  contentStandards CurriculumContentStandard[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([strandId])
+  @@index([code])
+}
+
+model CurriculumContentStandard {
+  id          String              @id @default(cuid())
+  subStrandId String
+  subStrand   CurriculumSubStrand @relation(fields: [subStrandId], references: [id])
+
+  code        String // e.g. "K1.1.1.1"
+  description String
+  orderIndex  Int    @default(0)
+
+  indicators CurriculumIndicator[]
+  media      CurriculumMedia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subStrandId])
+  @@index([code])
+}
+
+model CurriculumIndicator {
+  id                String                    @id @default(cuid())
+  contentStandardId String
+  contentStandard   CurriculumContentStandard @relation(fields: [contentStandardId], references: [id])
+
+  code        String // e.g. "K1.1.1.1.1"
+  description String
+  orderIndex  Int    @default(0)
+
+  exemplars CurriculumExemplar[]
+  media     CurriculumMedia[]
+
+  // 🔽 all Scheme of Work items pointing at this indicator
+  schemeItems SchemeOfWorkItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@index([contentStandardId])
+  @@index([code])
+
+  // If you ever want to *enforce* that each code is unique per content standard
+  // (i.e. no two indicators with the same code under one content standard),
+  // you can later safely add:
+  //
+  // @@unique([contentStandardId, code], name: "CurriculumIndicator_contentStandard_code_unique")
+}
+
+model CurriculumExemplar {
+  id          String              @id @default(cuid())
+  indicatorId String
+  indicator   CurriculumIndicator @relation(fields: [indicatorId], references: [id])
+
+  title           String?
+  description     String // full exemplar text
+  assessmentNotes String?
+  orderIndex      Int     @default(0)
+
+  media CurriculumMedia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([indicatorId])
+}
+
+model CurriculumMedia {
+  id String @id @default(cuid())
+
+  subjectId String?
+  subject   CurriculumSubject? @relation(fields: [subjectId], references: [id])
+
+  contentStandardId String?
+  contentStandard   CurriculumContentStandard? @relation(fields: [contentStandardId], references: [id])
+
+  indicatorId String?
+  indicator   CurriculumIndicator? @relation(fields: [indicatorId], references: [id])
+
+  exemplarId String?
+  exemplar   CurriculumExemplar? @relation(fields: [exemplarId], references: [id])
+
+  pageNumberInPdf     Int
+  figureLabel         String?
+  imagePath           String
+  altText             String
+  detailedDescription String
+  tags                String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subjectId])
+  @@index([contentStandardId])
+  @@index([indicatorId])
+  @@index([exemplarId])
+
+  // ✅ NEW: stop exact duplicate media rows for the same indicator + file path
+  @@unique([indicatorId, imagePath], name: "CurriculumMedia_indicator_image_unique")
+}
+
+// -------------------------------------
+// IMAGE PROMPTS FOR CURRICULUM NODES
+// -------------------------------------
+
+model ImagePrompt {
+  id      String @id @default(cuid())
+  phase   String // e.g. "KG"
+  level   String // e.g. "KG1"
+  subject String // e.g. "Our World and Our People"
+
+  strandCode          String // NOT NULL
+  subStrandCode       String?
+  contentStandardCode String?
+  indicatorCode       String?
+  exemplarIndex       Int?
+
+  // "strand" | "subStrand" | "contentStandard" | "indicator" | "exemplar"
+  nodeType String
+
+  ageBand String // NOT NULL in SQL
+  prompt  String // full text prompt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 🔒 one prompt per node (per subject)
+  @@unique([subject, strandCode, subStrandCode, contentStandardCode, indicatorCode, exemplarIndex, nodeType])
+
+  // Helpful indexes
+  @@index([subject])
+  @@index([strandCode])
+  @@index([subStrandCode])
+  @@index([contentStandardCode])
+  @@index([indicatorCode])
+  @@index([nodeType])
+  @@index([phase, level, subject])
+}
+
+// -------------------------------------
+// SCHEME OF WORK (NaCCA-aligned)
+// -------------------------------------
+//
+// One SchemeOfWork ≈ one term's plan for a subject/class.
+// One SchemeOfWorkItem ≈ one weekly entry linked to a curriculum indicator.
+//
+
+model SchemeOfWork {
+  id String @id @default(cuid())
+
+  tenantId      String
+  teacherUserId String
+  classroomId   String?
+
+  // Where this scheme lives in the curriculum
+  phase       String? // e.g. "KG", "PRIMARY", "JHS"
+  level       String? // e.g. "KG1", "B6", "JHS1"
+  subject     String  // human name, e.g. "Mathematics"
+  subjectSlug String? // link back to CurriculumSubject.slug
+
+  term         String // e.g. "1st Term"
+  academicYear String // e.g. "2025/2026"
+
+  // Optional human-readable title, e.g. "B6 Maths – 1st Term 2025/2026"
+  title String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teacher   User       @relation("SchemeOfWorkTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+
+  items SchemeOfWorkItem[]
+
+  @@index([tenantId])
+  @@index([teacherUserId])
+  @@index([classroomId])
+  @@index([term, academicYear])
+}
+
+model SchemeOfWorkItem {
+  id String @id @default(cuid())
+
+  schemeOfWorkId String
+
+  // Timetabling
+  weekNumber Int
+  // (optional if you ever want day-level granularity later)
+  dayNumber  Int?
+
+  // Direct link to the hierarchical curriculum indicator
+  curriculumIndicatorId String?
+  indicator             CurriculumIndicator? @relation(fields: [curriculumIndicatorId], references: [id])
+
+  // Cached curriculum text for fast printing & robustness
+  indicatorCode              String?
+  indicatorDescription       String
+  strandTitle                String
+  subStrandTitle             String
+  contentStandardCode        String?
+  contentStandardDescription String?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scheme SchemeOfWork @relation(fields: [schemeOfWorkId], references: [id], onDelete: Cascade)
+
+  @@index([schemeOfWorkId])
+  @@index([weekNumber])
+  @@index([indicatorCode])
+}
+
+// -------------------------------------
+// ASSESSMENT & GRADEBOOK
+// -------------------------------------
+//
+// One AssessmentItem ≈ one CA / quiz / project definition for a class.
+// AssessmentScore links a learner to that item with a mark.
+//
+model AssessmentItem {
+  id String @id @default(cuid())
+
+  tenantId    String
+  classroomId String
+
+  subject      String
+  term         String // e.g. "1st Term"
+  academicYear String // e.g. "2025/2026"
+
+  title       String // e.g. "Class Test 1"
+  description String?
+  type        String // e.g. "CLASS_TEST", "HOMEWORK", "PROJECT"
+  maxScore    Int
+  weighting   Float? // optional weighting %
+
+  date DateTime? // when the assessment was done
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classroom Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  scores    AssessmentScore[]
+}
+
+model AssessmentScore {
+  id String @id @default(cuid())
+
+  itemId    String
+  studentId String
+
+  score   Float
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  item    AssessmentItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, studentId], name: "assessment_student_unique")
 }

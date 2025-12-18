@@ -1,99 +1,106 @@
 // src/app/headteacher/consent/letters/student/[studentId]/page.tsx
-'use client'
-import { useEffect, useState } from 'react'
+import { prisma } from '@/lib/prisma'
 
-type Student = {
-  id: string
-  firstName: string | null
-  lastName: string | null
-  guardianName: string | null
-  guardianPhone: string | null
-  healthConsentAt: string | null
-  guardianSmsOptIn: boolean | null
-  classroom?: { grade: string | null; arm: string | null; name: string }
+export const dynamic = 'force-dynamic'
+
+type PageProps = {
+  params: Promise<{ studentId: string }>
 }
 
-export default function StudentConsentLetter({ params }: { params: { studentId: string } }) {
-  const [tenantName, setTenantName] = useState<string>('School')
-  const [s, setS] = useState<Student | null>(null)
-  const [loading, setLoading] = useState(true)
+export default async function StudentConsentLetterPage(props: PageProps) {
+  const { studentId } = await props.params
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // tenant
-        const t = await fetch('/api/test/tenants').then(r => r.json())
-        const first = t?.tenants?.[0]
-        if (first?.name) setTenantName(first.name)
+  const student = await prisma.student.findUnique({
+    where: { id: studentId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      guardianName: true,
+      guardianPhone: true,
+      healthConsentAt: true,
+      tenant: {
+        select: { id: true, name: true, slug: true },
+      },
+    },
+  })
 
-        // student
-        const res = await fetch(`/api/consent/students/detail?studentId=${params.studentId}`)
-        const data = await res.json()
-        setS(data?.student ?? null)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [params.studentId])
+  if (!student) {
+    return (
+      <div className="p-6 text-red-600">
+        Student not found.
+      </div>
+    )
+  }
 
-  if (loading) return <div className="p-6">Loading...</div>
-  if (!s) return <div className="p-6 text-red-600">Student not found.</div>
-
-  const classLabel = s.classroom
-    ? (s.classroom.grade ? `${s.classroom.grade}${s.classroom.arm ?? ''}` : s.classroom.name)
-    : ''
+  const fullName = [student.firstName, student.lastName].filter(Boolean).join(' ')
+  const tenantName = student.tenant?.name ?? 'School'
+  const tenantSlug = student.tenant?.slug ?? 'default'
+  const logoSrc = `/logos/${tenantSlug}.png`
 
   return (
-    <div className="max-w-[800px] mx-auto p-8 print:p-0">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{tenantName}</h1>
-        <button
-          onClick={() => window.print()}
-          className="px-3 py-2 rounded-lg border text-sm hover:bg-gray-50 print:hidden"
-        >
-          Print / Save as PDF
-        </button>
-      </div>
+    <div className="p-6">
+      {/* A4-friendly container */}
+      <div className="mx-auto w-full max-w-[800px] bg-white shadow-sm border rounded-xl p-8 print:shadow-none print:border-0 print:p-0">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b pb-4 mb-6">
+          <div className="flex items-center gap-3">
+            {/* Logo (no onError in Server Component) */}
+            <img
+              src={logoSrc}
+              alt={`${tenantName} logo`}
+              className="h-12 w-auto"
+            />
+            <div>
+              <div className="text-lg font-semibold">{tenantName}</div>
+              <div className="text-xs text-zinc-600">
+                Guardian Consent &amp; SMS Opt-in Letter
+              </div>
+            </div>
+          </div>
 
-      <h2 className="text-xl font-semibold mb-2">Parent/Guardian Consent Letter</h2>
-      <p className="text-sm text-gray-600 mb-6">Student daily health + SMS notifications</p>
-
-      <div className="space-y-1 text-sm">
-        <div><span className="font-semibold">Student:</span> {s.firstName} {s.lastName}</div>
-        <div><span className="font-semibold">Class:</span> {classLabel}</div>
-        <div><span className="font-semibold">Guardian:</span> {s.guardianName ?? '-'}</div>
-        <div><span className="font-semibold">Guardian Phone:</span> {s.guardianPhone ?? '-'}</div>
-        <div><span className="font-semibold">Consent recorded:</span> {s.healthConsentAt ? new Date(s.healthConsentAt).toLocaleString() : '—'}</div>
-        <div><span className="font-semibold">SMS Opt-in:</span> {s.guardianSmsOptIn ? 'Yes' : 'No'}</div>
-      </div>
-
-      <hr className="my-6" />
-
-      <p className="text-sm leading-6">
-        Dear Parent/Guardian, <br />
-        We respectfully request your consent to collect and securely process your child’s basic health
-        indicators (e.g., temperature, reported symptoms) for the purpose of wellness support and to
-        notify you via SMS when relevant. Data is kept confidential, used only by authorized staff, and
-        aligned with Ghana’s Data Protection Act (2012). You may withdraw consent at any time.
-      </p>
-
-      <div className="mt-8 grid grid-cols-2 gap-6">
-        <div>
-          <div className="h-24 border rounded-lg" />
-          <div className="text-xs mt-2 text-gray-600">Parent/Guardian Signature &amp; Date</div>
+          <div className="text-right text-xs text-zinc-500">
+            Generated on {new Date().toLocaleDateString()}
+          </div>
         </div>
-        <div>
-          <div className="h-24 border rounded-lg" />
-          <div className="text-xs mt-2 text-gray-600">School Representative Signature &amp; Date</div>
+
+        {/* Body */}
+        <div className="space-y-4 text-[0.95rem] leading-6">
+          <p>
+            Dear {student.guardianName ?? 'Parent/Guardian'},
+          </p>
+          <p>
+            This letter documents the health data consent and SMS communication preference
+            for your ward, <strong>{fullName}</strong>. With your consent, the school may
+            record daily health entries (e.g., temperature and symptoms during school days)
+            to support student well-being.
+          </p>
+
+          <div className="rounded-lg border p-4 bg-zinc-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div><span className="text-zinc-500">Student:</span> <strong>{fullName}</strong></div>
+              <div><span className="text-zinc-500">Guardian:</span> <strong>{student.guardianName ?? '—'}</strong></div>
+              <div><span className="text-zinc-500">Phone:</span> <strong>{student.guardianPhone ?? '—'}</strong></div>
+              <div><span className="text-zinc-500">Consent Date:</span> <strong>{student.healthConsentAt ? new Date(student.healthConsentAt).toLocaleDateString() : '—'}</strong></div>
+            </div>
+          </div>
+
+          <p>
+            By opting into SMS notifications, you agree to receive messages related to your
+            ward’s attendance or health alerts. Standard carrier rates may apply.
+          </p>
+
+          <p className="mt-6">
+            Sincerely,<br />
+            <strong>{tenantName}</strong>
+          </p>
+        </div>
+
+        {/* Print controls */}
+        <div className="mt-8 hidden print:block text-center text-xs text-zinc-500">
+          — End of Letter —
         </div>
       </div>
-
-      <style>{`
-        @media print {
-          button { display: none; }
-          body { background: white; }
-        }
-      `}</style>
     </div>
   )
 }

@@ -1,83 +1,92 @@
 // src/app/api/consent/students/update/route.ts
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import type { NextRequest } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
-type Body = {
-  studentId?: string;
-  smsOptIn?: boolean;
-  healthConsentAt?: string | null; // ISO | "NOW" | null | undefined
-};
-
+/**
+ * POST /api/consent/students/update?actorId=USER_ID (actorId optional; can also be in body.actorId)
+ * Body:
+ * {
+ *   studentId: string,
+ *   smsOptIn?: boolean,              // maps to Student.guardianSmsOptIn
+ *   healthConsentAt?: string | null, // ISO string to set/clear; if omitted we keep previous
+ *   actorId?: string                 // optional duplicate of query param
+ * }
+ *
+ * Behavior:
+ * - Loads the student (tenantId, guardianSmsOptIn, healthConsentAt).
+ * - Applies provided changes.
+ * - Upserts the student fields.
+ * - Writes an AuditLog row with before/after snapshot.
+ */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Body;
+    const url = new URL(req.url)
+    const actorIdFromQuery = url.searchParams.get('actorId')?.trim() || undefined
 
-    const studentId = (body.studentId || '').trim();
+    const body = await req.json().catch(() => ({} as any))
+
+    const studentId: string | undefined = typeof body?.studentId === 'string' ? body.studentId.trim() : undefined
     if (!studentId) {
       return new Response(JSON.stringify({ error: 'studentId is required' }), {
         status: 400,
         headers: { 'content-type': 'application/json' },
-      });
+      })
     }
 
-    // Fetch the student to validate existence (and to avoid passing undefined tenant/classroom)
+    const actorId: string | undefined =
+      (typeof body?.actorId === 'string' ? body.actorId.trim() : undefined) || actorIdFromQuery
+
+    const hasSmsOptIn = typeof body?.smsOptIn === 'boolean'
+    const smsOptIn: boolean | undefined = hasSmsOptIn ? Boolean(body.smsOptIn) : undefined
+
+    let healthConsentAt: Date | null | undefined
+    if (body?.hasOwnProperty('healthConsentAt')) {
+      if (body.healthConsentAt === null) {
+        healthConsentAt = null
+      } else if (typeof body.healthConsentAt === 'string' && body.healthConsentAt.trim()) {
+        const d = new Date(body.healthConsentAt)
+        if (!isNaN(d.getTime())) healthConsentAt = d
+        else healthConsentAt = undefined // ignore invalid date
+      } else {
+        healthConsentAt = undefined // no change
+      }
+    } else {
+      healthConsentAt = undefined // no change
+    }
+
+    // Load current student
     const current = await prisma.student.findUnique({
       where: { id: studentId },
       select: {
         id: true,
         tenantId: true,
-        classroomId: true,
+        firstName: true,
+        lastName: true,
         guardianName: true,
         guardianPhone: true,
-        // These fields must exist in your Prisma schema (we added them earlier)
-        healthConsentAt: true,
         guardianSmsOptIn: true,
+        healthConsentAt: true,
       },
-    });
+    })
 
     if (!current) {
       return new Response(JSON.stringify({ error: 'Student not found' }), {
         status: 404,
         headers: { 'content-type': 'application/json' },
-      });
+      })
     }
 
-    // Build the update payload surgically
-    const data: any = {};
+    // Prepare update data (only set fields provided)
+    const data: Record<string, any> = {}
+    if (hasSmsOptIn) data.guardianSmsOptIn = smsOptIn
+    if (healthConsentAt !== undefined) data.healthConsentAt = healthConsentAt
 
-    // Map smsOptIn -> guardianSmsOptIn only if provided
-    if (typeof body.smsOptIn === 'boolean') {
-      data.guardianSmsOptIn = body.smsOptIn;
-    }
-
-    // healthConsentAt handling
-    if (body.hasOwnProperty('healthConsentAt')) {
-      const v = body.healthConsentAt;
-      if (v === null) {
-        data.healthConsentAt = null; // clear
-      } else if (typeof v === 'string') {
-        if (v.toUpperCase() === 'NOW') {
-          data.healthConsentAt = new Date();
-        } else {
-          const d = new Date(v);
-          if (isNaN(d.getTime())) {
-            return new Response(JSON.stringify({ error: 'healthConsentAt must be ISO date string, "NOW", or null' }), {
-              status: 400,
-              headers: { 'content-type': 'application/json' },
-            });
-          }
-          data.healthConsentAt = d;
-        }
-      }
-      // if undefined, do not set (leave unchanged)
-    }
-
-    if (Object.keys(data).length === 0) {
-      // Nothing to update—treat as success to avoid noisy failures
-      return new Response(JSON.stringify({ ok: true, unchanged: true }), {
+    // If nothing to update, still return current (and skip audit)
+    if (!Object.keys(data).length) {
+      return new Response(JSON.stringify({ ok: true, updated: false, student: current }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
-      });
+      })
     }
 
     const updated = await prisma.student.update({
@@ -85,20 +94,51 @@ export async function POST(req: NextRequest) {
       data,
       select: {
         id: true,
+        tenantId: true,
+        firstName: true,
+        lastName: true,
+        guardianName: true,
+        guardianPhone: true,
         guardianSmsOptIn: true,
         healthConsentAt: true,
       },
-    });
+    })
 
-    return new Response(JSON.stringify({ ok: true, student: updated }), {
+    // Write audit (best-effort; don't fail the request if audit fails)
+    try {
+      await prisma.auditLog.create({
+        data: {
+          tenantId: updated.tenantId,
+          userId: actorId || null,
+          action: 'CONSENT_STUDENT_UPDATE',
+          resource: 'Student',
+          resourceId: updated.id,
+          metadata: {
+            actorId: actorId || null,
+            before: {
+              guardianSmsOptIn: current.guardianSmsOptIn,
+              healthConsentAt: current.healthConsentAt,
+            },
+            after: {
+              guardianSmsOptIn: updated.guardianSmsOptIn,
+              healthConsentAt: updated.healthConsentAt,
+            },
+          } as any,
+        },
+      })
+    } catch (e) {
+      console.warn('audit write failed (non-fatal):', e)
+    }
+
+    return new Response(JSON.stringify({ ok: true, updated: true, student: updated }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
-    });
-  } catch (err: any) {
-    console.error('consent/students/update error:', err);
+    })
+  } catch (err) {
+    console.error('consent/students/update error:', err)
     return new Response(JSON.stringify({ error: 'Failed to update student consent' }), {
       status: 500,
       headers: { 'content-type': 'application/json' },
-    });
+    })
   }
 }

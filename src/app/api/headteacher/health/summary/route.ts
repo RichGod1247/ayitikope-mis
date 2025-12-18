@@ -1,141 +1,120 @@
 // src/app/api/headteacher/health/summary/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
 
-function toISODateOnly(input?: string | null): string | null {
-  if (!input) return null
-  const d = new Date(input)
-  if (isNaN(d.getTime())) return null
-  return d.toISOString().slice(0, 10)
-}
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 /**
- * GET /api/headteacher/health/summary?tenantId=...&start=YYYY-MM-DD&end=YYYY-MM-DD&fever=37.8
+ * GET /api/headteacher/health/summary
  *
- * Returns:
- * {
- *   tenantId, start, end, fever,
- *   totals: { entries, fevers, symptomatic },
- *   byClass: Array<{ classroomId, classLabel, entries, fevers, symptomatic }>,
- *   symptoms: Array<{ name, count }>,
- *   days: Array<{ date, entries, fevers }>
- * }
+ * Returns a simple pilot summary of:
+ *  - Student daily health entries in the last 7 days
+ *  - Teacher weekly wellbeing entries in the last 28 days
+ *
+ * This is Step 7 of Phase 6 coming alive inside Phase 8.
  */
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url)
-    const tenantId = String(searchParams.get('tenantId') || '').trim()
-    const start = toISODateOnly(searchParams.get('start'))
-    const end = toISODateOnly(searchParams.get('end'))
-    const fever = Number.isFinite(Number(searchParams.get('fever')))
-      ? Number(searchParams.get('fever'))
-      : 37.8
+    // 1) Auth – ensure headteacher is signed in
+    const session = await getServerSession(authOptions);
+    const user = session?.user as any;
+    const userId: string | undefined = user?.id;
 
-    if (!tenantId || !start || !end) {
-      return new Response(JSON.stringify({ error: 'tenantId, start, end are required' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
+    if (!userId) {
+      return NextResponse.json(
+        { ok: false, error: "Not signed in" },
+        { status: 401 }
+      );
     }
 
-    // IMPORTANT: serialize queries to avoid P2024 with connection_limit=1
-    const rows = await prisma.$queryRaw<Array<{
-      classroomId: string
-      classGrade: string | null
-      classArm: string | null
-      entries: number
-      fevers: number
-      symptomatic: number
-    }>>`
-      WITH base AS (
-        SELECT
-          h."classroomId",
-          c."grade" AS "classGrade",
-          c."arm"   AS "classArm",
-          h."temperatureC",
-          h."symptoms"
-        FROM "edulife_os"."StudentHealthDaily" h
-        JOIN "edulife_os"."Classroom" c ON c."id" = h."classroomId"
-        WHERE h."tenantId" = ${tenantId}
-          AND h."date"::date BETWEEN ${start}::date AND ${end}::date
-      )
-      SELECT
-        "classroomId",
-        "classGrade",
-        "classArm",
-        COUNT(*)::int AS entries,
-        COUNT(CASE WHEN "temperatureC" IS NOT NULL AND "temperatureC" >= ${fever} THEN 1 END)::int AS fevers,
-        COUNT(CASE WHEN "symptoms" IS NOT NULL AND length(trim("symptoms")) > 0 THEN 1 END)::int AS symptomatic
-      FROM base
-      GROUP BY "classroomId", "classGrade", "classArm"
-      ORDER BY "classGrade" NULLS LAST, "classArm" NULLS LAST
-    `
+    // 2) Tenant – find which school this headteacher belongs to
+    const membership = await prisma.membership.findFirst({
+      where: { userId },
+    });
 
-    const symptomRows = await prisma.$queryRaw<Array<{ symptom: string; count: number }>>`
-      WITH base AS (
-        SELECT
-          regexp_split_to_table(
-            COALESCE(h."symptoms", ''),
-            E'\\s*,\\s*'
-          ) AS symptom
-        FROM "edulife_os"."StudentHealthDaily" h
-        WHERE h."tenantId" = ${tenantId}
-          AND h."date"::date BETWEEN ${start}::date AND ${end}::date
-      )
-      SELECT lower(trim(symptom)) AS symptom, COUNT(*)::int AS count
-      FROM base
-      WHERE length(trim(symptom)) > 0
-      GROUP BY lower(trim(symptom))
-      ORDER BY COUNT(*) DESC, symptom ASC
-    `
+    if (!membership?.tenantId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "No tenant membership found for this user.",
+        },
+        { status: 401 }
+      );
+    }
 
-    const dayRows = await prisma.$queryRaw<Array<{ date: string; entries: number; fevers: number }>>`
-      WITH base AS (
-        SELECT
-          h."date"::date::text AS "date",
-          h."temperatureC"
-        FROM "edulife_os"."StudentHealthDaily" h
-        WHERE h."tenantId" = ${tenantId}
-          AND h."date"::date BETWEEN ${start}::date AND ${end}::date
-      )
-      SELECT
-        "date",
-        COUNT(*)::int AS entries,
-        COUNT(CASE WHEN "temperatureC" IS NOT NULL AND "temperatureC" >= ${fever} THEN 1 END)::int AS fevers
-      FROM base
-      GROUP BY "date"
-      ORDER BY "date"::date ASC
-    `
+    const tenantId = membership.tenantId;
 
-    const totals = rows.reduce(
-      (acc, r) => {
-        acc.entries += r.entries
-        acc.fevers += r.fevers
-        acc.symptomatic += r.symptomatic
-        return acc
+    // 3) Time windows
+    const now = new Date();
+    const sevenDaysAgo = new Date(
+      now.getTime() - 7 * 24 * 60 * 60 * 1000
+    );
+    const twentyEightDaysAgo = new Date(
+      now.getTime() - 28 * 24 * 60 * 60 * 1000
+    );
+
+    // 4) Counts from real health tables.
+    //
+    // FIRST VERSION (pilot):
+    //  - only rely on tenantId + createdAt
+    //  - just counts, no breakdown by status yet
+    //
+    // Prisma models (from naming convention):
+    //   model StudentHealthDaily   -> prisma.studentHealthDaily
+    //   model TeacherHealthWeekly  -> prisma.teacherHealthWeekly
+    const [studentDailyCount, teacherWeeklyCount] = await Promise.all([
+      prisma.studentHealthDaily.count({
+        where: {
+          tenantId,
+          createdAt: {
+            gte: sevenDaysAgo,
+          },
+        },
+      }),
+      prisma.teacherHealthWeekly.count({
+        where: {
+          tenantId,
+          createdAt: {
+            gte: twentyEightDaysAgo,
+          },
+        },
+      }),
+    ]);
+
+    return NextResponse.json(
+      {
+        ok: true,
+        tenantId,
+        windows: {
+          studentDailySince: sevenDaysAgo.toISOString(),
+          teacherWeeklySince: twentyEightDaysAgo.toISOString(),
+        },
+        studentDaily: {
+          entriesLast7Days: studentDailyCount,
+        },
+        teacherWeekly: {
+          entriesLast28Days: teacherWeeklyCount,
+        },
       },
-      { entries: 0, fevers: 0, symptomatic: 0 }
-    )
-
-    const byClass = rows.map(r => ({
-      classroomId: r.classroomId,
-      classLabel: r.classGrade ? (r.classArm ? `${r.classGrade}${r.classArm}` : r.classGrade) : (r.classArm ?? ''),
-      entries: r.entries,
-      fevers: r.fevers,
-      symptomatic: r.symptomatic,
-    }))
-
-    const symptoms = symptomRows.map(s => ({ name: s.symptom, count: s.count }))
-    const days = dayRows.map(d => ({ date: d.date, entries: d.entries, fevers: d.fevers }))
-
-    return new Response(JSON.stringify({
-      tenantId, start, end, fever,
-      totals, byClass, symptoms, days
-    }), { status: 200, headers: { 'content-type': 'application/json' } })
-
+      { status: 200 }
+    );
   } catch (err: any) {
-    console.error('headteacher/health/summary error:', err)
-    return new Response(JSON.stringify({ error: 'Failed to load health summary' }), {
-      status: 500, headers: { 'content-type': 'application/json' },
-    })
+    console.error(
+      "Error in /api/headteacher/health/summary",
+      err
+    );
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          err?.message ||
+          "Unexpected error while summarising health & wellbeing.",
+      },
+      { status: 500 }
+    );
   }
 }

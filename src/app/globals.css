@@ -33,3 +33,24 @@
   0% { transform: translateX(0%); }
   100% { transform: translateX(-40%); }
 }
+
+/* =========================
+   Print-friendly styles
+   ========================= */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+  html, body {
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Hide any screen-only chrome/toolbars */
+  .print\:hidden { display: none !important; }
+  /* Optional: remove borders & rounding on print cards if desired */
+  .print\:border-0 { border: 0 !important; }
+  .print\:rounded-none { border-radius: 0 !important; }
+  .print\:p-0 { padding: 0 !important; }
+}

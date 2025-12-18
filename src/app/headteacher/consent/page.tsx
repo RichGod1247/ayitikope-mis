@@ -12,7 +12,7 @@ type StudentRow = {
   guardianName: string | null;
   guardianPhone: string | null;
   healthConsentAt: string | null;
-  smsOptIn: boolean; // mapped from guardianSmsOptIn in API if present
+  smsOptIn: boolean; // from guardianSmsOptIn
 };
 
 type TeacherRow = {
@@ -22,25 +22,53 @@ type TeacherRow = {
   smsOptIn: boolean;
 };
 
+type Me = {
+  ok: boolean;
+  userId: string | null;
+  email: string | null;
+  name: string | null;
+};
+
+type BrandName = 'AyitikopJHS' | 'AyitikPRIM' | 'AyitiAdmin';
+
 function cx(...classes: (string | undefined | false)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-function buildCsvUrls(tenantId?: string, classroomId?: string) {
-  const q = new URLSearchParams();
-  if (tenantId) q.set('tenantId', tenantId);
-  if (classroomId) q.set('classroomId', classroomId);
-  const qs = q.toString() ? `?${q.toString()}` : '';
-  return {
-    students: `/api/consent/students/export/csv${qs}`,
-    teachers: `/api/consent/teachers/export/csv${qs}`,
-  };
+/** Tiny toast */
+type Toast = { id: number; text: string; tone?: 'default' | 'success' | 'error' };
+function ToastHost({ items, remove }: { items: Toast[]; remove: (id: number) => void }) {
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      {items.map(t => (
+        <div
+          key={t.id}
+          className={cx(
+            'rounded-xl px-4 py-3 shadow-md border text-sm bg-white',
+            t.tone === 'success' && 'border-green-300 text-green-800',
+            t.tone === 'error' && 'border-red-300 text-red-800',
+            (!t.tone || t.tone === 'default') && 'border-gray-200 text-gray-800'
+          )}
+          onClick={() => remove(t.id)}
+        >
+          {t.text}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function ConsentPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'students' | 'teachers'>('students');
+
+  // brand selector
+  const [brand, setBrand] = useState<BrandName>('AyitiAdmin');
+
+  // current user (for actorId in CSV links)
+  const [me, setMe] = useState<Me | null>(null);
+  const actorId = me?.userId || null;
 
   // Students
   const [students, setStudents] = useState<StudentRow[]>([]);
@@ -54,31 +82,57 @@ export default function ConsentPage() {
   const [savingTeacherId, setSavingTeacherId] = useState<string | null>(null);
   const [teacherError, setTeacherError] = useState<string | null>(null);
 
-  // Load tenants first
+  // Toasts
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const pushToast = (text: string, tone?: Toast['tone']) => {
+    const id = Math.random();
+    setToasts(prev => [...prev, { id, text, tone }]);
+    setTimeout(() => removeToast(id), 3500);
+  };
+  const removeToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
+
+  // Load brand from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('consent.brand');
+      if (saved === 'AyitikopJHS' || saved === 'AyitikPRIM' || saved === 'AyitiAdmin') {
+        setBrand(saved);
+      }
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem('consent.brand', brand);
+    } catch {}
+  }, [brand]);
+
+  // Load tenants + me
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/test/tenants', { cache: 'no-store' });
-        const data = await res.json();
-        const list = (data?.tenants ?? []) as Tenant[];
+        const [tenantsRes, meRes] = await Promise.all([
+          fetch('/api/test/tenants', { cache: 'no-store' }),
+          fetch('/api/me', { cache: 'no-store' }),
+        ]);
+        const tenantsData = await tenantsRes.json();
+        const meData = (await meRes.json()) as Me;
+
+        const list = (tenantsData?.tenants ?? []) as Tenant[];
         setTenants(list);
-        if (!tenantId && list.length > 0) {
-          setTenantId(list[0].id);
-        }
+        if (!tenantId && list.length > 0) setTenantId(list[0].id);
+        setMe(meData);
       } catch {
-        // noop
+        pushToast('Failed to load tenants or session', 'error');
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load lists whenever tenant/tab changes
   useEffect(() => {
     if (!tenantId) return;
-    if (activeTab === 'students') {
-      loadStudents();
-    } else {
-      loadTeachers();
-    }
+    if (activeTab === 'students') loadStudents();
+    else loadTeachers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, activeTab]);
 
@@ -89,8 +143,6 @@ export default function ConsentPage() {
       const res = await fetch(`/api/consent/students/list?tenantId=${encodeURIComponent(tenantId)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load students');
       const data = await res.json();
-
-      // Expecting shape: { items: [...] }
       const rows: StudentRow[] = (data?.items ?? []).map((s: any) => ({
         id: s.id,
         firstName: s.firstName,
@@ -98,7 +150,6 @@ export default function ConsentPage() {
         guardianName: s.guardianName ?? null,
         guardianPhone: s.guardianPhone ?? null,
         healthConsentAt: s.healthConsentAt ?? null,
-        // Handle either smsOptIn or guardianSmsOptIn from API, default false
         smsOptIn: (typeof s.smsOptIn === 'boolean' ? s.smsOptIn : (s.guardianSmsOptIn ?? false)) as boolean,
       }));
       setStudents(rows);
@@ -116,7 +167,6 @@ export default function ConsentPage() {
       const res = await fetch(`/api/consent/teachers/list?tenantId=${encodeURIComponent(tenantId)}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load teachers');
       const data = await res.json();
-
       const rows: TeacherRow[] = (data?.items ?? []).map((u: any) => ({
         id: u.id,
         name: u.name ?? null,
@@ -139,7 +189,6 @@ export default function ConsentPage() {
       const payload = {
         studentId: row.id,
         smsOptIn: row.smsOptIn,
-        // If you want to keep the current value, pass it through; to "set now", you can pass ISO string on button click
         healthConsentAt: row.healthConsentAt,
       };
       const res = await fetch('/api/consent/students/update', {
@@ -148,15 +197,17 @@ export default function ConsentPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to update student consent');
+      pushToast('Student saved', 'success');
       await loadStudents();
     } catch (e: any) {
       setStudentError(e?.message || 'Failed to save student');
+      pushToast('Save failed', 'error');
     } finally {
       setSavingStudentId(null);
     }
   }
 
-  // “Set Consent Now” convenience
+  // “Set Consent Now”
   async function setStudentConsentNow(id: string) {
     const target = students.find(s => s.id === id);
     if (!target) return;
@@ -175,18 +226,52 @@ export default function ConsentPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to update teacher consent');
+      pushToast('Teacher saved', 'success');
       await loadTeachers();
     } catch (e: any) {
       setTeacherError(e?.message || 'Failed to save teacher');
+      pushToast('Save failed', 'error');
     } finally {
       setSavingTeacherId(null);
     }
   }
 
+  async function sendCampaign() {
+    if (!tenantId) return;
+    try {
+      pushToast('Sending campaign…');
+      const res = await fetch('/api/consent/campaign/send', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tenantId,
+          brand,   // selected brand
+          limit: 25,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        pushToast(`Campaign failed: ${data?.error || res.statusText}`, 'error');
+        return;
+      }
+      const cnt = data?.count ?? 0;
+      pushToast(`Campaign queued (${cnt} guardians)`, 'success');
+    } catch {
+      pushToast('Campaign error', 'error');
+    }
+  }
+
   const currentTenant = useMemo(() => tenants.find(t => t.id === tenantId), [tenants, tenantId]);
 
-  // Pre-build CSV URLs
-  const { students: studentsCsvUrl, teachers: teachersCsvUrl } = buildCsvUrls(tenantId);
+  const studentsCsvHref =
+    tenantId
+      ? `/api/consent/students/csv?tenantId=${encodeURIComponent(tenantId)}${actorId ? `&actorId=${encodeURIComponent(actorId)}` : ''}`
+      : '#';
+
+  const teachersCsvHref =
+    tenantId
+      ? `/api/consent/teachers/csv?tenantId=${encodeURIComponent(tenantId)}${actorId ? `&actorId=${encodeURIComponent(actorId)}` : ''}`
+      : '#';
 
   return (
     <div className="p-6 space-y-6">
@@ -195,7 +280,14 @@ export default function ConsentPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Consent Center</h1>
-            <p className="text-sm text-gray-500">Privacy-first controls for guardians and staff (opt-in, consent, audit & exports).</p>
+            <p className="text-sm text-gray-500">
+              Privacy-first controls for guardians and staff (opt-in, consent, audit, exports, campaigns).
+            </p>
+            {currentTenant && (
+              <p className="text-xs text-gray-400 mt-1">
+                Tenant: <span className="font-medium">{currentTenant.name}</span>
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -211,6 +303,18 @@ export default function ConsentPage() {
               ))}
             </select>
 
+            {/* Brand select */}
+            <select
+              className="border rounded-lg px-3 py-2 text-sm"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value as BrandName)}
+              title="SMS Brand / Sender ID"
+            >
+              <option value="AyitikopJHS">AyitikopJHS</option>
+              <option value="AyitikPRIM">AyitikPRIM</option>
+              <option value="AyitiAdmin">AyitiAdmin</option>
+            </select>
+
             {/* Quick links toolbar */}
             <Link
               href="/headteacher/consent/audit"
@@ -219,28 +323,40 @@ export default function ConsentPage() {
               View Audit
             </Link>
 
-            {/* Export buttons wired to API CSV endpoints */}
             <a
-              href={tenantId ? studentsCsvUrl : undefined}
-              download
+              href={studentsCsvHref}
               className={cx(
                 'rounded-xl border px-3 py-2 text-sm hover:bg-gray-50',
-                !tenantId && 'pointer-events-none opacity-50'
+                (!tenantId || !me) && 'pointer-events-none opacity-50'
               )}
+              target="_blank"
+              rel="noreferrer"
+              title={me ? 'Download Students CSV' : 'Loading user…'}
             >
               Export Students CSV
             </a>
 
             <a
-              href={tenantId ? teachersCsvUrl : undefined}
-              download
+              href={teachersCsvHref}
               className={cx(
                 'rounded-xl border px-3 py-2 text-sm hover:bg-gray-50',
-                !tenantId && 'pointer-events-none opacity-50'
+                (!tenantId || !me) && 'pointer-events-none opacity-50'
               )}
+              target="_blank"
+              rel="noreferrer"
+              title={me ? 'Download Teachers CSV' : 'Loading user…'}
             >
               Export Teachers CSV
             </a>
+
+            <button
+              onClick={sendCampaign}
+              className="rounded-xl bg-blue-600 text-white px-3 py-2 text-sm hover:bg-blue-700 disabled:opacity-50"
+              disabled={!tenantId}
+              title="Send consent campaign SMS to a small batch"
+            >
+              Send Campaign
+            </button>
           </div>
         </div>
 
@@ -275,7 +391,7 @@ export default function ConsentPage() {
           )}
           <div className="rounded-2xl border p-4">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">Guardian Consent & SMS</h2>
+              <h2 className="text-lg font-medium">Guardian Consent &amp; SMS</h2>
               <button
                 onClick={loadStudents}
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
@@ -286,7 +402,7 @@ export default function ConsentPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-[800px] w-full text-sm">
+              <table className="min-w-[980px] w-full text-sm">
                 <thead className="text-left">
                   <tr className="border-b bg-gray-50">
                     <th className="p-2">Student</th>
@@ -317,8 +433,23 @@ export default function ConsentPage() {
                           <span>{s.smsOptIn ? 'Yes' : 'No'}</span>
                         </label>
                       </td>
-                      <td className="p-2 text-right">
-                        <div className="flex justify-end gap-2">
+                      <td className="p-2">
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          <Link
+                            href={`/headteacher/consent/letters/student/${encodeURIComponent(s.id)}`}
+                            className="rounded-lg border px-3 py-1.5 hover:bg-gray-50"
+                            target="_blank"
+                          >
+                            View Letter
+                          </Link>
+                          <a
+                            href={`/api/consent/letters/student/${encodeURIComponent(s.id)}/pdf`}
+                            className="rounded-lg border px-3 py-1.5 hover:bg-gray-50"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Print PDF
+                          </a>
                           <button
                             onClick={() => setStudentConsentNow(s.id)}
                             className="rounded-lg border px-3 py-1.5 hover:bg-gray-50"
@@ -366,7 +497,7 @@ export default function ConsentPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-[700px] w-full text-sm">
+              <table className="min-w-[900px] w-full text-sm">
                 <thead className="text-left">
                   <tr className="border-b bg-gray-50">
                     <th className="p-2">Name</th>
@@ -393,14 +524,23 @@ export default function ConsentPage() {
                           <span>{t.smsOptIn ? 'Yes' : 'No'}</span>
                         </label>
                       </td>
-                      <td className="p-2 text-right">
-                        <button
-                          onClick={() => saveTeacher(t)}
-                          className="rounded-lg bg-blue-600 text-white px-3 py-1.5 hover:bg-blue-700 disabled:opacity-50"
-                          disabled={savingTeacherId === t.id}
-                        >
-                          {savingTeacherId === t.id ? 'Saving…' : 'Save'}
-                        </button>
+                      <td className="p-2">
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          <Link
+                            href={`/headteacher/consent/letters/teacher/${encodeURIComponent(t.id)}`}
+                            className="rounded-lg border px-3 py-1.5 hover:bg-gray-50"
+                            target="_blank"
+                          >
+                            View Letter
+                          </Link>
+                          <button
+                            onClick={() => saveTeacher(t)}
+                            className="rounded-lg bg-blue-600 text-white px-3 py-1.5 hover:bg-blue-700 disabled:opacity-50"
+                            disabled={savingTeacherId === t.id}
+                          >
+                            {savingTeacherId === t.id ? 'Saving…' : 'Save'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -416,6 +556,8 @@ export default function ConsentPage() {
           </div>
         </div>
       )}
+
+      <ToastHost items={toasts} remove={removeToast} />
     </div>
   );
 }

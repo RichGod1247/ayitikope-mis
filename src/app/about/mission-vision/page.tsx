@@ -1,7 +1,6 @@
 // src/app/about/mission-vision/page.tsx
 import CoreValues from "../../../components/CoreValues";
 
-
 export default function MissionVisionValuesPage() {
   return (
     <section className="space-y-12">

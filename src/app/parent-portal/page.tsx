@@ -1,80 +1,111 @@
 // src/app/parent-portal/page.tsx
-import Image from "next/image";
-import SignInForm from "@/components/SignInForm";
 
-export default function ParentsPortalPage() {
+import type { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { ParentPortalClient } from "@/components/ParentPortalClient";
+
+export const metadata: Metadata = {
+  title: "Parent Portal | EduLife OS",
+  description:
+    "Parent view of learners with simple fees and attendance summary.",
+};
+
+export const dynamic = "force-dynamic";
+
+type SafeStudent = {
+  id: string;
+  firstName: string;
+  lastName: string;
+};
+
+export default async function ParentPortalPage() {
+  // 1) Auth – ensure user is signed in
+  const session = await getServerSession(authOptions);
+  const user = session?.user as any;
+  const userId: string | undefined = user?.id;
+
+  if (!userId) {
+    redirect(`/api/auth/signin?callbackUrl=/parent-portal`);
+  }
+
+  // 2) Tenant – find which school this parent belongs to
+  const membership = await prisma.membership.findFirst({
+    where: { userId },
+    include: {
+      tenant: true,
+    },
+  });
+
+  if (!membership?.tenantId) {
+    redirect("/");
+  }
+
+  const tenantId = membership.tenantId;
+  const tenantName = membership.tenant?.name ?? "Your school";
+
+  // 3) Load learners for this tenant.
+  // For now, this is "all learners for the school" – later,
+  // we can restrict this to JUST the children linked to this parent.
+  const students = await prisma.student.findMany({
+    where: {
+      tenantId,
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+    },
+    orderBy: {
+      firstName: "asc",
+    },
+  });
+
+  const safeStudents: SafeStudent[] = students.map((s) => ({
+    id: s.id,
+    firstName: s.firstName ?? "",
+    lastName: s.lastName ?? "",
+  }));
+
   return (
-    <main className="container mx-auto px-6 py-10">
-      {/* Hero header */}
-      <header className="relative overflow-hidden rounded-2xl border bg-white shadow-sm">
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-emerald-50 via-white to-emerald-50" />
-        <div className="relative flex items-center gap-4 px-6 py-6">
-          <div className="rounded-xl border bg-white p-3 shadow-sm">
-            <Image
-              src="/portal.png"
-              alt="Parents Portal"
-              width={64}
-              height={64}
-              className="rounded-md object-cover"
-              priority
-            />
-          </div>
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8 space-y-6">
+        {/* Header */}
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-emerald-900">
-              Parents Portal
+            <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-800">
+              EduLife OS · Parent Portal
+            </div>
+            <h1 className="mt-2 text-xl font-semibold text-slate-900 sm:text-2xl">
+              {tenantName} – your child&apos;s progress
             </h1>
-            <p className="mt-1 text-gray-700">
-              Check your child’s admissions status, attendance, assessments, and announcements.
+            <p className="mt-1 max-w-2xl text-xs text-slate-600 sm:text-sm">
+              View a simple{" "}
+              <span className="font-semibold">
+                fees and attendance summary
+              </span>{" "}
+              for each learner, so you can stay in sync with the school.
             </p>
           </div>
-        </div>
-      </header>
-
-      {/* Two-column: info + form */}
-      <section className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        {/* Info card */}
-        <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-emerald-800">What you can do</h2>
-          <ul className="mt-3 space-y-2 text-gray-700">
-            <li>• Track admissions & updates</li>
-            <li>• View attendance snapshots and term summaries</li>
-            <li>• See results and continuous assessment (when published)</li>
-            <li>• Receive official notices via WhatsApp (connected already!)</li>
-          </ul>
-          <p className="mt-4 text-sm text-gray-600">
-            (Demo only for now — we’ll map real parent accounts to student records next.)
-          </p>
-        </div>
-
-        {/* Sign-in card with logo header */}
-        <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-center">
-            <div className="flex flex-col items-center">
-              <Image
-                src="/logo.png"
-                alt="Ayitikope M/A Basic School"
-                width={72}
-                height={72}
-                className="rounded-lg object-contain"
-                priority
-              />
-              <div className="mt-2 text-sm font-semibold text-emerald-900">
-                Ayitikope M/A Basic School
-              </div>
-            </div>
+          <div className="text-xs text-right text-slate-500 space-y-1">
+            <p>
+              Signed in as{" "}
+              <span className="font-semibold">
+                {session?.user?.email ?? "Parent"}
+              </span>
+            </p>
+            <p className="text-[11px]">
+              Learners in school:{" "}
+              <span className="font-semibold">{safeStudents.length}</span>
+            </p>
           </div>
+        </header>
 
-          <div className="flex items-start justify-center">
-            <div className="w-full max-w-md">
-              <SignInForm role="parent" />
-            </div>
-          </div>
-
-          <p className="mt-4 text-center text-xs text-gray-500">
-            Need help? Contact your child’s class teacher or the office.
-          </p>
-        </div>
-      </section>
+        {/* Main parent portal client */}
+        <ParentPortalClient initialStudents={safeStudents} />
+      </div>
     </main>
   );
 }

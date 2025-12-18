@@ -1,148 +1,125 @@
 // src/app/api/health/student/daily/upsert/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { sendSMS } from '@/lib/sms'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-type IncomingItem = {
-  studentId: string
-  date: string // ISO YYYY-MM-DD (preferred) or parseable date
-  temperatureC?: number | null
-  symptoms?: string | null
-  notes?: string | null
-  tenantId?: string // optional hint from UI
-  classroomId?: string // optional hint from UI
-}
-
-function toDateOnly(input: string): Date {
-  const d = new Date(input)
-  if (isNaN(d.getTime())) throw new Error(`Invalid date: ${input}`)
-  const iso = d.toISOString().slice(0, 10)
-  return new Date(`${iso}T00:00:00.000Z`)
-}
-
-function hasSmsConsentFromNote(note?: string | null): boolean {
-  if (!note) return false
-  return /\[consent:\s*sms\]/i.test(note)
-}
+type UpsertItem = {
+  studentId: string;
+  temperatureC?: number | null;
+  symptoms?: string | null;
+  notes?: string | null;
+  sendSms?: boolean; // comes from client, but not stored here
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null)
-    if (!body || !Array.isArray(body.items)) {
-      return new Response(JSON.stringify({ error: 'Invalid payload: { items: [...] } required' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' },
-      })
-    }
+    const body = await req.json().catch(() => ({} as any));
+    const tenantId: string | undefined = body.tenantId;
+    const classroomId: string | undefined = body.classroomId;
+    const dateStr: string | undefined = body.date;
+    const items: UpsertItem[] = Array.isArray(body.items) ? body.items : [];
 
-    const items: IncomingItem[] = body.items
-    if (items.length === 0) {
-      return new Response(JSON.stringify({ saved: 0, smsQueued: 0, skipped: 0 }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    let saved = 0
-    let smsQueued = 0
-    let skipped = 0
-
-    // Process sequentially to reduce pool pressure
-    for (const it of items) {
-      const { studentId } = it
-      if (!studentId) { skipped++; continue }
-
-      let dateOnly: Date
-      try {
-        dateOnly = toDateOnly(it.date)
-      } catch {
-        skipped++
-        continue
-      }
-
-      // Fetch student first to derive required fields
-      const student = await prisma.student.findUnique({
-        where: { id: studentId },
-        select: {
-          id: true,
-          tenantId: true,
-          classroomId: true,
-          firstName: true,
-          lastName: true,
-          guardianPhone: true,
-          note: true,
+    if (!tenantId || !classroomId || !dateStr) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "tenantId, classroomId, and date are required to save daily health.",
         },
-      })
+        { status: 400 }
+      );
+    }
 
-      if (!student) { skipped++; continue }
+    if (!items.length) {
+      return NextResponse.json(
+        { ok: true, itemsSaved: 0, message: "No health items to save." },
+        { status: 200 }
+      );
+    }
 
-      // Resolve required strings (schema requires non-null)
-      const tenantId = (it.tenantId ?? student.tenantId)?.trim()
-      const classroomId = (it.classroomId ?? student.classroomId ?? '')?.trim()
+    const baseDate = new Date(dateStr);
+    if (Number.isNaN(baseDate.getTime())) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Invalid date format for health entries.",
+        },
+        { status: 400 }
+      );
+    }
 
-      if (!tenantId || !classroomId) {
-        // Cannot create due to schema non-null constraints
-        skipped++
-        continue
-      }
+    const client: any = prisma as any;
+    const filtered = items.filter((x) => !!x.studentId);
+
+    let savedCount = 0;
+
+    // IMPORTANT: do this SEQUENTIALLY to be friendly to connection_limit=1
+    for (const item of filtered) {
+      const { studentId } = item;
+
+      const existing = await client.studentHealthDaily.findFirst({
+        where: {
+          tenantId,
+          classroomId,
+          studentId,
+          date: baseDate,
+        },
+        select: { id: true },
+      });
 
       const data = {
         tenantId,
         classroomId,
         studentId,
-        date: dateOnly,
-        temperatureC: typeof it.temperatureC === 'number' ? it.temperatureC : null,
-        symptoms: it.symptoms ?? null,
-        notes: it.notes ?? null,
+        date: baseDate,
+        temperatureC:
+          typeof item.temperatureC === "number" ? item.temperatureC : null,
+        symptoms:
+          typeof item.symptoms === "string" && item.symptoms.trim().length
+            ? item.symptoms.trim()
+            : null,
+        notes:
+          typeof item.notes === "string" && item.notes.trim().length
+            ? item.notes.trim()
+            : null,
+      };
+
+      if (existing) {
+        await client.studentHealthDaily.update({
+          where: { id: existing.id },
+          data,
+        });
+      } else {
+        await client.studentHealthDaily.create({ data });
       }
 
-      await prisma.studentHealthDaily.upsert({
-        where: { StudentHealthDaily_unique_student_date: { studentId, date: dateOnly } },
-        // On update we also refresh tenant/classroom to keep it consistent with current enrollment
-        update: data,
-        create: data,
-        select: { id: true },
-      })
-
-      saved += 1
-
-      // Consent + SMS (from student.note token and phone present)
-      const consent = hasSmsConsentFromNote(student.note)
-      const phone = (student.guardianPhone || '').trim()
-
-      if (consent && phone) {
-        const fullName = [student.firstName, student.lastName].filter(Boolean).join(' ')
-        const dayStr = dateOnly.toISOString().slice(0, 10)
-        const tempPart =
-          typeof it.temperatureC === 'number'
-            ? `Temp ${it.temperatureC.toFixed(1)}°C`
-            : 'Temp N/A'
-        const symptomsPart = it.symptoms?.trim() ? `; Symptoms: ${it.symptoms.trim()}` : ''
-        const msg = `Ayitikope M/A: ${fullName} health for ${dayStr} — ${tempPart}${symptomsPart}. If unwell, please follow up.`
-        try {
-          await sendSMS({
-            to: phone,
-            message: msg,
-            tenantId,                     // <-- REQUIRED for audit insert
-            // kind: 'student-health',    // optional, not persisted yet
-            // meta: { studentId, classroomId, date: dayStr }, // optional, not persisted
-          })
-          smsQueued += 1
-        } catch {
-          // swallow SMS errors; optional: log
-        }
-      }
+      savedCount += 1;
     }
 
-    return new Response(JSON.stringify({ saved, smsQueued, skipped }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    })
+    return NextResponse.json(
+      {
+        ok: true,
+        itemsSaved: savedCount,
+        message: `Saved ${savedCount} daily health entr${
+          savedCount === 1 ? "y" : "ies"
+        }.`,
+      },
+      { status: 200 }
+    );
   } catch (err: any) {
-    console.error('student/daily/upsert error:', err)
-    return new Response(JSON.stringify({ error: 'Failed to upsert student health' }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-    })
+    console.error("[HEALTH_DAILY_UPSERT_ERROR]", err);
+
+    // If it's a Prisma connection timeout, give a clearer hint
+    const code = err?.code as string | undefined;
+    const isPoolTimeout = code === "P2024" || code === "P1001";
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: isPoolTimeout
+          ? "Health save timed out while talking to the database. Please try again in a moment. (If this repeats, ask admin to increase DB connection limit.)"
+          : "Failed to save daily health records. Please try again or contact the administrator.",
+      },
+      { status: isPoolTimeout ? 503 : 500 }
+    );
   }
 }

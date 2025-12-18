@@ -1,74 +1,98 @@
-'use client'
-import { useEffect, useState } from 'react'
+// src/app/headteacher/consent/letters/teacher/[userId]/page.tsx
+import { prisma } from '@/lib/prisma'
 
-type Teacher = {
-  id: string
-  name: string | null
-  email: string | null
-  smsOptIn: boolean | null
+export const dynamic = 'force-dynamic'
+
+type PageProps = {
+  params: Promise<{ userId: string }>
 }
 
-export default function TeacherConsentLetter({ params }: { params: { userId: string } }) {
-  const [tenantName, setTenantName] = useState('School')
-  const [t, setT] = useState<Teacher | null>(null)
-  const [loading, setLoading] = useState(true)
+export default async function TeacherConsentLetterPage(props: PageProps) {
+  const { userId } = await props.params
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const ten = await fetch('/api/test/tenants').then(r => r.json())
-        if (ten?.tenants?.[0]?.name) setTenantName(ten.tenants[0].name)
+  // Load teacher + their first tenant (via membership)
+  const teacher = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      smsOptIn: true,
+      memberships: {
+        select: {
+          tenant: { select: { id: true, name: true, slug: true } },
+          status: true,
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 1,
+      },
+    },
+  })
 
-        const res = await fetch(`/api/consent/teachers/detail?userId=${params.userId}`)
-        const data = await res.json()
-        setT(data?.user ?? null)
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [params.userId])
+  if (!teacher) {
+    return (
+      <div className="p-6 text-red-600">
+        Teacher not found.
+      </div>
+    )
+  }
 
-  if (loading) return <div className="p-6">Loading...</div>
-  if (!t) return <div className="p-6 text-red-600">Teacher not found.</div>
+  const tenant = teacher.memberships[0]?.tenant
+  const tenantName = tenant?.name ?? 'School'
+  const tenantSlug = tenant?.slug ?? 'default'
+  const logoSrc = `/logos/${tenantSlug}.png`
 
   return (
-    <div className="max-w-[800px] mx-auto p-8 bg-white">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{tenantName}</h1>
-        <button
-          onClick={() => window.print()}
-          className="px-3 py-2 rounded-lg border text-sm hover:bg-gray-50 print:hidden"
-        >
-          Print / Save as PDF
-        </button>
-      </div>
+    <div className="p-6">
+      <div className="mx-auto w-full max-w-[800px] bg-white shadow-sm border rounded-xl p-8 print:shadow-none print:border-0 print:p-0">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b pb-4 mb-6">
+          <div className="flex items-center gap-3">
+            <img
+              src={logoSrc}
+              alt={`${tenantName} logo`}
+              className="h-12 w-auto"
+            />
+            <div>
+              <div className="text-lg font-semibold">{tenantName}</div>
+              <div className="text-xs text-zinc-600">
+                Teacher SMS Opt-in Letter
+              </div>
+            </div>
+          </div>
 
-      <h2 className="text-xl font-semibold mb-2">Staff SMS Consent Letter</h2>
-      <p className="text-sm text-gray-600 mb-6">Weekly wellbeing check-ins & notifications</p>
-
-      <div className="space-y-1 text-sm">
-        <div><span className="font-semibold">Name:</span> {t.name}</div>
-        <div><span className="font-semibold">Email:</span> {t.email}</div>
-        <div><span className="font-semibold">SMS Opt-in:</span> {t.smsOptIn ? 'Yes' : 'No'}</div>
-      </div>
-
-      <hr className="my-6" />
-
-      <p className="text-sm leading-6">
-        Dear Staff, <br />
-        We invite you to opt-in to receive weekly wellbeing reminders (stress/workload check-ins) via SMS
-        and allow us to store your responses for internal wellness support. Data is confidential and aligned
-        with Ghana’s Data Protection Act (2012). You may opt out at any time.
-      </p>
-
-      <div className="mt-8 grid grid-cols-2 gap-6">
-        <div>
-          <div className="h-24 border rounded-lg" />
-          <div className="text-xs mt-2 text-gray-600">Staff Signature &amp; Date</div>
+          <div className="text-right text-xs text-zinc-500">
+            Generated on {new Date().toLocaleDateString()}
+          </div>
         </div>
-        <div>
-          <div className="h-24 border rounded-lg" />
-          <div className="text-xs mt-2 text-gray-600">School Representative Signature &amp; Date</div>
+
+        {/* Body */}
+        <div className="space-y-4 text-[0.95rem] leading-6">
+          <p>
+            Dear <strong>{teacher.name ?? 'Teacher'}</strong>,
+          </p>
+          <p>
+            This letter documents your SMS communication preference with <strong>{tenantName}</strong>.
+            By opting in, you agree to receive messages related to school operations (e.g., attendance
+            summaries, health reminders, or official announcements). Standard carrier rates may apply.
+          </p>
+
+          <div className="rounded-lg border p-4 bg-zinc-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div><span className="text-zinc-500">Name:</span> <strong>{teacher.name ?? '—'}</strong></div>
+              <div><span className="text-zinc-500">Email:</span> <strong>{teacher.email ?? '—'}</strong></div>
+              <div><span className="text-zinc-500">SMS Opt-in:</span> <strong>{teacher.smsOptIn ? 'Yes' : 'No'}</strong></div>
+            </div>
+          </div>
+
+          <p className="mt-6">
+            Sincerely,<br />
+            <strong>{tenantName}</strong>
+          </p>
+        </div>
+
+        <div className="mt-8 hidden print:block text-center text-xs text-zinc-500">
+          — End of Letter —
         </div>
       </div>
     </div>

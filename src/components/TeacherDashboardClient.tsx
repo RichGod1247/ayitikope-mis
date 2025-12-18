@@ -39,13 +39,13 @@ type RecentEntry = {
 
 type Chip = {
   key: string;
-  label: string;            // usually class_code or class_name
-  href: string;             // where to record assessment
-  kind: "HR" | "SJ";        // homeroom vs subject
-  sub?: string;             // subject or level label
+  label: string; // usually class_code or class_name
+  href: string; // where to record assessment
+  kind: "HR" | "SJ"; // homeroom vs subject
+  sub?: string; // subject or level label
   term?: string | null;
   year?: string | null;
-  count?: number;           // today count
+  count?: number; // today count
   classSize?: number | null;
   latestISO?: string | null;
 };
@@ -59,6 +59,12 @@ export default function TeacherDashboardClient({
   latestMap,
   recentToday,
   alerts,
+  // NEW: optional portal-style context
+  tenantId,
+  teacherUserId,
+  defaultTerm = "1st Term",
+  defaultAcademicYear = "2025/2026",
+  demoClassroomId,
 }: {
   teacher: Teacher;
   homeroom: Homeroom;
@@ -68,6 +74,11 @@ export default function TeacherDashboardClient({
   latestMap: Record<string, string | null>;
   recentToday: RecentEntry[];
   alerts: string[];
+  tenantId?: string;
+  teacherUserId?: string;
+  defaultTerm?: string;
+  defaultAcademicYear?: string;
+  demoClassroomId?: string;
 }) {
   const displayName =
     [teacher?.first_name, teacher?.last_name].filter(Boolean).join(" ").trim() ||
@@ -79,6 +90,36 @@ export default function TeacherDashboardClient({
     const id = setInterval(() => location.reload(), 30000);
     return () => clearInterval(id);
   }, [autoRefresh]);
+
+  // ==============================
+  // URLs aligned with TeacherPortal
+  // ==============================
+
+  const hasPortalContext = Boolean(tenantId && teacherUserId);
+
+  const lessonNotesWorkspaceUrl = hasPortalContext
+    ? `/teacher/lesson-notes?tenantId=${encodeURIComponent(
+        tenantId!
+      )}&teacherUserId=${encodeURIComponent(teacherUserId!)}`
+    : "/teacher/lesson-notes";
+
+  const termDashboardUrl = hasPortalContext
+    ? `/teacher/assessment/term-dashboard?tenantId=${encodeURIComponent(
+        tenantId!
+      )}&teacherUserId=${encodeURIComponent(teacherUserId!)}${
+        demoClassroomId
+          ? `&classroomId=${encodeURIComponent(demoClassroomId)}`
+          : ""
+      }&term=${encodeURIComponent(defaultTerm)}&academicYear=${encodeURIComponent(
+        defaultAcademicYear
+      )}`
+    : "/teacher/assessment";
+
+  const attendanceUrl = hasPortalContext
+    ? `/teacher/attendance?tenantId=${encodeURIComponent(
+        tenantId!
+      )}&teacherUserId=${encodeURIComponent(teacherUserId!)}`
+    : "/teacher/attendance";
 
   // Build homeroom chip (0 or 1)
   const homeroomChips: Chip[] =
@@ -142,24 +183,43 @@ export default function TeacherDashboardClient({
                 ID: <span className="font-mono">{teacher.teacher_id}</span>
               </p>
             )}
+            {hasPortalContext && (
+              <p className="text-[11px] text-gray-500 mt-1">
+                Tenant:{" "}
+                <span className="font-mono">
+                  {tenantId!.slice(0, 8)}…
+                </span>{" "}
+                · Term: {defaultTerm} · Year: {defaultAcademicYear}
+              </p>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              className="rounded-lg border bg-white px-3 py-1.5 text-xs hover:bg-gray-50"
-              onClick={() => location.reload()}
-              type="button"
-            >
-              Refresh now
-            </button>
-            <label className="inline-flex items-center gap-2 text-xs text-gray-700">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-              />
-              Auto refresh (30s)
-            </label>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                className="rounded-lg border bg-white px-3 py-1.5 text-xs hover:bg-gray-50"
+                onClick={() => location.reload()}
+                type="button"
+              >
+                Refresh now
+              </button>
+              <label className="inline-flex items-center gap-2 text-xs text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                />
+                Auto refresh (30s)
+              </label>
+            </div>
+            {hasPortalContext && (
+              <Link
+                href="/teacher-portal"
+                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] text-sky-800 hover:bg-sky-100"
+              >
+                Open calm Teacher Portal
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -367,7 +427,7 @@ export default function TeacherDashboardClient({
           <h2 className="text-lg font-semibold text-gray-900">
             My recent entries (today)
           </h2>
-          <div className="text-xs text-gray-500">{recentToday.length} shown</div>
+        <div className="text-xs text-gray-500">{recentToday.length} shown</div>
         </div>
 
         {recentToday.length ? (
@@ -413,19 +473,37 @@ export default function TeacherDashboardClient({
         )}
       </section>
 
-      {/* Quick links */}
+      {/* Quick links – now aligned with portal URLs */}
       <section className="rounded-2xl border bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Quick Links</h2>
-        <div className="mt-3 flex flex-wrap gap-3">
+        <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <Link
+            href={attendanceUrl}
+            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
+          >
+            📅 Take today&apos;s attendance
+          </Link>
+          <Link
+            href={lessonNotesWorkspaceUrl}
+            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
+          >
+            ✏️ Open Lesson Notes workspace
+          </Link>
+          <Link
+            href={termDashboardUrl}
+            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
+          >
+            📊 View my class term dashboard
+          </Link>
           <Link
             href="/teacher-portal"
-            className="rounded-lg border bg-white px-4 py-2 text-sm hover:bg-gray-50"
+            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
           >
-            Back to Teachers Portal
+            Calm Teacher Portal (full daily flow)
           </Link>
           <Link
             href="/admin/assessments"
-            className="rounded-lg border bg-white px-4 py-2 text-sm hover:bg-gray-50"
+            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
           >
             Admin Assessments (view)
           </Link>
