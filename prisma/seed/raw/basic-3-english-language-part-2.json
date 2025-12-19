@@ -1,0 +1,494 @@
+{
+  "part": "2/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 3",
+      "subject": "English Language",
+      "name": "Basic 3 English Language",
+      "slug": "basic-3-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 3 English Language curriculum deepens the development of listening, speaking, reading, and writing skills. It emphasizes oral language competence through storytelling, conversation, and presentation, while advancing reading proficiency with phonics, vocabulary, and comprehension strategies.",
+      "strands": [
+        {
+          "code": "B3.2",
+          "title": "Reading",
+          "description": "Developing reading skills through phonics, word families, vocabulary, comprehension, and fluency.",
+          "orderIndex": 2,
+          "subStrands": [
+            {
+              "code": "B3.2.2",
+              "title": "Phonics",
+              "description": "Connecting sounds to letters and blending them to read and write.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B3.2.2.1",
+                  "description": "Connect sounds to letters and blend letters/syllables in order to read and write",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.2.2.1.1",
+                      "description": "Understand the relationship between spelling of words and sounds of speech",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners revise writing out some words as you pronounce them. (You can also make them read words on the board or word cards)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Provide activities for learners to use letter names and sounds to spell and sound out words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.2.1.2",
+                      "description": "Use the alphabetic knowledge to decode unknown words (e.g. consonant blends, consonant digraphs, vowel sounds, vowel diagraphs and word patterns)",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners sing an alphabet song."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Introduce consonant blends and digraphs, one at a time and have learners form words out of them and use them in sentences. Note: An important thing to remember is that a digraph is made of two letters, although the letters spell a sound e.g. bl, br, ch, ck, cl, cr, dr, fl, fr, gh, gl"
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Use the same procedure to teach vowel digraphs e. g. ai, ee, ea, ie, ei, oo, oe, oo, ue, oi, au"
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.2.1.3",
+                      "description": "Use basic elements of structural analysis (e.g prefixes, suffixes, compound, root words) to decode unknown words",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners with examples to use the structure of words to decode."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Introduce words and have learners look for the parts. e.g. syllables, prefixes and suffixes."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners identify words with similar parts/structures."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.2.3",
+              "title": "Word Families-Rhyming Endings and Common Digraphs",
+              "description": "Using rhyming endings and digraphs to enhance reading comprehension.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B3.2.3.1",
+                  "description": "Employ knowledge of rhyming endings and common digraphs to enhance reading comprehension",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.2.3.1.1",
+                      "description": "Use common rhyming/endings words for decoding of words",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to simple word formation by changing the beginning letter. e.g. pin, sin, fin"
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners build on these rhyming endings and read out the words to their group members."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners form sentences with these rhyming words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.3.1.2",
+                      "description": "Use words containing digraphs to make meaningful sentences",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to simple digraphs as in: sh- shirt, ch- church, gh- Ghana, ph-phone"
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners build as many words as possible with the digraphs and form meaningful sentences with some of the words."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.2.4",
+              "title": "Diphthongs",
+              "description": "Understanding and using diphthongs.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B3.2.4.1",
+                  "description": "Show understanding of diphthongs",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.2.4.1.1",
+                      "description": "Use diphthongs to build words",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise digraphs and have learners identify them in words."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Introduce diphthongs in context. e.g. ou-out, loud, cloud"
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Through think-pair-share, let learners generate diphthongs and build words with them."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.2.5",
+              "title": "Blends and Consonant Clusters",
+              "description": "Identifying and using consonant blends.",
+              "orderIndex": 5,
+              "contentStandards": [
+                {
+                  "code": "B3.2.5.1",
+                  "description": "Identify and use consonant blends in words",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.2.5.1.1",
+                      "description": "Use consonant blends to build words",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners revise diphthongs and use them in sentences."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Introduce consonant blends and have learners identify words having the blends. e.g. bl - black, br- brush, st- stone, tr- tree"
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners work in pairs/groups to identify consonant blends and build words from them."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.2.6",
+              "title": "Vocabulary",
+              "description": "Understanding word meanings and usages.",
+              "orderIndex": 6,
+              "contentStandards": [
+                {
+                  "code": "B3.2.6.1",
+                  "description": "Understand word meanings and usage",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.2.6.1.1",
+                      "description": "Read level-appropriate sight words, understand and use them in meaningful complex sentences",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide learners with texts containing level-appropriate sight words."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put them into groups to identify, read and use sight words in meaningful sentences."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.6.1.2",
+                      "description": "Use knowledge of prefixes and suffixes to interpret unfamiliar words",
+                      "orderIndex": 2,
+                      "exemplars": []
+                    },
+                    {
+                      "code": "B3.2.6.1.3",
+                      "description": "Understand and use many of the frequently occurring words and chunks in the language, including both content words (nouns, verbs, adjectives and adverbs) and function words ( prepositions, articles)",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise learners RPK by asking them to use some sight words learnt in earlier lessons."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Introduce new words and have learners form sentences with them as you guide them with simple ways to find contextual meanings of words."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "You may introduce game activities e.g. Lucky Dip to provide practice in identification and use of sight words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.6.1.4",
+                      "description": "Use dictionaries, glossaries and internet to clarify word meanings",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to the dictionary and glossaries."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners find the dictionary meaning to key words in a comprehension passage."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners make or build their own glossaries on the words learnt."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "In groups, let learners practise finding key words and building their own word albums/dictionaries/glossaries."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.2.7",
+              "title": "Comprehension",
+              "description": "Understanding and analysing texts read.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B3.2.7.1",
+                  "description": "Understand and analyse texts read",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.2.7.1.1",
+                      "description": "Use self-correction strategies to make meaning when reading texts",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Engage learners on before reading activities, e.g. review of background knowledge, discussion of title and accompanying pictures)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Model reading the text aloud and have learners echo-read the text (if necessary)."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Read out words and sentences for learners to identify in the text."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Let learners read aloud in groups and pairs and answer questions."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.7.1.2",
+                      "description": "Ask and answer factual, inferential and vocabulary questions about level-appropriate texts",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners brainstorm on the topic on which they will answer questions."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Ask learners to read and answer simple pre-reading questions as you guide them."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Guide learners to ask and answer factual, inferential and vocabulary questions on the passage read."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.7.1.3",
+                      "description": "Retell level-appropriate text in own, explain and illustrate",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Ask a few questions to review the text/story to be retold."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners narrate or retell the story passage using the herring bone or story map strategy. The narration should be sequential to make the story understood."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.7.2",
+                  "description": "Use knowledge, skills and techniques of reading to understand, interpret and appreciate a variety of literary texts",
+                  "orderIndex": 2,
+                  "indicators": [
+                    {
+                      "code": "B3.2.7.2.1",
+                      "description": "Demonstrate understanding of the purpose and features of poems or rhymes and fables, etc",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce the lesson with before reading activities, singing, reciting, prediction, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners read a text and identify its purpose and features. Guide them with questions to do this."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners transfer the same ideas to other types of texts."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Use think-pair-share to have learners compare ideas."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.7.2.2",
+                      "description": "Respond to stories with own opinion and value judgment",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners give their personal opinions and judgment to stories (events, setting, characters and their actions) read or heard."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.7.2.3",
+                      "description": "Use visualisation strategy (form mental images when reading text) to enhance understanding of level-appropriate texts",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners play simple mental or guessing games like Bingo and matching games."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Guide learners to form mental images as they read a text, to help them make meaning from the text."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.7.2.4",
+                      "description": "Read level-appropriate texts independently",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide learners with level-appropriate texts and encourage them to read independently."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners may be provided with pre-reading questions to enable them focus."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.2.9",
+              "title": "Fluency",
+              "description": "Reading texts with good speed, accuracy, and expression.",
+              "orderIndex": 9,
+              "contentStandards": [
+                {
+                  "code": "B3.2.9.1",
+                  "description": "Read texts fluently",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.2.9.1.1",
+                      "description": "Read long texts with good pace, accuracy and expression",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Engage learners in pre-reading and demonstrate/model reading aloud with fluency, accuracy and expression."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners practise in pairs and groups. Note: Learners must read at their own pace."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.9.1.2",
+                      "description": "Recognise more than two hundred high frequency words with automaticity",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise the knowledge of sight words through games."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners identify sight words in texts using games such as Fishing and Lucky Dip."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners use the sight words to construct meaningful sentences."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.2.9.1.3",
+                      "description": "Use self-correction strategy to make meaning from texts (repeated)",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners use self-correction strategy as they pronounce words in a read aloud lesson."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Check for intonation and pace as they read to make meaning."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

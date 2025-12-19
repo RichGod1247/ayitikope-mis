@@ -1,0 +1,1283 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 8",
+  "subject": "Science",
+  "name": "JHS 2 Science",
+  "slug": "jhs-2-science",
+  "orderIndex": 1,
+  "description": "The JHS 2 Science curriculum advances the knowledge acquired in Basic 7. It covers the diversity of matter with mixtures, atomic structure, and living cells; cycles in earth science and life cycles of organisms; systems like the human body and ecosystems; forces and energy; and the relationship between humans and the environment.",
+  "strands": [
+    {
+      "code": "B8.1",
+      "title": "DIVERSITY OF MATTER",
+      "description": "Understanding mixtures, atoms, and living cells.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B8.1.1",
+          "title": "MATERIALS",
+          "description": "Mixtures and atomic structure.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.1.1.1",
+              "description": "Demonstrate knowledge of types of mixtures, and understanding of the processes of scientific ways of separating the components of mixtures",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.1.1.1",
+                  "description": "Identify types of mixtures by name and characteristics",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Group materials into solids and liquids."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the resultant nature of mixtures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw observable conclusions on homogeneous and heterogeneous characteristics."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compare and contrast solutes and solvents."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Identify and separate mixtures and solutions based on physical properties."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Identify a suspension as a type of mixture."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Differentiate between a colloid and a suspension."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.2",
+                  "description": "Design and perform processes for separating kinds of mixtures",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Perform activities to separate different kinds of mixtures and present a report."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.1.1.2",
+              "description": "Demonstrate understanding of atoms and the atomic structure of elements in the periodic table",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.1.1.2.1",
+                  "description": "Describe atoms as composed of sub-atomic particles",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain an atom and its structure using the periodic table."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "List sub-atomic particles and their location."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "State the electrical charges on sub-atomic particles."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe the differences between atomic number and mass number."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Determine the number of protons, neutrons and electrons in an atom."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.2.2",
+                  "description": "Explain the arrangement of elements in terms of the number of protons in the nuclei of atoms of each element",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain arrangement of elements by atomic number."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw the distribution of electrons in atoms."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the formation of ions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe a molecule as a combination of atoms."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.2",
+          "title": "LIVING CELLS",
+          "description": "Types of cells and their structure.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.1.2.1",
+              "description": "Demonstrate an understanding of the types of cells and their structure in relation to different organisms",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.2.1.1",
+                  "description": "Examine and describe the structure of prokaryotic and eukaryotic cells",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compare and contrast prokaryotic and eukaryotic cells."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create a table or chart depicting types of cells."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw and label a prokaryotic cell and a eukaryotic cell."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.2",
+                  "description": "Classify organisms (plants or animals) as prokaryotic or eukaryotic based on the type of cells they are made of",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List examples of organisms as prokaryotic or eukaryotic."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the impact of prokaryotes and eukaryotes on human health."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.2",
+      "title": "CYCLES",
+      "description": "Earth science and life cycles.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B8.2.1",
+          "title": "EARTH SCIENCE",
+          "description": "The carbon cycle.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.2.1.1",
+              "description": "Demonstrate understanding of the process of Carbon cycle as an example of repeated pattern of change in nature and how it relates to the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.1.1.1",
+                  "description": "Explain the process of the carbon cycle",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the carbon cycle and write notes on stages."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Produce a flow chart of the carbon cycle."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain processes like photosynthesis, respiration, burning, and decay."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compile information on why the carbon cycle is a repeated pattern."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.1.1.2",
+                  "description": "Describe the role of the carbon cycle to the environment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the role of the carbon cycle in maintaining atmospheric balance."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the effect of the carbon cycle on food chains."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the relationship between greenhouse gases and the carbon cycle."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.2",
+          "title": "LIFE CYCLE OF ORGANISMS",
+          "description": "Life cycle of the Anopheles mosquito.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.2.2.1",
+              "description": "Demonstrate an activity to show the life cycle of the Anopheles mosquito and show how the effects of its activities on humans can be managed",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.2.1.1",
+                  "description": "Describe the life cycle and economic importance of the Anopheles mosquito",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe and draw the stages of the life cycle of the Anopheles mosquito."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the economic importance of the Anopheles mosquito."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.2",
+                  "description": "Discuss the impact of the Anopheles mosquito on humans and how it can be controlled",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the impact of the female Anopheles mosquito as a vector."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Generate solutions to control malaria."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.3",
+          "title": "CROP PRODUCTION",
+          "description": "Planting crops on different seed beds.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.2.3.1",
+              "description": "Demonstrate knowledge and skills in planting crops on different seed beds",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.3.1.1",
+                  "description": "Explore the different seed beds for planting crops in your community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe and discuss different seed beds."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "List and compare differences and similarities among seed beds."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Match seed beds with crop types."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.2",
+                  "description": "Plant different types of crops on different seed beds",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe and discuss planting practices."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Select plant parts and plant them in different seed beds."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.2.3.2",
+              "description": "Demonstrate understanding of the differences in height, size, and flowering of crops grown in different seed beds",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.2.3.2.1",
+                  "description": "Compare and contrast the differences in height, size, and flowering of crops grown in different seed beds",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Measure heights, sizes, and count flowers/fruits."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss differences and similarities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write and present reasons for differences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.4",
+          "title": "ANIMAL PRODUCTION",
+          "description": "Types of animal feed and water importance.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.2.4.1",
+              "description": "Recognise the different types of feed for different types of animals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.4.1.1",
+                  "description": "Compare and contrast the different types of feed for different types of animals",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Match feed types with animals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss nutrients and sources in animal feed."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Select appropriate feed based on nutrients."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.2.4.2",
+              "description": "Demonstrate understanding of the importance of water and animal feed to the growth of animals",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.2.4.2.1",
+                  "description": "Explain the importance of water and animal feed to the growth of animals",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List and discuss usefulness of water and feed."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Predict effects of inadequate water."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.3",
+      "title": "SYSTEMS",
+      "description": "Human body, solar system, ecosystem, and farming systems.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B8.3.1",
+          "title": "THE HUMAN BODY SYSTEM",
+          "description": "Mammalian tooth structure and function.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.3.1.1",
+              "description": "Demonstrate knowledge of parts of mammalian tooth and the functions of the different types of teeth in relation to feeding in man",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.1.1.1",
+                  "description": "Identify parts of a mammalian tooth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Label parts of a tooth."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain functions of each part."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.2",
+                  "description": "Discuss the functions of the different types of teeth such as incisors, canines, premolars, and molars",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss functions of different teeth types."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw different types of teeth."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.3",
+                  "description": "Explain the causes and prevention of tooth and gum decay",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe causes and prevention of tooth decay and gum diseases."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate proper teeth cleaning."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.2",
+          "title": "THE SOLAR SYSTEM",
+          "description": "Outer planets.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.3.2.1",
+              "description": "Demonstrate knowledge of the outer planets of the solar system",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.2.1.1",
+                  "description": "Identify the outer planets of the solar system and describe their properties",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe solar system composition."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and draw outer planets."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss properties of Jupiter, Saturn, Uranus, Neptune."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain absence of life on outer planets."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Construct model of outer solar system."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.3",
+          "title": "ECOSYSTEM",
+          "description": "Interdependence and interaction.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.3.3.1",
+              "description": "Demonstrate an understanding of the interdependence of organisms in an ecosystem and their interaction",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.3.1.1",
+                  "description": "Explore the feeding relationships within an ecosystem",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss life without the sun."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain producer, consumers, food chain, food web."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Illustrate energy flow in ecosystem."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.4",
+          "title": "FARMING SYSTEMS",
+          "description": "Crop, animal, and land combinations.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.3.4.1",
+              "description": "Demonstrate understanding of the different crop, animal and land combinations under various farming systems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.4.1.1",
+                  "description": "Identify and describe the types of crops, animals and land combinations for the different farming systems",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe combinations in community farming systems."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss advantages and disadvantages."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.4.1.2",
+                  "description": "Discuss the usefulness of the different crops and animals involved in the different farming systems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain contributions of components."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss contributions to sustainability."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.4",
+      "title": "FORCES AND ENERGY",
+      "description": "Energy, electricity, conservation, and force.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B8.4.1",
+          "title": "ENERGY",
+          "description": "Conversion, renewable sources, and heat.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.4.1.1",
+              "description": "Demonstrate the skill to evaluate the conversion of energy from one form to another",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.1.1.1",
+                  "description": "Describe energy conversion",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe energy conversion processes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.1.1.2",
+                  "description": "Discuss the importance of conversion of energy",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain hydroelectric power generation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe harnessing natural energy."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.4.1.2",
+              "description": "Show an understanding of the sources of renewable energy and how to manage these sources in a sustainable manner",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.4.1.2.1",
+                  "description": "Describe renewable and non-renewable forms of energy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain renewable vs non-renewable energy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and classify energy sources."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe production from renewable sources."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.1.2.2",
+                  "description": "Demonstrate how to manage sources of renewable energy sustainably",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research managing renewable energy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create table of management challenges."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.4.1.3",
+              "description": "Demonstrate an understanding of the relationship between heat and temperature",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B8.4.1.3.1",
+                  "description": "Discuss the differences and the relationship between heat and temperature in the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create table distinguishing temperature and heat."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss relationship between them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.2",
+          "title": "ELECTRICITY AND ELECTRONICS",
+          "description": "Electricity transmission and electronics.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.4.2.1",
+              "description": "Demonstrate knowledge of electricity transmission",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.2.1.1",
+                  "description": "Explain how electricity transmission occurs",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify transmission stages."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw flow chart of transmission."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.4.2.2",
+              "description": "Demonstrate understanding of the functions of capacitors in relation to LEDs, Diodes and resistors in electronic circuits",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.4.2.2.1",
+                  "description": "Demonstrate the charging and discharging action of a capacitor in a DC electronic circuit",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research capacitors and explain functions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe charging/discharging and role of components."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.3",
+          "title": "CONVERSION AND CONSERVATION OF ENERGY",
+          "description": "Impact of energy conversion.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.4.3.1",
+              "description": "Evaluate the impact of conversion of energy and energy conservation on the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.3.1.1",
+                  "description": "Explain the importance of conversion of energy and energy conservation in daily life",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Classify importance of conversion and conservation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Search for information on impact."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make poster on findings."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.4",
+          "title": "FORCE AND MOTION",
+          "description": "Magnetism and Newton's laws.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.4.4.1",
+              "description": "Demonstrate the production of magnet, domestic and industrial application of Magnetic force and its relationship with Newton's Second law of motion and in everyday life",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.4.1.1",
+                  "description": "Demonstrate simple ways of making magnets and show how magnetic force can be applied in domestic and industrial activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Produce magnets."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate application of magnetic force."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore other applications."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.4.1.2",
+                  "description": "Explain the relationship between magnetic force and Newton's Second Law of motion; and show the law's application to life",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain Newton's Second Law."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform experiment on force and motion."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.4.4.2",
+              "description": "Demonstrate understanding of complex machines and how they work",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.4.4.2.1",
+                  "description": "Identify complex machines and describe their functions in life",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recap simple machines."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain complex machines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify simple machine in complex machines."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain how complex machines improve life."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.5",
+          "title": "AGRICULTURAL TOOLS",
+          "description": "Handling and maintenance of tools.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B8.4.5.1",
+              "description": "Demonstrate knowledge and skills in the use of basic and simple agricultural tools for basic on-farm activities",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.5.1.1",
+                  "description": "Show and discuss the use of basic and simple agricultural tools for basic on-farm activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Collect and list tools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Match tool with activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.5.1.2",
+                  "description": "Engage in the use of basic and simple agricultural tools for basic farm activities",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain usage of tools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Practice use of tools."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Select appropriate tools."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.5",
+      "title": "HUMANS AND THE ENVIRONMENT",
+      "description": "Waste management, human health, science and industry, and climate change.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B8.5.1",
+          "title": "WASTE MANAGEMENT",
+          "description": "Sustainable waste management.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.5.1.1",
+              "description": "Demonstrate knowledge of waste management systems and apply it in an environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.1.1.1",
+                  "description": "Explain sustainable waste management practices",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Outline approaches."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Conduct survey."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.1.1.2",
+                  "description": "Apply knowledge of waste management practices to manage waste in a community",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Carry out management activity."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Evaluate practices."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.2",
+          "title": "HUMAN HEALTH",
+          "description": "Communicable and bacterial diseases.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.5.2.1",
+              "description": "Demonstrate knowledge of common communicable diseases, such as Hepatitis, of humans, causes, symptoms, effects and their prevention",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.2.1.1",
+                  "description": "Explain the symptoms, effects and prevention of common communicable diseases",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compile data on diseases."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify causes, symptoms, effects."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Search for info and develop plan."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8. 5.2.1.2",
+                  "description": "Analyse the risk factors of communicable diseases",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Search for associated info."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create awareness."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.5.2.2",
+              "description": "Demonstrate knowledge of the nature of selected bacterial diseases of humans, their causes, symptoms, effects and prevention",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.5.2.2.1",
+                  "description": "Explain the nature of bacterial diseases with special emphasis on food poisoning/gonorrhoea/meningitis their causes, symptoms, effects on humans and prevention",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss nature of bacterial diseases."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Search for info."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe symptoms, effects, prevention."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe role in managing diseases."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Design poster."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.3",
+          "title": "SCIENCE AND INDUSTRY",
+          "description": "Science, technology, and innovation.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.5.3.1",
+              "description": "Demonstrate an understanding of connections among science, technology, innovation, society and the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.3.1.1",
+                  "description": "Examine the relationship among science, technology, innovation and society",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain interrelationship."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss advancements."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.4",
+          "title": "CLIMATE CHANGE AND GREEN ECONOMY",
+          "description": "Climate change effects and actions.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.5.4.1",
+              "description": "Demonstrate an understanding of the effects of climate change in the world and greening of other tropical countries including Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.4.1.1",
+                  "description": "Explain the concept of climate change and its effect on the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe signs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Search for causes and effects."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain adaptation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.4.1.2",
+                  "description": "Describe climate change and green economy actions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe adaptation measures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss mitigation strategies."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.5.4.2",
+              "description": "Evaluate the effectiveness of initiatives that address the issue of climate change and green economy in Ghana and the world at large",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.5.4.2.1",
+                  "description": "Assess data on climate change and green economy actions/ activities globally including Ghana and other countries",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research actions in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Access actions in other countries."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare and contrast actions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify effective initiatives."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Prescribe best practices."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.5",
+          "title": "UNDERSTANDING THE ENVIRONMENT",
+          "description": "Soil properties and plant growth.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B8.5.5.1",
+              "description": "Demonstrate understanding of the differences among soils, plant roots, stems, leaves, flowers, and fruits of plants in the different environments",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.5.1.1",
+                  "description": "Discuss physical properties of soils",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Collect and describe soil samples."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss water retention."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Conduct experiment on water retention."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.5.1.2",
+                  "description": "Analyse the physical properties of soils and soil water content and demonstrate their importance in crop production",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Examine physical properties."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Observe plant growth."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate osmosis."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.6",
+          "title": "SOIL AS A COMPONENT OF THE ENVIRONMENT",
+          "description": "Rocks as origin of soils.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B8.5.6.1",
+              "description": "Recognise the different types of rocks as origin of different types of soils",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.6.1.1",
+                  "description": "Observe and describe different types of rocks as origins of soils",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify rock samples."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe visible characteristics."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Collect and compare local rocks."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Research weathering."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,455 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "History",
+  "name": "Basic 5 History",
+  "slug": "basic-5-history",
+  "orderIndex": 1,
+  "description": "The Basic 5 History curriculum focuses on life in ancient times, significant Ghanaian individuals, the Trans-Atlantic slave trade, social and economic developments under colonial rule, and the early protest movements leading to independence.",
+  "strands": [
+    {
+      "code": "B5.2",
+      "title": "My Country Ghana",
+      "description": "Exploring the people of Ghana and significant individuals.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5.2.1",
+          "title": "The People of Ghana",
+          "description": "Understanding life in ancient times and ancient towns.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.2.1.1",
+              "description": "Demonstrate understanding of how life in ancient time was different from life today",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.1.1.1",
+                  "description": "Describe how our ancestors lived in ancient times (before the 15th century) and compare it with how we live today.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the kinds of food they ate, the clothes they wore and how they travelled etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare life today to life in ancient days. E.g. Food eaten, Clothes worn, Mode of travel, buildings Communication, Trading, Professions and Technology."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Produce a photo album (Tactile photo album for visually impaired) of family members including learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Visit ancient sites and museums."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use videos/ documentaries/internet to highlight how life today has changed from the past."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.1.1.2",
+                  "description": "Describe some ancient towns in Ghana.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List some ancient towns and places in Ghana (Begho, Bono-Manso, Dawhenya, Eguafo, Kintampo, Salaga, Daboya)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Locate some of these towns and places on a map of Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the internet to learn about these places and share in class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Show and discuss a documentary/pictures of some of these towns and places."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.5",
+          "title": "Some Selected Individuals",
+          "description": "Highlighting Ghanaians who made significant contributions locally and internationally.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.2.5.1",
+              "description": "Demonstrate knowledge of Ghanaians who made significant contributions locally and internationally",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.5.1.1",
+                  "description": "Name Ghanaians who have made significant Contribution locally and internationally including Dr R.E.G Armattoe (Science and Medicine), Kofi Annan-international diplomacy, Osibisa- popular music, El Anatsui - sculptor, David Adjaye -architect, Ozwald Boateng-fashion, Efua Sutherland- playwright, Prof Francis Allotey- science and History, Prof Akua Kuenyehia- law, Prof. Frimpong Boateng - Surgeon, Abedi Ayew 'Pele' - Football, Azumah Nelson - Boxing etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use pictures, posters or the internet to identify Ghanaian who have made important contributions locally and internationally."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Match these personalities with areas of specialty e.g. Dr R.E.G Armattoe (Science and Medicine), Kofi Annan-international diplomacy, Osibisa- popular music, El Anatsui - sculptor, David Adjaye- Architect, Ozwald Boateng-fashion, Efua Sutherland- playwright, Prof Francis Allotey- science and History, Prof Akua Kuenyehia- law, Prof. Frimpong Boateng - Surgeon, Abedi Ayew 'Pele' - Football, Azumah Nelson -Boxing etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show photographs/ documentary of significant individuals."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Retell the live stories of any of these from a documentary show."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "With the aid of the internet learners are to develop a documentary/poster of individuals who have contributed significantly in this field."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Identify the traditional rulers whose work inspires you most and give reasons for your choice."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.3",
+      "title": "Europeans in Ghana",
+      "description": "Understanding the shift to trade in humans.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5.3.2",
+          "title": "International Trade Including the Slave Trade",
+          "description": "Investigating the origins of the slave trade.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.3.2.1",
+              "description": "Understand that what began as trade in goods from 1471 soon included trade in humans by the 16th century.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.2.1.1",
+                  "description": "Investigate why the Europeans began trading in humans by the 16th century.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a map to explain the concept of Trans-Atlantic slave trade."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Role play/show documentary on how the slave trade was conducted."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Brainstorm the reasons why the Europeans began trading in humans."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Visit/show pictures of some forts and castles."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "In small groups learners develop a poster on the Trans-Atlantic Slave Trade."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Groups present their work to the whole class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.4",
+      "title": "Colonisation and Developments under Colonial Rule in Ghana",
+      "description": "Understanding social and economic developments under colonial rule.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5.4.2",
+          "title": "Social Developments Under Colonial Rule",
+          "description": "Developments in education, health, and housing.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.4.2.1",
+              "description": "Demonstrate understanding of the social developments that took place during the colonial period (1874-1957).",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.2.1.1",
+                  "description": "Identify the developments in education during the colonial era (1874-1957).",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify schools that existed by 1930, where they are located and state some facts about these schools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "List some of the measures the British took to promote education in the Gold Coast. E.g. Ordinances to make sure all teachers were registered."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the role of the churches in Ghana's education sector."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Recall the role of the important people in (a) the community and (b) the country who played key role in the educational sector. e.g. Dr Kwegyir Aggrey. NB: Display pictures of such people in the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.2.1.2",
+                  "description": "Identify some of the health facilities and housing projects in the colonial period.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the health facilities and housing projects carried out during the colonial period e.g. the establishment of the Korle Bu hospital- 1923, Kumasi hospital, Takoradi hospital."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Brainstorm the significance of these social services."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show pictures/documentaries of these facilities to highlight the social facilities during the era."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.3",
+          "title": "Economic Developments Under Colonial Rule",
+          "description": "Economic measures, transport, and communication projects.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.4.3.2",
+              "description": "Show understanding of the Economic policies and projects during the colonial period (1874-1957)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.3.2.1",
+                  "description": "Describe the economic measures introduced during the colonial period including transport and communication projects.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the economic policies and projects during the colonial era."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Enumerate contributions in the agricultural sector (e.g. setting up of agricultural station at Bunso, botanical garden at Aburi and Agricultural College at Kwadaso, promotion and marketing of cocoa farming), The construction of the Takoradi Harbour, construction of roads and railways and introduction of vehicles to link their main centres to evacuate and export items and facilitate movement."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the role of Tetteh Quarshie in the introduction of cocoa into Ghana and how important cocoa has become."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Visit/show pictures of any of these facilities e.g. Tetteh Quarshie farm."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Enumerate contributions of the colonial government to mining sector."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.5",
+      "title": "Journey to Independence",
+      "description": "Understanding early protest movements and the 1948 riots.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B5.5.1",
+          "title": "Early Protest Movements",
+          "description": "Identifying and examining early protest movements and their leaders.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.1",
+              "description": "Show understanding of the factors that led to the formation of early protest movements in Ghana before 1945",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.1.1",
+                  "description": "Identify the early protest movements in Ghana before 1945.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "What is a protest movement?"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "List the main protest movements in Ghana before 1945: Aborigines Rights Protection Society-ARPS-1897; National Congress of British West Africa-NCBWA-1917; The Gold Coast Youth Conference-1929."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discus the sequence of events that led to the formation of these movements (refer to subsequent indicators)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.1.2",
+                  "description": "Examine sources of evidence about the role of Joseph Mensah Sarbah in the Aborigines Rights Protection Society-ARPS-1897",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the key leaders of the ARPS by pictures/documentary."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find out from the internet how the ARPS got the land bill withdrawn."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Present report as a poster."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.1.3",
+                  "description": "Examine sources of evidence about the role of Joseph Ephraim Casely-Hayford in the National Congress of British West Africa (NCBWA).",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify Joseph Ephraim Casely-Hayford from photographs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show and discuss a documentary the bust of Joseph Ephraim Casely-Hayford at Casford Hall, UCC (where possible)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Present a narrative of the leadership role of Joseph Ephraim Casely-Hayford in the NCBWA."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners retell the story of Joseph Ephraim Casely-Hayford."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.1.4",
+                  "description": "Examine sources of evidence about the role of Dr Joseph Boakye Danquah in the Gold Coast Youth Conference",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Present a narrative of the role of J.B. Danquah in the Gold Coast Youth Conference."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Field trip to Danquah Circle in Accra or his home where possible or show picture of Danquah Circle in Accra."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners retell the story of J.B. Danquah and the Gold Coast Youth Conference."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.3",
+          "title": "The 1948 Riots And After",
+          "description": "Understanding the sequence of events leading to the 1948 riots.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.5.3.1",
+              "description": "Show understanding of the sequence of events leading to the 1948 riots in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.3.1.1",
+                  "description": "Explain why people were unhappy in the country after the Second World War",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show and discuss a documentary on the general state of affairs after the Second World War -failure to honour the promises to the ex-servicemen, lack of adequate housing and high cost of imported goods etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss how government handled their grievances at the time."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play the scene for learners to offer the opinions on the situation (whether the riot was justified or not)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners to develop a poster that illustrates the link between the boycott of European goods, the shootings of 28th February and the riots of 1948."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.3.1.2",
+                  "description": "Examine sources of evidence about what happened during the 1948 riots.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show a map of Accra indicating the routes that were approved for the ex-service men."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use a documentary to illustrate what happened during the 1948 riots and discuss it afterwards."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play the scene of the 1948 riots as evidence for learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the arrest of the 'Big Six' (leaders of the UGCC)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,812 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 1",
+  "subject": "Our World and Our People",
+  "name": "Basic 1 Our World and Our People",
+  "slug": "basic-1-our-world-and-our-people",
+  "orderIndex": 1,
+  "description": "The Basic 1 OWOP curriculum nurtures honest, creative, and responsible citizens. It focuses on developing self-awareness, understanding the environment, religious values, and national identity through themes like the nature of God, the community, the environment, and global citizenship.",
+  "strands": [
+    {
+      "code": "B1.1",
+      "title": "ALL ABOUT US",
+      "description": "Developing understanding of God, self, family, and the community.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B1.1.1",
+          "title": "Nature of God",
+          "description": "Understanding God as the Creator.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.1.1.1",
+              "description": "Demonstrate understanding of God as the Creator",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.1.1.1",
+                  "description": "Examine our relationship with the Creator",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about God's creation using pictures and charts and real things from the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners listen to creation stories/watch videos from the internet about creation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play to retell the creation story."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners draw, colour, make models, recite rhymes, sing songs about God's creation: human beings, animals, trees, rivers, moon, stars, sea and mountains."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners discuss and role play the attributes of God."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners research the creation story. Use the internet or any available resources e.g. books. If using internet, guide learners to explore parts of the computer (mouse, Central Processing Unit-CPU) etc"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.2",
+          "title": "Myself",
+          "description": "Understanding self as a unique individual.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.1.2.1",
+              "description": "Demonstrate knowledge of self as a unique individual",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.2.1.1",
+                  "description": "Recognise individual characteristics as the basis of one's uniqueness",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups identify and talk about their individual characteristics and accept themselves, bringing out their similarities and differences. I am kind. I am honest. I like people."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners brainstorm on the importance of knowing and appreciating oneself."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners say things about themselves with confidence and positive self-esteem: e.g. I am tall and beautiful. I am short and strong. I am black and proud."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.3",
+          "title": "My Family and the Community",
+          "description": "Understanding relationships with others.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B1.1.3.1",
+              "description": "Demonstrate understanding of one's relationship with others and the need for good interpersonal relationships",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.3.1.1",
+                  "description": "Identify persons closely related us and the need to relate well with others",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention the names of those who are closely related to them, e.g. parents, brothers, sisters, friends and teachers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners in groups, talk about the importance of inter-personal relationships and the need to accept everyone, irrespective of where the person comes from."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play healthy relationship with family and friends."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.4",
+          "title": "Home and School",
+          "description": "Understanding the home environment.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B1.1.4.1",
+              "description": "Demonstrate understanding of the place you call home",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.4.1.1",
+                  "description": "Describe and show direction to their home",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners take turns to talk about their home e.g. my home is in a good and beautiful neighbourhood."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners sketch the direction to their home on paper."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about what they want to add to their home."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners draw their home."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.2",
+      "title": "ALL AROUND US",
+      "description": "Exploring the environment, weather, plants, animals, and mapping.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B1.2.1",
+          "title": "The Environment and the Weather",
+          "description": "Knowledge of things in the environment and weather conditions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.2.1.1",
+              "description": "Demonstrate knowledge of things in the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.1.1.1",
+                  "description": "Explore the uses of things in the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage learners in a nature walk to observe, identify, locate and talk about things in the environment and their uses e.g. Furniture: chairs, tables, cupboards, Plants, Animals, Computers and sort them into living, non-living, manmade and natural"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners browse the internet, draw or look at pictures or posters of things in the environment and talk about caring for them in environment as responsible citizens"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Note: As learners use the internet to browse pictures of things in the environment, teacher helps learners learn about the use of parts of the computer e.g. the mouse, keyboard, monitor or system unit and how they are connected"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.2.1.2",
+              "description": "Demonstrate knowledge of different types of weather conditions",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B1.2.1.2.1",
+                  "description": "Identify and describe different weather conditions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures/films of different weather conditions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners use rhymes, e.g. \"rain, rain go away\", to tell the types of weather e.g. i) Sunny weather, ii) Windy weather, iii) Rainy weather, iv) Cloudy weather"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups: describe the weather type from their pictures to the class; mention the weather of the day from what they can observe outside their classroom"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.2.2",
+          "title": "Plants and Animals",
+          "description": "Recognising and appreciating plants and animals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.2.2.1",
+              "description": "Recognise different plants in the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.2.1.1",
+                  "description": "Identify different plants in the environments and their uses",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners go on a nature walk to observe and talk about different plants in the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learner watch films/pictures of plants in the environment to show forest trees, grassland, maize, cocoa, shea butter trees, rubber, mangoes, to enable learners understand that different plants live in different environments."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about uses of plants and share the information with the whole class. The uses of plants include food, clothing, shelter, medicine, decoration and shades."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.2.2.2",
+              "description": "Recognise and appreciate different animals in the environment",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B1.2.2.2.1",
+                  "description": "Identify different animals in the environments and their uses",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use school and community environments, pictures, films from the internet, to show different animals such as fish, birds, monkeys, butterflies, ants to enable learners to understand that different animals live in different environments."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw fishes in rivers, birds in their nests, pets in their sleeping places in learners' homes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Note: Learners collect and share information about animals from the internet, parents, books"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.2.3",
+          "title": "Map Making and Land Marks",
+          "description": "Understanding cardinal points.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B1.2.3.1",
+              "description": "Demonstrate understanding of the cardinal points",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.3.1.1",
+                  "description": "Identify the cardinal points",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the cardinal points e.g. North, South, East and West."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners sketch the cardinal points and label them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners stretch their arms sideways to demonstrate the cardinal points e.g. in front of me is North, to the right is East, to the left is West and to my back is South."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.2.4",
+          "title": "Population and Settlement",
+          "description": "Understanding population structure.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B1.2.4.1",
+              "description": "Demonstrate basic understanding of population structure (age and sex structure)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.4.1.1",
+                  "description": "Describe the population structure of their class and the need to respect one another",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups describe the structure of population in their class by sex and age."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners group the population in their class by age and by sex in their class. NB: Teacher to represent each age by sex on the chalk/white board with a rectangular block, starting with the youngest age at three bottom and building on with older boys and girls. Size of box will be determined in each case by number of learners in each age group."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about the need to respect one another regardless of age and sex as responsible citizens."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.3",
+      "title": "OUR BELIEFS AND VALUES",
+      "description": "Exploring worship, festivals, human rights, and leadership.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B1.3.1",
+          "title": "Worship",
+          "description": "Appreciating the importance of religious worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.3.1.1",
+              "description": "Appreciate the importance of religious worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.1.1.1",
+                  "description": "Explore the main types of worship in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures, video clips, etc. of people worshipping, among the three main religions in Ghana: Christian worship, Islamic worship, Traditional worship"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play the act of worship in the three main religions in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners sing and recite texts from the three main religions. The Lord's Prayer, Psalm 23 (Christian), Al-Fathiha (Islamic), Any recital from the traditional religion-sacred myths, riddle, proverbs, etc. (Traditional)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.3.2",
+          "title": "Festivals",
+          "description": "Knowledge of festivals in Ghana.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.3.2.1",
+              "description": "Demonstrate knowledge of festivals in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.2.1.1",
+                  "description": "Describe religious festivals in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention festivals celebrated in the three religions in Ghana: i. Christian - Christmas, Easter, etc. ii. Islamic - Eid-ul-Fitr, Eid-ul-Adha, etc. iii. African Traditional Religion (ATR) - Odwira, Damba, Homowo, Hogbetsotso, Fetu Afahye, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play religious tolerance e.g. prayers at the Independence Day celebrations, celebrations of major religious festivals (Christmas, Eid-ul-Adha, ban on drumming preceding the Homowo Festival)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.3.3",
+          "title": "Basic Human Rights",
+          "description": "Understanding human rights.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B1.3.3.1",
+              "description": "Demonstrate understanding of human rights as a citizen",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.3.1.1",
+                  "description": "Explain basic human needs and rights of self and others",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage learners with games/story telling, rhymes to talk about human needs and rights."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Human needs: food, shelter. Clothing. Human rights: right to life, freedom of association, right to movement, personal liberty, right to fair trial, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.3.4",
+          "title": "Being a Leader",
+          "description": "Knowledge of birth stories of religious leaders.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B1.3.4.1",
+              "description": "Demonstrate knowledge of the birth stories of religious leaders",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.4.1.1",
+                  "description": "Narrate the stories of the birth of religious leaders",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures and video clips depicting the birth of the religious leaders: Christian, Islam and African Traditional Religion (ATR)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners tell stories about the birth of the religious leaders."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play the birth of the religious leaders."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Project Work: Learners to consult their parents and record: i. their dates of birth, ii. town of birth"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.4",
+      "title": "OUR NATION GHANA",
+      "description": "Developing a sense of national identity and citizenship.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B1.4.1",
+          "title": "Being a Citizen",
+          "description": "Understanding responsible citizenship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.4.1.1",
+              "description": "Demonstrate Understanding of the characteristics of a responsible citizen",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.4.1.1.1",
+                  "description": "Mention the characteristics of a responsible citizen",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about who a responsible citizen is, e.g. obeying parents and school rules, respecting people, taking care of school property, keeping the environment tidy, being polite, keeping the environment tidy, loving your country etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play on some of the characteristics of a responsible citizen."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.4.2",
+          "title": "Authority and Power",
+          "description": "Understanding power, authority, and national symbols.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.4.2.1",
+              "description": "Demonstrate understanding of obeying power and authority as a responsible citizen",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.4.2.1.1",
+                  "description": "Explore sources of power and authority",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify the national symbols and appreciate them: i. National Flag, ii. National Anthem, iii. National Pledge, iv. Coat of Arms, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners, in groups/pairs, tell how these national symbols can be preserved, e.g. pay attention to the National Anthem, protect the national symbols, report people who destroy the national symbols."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.4.2.1.2",
+                  "description": "Identify people who have power and authority and respect them, as a responsible citizen",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the people who have power and authority: i. at Home: father, mother, older siblings; ii. in class/school: head teacher, class teacher, school prefects, class prefects; iii. in the community: chiefs, parliamentarians, assembly members; iv. in the nation: president, vice president, speaker of parliament."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners give examples of persons occupying such positions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.4.3",
+          "title": "Responsible Use of Resources",
+          "description": "Understanding the importance of energy.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B1.4.3.1",
+              "description": "Demonstrate understanding of the importance of energy in our environment.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.4.3.1.1",
+                  "description": "Explore the importance of energy in the home, school and community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through questions and answers, learners mention the types of energy sources available in their homes and communities, e.g. sun, wind, firewood, charcoal, kerosene and gas (LPG) (Whole class /small group discussion)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about uses of energy, e.g. cooking, smoking and drying of food items."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners draw a bulb, flashlight coal pot, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Share their drawings with peers in the class in order to appreciate the sources of energy in the home and community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.4.4",
+          "title": "Farming in Ghana",
+          "description": "Understanding farming activities and tools.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B1.4.4.1",
+              "description": "Demonstrate understanding of farming as an important activity",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.4.4.1.1",
+                  "description": "Describe farming activities in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners look around the school or community and talk about different farm activities the people do/watch pictures/ films on different types of farm activities e.g. growing of vegetable, fruits, corn, goats, sheep, pigs, cattle, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw some farming activities e.g. weeding the farm or garden, feeding animals"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.4.2",
+              "description": "Show understanding of simple agricultural tools use in Ghana",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B1.4.4.2.1",
+                  "description": "Identify simple agricultural tools",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners look at pictures of simple agricultural tools or the real tools people use in the community to farm. Tools such as cutlass, hoe, watering cans, hand trowels, spade can be used."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw some of the agricultural tools used in Ghana, e.g. cutlass, hoe, mattock, rake, hand fork, axe, watering can, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.5",
+      "title": "MY GLOBAL COMMUNITY",
+      "description": "Connecting with the wider world through geography and technology.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B1.5.1",
+          "title": "Our Neighbouring Countries",
+          "description": "Identifying Ghana's neighbors.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.5.1.1",
+              "description": "Demonstrate knowledge of Ghana's Neighbouring Countries",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.5.1.1.1",
+                  "description": "Mention Ghana's Neighbours",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify their unique country, Ghana and her neighbours."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners demonstrate the positions of Ghana's neighbouring countries by using the body e.g. to my right is Togo, to my left is La Cote d'Ivoire, to my front is Burkina Faso and to my back is the sea (the Atlantic Ocean)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners compose a song/rhyme and draw a learner with arm stretched showing Ghana's neighbours"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.5.2",
+          "title": "Introduction to Computing",
+          "description": "Understanding computer parts.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.5.2.1",
+              "description": "Demonstrate understanding of the parts of a computer",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.5.2.1.1",
+                  "description": "Identify parts of a computer and how they connect to each other",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the parts of a computer e.g. mouse."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners work in small groups to explore how the gadgets connect to each other. Each group is given one item at a time, i.e. a mouse, keyboard, monitor or system unit. Guide learners to connect the gadgets."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to tell how the gadgets are connected (i.e. the connection of mouse, keyboard, monitor, system unit, etc.)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.5.3",
+          "title": "Sources of Information",
+          "description": "Understanding data and information.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B1.5.3.1",
+              "description": "Demonstrate understanding of data and sources of information",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.5.3.1.1",
+                  "description": "Collect types of data",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to collect various items from the environment, count and record them in a book, e.g. count the number of tables, chairs, exercise books, textbooks and record them. Talk about the various types of data gathered."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.5.4",
+          "title": "Technology in Communication",
+          "description": "Recognising communication tools.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B1.5.4.1",
+              "description": "Recognise technology tools in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.5.4.1.1",
+                  "description": "Identify technology tools in communication",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups talk about technology tools used for communication e.g. gong gong, drums, bells, mobile vans, and community information centres."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw and colour drums, bells, gong gong to assemble people."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

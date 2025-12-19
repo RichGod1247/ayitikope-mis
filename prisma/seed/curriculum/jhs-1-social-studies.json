@@ -1,0 +1,756 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 7",
+  "subject": "Social Studies",
+  "name": "JHS 1 Social Studies",
+  "slug": "jhs-1-social-studies",
+  "orderIndex": 1,
+  "description": "The JHS 1 Social Studies curriculum introduces learners to environmental issues, mapping skills, family life, self-identity, citizenship, and socio-economic development. It emphasizes understanding the world, responsible citizenship, and national identity",
+  "strands": [
+    {
+      "code": "B7.1",
+      "title": "ENVIRONMENT",
+      "description": "Understanding environmental issues and mapping skills",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B7.1.1",
+          "title": "ENVIRONMENTAL ISSUES",
+          "description": "Sanitation and energy conservation",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.1.1.1",
+              "description": "Demonstrate skills in dealing with environmental challenges",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.1.1.1",
+                  "description": "Examine ways of dealing with sanitation challenges in the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain Environment and Sanitation"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the types of environment (physical and social)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify some environmental problems, including poor sanitation"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine cultural practices and their related problems for sanitation in the community"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the effects of poor sanitation practices"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Identify different ways of managing sanitation problems"
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Embark on a project with the aim of managing sanitation problems in the community"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.1.1.2",
+              "description": "Examine the sources of energy and demonstrate the skills of conserving energy in Ghana",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.1.1.2.1",
+                  "description": "Examine the sources of energy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain energy"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the sources of energy in Ghana, including fuel wood, hydro, solar and thermal"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Categorise sources of energy into renewable and non-renewable"
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.2.2",
+                  "description": "Examine the benefits of using renewable and non-renewable energy",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Examine the benefits of using renewable energy"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the benefits of using non-renewable energy sources"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Design posters to show how different sources of energy are used"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss how sun or wind can be used to heat or perform work"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Come out with ways of using energy"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss why Ghana sometimes imports energy"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.2",
+          "title": "MAPPING SKILLS",
+          "description": "Mapping and interpreting landscapes",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.1.2.1",
+              "description": "Demonstrate a range of mapping skills",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.2.1.1",
+                  "description": "Demonstrate skills involved in mapping and locating places in the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain 'maps' and 'scale'"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify types of maps, including street maps, maps showing landscape features and national maps using an atlas"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the importance of maps to different people"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify components of maps, including north arrow, scale, map key allowing representation of physical and human features"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Sketch a map of the school compound, marking the main features"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Locate some important landmarks in the community using maps"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.3",
+          "title": "UNDERSTANDING OUR NATURAL WORLD",
+          "description": "Physical features of the earth",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.1.3.1",
+              "description": "Show understanding of the world around us",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.3.1.1",
+                  "description": "Examine major physical features of the earth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify some major features of the earth such as mountain ranges, rivers, oceans, hot deserts and tropical rainforest"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find the locations of major physical features using maps"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss human activities that affect features and ways of protecting them"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the effects of plastic pollution on water bodies"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.1.3.2",
+              "description": "Assess the issue of natural disasters and their management",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.1.3.2.1",
+                  "description": "Examine natural disasters in the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain natural disasters"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Watch documentaries on some natural disasters"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Mention examples of natural disasters"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify natural disasters in Ghana"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Suggest ways to manage disasters"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss the role of institutions responsible for early detection and management of natural disasters in Ghana"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.2",
+      "title": "FAMILY LIFE",
+      "description": "Adolescent health, socialisation, and population",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B7.2.1",
+          "title": "ADOLESCENT REPRODUCTIVE HEALTH",
+          "description": "Understanding adolescent behaviour and health",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.2.1.1",
+              "description": "Demonstrate understanding of adolescent behaviour and reproductive health issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.1.1.1",
+                  "description": "Examine issues on adolescent behaviour and reproductive health",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts: Adolescence and Reproductive Health"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss adolescent behaviours, including chastity that would support reproductive health"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss why healthy behaviour during adolescence is important"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Invite a resource person to talk about how some adolescent behaviours can harm their reproductive health"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explain changes that adolescents go through"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss some challenges faced by adolescents"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.3",
+          "title": "SOCIALISATION",
+          "description": "Understanding socialisation and its importance",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.2.3.1",
+              "description": "Exhibit knowledge of the importance of socialisation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.3.1.1",
+                  "description": "Examine the place of socialisation in developing the individual",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the meaning of socialisation"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the terms: Agencies and Agents"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the agencies and agents of socialisation"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the roles of agencies and agents in the socialisation process"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Role-play and embark on a socialising project"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Find out the need for socialisation and the challenges associated with it"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.4",
+          "title": "POPULATION",
+          "description": "Population structure and growth",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.2.4.1",
+              "description": "Analyse the population structure in Ghana and its related issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.4.1.1",
+                  "description": "Examine the components of population growth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of population growth"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss how population in Ghana has changed in the recent past"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare Ghana's population growth with that of some other countries"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss factors of population change: Birth rate, Death rate, Migration"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Investigate the causes of high birth rates and high death rates in Ghana"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.3",
+      "title": "SENSE OF PURPOSE",
+      "description": "Self-identity and personal development",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B7.3.1",
+          "title": "SELF-IDENTITY",
+          "description": "Understanding oneself",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.3.1.1",
+              "description": "Show understanding of self as a unique individual",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.1.1.1",
+                  "description": "Exhibit knowledge of self-identity",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts \"self\" and \"self-identity\""
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify attitudes that enhance self-worth"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify one's strengths and weaknesses as unique individual"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine the reasons for knowing oneself"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Describe how an individual can develop their capabilities"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.4",
+      "title": "LAW AND ORDER",
+      "description": "Citizenship and responsibilities",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B7.4.1",
+          "title": "CITIZENSHIP AND HUMAN RIGHTS",
+          "description": "Responsibilities of a citizen",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.4.1.1",
+              "description": "Analyse the responsibilities of a citizen",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.1.1.1",
+                  "description": "Examine the value of citizenship in nation building",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of \"citizenship\""
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the various ways of acquiring citizenship in Ghana"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine the responsibilities of a Ghanaian citizen"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss good working attitudes"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Dramatise the various ways citizens contribute to the development of the country"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.5",
+      "title": "SOCIO-ECONOMIC DEVELOPMENT",
+      "description": "Human resource, finance, and tourism",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B7.5.1",
+          "title": "HUMAN RESOURCE DEVELOPMENT",
+          "description": "Developing human resources in Ghana",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.5.1.1",
+              "description": "Demonstrate knowledge of human resource development in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.1.1.1",
+                  "description": "Mention ways of developing human resource in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts: Human resource and Human resource development"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify ways of developing human resource in Ghana"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the importance of human resource development in Ghana"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assess the challenges associated with human resource development in Ghana"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Suggest solutions to problems facing human resource development in Ghana"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.5.2",
+          "title": "FINANCIAL AND INVESTMENT ISSUES",
+          "description": "Social security and pension issues",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.5.2.1",
+              "description": "Demonstrate understanding of social security and pension issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.2.1.1",
+                  "description": "Examine the importance of social security to the individual",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of social security"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the features of social security"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify types of social security schemes"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Think-pair-share the benefits of social security to the individual"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Create a poster on the benefits of social security"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.5.3",
+          "title": "TOURISM",
+          "description": "Role of tourism in development",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.5.3.1",
+              "description": "Demonstrate knowledge on how tourism and leisure promote national development",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.3.1.1",
+                  "description": "Examine the role of tourism and leisure in socio-economic development of Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts: Tourism and Leisure"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify some attractive places or sceneries in your locality"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine reasons for which people go on tour to different places"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the economic and social importance of tourism to the nation's development"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explain challenges faced in the tourism industry"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Suggest ways of solving the challenges faced in the tourism industry"
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Discuss ways of promoting tourism in Ghana"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.6",
+      "title": "NATIONHOOD",
+      "description": "Independent Ghana and its history",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B7.6.1",
+          "title": "INDEPENDENT GHANA",
+          "description": "History of Ghana's independence",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.6.1.1",
+              "description": "Demonstrate understanding of how Ghana became an independent nation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.6.1.1.1",
+                  "description": "Explain how events after the 1948 riots accelerated the move towards independence",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show documentaries or listen to personal accounts on the 28th February riots"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the documentaries or what was witnessed on the visit"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the reasons for the formation of the Watson commission"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine how the Watson Commission helped the move towards independence"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write down the bio data of the three ex-service men"
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.6.1.1.2",
+                  "description": "Recount the formation of the Convention People's Party (CPP) in 1949",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show and discuss pictures of Kwame Nkrumah, Kojo Botsio and K.A. Gbedemah"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the role of other groups in the activities of the CPP"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use resource persons to tell about 'Positive Action'"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Create a poster on one of the CPP leaders"
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.6.1.1.3",
+                  "description": "Discuss the recommendations of the Coussey Committee and the outcomes of the 1951, 1954 and 1956 elections",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss how the Coussey Committee recommendations formed the basis of the 1950 Constitution"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the outcome of the 1951 elections"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the role of Kwame Nkrumah as leader of government business"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine why a new constitution was drawn up in 1954"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss what happened after the CPP won the 1956 election"
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.6.1.1.4",
+                  "description": "Analyse the nature of government from 1957 to 1960",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the power-sharing arrangement between the British government and elected Ghanaian officials"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the advantages and disadvantages of power-sharing from March 1957 to July 1960"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Find out the portfolios held by British and Ghanaian officials"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the composition of the cabinet from March 1957 to July 1960"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

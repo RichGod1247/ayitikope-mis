@@ -1,0 +1,1635 @@
+{
+  "part": "2/2",
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "Ghanaian Language",
+  "name": "Basic 5 Ghanaian Language",
+  "slug": "basic-5-ghanaian-language",
+  "orderIndex": 1,
+  "description": "Part 2 of the Basic 5 Ghanaian Language curriculum focuses on developing writing skills, including penmanship, composition, and grammar usage. It also includes extensive reading to foster a culture of reading.",
+  "strands": [
+    {
+      "code": "B5.3",
+      "title": "Writing",
+      "description": "Developing penmanship and handwriting skills.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5.3.1",
+          "title": "Penmanship/Handwriting",
+          "description": "Using punctuation marks and writing sentences clearly.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.3.1.1",
+              "description": "Exhibit knowledge in the use of full stops, commas and question marks appropriately in sentences; and write simple sentences boldly and clearly.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.1.1.1",
+                  "description": "Recognise the use of full stops at the end of a complete sentence, and to separate initials.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners write sentences on the board and in their books."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Go round and check the sentences written to see if full stops are at the ends."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the punctuation, full stop, with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write a passage on the board with all punctuations."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Assist learners to recognise that a full stop is used at the end of a complete sentence, and to separate initials."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.1.1.2",
+                  "description": "Recognise that a comma is used to separate a list of items. It serves as a pause in sentences and speech.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a passage on the board with all the appropriate punctuations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the passage with learners, and help them to recognize the punctuation comma."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners to recognise that a comma is used to separate a list of items. It serves as a pause in sentences and speech."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners write sentences or short passages using the comma."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write a list of items on the board and ask learners to use the list to form sentences, using the comma to separate the items in the sentence written."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.1.1.3",
+                  "description": "Recognise that a colon is used to list and explain a statement, or to mention a list of items.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a passage on the board with all the appropriate punctuations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the use of the colon in the passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners to recognise that a colon is used to list and explain a statement, or to mention a list of items."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.1.1.4",
+                  "description": "Recognise that quotation marks are used when you want to write or quote the same words a person said or wrote.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Call learners to make some utterances by asking questions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the utterance in quotation marks on the board and discuss with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a passage on the board with all punctuations."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assist learners to recognise that, quotation marks are used when you want to write the same words a person said or wrote."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.1.1.5",
+                  "description": "Write simple sentences.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write words on the boards and explain the meaning of those words."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call learners in turns to form simple sentences with the words."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write sentences on sentence cards."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the sentence cards to help learners write simple and meaningful sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.4",
+      "title": "Composition Writing",
+      "description": "Writing narratives, creative stories, descriptive, persuasive, and argumentative essays, as well as letters and academic compositions.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B5.4.1",
+          "title": "Narrative Writing",
+          "description": "Using punctuation correctly in narrative writing.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.4.1.1",
+              "description": "Comprehend and use punctuation marks in narrative writing.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.1.1.1",
+                  "description": "Recognise and use commas, full stops, and question marks appropriately in narrative writing.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners types of writing and explain what narrative writing is."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give examples of narrative writing to learners to examine."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss with learners the structure and features of narrative writing."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assist learners to recognise the use of commas, full stops, and question marks appropriately in narrative writing given."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Allow learners to write a narrative of about two hundred words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.1.1.2",
+                  "description": "Understand and use exclamation mark in narrative writing appropriately.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give a long narrative writing piece to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the content of the narrative writing with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow learners to recognise the exclamation marks used in the given piece."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners read the narrative piece in their groups."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Assist learners to understand the use of exclamation marks in narrative writing appropriately."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.1.1.3",
+                  "description": "Know the appropriate use of colon and quotation marks in narrative writing.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "With a given narrative writing piece, allow learners to discuss in groups the punctuations used in the narrative writing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assist learners to know the use of the colon and quotation marks in narrative writing appropriately through discussion."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.2",
+          "title": "Creative/ Free Writing",
+          "description": "Writing short and long imaginative and real stories.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.4.2.1",
+              "description": "Show an understanding of creating and writing longer stories on their own.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.2.1.1",
+                  "description": "Write a short story on their own.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners things that are considered in writing a story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, ask learners to create a short story and read to the class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Give a few words on the board as a guide for learners to write a short story."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.2.1.2",
+                  "description": "Write an imaginative longer story on their own.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask a learner to tell a story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss with learners what an imaginative story is."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, ask learners to write an imaginative story of about three hundred words and present to the class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write sentences on flashcards."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use the sentences on the flashcards to help learners to write an imaginative longer story on their own."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.2.1.3",
+                  "description": "Create a story that relates to their environment.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss some environmental issues with learners such as flood, bushfire, climate change pollution, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give learners some guiding sentences on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put learners in groups and guide them to create a story about a selected issue on the environment for each group."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.3",
+          "title": "Descriptive Writing",
+          "description": "Writing descriptive essays about people, objects, and processes.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.4.3.1",
+              "description": "Exhibit knowledge of writing descriptive essays using controlled composition or on their own.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.3.1.1",
+                  "description": "Write simple descriptive essays about human beings using controlled composition.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use controlled composition to write a short descriptive essay on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Encourage and monitor learners to write simple descriptive essays about human beings using controlled composition."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.3.1.2",
+                  "description": "Give simple descriptive essays about objects using controlled composition.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use controlled composition to write a simple descriptive essay on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners write simple descriptive essays about objects using controlled composition."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.3.1.3",
+                  "description": "Write their own simple descriptive essays on given topics.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use controlled composition to write a simple descriptive essay on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to write simple descriptive essays on given topics of at least three paragraphs and read some aloud in class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.4",
+          "title": "Persuasive Writing",
+          "description": "Writing persuasive essays using controlled composition.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.4.4.1",
+              "description": "Exhibit knowledge of writing simple persuasive essays using controlled composition on their own",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.4.1.1",
+                  "description": "Write a simple persuasive essay through controlled composition.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use controlled composition to write a simple persuasive essay on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read the sample persuasive essays on the cardboard and discuss some of its structure and features."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners compose a simple persuasive essay through controlled composition individually and read some aloud to class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.4.1.2",
+                  "description": "Write simple persuasive essays about domestic issues.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss domestic issues with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use controlled composition to write a simple persuasive essay on a cardboard."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow learners to write simple persuasive essays about domestic issues."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.4.1.3",
+                  "description": "Write persuasive essays on given topics.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use controlled composition to write a simple persuasive essay on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to write persuasive essays on given topics."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.5",
+          "title": "Argumentative Writing",
+          "description": "Gathering information and writing argumentative essays.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.4.5.1",
+              "description": "Exhibit knowledge and understanding of good argumentative essays by gathering information.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.5.1.1",
+                  "description": "Gather information for the writing of good argumentative essays.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the structure of argumentative writing with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use controlled composition to write a simple argumentative essay on a cardboard."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read the argumentative essay on the board pointing out the structure."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners understand and recognise how to gather information for the writing of good argumentative essays."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.5.1.2",
+                  "description": "Comprehend and discuss how to write for or against a motion in an argumentative essay.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give a topic to the class and put the learners into two groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let one group write for the topic and the other against the topic in class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let each group read their write up in class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the ways of writing for or against a motion in a given motion in an argumentative essay."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let individual learners write for or against a given motion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.5.1.3",
+                  "description": "Write a simple argumentative essay on a given topic.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use controlled composition to write a simple argumentative essay on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to write a simple argumentative essay on a given topic of about four paragraphs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.6",
+          "title": "Informative/ Academic Writing",
+          "description": "Writing articles for a journal.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.4.6.1",
+              "description": "Demonstrate knowledge of creating a journal",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.6.1.1",
+                  "description": "Write articles for a journal and edit the articles.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show learners a copy of an article."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss with learners some types of articles and their structure."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss with learners what a journal is."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Talk to learners about types of journals."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Guide learners to write a simple article in their groups, and discuss in class."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Create a class journal. Let learners write articles for their class journal."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Assist learners to edit the articles for their class journal by bringing out the features and structure of the article in the journal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.6.1.2",
+                  "description": "Publish and appreciate the articles in the journal.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Look at the class journal created."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In their groups, let learners write simple articles on topics on disability and equity, and let other learners edit them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask the learners to publish the article in the created class journal and display in the class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Put learners in groups and allow each group to read an article from the class journal and discuss the article, bringing out for instance, the moral and the theme."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.7",
+          "title": "Literary Writing",
+          "description": "Writing poems, prose, and plays.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.4.7.1",
+              "description": "Demonstrate knowledge of creating short literary works.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.7.1.1",
+                  "description": "Write short poems.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a simple short poem on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss some features of a poem with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use flashcards with short poems on them to help learners compose their own short poems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.7.1.2",
+                  "description": "Create short prose.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show learners samples of prose and discuss some features of prose."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to write a simple prose to be read in class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Give an assignment of prose writing as a competition among learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.7.1.3",
+                  "description": "Write a short and simple play.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Allow learners to watch a simple play."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the play with learners and bring out its features."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write out some of the features of a play on the board as a guide."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Ask learners to write a simple play of at least three characters, one of the plays may be dramatised in class and be discussed."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.8",
+          "title": "Letter Writing",
+          "description": "Writing semi-formal letters.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.4.8.1",
+              "description": "Exhibit knowledge in the writing of semi-formal letters.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.8.1.1",
+                  "description": "Comprehend and discuss the process in writing good semi-formal letters.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss letter writing and its structure with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show a sample of a letter to learners to point out the structure and features."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the features and types of letters."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain to learners the structure of semi-formal letters."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write a sample semi-formal letter on the board."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss the process involved in writing a semi-formal letter."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Assist learners to understand the process in writing good semi-formal letters."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.8.1.2",
+                  "description": "Write semi-formal letters using controlled composition.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a semi-formal letter on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assist learners to write semi-formal letters using controlled composition."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners to point out the features and structure of the semi-formal letter written."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.8.1.3",
+                  "description": "Write good semi-formal letters.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a semi-formal letter to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to write good semi-formal letters."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.5",
+      "title": "Writing Conventions/ Usage",
+      "description": "Applying grammar rules in written language.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B5.5.1",
+          "title": "Integrating Grammar in Written Language (capitalization)",
+          "description": "Using capital letters correctly.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.1",
+              "description": "Show an understanding in the use of capital letters appropriately.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.1.1",
+                  "description": "Understand that capital letters begin proper nouns.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a list of words on the board comprising of common nouns and proper nouns."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to group the nouns."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss with learners the proper nouns."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners recognise the use of capital letters to begin the proper nouns."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Ask students to write some more proper nouns on the board."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Ask learners to use some of the proper nouns in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.1.2",
+                  "description": "Comprehend the use of capital letters after a colon.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a paragraph on flash cards with all punctuations used."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to recognise where capital letters occur in the paragraph."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the colon and the use of capitals after the colon."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use flashcards to help learners understand the use of capital letters after a colon."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.1.3",
+                  "description": "Understand the use of capital letters after a question mark.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Allow learners to read a passage."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss with learners the occurrences of the question mark in the passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners recognise the words that occur after the question mark."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the occurrence of the capital letter to begin the word after the question mark."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write a few sentences on the board and ask learners to write them out correctly, placing in them question marks and capital letters, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.2",
+          "title": "Integrating Grammar in Written Language (Punctuation)",
+          "description": "Using punctuation marks appropriately.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.5.2.1",
+              "description": "Demonstrate knowledge in the use of punctuation marks in passages.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.2.1.1",
+                  "description": "Recognise and use commas, full stops, and question marks appropriately in writing.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show a passage to learners and allow the learners to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read the passage aloud to learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners recognise the punctuation used in the passage."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write a paragraph on a flash card without any punctuations."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Guide learners to use commas, full stops, and question marks appropriately in the writing."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.2.1.2",
+                  "description": "Understand and use exclamation mark in writing appropriately.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Allow learners to read a passage and discuss the punctuations with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about the exclamation mark."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a paragraph on a flash card without some punctuations, e.g. the exclamation mark."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Read the paragraph aloud to learners."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Assist learners to use exclamation marks to punctuate the writing appropriately."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.2.1.3",
+                  "description": "Use colon and quotation marks in writing appropriately.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on colon with learners and discuss quotation marks with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give a short passage and ask learners to put in the colon and quotation marks appropriately."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.3",
+          "title": "Integrating Grammar in Written Language (Use of action words)",
+          "description": "Using action words in present and past tense.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.5.3.1",
+              "description": "Demonstrate knowledge on use of action words appropriately.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.3.1.1",
+                  "description": "Recognise and use simple present tense action words in sentences.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to do some actions in the class like clap, jump, sit, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write and read aloud some of the action words mentioned by the learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners to form sentences orally with some of the action words."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write simple present tense sentences on flashcards."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Call learners in turns to read out the sentences on the flashcards."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Call a learner to say or point out the action word in the sentence on a flashcard."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Give simple present tense action words to learners to form sentences and read out aloud, or show to the class by writing on the board."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.3.1.2",
+                  "description": "Use simple past tense action words in sentences.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to recount what they did the day before."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write some of the action words mentioned by the learners on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read aloud to learners the written action words."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Talk to learners about the action and explain to them the action has happened already."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Allow learners to give more action words orally and guide them to put the words in past tense."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Ask learners to use the past tense action words to form simple sentences in writing, or orally."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.4",
+          "title": "Integrating Grammar in Written Language (Use of qualifying words)",
+          "description": "Using adjectives and adverbs.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.5.4.1",
+              "description": "Demonstrate knowledge in the use of adjectives and adverbs.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.4.1.1",
+                  "description": "Recognise and use the types of adjectives (dimension, colour, age)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show objects to the class and let learners touch the objects."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to describe the objects."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write on the board some of the words used in describing the objects."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Read aloud the words to learners e.g. blue, big, small, round etc."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Allow learners to use some of the qualifying words to form sentences either written or orally."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Write sentences containing adjectives on flashcards."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Use the flashcards with adjectives written on them to help learners recognise the type of adjectives."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Ask learners to mention adjectives and write them on the board."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Allow learners to use some of the adjectives to form sentences."
+                    },
+                    {
+                      "orderIndex": 10,
+                      "description": "Ask learners to put the adjectives written on the board into the different types taught to the learners."
+                    },
+                    {
+                      "orderIndex": 11,
+                      "description": "Put learners into groups and give each group one type of adjective to form some sentences with them and read aloud to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.4.1.2",
+                  "description": "Use of comparative and superlative words/adjectives forms in sentences.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show two objects of the same type to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to compare the objects in terms of size, colour, age, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write out the words that are used in the sentences to compare the objects."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain to learners that the comparative is done either with the use of a word, or the adjectival form changes depending on the language in question."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Talk about the superlative and discuss the words used in a sentence to tell that the object that is described is superlative."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.5",
+          "title": "Integrating Grammar in Written Language (Use of postpositions)",
+          "description": "Using postpositions in sentences.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.5.5.1",
+              "description": "Demonstrate the use of postpositions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.5.1.1",
+                  "description": "Recognise and use postpositions in complex sentences.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise postpositions with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners give some examples of postpositions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write the postpositions on the board and read them aloud."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Allow learners to form some sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write sentences with postposition words on flashcards. Read aloud the sentences and allow learners to also read."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Guide learners to recognise post positions in complex sentences."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Allow learners to use some of the written postpositions on the board to form complex sentences."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Explain the structure of a complex sentence to learners."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Assist learners to use postpositions in writing complex sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.5.1.3",
+                  "description": "Recognise postpositions in paragraphs",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners a passage to read or read it to them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assist learners to recognise post positions in paragraphs."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Present learners with a mixture of words and allow them to select the postpositions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.6",
+          "title": "Integrating Grammar in Written Language (Use of simple and compound sentences)",
+          "description": "Forming compound sentences using conjunctions.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.5.6.1",
+              "description": "Exhibit knowledge in the use of conjunctions in forming compound sentences.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.6.1.1",
+                  "description": "Recognise single conjunctions such as 'but' and 'because' in compound sentences.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to give simple sentences orally and write the sentences on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss how some of the sentences can be put together as one sentence."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain to the learners the use of conjunctions as words used to link the sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Give a sample compound sentence and guide learners to recognise the conjunction in it."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write out other conjunctions and read aloud to learners."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Use flashcards with single conjunctions written on them to assist learners to recognise single conjunctions such as 'but', 'because' in compound sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.6.1.2",
+                  "description": "Use single conjunctions in forming compound sentences.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a mixture of words on the board and lead learners to select the conjunctions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to use the conjunctions to form compound sentences orally or written."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put learners in a group to write compound sentences and underline the conjunction."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.6.1.3",
+                  "description": "Form compound sentences with appropriate conjunctions.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners simple sentences and ask them to form compound sentences with them using the appropriate conjunction."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use flashcards with conjunctions written on them to assist learners to form compound sentences with appropriate conjunctions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow learners to write some conjunctions on the board."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.7",
+          "title": "Integrating Grammar in Written Language (Spelling)",
+          "description": "Spelling and word formation.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.5.7.1",
+              "description": "Recognise and spell out words correctly.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.7.1.1",
+                  "description": "Write eight and nine-letter words correctly.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to mention words they know and write them on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Group the words according to the number of letters."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read the letters aloud and guide learners to spell out the words correctly."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use flashcards with eight and nine letter words written on them to help learners to write eight and nine letter words correctly."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.7.1.2",
+                  "description": "Rearrange letters to form new words.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners some letters and ask them to form words from those letters."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Say and write on the board eight, and nine letters and help learners rearrange the letters to form new words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.7.1.3",
+                  "description": "Fill in missing words from passages.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write words with some missing sounds. Let learners recognise them and fill in the missing letters."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using flashcards with sentences that have missing words written on them help learners fill in missing words from passages."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.8",
+          "title": "Integrating Grammar in Written Language (Conjunctions)",
+          "description": "Using conjunctions in writing.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.5.8.1",
+              "description": "Apply the knowledge on the use of conjunctions in writing sentences",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.8.1.1",
+                  "description": "Identify conjunctions (because, since, so, although etc.) appropriately in sentences to give reasons, link contrasting ideas and show results",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on simple conjunctions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Provide simple sentences and let learners join them using and, or/nor, but."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Introduce because, since, so, although in context."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners to discover the functions of these conjunctions."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Have them practise using these conjunctions in their own sentences."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Provide a passage and have learners identify the conjunctions in the passage."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners form pairs of simple sentences and join them with the conjunctions identified."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.6",
+      "title": "Extensive Reading/Children Literature/Library",
+      "description": "Fostering a culture of reading.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B5.6.1",
+          "title": "Building the Love and Culture of Reading in Learners",
+          "description": "Reading various materials.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.6.1.1",
+              "description": "Exhibit the ability to read other materials like newspapers, novels, other than the class Reader alone.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.1.1.1",
+                  "description": "Read aloud passages from novels and newspapers with correct pronunciation and tone.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage aloud to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use flashcards with three to four word sentences written on them to assist learners with correct pronunciation and intonation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners bring other materials on literary works like magazines or newspapers to read."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Call learners to read paragraph by paragraph to check the correct pronunciation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.1.1.2",
+                  "description": "Demonstrate correct speech, rhythm and tone.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a newspaper or novel aloud to learners with the correct tone and rhythm."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Allow learners to demonstrate correct speech, rhythm and tone."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.2",
+          "title": "Read Aloud with Children",
+          "description": "Reading aloud with correct pronunciation.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.6.2.1",
+              "description": "Exhibit knowledge in reading sentences, paragraphs and stories aloud.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.2.1.1",
+                  "description": "Read aloud passages with correct pronunciation and tone.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage of about seven paragraphs aloud to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to read aloud passages with correct pronunciation and intonation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.2",
+                  "description": "Demonstrate correct speech, rhythm and tone.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate correct speech, rhythm and tone."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to demonstrate correct speech, rhythm and tone."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.3",
+          "title": "Reading Texts, Poems, Narrative, and Short Stories and Respond to them",
+          "description": "Reading diverse texts and responding.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.6.3.1",
+              "description": "Demonstrate knowledge in reading materials other than the reader provided in class with understanding.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.3.1.1",
+                  "description": "Read short texts, narratives or stories from other materials with correct intonation/tone.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a text aloud to the hearing of learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to read short texts, narratives or stories from other materials with correct intonation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners read paragraph each of the text to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.3.1.2",
+                  "description": "Answer questions on the narratives/passage read.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners read a passage to the hearing of others learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to answer questions on the passage read orally then write them into their books."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.3.1.3",
+                  "description": "Retell the short stories or narratives read.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage to the hearing of learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to re-tell the short stories or narratives read."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.3.1.4",
+                  "description": "Read paragraphs, passages and stories of different texts.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a paragraph to the hearing of learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give learners the opportunity to read paragraphs, passages and stories of different texts to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.3.1.5",
+                  "description": "Answer factual questions based on the passage read.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage to the hearing of learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Help learners to read a text."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let them answer factual questions based on the passage read."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Ask learners to narrate what they read."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.3.1.6",
+                  "description": "Write a summary of passage/text read.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage to the hearing of learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to read a text."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide them to summarize the passage read."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

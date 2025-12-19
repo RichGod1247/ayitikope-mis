@@ -1,0 +1,953 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 8",
+  "subject": "Computing",
+  "name": "JHS 2 Computing",
+  "slug": "jhs-2-computing",
+  "orderIndex": 1,
+  "description": "The JHS 2 Computing curriculum builds on the foundation of JHS 1, introducing more advanced concepts in computer systems, productivity software, communication networks, and computational thinking. It covers fifth-generation computers, data entry devices, advanced file management, desktop publishing, electronic spreadsheets, network security, and introductory programming and robotics.",
+  "strands": [
+    {
+      "code": "B8.1",
+      "title": "INTRODUCTION TO COMPUTING",
+      "description": "Advanced computer components, technology in the community, and health and safety.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B8.1.1",
+          "title": "COMPONENTS OF COMPUTERS AND COMPUTER SYSTEMS",
+          "description": "Fifth-generation computers, direct data entry, and storage devices.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.1.1.1",
+              "description": "Identify parts of a computer and technology tools",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.1.1.1",
+                  "description": "Discuss the fifth generation of computers with emphasis on quantum computing",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the features of the fifth-generation computers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe quantum computing using the Google operational quantum computing called 'Sycamore'."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss parallel processing hardware and Artificial Intelligence (Al) software."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.2",
+                  "description": "Demonstrate understanding of direct data entry devices (Graphic Tablet, Magnetic Card Reader, Optical Card Reader, QR code reader, Radio Frequency Identification (RFID) Readers)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify Graphic tablet, Magnetic card reader, optical card reader, QR code reader, Radio Frequency Identification (RFID) Readers from video or pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore features of these input devices."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore how these input devices work in real life situations."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Generate QR codes and link them to specific websites."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.3",
+                  "description": "Examine the uses of the output devices: Braille printers, Impact, Inkjet, Thermal, Wax, 3D printers",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify Braille printers, Impact, Inkjet, Thermal, Wax, 3D printers from pictures or videos."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore the features of these output devices."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore how these output devices work in real life situations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.4",
+                  "description": "Describe storage devices: Flash Memory Storage Systems, Embedded Flash Memory Cards and Readers, USB Flash Drives, Solid State Drives and Hybrid hard drives",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Illustrate the use of Flash Memory Storage Systems, Embedded Flash Memory, Flash Memory Cards and Readers, USB Flash Drives, Solid State Drives and Hybrid hard drives."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the features of Flash Memory Storage Systems, Embedded Flash Memory Flash Memory Cards and Readers."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.1.1.2",
+              "description": "Demonstrate the use of the Desktop features",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.1.1.2.1",
+                  "description": "Explore the use of the Charms bar",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the icons in the Charms bar."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe features of the Charms bar icons."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.2.2",
+                  "description": "Practise file management techniques (Drive Management)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the file management techniques such as defragmentation, compression of files, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore ways of partitioning a hard disk."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.2",
+          "title": "TECHNOLOGY IN THE COMMUNITY",
+          "description": "Assistive technologies, portable devices, and online service issues.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.1.2.1",
+              "description": "Demonstrate the use of Technology in the Community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.2.1.1",
+                  "description": "Discuss technologies that help to improve computer accessibility (adaptive and assistive technologies)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the categories of people with special needs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss technologies that can be used to help people with special needs (e.g. Computer software and hardware such as voice recognition programs, screen readers, and screen enlargement applications, to help people with mobility and sensory impairments use computers and mobile devices, etc.)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.2",
+                  "description": "Describe how portable computing devices affect our everyday lives",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss portable computing devices that we use daily e.g. mobile phones, smart watches, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe how these devices affect our daily lives."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.3",
+                  "description": "Explain the issues associated with online services (e.g. social media, wikis, blogs, etc.)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the online services that learners normally use or have access to."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Evaluate issues that are associated with online service delivery."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.3",
+          "title": "HEALTH AND SAFETY IN THE USE OF ICT TOOLS",
+          "description": "Health issues at workstations and safety measures.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.1.3.1",
+              "description": "Demonstrate How to Apply Health and Safety measures in Using ICT Tools",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.3.1.1",
+                  "description": "Discuss health issues at workstations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the importance of taking regular breaks from bulk work (possibly after every hour)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the adoption of good posture while at the computer."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the use of document holders to avoid having to lean over and bend your neck while looking at paperwork."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.3.1.2",
+                  "description": "Discuss safety measures in risk reduction at workstations",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the use of appropriate volumes when using speakers and earpieces."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of screen protectors/spectacles to control the amount of light received by our eyes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Illustrate how not to overload electric sockets but use trailing multi-socket units rather than plug adapters."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.2",
+      "title": "PRODUCTIVITY SOFTWARE",
+      "description": "Advanced features in Word Processing, Presentation, Desktop Publishing, and Spreadsheets.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B8.2.1",
+          "title": "INTRODUCTION TO WORD PROCESSING",
+          "description": "Tables, hyperlinks, merging, and page formatting.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.2.1.1",
+              "description": "Demonstrate How to Use Microsoft Word (tables and hyperlink pages)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.1.1.1",
+                  "description": "Demonstrate how to create a table and hyperlinks",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Tables group under the Insert tab."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create tables, columns and resize them in MS-Word."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the use of hyperlinks to create non-linear presentations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.1.1.2",
+                  "description": "Demonstrate how to merge, split, add formula, borders and shades",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore merging, splitting, adding formulas, borders and shades in MS-Word under the Insert tab."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore the use of the bullets; decrease and increase indentation under the Home tab."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the use of the Border Button and set line spacing (e.g. explore the use of the dialogue Box Launcher button under the Home tab)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.1.1.3",
+                  "description": "Demonstrate how to format a page (e.g. page adjustment, inserting header and footer, page numbers, breaks and orientations)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate how to format pages by adjusting the header, footer, page numbers, and page orientation."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.2",
+          "title": "INTRODUCTION TO PRESENTATION",
+          "description": "Multimedia features in PowerPoint.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.2.2.1",
+              "description": "Demonstrate how to use Microsoft PowerPoint (Multimedia)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.2.1.1",
+                  "description": "Demonstrate how to add pictures, screenshot and edit and format pictures",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Images Group under the Insert tab."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of ClipArt, Photo Album and Screenshot."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Project examples of the PowerPoint interface to learners with the aid of a projector or pictures."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.2",
+                  "description": "Demonstrate how to add a drawing canvas, shapes, and also edit, format and add text to shapes",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Illustrations group under the Insert tab."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Illustrate the use of Shapes and SmartArt."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the use of the drawing canvas to group shapes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.3",
+                  "description": "Demonstrate how to add text to shapes and arrange shapes",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Format Ribbon once a shape is selected."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore the editing features of the Insert Shapes and Shape Styles."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Present a prepared project or exercise using what has been studied in Indicator I and 2."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.3",
+          "title": "INTRODUCTION TO DESKTOP PUBLISHING",
+          "description": "Using MS-Publisher for creating documents.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.2.3.1",
+              "description": "Demonstrate how to use MS-Publisher",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.3.1.1",
+                  "description": "Explain the importance of desktop publishing software (DTP)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the meaning of desktop publishing software."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Brainstorm to elicit the importance of DTP."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Brainstorm to elicit responses of some DTP packages. (e.g. MS-Publisher, Adobe InDesign, LibreOffice Draw, QuarkXpress etc.)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.2",
+                  "description": "Create and save a new document from a blank or pre-designed template",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Open a desktop publishing software (e.g. MS-Publisher)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create a new document from a blank publication."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create a new document from a pre-designed template."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Save the document with the appropriate name."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.3",
+                  "description": "Demonstrate the use of the commands in MS-Publisher ribbons under each tab (Home, Page Design, Mailings, Review, View)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Working in pairs, explore the use of the commands in a desktop publishing software (e.g. MS-Publisher ribbons: Home, Page Design, Mailings, Review, View)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.4",
+                  "description": "Change the orientation and margins of a document",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore and change the orientation and margins of your document by working pairs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.5",
+                  "description": "Add and modify pictures from different sources",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore addition and modification of pictures from different sources to your document by working in pairs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.6",
+                  "description": "Add and modify text",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore addition and modification of text using different font types in your document."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.7",
+                  "description": "Create and present a Publisher document (flyer, advertisement, invitation cards, business cards)",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create a one-page Publisher document e.g. flyer, advertisement, invitation cards, business cards, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present documents to demonstrate creative abilities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.4",
+          "title": "INTRODUCTION TO ELECTRONIC SPREADSHEET",
+          "description": "Functions, complex formulas, and data tables in Excel.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.2.4.1",
+              "description": "Demonstrate How to Use the Spreadsheet (using functions and complex formulas)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.4.1.1",
+                  "description": "Perform operations using functions and Built-in functions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Enumerate the difference between formulas and functions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Access built-in functions to perform operations on sample data."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate the use of common spreadsheet functions such as SUM, AVERAGE, COUNT, COUNTA, COUNTIF, MAX and MIN."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.4.1.2",
+                  "description": "Demonstrate how to create complex formulas",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create complex formulas (e.g. finding percentages, commissions, interest rates, etc.)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.4.1.3",
+                  "description": "Demonstrate how to copy formulas and references",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the procedure for copying and pasting formulas in a worksheet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore how to reference cells and ranges in a worksheet."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate the use of relative and absolute cell referencing in creating formulas."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explore how to correct common formula errors."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Complete a project that involves creating a set of formulas with common functions (e.g. simple interest formula)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.3",
+      "title": "COMMUNICATION NETWORKS",
+      "description": "Computer networks, internet, security, and web technologies.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B8.3.1",
+          "title": "COMPUTER NETWORKS",
+          "description": "Data communication models and internet concepts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.3.1.1",
+              "description": "Identify the concept of computer networking for global communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.1.1.1",
+                  "description": "Describe the data communication models for networks",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the Open System Interconnection (OSI) model."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the different layers in the OSI model."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the purpose or benefits of the layers in ensuring interoperability of different hardware devices."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.2",
+                  "description": "Describe the Internet, world wide web (www) and Internet Protocol (IP) addresses",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the Internet and the classes of internet addresses."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the internet Domain Name Server (DNS), which is equivalent to the function of a phonebook."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Distinguish between IPv4 and IPv6 addresses."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explore the difference between internet and world wide web (www)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.2",
+          "title": "INTERNET AND SOCIAL MEDIA",
+          "description": "Social media types and email usage.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.3.2.1",
+              "description": "Demonstrate the use of Social Networking and Electronic Mail",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.2.1.1",
+                  "description": "Identify the various types of Social Media sites such as Photo sharing (Instagram, Snapchat, Pinterest) and Video sharing (YouTube, Facebook Live, Periscope, Vimeo)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the use of Photo sharing sites such as Instagram, Snapchat, Pinterest etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of video sharing platforms such as YouTube, Facebook Live, Periscope, Vimeo etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Illustrate the steps involved in attaching a document to an email."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explore the use of the address book as a feature of email."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.3",
+          "title": "INFORMATION SECURITY",
+          "description": "Data threats and protection methods.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.3.3.1",
+              "description": "Recognise data threats and security protections",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.3.1.1",
+                  "description": "Describe the nature of four major data threats (Interruption, Interception, Modification, Fabrication)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch a video on threats to data security."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the threats that can prevent information from reaching its destination."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the threats that can cause data corruption."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe the nature of the four major data threats."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.3.1.2",
+                  "description": "Map the protection methods to each of the four identified data threats (Authorisation, Authentications, Encryption and Decryption)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Brainstorm the methods of protecting data against the four main threats."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the threats to data security and the methods of preventing each threat."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.4",
+          "title": "WEB TECHNOLOGIES",
+          "description": "Using web browsers and search engines effectively.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.3.4.1",
+              "description": "Demonstrate the use of a web browser (Search engine)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.4.1.1",
+                  "description": "Demonstrate how to effectively search from a web browser",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify effective search techniques (e.g. using search phrases with exact spelling, use of AND, OR, NOT, etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate how to search with any of the techniques or a combination of techniques."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.4.1.2",
+                  "description": "Explore the use of more than one search engine",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Investigate the use of more than one search engine e.g. Ask, Google, yahoo!"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore different search engines with the same search string/terms and observe the outcome."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the results of your findings."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.4",
+      "title": "COMPUTATIONAL THINKING",
+      "description": "Programming concepts, algorithms, robotics, and AI.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B8.4.1",
+          "title": "INTRODUCTION TO PROGRAMMING",
+          "description": "Basic programming concepts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.4.1.1",
+              "description": "Show an understanding of the concept of programming",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.1.1.1",
+                  "description": "Describe the basic concepts in programming (Constants, Variables, Expressions, Statements/Instructions, logical and arithmetic operators, Operator precedence, etc.)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create a table to compare how the same arithmetic notations are represented in coding and in classroom mathematics."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.2",
+          "title": "ALGORITHM",
+          "description": "Analyzing algorithms and programming logic.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.4.2.1",
+              "description": "Analyse the correct step-by-step procedure in solving any real-world problem",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.2.1.1",
+                  "description": "Apply variables, expressions, assignment statements and operator precedence order (BODMAS rule) to process and store numbers and text in a programme",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compute an expression following the operator precedence order (BODMAS) to exemplify how computers process input data to print out an answer."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.2.1.2",
+                  "description": "Describe and use sequence, selection and iteration statements in a programme. Understand the difference between variables and constants and be able to choose appropriate naming conventions when writing statements",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw the four basic symbols representing programme start-stop, input-output, process and decision."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify a real case problem in the environment and arrange the symbols to represent a logical step-by-step sequence in solving that problem. (Example, illustrate the logical steps to prepare the land for a maize farm)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.3",
+          "title": "ROBOTICS",
+          "description": "Robot components and operations.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.4.3.1",
+              "description": "Discuss Robot Intelligence Concepts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.3.1.1",
+                  "description": "Describe the principles underlying the operation of the components of a robot (Controller Mechanical, Sensors)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the controller as the 'brain' of the robot."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate understanding of mechanical parts such as motors, pistons, grippers, wheels and gears that make the robot move, grab, turn around or lift (Actuators)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Watch video/pictures of the various parts of the robot."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe how a range of sensors can be used to input data into a computer system, including light, temperature, magnetic field, gas, pressure, moisture, humidity, pH and motion."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Describe how these sensors are used in real-life scenarios, for example: street lights, security devices, pollution control, games, and household and industrial applications."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.4",
+          "title": "ARTIFICIAL INTELLIGENCE",
+          "description": "Artificial Neural Networks and intelligence comparison.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.4.4.1",
+              "description": "Discuss Artificial Intelligence Concepts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.4.1.1",
+                  "description": "Discuss Artificial Neural Networks (ANN) and compare intelligence in humans, animals and machines",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compare intelligence in humans, animals and machines."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare the limitations and capabilities of the three intelligences in processing information."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the difference between strong and weak artificial intelligence."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss hologram science basics and link the application in creating a 3-Dimension mixed reality (MR) intelligence."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

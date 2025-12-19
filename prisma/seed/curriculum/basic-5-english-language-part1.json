@@ -1,0 +1,1190 @@
+{
+  "part": "1/2",
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "English Language",
+  "name": "Basic 5 English Language",
+  "slug": "basic-5-english-language",
+  "orderIndex": 1,
+  "description": "The Basic 5 English Language curriculum focuses on enhancing oral language skills, reading comprehension, and grammar usage. It includes strands on songs, poetry, storytelling, dramatisations, conversation, and reading strategies.",
+  "strands": [
+    {
+      "code": "B5.1",
+      "title": "Oral Language (Listening and Speaking)",
+      "description": "Developing listening and speaking skills through songs, poetry, storytelling, dramatisation, and conversation.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5.1.1",
+          "title": "Songs",
+          "description": "Using songs to understand central messages and relate values to life.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.1.1.1",
+              "description": "Demonstrate understanding of a variety of songs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.1.1.1",
+                  "description": "Explain the central messages in songs",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sing familiar patriotic songs and listen to selected songs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the central message of the song using questions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Invite individuals to explain the central message(s) of the song."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.2",
+                  "description": "Relate values in songs to real life experiences",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the song and bring out the meaning."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss values in the song (e.g., truthfulness, patience) and relate them to real life situations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Share ideas with the class in the form of presentations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.3",
+          "title": "Poems",
+          "description": "Appreciating poems and relating their values to daily life.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.1.3.1",
+              "description": "Appreciate poems and other pieces of literary materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.3.1.1",
+                  "description": "Respond to poems by discussing their central messages and expressing own opinion",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recite and act out a poem as learners listen and observe."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recite lines of the poem with correct stress, clapping, and tapping out the rhythm."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.2",
+                  "description": "Relate values in poems to day-to-day life",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read the poem line by line and discuss the meaning."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and discuss values in the poem (e.g., patience, love, patriotism) and relate them to real life situations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.3",
+                  "description": "Compose six-line poems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write out some lines of recited poems in groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create or write meaningful lines similar to those in the poem and arrange them to compose a six-line poem."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.4",
+          "title": "Story Telling",
+          "description": "Responding to stories and creating parallel narratives.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.1.4.1",
+              "description": "Respond to stories",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.4.1.1",
+                  "description": "Demonstrate understanding of lessons in stories by making relevant comments",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the beginning, middle, and ending of a story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Retell the story sequentially."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss key details like characters, setting, and events."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.4.1.2",
+                  "description": "Tell stories which are parallel to stories heard or read",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify areas in a story that can be changed or replaced to create a parallel story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write and present stories parallel to a familiar one."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.5",
+          "title": "Dramatisation and Role Play",
+          "description": "Using drama to appreciate literary materials and key issues.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.1.5.1",
+              "description": "Appreciate pieces of literary materials through dramatisation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.5.1.1",
+                  "description": "Use costume to dramatise or role-play parts/whole of stories",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select a familiar story and assign roles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Prepare costume and rehearse for performance."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.5.2",
+              "description": "Appreciate key issues in stories/sketches",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.1.5.2.1",
+                  "description": "Interpret moral values in plays/stories",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify moral values (e.g., truthfulness, perseverance) in a story/play."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss how to apply those values to day-to-day living."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.5.2.2",
+                  "description": "Develop sketches from stories read or heard",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify parts in stories and retell them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Develop a sketch from the story in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.5.2.3",
+                  "description": "Analyse the actions of characters in sketches",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and analyse characters and their actions in sketches."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.6",
+          "title": "Conversation",
+          "description": "Engaging in conversation about oneself, family, people, customs, and social values.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.1.6.1",
+              "description": "Use culturally acceptable language for communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.6.1.1",
+                  "description": "Describe/talk about names of regions/places in the country as well as personalities in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss important personalities in the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Mention regions in the country and talk about important places in each region."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.6.2",
+              "description": "Demonstrate positive listening and viewing attitudes and behaviour",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.1.6.2.1",
+                  "description": "Maintain appropriate posture and facial expression",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage in conversation maintaining appropriate posture and facial expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.6.2.2",
+                  "description": "Listen and view for the entire duration of a text, speech, presentation, video etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to an audio or video and describe what was seen and heard."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.6.3",
+              "description": "Use knowledge of language and communicative skills to participate in conversation",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.1.6.3.1",
+                  "description": "Engage in collaborative conversation on topics such as social issues, values and manners",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Initiate and contribute to conversations on topics like social values and manners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.6.3.2",
+                  "description": "Demonstrate turn taking in conversation on different topics",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Converse in pairs on different topics following agreed-upon rules like listening to others."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.6.3.3",
+                  "description": "Respond to questions to give further clarification of an opinion",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Initiate a conversation and respond to questions to clarify opinions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.7",
+          "title": "Listening Comprehension",
+          "description": "Using skills and strategies to process meaning from texts.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.1.7.1",
+              "description": "Use appropriate skills and strategies to process meaning from texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.7.1.1",
+                  "description": "Employ the Think-Aloud strategy to convey meaning from level-appropriate texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to a text and practice the Think-Aloud strategy to construct meaning."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.7.1.2",
+                  "description": "Make connections with events in drama",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the sequence of events in a drama and relate them to real life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.7.1.3",
+                  "description": "Relate to lessons in stories",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify characters, setting, and moral lessons in a story and relate them to life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.7.1.4",
+                  "description": "Use background knowledge to understand and build new knowledge while listening to drama",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and relate the plot of a drama to a familiar text."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.7.1.5",
+                  "description": "Ask relevant questions to expand comprehension of details of texts",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify interesting stories and ask relevant questions to expand comprehension."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.7.1.6",
+                  "description": "Distinguish between causes and effects of events in a story",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify events in a story and link them sequentially by identifying cause and effect."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.7.1.7",
+                  "description": "Draw conclusions from main ideas, key details and specific examples from texts",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify specific examples to help bring out main ideas and key details to draw conclusions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.8",
+          "title": "Asking and Answering Questions",
+          "description": "Demonstrating understanding in asking and answering questions correctly.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.1.8.1",
+              "description": "Demonstrate understanding in asking and answering questions correctly",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.8.1.1",
+                  "description": "Use the various forms of 'do', 'be', 'have', appropriately in questions and responses",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask and answer questions using forms of 'do', 'be', and 'have'."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.8.2",
+              "description": "Identify and use question tags correctly in speech",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.1.8.2.1",
+                  "description": "Use positive tags, negative tags and auxiliaries in speech",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Practice using positive and negative tags in dialogues."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.9",
+          "title": "Giving and Following Commands",
+          "description": "Using verbs in commands, instructions, requests, and directions appropriately.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.1.9.1",
+              "description": "Use verbs in commands, instructions, requests and directions appropriately in speech",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.9.1.1",
+                  "description": "Give and respond to commands, instructions; give and follow directions with clear landmarks",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Role-play giving and obeying commands/instructions and directions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.9.1.2",
+                  "description": "Make and respond to polite requests for help from familiar adults",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate making polite requests using 'please'."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.10",
+          "title": "Presentation",
+          "description": "Demonstrating knowledge of spoken grammar and register in presentations.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B5.1.10.1",
+              "description": "Demonstrate knowledge of spoken grammar and register",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.10.1.1",
+                  "description": "Demonstrate awareness of the features of spoken language",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use contractions and ellipsis in speech."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.1.2",
+                  "description": "Demonstrate awareness of the differences between spoken and written forms of language",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discover differences between spoken (simple) and written (complex) forms."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.1.3",
+                  "description": "Demonstrate awareness of how meaning is conveyed through appropriate pace, stress, tone",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Perform poems with appropriate intonation, stress, and rhythm."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.10.2",
+              "description": "Demonstrate the ability to communicate with accurate pronunciation and appropriate intonation",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.1.10.2.1",
+                  "description": "Speak audibly and coherently, using the appropriate voice qualities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage in dialogue or speech delivery maintaining good pace and tone."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.2.2",
+                  "description": "Read aloud clearly, at a good pace and with expression",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read speeches or texts aloud with appropriate expression and pace."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.10.3",
+              "description": "Plan and present information and ideas for a variety of purposes",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.1.10.3.1",
+                  "description": "Present information about personal experiences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Plan and present a speech identifying purpose and audience."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.3.2",
+                  "description": "Draw on prior knowledge to identify organisational structure of speech",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the structure of a model speech (heading, vocative address, introduction, body)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.3.3",
+                  "description": "Gather and select facts and ideas from one or multiple print and non-print sources",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Generate ideas and details for speeches from various sources."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.3.4",
+                  "description": "Support ideas and points of view by integrating selected visual and audio resources",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select facts and ideas appropriate to the purpose, audience, context, and culture."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.3.5",
+                  "description": "Use discourse markers to signpost stages in a presentation",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and use discourse markers like 'For example', 'In summary'."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.3.6",
+                  "description": "Elaborate on points using concrete examples",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Elaborate points with details, examples, and experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.3.7",
+                  "description": "Speak with confidence before different audiences and maintain appropriate posture",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Practice speaking before audiences using appropriate posture and eye contact."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.2",
+      "title": "Reading",
+      "description": "Developing reading skills through phonics, word families, diphthongs, blends, vocabulary, and comprehension.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5.2.2",
+          "title": "Phonics",
+          "description": "Connecting sounds to letters and blending for reading.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.2.2.1",
+              "description": "Connect sounds to letters; and blend letters/syllables in order to read and write",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.2.1.1",
+                  "description": "Apply common phonic generalisations (e.g. hard and soft 'c' and 'g') when reading",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce hard and soft forms of 'c' and 'g' with examples."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.2.1.2",
+                  "description": "Read two syllable words with suffixes and 'r' controlled words",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce 'r' controlled words (or, er, ar, ur) and read words containing them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.3",
+          "title": "Word Families: Minimal Pairs and Common Digraphs",
+          "description": "Identifying minimal pairs and common digraphs.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.2.3.1",
+              "description": "Identify minimal pairs and common digraphs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.3.1.1",
+                  "description": "Use common minimal pairs to decode words",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and read words containing minimal pairs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.3.1.2",
+                  "description": "Use words with digraphs to make meaningful sentences",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify words with digraphs and use them in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.4",
+          "title": "Diphthongs",
+          "description": "Identifying and using diphthongs.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.2.4.1",
+              "description": "Identify and use diphthongs to decode",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.4.1.1",
+                  "description": "Use closing diphthongs to make meaningful sentences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify words with diphthongs and use them in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.5",
+          "title": "Blends and Consonant Clusters",
+          "description": "Identifying and using consonant blends and clusters.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.2.5.1",
+              "description": "Identify and use consonant blends and clusters in reading",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.5.1.1",
+                  "description": "Orally produce two-syllable words by blending sounds, including consonant blends",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and list words having consonant blends and clusters."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.5.1.2",
+                  "description": "Use the spelling-sound correspondences for common consonant digraphs",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and spell words containing specific digraphs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.6",
+          "title": "Vocabulary",
+          "description": "Understanding and building vocabulary.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.2.6.1",
+              "description": "Understand word meanings and usages",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.6.1.1",
+                  "description": "Use level-appropriate content words and function words appropriately",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and use content and function words in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.6.1.2",
+                  "description": "Use terms: synonym, antonym, prefix, suffix, phrasal verb etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and use synonyms, antonyms, affixes, and phrasal verbs."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.6.2",
+              "description": "Build vocabulary",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.2.6.2.1",
+                  "description": "Develop a rich vocabulary stock through extensive reading",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify unfamiliar vocabulary in stories and find their meanings."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.6.3",
+              "description": "Demonstrate a rich vocabulary that supports skills development",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.2.6.3.1",
+                  "description": "Deduce meaning of words from word class and relationships",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use synonyms and antonyms to deduce meanings."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.6.4",
+              "description": "Use words appropriately for purpose, audience, context and culture",
+              "orderIndex": 4,
+              "indicators": [
+                {
+                  "code": "B5.2.6.4.1",
+                  "description": "Recognise how words are formed through acronyms and clipping",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and research acronyms and clipped words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.6.4.2",
+                  "description": "Recognise the playful use of words (jokes, riddles, puns)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate and use playful language like jokes and riddles."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.6.4.3",
+                  "description": "Use words suitable for purpose, audience, context and culture",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify key elements in writing like purpose and audience."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.7",
+          "title": "Comprehension",
+          "description": "Processing and comprehending texts.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.2.7.1",
+              "description": "Process and comprehend level appropriate texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.7.1.1",
+                  "description": "Construct meaning from text read",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use strategies like prior knowledge and prediction to make meaning."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.7.1.2",
+                  "description": "Note and recall main ideas in a sequence",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use SQ3R strategy to present facts sequentially."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.7.1.3",
+                  "description": "Scan texts for details",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Skim and scan texts for details and write down ideas."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.7.1.4",
+                  "description": "Read level-appropriate texts silently and closely for comprehension",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read texts using the Directed Reading Activity (DRA) strategy."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.7.2",
+              "description": "Apply critical reading, implied meaning, higher order thinking, judgment and evaluation",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.2.7.2.1",
+                  "description": "Respond to a text with simple judgment and personal interpretations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create mental images and respond to texts with judgment."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.7.2.2",
+                  "description": "Relate two or more ideas in a text",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Make personal connections and relate ideas within or across texts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.7.2.3",
+                  "description": "Demonstrate awareness of the structure of texts",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify introduction, body, and conclusion of a text."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.7.3",
+              "description": "Demonstrate an understanding of the use of words and phrases as used in a text",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.2.7.3.1",
+                  "description": "Use knowledge of prefixes and suffixes to read and interpret unfamiliar words",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify affixes in words and use them in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.8",
+          "title": "Silent Reading",
+          "description": "Constructing meaning from silent reading.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.2.8.1",
+              "description": "Construct meaning from texts read",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.8.1.1",
+                  "description": "Infer meaning from level-appropriate texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read silently and stop to think about meaning."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.8.1.2",
+                  "description": "Find the meaning of words as used in context",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find meaning of words in context using Think-Pair-Share."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.8.1.3",
+                  "description": "Answer questions based on the passage read",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Pose and answer questions to clarify meaning."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.9",
+          "title": "Fluency",
+          "description": "Reading texts fluently to enhance comprehension.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.2.9.1",
+              "description": "Read fluently to enhance comprehension",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.9.1.1",
+                  "description": "Read grade-level texts with good speed and accuracy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read texts with purpose and understanding using strategies like KWL."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.9.1.2",
+                  "description": "Use context to confirm or self-correction strategies",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read texts paying attention to punctuation and use correction strategies."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.10",
+          "title": "Summarising",
+          "description": "Summarising texts orally and in writing.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B5.2.10.1",
+              "description": "Read and summarise passages read",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.10.1.1",
+                  "description": "Summarise level-appropriate texts/passages orally",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify important ideas and restate them in own words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.10.1.2",
+                  "description": "Write a short summary of a level-appropriate text/passage read",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a summary of a text noting main ideas."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

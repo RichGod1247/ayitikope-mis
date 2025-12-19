@@ -1,0 +1,2108 @@
+{
+  "phase": "KG",
+  "level": "KG2",
+  "subject": "Our World and Our People",
+  "name": "KG2 Our World and Our People",
+  "slug": "kg2-our-world-and-our-people",
+  "orderIndex": 1,
+  "description": "The KG2 curriculum deepens learners' understanding of themselves, their families, and the wider world through integrated thematic strands, emphasizing inquiry, creativity, and practical skills.",
+  "strands": [
+    {
+      "code": "K2.1",
+      "title": "K2.1",
+      "description": "A comprehensive classroom scene showing KG2 learners engaged in various 'All About Me' activities. One group is looking at a body parts chart, another is role-playing washing hands, and a third is role-playing road safety with a traffic light prop. The atmosphere is busy and educational.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "K2.1.1",
+          "title": "K2.1.1",
+          "description": "A bright illustration of diverse Ghanaian 5-year-olds standing in a row, smiling. They are wearing different local school uniforms. The focus is on their unique features (height, smiles, hairstyles) as they compare themselves happily.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.1.1.1",
+              "description": "Children in a circle, taking turns holding a 'talking ball'. One child is speaking confidently about what makes them special. The teacher listens with a smile. A poster on the wall says 'I am Special'.",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "K2.1.1.1.1",
+                  "description": "A semi-circle arrangement in a classroom. Learners are passing a colorful ball. The child with the ball is standing and gesturing to their chest, describing themselves. Others are listening.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child holding a ball in a classroom circle, smiling and pointing to their face. The teacher encourages them to use positive words. The setting is a bright, airy Ghanaian classroom."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.2",
+                  "description": "A teacher holding a storybook, pointing to the front cover. She gestures to her own front/chest to make a comparison between the 'front of the book' and 'front of the body'. Children observe keenly.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Close-up of a teacher explaining the back cover of a book to students sitting on a mat. She turns the book over. The children touch their own backs to make the connection."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.3",
+                  "description": "Shared reading session. A large Big Book is open on an easel. Children are looking at the pictures and discussing the characters. One child raises a hand to say something positive about the character.",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children dramatizing a story from a Big Book. One child acts as the 'unique' character, standing proudly. Others clap. The teacher holds the book open to the relevant scene."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.4",
+                  "description": "A name-matching game. Children are holding name cards. They are looking for a friend who has a matching name card or the same starting letter. They look excited to find their match.",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child running towards the teacher with a name tag, matching it to one the teacher is holding. Other children are checking their tags. A fun, active literacy game."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.5",
+                  "description": "Teacher writing a large letter on the chalkboard. Children are writing the same letter in the air with their fingers. Some are tracing it on their desks. Focus is on letter formation.",
+                  "orderIndex": 12,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing a letter and a keyword (e.g., 'Face') in their exercise books. They are using pencils and sitting at wooden desks. The teacher walks around checking their work."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.6",
+                  "description": "Children drawing in their sketchbooks. One child is drawing a hand, another a leg. They are using crayons. They label their drawings with simple text.",
+                  "orderIndex": 14,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A pair of learners showing each other their drawings of body parts. One points to a drawing of an eye and explains why they like it. Collaborative learning."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.7",
+                  "description": "Numeracy lesson. Children are counting sets of body parts (e.g., 2 eyes, 10 fingers) on a poster. They are holding up number cards to match the quantity.",
+                  "orderIndex": 16,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Pairs of learners checking body parts. One counts the other's fingers. They place counters on a table to represent the number 10. Practical math."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Children grouped in fives. They are counting the total number of hands in their group. They are laughing and raising their hands."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.2",
+          "title": "K2.1.2",
+          "description": "A classroom wall with a detailed conversational poster showing the internal human body (brain, heart, stomach). Children are gathered around it, pointing and discussing what is inside them.",
+          "orderIndex": 19,
+          "contentStandards": [
+            {
+              "code": "K2.1.2.1",
+              "description": "Children placing their hands on their chests to feel their heartbeats. They look surprised and focused. A teacher explains the heart's function using a diagram.",
+              "orderIndex": 20,
+              "indicators": [
+                {
+                  "code": "K2.1.2.1.1",
+                  "description": "Group activity. Children running around the block and then stopping to feel their heartbeat. They are talking about the 'thump-thump' feeling.",
+                  "orderIndex": 21,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children pointing to the location of the brain (head) and stomach (belly) on their own bodies. A poster nearby shows these internal organs."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.2",
+                  "description": "Teacher using a KWL chart on the board. She writes what children 'Know' about the stomach. Children are raising hands to suggest ideas like 'it holds food'.",
+                  "orderIndex": 23,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read-aloud session about the body. The teacher reads an informational text. Children share what they have 'Learned' (L) about the brain helping them think."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.3",
+                  "description": "Children constructing simple sentences orally. One child pretends to eat and rubs their stomach, saying 'My stomach digests food'. Peer learning.",
+                  "orderIndex": 25,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child holding a picture card of a heart. They say a sentence about it. Other children clap. Vocabulary application."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.4",
+                  "description": "Teacher modeling writing the letter 'S' (for Stomach) on the board. Children write it on the back of the friend sitting in front of them. Fun writing practice.",
+                  "orderIndex": 27,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing 'Brain' and 'Heart' in their exercise books. They carefully follow the red and blue lines. They look focused."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.5",
+                  "description": "Children performing 'Head, Shoulders, Knees and Toes' with high energy. They touch each part as they sing. The teacher leads the action.",
+                  "orderIndex": 29,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A music session where children sing a local song identifying body parts. They dance and point rhythmically. Joyful atmosphere."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.6",
+                  "description": "Children sitting at desks drawing a full-body self-portrait. They label parts like 'head', 'leg' using invented spelling. They share with a partner.",
+                  "orderIndex": 31,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child showing their drawing. They have written 'My Heart' next to the chest area. They explain it to a friend."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.7",
+                  "description": "Children comparing piles of bottle tops. One pile has 15, another has 5. They use cards with symbols '>' and '<' to show which is greater.",
+                  "orderIndex": 33,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Math lesson. Children ordering number cards from 1 to 20 on the floor. They place corresponding numbers of stones next to the cards."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.3",
+          "title": "K2.1.3",
+          "description": "A hygiene station in class. Children washing hands with soap at a Veronica bucket. Others are pretending to brush teeth with props. A poster shows 'Personal Hygiene'.",
+          "orderIndex": 35,
+          "contentStandards": [
+            {
+              "code": "K2.1.3.1",
+              "description": "Children demonstrating care for the body. One simulates cutting nails with a toy clipper. Another combs hair. They discuss why this is important.",
+              "orderIndex": 36,
+              "indicators": [
+                {
+                  "code": "K2.1.3.1.1",
+                  "description": "Community circle. Children singing 'This is the way I brush my teeth'. They mime the action. Teacher writes 'Brush teeth' on the board.",
+                  "orderIndex": 37,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children asking questions about hygiene. One child asks 'Why do we bathe?'. Another answers 'To smell good'. Interactive discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.2",
+                  "description": "Teacher showing the cover of a book about hygiene. She points to the title and illustration. Children predict what the book is about.",
+                  "orderIndex": 39,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children acting out words from a story they just read, like 'washing' and 'combing'. They use props like a sponge and comb."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.3",
+                  "description": "Children singing rhymes. They emphasize rhyming words at the end of lines (e.g., 'hair' and 'care'). They clap when they hear the rhyme.",
+                  "orderIndex": 41,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child pointing to their ear saying 'Hear'. Another points to a picture of a 'Bear'. They laugh at the rhyme. Phonological awareness game."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.4",
+                  "description": "A name tag game. Name cards are clipped to a line. Children find their own name tag and peg it. They are recognizing their names.",
+                  "orderIndex": 43,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children pointing to letters in their names on a wall chart. They spell out their names to a friend. 'K-O-F-I'."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.5",
+                  "description": "Teacher introducing a tongue twister with a target sound. Children repeat it, trying to say it fast. They identify the sound.",
+                  "orderIndex": 45,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing a key word (e.g., 'Soap') in their books. They focus on writing legibly. The teacher assists with pencil grip."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.6",
+                  "description": "Children creating a 'Self-Dictionary'. They draw a toothbrush and write 'Brush' underneath. They color the pictures brightly.",
+                  "orderIndex": 47,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child showing their drawing of a towel and soap. They read the labels they wrote. The teacher nods in approval."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.7",
+                  "description": "Children weighing hygiene items (soap, sponge) on a simple balance scale. They determine which is heavier. Using math vocabulary.",
+                  "orderIndex": 49,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children using symbols '<', '>', '=' on cards to compare numbers of hygiene items (e.g., 5 soaps > 2 brushes). Math integration."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.4",
+          "title": "K2.1.4",
+          "description": "A healthy lifestyle scene. Children eating fruit and balanced meals at a table. A nurse visiting the class explaining vaccinations with a poster. Focus on health.",
+          "orderIndex": 51,
+          "contentStandards": [
+            {
+              "code": "K2.1.4.1",
+              "description": "Children discussing a 'Balanced Diet' chart. They point to proteins, carbohydrates, and vitamins. Some hold plastic food items representing the groups.",
+              "orderIndex": 52,
+              "indicators": [
+                {
+                  "code": "K2.1.4.1.1",
+                  "description": "Community circle discussion. Children talk about foods that make them grow. One child holds a yam, another an egg. They look happy and healthy.",
+                  "orderIndex": 53,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children looking at a computer or chart showing a balanced diet. They contribute ideas about what they eat at home. Interactive learning."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.2",
+                  "description": "Teacher reading a Big Book about diseases. She shows pictures of sick people. Children answer questions about why they got sick (e.g. poor diet).",
+                  "orderIndex": 55,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children acting out words from the health story. One pretends to wash hands, another pretends to eat fruit. Understanding through action."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.3",
+                  "description": "Children clapping syllables of long health words like 'Vac-ci-na-tion'. They count the claps (4). They are stretching words and blending sounds.",
+                  "orderIndex": 57,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child saying 'Tu-ber-cu-lo-sis' slowly, counting 5 syllables on their fingers. The teacher smiles. Phonological awareness activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.4",
+                  "description": "Teacher flashing sight word cards (e.g., 'the', 'can', 'is'). Children read them instantly. They use the words to make oral sentences about health.",
+                  "orderIndex": 59,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children finding sight words in a text about diseases. They point to 'the' and 'to'. They write a simple sentence in their books."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.5",
+                  "description": "Children practicing writing a letter sound for the week. They write it in the air, then in their books. The keyword is related to health (e.g., 'F' for Food).",
+                  "orderIndex": 61,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sitting at desks writing letters and words legibly on blue and red lines. They are focused on handwriting practice."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.6",
+                  "description": "Children drawing healthy foods in their 'Self-Dictionary'. One draws an orange, another fish. They color them and label them with invented spelling.",
+                  "orderIndex": 63,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child copying the names of food items from the board into their book under their drawings. Literacy and art integration."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.7",
+                  "description": "Children comparing a big yam and a small potato. They say 'The yam is bigger'. They compare a big water bottle and a small one. Measuring size and weight.",
+                  "orderIndex": 65,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child holding two fruits, estimating which is heavier. They place them on a balance scale to check. Hands-on math."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.5",
+          "title": "K2.1.5",
+          "description": "Children exploring their school environment. Some point to a clean gutter, others to a bin. They are discussing what is safe and unsafe. A nature walk scene.",
+          "orderIndex": 67,
+          "contentStandards": [
+            {
+              "code": "K2.1.5.1",
+              "description": "Classroom discussion about a poster on pollution. Children look concerned about dirty water. They suggest cleaning it up. Environmental awareness.",
+              "orderIndex": 68,
+              "indicators": [
+                {
+                  "code": "K2.1.5.1.1",
+                  "description": "Children walking outside with the teacher. They point to broken glass (unsafe) and a playground swing (safe). They are learning to identify hazards.",
+                  "orderIndex": 69,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children discussing cleanliness in a circle. One mimics sweeping. They talk about keeping the environment safe from diseases."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.2",
+                  "description": "Teacher reading 'Adzoa has Malaria' to the class. Children ask questions about mosquitoes. They discuss using bed nets. Active listening.",
+                  "orderIndex": 71,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children identifying the illustrator and author of a book. They look at the back cover. Literacy skills in context."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.3",
+                  "description": "Children identifying sounds in environment words. 'Sand' starts with /s/ and ends with /d/. They clap syllables for 'Gut-ter'. Phonics practice.",
+                  "orderIndex": 73,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child holding a picture of a 'Rat'. They say the beginning sound /r/. Another child holds 'Fly' and says /f/. Phonemic awareness."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.4",
+                  "description": "Children blending sounds to say 'Cut-lass'. They write the word in their books. Teacher helps with spacing. Literacy and safety vocab.",
+                  "orderIndex": 75,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Close up of exercise book. Child writing 'Safe' and 'Clean'. Handwriting practice with red and blue lines."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.5",
+                  "description": "Children drawing dangerous objects like a knife or open socket. They label them 'Danger'. Awareness of safety hazards.",
+                  "orderIndex": 77,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child drawing a banana peel on the floor. They explain why it is dangerous (slipping). Visualizing safety."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.6",
+                  "description": "Household corner. Children sorting objects. Putting 'dangerous' items (plastic knife) in one box and 'safe' items (spoon) in another. Classification.",
+                  "orderIndex": 79,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children sorting shapes by color. Red triangles in one group, blue circles in another. Numeracy integration."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.6",
+          "title": "K2.1.6",
+          "description": "Role-play area set up as a road. Children practicing crossing safely using a zebra crossing mat. Others act as cars stopping. Safety awareness.",
+          "orderIndex": 81,
+          "contentStandards": [
+            {
+              "code": "K2.1.6.1",
+              "description": "Children discussing 'Strangers'. A teacher explains not to go with unknown people. Children practicing saying 'No!' politely but firmly.",
+              "orderIndex": 82,
+              "indicators": [
+                {
+                  "code": "K2.1.6.1.1",
+                  "description": "Community circle. Children singing a traffic light song ('Red means Stop'). They act out the lights. A poster shows road safety rules.",
+                  "orderIndex": 83,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children role-playing avoiding sharp objects. One child warns another 'Don't touch!'. Safety education."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.6.1.2",
+                  "description": "Shared reading. Teacher reading from left to right. Children following the text. KWL chart about safety on the board.",
+                  "orderIndex": 85,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children picking keywords from the text like 'Hurt' and acting them out. One child pretends to have a hurt finger. Comprehension check."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.6.1.4",
+                  "description": "Phonics revision. Teacher shows letter 'H' for 'Harm'. Children write it in the air. They write 'Harm' in their books. Handwriting practice.",
+                  "orderIndex": 87,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing sentences about safety in exercise books. 'I walk safe'. Focused writing time."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.6.1.5",
+                  "description": "Children think-pair-sharing about what to draw. They draw a scene of running away from a stranger. They color it and explain it.",
+                  "orderIndex": 89,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child labeling their drawing 'Stop'. The drawing shows a hand signaling stop to a car. Safety art."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.6.1.6",
+                  "description": "Children sorting objects by color (red items, blue items). They count them. They compare piles using 'more than' cards. Math with objects.",
+                  "orderIndex": 91,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children placing a '<' sign between a small pile of sticks and a large pile. They are learning comparison symbols."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.3",
+      "title": "K2.3",
+      "description": "A respectful classroom scene illustrating values. One group of children is role-playing greetings with traditional gestures. Another group is looking at posters of a church, mosque, and palace. The atmosphere is peaceful and culturally rich.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "K2.3.1",
+          "title": "K2.3.1",
+          "description": "Children sitting in pairs engaging in dialogue. They are holding picture cards representing hobbies (football, reading). They smile or shake heads to show 'likes' and 'dislikes'. Social emotional learning.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.3.1.1",
+              "description": "Children in a circle discussing values. The teacher writes 'Good Manners' on the board. Children demonstrate sharing toys. Positive behavior focus.",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "K2.3.1.1.1",
+                  "description": "Community Circle time. Children face each other in pairs. One speaks while the other listens. They are discussing what they like about their friends. Respectful communication.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children role-playing a conversation about likes and dislikes. One holds a red card (dislike) and explains why they don't like fighting. Another holds a green card (like) for sharing."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.1.1.2",
+                  "description": "Teacher showing the cover of 'The Cat's Hat' (or similar story). She points to the title. Children raise hands to predict the story based on the illustration.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children filling in a 'Herringbone' graphic organizer on the floor with word cards (Who, What, Where). They are discussing a story they heard. Comprehension activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.1.1.3",
+                  "description": "A phonics game. Teacher makes a letter sound. Children run to pick up the corresponding letter card from a table. They clap the syllables of a word starting with that letter.",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children listening to the word 'Table'. They identify the beginning letter 'T'. Then they clap twice for 'Ta-ble'. Active listening."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.1.1.4",
+                  "description": "Children identifying key words on flash cards (e.g. 'Love', 'Share'). They copy the words into their 'Self-Dictionary' books and draw a picture next to it.",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Close-up of a child's journal. They have written the word 'Play' and drawn two stick figures playing ball. Literacy and art integration."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.2",
+          "title": "K2.3.2",
+          "description": "Children role-playing traditional greetings. A boy bows to an elder (another child dressed up). A girl waves. A poster shows 'Respect'.",
+          "orderIndex": 12,
+          "contentStandards": [
+            {
+              "code": "K2.3.2.1",
+              "description": "Classroom display of cultural virtues. Children act out being polite—giving items with the right hand. The teacher smiles approvingly.",
+              "orderIndex": 13,
+              "indicators": [
+                {
+                  "code": "K2.3.2.1.1",
+                  "description": "Community circle. Children taking turns to demonstrate a greeting with appropriate facial expressions (smiling, making eye contact). Conversational poster on Greetings is visible.",
+                  "orderIndex": 14,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child pretending to be an elder sitting in a chair. Another child approaches, lowers their height slightly, and greets 'Good morning'. Cultural role-play."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.2.1.2",
+                  "description": "Children using a 'Story Map' graphic organizer. They draw the setting and characters of a story about respect. They are retelling the story to a partner.",
+                  "orderIndex": 16,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teacher reading aloud. She pauses to ask 'What is the problem in the story?'. Children look thoughtful. They identify that the character was rude."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.2.1.3",
+                  "description": "A lively phonics game. Children moving around. Teacher calls a letter sound. Children find an object or word card in the room that starts with that sound.",
+                  "orderIndex": 18,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children picking a letter card 'M'. They say 'M is for Manners'. They clap the syllables of 'Man-ners'. Interactive learning."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.2.1.4",
+                  "description": "Children copying daily greetings like 'Good Morning', 'Good Afternoon' into their note books. They are checking the board for spelling. Writing practice.",
+                  "orderIndex": 20,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Pairs of learners reading greetings to each other from their self-dictionaries. One reads, the other responds with the appropriate gesture."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.3",
+          "title": "K2.3.3",
+          "description": "Children dressed in Ghana colours or holding small flags. They are standing tall singing the National Anthem. A poster of the Coat of Arms is on the wall.",
+          "orderIndex": 22,
+          "contentStandards": [
+            {
+              "code": "K2.3.3.1",
+              "description": "Children brainstorming 'Good Ghanaian Behaviours'. Teacher writes 'Truth', 'Obedience' on the board. Children give thumbs up to pictures of good behaviour.",
+              "orderIndex": 23,
+              "indicators": [
+                {
+                  "code": "K2.3.3.1.1",
+                  "description": "Community Circle. Children discussing a poster showing hospitality (offering water). They volunteer to act out a scene of welcoming a visitor. Civic values.",
+                  "orderIndex": 24,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A skit in the classroom. A child knocks on a pretend door. Another opens it and offers a seat warmly. The class claps. Learning hospitality."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.3.1.2",
+                  "description": "Teacher reading a narrative about Kwame Nkrumah or a national hero. Children listening. They use a Story Map to recall who the hero was and what they did.",
+                  "orderIndex": 26,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children drawing a picture of a national hero based on the story read. They attempt to write the hero's name under the drawing."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.3.1.3",
+                  "description": "Children creating a short drama about 'Truthfulness'. One child admits to breaking a toy, and the 'teacher' forgives them. Demonstrating honesty.",
+                  "orderIndex": 28,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children acting out a scene where a police officer catches a thief. They use vocabulary like 'Stop', 'Law', 'Good citizen'. Patriotic drama."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.3.1.4",
+                  "description": "Teacher reviewing a letter sound (e.g., 'P' for Patriotism/Police). Children write the letter 'P' in the air and then in their books.",
+                  "orderIndex": 30,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing the word 'Ghana' in their books. They focus on the capital 'G'. They color the word in red, yellow, and green."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.4",
+          "title": "K2.3.4",
+          "description": "A multicultural classroom display. Pictures of children from different backgrounds holding hands. Symbols of Christianity, Islam, and Traditional religion. Theme of unity.",
+          "orderIndex": 32,
+          "contentStandards": [
+            {
+              "code": "K2.3.4.1",
+              "description": "Children engaging in a sorting activity. They group pictures of people by clothing/culture, then mix them up to show everyone playing together. Promoting tolerance.",
+              "orderIndex": 33,
+              "indicators": [
+                {
+                  "code": "K2.3.4.1.1",
+                  "description": "Community Circle. Children discussing a poster of diverse people. Teacher prompts 'How do we treat everyone?'. Children answer 'With love'.",
+                  "orderIndex": 34,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A game where children find a partner who speaks a different language or is from a different tribe. They shake hands and smile. Celebrating diversity."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.4.1.2",
+                  "description": "Picture walk through a Big Book about a religious story (e.g., David and Goliath). Children predict the ending. They use a Story Map to analyze characters.",
+                  "orderIndex": 36,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children drawing 'David' and 'Goliath'. They compare the sizes (small and big). They write 'David' under the small boy. Literacy integration."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.4.1.3",
+                  "description": "Teacher displaying sight word cards from the religious story. Children read them aloud. They find the words in the Big Book text.",
+                  "orderIndex": 38,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children forming sentences with sight word cards on their tables. 'God is good'. They copy the sentence into their books."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.4.1.4",
+                  "description": "A 'Letter Ladder' game drawn on the floor. A grid with letters. Children hop onto the letter that matches the sound the teacher calls out.",
+                  "orderIndex": 40,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children playing in teams. Teacher says a word from the story. First child to jump on the beginning letter wins. Active phonics."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.5",
+      "title": "K2.5",
+      "description": "A celebratory scene of Ghana's Independence Day. KG2 children marching in school uniforms holding small Ghana flags. A teacher salutes playfully. Background shows decorations in Red, Gold, and Green.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "K2.5.1",
+          "title": "K2.5.1",
+          "description": "Children gathering around a large map of Ghana. They are placing stickers on different regions. On the board, pictures of the 'Big Six' are displayed. A sense of history and pride.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.5.1.1",
+              "description": "A classroom drama. Children dressed as historical figures (e.g., Kwame Nkrumah) wearing traditional cloth. They are reenacting the independence declaration. Other children clap.",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "K2.5.1.1.1",
+                  "description": "Community Circle time. Teacher telling the story of 6th March. Children act out marching. A child holds a flag. Discussing freedom.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children listening to a resource person (an elder) telling a story about Ghana's past. They sit on mats attentively. They raise hands to share what they learnt (L)."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.2",
+                  "description": "Shared reading of a book about Independence Day. Teacher reads with expression. Children interrupt politely to ask 'Why are they happy?'. KWL chart on board.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children looking at pictures in a history book. They discuss the clothing people wore long ago. Teacher guides the conversation using the KWL chart."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.3",
+                  "description": "Children using word cards related to independence (e.g., 'Flag', 'March', 'Free'). They arrange them to make a simple sentence: 'We march today'. Writing practice.",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children dramatizing a march past. One acts as a commander shouting 'Left, Right'. Others follow instructions. Learning action words."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.4",
+                  "description": "Rhyming game. Teacher says 'Cap'. Children suggest 'Map', 'Tap'. They clap when words rhyme. Replacing sounds to make new words.",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children playing with letter cards. They change the first letter of 'Day' to 'Say' and 'Pay'. Visual phonics activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.5",
+                  "description": "Letter Ladder game floor mat. A grid with letters drawn on the floor. Children hop onto the letter that corresponds to a spoken word's start sound. Active learning.",
+                  "orderIndex": 12,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children in teams playing 'Letter Hop'. A child jumps on 'G' when the teacher says 'Ghana'. The class cheers."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.6",
+      "title": "K2.6",
+      "description": "A nature-rich scene. Children examining plants with magnifying glasses, watching a goat graze (living), and stacking stones (non-living). A water play area and wind socks flying.",
+      "orderIndex": 14,
+      "subStrands": [
+        {
+          "code": "K2.6.5",
+          "title": "K2.6.5",
+          "description": "A garden study scene. Children are gathered around a young tree. One child points to the roots, another touches the leaves. A teacher holds a card labeled 'Stem'. Hands-on learning.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.6.5.1",
+              "description": "Children in the classroom painting pictures of plants. They are labeling the parts. A display table has real fruits and vegetables (food from plants). Understanding plant benefits.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "K2.6.5.1.1",
+                  "description": "Community circle. Teacher holding a real plant (uprooted to show roots). Children discuss the parts. A poster shows a diagram of a maize plant.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children observing a conversational poster of plants. They take turns pointing to parts that make food (leaves) and parts that hold the plant (roots)."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.5.1.2",
+                  "description": "Language Experience Approach (LEA). Children dictating sentences about plants to the teacher. 'Roots go down'. Teacher writes on large paper. Collaborative writing.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children reading the class-created text about plants together. One child uses a pointer to track the words. The text has small drawings next to keywords."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.5.1.3",
+                  "description": "Teacher reading aloud the LEA text. Children listening and raising hands to share 'L' (what they learnt) for the KWL chart. Reflective learning.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children participating in a Q&A about the plant text. Teacher points to the word 'Leaf'. A child explains its use."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.5.1.4",
+                  "description": "Practice Ladder game with sight words. A ladder drawn on the ground. Rungs have words like 'Tree', 'Leaf', 'Root'. Children hop on the words they can read.",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children cheering as a friend successfully reads a sight word on the ladder. Active literacy game."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.5.1.5",
+                  "description": "Teacher revising letter sounds. Children blending sounds to make two-syllable words. 'Gar-den'. They write the word in their books.",
+                  "orderIndex": 11,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children sitting in pairs helping each other blend words. One holds 'Flow', the other 'er'. They say 'Flower'. Peer learning."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.6",
+          "title": "K2.6.6",
+          "description": "Children watering seedlings in pots on a window sill. A chart tracks the growth (height). They look caring and observant. Learning about growth.",
+          "orderIndex": 13,
+          "contentStandards": [
+            {
+              "code": "K2.6.6.1",
+              "description": "Classroom experiment. Two plants, one covered with a box (no light), one in the sun. Children comparing them. Discussing needs like light and water.",
+              "orderIndex": 14,
+              "indicators": [
+                {
+                  "code": "K2.6.6.1.1",
+                  "description": "Community circle. Discussing nutrients. Teacher shows soil and water. Children sing 'Plants need water'. Interactive discussion.",
+                  "orderIndex": 15,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Nature walk. Children looking for healthy and unhealthy plants. They point to a dried leaf. They discuss why it dried up (no water)."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.6.1.2",
+                  "description": "LEA activity. Children observing their bean plant experiment. Dictating: 'The bean grew big'. Teacher writes on chart.",
+                  "orderIndex": 17,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children copying the LEA story into their books. They draw a picture of their bean plant next to the text."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.6.1.3",
+                  "description": "Teacher reading a Big Book about a farmer. Children participate by making digging actions. They answer questions about what the farmer did first.",
+                  "orderIndex": 19,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children sharing lessons learnt from the story. One says 'Plants need sun'. Teacher adds this to the KWL chart."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.6.4",
+                  "description": "Blending activity. Children blending sounds to make words like 'Seed', 'Grow'. Writing the words boldly on lines.",
+                  "orderIndex": 21,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teacher conducting a 'Pupils blending process'. A child comes to the front to blend sounds on the board. Others watch and clap."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.1",
+          "title": "K2.6.1",
+          "description": "Children sorting items on a large mat. One side has 'Living' (plant, insect in jar), the other 'Non-Living' (pencil, cup). They discuss movement and growth.",
+          "orderIndex": 15,
+          "contentStandards": [
+            {
+              "code": "K2.6.1.1",
+              "description": "Nature walk. Teacher and students walking in the school garden. They point to a bird flying (living) and a wall (non-living). Observation skills.",
+              "orderIndex": 16,
+              "indicators": [
+                {
+                  "code": "K2.6.1.1.1",
+                  "description": "Community Circle. Displaying real objects: a stone and a potted plant. Children debating which one needs water. Classification discussion.",
+                  "orderIndex": 17,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children returning from a nature walk with collected items. They place leaves in one basket and pebbles in another. Discussing what they saw."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.1.1.2",
+                  "description": "Shared reading of a book about 'Living Things'. Children gathered around the teacher. Teacher asks 'Is a car living?'. Children shout 'No!'. Interactive reading.",
+                  "orderIndex": 19,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "KWL chart on board about Nature. Children share what they learnt (L) from the story. Teacher writes 'Plants grow'."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.1.1.3",
+                  "description": "Children writing new words like 'Tree', 'Bird', 'Stone' in their notebooks. They look at word cards for spelling help. Vocabulary focus.",
+                  "orderIndex": 21,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teacher writing 'Living' and 'Non-living' on the board. Children copy the words and draw one example under each heading."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.1.1.4",
+                  "description": "Alphabet Relay game outdoors. Two teams running to the chalkboard to write a letter called out by the teacher. High energy literacy game.",
+                  "orderIndex": 23,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children celebrating after writing the correct letter 'B' on the board during a relay game. Teamwork and letter recognition."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.1.1.5",
+                  "description": "Phonics review. Teacher showing a letter card 'S'. Children look for objects starting with 'S' (sand, stone, stick). They write 'S' in the air.",
+                  "orderIndex": 25,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing the word 'Sun' in their books. They draw a sun next to it. Focusing on the initial 'S' sound."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.7",
+          "title": "K2.6.7",
+          "description": "Children exploring soil. Three bowls with sandy, clayey, and loamy soil. Children feeling the texture. A chart shows what grows in each.",
+          "orderIndex": 23,
+          "contentStandards": [
+            {
+              "code": "K2.6.7.1",
+              "description": "Garden area. Children trying to plant in hard clay versus soft loam. Discussing which is easier. Hands-on science.",
+              "orderIndex": 24,
+              "indicators": [
+                {
+                  "code": "K2.6.7.1.1",
+                  "description": "Community circle. Reciting a poem about soil. Discussing which soil is best for gardening. Teacher writes 'Loam' on board.",
+                  "orderIndex": 25,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children observing a poster showing crops growing in good soil. They identify the crops (maize, tomato). Interactive discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.7.1.2",
+                  "description": "Read aloud of informational text about soil. Teacher asks inferential questions 'Why did the plant die?'. Children answer.",
+                  "orderIndex": 27,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children arranging cut-up sentences about soil. They count the words. 'Soil helps plants'. Literacy and numeracy."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.7.1.3",
+                  "description": "LEA session. Children dictating 'Clay is sticky'. Teacher writes it. Children read it back. Creating reading material.",
+                  "orderIndex": 29,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children copying the sentence 'Loam is good' into books. They draw a pot with a plant. Writing practice."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.7.1.4",
+                  "description": "Phoneme substitution game. Teacher says 'Pot'. Children change /p/ to /h/ to make 'Hot'. They laugh and try other words.",
+                  "orderIndex": 31,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children adding new words to the Word Wall. 'Dig', 'Pig', 'Big'. Recognizing rhyming patterns and initial sounds."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.2",
+          "title": "K2.6.2",
+          "description": "A contrast poster on the wall: 'Domestic Animals' (cat, dog, sheep) vs 'Wild Animals' (lion, elephant). Children sitting on the floor sorting plastic animals into two farm and jungle sets.",
+          "orderIndex": 27,
+          "contentStandards": [
+            {
+              "code": "K2.6.2.1",
+              "description": "Children role-playing animal care. One child 'feeds' a toy dog. Another 'builds' a coop for chickens with blocks. Emphasizing care for domestic animals.",
+              "orderIndex": 28,
+              "indicators": [
+                {
+                  "code": "K2.6.2.1.1",
+                  "description": "Community Circle. Discussing animals at home vs in the bush. Children mimic animal sounds. 'Roar' for lion, 'Meow' for cat.",
+                  "orderIndex": 29,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children holding up pictures of animals. They stand in two groups: 'Home' and 'Bush'. They talk about what the animals eat."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.2.1.2",
+                  "description": "Shared reading of a folktale about animals (e.g., Why the dog lives with man). Children listening intently. Predicting what happens next.",
+                  "orderIndex": 31,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children using a Story Map to draw the characters (dog, man) and the setting (forest, house) of the folktale. Comprehension check."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.2.1.3",
+                  "description": "LEA session. Teacher writing 'Animals help us' on chart paper. Children dictating sentences about what animals do. 'Dogs guard the house'.",
+                  "orderIndex": 33,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children illustrating the class story about animals. They draw a dog barking at a stranger. They write 'Dog' under the picture."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.2.1.4",
+                  "description": "Children singing 'Old MacDonald'. They clap for each syllable of the animals mentioned: 'Cow' (1 clap), 'Chi-cken' (2 claps). Musical literacy.",
+                  "orderIndex": 35,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children counting claps for animal names. They hold up fingers to show how many syllables. 'El-e-phant' has 3 syllables."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.2.1.5",
+                  "description": "Teacher showing letter 'C'. Children say 'Cat'. Teacher showing 'D'. Children say 'Dog'. Revision of initial sounds.",
+                  "orderIndex": 37,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Pupils blending sounds. Two children stand together holding 'C', 'a', 't'. They move closer to blend 'Cat'. Active spelling."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.8",
+          "title": "K2.6.8",
+          "description": "A scene showing Day and Night. Sun shining on a school (day). Moon and stars over a house with a lighted window (night). Contrasting light sources.",
+          "orderIndex": 33,
+          "contentStandards": [
+            {
+              "code": "K2.6.8.1",
+              "description": "Children sorting pictures of light sources. Sun and firefly (Natural). Torch and candle (Man-made). Discussing usefulness.",
+              "orderIndex": 34,
+              "indicators": [
+                {
+                  "code": "K2.6.8.1.1",
+                  "description": "Community circle. Reciting 'Twinkle Twinkle'. Discussing what gives light. Teacher shows a real torch and candle.",
+                  "orderIndex": 35,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children classifying light sources on a chart. Placing stickers under 'Natural' or 'Artificial'. Critical thinking."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.2",
+                  "description": "Read aloud about 'Lights at Night'. Children counting words in a sentence from the book. Discussing how streetlights help us.",
+                  "orderIndex": 37,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children answering questions about the story. 'What happened when the lights went out?'. They relate it to their own experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.3",
+                  "description": "LEA session. Children dictating 'The sun gives us light'. Teacher writes. Children read along.",
+                  "orderIndex": 39,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children copying the LEA text into their books. They draw a big sun. Integrating writing and art."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.4",
+                  "description": "Letter Bingo game. Children have cards with letters. Teacher calls a sound. Children tick the letter. Fun assessment.",
+                  "orderIndex": 41,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children shouting 'Bingo!' when they tick all letters. Identifying letter sounds in names of environment items."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.5",
+                  "description": "Children using letter cards to form words like 'Sun', 'Lamp'. They match the word to a picture. Word building.",
+                  "orderIndex": 43,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Group work. Children forming simple sight words 'is', 'it', 'on'. Teacher checks spelling."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.3",
+          "title": "K2.6.3",
+          "description": "A water theme corner. Posters of rain, rivers, and taps. A bucket of clean water. Children discussing why we need water. 'Water is life'.",
+          "orderIndex": 39,
+          "contentStandards": [
+            {
+              "code": "K2.6.3.1",
+              "description": "Children demonstrating water uses. One pretends to drink, another pretends to wash clothes. They look at a poster showing plants needing water.",
+              "orderIndex": 40,
+              "indicators": [
+                {
+                  "code": "K2.6.3.1.1",
+                  "description": "Community Circle. Discussing sources of water (tap, well, rain). Reciting a poem about rain. Teacher writes sources on the board.",
+                  "orderIndex": 41,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children watching a video or looking at a poster about water. They dictate a story to the teacher about 'How we use water at home'. LEA session."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.3.1.2",
+                  "description": "Shared reading of 'The Thirsty Crow'. Children looking at pictures. Teacher asks 'Why did the crow need water?'. Inferential thinking.",
+                  "orderIndex": 43,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children brainstorming why water is important after the story. They answer story map questions about the crow. Teacher writes answers."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.3.1.3",
+                  "description": "Children creating a text about water using LEA. They say sentences like 'Water helps plants grow'. Teacher writes it clearly. Children read it back.",
+                  "orderIndex": 45,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children illustrating their class story about water. Drawing flowers growing with rain. They label 'Rain' and 'Flower'."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.3.1.4",
+                  "description": "Phonics blending. Teacher writes 'T', 'a', 'p'. Children sound out /t/ /a/ /p/ -> Tap. They write 'Tap' in their books.",
+                  "orderIndex": 47,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children working in pairs. One holds letter cards, the other blends them to say the word (e.g. Pot, Cup). Fun reading practice."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.9",
+          "title": "K2.6.9",
+          "description": "Weather station in class. A chart with movable arrows for 'Sunny', 'Rainy', 'Windy'. Children dressing a paper doll for the weather. Awareness of weather changes.",
+          "orderIndex": 45,
+          "contentStandards": [
+            {
+              "code": "K2.6.9.1",
+              "description": "Children discussing effects of weather. Poster shows flooding (negative) and drying clothes (positive). They talk about staying safe.",
+              "orderIndex": 46,
+              "indicators": [
+                {
+                  "code": "K2.6.9.1.1",
+                  "description": "Community circle. Reciting a weather rhyme. Describing the current weather. 'It is sunny'. Teacher points to the sun symbol.",
+                  "orderIndex": 47,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children drawing the weather for the day. Sun and clouds. They share their drawings."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.9.1.2",
+                  "description": "Shared reading of a weather story. Children answering simple questions. 'What did the wind do?'. Comprehension.",
+                  "orderIndex": 49,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "KWL strategy. Children sharing experiences of a big rainstorm. Teacher writes notes."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.9.1.3",
+                  "description": "LEA session. Creating a text 'The rain is wet'. Children dictating. Teacher scribing.",
+                  "orderIndex": 51,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children reading the class weather story. They point to words they know. Literacy confidence."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.9.1.4",
+                  "description": "Teacher showing sight words 'Hot', 'Cold', 'Wet'. Children read them. They form sentences 'The sun is hot'.",
+                  "orderIndex": 53,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children copying weather sentences into their books. They draw appropriate pictures."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.9.1.5",
+                  "description": "Children identifying letters in names of people from other countries (e.g., 'Kofi' vs 'Pierre'). Recognizing diversity in names.",
+                  "orderIndex": 55,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A game finding name cards. Children match names to flags. 'Ama' - Ghana, 'John' - UK. Letter recognition."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.4",
+          "title": "K2.6.4",
+          "description": "Children experimenting with air. Blowing balloons, using hand fans, running with paper streamers. They discuss how air moves things. Scientific inquiry.",
+          "orderIndex": 49,
+          "contentStandards": [
+            {
+              "code": "K2.6.4.1",
+              "description": "Teacher explaining air helps living things. Children taking deep breaths. They point to a plant swaying in the wind. Understanding invisible resources.",
+              "orderIndex": 50,
+              "indicators": [
+                {
+                  "code": "K2.6.4.1.1",
+                  "description": "Community circle. Discussing the importance of air. Teacher shows a deflated ball and an inflated one. Children talk about the difference.",
+                  "orderIndex": 51,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Nature walk. Children observing leaves moving. They share their experiences 'The wind is blowing'. Experiential learning."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.4.1.2",
+                  "description": "LEA activity. Children observing a fan. They dictate sentences: 'The fan gives us air'. Teacher scribes. They read it together.",
+                  "orderIndex": 53,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children drawing a picture to go with their air story. Drawing a kite flying. They write 'Kite' next to it."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.4.1.3",
+                  "description": "Read aloud about Air. KWL strategy. Children identify spaces between words in a sentence on the board. 'Air is good'.",
+                  "orderIndex": 55,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children pointing to spaces between words in a big book with a pointer. Visualizing text structure."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.4.1.4",
+                  "description": "Practice Ladder game drawn on floor. Grid has sight words like 'Is', 'It', 'The'. Children jump on the word the teacher reads. Active reading.",
+                  "orderIndex": 57,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children cheering as a friend lands on the correct sight word. Happy, competitive learning game."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.4.1.5",
+                  "description": "Pupils blending process. Children holding cards 'F', 'a', 'n'. They blend to say 'Fan'. They write 'Fan' in exercise books.",
+                  "orderIndex": 59,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teacher checking children's writing. They are writing 'Fan' and 'Man'. Focusing on correct letter formation."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.4",
+      "title": "K2.4",
+      "description": "A busy community scene. A post office, a market, a school, and a chief's palace. People of different occupations (police, nurse, farmer) are working. Children interacting with the environment.",
+      "orderIndex": 42,
+      "subStrands": [
+        {
+          "code": "K2.4.1",
+          "title": "K2.4.1",
+          "description": "Children on a community walk. They are standing in front of a local clinic, pointing and talking. Teacher is guiding their observation of special places.",
+          "orderIndex": 43,
+          "contentStandards": [
+            {
+              "code": "K2.4.1.1",
+              "description": "Community circle. A large poster of a village/town layout. Children identify the market and the school. They share stories of visiting these places.",
+              "orderIndex": 44,
+              "indicators": [
+                {
+                  "code": "K2.4.1.1.1",
+                  "description": "Children sitting on mats, looking at pictures of special places. One child holds a picture of a Chief's Palace and describes what happens there.",
+                  "orderIndex": 45,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A field trip scene. Children observing a police station. They see a police officer in uniform. They look excited and curious."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.1.1.2",
+                  "description": "Teacher reading an informational text about 'My Community'. She uses a KWL chart. Children participate by asking questions about the places mentioned.",
+                  "orderIndex": 47,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children raising hands to answer questions about the read-aloud. 'Where do we buy food?'. They answer 'Market'. Teacher points to the word 'Market' in the book."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.1.1.3",
+                  "description": "Reading sight words from the big book. Words like 'School', 'Shop', 'Clinic' are on flashcards. Children match cards to pictures in the book.",
+                  "orderIndex": 49,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing the word 'School' in their notebooks. They draw a picture of their school next to it. Vocabulary building."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.1.1.4",
+                  "description": "An 'Alphabet Relay' game. Two teams of children. They run to the board to write a letter called out by the teacher. Fun and competitive.",
+                  "orderIndex": 51,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing capital and small letters on the board (e.g., Mm). Their teammates cheer. Letter recognition practice."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.1.1.5",
+                  "description": "Teacher introducing the letter 'M' for Market. Children write 'M' in the air. They write 'Market' in their books, focusing on neatness.",
+                  "orderIndex": 53,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children finding words starting with 'M' on a community map poster. They point to 'Mosque' and 'Market'. Phonemic awareness."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.4.2",
+          "title": "K2.4.2",
+          "description": "Children dressed up as community helpers. A 'Doctor' checks a 'Patient'. A 'Teacher' writes on a small board. A 'Farmer' holds a toy hoe. Learning about jobs.",
+          "orderIndex": 55,
+          "contentStandards": [
+            {
+              "code": "K2.4.2.1",
+              "description": "Community circle. A poster shows various occupations. Children discuss what their parents do. They mime actions of different jobs.",
+              "orderIndex": 56,
+              "indicators": [
+                {
+                  "code": "K2.4.2.1.1",
+                  "description": "Discussion about neighbors' jobs. Children hold up pictures of a baker, a driver, and a fisher. They talk about why these jobs are important.",
+                  "orderIndex": 57,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children stating which job they like. 'I want to be a nurse'. They stand in groups based on their choice."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.2.1.2",
+                  "description": "Teacher reading a Big Book about 'The Baker'. Children track the words. They use a KWL chart to record facts about baking.",
+                  "orderIndex": 59,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children sharing lessons learnt (L). One says 'The baker makes bread'. They draw a baker and write a simple sentence."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.2.1.3",
+                  "description": "Children giving an oral composition. A child in a police uniform stands in front of the class and says 'I am a police officer. I catch thieves'.",
+                  "orderIndex": 61,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing simple sentences in their word bank. 'I am a teacher'. 'I help people'. Using new vocabulary."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.2.1.4",
+                  "description": "Teacher revising letter sounds. Children write the letter 'N' for Nurse. They practice writing 'Nurse' on the lines in their books.",
+                  "orderIndex": 63,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children identifying the sound /d/ in Doctor and Driver. They circle the letter 'D' on a worksheet."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.4.3",
+          "title": "K2.4.3",
+          "description": "A display of community leaders. Pictures of a Chief, Assemblyman, Imam, and Pastor. Children are discussing who leads their community.",
+          "orderIndex": 65,
+          "contentStandards": [
+            {
+              "code": "K2.4.3.1",
+              "description": "Children role-playing a meeting of leaders. One acts as the Chief, listening to people. They learn about solving problems.",
+              "orderIndex": 66,
+              "indicators": [
+                {
+                  "code": "K2.4.3.1.1",
+                  "description": "Community circle. Talking about the roles of political (Assemblyman), traditional (Chief), and religious leaders. A poster shows them working together.",
+                  "orderIndex": 67,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children matching picture cards of leaders to their symbols (e.g., Chief - Stool, Pastor - Bible). Understanding symbols of authority."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.3.1.2",
+                  "description": "Teacher reading 'The Chief' Big Book. Children tracking words. They use KWL chart to discuss what chiefs do (settle disputes, celebrate festivals).",
+                  "orderIndex": 69,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children answering questions about the Queen Mother from the story. They share what they learnt about her role."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.3.1.3",
+                  "description": "Children identifying keywords like 'Durbar', 'Stool', 'Staff'. They use them to make oral sentences. 'The Chief sits on a stool'.",
+                  "orderIndex": 71,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children dramatizing a leader's role using the keywords. A 'Chief' holds a 'Staff' and speaks to the people."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.3.1.4",
+                  "description": "A blending game. Teacher writes letters on the board. Points to them slowly to blend sounds into a word like 'Mat'. Children repeat.",
+                  "orderIndex": 73,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Two children holding letter cards standing next to each other. They move closer to blend the sounds into a word. Physical phonics."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.7",
+      "title": "K2.7",
+      "description": "A Global Community corner. A globe, maps, toy planes, and phones. Children pretending to travel and call friends abroad. Connecting with the world.",
+      "orderIndex": 57,
+      "subStrands": [
+        {
+          "code": "K2.7.1",
+          "title": "K2.7.1",
+          "description": "Children communicating. Using tin-can phones or toy mobiles. Looking at a computer screen (pretend video call). Discussing how we talk to people far away.",
+          "orderIndex": 58,
+          "contentStandards": [
+            {
+              "code": "K2.7.1.1",
+              "description": "Children engaging in global connection activities. Identifying transport (ship, plane) on a map. Discussing trade (cocoa leaving Ghana).",
+              "orderIndex": 59,
+              "indicators": [
+                {
+                  "code": "K2.7.1.1.1",
+                  "description": "Community circle. Reciting a poem about the world. Passing a globe around. Discussing how we visit other countries.",
+                  "orderIndex": 60,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children discussing modes of transport. 'Plane goes in air'. 'Ship goes on water'. Holding toy vehicles."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.2",
+                  "description": "Shared reading of a book about travel. KWL strategy. 'What do you know about planes?'. Children answering questions.",
+                  "orderIndex": 62,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children asking questions about the story. 'Where is the ship going?'. Sharing what they learnt."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.3",
+                  "description": "LEA session on 'Ways we communicate'. Children dictating 'We use phones'. Teacher scribes. Creating a class text.",
+                  "orderIndex": 64,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children reading the LEA text together. They circle the word 'Phone'. Literacy practice."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.4",
+                  "description": "Alphabet Relay. Teams writing letters called by teacher. 'Write the sound /b/'. Children running to board.",
+                  "orderIndex": 66,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children cheering as team members write letters correctly. Energetic learning."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.5",
+                  "description": "Using flash cards to identify key words like 'Ship', 'Bus'. Children writing the words in their books. Dictation practice.",
+                  "orderIndex": 68,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing the word 'Plane' legibly. Drawing a plane next to it."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1 6",
+                  "description": "Children singing a simple French song (e.g., 'Frère Jacques'). They perform actions. Introduction to foreign language.",
+                  "orderIndex": 70,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children learning names of days in French or another language. 'Lundi', 'Mardi'. They clap the rhythm."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.2",
+      "title": "K2.2",
+      "description": "A warm family scene in a Ghanaian home. An extended family eating fufu together. Children helping parents. Grandparents telling stories. A sense of belonging and history.",
+      "orderIndex": 93,
+      "subStrands": [
+        {
+          "code": "K2.2.1",
+          "title": "K2.2.1",
+          "description": "Children discussing family roles. One acts as a father reading a paper, another as a mother cooking. They talk about helping at home. Family structure awareness.",
+          "orderIndex": 94,
+          "contentStandards": [
+            {
+              "code": "K2.2.1.1",
+              "description": "Children demonstrating rights and responsibilities. A child reading a book (right to education). Another sweeping (responsibility). Teacher facilitates.",
+              "orderIndex": 95,
+              "indicators": [
+                {
+                  "code": "K2.2.1.1.1",
+                  "description": "Community circle. Teacher displays an Extended Family poster. Children recite a poem about family. Discussion about family members.",
+                  "orderIndex": 96,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children taking turns to name who lives in their house. They count family members on their fingers. Sharing family stories."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.2",
+                  "description": "Teacher showing a book about families. Scaffolding opening book from left to right. Reading an informational text. KWL chart visible.",
+                  "orderIndex": 98,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children sharing what they learnt (L) about family roles. One says 'Dad works'. Another says 'Mom cares'. Teacher writes it down."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.3",
+                  "description": "Children mentioning names of family members. Teacher lists them. Children clap syllables for 'Fa-ther', 'Mo-ther'. Identifying initial sounds /f/, /m/.",
+                  "orderIndex": 100,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children identifying letters associated with family roles. 'F' for Father. They find the letter card. Phonemic awareness."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.4",
+                  "description": "Teacher revising letter sounds. Children identify sounds in family words. They write the letters in their books.",
+                  "orderIndex": 102,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing 'Dad' legibly in their books. Teacher checks pencil grip. Writing practice."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.5",
+                  "description": "Children creating a family tree collage. Cutting and pasting pictures of people on a tree drawing. Writing names next to pictures.",
+                  "orderIndex": 104,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Warm up exercise tapping fingers. Teacher models writing a letter in the air. Children write the letter in their books. Handwriting prep."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.6",
+                  "description": "Teacher presenting a word problem using pictures. '3 learners + 2 parents'. Children counting all people to find the sum 5. Addition concept.",
+                  "orderIndex": 106,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children doing simple addition sums in books. 2 + 3 = 5. Using counters to help. Transition to abstract addition."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.2",
+          "title": "K2.2.2",
+          "description": "A map of Ghana on the wall. Children sitting in groups based on their language/tribe. They are sharing food or stories from their culture. Celebrating diversity.",
+          "orderIndex": 108,
+          "contentStandards": [
+            {
+              "code": "K2.2.2.1",
+              "description": "Children listening to a story about where families come from. They are asking questions. Teacher explains migration simply.",
+              "orderIndex": 109,
+              "indicators": [
+                {
+                  "code": "K2.2.2.1.1",
+                  "description": "Community circle. Singing indigenous songs. Children stating their home language and family name. Discussing origins.",
+                  "orderIndex": 110,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children sharing a traditional food item or story from their family history. Class listens respectfully. Cultural appreciation."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.2",
+                  "description": "Teacher reading 'Family Picture' story. Children identify author/illustrator. Using Herringbone strategy (Who, What, Where chart) to answer questions.",
+                  "orderIndex": 112,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children retelling the family history story in their own words. They point to pictures in the book to support their telling."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.3",
+                  "description": "Children identifying sight words like 'brother', 'sister' in a text. Teacher lists them on board. Flash card reading practice.",
+                  "orderIndex": 114,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing sight words in their word banks. They read the words to a partner. Building vocabulary."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.4",
+                  "description": "Children clapping syllables of tribe names (e.g. 'A-kan'). Identifying sounds. Decoding words using letter sounds.",
+                  "orderIndex": 116,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children grouping letter cards to form names of tribes. Teacher assists with sounds. Phonological awareness."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.5",
+                  "description": "Teacher reviewing letter sounds. Children writing letters and keywords in books. Handwriting practice.",
+                  "orderIndex": 118,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing 'Ga' or 'Ewe' in their books. They ensure letters sit on the line. Writing skills."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.6",
+                  "description": "Resource person (elder) telling stories of origin. Children listening. Dramatizing the story in costume. Singing songs.",
+                  "orderIndex": 120,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children acting out a migration story. They pretend to walk a long journey. They wear traditional cloth. Cultural history."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.7",
+                  "description": "Children measuring classroom length with feet. Using rope to measure distance to headteacher's office. Comparing lengths 'longer than', 'shorter than'.",
+                  "orderIndex": 122,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children using a ruler to measure a table. They record the number. They estimate distance on a map. Measurement activity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.3",
+          "title": "K2.2.3",
+          "description": "A festive scene. Children celebrating. Some in party hats, some in traditional wear. Food and music. Represents family celebrations.",
+          "orderIndex": 124,
+          "contentStandards": [
+            {
+              "code": "K2.2.3.1",
+              "description": "Children talking about festivals. Display of festival items (drum, food bowl). Singing songs. Understanding importance of celebrations.",
+              "orderIndex": 125,
+              "indicators": [
+                {
+                  "code": "K2.2.3.1.1",
+                  "description": "Community circle. Poster of celebration. Discussing activities (eating, dancing). Singing folk tunes. Sharing experiences.",
+                  "orderIndex": 126,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children dancing to a religious song. They look happy. They mime playing instruments. Celebrating culture."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.2",
+                  "description": "Teacher showing book cover. Children predict story. Read aloud narrative. Answering 'wh' questions. Using Herringbone chart.",
+                  "orderIndex": 128,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children answering questions about the story characters. They explain what happened. Comprehension check."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.3",
+                  "description": "Reading sight words on flash cards (e.g., 'happy', 'gift'). Children find them in the big book. Copying words into books.",
+                  "orderIndex": 130,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children writing 'birthday' in their word bank. They draw a cake next to it. Building vocabulary."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.4",
+                  "description": "Teacher listing festival names. Children clap syllables. Identify initial letter sounds. Phonological awareness.",
+                  "orderIndex": 132,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children clapping 'Christ-mas' (2 claps). Identifying /c/ sound. Sorting words by initial sound."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.5",
+                  "description": "Revising letter sounds. Writing letter names of festivals in exercise books. Legible writing practice.",
+                  "orderIndex": 134,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children sitting at desks writing 'Eid' carefully. Teacher checking work. Handwriting focus."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.6",
+                  "description": "Children making beads from paper and straws. Rolling paper with glue. Threading beads. Preparing for celebration.",
+                  "orderIndex": 136,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children wearing their handmade beads. Role playing a festival procession. Creative arts."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.7",
+                  "description": "Classroom store. Children using real or play money to buy ingredients for a meal. Counting money and change. Making a shopping list.",
+                  "orderIndex": 138,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children solving addition/subtraction word problems about shopping. 'Bought 3 tomatoes, used 1'. Numeracy in context."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.4",
+          "title": "K2.2.4",
+          "description": "A friendly classroom. Children following rules—raising hands, sharing, tidying up. A poster of 'School Rules' is visible. Safe and orderly environment.",
+          "orderIndex": 140,
+          "contentStandards": [
+            {
+              "code": "K2.2.4.1",
+              "description": "Children discussing school rules. Teacher writing them on board. Children modeling 'walking feet' and 'quiet voices'. Understanding community rules.",
+              "orderIndex": 141,
+              "indicators": [
+                {
+                  "code": "K2.2.4.1.1",
+                  "description": "Community circle. Discussing posters of classroom and library. Talking about members of school family (Head, teachers). Creating simple rules together.",
+                  "orderIndex": 142,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children role-playing being good friends. Sharing a book. Demonstrating rules in action."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.4.1.2",
+                  "description": "Predicting a story from book cover. Reading aloud narrative. Answering 'wh' questions using Herringbone strategy. Literacy focus.",
+                  "orderIndex": 144,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children confirming their predictions after reading. Discussing the problem and solution in the story."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.4.1.3",
+                  "description": "Children reading new vocabulary on word cards. Practicing pronunciation. Using words to make simple sentences about school rules.",
+                  "orderIndex": 146,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child saying a sentence 'I share my toys'. Teacher writes it. Vocabulary application."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.4.1.4",
+                  "description": "Teacher revising letter sounds. Children writing letter in air, on arms, then in books. Focus on legibility.",
+                  "orderIndex": 148,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Children practicing writing a letter on a slate. They check each other's work."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.4.1.5",
+                  "description": "Children drawing objects that communicate rules (bell, drum). Tracing and coloring. Labeling the object. Art and literacy.",
+                  "orderIndex": 150,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "A child showing a drawing of a school bell. They explain what it means (time for class). Teacher affirms."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.7",
+                  "description": "Children measuring classroom items with feet/rope. Comparing lengths 'longer than', 'shorter than'. Comparing heights of learners back-to-back.",
+                  "orderIndex": 152,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Two children standing back-to-back. Another child decides who is taller. Practical measurement activity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,333 @@
+{
+  "part": "4/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 2",
+      "subject": "English Language",
+      "name": "Basic 2 English Language",
+      "slug": "basic-2-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 2 English Language curriculum focuses on developing foundational skills in listening, speaking, reading, and writing. It adopts an integrated, thematic approach to help learners acquire effective communication skills, appreciate values, and develop core competencies like critical thinking and collaboration.",
+      "strands": [
+        {
+          "code": "B2.5",
+          "title": "Using Writing Conventions/Grammar Usage",
+          "description": "Applying grammar rules and conventions in writing and communication.",
+          "orderIndex": 5,
+          "subStrands": [
+            {
+              "code": "B2.5.1",
+              "title": "Using Capitalisation",
+              "description": "Using capital letters correctly in writing.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B2.5.1.1",
+                  "description": "Apply knowledge of capitalisation in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.5.1.1.1",
+                      "description": "Use capital letter to write names of particular places and days of the week",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide a sample text and have learners identify names of particular places and days of the week."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have them compare the initial letters of these names and other common names and share their observations with the class."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Give learners a text with names of particular places and days of the week, beginning with small letters. Let learners rewrite the text, beginning the names of particular places and days of the week, with capital letters."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.5.1.1.2",
+                      "description": "Use capital letters to begin the first words of sentences",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Assist learners to begin sentences with capital letters. For example: i. Kofi is a good boy. ii. The house is beautiful."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.5.2",
+              "title": "Using Punctuation",
+              "description": "Applying punctuation marks in writing.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B2.5.2.1",
+                  "description": "Apply knowledge of punctuation in written communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.5.2.1.1",
+                      "description": "Use full stops at the end of sentences and question marks at the end of questions",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners look at sentences in their class readers to observe how they begin and end."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Demonstrate placing a full stop (.) at the end of a sentence."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners copy and punctuate sentences with full stop."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Present the question mark similarly."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.5.4",
+              "title": "Using Action Words",
+              "description": "Using verbs to express actions and states.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B2.5.4.1",
+                  "description": "Apply knowledge of action words in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.5.4.1.1",
+                      "description": "Use the simple present tense to express habitual actions (simple truths, interest, feelings and opinions)",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Tell learners some of the things you do daily in short and simple sentences. e.g. I read stories everyday."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Create situations for learners to use the structure. e.g. i. simple truths - Lemons are sour. ii. interest - I like playing football. iii. feelings - I am happy. iv. opinions - He is a good teacher."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Introduce drills for learners to have practice."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Put learners into small groups to discuss given topics, using the structures."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.5.5",
+              "title": "Using Adjectives",
+              "description": "Using adjectives to describe people and things.",
+              "orderIndex": 5,
+              "contentStandards": [
+                {
+                  "code": "B2.5.5.1",
+                  "description": "Apply knowledge of adjectives in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.5.5.1.1",
+                      "description": "Identify and use simple sentences to describe the weather and show quantity and position or order of people and things",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use appropriate texts to help learners to describe the weather and show quantity and position or order of people and things, e.g: weather - It is cold. quantity - I have two pens. position or order of people and things - She is on the first row."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.5.7",
+              "title": "Using Simple Preposition",
+              "description": "Using prepositions to indicate time and place.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B2.5.7.1",
+                  "description": "Understand and identify the use of prepositions",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.5.7.1.1",
+                      "description": "Identify prepositions in sentences to indicate days, dates and places",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners use the preposition in, on, in context. e.g. i. I saw a bird on Monday. ii. I have a test on 1st May, 2018. iii. They are in the classroom."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.5.7.1.2",
+                      "description": "Use prepositions to form simple sentences to indicate position and time",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide a short passage containing prepositions that indicate position and time."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners identify the prepositions. e. g. i. Esi sat on a chair in the room. ii. The other pupils stood on the veranda. iii. The teacher went to the classroom at night."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.5.9",
+              "title": "Using Simple and Compound Sentences",
+              "description": "Understanding sentence structure.",
+              "orderIndex": 9,
+              "contentStandards": [
+                {
+                  "code": "B2.5.9.1",
+                  "description": "Understand simple sentences in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.5.9.1.1",
+                      "description": "Identify the structure of simple sentences",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use context to help learners identify the structure of simple sentences. Yaa came. (Name) + (Doing word) Musa ate."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.5.9.1.2",
+                      "description": "Identify nouns and verbs in simple sentences",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use questions and samples to learners to identify nouns and verbs in the structure of simple sentences. e. g. i. Ofori danced. (Who danced? What did Ofori do?) ii. Ama laughed."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.5.10",
+              "title": "Spelling",
+              "description": "Using phonics to spell words.",
+              "orderIndex": 10,
+              "contentStandards": [
+                {
+                  "code": "B2.5.10.1",
+                  "description": "Use phonics knowledge to spell words",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.5.10.1.1",
+                      "description": "Use phonics knowledge to spell words with irregular phonic letter pattern",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners play the pick and spell game to spell phonetically irregular words. e. g. the, face"
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners use these words in oral and written sentences."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Provide sentences with blank spaces for learners to fill in the blanks using the words they have learnt to spell. e. g. i. This is my-------"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.6",
+          "title": "Extensive Reading",
+          "description": "Building a culture of reading.",
+          "orderIndex": 6,
+          "subStrands": [
+            {
+              "code": "B2.6.1",
+              "title": "Building The Love And Culture Of Reading",
+              "description": "Encouraging independent reading.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B2.6.1.1",
+                  "description": "Read widely for pleasure and to demonstrate independent reading and learning in the literary area",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.6.1.1.1",
+                      "description": "Read a variety of age and level-appropriate books and texts from print and non-print",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use the Author's chair to introduce the reading/ library time."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have a variety of age and level-appropriate books for learners to make a choice."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Introduce narratives, pop-up and flip-the-page texts to learners."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Introduce e-books to learners, if available."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "For each reading session, guide learners to select books."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

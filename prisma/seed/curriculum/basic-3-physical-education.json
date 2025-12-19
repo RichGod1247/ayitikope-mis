@@ -1,0 +1,603 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 3",
+  "subject": "Physical Education",
+  "name": "Basic 3 Physical Education",
+  "slug": "basic-3-physical-education",
+  "orderIndex": 1,
+  "description": "The Basic 3 Physical Education curriculum focuses on advanced motor skills, movement concepts, physical fitness strategies, and the development of values. It includes complex locomotor skills like directional changes and rope skipping, manipulative skills with various equipment, understanding space and dynamics, fitness assessment, and fostering social skills through physical activity.",
+  "strands": [
+    {
+      "code": "B3.1",
+      "title": "MOTOR SKILL AND MOVEMENT PATTERNS",
+      "description": "Developing competence in motor skills and movement patterns for various physical activities.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B3.1.1",
+          "title": "LOCOMOTOR, MANIPULATIVE AND RHYTHMIC SKILLS",
+          "description": "Developing advanced locomotor, manipulative and rhythmic skills.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.1.1.1",
+              "description": "Demonstrate competency in motor skills and movement patterns needed to perform a variety of physical activities (games, athletics gymnastics and dance)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.1.1.1.1",
+                  "description": "Change direction from forward and back and right and left while walking, running, hopping, and jumping (i.e., locomotor skills).",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Mark points on the court with cones/skittles with directions. After warm-ups lead learners to direction from forward to backward, right to left whiles starting with walking, to running, hopping to jumping, etc. in a fun way."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.2.1.2",
+                  "description": "Jump continuously forward and backward over a turning rope.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners find free space and skip 10 times always landing on the balls on both feet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners find free space and skip 5 times on one foot always landing on the balls of the same foot. Alternate foot."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "With a jump rope, each learner skips 5 times always on the balls of the same foot. Alternate foot."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "With a jump rope, each learner skips 10 times always landing on the balls of both feet."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "In groups of three, two holding each end of the rope, a learner jumps continuously a forward-turning rope 10 times after which they change roles."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "In groups of three, two holding each end of the rope, a learner jumps continuously a backward-turning rope 10 time after which they change role."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.2.1.3",
+                  "description": "Jump continuously a self forward turning rope in a circle (skipping with rope).",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Hold the handle of the skipping rope side by side with the two hands with the middle of the rope on the ground or slightly above. Hop over it and swing the rope clockwise to turn round the body in circle as they continue series of step-hops starting with double take-off."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Advance should progress to single step-hops and change clockwise rope movement to anti-clockwise."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.3.1.4",
+                  "description": "Roll a ball from stationary forward and back, using sticks.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After warm-ups learners roll ball with sticks from stationary to a demarcated point and back to the starting point."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.4.1.5",
+                  "description": "Manipulate an object whiles distributing weight and base of support.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to volley light balls at a spot."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners should also bounce ball at a spot or with a stick and ball, learners should lean slightly down and use the stick to manipulate the ball at a spot."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.5.1.6",
+                  "description": "Balance while moving and manipulating an object on a ground-level balance beam.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners lean forward and bounce balls whiles moving on ground level balance beam."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "They roll ball with stick whiles moving."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.6.1.7",
+                  "description": "Strike (serve) a lightweight ball to a partner, using the underhand movement pattern.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners toss a ball and swing the arm from behind to strike the ball to a partner about 6m away. Learners strike the ball back to continue the rally. The process should continue when the ball drops."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.7.1.8",
+                  "description": "Strike a gently tossed ball with a bat, using a side orientation (movement).",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in pairs with bats and tennis/table tennis balls. Learners stand with the shoulder facing the partner. Guide them to bounce ball and gently and strike sideways to the partner using inward and outward orientation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.8.1.9",
+                  "description": "Perform the two-handed throw pattern (as throwing in football).",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners hold the ball with two hand and move their hands with balls above the head. Learners slightly flex their knees and swing their hands to throw ball over the head as in soccer."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners practice two hands chest throw and side throw as in basketball and netball."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.8.1.10",
+                  "description": "Throw and catch a ball with a partner while both partners are moving using underhand, overhand and sidearm throw patterns.",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Group learners in pairs with a ball. Learners stand about 6m apart facing the direction of movement. Guide them to perform throwing and catching as they move from one point to the other."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "They play handball, netball or basketball game."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.8.1.11",
+                  "description": "Catch a flying ball away from the body.",
+                  "orderIndex": 11,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to stand straight, shoulder width apart, with the foot opposite the throwing hand slightly forward. Learners stretch their arms and hands fully sideways with fingers open catch the ball away from their body."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.9.1.12",
+                  "description": "Kick a stationary ball from the ground into the air to a stationary partner and a moving partner using the inside of the foot.",
+                  "orderIndex": 12,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners place balls in front about 2m away. Learners demonstrate how to kick by stepping forward to kick the stationary ball into air to a partner at 10m apart using the inside of the foot."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.10.1.13",
+                  "description": "Hand-dribble a ball continuously while moving around obstacles.",
+                  "orderIndex": 13,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners move from stationary position with balls, bounce and continue bouncing whiles moving through obstacles from one point to other."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.11.1.14",
+                  "description": "Foot-dribble a ball continuously while traveling and changing direction.",
+                  "orderIndex": 14,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Arrange cones or skittles. Learners dribble a ball in a forward direction using the inside of the foot."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.12.1.15",
+                  "description": "Clap, sing and dance to a rhythm",
+                  "orderIndex": 15,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners clap, sing and dance to a rhythm. Emphasis on coordination in clapping to the beat and coordination dancing."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.12.1.16",
+                  "description": "Demonstrate the difference between a jog and a run, a hop and a jump, and a gallop and a slide.",
+                  "orderIndex": 16,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learner demonstrate jogging and running and compare their similarities and differences. Do same for other hop and jump as well as gallop and slide."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.13.1.17",
+                  "description": "Roll forward from standing position many time to a distance in a round form.",
+                  "orderIndex": 17,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Squat in front of a spread mat/safe floor. Place hands on the mat/floor and tuck the chin to touch the chest. From this position, push with the hands and roll forward in a round form and back to the standing."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.2",
+      "title": "MOVEMENT CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Understanding movement concepts, principles, and strategies.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B3.2.1",
+          "title": "SPACE AWARENESS, DYNAMICS, RELATIONS, BODY MANAGEMENT AND STRATEGIES",
+          "description": "Understanding space, dynamics, and body management.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.2.1.2",
+              "description": "Demonstrate knowledge of movement concepts, principles, and strategies that apply to the learning and performance of physical activities.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.1.2.1",
+                  "description": "Identify general space.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify general space by indicating the total working area. Learners move to indicate the general space."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.2.2.2",
+                  "description": "Compare and contrast locomotor movements conducted to even and uneven beats.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify locomotor movements conducted to Even beats; jumping, jogging, hopping, dancing etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners identify locomotor movements conducted to Uneven beat; running, dancing, sliding, galloping, trotting, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.2.2.3",
+                  "description": "Identify steps and rhythm patterns for traditional and cultural dances.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show video of traditional and cultural dances of Ghana such as agbadza, adowa, etc and guide learners to identify the steps and rhythm patterns."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Basic dance steps are: balancing, closing, hesitating, pivoting, and rocking. Basic dance rhythms are: slow- quick, quick-quick, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.4.2.5",
+                  "description": "Explain the importance of a wide rather than a narrow base of support in balance activities.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify that wide base of support is stable than narrow base. During practical lesson as two learners to stand up, one with broad feet apart and other with feet together. Push the two with same force for learners observe."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.4.2.6",
+                  "description": "Identify the key elements for increasing accuracy in rolling a ball and throwing a ball.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify elements for increasing accuracy in rolling and throwing as coordination, agility, strength, flexibility, timing, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.5.2.7",
+                  "description": "Explain the similar movement elements of the underhand throw and the underhand volleyball serve.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify that the similarities between underhand throw and underhand volleyball serve movement elements are: i. Stance ii. Flexing of knees iii. Hand swing iv. Follow through."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.3",
+      "title": "PHYSICAL FITNESS",
+      "description": "Assessing and maintaining physical fitness.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B3.3.1",
+          "title": "AEROBIC CAPACITY, STRENGTH, ENDURANCE AND FLEXIBILITY",
+          "description": "Activities to improve physical fitness.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.3.1.3",
+              "description": "Assess and maintain a level of physical fitness to improve health and performance.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.3.1.3.1",
+                  "description": "Perform 10 minutes dance with music.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners perform 10minute dance with music at their own pace for recreation and improvement of their physical fitness."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.3.2.3.2",
+                  "description": "Perform continuous step-ups.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After warm-ups learners perform continuous step ups using stable platforms like block, bag of sand, etc. to test muscular strength in the legs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.3.3.3.3",
+                  "description": "Perform three set of continuous step-ups.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After warm-ups learners perform continuous step ups using stable platforms like block, bag of sand, etc. learners repeat three set after 5minutes rest to test muscular endurance in the legs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.3.4.3.4",
+                  "description": "Perform lateral sit and reach.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sit flat on the ground with legs opened in 'V' and trunk erect. Learners put their right toes with the two hands and flex the trunk to touch the knee. Let them repeat to the other leg to test their level of flexibility."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.3.5.3.5",
+                  "description": "Identify body composition using fat and fat free body mass.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to understand that body composition is the relative percentage of fat muscles and fat free body."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.4",
+      "title": "PHYSICAL FITNESS CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Understanding fitness concepts for health and performance.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B3.4.1",
+          "title": "FITNESS PROGRAMME, HEALTHY DIET, SAFETY AND INJURIES, SUBSTANCES/DRUGS AND BODY COMPOSITION",
+          "description": "Concepts related to fitness, health, and safety.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.4.1.4",
+              "description": "Demonstrate knowledge of physical fitness concepts, principles, and strategies to improve health and performance",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.4.1.4.1",
+                  "description": "Sustain continuous movement for an increasing period of time while participating in moderate to vigorous physical activities.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain to learners during physical activities that in order to sustain continuous movement for increasing periods of time with varying intensity needs improvement of muscular endurance through regular workout."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.1.4.2",
+                  "description": "Describe the role of moderate to vigorous physical activity in achieving or maintaining good health.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain how moderate to vigorous physical activities improve aerobic capacity (ability of the body system to process oxygen) for maintenance and improvement of good health."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.2.4.3",
+                  "description": "Explain the energy requirements of the body during physical activity and inactivity.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain that the body uses more energy during physical activity than during inactivity. Learners discussed the need to eat energy giving food before engaging in physical activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.3.4.4",
+                  "description": "Identify flexibility exercises that are not safe for the joints and should be avoided.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners perform physical activities to identify unsafe joint flexibility exercises as squatting, knee rocking, hurdle sitting, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.4.4.5",
+                  "description": "Classify PE equipment into safe and unsafe.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sort them into safe and unsafe by their appearance, Safe: not damaged, not rusted, not broken, not harmful to the user, etc. Unsafe: Damaged, broken, rusted, harmful to the user."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.5.4.6",
+                  "description": "Recall why adolescents use drugs for physical activities.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Brainstorm with learners that adolescents use drugs to reduce pains, to cure disease, to gain confidence, imitate others, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.6.4.7",
+                  "description": "Explain the meaning of body composition using fat and fat free body mass.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain that body composition is the relative percentage of fat muscles and fat free body."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.5",
+      "title": "VALUES AND PSYCHO-SOCIAL CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Developing values and social skills through physical activity.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B3.5.1",
+          "title": "SELF-RESPONSIBILITY, SOCIAL INTERACTION, GROUP DYNAMICS AND CRITICAL THINKING",
+          "description": "Values, social interaction, and critical thinking.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.5.1.5",
+              "description": "Demonstrate value and utilize knowledge of psychological and sociological concepts, principles, and strategies that apply to the learning and performance of physical activity.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.5.1.5.1",
+                  "description": "Set a personal goal to improve a motor skill and work toward that goal in non-school time.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners during physical activities to set personal goals such as participate in 30 minutes physical activities at least three time a week, improve upon the number of push-ups(from 4-5 in 4 weeks)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.5.2.5.2",
+                  "description": "Use appropriate cues for movement and positive words of encouragement while coaching others in physical activities.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Encourage learners to improve upon their performance through positive encouragement during physical activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.5.3.5.3",
+                  "description": "Use verbal and nonverbal communication to improve practice.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners improve on their practice as they receive positive verbal and non-verbal feedback from their peers, teacher, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.5.4.5.4",
+                  "description": "Demonstrate how to solve a problem with another person during physical activity.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners embrace their peers after physical activities as a means of solving personal problems."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

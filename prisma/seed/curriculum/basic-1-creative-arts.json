@@ -1,0 +1,312 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 1",
+  "subject": "Creative Arts",
+  "name": "Basic 1 Creative Arts",
+  "slug": "basic-1-creative-arts",
+  "orderIndex": 1,
+  "description": "The Basic 1 Creative Arts curriculum provides opportunities for learners to explore, understand, and express themselves through various media, methods, and techniques. It focuses on developing aesthetic perception, understanding design elements, and appreciating historical and cultural contexts through visual and performing arts.",
+  "strands": [
+    {
+      "code": "CA 1",
+      "title": "MEDIA, METHODS, TECHNIQUES AND TECHNOLOGY",
+      "description": "Exploration and experimentation with tools and materials to create art.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "CA 1.1",
+          "title": "Explore, understand and experiment creatively with variety of tools and materials",
+          "description": "Hands-on interaction with simple tools and materials.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA 1.1.1",
+              "description": "Explore, understand and experiment creatively with variety of tools and materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA1 1.1.1",
+                  "description": "Handle and play with simple tools and materials freely with little guidance",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners use different writing tools (crayons, pencils) to draw a beautiful picture of themselves and colour it nicely."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In small groups, learners use glue and pieces of materials in the colours of the national flag to build a large collage of the Ghana Flag."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use clay or play dough to mould objects (e.g., fruits, farm tools, toys) and paint them once dry."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Provide learners with different materials such as straws and old calendars to cut and create beads. Cut old calendars, brown papers, and roll them using glues."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA 2",
+      "title": "CREATIVE EXPRESSION THROUGH PRODUCTION AND MAKING",
+      "description": "Expressing ideas and feelings through visual and performing arts.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "CA 2.1",
+          "title": "Design, make, exhibit, and respond to own or others art works (2-dimensional and 3-dimensional) freely",
+          "description": "Creating and discussing art works, music, and drama.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA 2.1.1",
+              "description": "Design, make, exhibit, and respond to own or others art works (2-dimensional and 3-dimensional) freely",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA1 2.1.1",
+                  "description": "Demonstrate creative knowledge in making two and three-dimensional art works, music or drama",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Perform rhythmic action (e.g. clapping, stamping, snapping, etc.) using songs, words, etc. E.g. 'Head, shoulders, knees and toes'."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners choose their future jobs and draw themselves in the uniform of their aspired future job, colour it nicely and write the name of the job underneath."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play the responsibilities of family members or community leaders (e.g. chief, queen mother) using props like umbrellas and staffs."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners use improvised musical instruments to play their own music, accompanied by dance movements."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA1 2.1.2",
+                  "description": "Talk about how they made their art work, music or drama",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about what they have written or drawn with a friend sitting next to them in the classroom."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners describe the way they created their own pictures of sources of light or weather conditions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA 3",
+      "title": "AESTHETIC PERCEPTION",
+      "description": "Deriving meaning and making judgments about artworks based on beauty and senses.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "CA 3.1",
+          "title": "Derive meaning and make judgment about artworks using the senses according to its beauty.",
+          "description": "Observing and appreciating art in the environment.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA 3.1.1",
+              "description": "Derive meaning and make judgment about artworks using the senses according to its beauty.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA1 3.1.1",
+                  "description": "Talk about art forms seen in the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Talk about the different parts of a book (front/cover page, back of a book) and relate the content to the illustrations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and talk about the illustration(s) that matched well with the print in a book."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Observe and talk about conversational posters depicting family, community places, or weather conditions."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA1 3.1.2",
+                  "description": "Asking and responding to questions about own and others art works; stating what they like and dislike about what they see",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners indicate the part of a story they liked most through art work."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw their favourite part of a book read to them and tell why."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Using positive language, have learners talk about their own drawing and that of others."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA 4",
+      "title": "ELEMENTS AND PRINCIPLES OF DESIGN",
+      "description": "Understanding and applying elements like colour, size, and shape.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "CA 4.1",
+          "title": "Create and organize the elements of design according to the principles to create art forms",
+          "description": "Using design elements in art creation.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA 4.1.1",
+              "description": "Create and organize the elements of design according to the principles to create art forms",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA1 4.1.1",
+                  "description": "Identify and describe objects by colour names and size",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and describe objects by colour names (red, yellow, green, etc.) and size (big, small, long, short)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sort and classify items (e.g., farm tools, domestic animals, shapes) based on colour and size."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the attributes of 3-D objects (e.g., stone, leaf, empty cans) and draw them."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA1 4.1.2",
+                  "description": "Make art works with the elements of art",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create their own simple classroom rules using simple pictures and different colours to design the rules."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Prepare posters with pictures cut from calendars and newspapers (e.g., cautioning people not to make the place dirty) using selected colours."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create a leaf album using different types of leaves pasted on cards."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA 5",
+      "title": "HISTORICAL AND CULTURAL CONTEXT",
+      "description": "Connecting arts to history, culture, and society.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "CA 5.1",
+          "title": "Demonstrate knowledge and skills of the visual and performing arts in relation to history, culture, environment and modern society",
+          "description": "Appreciating art in cultural and historical contexts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA 5.1.1",
+              "description": "Demonstrate knowledge and skills of the visual and performing arts in relation to history, culture, environment and modern society",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA1 5.1.1",
+                  "description": "Identify, observe and talk about art in the immediate natural and manmade environment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and talk about the natural and artificial sources of light on a conversational poster depicting day and night."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about the beauty of different weather conditions (rainy, sunny, windy) using pictures."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA1 5.1.2",
+                  "description": "Identify and discuss art objects and performances (past and present) from other places in our culture/country",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Talk about the colours of the flags of other countries and other art work and music that they have."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Observe and talk about images, items and performances in artworks of everyday life, such as traditional festivals or religious worship."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA1 5.1.3",
+                  "description": "Perform dance movements and music inspired by Ghanaian history other cultures",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sing and dance to traditional songs about food, festivals, or history in the locality."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play different musical instruments (rattle, shakers), clap and dance on the correct rhythm."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners listen to music on Ghanaian history (e.g. 'Hɛn ara asaase ni') and dance to it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

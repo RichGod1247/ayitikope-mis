@@ -1,0 +1,938 @@
+{
+  "part": "1/1",
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "Our World and Our People",
+  "name": "Basic 5 Our World and Our People",
+  "slug": "basic-5-our-world-and-our-people",
+  "orderIndex": 1,
+  "description": "The Basic 5 Our World and Our People curriculum focuses on the uniqueness of human beings, adolescent changes, family commitment, road safety, gender equity, environmental care, the solar system, map making, population features, religious worship, festivals, human rights, leadership, citizenship, and global cooperation.",
+  "strands": [
+    {
+      "code": "B5.1",
+      "title": "ALL ABOUT US",
+      "description": "Understanding human uniqueness, adolescence, family, and community.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5.1.1",
+          "title": "Nature of God",
+          "description": "Understanding the uniqueness of humans in creation.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.1.1.1",
+              "description": "Demonstrate understanding of the uniqueness of human beings among God's creation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.1.1.1",
+                  "description": "Explain that human beings are unique compared to other creatures",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners recall and retell stories about Creation. They talk about the nature of God as the Creator, the all-knowing, powerful and creator of all things."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners look at themselves, pictures of different human beings, and animals and reflect on how they are different from animals and present their findings to the class for discussion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups reflect and make a poster on the characteristics of human beings that make them different from other creatures e.g. having a unique personality, ability to be creative and think rationally, ability to communicate and collaborate, ability to exercise judgement and make choices between right and wrong, ability to learn."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners display their posters for class discussion and peer-review."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners reflect on why God created human beings and why God made man different from other creatures."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners debate on the topic 'animals do not reason'."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.2",
+          "title": "Myself",
+          "description": "Understanding adolescence.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.1.2.1",
+              "description": "Demonstrate understanding of positive attitudes towards the changes that occur during adolescence",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.2.1.1",
+                  "description": "Describe changes that occur during adolescence",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners brainstorm on the term, Adolescence e.g. Young people are people within the ages 10-24 and the adolescent falls within this group. Adolescence is a period of transition between childhood and adulthood. It occurs between the ages of 10 and 19 years (WHO, 1968)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Group learners in their sex groups to discuss the changes that take place in their own sex during adolescence and present to class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Physical changes in boys: e.g. breaking of voice, broadening of the chest, enlargement of testes and penis, growth of armpit, facial and pubic hair, acquisition of excess energy, acne (pimples) may develop on the face, growth in height and weight."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Some physical changes in girls: e.g. development of breast, broadening of hips, growth of armpit and pubic hair, onset of ovulation and menstruation, acquisition of excess energy, growth in height and weight, acne (pimples) on the face."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Some emotional and psychological changes in both boys and girls e.g. easily irritated (anger), worry/fear, love (strong attachment to the opposite sex), shyness, excitement, happiness/sadness, adventurous."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.3",
+          "title": "My Family and the Community",
+          "description": "Family commitment, road safety, and gender equity.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.1.3.1",
+              "description": "Demonstrate understanding of how to be committed to one's Family",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.3.1.1",
+                  "description": "Explain the need to be a committed member of the family",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention behaviours and attitudes needed to be a committed family member e.g. taking part in family activities, obedience to elders of the family, respect for family members, accepting responsibility (performing assigned duties), taking initiatives, helping needy relatives, be present at family meetings, respond to family needs, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about the need to be a committed family member e.g. to promote unity, to gain respect, to bring unity and peace in the family, to strengthen the family support system, to be considered a trustworthy person, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play commitment to the family. The role play should have as a climax reward for being committed."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.3.2",
+              "description": "Show understanding of staying safe on the road",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.1.3.2.1",
+                  "description": "Identify things to do to stay safe on roads",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the things they need to know to stay safe on the road e.g. traffic light, road signs, stick to the pavement, do not walk on the road, crossing road only at the pedestrian crossing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners visit the nearest traffic light/ lollipop or watch pictures/video clips of the use of traffic lights/lollipop."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups discuss and present their findings on the use of the traffic lights/lollipop."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners demonstrate the use of traffic lights/lollipop e.g. yellow means get ready to stop, red means stop, and green means go."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners draw and colour the traffic light."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.3.3",
+              "description": "Demonstrate understanding of gender related issues in the environment",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.1.3.3.1",
+                  "description": "Explain how gender equity can be promoted",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups learners work to elicit gender stereotypes in their community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners, in groups identify roles that are to be performed by the sexes. Learners discuss and cross out responses the class considers as stereotypes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners discuss some gender issues in the community and how they affect the: i. Individual ii. Community iii. Nation building e.g. widowhood rites, trokosi, witch camps etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners find out from parents and other people in the community some of the customs they consider discriminatory. In groups, learners discuss and present their findings in class."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners in groups discuss how they will promote gender equity in their community. e.g. women empowerment."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.4",
+          "title": "Home and School",
+          "description": "Understanding peer pressure.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.1.4.1",
+              "description": "Demonstrate understanding of skills for using peer groups for the benefit of the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.4.1.1",
+                  "description": "Describe skills for dealing with peer pressure",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the benefits of belonging to good peer groups e.g. learning new things, respectfulness, obedience, achieving goals, being courteous."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the dangers of belonging to bad peer groups e.g. drink alcohol, take drugs, have pre marital sex."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play a scenario in which an older pupil is putting pressure on a younger one to do any of the following: i. drink alcohol ii. take drugs iii. have pre marital sex."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.2",
+      "title": "ALL AROUND US",
+      "description": "Exploring the environment, plants, animals, and map making.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5.2.1",
+          "title": "The Environment and the Weather",
+          "description": "Greenhouse gases, environmental care, and the earth's shape.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.2.1.1",
+              "description": "Demonstrate understanding of human activities that contribute to abundant greenhouse gases in the atmosphere",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.1.1.1",
+                  "description": "Record human activities that cause over concentration of greenhouse gases and climate change",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain climate change and human adaptations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learner list human activities in their community that contribute to the emission of greenhouse gases e.g. deforestation, application of fertilizers, smoke from vehicles, bush burning, burning of refuse and charcoal, smoke from industries."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about how the atmosphere can be preserved for the provision of quality air, e.g. tree planting, do not cut trees, do not burn refuse etc."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.1.2",
+              "description": "Demonstrate understanding of how to care for the environment",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.2.1.2.1",
+                  "description": "Explain ways to care for the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the human activities in the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures and video clips on human activities that destroy the environment: illegal mining (galamsey), indiscriminate cutting down of trees (deforestation), pollution of water bodies, air pollution, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners write the effects of human activities on the environment: climate change heat, floods, rain storms, less rainfall, famine, draught, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Using Think-Pair-Share, learners talk about ways of caring for the environment through: tree planting, proper disposal of waste, legal mining, clean-up exercises, avoiding environmental pollution, etc."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners in groups do a project on any of the following: clearing a rubbish dump in the school, planting trees, checking erosion, clearing choked gutters, etc."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners discuss the importance of caring for the environment: It helps to improve climatic conditions such as oxygen, balanced temperature on earth, etc."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners present their work in class for discussion."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Learners design posters and flyers in groups to create awareness on cleanliness in their school."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.1.3",
+              "description": "Demonstrate knowledge of the shape of the earth",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.2.1.3.1",
+                  "description": "Describe the shape of the earth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners use the globe to study the shape of the earth."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners watch pictures/videos illustrating the shape of the earth-picture and video of an approaching ship."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners sketch the globe to illustrate the shape and angle of the earth on its axis."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.2",
+          "title": "Plants and Animals",
+          "description": "Animal housing and care.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.2.2.1",
+              "description": "Demonstrate knowledge of animal housing and how to care for pets",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.2.1.1",
+                  "description": "Design and make a simple animal house and keep a pet",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners watch pictures/films on different housing for domestic animals and pets or visit farms in the community to observe different types of housing for animals e.g. sheep, goats, rabbits, poultry and pigs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners engage in practical activities to design and make simple animal houses such as: pens for goats and sheep, coop for hen, cage for dog."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners sketch domestic animals and their housing."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners talk about values of keeping animals such as learning to become responsible and committed to hardwork, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.3",
+          "title": "Map Making and Land Marks",
+          "description": "Identifying and locating landmarks.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.2.3.1",
+              "description": "Demonstrate knowledge of major landmarks in the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.3.1.1",
+                  "description": "Locate major land marks on a sketch map of the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify major land marks in the community e.g. the school, post office, police station church, mosque."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using landmarks, learners take turns in showing directions to places in the community."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners sketch a map of the community indicating major landmarks."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.4",
+          "title": "Population and Settlement",
+          "description": "Features of rural settlements.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.2.4.1",
+              "description": "Demonstrate knowledge of the features of rural settlements",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.4.1.1",
+                  "description": "Explain the features of rural settlements",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the features of rural and urban settlements e.g. in rural settlements there is small population, few buildings, people living far apart. In urban settlements the population is large, there is large market."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners in groups talk about the main activities in the rural and urban settlements of Ghana. What can do to get food and money e.g. rural settlement: crop farming, animal rearing, hunting."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners draw a rural and urban settlements, showing some features."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.3",
+      "title": "OUR BELIEFS AND VALUES",
+      "description": "Worship, festivals, human rights, and leadership.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5.3.1",
+          "title": "Worship",
+          "description": "Importance of prayer and worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.3.1.1",
+              "description": "Appreciate the importance of prayer, worship and other acts of worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.1.1.1",
+                  "description": "Identify the moral significance of Sacred Passages and Oral Traditions in the three main religions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners recall the modes of worship (charity, prayer, song ministration, evangelism,) and give reasons why we worship: human beings are under the authority of the Creator, we demonstrate that we depend on God for survival, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners listen to and sing religious songs of the three major religions in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners recite selected passages and, or oral traditions e.g.: The Ten Commandments (Exodus 20), Al-Fathiha', Folktales, etc., and show how they can apply them in their daily lives."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners relate the moral values they have learned to their lives e.g. honesty, sacrifice, dedication, commitment, forgiveness, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.2",
+          "title": "Festivals",
+          "description": "Celebrations in Ghana.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.3.2.1",
+              "description": "Demonstrate knowledge of Celebrations in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.2.1.1",
+                  "description": "Describe various celebrations in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about types of celebrations in Ghana e.g. Birthday, Indolence Day, Naming babies, festivals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about importance of celebrations in Ghana: teaches about love and sacrifice, unity, brotherliness, appreciation, generosity, kindness, forgiveness, bravery, reconciliation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play various celebrations, showing important activities like sharing, reconciliation, unity and brotherliness, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners write essay on any of the celebrations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.3",
+          "title": "Basic Human Rights",
+          "description": "Respecting rights as a citizen.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.3.3.1",
+              "description": "Demonstrate understanding of how to respect human rights as a citizen",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.3.1.1",
+                  "description": "Describe fundamental human rights in the family",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners describe fundamental human rights as a family member e.g. right to live with family, right to guardianship, right to education, right to health."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners compose songs and rhymes on the right to belong to a family."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners develop posters describing the right to education using pictures or the internet."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.4",
+          "title": "Being a Leader",
+          "description": "Ministry of major religious leaders.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.3.4.1",
+              "description": "Show Understanding of the Ministry of the major religious leaders",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.4.1.1",
+                  "description": "Describe the key events in the Ministry of the leaders of the three religions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners describe the key events associated with the ministry of the leaders of the three main religions: i. The Lord Jesus Christ-Baptism, temptation, call of the disciples, teaching, etc. ii. The Holy Prophet Muhammad (S.A.W.) -call, triumphant entry to Makkah etc. iii. Traditional Leader-training, teaching, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, learners role-play some aspects of the Ministry of: a. The Lord Jesus Christ b. The Holy Prophet Muhammad c. A Traditional Religious Leader."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups to identify the significant roles by the religious leaders their ministries: obedience; commitment; patience, leadership, sacrifice etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, learners dramatise portions of the scripture that depict moral lessons, e.g. submissiveness, humility, loyalty, etc., and how they can emulate such values as individuals."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.4",
+      "title": "OUR NATION GHANA",
+      "description": "Citizenship, authority, resources, and farming.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B5.4.1",
+          "title": "Being a Citizen",
+          "description": "Attitudes for effective citizenship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.4.1.1",
+              "description": "Show understanding of attitudes needed for effective citizenship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.1.1.1",
+                  "description": "Describe the attitudes needed for effective citizenship",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify attitudes necessary for effective citizenship, e.g. compromise, tolerance, collaboration, dialogue, teamwork, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play the importance of living in harmony with others, e.g. peaceful coexistence, unity, love, respect."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.4.1.2",
+              "description": "Demonstrate an understanding of how responsible citizens, can contribute to national development",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.4.1.2.1",
+                  "description": "Discuss the importance of being a responsible citizen in the nation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners describe attitudes and behaviours that show that a person is responsible e.g. obedience to rules and regulations, respect others, accepting responsibility (performing assigned duties), taking initiatives, helping needy people."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the importance of being a responsible citizen e.g. to promote unity, to gain respect, to be considered a reliable person, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role-play activities of responsible citizens."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners identify and talk about what they can do to help the country to develop."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.4.1.3",
+              "description": "Demonstrate understanding of unity in diversity",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.4.1.3.1",
+                  "description": "Demonstrate how diversity can promote national development",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners describe how ethnic diversity can promote national development e.g. promotion of tourism, sale of artefacts, inter-ethnic marriage."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play a scenario depicting cultural diversity e.g. display of various cultural activities at national gatherings."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.2",
+          "title": "Authority and Power",
+          "description": "Obedience to authority and good governance.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.4.2.1",
+              "description": "Demonstrate knowledge of the need to obey and submit to authority",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.2.1.1",
+                  "description": "Recognise parents as source of discipline and character formation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about rules and regulations they are expected to follow at home."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss why it is important to obey rules and regulations at home."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners identify ways by which they can be responsible: be a good child to avoid punishment, emulate parents and other family members, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners role play responsible behaviours as parents and children at home."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners write essays on how to become responsible adults."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.4.2.2",
+              "description": "Demonstrate understanding of the need for good governance",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.4.2.2.1",
+                  "description": "Explain and appreciate the importance of democratic governance",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify various persons and bodies who are responsible in governing their school e.g. headteacher, teachers, school prefects."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the importance of good governance in their school."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups suggest ways in which school governance could be improved. Groups present their report in class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Class mock election. Learners demonstrate how to elect a leader in a democratic way."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners discuss why good governance is important for national development."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.3",
+          "title": "Responsible Use of Resources",
+          "description": "Keeping water bodies safe.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.4.3.1",
+              "description": "Demonstrate understanding of responsible use of water",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.3.1.1",
+                  "description": "Identify ways of keeping water bodies safe",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss ways of keeping water bodies safe e.g. Do not throw rubbish into water bodies, do not wash in water bodies, do not defecate in water bodies."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners compose slogans and create poster on how to keep water bodies safe."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners compose songs and rhymes on ways to keep water bodies safe."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.4",
+          "title": "Farming in Ghana",
+          "description": "Basic farming practices.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.4.4.1",
+              "description": "Demonstrate understanding of basic farming practices (transplanting)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.4.1.1",
+                  "description": "Participate in transplanting seedlings",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners prepare plant house or garden boxes/pots/trays, containers or garden beds for transplanting. Fill with fertile soil or plant medium; make holes at correct spacing and water ready for seedlings."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ensure that seedlings are ready for transplanting."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Water seedlings before transplanting."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the right tools e.g. hand trowel to lift seedlings from seedbed, use dibber to make holes at the right depth. Transplant seedlings in boxes/pots/trays, containers or garden beds."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Visit transplanted seedlings daily to record number of leaves and height (growth) of transplanted seedlings. Use record to write weekly report."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.5",
+      "title": "MY GLOBAL COMMUNITY",
+      "description": "Connecting with neighbouring countries and understanding earth's movements.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B5.5.1",
+          "title": "Our Neighbouring Countries",
+          "description": "Economic exchanges and earth's movements.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.1",
+              "description": "Demonstrate knowledge of the economic exchanges between Ghana and her neighbours",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.1.1",
+                  "description": "Describe the economic exchanges between Ghana and her neighbours",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners watch picture/videos of economic exchanges between Ghana and her neighbours e.g. trade, work."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners describe the types of goods exchanged between Ghana and her neighbours e.g. tomatoes, onions, clothes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners write essays on the importance of the exchange of goods e.g. for food, clothes."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.5.1.2",
+              "description": "Demonstrate knowledge of the Rotation and Revolution of the Earth",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.5.1.2.1",
+                  "description": "Describe the rotation and revolution of the Earth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain rotation and revolution of the Earth."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners undertake activities describing the rotation of the earth on its axis and revolution of the earth round the sun."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners demonstrate the solar and lunar eclipses. Use learners to represent the sun, moon and earth. i. Have the moon (learner 1) walk in circles around the earth (learner 2). ii. Have the earth (learner 2) walk around the sun (learner 3) while the moon (learner 1) maintains its orbit. iii. When the moon (learner 1) passes between the sun (learner 3) and the earth (learner 2) to create a shadow, solar eclipse is formed."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss their findings on the experiment in groups."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Present group findings to the class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

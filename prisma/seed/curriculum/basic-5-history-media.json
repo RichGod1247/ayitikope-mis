@@ -1,0 +1,93 @@
+[
+  {
+    "contentStandardCode": "B5.2.1.1",
+    "indicatorCode": "B5.2.1.1.1",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.2.1.1.1-ancient-life-then-now.png",
+    "altText": "Life in ancient times compared with life today (food, clothing, travel, housing, communication and technology).",
+    "tags": ["ancient times", "then and now", "Ghana", "daily life", "comparison"]
+  },
+  {
+    "contentStandardCode": "B5.2.1.1",
+    "indicatorCode": "B5.2.1.1.2",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.2.1.1.2-ancient-towns-map.png",
+    "altText": "Map and examples of ancient towns in Ghana such as Begho, Bono-Manso, Kintampo, Salaga and Daboya.",
+    "tags": ["ancient towns", "map", "Begho", "Bono-Manso", "Salaga", "Kintampo", "Ghana"]
+  },
+  {
+    "contentStandardCode": "B5.2.5.1",
+    "indicatorCode": "B5.2.5.1.1",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.2.5.1.1-ghanaian-achievers-gallery.png",
+    "altText": "Gallery of notable Ghanaians and their contributions in science, arts, diplomacy and sports.",
+    "tags": ["Ghanaians", "contributions", "role models", "science", "arts", "sports", "diplomacy"]
+  },
+  {
+    "contentStandardCode": "B5.3.2.1",
+    "indicatorCode": "B5.3.2.1.1",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.3.2.1.1-transatlantic-slave-trade-nongraphic.png",
+    "altText": "Non-graphic diagram explaining the Trans-Atlantic slave trade and the routes involved.",
+    "tags": ["Trans-Atlantic slave trade", "trade routes", "history", "non-graphic", "forts and castles"]
+  },
+  {
+    "contentStandardCode": "B5.4.2.1",
+    "indicatorCode": "B5.4.2.1.1",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.4.2.1.1-colonial-education-developments.png",
+    "altText": "Developments in education during the colonial period, including schools, ordinances and church roles.",
+    "tags": ["colonial period", "education", "schools", "ordinances", "church", "Gold Coast"]
+  },
+  {
+    "contentStandardCode": "B5.4.2.1",
+    "indicatorCode": "B5.4.2.1.2",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.4.2.1.2-colonial-health-housing.png",
+    "altText": "Colonial-era health facilities and housing projects such as Korle Bu Hospital and other major hospitals.",
+    "tags": ["colonial period", "health facilities", "housing", "Korle Bu", "Kumasi", "Takoradi"]
+  },
+  {
+    "contentStandardCode": "B5.4.3.2",
+    "indicatorCode": "B5.4.3.2.1",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.4.3.2.1-colonial-economic-infrastructure.png",
+    "altText": "Economic policies and infrastructure under colonial rule: cocoa, roads, railways, ports and communication.",
+    "tags": ["colonial period", "economy", "roads", "railways", "Takoradi Harbour", "cocoa", "infrastructure"]
+  },
+  {
+    "contentStandardCode": "B5.5.1.1",
+    "indicatorCode": "B5.5.1.1.1",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.5.1.1.1-early-protest-movements-3panels.png",
+    "altText": "Early protest movements in Ghana before 1945: ARPS, NCBWA and the Gold Coast Youth Conference.",
+    "tags": ["protest movements", "ARPS", "NCBWA", "Gold Coast Youth Conference", "before 1945", "timeline"]
+  },
+  {
+    "contentStandardCode": "B5.5.1.1",
+    "indicatorCode": "B5.5.1.1.2",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.5.1.1.2-arps-petition-evidence.png",
+    "altText": "Evidence and sources about Joseph Mensah Sarbah and the role of ARPS in resisting the land bill.",
+    "tags": ["ARPS", "Joseph Mensah Sarbah", "petition", "land bill", "evidence", "activism"]
+  },
+  {
+    "contentStandardCode": "B5.5.1.1",
+    "indicatorCode": "B5.5.1.1.3",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.5.1.1.3-ncbwa-conference.png",
+    "altText": "Sources of evidence about J. E. Casely-Hayford and the National Congress of British West Africa (NCBWA).",
+    "tags": ["NCBWA", "Casely-Hayford", "conference", "British West Africa", "leadership", "evidence"]
+  },
+  {
+    "contentStandardCode": "B5.5.1.1",
+    "indicatorCode": "B5.5.1.1.4",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.5.1.1.4-youth-conference-leadership.png",
+    "altText": "Sources of evidence about J. B. Danquah and the Gold Coast Youth Conference leadership.",
+    "tags": ["J. B. Danquah", "Gold Coast Youth Conference", "leadership", "evidence", "nationalism"]
+  },
+  {
+    "contentStandardCode": "B5.5.3.1",
+    "indicatorCode": "B5.5.3.1.1",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.5.3.1.1-postwar-grievances.png",
+    "altText": "Post–Second World War grievances: ex-servicemen, promises not honoured, housing shortages and high prices.",
+    "tags": ["Second World War", "ex-servicemen", "grievances", "boycott", "prices", "Gold Coast"]
+  },
+  {
+    "contentStandardCode": "B5.5.3.1",
+    "indicatorCode": "B5.5.3.1.2",
+    "image": "/curriculum/upper-primary/basic-5/basic-5-history/B5.5.3.1.2-1948-riots-sources-of-evidence.png",
+    "altText": "Sources of evidence about the 1948 riots: routes, shootings, arrests and key events.",
+    "tags": ["1948 riots", "Accra", "routes", "shootings", "Big Six", "evidence", "UGCC"]
+  }
+]

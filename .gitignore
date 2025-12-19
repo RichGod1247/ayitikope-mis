@@ -1,4 +1,6 @@
-# --- Dependencies / package managers ---
+# ======================
+# Dependencies
+# ======================
 node_modules/
 .pnp
 .pnp.*
@@ -8,50 +10,66 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# --- Build / output ---
+# ======================
+# Build / output
+# ======================
 .next/
+.turbo/
 out/
 dist/
 build/
+.vercel/
 
-# --- Coverage / testing ---
-coverage/
-
-# --- Logs / debug ---
+# ======================
+# Logs / debug
+# ======================
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# --- Env & secrets (DO NOT COMMIT REAL SECRETS) ---
-# Ignore real env files, but keep example templates
+# ======================
+# Coverage / testing
+# ======================
+coverage/
+
+# ======================
+# Env & secrets (DO NOT COMMIT)
+# ======================
 .env
 .env.*
+.env.local
 !.env.example
 !*.env.example
+
 # Prisma env handling
 prisma/.env
+prisma/.env.*
 !prisma/.env.example
-# Common backup patterns
+
+# Common env backups
 *.env.bak
 *.env.back*
 *.env.backup_*
 
-# --- OS / editor cruft ---
+# ======================
+# Local data / imports (PII risk)
+# ======================
+data/
+prisma/imports/
+
+# ======================
+# OS / editor cruft
+# ======================
 .DS_Store
 Thumbs.db
 .vscode/
-
-# --- Vercel / hosting ---
-.vercel/
-
-# --- TypeScript artifacts ---
 *.tsbuildinfo
 next-env.d.ts
 
-# --- Generated code you don’t want in Git ---
-/generated/prisma
-.env
-.env.*
-!.env.example
-.env.local
+# ======================
+# Generated artifacts
+# ======================
+generated/
+.generated/
+public/curriculum/

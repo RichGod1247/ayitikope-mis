@@ -1,0 +1,621 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 7",
+  "subject": "Religious and Moral Education",
+  "name": "JHS 1 Religious and Moral Education",
+  "slug": "jhs-1-religious-and-moral-education",
+  "orderIndex": 1,
+  "description": "The JHS 1 Religious and Moral Education curriculum explores the nature and attributes of God, religious practices including worship, songs and recitations, the role of the family and community, religious leaders and personalities, ethics and moral life covering manners, decency and substance abuse, and religion's connection to economic life through work, entrepreneurship and social security.",
+  "strands": [
+    {
+      "code": "B7.1",
+      "title": "GOD, HIS CREATION AND ATTRIBUTES",
+      "description": "Understanding God's nature and attributes.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B7.1.1",
+          "title": "GOD, HIS NATURE AND ATTRIBUTES",
+          "description": "Exploring the nature and attributes of God in the three major religions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7 1.1.1",
+              "description": "Explain the nature of God seen through His attributes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7 1.1.1.1",
+                  "description": "Explain the nature of God through His attributes in the three major religions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the attributes of God. E.g. omnipotent, omnipresent, omniscient, love, patience."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the attributes of God in English and in their local languages. E.g., Amowia - giver of sunlight (Akan); Binnamdanaa - the Creator of all creatures (Dagbani); Mawu Kitikata - God is the source of life (Ewe)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write an essay on the attributes of God and present your works for class discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 1.1.1.2",
+                  "description": "Describe ways in which you demonstrate attributes of God in your life",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, ask learners to identify the attributes of God that are found in humankind and present to class for discussion E.g. love, patience, merciful."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Role play how they relate the attributes of God to their life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B 7.1.1.1.3",
+                  "description": "Identify the similarities in the way that the nature of God is understood through His attributes in the three major religions in Ghana",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using Think-Pair-Share, learners identify the similarities in the way the nature of God is understood in His attributes in the three major religions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.2",
+      "title": "RELIGIOUS PRACTICES",
+      "description": "Worship practices, religious songs, and recitations.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B7.2.1",
+          "title": "WORSHIP",
+          "description": "Understanding worship in the three major religions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7 2.1.1",
+              "description": "Explain how worship is performed in the three major religions in Ghana and apply the moral lessons in the worship in their life.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7 2.1.1.1",
+                  "description": "Identify the types of worship in the three major religions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through questions and answers learners explain the meaning of worship. E.g. worship is the submission to the will of God or Allah."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures or video clip of people at worship."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Through Think-Pair Share, learners discuss the religion each worship belongs to."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify the types of worship in Christianity, Islam and Indigenous African Religions. E.g. private (individual or family) and congregational."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "In three mixed ability groups, learners dramatise the types of worship in the three major religions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 2.1.1.2",
+                  "description": "Describe the modes of worship in the three major religions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, learners to identify activities that take place during worship and report to class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 2.1.1.3",
+                  "description": "Identify and explain the moral lessons from worship",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through questions and answers, learners identify the moral lessons from worship. E.g., It encourages discipline in society, it encourages togetherness and unity of people, it gives confidence to face life, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners to dramatise how they relate the moral lessons from worship to their life."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Project Work: Consult a pastor/priest/an Imam and parents to discuss why we need to be in constant touch with God."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.4",
+                  "description": "Explain the significance of prayer",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to explain the meaning of prayer. E.g. the act of communication between the worshipper and the object of worship."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, learners to identify the types of prayer in the three major religions and present findings for discussion in class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners use skits to demonstrate how prayer is performed in the three major religions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners should compare the use of prayer across the three major religions in Ghana and identify similarities and differences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "In groups, learners to discuss the significance of prayer in their daily life. E.g., it is a command from God/Allah, prayer brings us closer to our Creator, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.2",
+          "title": "RELIGIOUS SONGS AND RECITATIONS",
+          "description": "Analysing moral values in religious songs and recitations.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7 2.2.1",
+              "description": "Analyse and apply the moral values in religious songs and recitations",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7 2.2.1.1",
+                  "description": "Differentiate between religious songs and non-religious songs.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the differences between religious songs and non-religious songs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "State the characteristic of religious songs. Learners listen to a variety of songs and identify if they are religious songs or not."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, learners compose their own religious songs, sing in class and discuss the key message the songs convey."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 2.2.1.2",
+                  "description": "Demonstrate understanding of basic scripture recitations/oral traditions in the three major religions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 4,
+                      "description": "Recite basic texts from the Bible, Qur'an and Oral traditions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 2.2.1.3",
+                  "description": "Identify the moral values in religious songs and recitations.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the moral values in religious songs and recitations. E.g. motivation, humility, contentment, acknowledgement of the power of God."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "With the help of role play, learners demonstrate how they apply the moral values in their daily life."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.3",
+      "title": "THE FAMILY AND THE COMMUNITY",
+      "description": "Family systems and their importance.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B7.3.1",
+          "title": "FAMILY SYSTEMS",
+          "description": "Types of family systems, roles, and relationships.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7 3.1.1",
+              "description": "Identify and Explain the Importance of the Family Systems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.1.1.1",
+                  "description": "Explain the concept and types of family systems in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to explain the concept of family. E.g. It is a social unit whose members are bound by blood ties, marriage or covenant."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners identify the types of family systems in Ghana. E. g., Nuclear and Extended."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the two-family systems in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "With the help of parents, learners create/draw a poster to show their family tree indicating both the nuclear and extended families."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the merits and demerits of both family systems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 3.1.1.2",
+                  "description": "Identify the role of family members.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In a discussion, learners identify the roles of children, parents and grandparents in the family."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 3.1.1.3",
+                  "description": "Describe ways of promoting good relationships among family members",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify factors that promote good relationships in the family. E.g. patience, respect, obedience, tolerance, transparency, accountability, forgiveness, support to family members."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the need for healthy relationships among family members. Present findings to class for discussion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Analyse the need for self-examination when things go wrong in the family."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the importance of family systems in Ghana."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Dramatise behaviours that show good relationships among family members."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.4",
+      "title": "RELIGIOUS LEADERS AND PERSONALITIES",
+      "description": "Life and ministry of religious leaders.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B7.4.1",
+          "title": "RELIGIOUS LEADERS",
+          "description": "Birth, call, and ministry of religious leaders.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7 4.1.1",
+              "description": "Identify the key features and moral messages of the call and ministry of Religious Leaders in the three major religions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7 4.1.1.1",
+                  "description": "Discuss the early life and call of the religious leaders",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures or video clips to depict the birth and early life of religious leaders."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Summarise the birth and early life of religious leaders in the three major religions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, learners discuss the call of the religious leaders."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Role play the call of the religious leaders and show the moral lessons from the call."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 4.1.1.2",
+                  "description": "Describe the ministries of the religious leaders",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Summarise the key events associated with the ministry of the leaders of the three major religions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 4.1.1.3",
+                  "description": "Discuss the moral lessons from the exemplary lives of the religious leaders.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the moral lessons from the religious leaders. E.g., humility, forgiveness, patriotism, obedience, perseverance, sacrifice."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Role play the virtues from the exemplary life of religious leaders. Demonstrate how to apply the moral virtues in their life."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.5",
+      "title": "ETHICS AND MORAL LIFE",
+      "description": "Manners, decency, and substance abuse.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B7.5.1",
+          "title": "MANNERS AND DECENCY",
+          "description": "Good manners, decency, and chastity.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7 5.1.1",
+              "description": "Develop good manners and learn how to apply them in their daily lives.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7 5.1.1.1",
+                  "description": "Identify and explain behaviours considered to be good manners in the society.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the meaning of the concepts \"manners\" and \"decency.\""
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.1.1.2",
+                  "description": "Discuss the importance of good manners and decency",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Pick some examples of good manners and decent behaviours for discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 5.1.1.3",
+                  "description": "Discuss the significance of chastity",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the term \"chastity\". E.g. Abstinence from pre-marital sex."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Indicate ways of leading a chaste life."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "State the importance of living a chaste life."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Role play ways of leading a chaste life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 5.1.1.4",
+                  "description": "Discuss the teachings of the three main religions on manners, decency and chastity",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through questions and answers learners identify and explain examples of such teachings."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.5.2",
+          "title": "SUBSTANCE ABUSE",
+          "description": "Causes, effects, and prevention of substance abuse.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7 5.2.1",
+              "description": "Demonstrate the need to stay away from immoral thoughts and actions, with a key focus on substance abuse",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.2.1.1",
+                  "description": "Summarise the causes of substance abuse",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Brainstorm on the meaning of substance abuse."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the types of substances that are often abused."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the causes of substance abuse."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 5.2.1.2",
+                  "description": "Discuss the effects of substance abuse.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures/videos of effects of substance abuse."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "With the pictures/videos, learners identify and explain the effects of substance abuse."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 5.2.1.3",
+                  "description": "Demonstrate knowledge of teachings from the three religions on defensive skills in protecting yourself against substance abuse",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explain the teachings of the major religions on the need to avoid substance abuse."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.6",
+      "title": "RELIGION AND ECONOMIC LIFE",
+      "description": "Work, entrepreneurship, and social security.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B7.6.1",
+          "title": "WORK, ENTREPRENEURSHIP AND SOCIAL SECURITY",
+          "description": "Meaning of work, entrepreneurship, and being a successful entrepreneur.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7 6.1.1",
+              "description": "Cultivate the need for hard work and develop the spirit of entrepreneurship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7 6.1.1.1",
+                  "description": "Explain the meaning of work and entrepreneurship",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Distinguish among the concepts; \"work\", \"entrepreneurship\" and \"social security.\""
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and explain the various types of work."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 6.1.1.2",
+                  "description": "Discuss the relevance of work from the religious and ethical perspectives",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate knowledge of good work habits."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the need to work."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 6.1.1.3",
+                  "description": "Identify steps to be taken to become a successful entrepreneur",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "State the various steps to become an entrepreneur."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7 6.1.1.4",
+                  "description": "Justify the need to become an entrepreneur",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the benefits of entrepreneurship."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

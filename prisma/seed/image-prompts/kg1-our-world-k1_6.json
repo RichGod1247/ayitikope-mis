@@ -1,0 +1,1237 @@
+{
+  "phase": "KG",
+  "level": "KG1",
+  "subject": "Our World and Our People",
+  "imagePrompts": [
+    {
+      "nodeType": "strand",
+      "strandCode": "K1.6",
+      "subStrandCode": null,
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A wide view of a diverse Ghanaian environment. The scene includes a river flowing, trees with green leaves, domestic animals like goats, the sun shining brightly, and children exploring nature. It represents the living and non-living world around us."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children on a nature walk in the school compound. They are pointing at a 'living' tree with birds and a 'non-living' stone or building. They look curious and are sorting objects into two piles on a mat."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting in a circle interacting with real objects. One holds a potted plant (living), another holds a wooden block (non-living). They are discussing the differences, like growing and moving."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle time. Children reciting a poem about nature. Afterward, they walk outside to observe ants (living) and sand (non-living). They are excited to find things."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children observing items on a table: a flower, a shell, a plastic cup, and a beetle. They are placing the living things on a green mat and non-living things on a brown mat. Classification activity."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Interactive read aloud. The teacher holds a Big Book showing animals and rocks. Children predict the story. Later, they draw one living and one non-living thing they saw in the book."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children grouping cut-out pictures from the story. One pile has 'animals', the other 'toys'. They are counting the items in each pile. A mix of literacy and math."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children clapping syllables for 'But-ter-fly' and 'Ta-ble'. They hold up letter cards to spell simple words like 'cat' or 'book'. Phonics and rhythm activity."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child writing 'tree' on a slate after blending the sounds /t/ /r/ /ee/. Other children sort words into 'one clap' (one syllable) and 'two claps' piles."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher holding a picture of a 'Dog'. Children find the letter card 'D' to match the initial sound. They are matching labeled pictures of living/non-living things to letters."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing lines in their books to connect a picture of a 'Book' to the letter 'B'. Focused individual work on initial sounds."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children looking at a conversational poster of a park. They point to a 'tall green tree' and a 'small red ball'. They describe objects by color and size."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children arranging blocks in a pattern: Red, Blue, Red, Blue. Others arrange leaves by size: Big, Small, Big, Small. Learning patterns using attributes."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children creating sound patterns. They clap twice, then snap once (2, 1, 2, 1). Others arrange colored paper shapes in a repeating sequence on the floor."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.1",
+      "contentStandardCode": "K1.6.1.1",
+      "indicatorCode": "K1.6.1.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A pair of children extending a pattern of stones and seeds. Stone, seed, seed, stone, seed, seed. They look concentrated and happy."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A montage of animals. On one side, a domestic setting with a dog, cat, and hen near a house. On the other, a wild setting with an elephant and lion in the bush. Distinguishing animal habitats."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children role-playing caring for pets. One child pretends to feed a toy dog. Another child pretends to be a lion roaring. They are learning about domestic and wild animals."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. Children reciting 'Fiddo is a dog'. They mimic animal sounds like 'Meow' and 'Woof'. A poster shows animals that give food (sheep) vs pets (cat)."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting plastic animals into two hoops: 'Home' (domestic) and 'Bush' (wild). They count the animals in each hoop. Comparative language like 'more cows than lions' is used."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child holding a Big Book about animals upright. They turn the page gently from left to right. The teacher and peers watch during a pre-reading session."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Echo-reading session. The teacher reads a sentence about a goat, and the children repeat it. They point to the words as they read. Proper book handling is emphasized."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children singing 'Old MacDonald'. They clap the syllables of animal names: 'Chi-cken' (2 claps), 'Dog' (1 clap). They create rhythm patterns with the names."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children arranging colored shapes to represent syllables of animal names. Two red circles for 'puppy'. One blue circle for 'cat'. Visualizing sound structure."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Groups of children listing animals that start with /g/ (goat), /c/ (cat). They write the words on paper. A child matches a picture of a dog to the letter 'd'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting animal picture cards by initial sound. All 'c' animals in one pile, 'd' animals in another. They count the piles to see which is larger."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children comparing pictures of animals. One points to a 'big grey elephant' and a 'small white cat'. They discuss color and size attributes."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child coloring an outline of a goat brown. Another colors a parrot red and green. They describe their artwork to friends."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children creating a pattern with animal sounds. 'Moo, Baa, Baa, Moo, Baa, Baa'. They are laughing and repeating the sequence."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.2",
+      "contentStandardCode": "K1.6.2.1",
+      "indicatorCode": "K1.6.2.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children using plastic animals to make a pattern. Cow, Sheep, Sheep, Cow. They extend the pattern on the floor."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A collage showing sources of water: rain falling, a flowing river, a well, and the sea. Children are seen fetching water or using it to wash and cook. Water in daily life."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children discussing water uses. One draws a bucket of water, another mimes drinking. A poster shows a tap and a stream. Understanding water's importance."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. Children singing 'Rain, rain, go away'. They talk about where they get water (tap, well). A child mimes bathing."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing sources of water on paper. One draws a cloud with rain, another a bucket. They form simple sentences about their drawings."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Pre-reading session. Teacher shows a book cover about water. Children predict the story. During reading, she points to words. Children sequence pictures of water sources (1st, 2nd, 3rd)."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Five children standing in a queue representing the order of water sources in a story. They say 'I am 1st', 'I am 2nd'. Numeracy in context."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher listing words like 'drinking' and 'washing'. Children identify the initial sounds /d/ and /w/. A 'Pick and Act' game where a child mimes cooking."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children arranging colored papers representing uses of water in a specific order on a table. They tell the position of the 'washing' paper."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children using word cards to make sentences like 'I drink water'. A word grid on the wall shows water sources. Children identify position words like 'left', 'top'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Small groups working with a number grid. They identify numbers in different positions around a chosen central number. Spatial awareness."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children making a picture of a river or rain. They label their drawing 'RIVER'. They sort their drawings by color (blue for water) and arrange them."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A display of children's artwork of water sources. A child points to the third drawing in a row, practicing ordinal numbers."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children lining up water bottles and cups on a table. They describe the position: 'The cup is first', 'The bottle is last'. Learning sequence."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.3",
+      "contentStandardCode": "K1.6.3.1",
+      "indicatorCode": "K1.6.3.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A number grid on the floor. A child stands on '5' and describes '4' is to my left. Practical positioning activity."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children playing with air. Some are blowing balloons, others running with streamers or kites in the wind. The movement shows the invisible presence of air."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom experiment. Children blowing into water with straws to make bubbles. Others fanning themselves. They discuss breathing and air's importance."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children reciting an air rhyme. They hold their breath for a second, then breathe out. Outside, they run holding cloths overhead like parachutes to catch the wind."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child blowing up a balloon. They discuss how air fills it. They talk about their experience of feeling the wind."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Pre-reading prediction. Children looking at pictures of kites flying. They predict the story. They count how many air experiments are in the book."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children illustrating their favorite part of the air story. One draws a balloon. They label it. They describe the sequence of events in the story."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher writing target sounds on the board. Children identify if 'Nose' has the /o/ sound in the middle. They clap the number of target sounds they hear."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Small groups with word cards. They clap when they find the target sound in 'Holding' or 'Nose'. Filling in missing letters in words."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. Children act out 'breathing' and 'fanning'. They use word cards to make sentences like 'Air is cool'. They make smaller words from 'Breathing'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children writing the position of letters in words like 'kite' and 'air'. 1st letter, 2nd letter. Numeracy and literacy link."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children observing art posters of wind blowing trees. They demonstrate the action. Using LEA, they compose a story about the picture."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children judging artwork. They point to a colorful kite picture and say 'beautiful'. They discuss why they like it using senses."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children lining up pictures of objects that use air (balloon, kite, fan). They name the positions: 'First', 'Second'. Using position words."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.4",
+      "contentStandardCode": "K1.6.4.1",
+      "indicatorCode": "K1.6.4.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children placing shapes in a specific order on a table to show a pattern. Describing the position of the square."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A garden scene. Children are examining a plant. One points to the roots, another to the leaves. A poster shows a labelled tree. Connection to nature and food."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children creating a plant collage using real leaves and twigs. Others are labeling a drawing of a tree with cards: 'Root', 'Stem'. Learning plant parts."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. Children singing about plants. They point to parts of a real plant in class. They place word cards on a large drawn tree on the board."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing and coloring a plant. They are labeling the 'leaf' and 'root'. They talk about their drawing with a friend."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Pre-reading. Teacher points to the title on a book cover. During reading, she runs a finger under words. Children touch and feel 3D objects (fruits, seeds) related to the story."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children describing 3D objects like an orange ('round') and a book ('flat'). They compare sizes. Connecting story objects to real life."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children arranging letter cards to spell 'root' and 'leaf'. They blend the sounds. They fill in missing letters in words on a worksheet."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children discussing 2D drawings of plants vs real 3D plants. They compare attributes. Decoding words related to the theme."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A 'Letter Hunt' game. Children find objects or words starting with a specific sound. They draw the object and write the initial letter (e.g. L for Leaf)."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children recapping keywords using a labeled tree poster. They identify initial sounds. Making simple sentences about the plant parts."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children making a collage of a tree using real dried leaves and sawdust on paper. They talk about their art work using positive words."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children displaying their plant collages. They point to the stem and leaves they pasted. Creative expression of plant knowledge."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children looking at pictures of plants in a row. They identify the position: 'The flower is 5th'. They colour the plant in a specific position."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.5",
+      "contentStandardCode": "K1.6.5.1",
+      "indicatorCode": "K1.6.5.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Using an object grid with plant pictures. Children describe the location of the tree relative to the flower. Spatial reasoning."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children observing plant growth experiments. Some plants are in the sun, some in the dark. They are watering the healthy ones. Understanding needs of plants."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children classifying food items into fruits and vegetables. They count the items. They also match plant parts to their names. Integrated science and math."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children reciting a rhyme 'Plants can grow'. Discussing needs like water and air. Using LEA to write a story about plant growth on a manila card."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children illustrating the story they composed about plant growth. They draw the sun and rain helping a plant. Literacy through art."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Echo-reading a story about plants. Teacher highlights book handling. Children discuss 3D objects like cans and boxes, comparing attributes. Coloring 2D shapes."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children doing 'Pretend Reading' with a plant storybook. They answer questions about the story. Discussing shapes of real objects."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Drilling initial and ending sounds of 'plant', 'stem'. Children arranging letter cards to spell words. Writing selected words in books."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children identifying sounds in labels of plant pictures. Blending sounds to form words. Writing words and highlighting initial/ending sounds."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children reading word cards with pictures. Constructing sentences like 'Plants give food'. Matching objects by shape. Drawing 2D shapes."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children describing everyday objects by shape attributes. Drawing an object and comparing it to a 2D shape. Vocabulary practice."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children discussing uses of plants from a poster. Identifying 2D and 3D shapes in the poster illustration (roofs, fruits). Creating pictures of fruits."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children making their own fruit and vegetable pictures. Comparing their art using positive language. Observing art in the environment."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting pictures of fruits and vegetables into groups. They count the items in each group. They match the count with a numeral card."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.6",
+      "contentStandardCode": "K1.6.6.1",
+      "indicatorCode": "K1.6.6.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A classification activity on the floor. Hoops labeled 'Fruits' and 'Vegetables'. Children place plastic food items in the correct hoop and count them."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A gardening scene. Children touching different soil types (sand, clay, loam) in containers. Outside, they are planting seeds in a garden bed. Hands-on nature learning."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children experimenting with soil. They are moulding with clay and planting in loamy soil. They discuss which soil is best for plants. Integrated science and art."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. Reciting 'I have my garden'. Observing a poster of soil types. Feeling texture of sand, clay, loam in bowls. Washing hands afterwards."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children planting seeds in three different pots with different soils to observe growth. A class project setup. Discussing fertile soil."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Echo-reading a Big Book about gardening. Pointing to individual words. Predicting content from pictures. Post-reading discussion about favorite parts."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children coloring outlines of farm tools. They talk about their colors. Sorting tools by color and comparing quantities using 'more/less than'."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Word card game. Children picking cards, reading, and forming sentences like 'I play in sand'. LEA session creating a story about soil."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children using a poster to identify farm items. Representing items with counters (sticks, shells) and counting them. Comparing group sizes."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Singing a farm song. Identifying common sounds in words like 'soil, toil'. Using letter cards to form words ending in -in, -oil, -arm. Moulding clay tools."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children painting their dried clay tools. Discussing their art. Sorting art works by color and counting them. Extension to addition."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Reading a number concept book. Children matching numbers heard to cut-out numerals. Counting objects (straws) to match number cards."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.7",
+      "contentStandardCode": "K1.6.7.1",
+      "indicatorCode": "K1.6.7.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children picking a number card (1-9) and counting out that many bottle tops. A practical counting activity."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A day and night contrast scene. One side shows the sun shining on children playing. The other shows the moon and stars, with a street light on. Exploring light sources."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting light sources. Pictures of sun/moon in one group (Natural), candles/bulbs in another (Man-made). They are discussing when we use them."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. Reciting 'Twinkle Twinkle Little Star'. Discussing sources of light using a poster. Sharing experiences with natural lights like the sun."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing their favorite natural light source (sun or moon). They talk about their art work. Classroom filled with light-themed drawings."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Pre-reading discussion of a book cover. Picture walk prediction. Reading while tracking text. Post-reading retelling using pictures."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children grouping pictures of light sources into 'Day' and 'Night'. Counting the groups. Doing simple addition with light source pictures. Drawing a man-made light."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Using letter cards to name light sources. Identifying initial, middle, ending sounds of 'Moon', 'Sun'. Matching letter cards to initial sounds."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children arranging letters to form 'Sun'. Drawing a sun and writing 's' and 'n'. Positive discussion of art work."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. Discussing uses of light. Making sentences like 'Switch on the light'. 'Pick and Act' charades with sentence strips."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Solving a word problem about bulbs using counters. 'Bought 5 bulbs, one broke'. Children calculating how many are left. Integrated math."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Observing a poster of day and night scenes. Identifying natural and artificial lights. Describing the beauty. Connecting to real environment."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children grouping light sources and comparing them. Using counters for addition/subtraction. Art appreciation."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Recapping counting. Children picking number name cards and counting objects to match. Playing 'Pick and Count' in pairs."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.8",
+      "contentStandardCode": "K1.6.8.1",
+      "indicatorCode": "K1.6.8.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Interactive reading of a number name concept book. Matching objects to number names. Active math learning."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children experiencing weather. Some looking at rain through a window, others feeling the sun outside. A weather chart with symbols (cloud, sun, rain) is on the wall."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children dressing up for different weather. One wears a raincoat, another sunglasses. They are role-playing coping with weather conditions. Fun and practical."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Singing 'Rain rain go away'. Observing weather outside. Reciting weather poem. Using a weather tally chart to record daily weather with colors."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Discussing how to dress for weather. Pairs doing charades of weather activities. Tallying results."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Identifying book cover elements. Predicting content. Echo-reading about weather changes. Charades with sentences like 'It is cold'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Ordering weather conditions from the story (1st, 2nd). Telling positions of objects in a line. Using number grids for position."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Using pictures to identify initial sounds of weather words. Matching letter cards to pictures. Writing letters under pictures."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children posting letters under weather pictures on the board. Active literacy task."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Discussing weather poster. Reading keywords. Forming oral sentences. Groups picking word cards and saying something about them."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Making a word chart. Drawing and coloring weather conditions. Talking about art."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Talking about beauty of weather pictures. Making sentences. Drawing pictures. Comparing numbers with 'more/less than'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.6",
+      "subStrandCode": "K1.6.9",
+      "contentStandardCode": "K1.6.9.1",
+      "indicatorCode": "K1.6.9.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children comparing number of pencils vs erasers in class using comparison language. Math integration."
+    }
+  ]
+}

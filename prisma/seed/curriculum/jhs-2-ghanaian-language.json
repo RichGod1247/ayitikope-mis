@@ -1,0 +1,805 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 8",
+  "subject": "Ghanaian Language",
+  "name": "JHS 2 Ghanaian Language",
+  "slug": "jhs-2-ghanaian-language",
+  "orderIndex": 1,
+  "description": "The JHS 2 Ghanaian Language curriculum deepens learners' knowledge of customs, institutions, and language skills. It covers puberty rites, naming systems, clan systems, chieftaincy destoolment, advanced conversation, reading comprehension, translation, grammar, composition writing and literature.",
+  "strands": [
+    {
+      "code": "B8.1",
+      "title": "CUSTOMS AND INSTITUTIONS",
+      "description": "Understanding rites of passage, naming systems, clans, and chieftaincy.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B8.1.1",
+          "title": "RITES OF PASSAGE: PUBERTY RITES",
+          "description": "Exploring puberty rites and their significance.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.1.1.1",
+              "description": "Demonstrate understanding of how puberty rites are performed in their linguistic community, its significance and compare with other cultures of Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.1.1.1",
+                  "description": "Identify the processes involved in performing puberty rites in your culture",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what puberty rites are"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about the items needed for the performance of puberty rites among their people and their significance"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the processes involved in performing puberty rites for boys/girls among their people"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Read and discuss a two-hundred-word passage on puberty rites"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explain the significance of puberty rites"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Role play a puberty rite activity"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.2",
+                  "description": "Compare and contrast the processes involved in performing puberty rites in their culture to other cultures of Ghana",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the similarities in the performance of puberty rites among their people and those of other Ghanaian cultures"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the differences in the performance of puberty rites among their people and those of other Ghanaian cultures"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write the summary of the similarities and differences"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.3",
+                  "description": "Discuss the changes that has occurred in puberty rites performance over time",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Assess the current ways puberty rites are performed among his/her people"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare the contemporary ways to the traditional ways by which your people were performing puberty rites (e.g. It is now done by the church, Duration for the rites has changed, Done for all ages)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the threats to puberty rites in contemporary times (e.g. technology, migration, education and religion)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.2",
+          "title": "NAMING SYSTEMS - FAMILY NAMES, KINSHIP TERMS, PROVERBIAL AND INSINUATION NAMES",
+          "description": "Understanding family names, kinship terms, and other naming types.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.1.2.1",
+              "description": "Recognise and understand family names, kinship terms and proverbial and insinuation names",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.2.1.1",
+                  "description": "Discuss the sources of family names in your language and use them appropriately",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a text on names and their sources"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Mention family names and their sources (e.g. clan, grand and great-grand parents)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the importance of family names"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Make a documentation on family names for male and female and indicate their sources"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.2",
+                  "description": "Examine kinship terms in their community",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage (200 words) on kinship terms"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Cite the kinship terms that are used to address your family members (e.g. father, mother, uncle, aunt, niece, nephew, grandparents)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and document the importance of kinship terms"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.3",
+                  "description": "State and discuss the effects of the modern trends of naming on family names and kinship terms",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and talk about modern ways of naming babies among your people (e.g. Naming is done after anybody instead of from the family line/lineage, Naming from other cultures, Giving Christian/Muslim names)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain how the modern ways of naming affect the family names among your people (e.g. Loss of identity, Belittling the indigenous culture)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.4",
+                  "description": "Discuss proverbial and insinuation names",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain proverbial and insinuation names"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the characteristics of proverbial and insinuation names (e.g. They are one-word names that represent whole sentences)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify situations that lead to proverbial and insinuation names (e.g. To cast insinuations, To show appreciation)"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Give examples of proverbial and insinuation names used among your people"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.5",
+                  "description": "Explore and discuss appellations that go with names",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain appellation"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give examples of day names and their appellations"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify and discuss appellations that go with family and other names where applicable"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.3",
+          "title": "THE CLAN SYSTEM",
+          "description": "Understanding the importance and threats to the clan system.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.1.3.1",
+              "description": "Exhibit knowledge of the clan system in their locality by discussing the importance and threats to the clan systems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.3.1.1",
+                  "description": "Discuss the importance and threats to the clan system",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read and discuss a passage on clan system of their culture"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss and write the importance of the clan system of their culture"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the threats to the clan system"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.4",
+          "title": "CHIEFTAINCY: DESTOOLMENT",
+          "description": "Understanding the processes of destooling or deskining a chief.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.1.4.1",
+              "description": "Discuss the processes involved in the destooling/deskining of a chief or queenmother",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.4.1.1",
+                  "description": "Examine some behaviours that can lead to the destoolment/deskinment of chiefs and queenmothers",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read and discuss a text on destoolment/deskinment in their traditional area"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine and write behaviours that lead to the destoolment/deskinment of a chief or queenmother among their people (e.g. Misuse of property of the people, Disrespect for kingmakers and subjects, Neglect/abuse of tradition)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.4.1.2",
+                  "description": "Discuss the processes involved in the destoolment/deskinment of a chief or a queenmother",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Examine and write the process of destooling/deskining a chief and queenmother among their people (e.g. Complaints by subjects, Cautioning by kingmaker, Summoning the chief/queenmother for arbitration)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the advantages and disadvantages of destoolment/deskinment"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play destoolment/deskinment of a chief among their people"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.4.1.3",
+                  "description": "Compare and contrast the destoolment/deskinment processes among their people and other cultures of Ghana",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and write the similarities and differences of the destoolment/deskinment process of your people and that of other Ghanaian cultures"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the similarities and differences"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.2",
+      "title": "LISTENING AND SPEAKING",
+      "description": "Developing oral communication skills.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B8.2.1",
+          "title": "CONVERSATION/EVERYDAY DISCOURSE",
+          "description": "Using appropriate language in various contexts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.2.1.1",
+              "description": "Demonstrate knowledge of presentational skills in listening, following daily conversation, speaking clearly and explaining ideas",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.1.1.1",
+                  "description": "Develop and modify their language in narrating some selected daily activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Narrate what you do at home every Saturday"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe what you saw on your last visit to a market"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw and discuss a scenery on a given topic (e.g.: fishing, farming, weaving)"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe a visit to a hospital"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Describe a scene at a lorry station"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.2",
+          "title": "LISTENING COMPREHENSION",
+          "description": "Listening skills for understanding key information.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.2.2.1",
+              "description": "Demonstrate the ability to listen to extended reading and identify key information",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.2.1.1",
+                  "description": "Listen to a level-appropriate dialogue attentively and identify key information",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to and note important issues in a dialogue e.g. message, mood, tone"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Listen and compare the issues noted in the dialogue with peers"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.2",
+                  "description": "Listen to and discuss the ideas and share opinions from a level-appropriate text",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to and write down key information from texts/talk shows/news"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the key information from texts and add opinions"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.4",
+          "title": "TONE",
+          "description": "Understanding tonal changes and meaning.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.2.4.1",
+              "description": "Recognise changes in meaning due to tone contrast",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.4.1.1",
+                  "description": "Establish the meaning of words when the tone on the syllables in a word changes",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Pronounce words with high tone"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Pronounce words with mid-tone (where applicable)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Pronounce words with low tone"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Read same words with different tone in context"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "State the differences of those words as used in context"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.6",
+          "title": "PRESENTATION - EVERYDAY EXPERIENCE",
+          "description": "Presenting information effectively.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.2.6.1",
+              "description": "Demonstrate knowledge of presentational skills in listening, following daily conversation, speaking clearly and explaining ideas",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.6.1.1",
+                  "description": "Develop and modify their language in narrating some selected daily activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Narrate what you do at home every Saturday"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe what you saw on your last visit to a market"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw and discuss a scenery on a given topic (e.g.: fishing, farming, weaving)"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe a visit to the hospital"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Describe a scene at a lorry station"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.3",
+      "title": "READING",
+      "description": "Developing reading and summarising skills.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B8.3.1",
+          "title": "READING",
+          "description": "Understanding main ideas and summarising texts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.3.1.1",
+              "description": "Understand the main ideas and supporting points in texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.1.1.1",
+                  "description": "Understand the main ideas and supporting points in a range of extended texts on familiar and unfamiliar topics",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a three-paragraph passage from different subject areas (Science, Social Studies, RME, ICT, etc.) and answer questions to identify specific information and details"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.2",
+                  "description": "Summarise long passages read",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read longer texts and summarise main and supporting ideas"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.2",
+          "title": "TRANSLATION",
+          "description": "Translating words and sentences.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.3.2.1",
+              "description": "Demonstrate knowledge of translating words, phrases and sentences",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.2.1.1",
+                  "description": "Establish the meaning of words, phrases and sentences in their various languages",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Translate given words, phrases and sentences from source language to target language"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.4",
+      "title": "LANGUAGE AND USAGE",
+      "description": "Applying grammar and language rules.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B8.4.2",
+          "title": "INTEGRATING GRAMMAR IN WRITTEN LANGUAGE (USE OF NOUNS, PRONOUNS AND ADJECTIVES)",
+          "description": "Using nouns, pronouns, and adjectives correctly.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.4.2.1",
+              "description": "Demonstrate knowledge and understanding of nouns, pronouns and adjectives",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.2.1.1",
+                  "description": "Explore the use of nouns and pronouns in an increasing range of texts and classify them",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write down nouns and pronouns in their language"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Classify nouns under the various types (abstract, concrete, countable and uncountable)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct compound sentences with nouns and pronouns in speech and in texts"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Replace nouns with the appropriate pronouns in a given text"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.2.1.2",
+                  "description": "Determine and categorise adjectives under size, colour, shape, quantity, etc. in their language",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Determine the role of an adjective in a variety of texts"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and classify adjectives in a given text"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.3",
+          "title": "INTEGRATING GRAMMAR IN WRITTEN LANGUAGE (VERBS, ADVERBS AND CONJUNCTIONS)",
+          "description": "Using verbs, adverbs, and conjunctions correctly.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.4.3.1",
+              "description": "Demonstrate knowledge and understanding of verbs, adverb, conjunctions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.3.1.1",
+                  "description": "Recognise and use the tense and aspectual (habitual, progressive, future) forms of verbs in sentences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the types of tense and aspectual forms in their language"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Form sentences with the various types of tense and aspectual forms"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.3.1.2",
+                  "description": "Identify and use adverbs appropriately in sentences",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Determine the functions of adverbs in sentences"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and classify adverbs in a given text"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct compound sentences using adverbs"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.3.1.3",
+                  "description": "Identify and use conjunctions in an increasing range of texts appropriately and correctly",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use appropriate conjunctions to link simple and compound sentences in texts"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.5",
+      "title": "COMPOSITION WRITING",
+      "description": "Structuring and organizing ideas in writing.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B8.5.1",
+          "title": "STRUCTURE AND ORGANISE IDEAS IN COMPOSITION WRITING",
+          "description": "Writing various text types.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.5.1.1",
+              "description": "Demonstrate knowledge and understanding in the ability to write meaningful compositions on the various text types (persuasive/argumentative writing, informative/academic/expository and letter writing)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.1.1.1",
+                  "description": "Develop coherent essays using the features of given text types",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the features of persuasive/argumentative writing, informative/academic/expository and letter writing"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write a composition on a topic on the text types above"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.6",
+      "title": "LITERATURE",
+      "description": "Exploring proverbs, idioms, and literary devices.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B8.6.1",
+          "title": "PROVERBS, IDIOMS, PROSE, DRAMA, POETRY",
+          "description": "Understanding literature types and components.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.6.1.1",
+              "description": "Demonstrate knowledge and understanding of proverbs and idioms",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.6.1.1.1",
+                  "description": "Discuss the features of proverbs and idioms",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the features of proverbs and idioms and give examples of each"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and interpret proverbs and idioms in your language"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "State the occasions and situations in which the given proverbs and idioms are used"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "State the importance of proverbs and idioms"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.6.1.2",
+              "description": "Demonstrate knowledge and understanding in the use of language in a prose, poetry and drama texts",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.6.1.2.1",
+                  "description": "Discuss how writers use language to create effect in prose, poetry and drama",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss how writers use language to create character in prose, poetry and drama texts, giving examples from the text"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore ways in which writers use a wide range of literary devices (simile, metaphor, repetition, idioms and proverbs) in a range of prose, poetry and drama texts"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the ways writers use language to create settings for different effects in prose, poetry and drama"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss how writers use language to create mood and tone in prose, poetry and drama"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the ways writers structure texts in prose, poetry and drama"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

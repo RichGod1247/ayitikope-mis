@@ -1,0 +1,325 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 1",
+  "subject": "History",
+  "name": "Basic 1 History",
+  "slug": "basic-1-history",
+  "orderIndex": 1,
+  "description": "The Basic 1 History curriculum introduces learners to the concept of history as a subject, exploring personal and community history, the origin of Ghana's name, significant individuals, the arrival of Europeans, and the history of Ghana's leadership since independence.",
+  "strands": [
+    {
+      "code": "B1.1",
+      "title": "History as a Subject",
+      "description": "Understanding history as part of everyday life and community history.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B1.1.1",
+          "title": "Why and How We Study History",
+          "description": "Understanding history as past human activities and sources of historical evidence.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.1.1.1",
+              "description": "Demonstrate understanding of what history is about and how it is part of everyday life.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.1.1.1",
+                  "description": "Explain that history deals with past human activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Mention the activity they witnessed on their first day at school."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify any activity performed in the past which has not been performed again."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "List any past events they have witnessed."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain that since those activities were performed in the past, they qualify to be called history."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners sing a song, recite a rhyme or watch a documentary of any past activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.1.1.2",
+                  "description": "Describe how sources of historical evidence help us find out about past human activities",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sing songs or recite rhymes related to celebrations such as birthdays, festivals and weddings as part of history."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sketch/show a video of a scene depicting a birthday, funeral, wedding and festival celebration."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Start a birthday partnership/register to make history alive in the classroom. Learners write their date of birth chronologically on a manila card and this should be hanged in the classroom. At the end of every history lesson, the class could refer to these records for an upcoming birthday."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Build an album of themselves and family members, starting with earlier pictures and photographs to present ones."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.4",
+          "title": "Community History",
+          "description": "Recounting history about the community.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.1.4.2",
+              "description": "Recount history about their communities.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.4.2.1",
+                  "description": "State the similarities and differences between the communities where learners live.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Visit historical sites in town e.g. an old chapel, a post office, a chief's palace, groves, forests, wetlands etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners list the names of historical sites starting with the oldest to the most recent."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners sketch what they have seen on their visit."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compare sketches drawn with pictures of historical sites from other communities."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners discuss their sketches bringing out similarities and differences in the sites they visited."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.2",
+      "title": "My Country Ghana",
+      "description": "Exploring the origin of Ghana's name and significant individuals.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B1.2.3",
+          "title": "How Ghana Got Its Name",
+          "description": "Understanding why Ghana used to be called the 'Gold Coast'.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.2.3.1",
+              "description": "Demonstrate understanding of why Ghana used to be called the 'Gold Coast'",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.3.1.1",
+                  "description": "Explain why, in the past, Ghana was known as the Gold Coast.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain how the name was changed from Gold Coast to Ghana. Discuss the English translation of the Portuguese name costa da mina - Gold Coast."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the internet to locate ancient Ghana empire and the Akan forest regions of Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the role of Dr J.B. Danquah in linking the civilisations of the ancient Ghana Empire to the Akan of the forest region of Ghana."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.3.1.2",
+                  "description": "Recall when the name Ghana came into formal use.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the sequence of events leading to the change of name."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the role played by parliament and other individuals in the change of name from Gold Coast to Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Dramatise a scene in parliament in changing the name Gold Coast to Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain how similarly a new independent country can take on a new name, a new flag, a new leader in a story form. (A resource person could be invited)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.2.5",
+          "title": "Some Selected Individuals",
+          "description": "Significant roles played by Ghanaians from different walks of life.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.2.5.1",
+              "description": "Show understanding of significant roles played by Ghanaians from different walks of life",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.5.1.1",
+                  "description": "Identify Ghanaians of diverse fields who have contributed significantly to national development",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify Ghanaians of diverse professions who have contributed significantly to national development."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Match individuals with their achievements e.g. Theodosia Okoh - national flag. Amon Kotei - coat of arms. Baba Yara - football for Ghana. Ephraim Amu - music, Kofi Antubam - art and craft, Kow Ansah - Film etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show and discuss a documentary of significant individuals."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners to study about these individuals using the internet."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Role play what learners want to be in future."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.3",
+      "title": "Europeans in Ghana",
+      "description": "Understanding the arrival of Europeans in Ghana.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B1.3.1",
+          "title": "Arrival of Europeans",
+          "description": "Exploration of which Europeans came to Ghana.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.3.1.1",
+              "description": "Show understanding of Europeans who came to Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.1.1.1",
+                  "description": "Explore which Europeans came to Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the European countries whose citizens came and settled in Ghana: Portugal, Britain, France, Sweden, Germany (Brandenburg), Denmark, Norway, Netherlands."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Arrange the Europeans which they came to Ghana in the order which they came (starting with those who came first)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Locate each of these countries on the world map using the internet."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Find out where each country first settled in Ghana (From parents, museums etc.)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.6",
+      "title": "Independent Ghana",
+      "description": "History of Ghana's leadership since independence.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B1.6.1",
+          "title": "The Republics",
+          "description": "Understanding the presidents that have ruled Ghana since 1960.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.6.1.1",
+              "description": "Demonstrate understanding of the presidents that have ruled Ghana since 1960",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.6.1.1.1",
+                  "description": "Identify the Presidents Ghana has had since 1960",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Name the presidents of Ghana since 1960."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Match pictures of Ghana's presidents with their names (Create an album with the pictures)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Match the names of presidents of Ghana with their dates of tenure (Add the names to their pictures)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Put learners in groups to create a gallery station on the following lines: a. Select a picture of one of the presidents, b. Display the picture of the selected president on a large cardboard, c. Write the name of the president below the picture, d. Add the length of tenure of the president. Invite learners to visit the gallery station and talk about each group's presentation."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

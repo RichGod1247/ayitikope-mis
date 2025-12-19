@@ -1,0 +1,1374 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 4",
+  "subject": "Mathematics",
+  "name": "Basic 4 Mathematics",
+  "slug": "basic-4-mathematics",
+  "orderIndex": 1,
+  "description": "The Basic 4 Mathematics curriculum focuses on developing number sense, algebraic thinking, geometric reasoning, and data handling skills. Learners will explore multi-digit numbers, basic operations, fractions, decimals, patterns, equations, shapes, measurement, and data interpretation.",
+  "strands": [
+    {
+      "code": "B4.1",
+      "title": "Number",
+      "description": "Developing number sense and operational skills with whole numbers, fractions, and decimals.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B4.1.1",
+          "title": "Counting, Representation & Cardinality",
+          "description": "Understanding quantities, place value, and number systems.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.1.1.1",
+              "description": "Demonstrate an understanding of quantities and place value for multi-digit whole numerals up to 100,000.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.1.1.1",
+                  "description": "Model number quantities, place value for multidigit- using graph sheets or multi-base materials up to 100,000",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model number quantities up to 100,000 using graph sheets or multi-base materials."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Model numbers by shading graph sheet squares."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use token currency notes to model given amounts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.2",
+                  "description": "Read and write numbers in figures and in words up 100,000",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play place value number wheel game to generate and represent numbers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write given numbers in expanded form."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify numbers in different positions around a given number on a number chart."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.3",
+                  "description": "Identify numbers in different positions around a given number in a number chart",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a number chart in multiples of 500 to identify surrounding numbers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.4",
+                  "description": "Compare and order whole numbers up to 10,000 and represent comparisons using the symbols <, =, >",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify numbers more or less than a given number and use comparison symbols."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Order a given set of numbers in ascending or descending order."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare two numbers and describe their relationship."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.5",
+                  "description": "Round (off, up, down) whole numbers up to 10000 to the nearest, thousands, hundreds and tens",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Round off numbers to the nearest 1000, 100, and 10."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Round up and round down to estimate sums and differences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Estimate sums and differences by rounding up or down."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.6",
+                  "description": "Skip count forwards and backwards in 50s and 100s up to and from 10000",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Skip count in 50s or 100s in groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and correct errors in skip counting sequences."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.1.2",
+              "description": "Demonstrate understanding of Roman numerals up XXX (30)",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.1.1.2.1",
+                  "description": "Develop an understanding of Roman Numeral system up XXX (i.e. 30)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify Roman numerals from charts and match to Hindu-Arabic numerals."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.2.2",
+                  "description": "Count and convert Hindu Arabic numerals to Roman numerals up to 30 and vice versa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read and write Roman numerals sequentially and randomly."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Convert Hindu-Arabic numerals to Roman numerals and vice versa."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.1.3",
+              "description": "Demonstrate an understanding of factors, multiples and squared numbers",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B4.1.1.3.1",
+                  "description": "Determine set of factors of a given numbers up to 50",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Make formations of sets of equal objects to find factors."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Pair groupings to identify factors."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "List the set of factors for a given number."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.3.2",
+                  "description": "Determine the highest common factor (HCF) of any two whole numbers between 1 and 50",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List factors of two numbers to find the common set and HCF."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use Venn diagrams to find common factors and HCF."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.3.3",
+                  "description": "Determine the lowest common multiple (LCM) of at least any two given numbers up to 100",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List multiples of given numbers using skip counting."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify common multiples and select the LCM."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.3.4",
+                  "description": "Recognise the relationship between factors and multiples",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain factors and multiples using multiplication sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Investigate even and odd numbers and divisibility rules."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.3.5",
+                  "description": "Generate and analyse patterns in square numbers",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Generate square numbers using arrangements of objects."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Investigate the relationship between square numbers and sums of consecutive odd numbers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.3.6",
+                  "description": "Represent square numbers using factors",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw squares to represent square numbers and find their area."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.1.4",
+              "description": "Interpret negative and positive numbers in context",
+              "orderIndex": 4,
+              "indicators": [
+                {
+                  "code": "B4.1.1.4.1",
+                  "description": "Describe real life situations using positive and negative values",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use positive and negative numbers to represent real-life situations like profit/loss."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.4.2",
+                  "description": "Count forwards and backwards with positive and negative whole numbers through zero",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Count on a number line including positive and negative numbers."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.2",
+          "title": "Number Operations",
+          "description": "Performing operations including multiplication and division.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.1.2.1",
+              "description": "Recall basic multiplication fact up to 12x12",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.2.1.1",
+                  "description": "Determine basic multiplication facts up to 12x12",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use straws/lines to model multiplication facts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Model multiplication sentences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use a multiplication chart for games like 3-in-a-line."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Find doubles, squares, and skip count."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.2.2",
+              "description": "Describe and apply mental mathematics strategies and number properties to determine answers for basic multiplication facts to 81 and related division facts",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.1.2.2.1",
+                  "description": "Apply mental mathematics strategies and number properties",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use strategies like skip counting, doubling, and patterns."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recall multiplication and division facts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.2.2.2",
+                  "description": "Apply mental mathematics strategies for multiplication",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Multiply by multiples of 10, 100, 1000."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use halving and doubling strategies."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Apply the distributive property."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.2.3",
+              "description": "Demonstrate an understanding of multiplication (2 or 3-digit by 1digit-)",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B4.1.2.3.1",
+                  "description": "Multiply multidigit -numbers efficiently",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use 'expand and box' (partial decomposition) method."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the lattice method for multiplication."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.2.4",
+              "description": "Recall basic division fact up to 100",
+              "orderIndex": 4,
+              "indicators": [
+                {
+                  "code": "B4.1.2.4.1",
+                  "description": "Determine basic division fact up to 81",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Investigate divisibility rules for 2, 3, 4, and 5."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use multiplication charts for division games."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.2.5",
+              "description": "Demonstrate an understanding of division (2- or 3-digit by one digit number)",
+              "orderIndex": 5,
+              "indicators": [
+                {
+                  "code": "B4.1.2.5.1",
+                  "description": "Divide 2-digit numbers by 1-digit number efficiently",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use long division (repeated subtraction) method."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use estimation with multiples of 10/100 (Big 7 method)."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.2.6",
+              "description": "Translate and solve word problems involving the four basic operations on whole numbers",
+              "orderIndex": 6,
+              "indicators": [
+                {
+                  "code": "B4.1.2.6.1",
+                  "description": "Solve multi-step word problems involving the four basic operations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model and solve word problems involving addition and multiplication."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Model and solve word problems involving division and subtraction."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play word problems to solve them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.3",
+          "title": "Fractions",
+          "description": "Understanding equivalent and improper fractions.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.1.3.1",
+              "description": "Develop an understanding of equivalent and improper fractions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.3.1.1",
+                  "description": "Generate unit fractions and locate a unit fraction on a number line",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Locate unit fractions on a number line by partitioning."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Partition number lines into various unit fractions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use number charts to read equivalent fractions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.1.2",
+                  "description": "Recognise and name equivalent fractions using pictorial representations and number line to determine the Lowest Common Denominator (LCD).",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use charts to illustrate equivalent fractions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Illustrate relationship between fractions and equivalences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Find LCD to determine equivalent fractions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.1.3",
+                  "description": "Find the simplest form of given fractions by dividing through the highest common factor",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use pictorial representations to illustrate simplest forms."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Divide through by highest common factor to simplify."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Express numerator/denominator as factors and cancel common factors."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.1.4",
+                  "description": "Recognise fractions that are greater than one (i.e. improper fractions), draw and label such fractions with their symbols",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use pictorial representations to introduce improper fractions and mixed numbers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Express coloured mixed fractions as improper fractions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use number lines to identify mixed and improper fractions."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.3.2",
+              "description": "Demonstrate an understanding of strategies for comparing, adding and subtracting fractions",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.1.3.2.1",
+                  "description": "Compare and order fractions with like denominators",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use number lines or charts to compare fractions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare and order unit fractions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use LCD to arrange fractions from largest to smallest."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.2.3",
+                  "description": "Provide examples of where fractions are used",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss contexts like selling, sharing, buying."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Tell time using half/quarter past/to."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Interpret circle graphs involving fractions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.4",
+          "title": "Decimals",
+          "description": "Understanding decimals as tenths and hundredths.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.1.4.1",
+              "description": "Develop an understanding of decimals (tenths and hundredths)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.4.1.1",
+                  "description": "Describe and represent decimals (tenths and hundredths) concretely, pictorially, and symbolically",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify fractions using pictorial representations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use place value charts to write fractions as decimals."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Convert common fractions to decimals."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.4.1.2",
+                  "description": "Round decimals to the nearest tenth",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain rounding rules for decimals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Round decimals to nearest tenths or hundredths using a table."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Change fractions to decimals and round them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.4.1.3",
+                  "description": "Use models to explain the result of addition and subtraction of decimals (up to hundredths)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Add decimals by aligning decimal points."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Add decimals with different decimal places."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Subtract decimals by aligning decimal points."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.5",
+          "title": "Percentage",
+          "description": "Understanding percent as a fraction of hundredths.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B4.1.5.1",
+              "description": "Demonstrate an understanding of percent (limited to whole numbers)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.5.1.1",
+                  "description": "Model or recognise percent using concrete models and pictorial representations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use number lines to introduce tenths and hundredths."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Convert fractions to decimals using division."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Convert common fractions to hundredths and percent."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.5.1.2",
+                  "description": "Compare and order a mixture of common, decimal and percent fractions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compare fractions by converting to a common form (decimal/percent)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare fractions by locating them on a number line."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.2",
+      "title": "Algebra",
+      "description": "Identifying patterns, relationships, and working with unknowns.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B4.2.1",
+          "title": "Patterns and Relationships",
+          "description": "Identifying and extending patterns in tables and charts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.2.1.1",
+              "description": "Demonstrate an understanding of how to identify and describe patterns found in tables and charts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.1.1.1",
+                  "description": "Describe the pattern found in a given table or chart",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Skip count on a hundred chart and describe the pattern."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.1.1.2",
+                  "description": "Determine the missing element(s) in a given table or chart",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify missing numbers in a chart and explain reasoning."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.1.1.3",
+                  "description": "Identify the error(s) in a given table or chart",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explain errors in a pattern table."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.2.1.2",
+              "description": "Translate among different representations of a pattern",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.2.1.2.1",
+                  "description": "Create a concrete representation of a given pattern displayed in a table or chart",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use manipulatives to represent patterns from a table."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.1.2.2",
+                  "description": "Create a table or chart from a given concrete representation of a pattern",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Extend geometric patterns and record in a T-chart."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.2.1.3",
+              "description": "Represent, describe and extend patterns and relationships using charts and tables to solve problems",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B4.2.1.3.1",
+                  "description": "Translate the information in a given problem into a table or chart",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Extend numerical patterns and explain the rule."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use manipulatives to represent patterns and describe relationships."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.1.3.2",
+                  "description": "Identify and extend the patterns in a table or chart to solve a given problem",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Extend related patterns and explain similarities and differences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create pattern pairs and challenge others to find relationships."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.2",
+          "title": "Unknowns, Expressions and Equations",
+          "description": "Working with equations and unknowns.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.2.2.1",
+              "description": "Express a given problem as an equation in which a symbol is used to represent an unknown number",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.2.1.1",
+                  "description": "Write a given problem as an equation with a symbol for the unknown",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the purpose of symbols in equations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.2.1.2",
+                  "description": "Express a given pictorial or concrete representation of an equation in symbolic form",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write equations from word problems involving shapes and objects."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.2.2.2",
+              "description": "Solve one-step equations involving a symbol to represent an unknown number",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.2.2.2.1",
+                  "description": "Solve a given one-step equation using manipulatives",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a pan balance to solve equations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.2.2.2",
+                  "description": "Describe orally, the meaning of a given one-step equation with one unknown",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve equations and explain thinking."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.2.2.3",
+                  "description": "Solve a given equation when the unknown is on the left or right side",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve equations with unknowns on either side using base ten materials."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.2.2.4",
+                  "description": "Solve a given one-step equation using 'guess and check'",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use guess and check to find unknown values."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.2.2.5",
+                  "description": "Identify the unknown in a problem and solve it",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use linking cubes to model and solve problems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.2.2.6",
+                  "description": "Represent and solve addition or subtraction problems involving unknowns",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve 'part-part-whole' or comparison problems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.2.2.7",
+                  "description": "Create a problem for a given equation with one unknown",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create story problems for given equations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.3",
+      "title": "Geometry and Measurement",
+      "description": "Exploring shapes, symmetry, position, perimeter, area, and time.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B4.3.1",
+          "title": "2D and 3D Shapes",
+          "description": "Identifying symmetry in shapes.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.3.1.1",
+              "description": "Identify the lines of symmetry of regular and irregular 2D shapes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.1.1.1",
+                  "description": "Complete drawings of shapes to make them symmetrical",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Complete drawings of incomplete shapes on graph sheets."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.1.1.2",
+                  "description": "Identify the lines of symmetry of regular and irregular 2D shapes",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sort shapes into symmetrical and non-symmetrical."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.3.2",
+          "title": "Position / Transformation",
+          "description": "Describing position using cardinal points.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.3.2.1",
+              "description": "Describe the position of objects in space using the cardinal points",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.2.1.1",
+                  "description": "Tell the position and motion of objects in space using the cardinal points",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe coordinates and axes on graphs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe position and motion of objects."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Locate coordinates of points."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.3.3",
+          "title": "Measurement- (Perimeter and Area)",
+          "description": "Measuring perimeter and area of shapes.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.3.3.1",
+              "description": "Demonstrate understanding of perimeter of regular and irregular shapes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.3.1.1",
+                  "description": "Estimate perimeter using referents for centimetre or metre",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Estimate and measure perimeter of classroom objects."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.1.2",
+                  "description": "Measure and record perimeter for regular and irregular shapes in cm and m",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Measure sides of shapes and sum them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore perimeter using graph sheets."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Calculate perimeter of irregular shapes given side lengths."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.1.3",
+                  "description": "Develop and apply a formula for determining perimeter of square and rectangle",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use cut-out shapes to derive perimeter formulas."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.1.4",
+                  "description": "Construct different rectangles for a given perimeter",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw different rectangles with the same perimeter."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.3.3.2",
+              "description": "Demonstrate an understanding of area of regular and irregular 2-D shapes",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.3.3.2.1",
+                  "description": "Recognise that area is measured in square units",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore area using square sheets to cover objects."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore area using graph sheets."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Measure area using floor tiles."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.2.2",
+                  "description": "Select and justify referents for the units cm² or m²",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Choose appropriate units for small and large areas."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.2.3",
+                  "description": "Estimate area by using referents for cm² or m²",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Estimate area of classroom items."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Estimate area using a reference point."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.2.4",
+                  "description": "Develop and apply a formula for determining area of a rectangle and square",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use graph sheets to derive area formula."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Multiply vertical and horizontal squares."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.2.5",
+                  "description": "Construct different rectangles for a given area",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw different rectangles with the same area."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.3.3.3",
+              "description": "Demonstrate understanding of time taken by events in minutes and hours",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B4.3.3.3.1",
+                  "description": "Tell the time in hours and minutes in analogue and digital watches",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Tell time using 15, 30, 45 minute intervals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Tell time at various minute positions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Tell time at the hour mark."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Draw clock faces to tell time."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explore relationship between seconds, minutes, and hours."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Tell time using digital watches."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.3.2",
+                  "description": "Use clock to measure time to complete simple events",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Record time for simple activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.3.3.3",
+                  "description": "State dates of events and record calendar dates in a variety of formats",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Record dates in different formats."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write dates for national events."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create a timeline for birthdays."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.4",
+      "title": "Data",
+      "description": "Collecting, organizing, interpreting, and analysing data.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B4.4.1",
+          "title": "Data Collection, Organization, Presentation, Interpretation and Analysis",
+          "description": "Working with graphs and data interpretation.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.4.1.1",
+              "description": "Demonstrate an understanding of many-to-one correspondence in displaying, and reading or interpreting, graphs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.1.1.1",
+                  "description": "Use an understanding of one-to-one correspondence to read and interpret graphs",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Interpret graphs using one-to-one correspondence."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.1.1.2",
+                  "description": "Use an understanding of many-to-one correspondence to display or construct graphs",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss creating graphs where one object represents multiple units."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct graphs using cut-outs."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read and interpret graphs with many-to-one correspondence."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Construct graphs from data tables."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.1.1.3",
+                  "description": "Compare graphs in which the same data has been displayed",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compare one-to-one and many-to-one graphs of the same data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.1.1.4",
+                  "description": "Find examples of graphs in which many-to-one correspondence is used in media",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Interpret many-to-one graphs from print/electronic media."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.4.1.2",
+              "description": "Construct and interpret pictographs and bar graphs involving many-to-one correspondence",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.4.1.2.1",
+                  "description": "Identify common features of graphs and draw bar graphs or pictographs",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify graph features (title, axes, key)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw bar graphs from data tables."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw graphs for energy usage data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.1.2.2",
+                  "description": "Use understanding of many-to-one correspondence to solve simple problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve problems based on graph interpretation."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

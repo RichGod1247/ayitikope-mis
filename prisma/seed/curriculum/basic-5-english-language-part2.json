@@ -1,0 +1,1405 @@
+{
+  "part": "2/2",
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "English Language",
+  "name": "Basic 5 English Language",
+  "slug": "basic-5-english-language",
+  "orderIndex": 1,
+  "description": "Part 2 of the Basic 5 English Language curriculum covers Grammar Usage, Writing, Writing Conventions, and Extensive Reading. It builds on the oral and reading skills to develop proficiency in written communication and grammatical structure.",
+  "strands": [
+    {
+      "code": "B5.3",
+      "title": "Grammar Usage at Word and Phrase Levels",
+      "description": "Developing understanding and usage of various grammatical structures including nouns, determiners, pronouns, adjectives, verbs, adverbs, idiomatic expressions, conjunctions, modals, and prepositions.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5.3.1",
+          "title": "Nouns",
+          "description": "Using nouns or noun phrases to refer to quantities or units, proper nouns, collective nouns, and abstract nouns.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.3.1.1",
+              "description": "Apply knowledge of different types of nouns in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.1.1.1",
+                  "description": "Identify and use nouns or noun phrases to refer to quantities or units",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce quantities and units in context (e.g., a piece of paper, a pair of trousers)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify more examples of these in text and use them in sentences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make up own noun phrases and use them in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.1.1.2",
+                  "description": "Identify and use proper nouns, count/non-count, singular/plural nouns",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce proper nouns referring to festivals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss common nouns, count and non-count nouns with examples."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discover the difference between regular and irregular plural forms."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify plural nouns without plural markers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.1.1.3",
+                  "description": "Identify and use collective nouns to refer to a group of objects and people",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teach collective nouns in context (e.g., audience, congregation, flock)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the meaning of these words in context."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Provide more examples of collective nouns and use them in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.1.1.4",
+                  "description": "Identify and use abstract nouns to refer to concepts and ideas",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce abstract nouns as names of things that cannot be touched, seen, or felt (e.g., beauty, holiness)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify abstract nouns in passages and use them in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.2",
+          "title": "Determiners",
+          "description": "Using articles, quantifiers, possessive pronouns, demonstratives, and interrogative determiners.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.3.2.1",
+              "description": "Apply knowledge of different types of determiners in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.2.1.1",
+                  "description": "Identify and use indefinite and definite articles 'a' and 'an' to refer to a person, animal, event, time or objects in general",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce definite, indefinite, and zero articles using text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Form sentences using the articles."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.2.1.2",
+                  "description": "Identify and use quantifiers to show qualities",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce quantifiers like each, both, all, numerals, ordinals, some, few/little."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the quantifiers in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.2.1.3",
+                  "description": "Identify and use possessive pronouns to show possession",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use possessive pronouns like mine, yours, his, hers, theirs in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.2.1.4",
+                  "description": "Identify and use demonstratives: this/that, these/those",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify demonstratives in context and use them in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.2.1.5",
+                  "description": "Identify and use interrogative determiners e.g. which, whose",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify interrogative determiners in a text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use interrogative determiners in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.3",
+          "title": "Pronouns",
+          "description": "Using indefinite and possessive pronouns.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.3.3.1",
+              "description": "Apply knowledge of different types of pronouns in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.3.1.1",
+                  "description": "Identify and use indefinite pronouns and possessive pronouns",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce indefinite pronouns (someone, anyone, everything) and possessive pronouns (mine, ours) with examples."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify pronouns in a passage and use them in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.4",
+          "title": "Adjectives",
+          "description": "Using comparative forms of adjectives.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.3.4.1",
+              "description": "Apply the knowledge of adjectives in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.4.1.1",
+                  "description": "Use comparative forms of regular and irregular adjectives to make comparisons",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise comparative formation (adding 'er')."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Introduce irregular adjective comparisons (e.g., good - better, bad - worse)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use drills for practice."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.5",
+          "title": "Verbs",
+          "description": "Using various verb forms and tenses including simple present, simple past, past continuous, and imperative forms.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.3.5.1",
+              "description": "Apply the knowledge of verbs in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.5.1.1",
+                  "description": "Use different types of verbs in sentences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify main and helping verbs (primary and modal auxiliaries) in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.5.1.2",
+                  "description": "Use appropriate subject-verb agreement",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use examples to introduce and explain subject-verb agreement."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Complete sentences with missing subjects or verbs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.5.1.3",
+                  "description": "Use the simple present form of verbs to express needs/preferences and thoughts/ideas",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce simple present form for needs (e.g., I need new clothes) and thoughts (e.g., I think you are right)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.5.1.4",
+                  "description": "Use the simple past form of verbs to express past needs, interest and feeling",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use simple past form in sentences to express needs, interest, and feelings (e.g., Yesterday, I needed some money)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.5.1.5",
+                  "description": "Use irregular form of the simple past tense of verbs",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce simple past forms of irregular verbs in context (e.g., build - built)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use irregular verbs in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.5.1.6",
+                  "description": "Use the past continuous form of verbs",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use past continuous form to talk about actions going on when a second action took place."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write sentences using the past continuous form."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.5.1.7",
+                  "description": "Use the imperative forms of verbs to give instructions and directions",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate giving instructions and directions (e.g., Switch on the light, Turn right)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.6",
+          "title": "Adverbs",
+          "description": "Using adverbs to express manner.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.3.6.1",
+              "description": "Apply the knowledge of different types of adverbs in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.6.1.1",
+                  "description": "Use adverbs to express manner",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify adverbs of manner in passages."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write short paragraphs using adverbs of manner."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.7",
+          "title": "Idiomatic Expressions",
+          "description": "Understanding and using idiomatic expressions appropriately.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.3.7.1",
+              "description": "Understand and use idiomatic expressions appropriately in speech and in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.7.1.1",
+                  "description": "Identify, explain and use idiomatic expressions correctly",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the meaning of idiomatic expressions in context (e.g., take after, pull down)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use idiomatic expressions in own sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.8",
+          "title": "Conjunctions",
+          "description": "Using conjunctions to link ideas, give reasons, and show results.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.3.8.1",
+              "description": "Apply the knowledge of conjunctions in speech and in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.8.1.1",
+                  "description": "Identify and use simple conjunctions - because, since, so, although",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use conjunctions to give reasons, link contrasting ideas, and show results."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify conjunctions in passages and use them to join sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.9",
+          "title": "Modals",
+          "description": "Using modals to express ability, permission, obligation, prediction, and possibility.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B5.3.9.1",
+              "description": "Apply the knowledge of modals in speech and in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.9.1.1",
+                  "description": "Use modals to express a variety of meanings",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use modals such as can, may, must, shall/will, could, would, might, should, used to, have to/ought to/need to."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use situations and drills for practice."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.10",
+          "title": "Prepositions",
+          "description": "Using prepositions to convey various meanings like position, direction, time, and purpose.",
+          "orderIndex": 10,
+          "contentStandards": [
+            {
+              "code": "B5.3.10.1",
+              "description": "Apply the knowledge of prepositions in oral and written communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.10.1.1",
+                  "description": "Use prepositions to convey a variety of meanings",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use prepositions for position, direction, time, purpose, possession, comparison, support or opposition."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write a short paragraph containing examples of prepositions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.4",
+      "title": "Writing",
+      "description": "Developing writing skills through penmanship, paragraph development, and the writing process.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B5.4.2",
+          "title": "Penmanship and Handwriting",
+          "description": "Copying sentences correctly and writing compound sentences.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.4.2.1",
+              "description": "Copy and rewrite sentences correctly",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.2.1.1",
+                  "description": "Copy sentences clearly in joint script maintaining legible handwriting",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Copy sentences from the board into exercise books using joint script."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.2.1.2",
+                  "description": "Write compound sentences clearly and correctly",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Search for compound sentences in texts and write them out."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write parallel simple sentences following identified structures."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.3",
+          "title": "Paragraph Development",
+          "description": "Developing coherent paragraphs with main and supporting ideas.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.4.3.1",
+              "description": "Develop, organise and express ideas cohesively in writing and representing for a variety of purposes, audience and context",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.3.1.1",
+                  "description": "Choose appropriate ways and modes of writing and organise facts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify modes of writing (e.g., process, narration, description) in sample texts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Re-arrange jumbled paragraphs into a coherent piece."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.3.1.2",
+                  "description": "Identify the main idea and minor ideas/supporting details in a paragraph",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify topic sentences and supporting details in a model paragraph."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write own paragraphs on selected topics."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.3.1.3",
+                  "description": "Elaborate on, explain and or justify the main ideas of a paragraph",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide details (explanations/examples) to elaborate on a topic sentence."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.3.1.4",
+                  "description": "Use cohesive devices to link ideas in a paragraph",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify cohesive devices (e.g., firstly, next, finally) in a paragraph."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Complete paragraphs with appropriate transitional words."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.9",
+          "title": "Writing as a Process",
+          "description": "Applying the writing process including pre-writing, drafting, revising, and publishing.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.4.9.1",
+              "description": "Apply the skills and strategies for idea generation, selection, development, organisation and revision in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.9.1.1",
+                  "description": "Select a topic of choice on issues in their community, brainstorm and organise ideas before writing",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use brainstorming and graphic organizers to generate and organize ideas."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.4.9.2",
+              "description": "Develop and express ideas coherently and cohesively in writing",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.4.9.2.1",
+                  "description": "Develop ideas into a two-paragraph draft",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draft paragraphs linking ideas within and across paragraphs using cohesive devices."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.4.9.3",
+              "description": "Apply strategies for improving drafts for publishing",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.4.9.3.1",
+                  "description": "Review, and revise the draft by proposing grammar for improvement",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Review drafts for clarity and order of ideas."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.9.3.2",
+                  "description": "Edit/proofread draft, checking capitalisation, usage of punctuation and spelling",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Check for punctuation, capitalization, and spelling errors using checklists."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Peer edit drafts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.9.3.3",
+                  "description": "Display writing piece for peers to read and publish it in the class magazine",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Publish work in class magazines or on notice boards."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.10",
+          "title": "Narrative Writing",
+          "description": "Writing personal narratives with proper structure.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.4.10.1",
+              "description": "Narrate situations, express feelings and convey point of view about the world/ or fictional world",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.10.1.1",
+                  "description": "Create settings, characters and at least one plot in a narrative text",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write personal narratives using graphic organizers like Time Line and 5 Ws Chart."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organize details into a writing plan with beginning, middle, and ending."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Revise and edit narratives using checklists."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.11",
+          "title": "Creative/Free Writing",
+          "description": "Writing freely on various topics and creating poems and stories.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.4.11.1",
+              "description": "Create texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.11.1.1",
+                  "description": "Write freely about topics of choice on national issues and issues from different learning areas",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select topics, brainstorm, draft, revise, edit, and publish creative pieces."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.11.1.2",
+                  "description": "Write poems and imaginative narrative stories using ideas from poems and imaginative texts read or viewed",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Plan and write imaginative stories and poems using elements of narrative."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.12",
+          "title": "Descriptive Writing",
+          "description": "Using descriptive language and sensory details.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.4.12.1",
+              "description": "Demonstrate knowledge of descriptive words/expressions in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.12.1.1",
+                  "description": "Use descriptive words/expressions/sound devices/ figurative language to describe places, personal experiences and events",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write descriptions using adjectives, figurative language, and sensory details."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.13",
+          "title": "Persuasive/Argumentative Writing",
+          "description": "Supporting opinions and writing arguments.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.4.13.1",
+              "description": "Support an opinion in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.13.1.1",
+                  "description": "Write explanations to support opinions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Take a stand on a motion and write down opinions to support it."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.4.13.2",
+              "description": "Write arguments to support claims with clear reasons and relevant evidence",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.4.13.2.1",
+                  "description": "Introduce claims and support them with clear reasons and evidence using credible sources",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide reasons and evidence for opinions held on a topic."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.13.2.2",
+                  "description": "Use words, phrases, and clauses to clarify the relationships between claim(s) and reasons",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss appropriate language for arguments."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.13.2.3",
+                  "description": "Establish and maintain a formal style",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Present compositions using the structure of an argumentative piece."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.13.2.4",
+                  "description": "Provide a concluding statement that follows from the arguments presented",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Debate on a topic using the writing process."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.14",
+          "title": "Informative/Expository Writing",
+          "description": "Writing informative texts describing processes and events.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.4.14.1",
+              "description": "Write informative/ expository essays",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.14.1.1",
+                  "description": "Write sentences to describe a process of doing something",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe picture sequences and write words giving information on an activity."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compose expository pieces on a domestic activity."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.4.14.2",
+              "description": "Write the event of the day",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.4.14.2.1",
+                  "description": "Write about incidence or events of the day and make radio/TV presentations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write news from TV pictures or brainstormed events."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present news to the class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.15",
+          "title": "Letter Writing",
+          "description": "Writing informal letters.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B5.4.15.1",
+              "description": "Write informal letters on given topics",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.15.1.1",
+                  "description": "Write to friends about events using appropriate letter formats",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Brainstorm features of friendly letters."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write letters to imaginary friends."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.5",
+      "title": "Using Writing Conventions/Grammar Usage",
+      "description": "Applying grammar conventions including capitalisation, punctuation, nouns, verbs, adjectives, adverbs, prepositions, conjunctions, and sentence structures.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B5.5.1",
+          "title": "Using Capitalisation",
+          "description": "Using capital letters for direct speech and proper nouns.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.1",
+              "description": "Use capital letters to start the first words in a direct speech",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.1.1",
+                  "description": "Follow appropriate mechanical convention",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write formal letters paying attention to capitalisation and punctuation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.1.2",
+                  "description": "Writing of lower case and capital letters",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write paragraphs about friends."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Edit work checking for capitalisation."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.2",
+          "title": "Using Punctuation",
+          "description": "Using commas and apostrophes.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.5.2.1",
+              "description": "Show understanding of how punctuations are used appropriately in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.2.1.1",
+                  "description": "Use punctuations: (the comma) to write an address; (the apostrophe) in contraction",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce and practice using commas in addresses and apostrophes in contractions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Punctuate sentences correctly."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.3",
+          "title": "Naming Words/Nouns",
+          "description": "Using nouns for quantities, festivals, collective and abstract concepts.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.5.3.1",
+              "description": "Apply knowledge of different types of nouns in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.3.1.1",
+                  "description": "Identify and use nouns or noun phrases to refer to quantities or units",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use quantities and units in context."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.3.1.2",
+                  "description": "Identify and use proper nouns, count/non-count, singular/plural nouns",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and use proper nouns for festivals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use count and non-count nouns."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use regular and irregular plural nouns."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify plural nouns without plural markers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.3.1.3",
+                  "description": "Identify and use collective nouns to refer to a group of objects and people",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use collective nouns in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.3.1.4",
+                  "description": "Identify and use abstract nouns to refer to concepts and ideas",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and use abstract nouns in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.4",
+          "title": "Using Action Words",
+          "description": "Using various verb tenses including simple past, present perfect, and past perfect.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.5.4.1",
+              "description": "Demonstrate understanding of verbs in everyday language",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.4.1.1",
+                  "description": "Differentiate between how the simple past and the present perfect tense forms are used",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and use simple past and present perfect tenses in stories."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.4.1.2",
+                  "description": "Use the simple past verb form to express past needs, feelings and interest",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write stories using simple past and participle forms."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.4.1.3",
+                  "description": "Use past perfect in speech and in writing",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write narratives using simple past and past perfect tenses."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.4.1.4",
+                  "description": "Use singular and plural subjects and the verb forms that go with them",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write essays using various tenses and ensuring subject-verb agreement."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.5",
+          "title": "Using Qualifying Words-Adjectives",
+          "description": "Using comparative forms of adjectives.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.5.5.1",
+              "description": "Demonstrate understanding of adjectives in speech and in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.5.1.1",
+                  "description": "Use comparative forms of regular and irregular adjectives to make comparisons",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe family members using positive, comparative, and superlative adjectives."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.6",
+          "title": "Using Adverbs",
+          "description": "Using adverbs to express manner.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.5.6.1",
+              "description": "Demonstrate understanding of the use of adverbs in speech and in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.6.1.1",
+                  "description": "Use adverbs to express manner",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify adverbs of manner in texts and use them in writing."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.7",
+          "title": "Using Simple Prepositions",
+          "description": "Using prepositions for various meanings.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.5.7.1",
+              "description": "Apply the knowledge of prepositions in oral and written communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.7.1.1",
+                  "description": "Use prepositions to convey a variety of meanings",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use prepositions for position, direction, time, purpose, possession, comparison, support or opposition in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.8",
+          "title": "Using Conjunctions",
+          "description": "Using conjunctions to link ideas.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.5.8.1",
+              "description": "Apply the knowledge of conjunctions in speech and in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.8.1.1",
+                  "description": "Identify and use simple conjunctions – because, since, so, although",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use conjunctions to give reasons, link contrasting ideas, and show results in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.9",
+          "title": "Using Simple, Compound and Complex Sentences",
+          "description": "Applying grammatical rules to form sentences.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B5.5.9.1",
+              "description": "Apply knowledge of grammatical rules to form words, phrases and sentences",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.9.1.1",
+                  "description": "Identify subjects and predicates in compound sentences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify subjects and verbs in compound sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write about an event demonstrating understanding of subject and predicate."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.9.1.2",
+                  "description": "Construct compound sentences correctly",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use coordinators to write compound sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write a narrative exhibiting knowledge of subject and predicate in compound sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.10",
+          "title": "Spelling",
+          "description": "Spelling words correctly.",
+          "orderIndex": 10,
+          "contentStandards": [
+            {
+              "code": "B5.5.10.1",
+              "description": "Spell words correctly",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.10.1.1",
+                  "description": "Use phonics knowledge to spell words",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Spell phonically irregular words through games and dictation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use spelt words in sentences and fill in blanks."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.6",
+      "title": "Extensive Reading",
+      "description": "Building a love and culture of reading.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B5.6.1",
+          "title": "Building the Love and Culture of Reading",
+          "description": "Reading widely for pleasure and independent learning.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.6.1.1",
+              "description": "Read widely for pleasure, and to demonstrate independent reading and learning in the literary/content areas",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.1.1.1",
+                  "description": "Read a variety of age and level appropriate books and present at least a-three-paragraph summary of each book read",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read books independently and share stories."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write a summary of the book read."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Present work to the class for feedback."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

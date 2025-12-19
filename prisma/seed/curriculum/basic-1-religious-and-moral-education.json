@@ -1,0 +1,257 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 1",
+  "subject": "Religious and Moral Education",
+  "name": "Basic 1 Religious and Moral Education",
+  "slug": "basic-1-religious-and-moral-education",
+  "orderIndex": 1,
+  "description": "The Basic 1 Religious and Moral Education curriculum focuses on developing an awareness of the Creator, understanding religious worship and festivals, knowing religious leaders, and appreciating the roles of the family and community in daily life.",
+  "strands": [
+    {
+      "code": "B1.1",
+      "title": "God, His Creation and Attributes",
+      "description": "Understanding God as the Creator and His attributes.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B1.1.1",
+          "title": "God the Creator",
+          "description": "Exploring God's creation and attributes.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.1.1.1",
+              "description": "Explain who the Creator is",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.1.1.1",
+                  "description": "Explore God's Creation.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, learners discuss who the creator is. He is God, the originator of all things. He provides all our needs: air, food, water, life, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.1.1.2",
+                  "description": "Mention the names of some of the things God created.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage learners with pictures, charts, video clips and songs showing some of the things God created: humankind, animals, trees, rivers, the sea and mountains."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners draw, colour and model some of the things God created."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to role play, recite rhymes and sing songs about some of the things God created."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.1.1.3",
+                  "description": "Examine some attributes of God.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, guide learners to talk about the attributes of God."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Engage learners with pictures, charts, video clips, songs and role play to demonstrate attributes of God showing: love to one another, truthfulness, kindness, patience, mercy, etc. at home, school and community."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners role play the following activities: home: family members caring for one another, school: teachers and learners demonstrate care and love among themselves and community: visits to the hospital and orphanage, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.2",
+      "title": "Religious Practices and their Moral Implications",
+      "description": "Understanding religious worship and festivals in Ghana.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B1.2.1",
+          "title": "Religious Worship in the Three Major Religions in Ghana",
+          "description": "Types of worship and religious recitations.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.2.1.1",
+              "description": "Demonstrate the understanding of religious worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.1.1.1",
+                  "description": "Name the three main types of worship in Ghana.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures, video clips of people worshipping among the three main religions in Ghana. Christian worship, Islamic worship and Traditional worship."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners role-play the act of worship in the three main religions in Ghana."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.1.1.2",
+                  "description": "Recite religious passages and sing religious songs.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures, video clips, etc. of songs and recitations from the three main religions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners sing and recite texts from the three main religions: The Lord's Prayer, Psalm 23 (Christian), Al-Fatihah (Islamic) and any recital from the traditional religion-sacred myths, riddle, proverbs, etc. (Traditional)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.2.2",
+          "title": "Religious Festivals in the Three Major Religions in Ghana",
+          "description": "Describing religious festivals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.2.2.1",
+              "description": "Describe religious festivals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.2.1.1",
+                  "description": "Describe religious festivals in Ghana.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention festivals celebrated in the three religions. Christian: Christmas, Easter, etc. Islamic: Eid-ul-Fitr, Eid-ul-Adha, etc. African Traditional Religion (ATR): Odwira, Damba, Homowo, Hogbetsotso, Fetu Afahye, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.3",
+      "title": "Religious Leaders",
+      "description": "Stories of the birth of religious leaders.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B1.3.1",
+          "title": "Birth of the Leaders of the three Major Religions in Ghana",
+          "description": "Narrating birth stories of religious leaders.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.3.1.1",
+              "description": "Narrate the birth stories of the leaders of the three main religions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.1.1.1",
+                  "description": "Narrate the stories of the birth of religious leaders.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures and video clips depicting the birth of the religious leaders: Christian, Islamic and ATR."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners tell stories about the birth of the religious leaders."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners dramatise the birth of the religious leaders."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.4",
+      "title": "The Family and Community",
+      "description": "Roles and relationships in the family and community.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B1.4.1",
+          "title": "Roles and Relationships",
+          "description": "Roles of family members and the community.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.4.1.1",
+              "description": "Show an appreciation of the roles of the family and community in their daily lives",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.4.1.1.1",
+                  "description": "Identify the role of the individual members of the family.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners, in groups, talk about their roles and roles of their parents in the family: Parents: Provision of shelter, food, security and education, Children: running errands, performing house chores, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners role-play the functions of the various members in the family, e.g. Learners play the role of a father, mother, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.4.1.1.2",
+                  "description": "Explain the role of the community in the upbringing of its members.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners, in groups, talk about the role of the community in the upbringing of its members through education, discipline, counselling, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners dramatise or role-play the roles of members of the community in the upbringing of its members through education, discipline, counselling, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

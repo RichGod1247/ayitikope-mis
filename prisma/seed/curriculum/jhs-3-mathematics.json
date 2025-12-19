@@ -1,0 +1,1081 @@
+{
+  "phase": "Junior High School",
+  "level": "Basic 9",
+  "subject": "Mathematics",
+  "name": "JHS 3 Mathematics",
+  "slug": "jhs-3-mathematics",
+  "orderIndex": 1,
+  "description": "The JHS 3 Mathematics curriculum focuses on advanced number concepts including standard form, surds, and sets; algebraic proficiency in simultaneous equations, change of subject, and inequalities; geometric constructions and transformations like enlargement; and data handling including histograms and probability of dependent events.",
+  "strands": [
+    {
+      "code": "B9.1",
+      "title": "NUMBER",
+      "description": "Advanced number concepts, operations, and applications.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B9.1.1",
+          "title": "NUMBER AND NUMERATION SYSTEM",
+          "description": "Standard form, significant figures, and set theory.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.1.1.1",
+              "description": "Apply the understanding of place value in solving real life problems involving integers of any size, rounding this to given decimal places and significant figures",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.1.1.1",
+                  "description": "Express integers to a given number of significant and decimal places",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Express integers to a number of significant figures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Express decimal numbers to a given number of decimal places."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.2",
+                  "description": "Use knowledge and understanding of place value to solve real life problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create and solve a real-life problem or a story problem and write the answer in standard form."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create similar real story problems and solve."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.1.1.2",
+              "description": "Demonstrate an understanding of the relationship between members of the rational number system and solve real life problems involving union and intersection of three sets",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.1.1.2.1",
+                  "description": "Solve problems on relationship between members of the rational number system using knowledge and understanding of the concept of union and intersection of two sets",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use sets diagrams to show the relationship among the Real numbers namely Irrational, Rational, Integers, Whole, and Natural numbers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the factors of numbers and represent them on a Venn diagram."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.2.2",
+                  "description": "Apply the concept of sets to solve problems on relationship between members of rational number system and solve real life problems involving union and intersection of two sets",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create and solve real life problems to show the union and intersection of two sets."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.2",
+          "title": "NUMBER OPERATIONS",
+          "description": "Operations properties, decimals, and surds.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.1.2.1",
+              "description": "Apply mental mathematics and properties to determine answers for addition and subtraction of basic facts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.2.1.1",
+                  "description": "Multiply and divide given numbers by powers of 10 including decimals and benchmark fractions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recall multiplication facts up to 144 and related division facts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recall decimal names of given benchmark fractions converted to decimals or percentages."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Find the product of a given decimal number when it is multiplied by powers of 10."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.2",
+                  "description": "Demonstrate the ability to determine commutative properties of addition and multiplication",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recognise that for any two numbers a and b; a + b = b + a and a × b = b × a."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.3",
+                  "description": "Use the associative property of addition and multiplication",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recognise that for any three numbers a, b and c; a + (b + c) = (a + b) + c and (a × b) × c = a × (b × c)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.4",
+                  "description": "Use the distributive property in solving problems",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recognise that for any three numbers a, b and c; a × (b + c) = (a × b) + (a × c) and a × (b - c) = (a × b) - (a × c)."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.1.2.2",
+              "description": "Apply the understanding of addition, subtraction, multiplication and division of decimal numbers to solve problems, and round answers to given decimal places and significant figures",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.1.2.2.1",
+                  "description": "Solve operations involving addition, subtraction, multiplication and division using word problems",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create and solve story problems involving a combination of two or more of the basic operations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.2.2",
+                  "description": "Solve word problems involving the four basic operations and round the answers to the nearest two decimal figures or to some significant figures",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate total amounts in word problems and round answers to specified decimal places or significant figures."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.1.2.4",
+              "description": "Demonstrate understanding of surds as real numbers, the process of adding and subtracting of surds as well as determining (using a calculator) the approximate square root of a number that is not a perfect square",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B9.1.2.4.1",
+                  "description": "Identify simple and compound surds",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify examples of simple and compound surds."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.4.2",
+                  "description": "Explain the identities/rules of surds",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain and use rules of surds for multiplication, division, and rationalization."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.4.3",
+                  "description": "Simplify given surds",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Simplify surd expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.3.4",
+                  "description": "Approximate the square roots of non-perfect squares with calculators/tables",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find square roots of non-perfect squares."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.3",
+          "title": "FRACTIONS, DECIMALS AND PERCENTAGES",
+          "description": "Operations with fractions and solving related problems.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.1.3.1",
+              "description": "Apply the understanding of operations on fractions to solve problems involving fractions of given quantities and round the results to given decimal and significant places",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.3.1.1",
+                  "description": "Review fractions and solve problems involving basic operations on fractions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Review the concept of fraction."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Review the basic operations on fractions (addition, subtraction, multiplication, division)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.3.1.2",
+                  "description": "Add and/or subtract, multiply and/or divide given fractions, using the principle of order of operations including the use of the BODMAS or PEMDAS rule, and apply the understanding of these to solve problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the order of operations to simplify whole number expressions with more than two operations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the order of operations to simplify fractions with more than two operations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.3.1.3",
+                  "description": "Review word problems involving basic operations on fractions",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve word problems based on fractions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.4",
+          "title": "NUMBER: RATIOS AND PROPORTION",
+          "description": "Solving real-world problems involving ratio, rate, and proportion.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.1.4.1",
+              "description": "Apply the understanding of ratio, rate and proportions to solve problems that involve rates, ratios, and proportional reasoning and use it to solve real world mathematical problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.4.1.1",
+                  "description": "Represent proportional relationships by equations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Express relationships where total cost is proportional to number of items as equations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.4.1.2",
+                  "description": "Use proportional relationships to solve multistep ratio and percent problems, examples: simple interest, tax, discount and commissions, NHIL, depreciation, insurance, etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve problems on simple interest."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve problems on tax (VAT)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve problems on discount."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Solve problems on commission."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Solve problems involving depreciation."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Solve problems involving NHIL."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Solve problems involving insurance."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.4.1.3",
+                  "description": "Use knowledge of rates and proportional reasoning to solve problems involving SSNIT benefits and contributions",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the obligations of the employer/employee and the contribution rates."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Calculate employee/employer contributions to SSNIT under Act 766."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Calculate employee/employer contributions to SSNIT under PNDCL 247."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Calculate employee benefits from SSNIT under Act 766."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Calculate employee benefits from SSNIT under PNDCL 247."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.4.1.4",
+                  "description": "Recognise and graph proportional relationships, interpreting the unit rate as the slope of the graph and use these to solve problems",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Interpret graphs of cost versus quantity to find unit rates and solve cost problems."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.2",
+      "title": "ALGEBRA",
+      "description": "Advanced algebraic concepts involving simultaneous equations, change of subject, and inequalities.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B9.2.1",
+          "title": "PATTERNS AND RELATIONS",
+          "description": "Simultaneous linear equations.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.2.1.1",
+              "description": "Demonstrate the ability to construct tables of values for pairs of linear relations, graph the relations in a number plane and determine the intersection of the lines to solve simultaneous linear equations",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.1.1.1",
+                  "description": "Construct a table of values for two linear relations and graph the relation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Construct a table of values for two linear relations and draw the graphs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw graph for two linear relations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct a table of values for two linear relations."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Draw a graph for two linear relations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.2",
+                  "description": "Use graphs of two linear relations to determine subsequent missing elements in ordered pairs of the relation",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find the missing elements of ordered pairs on graphs of two linear relations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.3",
+                  "description": "Use graphs to solve equations involving two linear relations",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve two linear equations simultaneously using the graph shown."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve two linear equations simultaneously using the graph."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.2",
+          "title": "ALGEBRAIC EXPRESSIONS",
+          "description": "Change of subject, substitution, and factorization.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.2.2.1",
+              "description": "Demonstrate an understanding of (i) change of subject (ii) substituting values to evaluate expressions, and (iii) factorize expressions that have simple binomial as a factor",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.2.1.1",
+                  "description": "Perform change of subject of a given formula and use it to solve problems",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Perform change of subject for given formulae."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the concept of change of subject to solve problems involving formulae."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.2.1.2",
+                  "description": "Substitute values into given formulae to evaluate it and use it to solve problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Substitute values into expressions to find their value."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make a variable the subject and find its value."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Find volume using the formula for a cone."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.2.1.3",
+                  "description": "Factorise expressions that have simple binomial",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Factorise expressions using common factors."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.2.1.4",
+                  "description": "Use the knowledge of simplifying and factorising expressions to solve real world problems",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve problems involving capacity and number of items."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve money problems involving prices of items."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve area and dimension problems for rectangles."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.3",
+          "title": "VARIABLES AND EQUATIONS",
+          "description": "Single variable linear inequalities.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.2.3.1",
+              "description": "Demonstrate understanding of single variable linear inequalities with rational coefficients including: solving inequalities, verifying, comparing, graphing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.3.1.1",
+                  "description": "Solve single variable linear inequalities with rational coefficients",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Translate word problems into linear inequalities in one variable and vice versa."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve simple linear inequalities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.3.1.2",
+                  "description": "Illustrate solution sets of linear inequalities on the number line",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Illustrate and explain inequality signs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Graph linear inequalities in one variable on a number line."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve and graph linear inequalities on a number line."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Solve and graph linear inequalities on a cartesian plane."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.3.1.3",
+                  "description": "Solve real-life problems involving linear equations and inequalities",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve real-life problems involving linear equations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve real-life problems involving linear inequalities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.3",
+      "title": "GEOMETRY AND MEASUREMENT",
+      "description": "Shapes, measurement, position and transformation.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B9.3.1",
+          "title": "SHAPES AND SPACE",
+          "description": "Properties of angles, polygons, and constructions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.3.1.1",
+              "description": "Apply the properties of angles at a point, angles on a straight line, vertically opposite angles, corresponding, angles to solve problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.1.1.1",
+                  "description": "Derive the formula for calculating the sum of angles in any polygon and use this to calculate the value of missing angles in polygons",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and name the various polygons."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Derive and use the formula (n - 2) × 180 ° for triangles."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Derive and use the formula (n - 2) × 180 ° for quadrilaterals."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Derive and use the formula (n - 2) × 180 ° for polygons, pentagons, hexagons, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.1.2",
+                  "description": "Identify similar and congruent triangles and use the knowledge to solve related problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recognise similar triangles and solve for values of angles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recognise congruent triangles and solve for values of angles."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Determine values of unknowns using similarity and congruency."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.3.1.2",
+              "description": "Construct inscribed and circumscribed triangles and parallelograms with given dimensions",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.3.1.2.1",
+                  "description": "Draw inscribed and circumscribed circles for triangles under given conditions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Construct a triangle and locate the incentre."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw an inscribed circle in a triangle."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct a triangle and locate the circumcentre."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Draw a circumscribed circle for a triangle."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.2.2",
+                  "description": "Construct parallelograms (i.e. square, rectangle, rhombus) under given conditions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Perform geometric construction of a square with a given side."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct a square given a side and measure the diagonal."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Perform geometric construction of a square with a given diagonal."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Perform geometric construction of a rectangle with given side."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Perform geometric construction of a rectangle with a given side and diagonal."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Perform geometric construction of a parallelogram with given sides and given angle(s)."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Perform geometric construction of regular compound plane shapes with given sides and angles."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.2",
+          "title": "MEASUREMENT",
+          "description": "Surface area, vectors, and bearings.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B.9.3.2.1",
+              "description": "Derive the formulas for determining the surface area of prisms (i.e. cuboid and triangular prism) and use to solve problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.2.1.1",
+                  "description": "Identify cuboids and triangular prisms; draw their nets to construct the 3-D shapes and use it to determine the surface area",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sort out shapes that are triangular prisms and cuboids."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify nets of shapes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Measure and find the area of each section in the net to find surface area."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.2.1.2",
+                  "description": "Use the net of a cuboid to determine its surface area",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find the surface area of cuboids."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.2.1.3",
+                  "description": "Use the net of a triangular prism to determine its surface area",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find the surface area of triangular prisms."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.2.1.4",
+                  "description": "Express points in the Cartesian plane as position vectors",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identity the origin and position vectors."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw and write position vectors of points."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.3.2.2",
+              "description": "Solve problems involving bearings and addition/subtraction of vectors",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.3.2.2.1",
+                  "description": "Show an understanding of parallel vectors and perpendicular vectors",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Investigate conditions for parallel vectors and perpendicular vectors."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve questions involving parallel and perpendicular vectors."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.2.2.2",
+                  "description": "Apply the triangular and parallelogram laws of addition to resolve vectors",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Deduce the triangle law of vector addition."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Express vectors as column vectors, show isosceles property and find equations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Investigate the parallelogram law of vector addition."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Find vectors in a parallelogram and values of variables."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.3",
+          "title": "POSITION AND TRANSFORMATION",
+          "description": "Enlargement and its properties.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.3.3.1",
+              "description": "Demonstrate understanding of how to perform an enlargement on a geometrical shape given a scale factor and describe the properties of the image under the transformation (i.e. congruence, similarity, etc.)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.3.1.1",
+                  "description": "Know examples of situations in everyday life that depict enlargement situations in everyday life",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Know examples of situations that relate to enlargement situations in everyday life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.3.1.2",
+                  "description": "Understand enlargement and identify real-life situations involving enlargement",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw an enlargement of shapes using a given scale factor. State transformations mapping shapes. Investigate characteristics of enlargements under various scale factor conditions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine the scale factor in a transformation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.3.1.3",
+                  "description": "Investigate the concept of congruent and similar shapes",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Verify congruent and similar shapes using their properties on a coordinate plane."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.4",
+      "title": "HANDLING DATA",
+      "description": "Data collection, presentation, and analysis.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B9.4.1",
+          "title": "DATA",
+          "description": "Data collection methods, histograms, and descriptive statistics.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.4.1.1",
+              "description": "Select, justify, and use appropriate methods to collect data (grouped/ungrouped), use the data to construct and interpret frequency tables and histogram and use it to determine the mode and to solve and/or pose problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.1.1.1",
+                  "description": "Select and justify a method to collect data (quantitative and qualitative) to answer a given question",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and decide on data collection methods for given scenarios."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify which method to use for gathering facts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.1.2",
+                  "description": "Organise data (grouped/ungrouped) present it in frequency tables, line graphs, pie graphs, bar graphs and/or pictographs (representations include infographics, waffle diagrams, box and whisker plots and stem and leaf plots) and analyse it to solve and/or pose problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Present raw data in a frequency table."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine modal group. Use stem and leaf plots to display data and solve problems (range, mode, median)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use pictographs to answer questions and represent data with infographics."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.1.3",
+                  "description": "Use a histogram to determine the mode of a given data to solve and/or pose real life cases",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Construct frequency tables using different class intervals and draw a histogram to find the modal class."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.1.2",
+              "description": "Select, justify, and use appropriate methods of collecting data (quantitative and qualitative), organise and analyse the data (grouped/ungrouped) to interpret the results using the descriptive statistics (measures of central tendency and range)",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.1.2.1",
+                  "description": "Select a method for collecting data (quantitative and qualitative), taking into consideration how bias (use of language, ethics, cost, time and timing, privacy or cultural sensitivity) may influence data",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss bias in survey questions and suggest improvements."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Analyze influencing factors in surveys like time and bias."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify influencing factors and provide solutions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss ethics in data usage."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss culturally sensitive questions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.2.2",
+                  "description": "Organise and analyse data and interpret the results using the descriptive statistics (i.e. minimum, maximum, measures of central tendency and range) to answer a given question",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find minimum, maximum, range, mean, median, mode from data and make decisions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.2.3",
+                  "description": "Demonstrate the effect on the mean, median, and mode when extreme data is included in a data set",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate and compare mean, median, and mode when extreme values are added or changed."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.2",
+          "title": "CHANCE OR PROBABILITY",
+          "description": "Probability of dependent events.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.4.2.1",
+              "description": "Identify the sample space for a probability experiment involving two dependent events and express the probabilities of given events as fractions, decimals, percentages and/or ratios to solve problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.2.1.1",
+                  "description": "Perform a probability experiment involving two dependent events e.g. drawing coloured bottle tops from a bag without replacement",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List elements of sample space for picking items without replacement and discuss dependence."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.2.1.2",
+                  "description": "Express the probabilities of the events as fractions, decimals, percentages and/or ratios; e.g. using a tree diagram, table or another graphic organiser",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw probability tree diagrams and express probabilities."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Calculate probabilities of drawing cards without replacement."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

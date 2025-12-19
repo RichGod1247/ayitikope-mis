@@ -1,0 +1,440 @@
+{
+  "part": "4/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 3",
+      "subject": "English Language",
+      "name": "Basic 3 English Language",
+      "slug": "basic-3-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 3 English Language curriculum focuses on developing foundational skills in listening, speaking, reading, and writing. It adopts an integrated, thematic approach to help learners acquire effective communication skills, appreciate values, and develop core competencies like critical thinking and collaboration.",
+      "strands": [
+        {
+          "code": "B3.5",
+          "title": "Using Writing Conventions/Grammar Usage",
+          "description": "Applying grammar rules and conventions in writing and communication.",
+          "orderIndex": 5,
+          "subStrands": [
+            {
+              "code": "B3.5.1",
+              "title": "Using Capitalisation",
+              "description": "Using capital letters correctly in writing.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3.5.1.1",
+                  "description": "Apply knowledge of capitalisation in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.5.1.1.1",
+                      "description": "Use capital letters to write initials and abbreviations",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce initials and abbreviations in context."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Provide learners with sentences or texts containing initials and abbreviations for them to identify. e. g. WHO – World Health Organisation; K. S. Manu – Kofi Sakyi Manu"
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Give texts having full names of people and organisations."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Ask learners to rewrite the text and replace the full names of people and organisations with initials and abbreviations."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.5.1.1.2",
+                      "description": "Demonstrate the ability to capitalise titles of texts",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide sample varied stories and passages whose titles or headings have capital letters at the beginning of content words, e.g. “Ananse and the Wisdom Pot\"."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put learners into groups to study the titles/headings and discover the use of capital letters in context."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have groups present their observations."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Give learners titles/headings of stories or texts in lower case for them to re-write using capital letters at the beginning of content words."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.5.2",
+              "title": "Using Punctuation",
+              "description": "Applying punctuation marks in writing.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B3.5.2.1",
+                  "description": "Apply knowledge of the use of punctuation in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.5.2.1.1",
+                      "description": "Use full stops in initials and abbreviations",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise the use of the full stop (.)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Provide a short passage of about four sentences."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Pair learners place a full stop at the end of each sentence."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Introduce full stops in initials and abbreviations. e.g. Mr. Badu - Mister Badu, A. O. Boateng – Adom Opoku Boateng"
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Provide opportunities for learners to practise using full stops in initials of their names, and abbreviations."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.5.2.1.2",
+                      "description": "Use commas appropriately to list items",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Help learners to separate items in a list, using commas, e.g. My friend has a pen, pencil, eraser and a book."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.5.2.1.3",
+                      "description": "Identify and use the apostrophe to show possession",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce the apostrophe showing possession in context. e.g. Kofi's mother has travelled."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.5.4",
+              "title": "Using Action Words",
+              "description": "Using verbs to express actions and states.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B3.5.4.1",
+                  "description": "Apply knowledge of action words in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.5.4.1.1",
+                      "description": "Identify the present continuous form of action words in spoken and written communication",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Through demonstration, assist learners to use the continuous form of the action words such as running, eating and sitting. Provide sentences and let learners identify the continuous form of the action words: e.g. Adongo is running with the ball."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.5.4.1.2",
+                      "description": "Use the present continuous form of verbs to describe actions taking place at the time of speaking",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Through examples, assist learners to use the continuous forms of action words in sentences. e.g. Aba is singing. They are jumping."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Present action pictures for learners to write simple sentences about the actions taking place."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.5.4.1.3",
+                      "description": "Use simple past and the past continuous forms of verbs to express past actions",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise the use of the present simple and present continuous tenses."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Introduce the new form, one at a time, using examples and situations."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Provide examples for practice through drills and creation of situations."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.5.5",
+              "title": "Using Qualifying Words –Adjectives",
+              "description": "Using adjectives to describe people and things.",
+              "orderIndex": 5,
+              "contentStandards": [
+                {
+                  "code": "B3.5.5.1",
+                  "description": "Apply knowledge of adjectives in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.5.5.1.1",
+                      "description": "Identify and use adjectives in short sentences to describe height, length, etc",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide sentences with simple adjectives for learners to identify, e.g. I saw a tall tree."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put learners in groups to use the adjectives identified in simple sentences."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.5.6",
+              "title": "Using Qualifying Words – Adverbs",
+              "description": "Using adverbs to modify verbs.",
+              "orderIndex": 6,
+              "contentStandards": [
+                {
+                  "code": "B3.5.6.1",
+                  "description": "Show understanding of adverbs in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.5.6.1.1",
+                      "description": "Identify qualifying words",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide sentences with simple adverbs for learners to identify. e.g. i. He walked quickly to the church. ii. She danced beautifully."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Elicit other adverbs and provide practice."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.5.6.1.2",
+                      "description": "Use adverbs correctly to express time, frequency, etc.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners with examples and situations to use adverbs of time and frequency."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.5.7",
+              "title": "Using Simple Prepositions",
+              "description": "Using prepositions to indicate direction and means.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B3.5.7.1",
+                  "description": "Apply the knowledge of simple prepositions in oral and written communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.5.7.1.1",
+                      "description": "Identify prepositions in sentences to indicate directions and means, e.g. by bus",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide sample sentences. e.g. means -We are going home by bus. direction - The monkey is climbing up the tree."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Guide learners to discover the meaning of the sentences."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Draw learners’ attention to the words as prepositions."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners complete sentences with given prepositions that indicate means and direction. e.g. Mr. Badu is travelling ________ train."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.5.9",
+              "title": "Using Simple and Compound Sentences",
+              "description": "Understanding compound sentences.",
+              "orderIndex": 9,
+              "contentStandards": [
+                {
+                  "code": "B3.5.9.1",
+                  "description": "Demonstrate understanding of compound sentences in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.5.9.1.1",
+                      "description": "Identify and use coordinating conjunctions to join similar ideas or contrasting ideas in sentences",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Demonstrate the structure of a compound sentence by joining simple sentences with and. e.g. The boy woke up. The boy prayed. + And -> The boy woke up and prayed."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners identify the coordinating conjunction in the sentence."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Put learners in groups to form simple sentences."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have groups join the simple sentences with and and but."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.5.10",
+              "title": "Spelling",
+              "description": "Using phonics to spell words.",
+              "orderIndex": 10,
+              "contentStandards": [
+                {
+                  "code": "B3.5.10.1",
+                  "description": "Use phonics knowledge to spell words",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.5.10.1.1",
+                      "description": "Spell phonically irregular words correctly",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners play the Pick and Spell game to spell phonically irregular words. e. g. enough, answer, because, bought."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Dictate the words for learners to spell."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners use these words in oral and written sentences."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Provide sentences with blank spaces for learners to fill in the blanks using the words they have learnt to spell. e.g. bought, answer, because, enough etc. ii. I drink ------- water. iii. Your ................. is wrong. iv. I miss the class ..................... I was late. v. My father ................... chocolate."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.6",
+          "title": "Extensive Reading",
+          "description": "Building a culture of reading for pleasure and information.",
+          "orderIndex": 6,
+          "subStrands": [
+            {
+              "code": "B3.6.1",
+              "title": "Building the Love and Culture of Reading",
+              "description": "Encouraging independent reading habits.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3.6.1.1",
+                  "description": "Read widely for pleasure and demonstrate independent reading and learning in the literary area",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.6.1.1.1",
+                      "description": "Read a variety of age and level-appropriate books and summarise them",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Using the Author’s chair, introduce the reading/library time."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have a variety of age/level-appropriate books for learners to make a choice from."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Introduce narratives, expository, procedural texts to learners."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Guide learners to select books for readings."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

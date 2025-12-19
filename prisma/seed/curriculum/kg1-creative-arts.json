@@ -1,0 +1,623 @@
+{
+  "phase": "KG",
+  "level": "KG1",
+  "subject": "Creative Arts",
+  "name": "KG1 Creative Arts",
+  "slug": "kg1-creative-arts",
+  "orderIndex": 1,
+  "description": "The Creative Arts curriculum provides opportunities for learners to explore, understand, and express themselves through various media, methods, and techniques. It focuses on developing aesthetic perception, understanding design elements, and appreciating historical and cultural contexts through visual and performing arts.",
+  "strands": [
+    {
+      "code": "CA1",
+      "title": "MEDIA, METHODS, TECHNIQUES AND TECHNOLOGY",
+      "description": "Exploration and experimentation with tools and materials to create art.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "CA1.1",
+          "title": "Explore, understand and experiment creatively with variety of tools and materials",
+          "description": "Hands-on interaction with simple tools and materials.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA1.1.1",
+              "description": "Explore, understand and experiment creatively with variety of tools and materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA1.1.1.1",
+                  "description": "Handle and play with simple tools and materials freely with little guidance",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners use different writing tools (crayons, pencils) to draw a beautiful picture of themselves and colour it nicely."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In small groups, learners use glue and pieces of materials in the colours of the national flag to build a large collage of the Ghana Flag."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use clay or play dough to mould objects (e.g., fruits, farm tools, toys) and paint them once dry."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Provide learners with different materials such as straws and old calendars to cut and create beads. Cut old calendars, brown papers, and roll them using glues."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "CA1.1.2",
+              "description": "Observe real objects and familiar scenes and represent them through simple drawings.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "CA1.1.2.1",
+                  "description": "Draw simple classroom and household objects from observation.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Place real objects such as a cup, shoe, pencil and plant on a table and guide learners to look carefully and draw what they see."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Support learners to talk about the shapes, sizes and positions of the objects before and after drawing."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA1.1.2.2",
+                  "description": "Draw and talk about simple scenes from home and community.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to draw activities from their daily lives such as helping at home, going to school, playing with friends or visiting the market."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Invite learners to explain their drawings in their own words and display selected works on a classroom wall."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "CA1.2",
+          "title": "Plan and create collaborative artworks and simple patterns",
+          "description": "Working with others to design and produce large pictures and simple repeating patterns.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "CA1.2.1",
+              "description": "Work together to plan and create large pictures and simple patterns based on familiar experiences and cultural designs.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA1.2.1.1",
+                  "description": "Create a large collaborative picture (mural) based on a shared theme such as our school or community.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In small groups, learners work on a large sheet of paper to draw and colour different parts of a dream school or healthy community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Encourage learners to negotiate space, decide what to draw and respect each other’s ideas while working on the mural."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA1.2.1.2",
+                  "description": "Use local patterns such as kente and basket designs as inspiration to create simple repeating patterns.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show learners real or pictured examples of kente and other local patterns and help them identify repeated colours and shapes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to create simple repeating patterns on strips of paper using crayons or coloured pencils."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "CA1.3",
+          "title": "Use recycled materials and present artworks",
+          "description": "Using safe recycled materials to create artworks and talk about them.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "CA1.3.1",
+              "description": "Create artworks from safe recycled materials and present them in simple displays.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA1.3.1.1",
+                  "description": "Make collages and simple constructions from clean recycled materials.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide clean recycled materials such as cardboard, magazine pieces and fabric scraps and guide learners to make collage pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss how using recycled materials helps to reduce waste and care for the environment."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA1.3.1.2",
+                  "description": "Arrange and talk about their artworks in a mini classroom gallery.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Set up a simple gallery in the classroom and help learners display their drawings, paintings and collages neatly."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Encourage learners to talk about what they created and give positive comments about the work of others."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA2",
+      "title": "CREATIVE EXPRESSION THROUGH PRODUCTION AND MAKING",
+      "description": "Expressing ideas and feelings through visual and performing arts.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "CA2.1",
+          "title": "Design, make, exhibit, and respond to own or others art works (2-dimensional and 3-dimensional) freely",
+          "description": "Creating and discussing art works, music, and drama.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA2.1.1",
+              "description": "Design, make, exhibit, and respond to own or others art works (2-dimensional and 3-dimensional) freely",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA2.1.1.1",
+                  "description": "Demonstrate creative knowledge in making two and three-dimensional art works, music or drama",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Perform rhythmic action (e.g. clapping, stamping, snapping, etc.) using songs, words, etc. E.g. 'Head, shoulders, knees and toes'."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners choose their future jobs and draw themselves in the uniform of their aspired future job, colour it nicely and write the name of the job underneath."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play the responsibilities of family members or community leaders (e.g. chief, queen mother) using props like umbrellas and staffs."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners use improvised musical instruments to play their own music, accompanied by dance movements."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA2.1.1.2",
+                  "description": "Talk about how they made their art work, music or drama",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about what they have written or drawn with a friend sitting next to them in the classroom."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners describe the way they created their own pictures of sources of light or weather conditions."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "CA2.1.2",
+              "description": "Use body percussion and movement to respond to simple songs and rhythms.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "CA2.1.2.1",
+                  "description": "Use clapping, tapping and stamping to keep a steady beat while chanting or singing.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to keep a steady beat using claps, knee taps and gentle stamps while the teacher leads a simple rhyme."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA2.1.2.2",
+                  "description": "Move freely to music, changing movements when the tempo changes.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play or clap a slow and then a fast beat and help learners move more slowly or quickly to match the tempo."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "CA2.2",
+          "title": "Use drama to practise everyday situations and solve problems",
+          "description": "Acting out simple scenes from home and school, including conflict resolution.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "CA2.2.1",
+              "description": "Use simple drama activities to explore family and school roles and solve everyday problems.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA2.2.1.1",
+                  "description": "Act out simple home and school scenes using basic props.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In small groups, learners role play a parent, child and teacher showing respectful greetings and good manners."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA2.2.1.2",
+                  "description": "Use drama to show how to apologise and make peace after a conflict.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to dramatise a short story where friends quarrel over a toy, apologise and agree to share."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "CA2.3",
+          "title": "Express and communicate feelings through drama and performance",
+          "description": "Using voice, face and simple performances to share feelings and ideas.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "CA2.3.1",
+              "description": "Express feelings and ideas using voice, face and simple performances for familiar audiences.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA2.3.1.1",
+                  "description": "Act out simple feelings such as happy and sad using face, body and voice.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a simple feelings chart to help learners show and name feelings and explain why they feel that way."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA2.3.1.2",
+                  "description": "Present a short song, rhyme or movement piece to classmates or parents.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Prepare a short class performance where learners sing a simple song with actions to an audience of classmates or parents."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA3",
+      "title": "AESTHETIC PERCEPTION",
+      "description": "Deriving meaning and making judgments about artworks based on beauty and senses.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "CA3.1",
+          "title": "Derive meaning and make judgment about artworks using the senses according to its beauty.",
+          "description": "Observing and appreciating art in the environment.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA3.1.1",
+              "description": "Derive meaning and make judgment about artworks using the senses according to its beauty.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA3.1.1.1",
+                  "description": "Talk about art forms seen in the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Talk about the different parts of a book (front/cover page, back of a book) and relate the content to the illustrations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and talk about the illustration(s) that matched well with the print in a book."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Observe and talk about conversational posters depicting family, community places, or weather conditions."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA3.1.1.2",
+                  "description": "Asking and responding to questions about own and others art works; stating what they like and dislike about what they see",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners indicate the part of a story they liked most through art work."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw their favourite part of a book read to them and tell why."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Using positive language, have learners talk about their own drawing and that of others."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "CA3.1.2",
+              "description": "Relate stories and values to visual images and simple props.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "CA3.1.2.1",
+                  "description": "Use drawing to show ways of caring for the school and community.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After listening to a story, guide learners to draw themselves keeping the school or community clean or caring for plants and animals."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA3.1.2.2",
+                  "description": "Make simple props and pictures to support classroom drama and discussion.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Help learners create simple hats, name tags or signs from paper and recycled materials to use in short drama activities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "CA3.2",
+          "title": "Use creative arts to build caring classroom communities",
+          "description": "Designing simple visual messages about caring behaviours.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "CA3.2.1",
+              "description": "Design and display simple visual messages that promote caring behaviours in the classroom community.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA3.2.1.1",
+                  "description": "Create a simple class poster showing how learners care for one another and their classroom.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Support learners to draw and colour a class poster about sharing materials, helping friends and keeping the classroom tidy."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "CA3.3",
+          "title": "Reflect on personal growth through creative work",
+          "description": "Reviewing personal artworks and talking about progress.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "CA3.3.1",
+              "description": "Review and talk about personal creative work over time.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA3.3.1.1",
+                  "description": "Select and talk about favourite artworks in a simple personal portfolio.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sit with learners individually and look through a folder or box of their artworks, inviting them to choose a favourite and say what they learned from making it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA4",
+      "title": "ELEMENTS AND PRINCIPLES OF DESIGN",
+      "description": "Understanding and applying elements like colour, size, and shape.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "CA4.1",
+          "title": "Create and organize the elements of design according to the principles to create art forms",
+          "description": "Using design elements in art creation.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA4.1.1",
+              "description": "Create and organize the elements of design according to the principles to create art forms",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA4.1.1.1",
+                  "description": "Identify and describe objects by colour names and size",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and describe objects by colour names (red, yellow, green, etc.) and size (big, small, long, short)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sort and classify items (e.g., farm tools, domestic animals, shapes) based on colour and size."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the attributes of 3-D objects (e.g., stone, leaf, empty cans) and draw them."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA4.1.1.2",
+                  "description": "Make art works with the elements of art",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create their own simple classroom rules using simple pictures and different colours to design the rules."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Prepare posters with pictures cut from calendars and newspapers (e.g., cautioning people not to make the place dirty) using selected colours."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create a leaf album using different types of leaves pasted on cards."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA5",
+      "title": "HISTORICAL AND CULTURAL CONTEXT",
+      "description": "Connecting arts to history, culture, and society.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "CA5.1",
+          "title": "Demonstrate knowledge and skills of the visual and performing arts in relation to history, culture, environment and modern society",
+          "description": "Appreciating art in cultural and historical contexts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "CA5.1.1",
+              "description": "Demonstrate knowledge and skills of the visual and performing arts in relation to history, culture, environment and modern society",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "CA5.1.1.1",
+                  "description": "Identify, observe and talk about art in the immediate natural and manmade environment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and talk about the natural and artificial sources of light on a conversational poster depicting day and night."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about the beauty of different weather conditions (rainy, sunny, windy) using pictures."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA5.1.1.2",
+                  "description": "Identify and discuss art objects and performances (past and present) from other places in our culture/country",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Talk about the colours of the flags of other countries and other art work and music that they have."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Observe and talk about images, items and performances in artworks of everyday life, such as traditional festivals or religious worship."
+                    }
+                  ]
+                },
+                {
+                  "code": "CA5.1.1.3",
+                  "description": "Perform dance movements and music inspired by Ghanaian history other cultures",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sing and dance to traditional songs about food, festivals, or history in the locality."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play different musical instruments (rattle, shakers), clap and dance on the correct rhythm."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners listen to music on Ghanaian history (e.g. 'Hɛn ara asaase ni') and dance to it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

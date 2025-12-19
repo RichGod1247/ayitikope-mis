@@ -1,0 +1,191 @@
+{
+  "part": "4/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 1",
+      "subject": "English Language",
+      "name": "Basic 1 English Language",
+      "slug": "basic-1-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 1 English Language curriculum focuses on developing foundational skills in listening, speaking, reading, and writing. It adopts an integrated, thematic approach to help learners acquire effective communication skills, appreciate values, and develop core competencies like critical thinking and collaboration.",
+      "strands": [
+        {
+          "code": "B1.5",
+          "title": "Using Writing Convention/Grammar Usage",
+          "description": "Applying grammar rules and conventions in writing.",
+          "orderIndex": 5,
+          "subStrands": [
+            {
+              "code": "B1.5.5",
+              "title": "Using Qualifying Words - Adjectives",
+              "description": "Using adjectives to describe people and objects.",
+              "orderIndex": 5,
+              "contentStandards": [
+                {
+                  "code": "B1.5.5.1",
+                  "description": "Apply knowledge of adjectives in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.5.1.1",
+                      "description": "Identify adjectives and use them to describe self and other people",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners read level-appropriate texts describing people."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put learners in groups to discuss the texts read. Provide questions to help them identify the descriptive words."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners write simple sentences to describe themselves, using the descriptive words identified."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners write parallel sentences to describe their friends."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.5.7",
+              "title": "Using Simple Prepositions",
+              "description": "Using prepositions to indicate position.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B1.5.7.1",
+                  "description": "Apply knowledge of prepositions in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.7.1.1",
+                      "description": "Identify and use prepositions in oral and written language to indicate position",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "State the position of various classroom objects using simple prepositions."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Give sample sentences (on sentence cards) to learners. e.g. Mary is in the room. Aba is sitting on the chair."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners identify the words in, on, etc. as words that show position."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Pair up learners and have them use the prepositions identified in simple and meaningful sentences."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Let each learner write two sentences describing the position of objects in the classroom."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.5.10",
+              "title": "Spelling",
+              "description": "Using phonics to spell simple words.",
+              "orderIndex": 10,
+              "contentStandards": [
+                {
+                  "code": "B1.5.10.1",
+                  "description": "Use phonics knowledge to spell words",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.10.1.1",
+                      "description": "Identify and spell simple words correctly",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Help learners to write two letter words correctly e. g. go, so, in, on."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Using word cards, help learners to write three letter words correctly, e. g. see, low, bow."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.5.10.1.2",
+                      "description": "Fill in blank spaces in simple words",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide a passage with blank spaces and help learners to fill in the gaps or spaces with familiar two or three letter words."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.6",
+          "title": "Extensive Reading",
+          "description": "Building a culture of reading for pleasure and information.",
+          "orderIndex": 6,
+          "subStrands": [
+            {
+              "code": "B1.6.1",
+              "title": "Building the Love and Culture of Reading",
+              "description": "Encouraging independent reading habits.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B1.6.1.1",
+                  "description": "Read widely for pleasure and demonstrate independent reading and learning in the literary area",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.6.1.1.1",
+                      "description": "Read a variety of age - appropriate books and texts from print",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Using book tease or book talk, introduce the reading/ library time."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have a variety of age appropriate books for learners to make a choice from."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Introduce picture or wordless books, pop-up and flip-the-page texts to learners."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Encourage them to read individually and in pairs, and provide support and encouragement."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

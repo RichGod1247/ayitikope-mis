@@ -1,0 +1,521 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 9",
+  "subject": "Religious and Moral Education",
+  "name": "JHS 3 Religious and Moral Education",
+  "slug": "jhs-3-religious-and-moral-education",
+  "orderIndex": 1,
+  "description": "The JHS 3 Religious and Moral Education curriculum focuses on the purpose of God's creation, environmental stewardship, religious festivals, social cohesion, women in religious leadership, ethics concerning rewards, punishment and repentance, and the profitable management of time and leisure.",
+  "strands": [
+    {
+      "code": "B9.1",
+      "title": "GOD, HIS CREATION AND ATTRIBUTES",
+      "description": "Understanding the purpose of creation and environmental stewardship.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B9.1.1",
+          "title": "THE PURPOSE AND USEFULNESS OF GOD'S CREATION",
+          "description": "Exploring the utility and complexity of creation.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9 1.1.1",
+              "description": "Describe and explain the purpose and usefulness of God's creation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9 1.1.1.1",
+                  "description": "Identify the purpose and usefulness of God's creation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to recall the creation stories they learned at B8. With Think-Pair Share, learners recollect lessons learned from the creation stories."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the purpose and usefulness of God's creation. E.g. Humankind - to serve/worship God, care for other creatures (stewardship); Animals - security, companionship, food, clothing; Plants - food, medicine, shelter, beautification; Water bodies - food, transportation, irrigation, electricity, domestic and industrial use; Heavenly bodies - light, energy, time and seasons."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 1.1.1.2",
+                  "description": "Explain how the complex nature of things created by God reveals His nature",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners brainstorm on how creation reveals God's complex nature. E.g. There is design in nature as can be seen from changes in seasons and what is done in each season, and the beauty in nature (flowers, birds, rivers etc.). These show God as a planner and designer. All things created depend on each other for survival. This shows the caring nature of God."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, learners discuss what the world would be like without key elements of God's creation and present it in class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.2",
+          "title": "THE ENVIRONMENT",
+          "description": "Caring for the environment and understanding indigenous preservation methods.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9 1.2.1",
+              "description": "Explain why it is important to care for the environment and how to do so",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9 1.2.1.1",
+                  "description": "Describe human activities that destroy the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Take learners on a nature walk. Learners to observe and note down human activities that destroy the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners look at pictures and video on the negative effects of human activities on the environment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Based on findings from the nature walk and the video/pictures learners identify human activities that destroy the environment. E.g. Illegal tree felling, Illegal sand winning, Illegal mining, Bush burning, Over grazing, Over hunting, Water pollution, Weeding around water bodies, Improper fishing methods."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss how the above human activities destroy the environment. E.g., Illegal tree felling leads to the removal of the forest cover, thereby exposing land to direct sunshine and erosion; Illegal mining destroys water bodies and poisons fishes; Ploughing/weeding around water bodies exposes them to evaporation; All these lead to climate change."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Debate on the motion 'The benefits of tree felling outweigh the negative effects.'"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.2",
+                  "description": "Identify and describe how indigenous Ghanaian culture helps in taking care of the environment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify aspects of the environment in learners' locality regarded as sacred, and the rationale behind it."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss indigenous Ghanaian understanding of the environment: Humans live in a religious environment related to God, gods, and ancestors. Land has a spiritual part (Asase Yaa/Afua/Nyibgla). Water bodies like the sea, lagoons, lakes, and rivers are revered. Animals have totemic relations. Heavenly bodies and forests are associated with the divine."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the importance of the environment: Aspects of nature are revered; Trees around water bodies are not felled; Hunting is not allowed in sacred forests; Days and seasons are set aside where fishing and farming are restricted."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 1.2.1.3",
+                  "description": "Discuss reasons for taking care for the environment",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate ways of protecting the environment: Reforestation, Proper farming practices, Proper disposal of waste, Proper mining practices."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain why indigenous Ghanaians take care of the environment: God reveals Himself through it, Humans are related to it, gods reside in nature, Humans depend on it for survival."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Dramatise how to apply lessons from indigenous Ghanaian attitudes towards the environment."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.2",
+      "title": "RELIGIOUS PRACTICES",
+      "description": "Understanding the significance of religious festivals.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B9.2.1",
+          "title": "RELIGIOUS FESTIVALS",
+          "description": "Types, activities, and relevance of festivals.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9 2.1.1",
+              "description": "Understand the relevance of, and the need to participate in, religious festivals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9 2.1.1.1",
+                  "description": "State the meaning and types of festivals",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Brainstorm and explain the meaning of festivals as special occasions for rituals, thanksgiving, and remembrance."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and explain the types of festivals in Ghana: Agricultural Festivals (e.g. Bakatue, Yam Festival), Ancestral/Historical Festivals (e.g. Odwira, Bugumchugu, Hogbetsotsoza, Christmas, Eid-Adha)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 2.1.1.2",
+                  "description": "Describe the activities in festivals celebrated in the three main religions in Ghana",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the acts of preparation towards the celebration of festivals in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "List and explain the preparatory acts (e.g. ban on noise making, cleaning)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the main activities in the festivals: Family re-union, Exchange of gifts, Public worship."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Dramatise the main activities that take place in one festival."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 2.1.1.3",
+                  "description": "Identify and explain the social, religious and moral relevance of festivals in the three main religions and relate them to daily life",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explain the importance of festivals. Social: unity, development; Religious: relationship with God/ancestors, thanksgiving; Moral: remembrance of exemplary lives, sharing with the needy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners dramatise how they apply religious and moral lessons from festivals in their daily life."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.3",
+      "title": "THE FAMILY AND THE COMMUNITY",
+      "description": "Promoting religious tolerance and peaceful co-existence.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B9.3.1",
+          "title": "RELIGION AND SOCIAL COHESION",
+          "description": "Strategies for peaceful co-existence among different religions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9 3.1.1",
+              "description": "Identify and apply ways people with different religions can co-exist peacefully",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9 3.1.1.1",
+                  "description": "Identify and explain examples of tolerant and intolerant communities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures or video clips on tolerant and intolerant communities."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss characteristics of the two communities. Tolerant: peaceful relationships, development, inter-religious marriages. Intolerant: quarrels, mistrust, poor development."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 3.1.1.2",
+                  "description": "Explain reasons why religious intolerance occurs and their effects on society and the individual",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, learners identify the causes of religious intolerance (e.g. not learning about others' religion, undermining beliefs, bias, political parties along religious lines) and its effects (e.g. wars, destruction of life/property, hatred)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 3.1.1.3",
+                  "description": "Identify and explain ways in which people with diverse religious backgrounds can live peacefully",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, talk about ways people with diverse religious backgrounds can live peacefully. E.g. learn about each other's religion, respect, tolerance, participate in ceremonies."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the need for people of diverse religious backgrounds to live in harmony: prevents conflict, ensures development, respects rights."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.4",
+      "title": "RELIGIOUS LEADERS AND PERSONALITIES",
+      "description": "Contributions of women in religion and leadership.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B9.4.1",
+          "title": "WOMEN IN RELIGION AND LEADERSHIP POSITIONS",
+          "description": "Roles and contributions of key women in religions and society.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9 4.1.1",
+              "description": "Recognise leadership role of women in society",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9 4.1.1.1",
+                  "description": "Discuss the contributions of key women in the three major religions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify key women (e.g. Deborah, Mary, Khadijah, Aisha, Okomfo Oparebea, Yaa Asantewaa) and describe their roles (e.g. intercession, financing, protection, leadership)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 4.1.1.2",
+                  "description": "Discuss how to apply the moral lessons from the lives of these women in daily life",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the role played by these women: Medium used by God, Helped in spread of religion, Provided assistance, Helped protect people."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In three groups, learners make a skit to demonstrate the life of a woman from each of the three religions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 4.1.1.3",
+                  "description": "Identify and explain the contributions of women to the development of Ghana",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners brainstorm to identify key women and their contributions in national development across Politics, Legal/Judicial, Education, Health, Sports, and Agriculture."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create a poster about a woman who has had a prominent role in the development of Ghanaian society."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.5",
+      "title": "ETHICS AND MORAL LIFE",
+      "description": "Concepts of reward, punishment, and repentance.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B9.5.1",
+          "title": "REWARD, PUNISHMENT AND REPENTANCE",
+          "description": "Consequences of deeds and the process of repentance.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9 5.1.1",
+              "description": "Demonstrate an understanding that good deeds attract reward but bad deeds attract punishment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9 5.1.1.1",
+                  "description": "Describe the basis for good deeds and reward",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain \"good deeds\" (desirable actions) and \"reward\" (incentives)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify acts considered as good deeds (e.g. assisting elderly, relinquishing seat)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the need for performance of good deeds: service to humankind is service to God, draws us closer to God."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify and explain types of rewards (e.g. verbal appreciation, commendation, physical rewards)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the importance of rewarding people (encouragement, ensuring hard work)."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Act a play on the theme 'good deeds have rewards.'"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.1.1.2",
+                  "description": "Identify and explain acts that attract punishment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain \"bad deed\" (traits attracting negative reaction) and \"punishment\" (sanctions)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify acts considered as bad deeds (e.g. lying, stealing, disobedience)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Mention types of punishment (e.g. reprimanding, corporal punishment, imprisonment)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "State and explain reasons for punishment (reformation, retribution, deterrence, protection, maintenance of law)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Project Work: Research a person punished for a bad deed and explain moral lessons."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 5.1.1.3",
+                  "description": "Outline the stages of repentance",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain repentance: remorseful realisation and resolve not to repeat misconduct."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify stages of repentance: Realisation and acceptance of fault, regret, request for pardon, promise not to repeat."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the importance of repentance: promotes good relationship, draws humankind to God, reliefs conscience."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the story of the prodigal son to dramatise the need for repentance, forgiveness and reconciliation."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.6",
+      "title": "RELIGION AND ECONOMIC LIFE",
+      "description": "Managing time and leisure profitably.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B9.6.1",
+          "title": "TIME AND LEISURE",
+          "description": "Meaning and management of time, leisure, and idleness.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9 6.1.1",
+              "description": "Develop skills in managing time profitably",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9 6.1.1.1",
+                  "description": "Explain the meaning of the terms \"time\", \"leisure\" and \"idleness\"",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through Think-Pair-Share explain \"time\" (duration of events), \"leisure\" (break from work for hobbies), and \"idleness\" (whiling away time)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 6.1.1.2",
+                  "description": "Demonstrate how to plan and use time wisely",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and discuss teachings of the three religions on time (e.g. Ecclesiastes 3:1, Qur'an 103, African proverbs on planning)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Prepare a personal comprehensive timetable and assess compliance."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 6.1.1.3",
+                  "description": "Explain the need for leisure",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss how to use leisure profitably (sports, reading, gardening, tourism)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the need for leisure: Relaxation, recovery of energy, reflection, meditation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Prepare personal programmes for hobbies and out of school activities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

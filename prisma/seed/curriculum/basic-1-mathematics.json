@@ -1,0 +1,643 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 1",
+  "subject": "Mathematics",
+  "name": "Basic 1 Mathematics",
+  "slug": "basic-1-mathematics",
+  "orderIndex": 1,
+  "description": "The Basic 1 Mathematics curriculum focuses on developing number sense (0-100), basic operations (addition and subtraction), understanding fractions (halves), identifying coins, recognizing patterns, analyzing shapes, measuring using non-standard units, and organizing data. It aims to build critical thinking and problem-solving skills through hands-on activities.",
+  "strands": [
+    {
+      "code": "B1.1",
+      "title": "NUMBER",
+      "description": "Develop number sense, understanding of operations, fractions, and money.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B1.1.1",
+          "title": "Number: Counting, Representation, Cardinality & Ordinality",
+          "description": "Counting, reading, writing, and comparing numbers up to 100.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.1.1.1",
+              "description": "Describe numbers and the relationship between numbers 0 to 100",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.1.1.1",
+                  "description": "Use number names, counting sequences and how to count to find out \"how many?\"",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Count by 1s (forwards and backwards) between two given numbers between 0 and 100; or by 2s and 10s; Identify and correct errors or omissions in counting or skip counting sequences"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Count to answer \"how many?\" questions about as many as 100 objects arranged in a line, a grid or a circle; Show that the count of a group of up to 100 objects does not change regardless of the order in which the objects are counted or the arrangement of the objects"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Estimate the number of objects in a small group (up to 100) and describe the estimation strategy used; Select an appropriate estimate among all those given for a group of up to 100 objects and justify the choice"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Represent the number of objects in a group with a written numeral 0 to 100. Use ordinal numbers to describe the position of objects up to 10th place"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.1.1.2",
+                  "description": "Identify numbers in different positions around a given number (0-100)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display a number chart with numbers multiples of say 4 between 0 and 100 and have learners identify numbers in different positions around a given number. Put learners in convenient groups and give each group a number grid and have them identify numbers in different positions around a chosen number."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.1.1.3",
+                  "description": "Use number names and non-standard units for measuring (lengths and volumes) to count to find out \"how long or how much?\"...up to 100",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners use their feet, hand-span and referent materials to find how long a table, window and door frames are etc., by counting the number of times their feet, hand-span and referent materials are able to do this"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Have learners use empty containers such as bottles, cups etc. to determine the capacity of other bigger containers by counting to find how much (the number of times) the bottles, cups etc. are able to do this"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.1.1.4",
+                  "description": "Use comparative language to describe the relationship between quantities/numbers up to 100 using place value and the number line",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use 1-to-1 correspondence or matching to solve problems that involve comparing 2 sets having between 0 to 100 objects and explain how he/she solved the problem (finding which set has more or less, which groups have the same as)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the terms \"more than\", \"less than\" or \"the same as\" when comparing two groups having between 0 to 100 objects"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put groups between 1 to 50 objects in increasing or decreasing order and justify his/her answer or explain what he/she did to find the answer"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify numbers and groups of objects that are 1 more or less than a number (for numbers 0 to 100)"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use the number line to compare and order whole numbers from 0 to 100"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.1.1.5",
+                  "description": "Represent the comparison of two numbers up to 100 using symbols \">, < or =\"",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the terms \"more than\", \"less than\" or \"the same as\" when comparing two numbers between 1 to 50."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the symbols \">\", \"<\" or \"=\" when comparing two numbers between 1 to 50"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.1.1.6",
+                  "description": "Describe the relationship between quantities/numbers up to 100",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use one-to-one correspondence, matching or counting to identify whether the number of objects in one group of up to 20 objects is greater than, less than or equal to the number of objects in another; describe the relationship between the two groups or numerals using the terms greater than, less than, or equal to"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Build a group that has more than, less than, or the same number as a given set"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Order groups of 1 to 20 objects and then a small set of numerals between 1 and 20, and justifying the arrangement"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe the relative size of numbers up to 100 (i.e., say whether one number is a lot or a little bigger or smaller than another, or 5 more than another number)"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Place given numerals between 0 and 50 on a number line that has 0, 5, 10 and 20 indicated as benchmarks"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Act out and solve problems (pictures and words) that involve comparing quantities (i.e., Johnson has 3 mangoes, Adwoa has 7. what can you say?)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.2",
+          "title": "Number Operations (Addition, Subtraction, Multiplication and Division)",
+          "description": "Developing conceptual understanding of addition and subtraction strategies up to 20.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.1.2.1",
+              "description": "Develop a conceptual understanding of addition and subtraction",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.2.1.1",
+                  "description": "Demonstrate understanding of addition as joining and finding how many altogether and subtraction as separating and finding how many left; numbers 0 to 20",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Acting out a given story problem presented orally. For instance, Sena has 8 bottle caps. She takes 5 more bottle caps from Kofi. How many bottle caps does Sena now have? Kojo has 15 pencils. He gave 7 to Ato. How many pencils are left?"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Indicating if the scenario in a story problem represents an addition or a subtraction and justifying the answer"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Creating a story problem for subtraction or addition or for a given number sentence (+ and - within 20)"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.1.2.2",
+              "description": "Demonstrate an understanding of the concept of equality",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B1.1.2.2.1",
+                  "description": "Use objects and pictorial models to solve word problems involving joining, separating and comparing sets within 20 and unknowns as any one of terms in problems",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explaining that = means \"the same as\""
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identifying if two quantities or groups of objects are equal or not and justifying answers"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Using the symbol = to record equal relationships"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Representing a pictorial or concrete equality in symbolic form (e.g., represent pictorials as 3 + 2 = 5)"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use a symbol to represent the unknown in an addition or subtraction statement."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.2.2.2",
+                  "description": "Use relationship between addition and subtraction to demonstrate understanding of equality for numbers within 20",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate an understanding of the relationship between addition and subtraction by: transforming a subtraction as an equivalent addition and vice versa (For example, subtracting eight from 10 (10 - 8) is the same as identifying the number that must be added to 8 to make 10)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.2.2.3",
+                  "description": "Generate and solve word problem situations when given a number sentence involving addition and subtraction of numbers within 20",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write addition and subtraction problems, learners in their groups discuss and generate word problems to match the number sentences"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.1.2.3",
+              "description": "Demonstrate fluency with addition and subtraction-relationships",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B1.1.2.3.1",
+                  "description": "Use strategies for solving basic addition facts (and related subtraction fact) to 10.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Naming the number that is 1 more, 2 more, 1 less, or 2 less than a number given by the teacher or another pupil (for numbers up to 20 only)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Naming the double of a number to 10"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identifying 10 more or less than a number between 0 and 20, and eventually between 0 and 100"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identifying combinations to 5 or 10 (i.e., given a number, quickly identify how many more must be added to get 5 or 10)"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.1.2.4",
+              "description": "Apply strategies for adding and subtracting to 20",
+              "orderIndex": 4,
+              "indicators": [
+                {
+                  "code": "B1.1.2.4.1",
+                  "description": "Use counting on, counting down and missing addend strategies for adding and subtracting within 20",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Relating counting to addition (i.e., recognizing that adding 2 is the same as counting on 2)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Counting on (i.e., for 5 + 3, start at 5 and count on 3 places... 6, 7, 8. The answer is 8.)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "\"Making 10s\" (i.e., if 7 + 2 + 3, do 7 + 3 = 10 first then add 2. The answer is 12. Or if given 7 + 2 + 3, change the order of the addends to 7 + 3 + 2 to produce combinations that add to 10)"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "\"Making doubles\" (i.e., if 5 + 4 do 4 + 4 = 8 then add 1. The answer is 9. Or if given 6 + 7 change question to 6 + 6, which give 12 then add 1. The answer is 13)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Relating subtraction to counting down (i.e., Recognizing that subtracting 3 is the same as counting down 3) (i.e., for 15 - 3, start at 15 and count on 3 places... 14, 13, 12. The answer is 12.)"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Relating subtraction to comparison or finding the difference (Recognizing that subtracting 5 from 8 is the same as '5 is how many less than 8; or '8 is how many more than 5)"
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "\"Using addition to subtract\" or re-writing as addition sentence and finding the missing addend"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.2.4.2",
+                  "description": "Solve one-step word problems involving addition and subtraction within 20 using a variety of strategies",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a variety of strategies (objects, drawings, mental strategies, counting on, doubles etc.) to solve addition word problems to 20 involving adding to, putting together - and with unknowns in all positions. E.g., Ama has 10 mangoes and receives 3 more mangoes. How many mangoes does she have altogether?"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use a variety of strategies (objects, drawings, mental strategies, counting down, etc.) to solve subtraction word problems to 20 involving taking from, taking apart and comparing - and with unknowns in all positions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.3",
+          "title": "Fractions",
+          "description": "Understanding halves using concrete and pictorial representations.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B1.1.3.1",
+              "description": "Develop an understanding of halves using concrete and pictorial representations [Exclude notation here]",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.3.1.1",
+                  "description": "Understand the fraction one-half as the quantity obtained by taking 1 part when a whole is partitioned into two equal parts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use concrete objects to explain the fraction half as the quantity obtained by taking 1 part when a whole object is partitioned into two equal parts"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use pictorial representations to explain the fraction half as the quantity obtained by taking 1 part when a whole object is partitioned into two equal parts"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use pictorial representations to help learners sort fractions into those that are halves and those that are not halves"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.3.1.2",
+                  "description": "Count in halves using concrete and pictorial representations of halves",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show several halves of concrete objects (like half oranges, half piece of stick, half piece of card, etc. and have them count them in halves (using the language one-half, two-halves, three-halves, etc.)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show learners several pictorial representations of halves and have them count (using the language one-half, two-halves, three-halves, etc.)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.4",
+          "title": "Money",
+          "description": "Identifying coins and understanding their relationships.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B1.1.4.1",
+              "description": "Identify coins, their values and the relationships among them in order to recognize the need for monetary transactions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.4.1.1",
+                  "description": "Recognise Ghanaian coins by name, including one pesewa, five pesewas, ten pesewas, twenty pesewas, fifty pesewas and one cedi by value and describe the relationship among them",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display the various coins currently being used for transaction in Ghana and initiate discussion on the need for monetary transaction. Learners touch feel and say the features of each coin"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Introduce the one pesewa, five pesewas, ten pesewas, twenty pesewas, fifty pesewa and guide learners learn to identify and recognize the money by name and value"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "State the relationship between 2p and 10p; 5p and 10p; 2p and 20p; 1p and 1 cedi, 10p and 1 cedi"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.2",
+      "title": "ALGEBRA",
+      "description": "Recognizing, creating, and extending patterns.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B1.2.1",
+          "title": "Patterns and Relationship",
+          "description": "Working with non-numerical and simple numerical patterns.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.2.1.1",
+              "description": "Recognize, create, extend and describe non-numerical and simple numerical patterns.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.1.1.1",
+                  "description": "Demonstrate an understanding of repeating patterns with 2 to 4 repeating elements",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identifying, duplicating, extending or creating a simple number patterns (1, 2, 3, 4, 1, 2, 3, 4...) with 2 to 4 repeating elements, shape patterns with 2 to 4 repeating elements, sound with 2 to 4 repeating elements, or action patterns with 2 to 4 repeating elements."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identifying and describing errors or missing elements in number, shape, sound or action patterns with 2 to 4 repeating elements"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Representing a repeating sound or number pattern as shape pattern or vice versa"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identifying and describing patterns in and outside the classroom (in a song, in a fabric, etc.)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.3",
+      "title": "GEOMETRY AND MEASUREMENT",
+      "description": "Analyzing shapes, describing position, and measuring length, mass, and capacity.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B1.3.1",
+          "title": "2D and 3D Shapes",
+          "description": "Identifying and describing attributes of shapes.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.3.1.1",
+              "description": "Analyse attributes of two-dimensional shapes and three-dimensional objects to develop general concept about their properties",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.1.1.1",
+                  "description": "Distinguish between attributes that define a two-dimensional figure or three-dimensional figure and attributes that do not define the shape",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify 2D shapes (triangles, squares, rectangles, circles) on the surfaces of 3D objects in the classroom or beyond; Identify what features define a shape or an object and other features"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sort a given set of 2D shapes and 3D objects using a given single feature or criteria and explain the sorting rule; Describe the difference between two given pre-sorted sets"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify 3D objects in the environment that have parts similar to a given 2D shape"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Create a composite 2D shape from 2D shapes and describe it"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.3.1.1.2",
+                  "description": "Identify three-dimensional shapes, including spheres, cylinders, rectangular prisms (including cubes), and triangular prisms and describe their attributes using formal geometric language",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sort a given set of 3D shapes using a given single feature or criteria (size, shape, etc.) and explain the sorting rule"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the difference between two given pre-sorted sets of familiar 3D shapes and the feature"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.3.1.1.3",
+                  "description": "Identify two-dimensional shapes, including circles, triangles, rectangles and squares as special rectangles, rhombuses and hexagons and describe their attributes using formal geometric language",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sort a given set of 2D shapes using a given single feature or criteria (size, shape, etc.) and explain the sorting rule"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the difference between two given pre-sorted sets of familiar 2D shapes and the feature"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.3.2",
+          "title": "Position /Transformation",
+          "description": "Describing position in space.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.3.2.1",
+              "description": "Describe the position of objects in space",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.2.1.1",
+                  "description": "Tell the position of objects relative other objects in space using words such above, below, to the right etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners tell their sitting position relative to other children in the classroom. For example, Yaw is on the third line (row), three places from Ama and to the left of Kwesi"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.3.3",
+          "title": "Measurement - Length, Mass and Capacity",
+          "description": "Comparing items using non-standard measures.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B1.3.3.1",
+              "description": "Demonstrate an understanding of Measurement",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.3.1.1",
+                  "description": "Develop an understanding of measuring as a process of comparing pairs of items using words such as smaller, longer, thinner, heavier, bigger etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners bring together pairs of objects on the same flat surface to compare to find out which is taller"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.4",
+      "title": "Data",
+      "description": "Organizing, representing, and interpreting data.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B1.4.1",
+          "title": "Data Collection, Organisation, Interpretation, Presentation and Analysis",
+          "description": "Organizing and representing data with up to three categories.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.4.1.1",
+              "description": "Organise, represent and interpret data",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.4.1.1.1",
+                  "description": "Organise and represent (using pictures/objects) data with up to three categories.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have a picture of learners in front of the class and ask the learners to use two different pictures/objects to represent the number of males and females. Repeat with pictures of animals"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using a one-to-one correspondence to solve simple problems (i.e. how many altogether, how many more or less) problems requiring interpretation of the concrete representation of pictures"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.4.1.1.2",
+                  "description": "Organise a given set of data into three categories, find the total number of data points and determine how many are in each category and compare the number in any two category",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners use tally charts with data relevant to their daily lives (e.g. favourite drinks, eye colour, pets etc) to analyze and compare data in a picture graph"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners construct pictures graphs in groups as well as individually based on data given them"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

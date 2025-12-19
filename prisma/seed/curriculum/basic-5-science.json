@@ -1,0 +1,1278 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "Science",
+  "name": "Basic 5 Science",
+  "slug": "basic-5-science",
+  "orderIndex": 1,
+  "description": "The Basic 5 Science curriculum deepens learners' understanding of the diversity of matter, including life processes, classification of materials, and mixtures. It covers natural cycles like day and night, the solar system, and the hydrological cycle. Systems such as the human respiratory system and ecosystems are explored. Forces and energy concepts include energy transformation, heat, and electricity conservation. The curriculum also addresses personal hygiene, diseases like chicken pox and cholera, science in industry, and the impact of deforestation on climate change.",
+  "strands": [
+    {
+      "code": "B5.1",
+      "title": "DIVERSITY OF MATTER",
+      "description": "Exploring life processes, classification of materials, and mixtures.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5.1.1",
+          "title": "LIVING AND NON-LIVING THINGS",
+          "description": "Understanding life processes and classifying living and non-living things.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.1.1.1",
+              "description": "Understand the physical features and life processes of living things and use this understanding to classify them",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.1.1.1",
+                  "description": "Know the life processes of living things (growth, sensitivity to the environment, respiration and excretion)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners go outside the classroom to observe and identify various living and non-living things and discuss their observation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Engage learners to watch pictures or animated videos of different living things (e.g. birds, insects, trees, reptiles, mammals, etc.) and comment on them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners to identify the names of the living things from the video."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use relevant examples and illustrations to demonstrate or explain sensitivity, respiration and excretion as life processes."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners go on a nature walk to observe sensitivity in the mimosa plant when touched."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Assist learners to understand growth by observing a seedling and a mature plant of the same kind."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners breathe air in and out to demonstrate respiration."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "NB: Plants show movement within their parts and animals move from place to place."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Project: Learners plant a seed and observe its growth pattern."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.1.2",
+              "description": "Demonstrate understanding of the differences between living things, non-living things, and things which have never been alive",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.1.1.2.1",
+                  "description": "Compare the differences among things that are living, dead and things that have never been alive",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Assemble living things (e.g. plants, insects, etc.), non-living things (e.g. firewood, pencils, paper, etc.) and things that have never lived (rocks, soil, water, etc.) for class activities. NB: Wear protectives when gathering specimen."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners observe and comment on the samples."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners, in an activity, classify the provided specimen as (1) Things that are alive (2) Once alive or (3) Never been alive."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners are guided to compare the differences among things that are alive, once alive or never been alive."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners explain why they (learners) are classified as living things."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.2",
+          "title": "MATERIALS",
+          "description": "Classifying materials based on properties and states, and understanding mixtures.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.1.2.1",
+              "description": "Recognise materials as important resources for providing human needs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.2.1.1",
+                  "description": "Classify everyday materials based on their properties (soft, hard, rough, smooth, opaque, transparent and bendable)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners are asked to collect and bring a variety of everyday materials from the home, school and community. Examples should include cotton wool, pieces of cloth, pieces of paper, cardboard, wood, plastics, polythene bags (coloured and transparent), soil samples, marbles (rough and smooth) chalk, crayon, pen and straw."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners are assisted to sort and group the materials based on texture (hard or soft), and size (big or small)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate by assisting learners to group materials into those that we can see through (transparent) and those that we cannot see through (opaque)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners sort the materials into those that can bend and those that cannot bend."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners feel and draw materials that are hard, soft, smooth, etc."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners are tasked to display their drawings in class for discussion."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Learners are assisted to know that the properties of a given material enable it to be used for making certain products, e.g. clay is used for making pots because it can be moulded without breaking. raffia palm is used in basketry because it can bend easily."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Learners work in groups to classify different materials based on various similarities and differences."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Project: Learners use different materials to create new items such as paper fans, toy cars, toy planes, cooking pans, hats and earthenware pots and bowls and exhibit their work."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.2.2",
+              "description": "Know that substances can exist in different physical states (solid, liquid, gas). Many substances can be changed from one state to another by heating or cooling",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.1.2.2.1",
+                  "description": "Know that some changes are reversible, while others cannot be reversed",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide substances such as candle wax, shea butter, water, paper and a source of heat."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups learners undertake the following activities (e.g. melting of candle wax, melting of ice, melting of shea butter, heating of water, crumpling of paper, melting of plastics, burning of paper, burning of wood, etc.)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners, in their groups, talk about their observations."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assist learners to classify the activities as (1) lead to the formation of a new thing, (2) no new thing formed."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Assist learners to understand that changes where no new thing is formed are reversible, while changes where new things are formed are usually not reversible."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "NB: Hazardous chemicals and solutions should not be used."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.1.2.3",
+              "description": "Understand mixtures, the types, formation, uses and ways of separating them into their components",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.1.2.3.1",
+                  "description": "Demonstrate formation and separation of mixtures (solid-liquid and liquid-liquid mixtures)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display some solid and liquid substances for learners to observe, e.g. water, common salt, vinegar, sugar, sand, cooking oil and soft drinks."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Put learners in groups and ask them to add each of the substances to a separate quantity of water whilst stirring and observe what happens."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners describe the material combinations they have produced, i.e. as solid-liquid mixture, liquid-liquid mixture or a solution."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners find out the difference between a mixture of sand and water and a mixture of salt and water."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners also differentiate between the mixture of water and soft drink and the mixture of water and cooking oil."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Put learners into groups to demonstrate how to recover the salt from the salt solution."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Assist learners to separate different solid-liquid mixtures and liquid-liquid mixtures using separation methods such as filtration, evaporation, sieving and use of separating funnel."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Project: Separation of solid- liquid mixture. Learners separate a mixture of sand and water using appropriate materials."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "NB: Improvised separation equipment can be used to effectively separate various mixtures."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.2",
+      "title": "CYCLES",
+      "description": "Investigating Earth science and life cycles.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5.2.1",
+          "title": "EARTH SCIENCE",
+          "description": "Understanding day/night, sun-earth relationship, water cycle, carbon/nitrogen cycles, and natural resources.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.2.1.1",
+              "description": "Recognise that some events in our environment occur recurrently",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.1.1.1",
+                  "description": "Know how day and night are formed",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Assemble materials such as polystyrene (plastic) balls, football, ice-cream stick, torch, pen and globe."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners are assisted to understand the terms, rotation and axis using a ball."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain how the motion of the earth causes day and night, with the aid of a globe."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners observe a demonstration of day and night, using appropriate materials, e.g. globe of the earth, blu tac, and lamp without shade and a dark room."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners, in their groups, demonstrate the formation of day and night using, polystyrene balls, ice-cream stick, torch, pen and globe."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners explain how day and night come about and draw diagrams to represent their work."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.1.2",
+              "description": "Recognise the relationship between the earth and the sun",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.2.1.2.1",
+                  "description": "Describe the benefits of the sun to the earth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Put learners into groups to discuss the benefits the earth derives from the sun."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners, in their groups, present their findings. These may include the following; the sun provides warmth to the earth, light for plants to grow well, provides day and night cycles and energy."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners brainstorm on what will happen if there was no sun."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Project: Importance of the sun to plant growth. Learners demonstrate the importance of sunlight to the growth of plants."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.1.3",
+              "description": "Show understanding of the roles of condensation, evaporation, transpiration and precipitation in the hydrological (water) cycle",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B5.2.1.3.1",
+                  "description": "Demonstrate evaporation and condensation as important processes of the hydrological (water) cycle",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners recite poems and rhymes involving the environment and water."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, learners demonstrate evaporation and condensation, e.g. learners observe water drying off their wet hands (evaporation), covering water with a lid and observing water droplets on the lid after some time (evaporation & condensation)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate evaporation by heating water until it boils (to be done by the teacher), then covering the boiling water with a sheet of transparent glass. Water vapour condenses on transparent glass (condensation)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners are assisted to understand how evaporation and condensation lead to the formation of rain."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Display pictures or simple diagrams of the water cycle showing evaporation and condensation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.1.3.2",
+                  "description": "Know how clouds are formed",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Review composition of air with learners. This should include water vapour."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners the question: what are clouds? And assists learners to come out with this explanation: clouds consist of many tiny water droplets resulting from the condensation of water vapour into liquid water or ice."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain that upward vertical motion of air through the atmosphere cools water vapour to form clouds."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners demonstrate formation of clouds in a bottle."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners explain why clouds are not formed close to the surface of the ground."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.1.4",
+              "description": "Demonstrate understanding of how carbon and nitrogen are cycled in nature",
+              "orderIndex": 4,
+              "indicators": [
+                {
+                  "code": "B5.2.1.4.1",
+                  "description": "Describe the uses of carbon dioxide and its effects on humans and life on earth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention the components of air (this should include carbon dioxide)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners are assisted in groups to answer the following questions: What is carbon dioxide? What is carbon dioxide used for? How does carbon dioxide get into the environment? Does carbon dioxide have adverse health effects? Does carbon dioxide have adverse effects on the environment?"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners are assisted to identify some common uses of carbon dioxide such as for making fire extinguishers, fizzy drinks and for the process of food preparation in plants."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.2.1.5",
+              "description": "Recognise water and air as important natural resources",
+              "orderIndex": 5,
+              "indicators": [
+                {
+                  "code": "B5.2.1.5.1",
+                  "description": "Identify human activities that make water unsuitable for human use",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Begin by discussing the qualities of good drinking water and dangers of using unsafe water."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners, in groups, identify human activities that make water unsuitable for use, e.g. toxic waste disposal, sewage disposal, deforestation, mining, littering, pesticides, herbicides and fertilizer application and agricultural practices."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners brainstorm to come out with ways of preventing, minimizing and controlling water pollution."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Project: Task learners to work in groups to create concept maps on the causes, control and prevention of water pollution."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.1.5.2",
+                  "description": "Know how to make and keep air clean in our environment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find out from learners what they understand by clean air and review things that pollute air (make air unclean) such as smoke from factories, car exhausts, bush burning and dust from construction sites and untarred roads."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead discussions to come out with the do's and don'ts that will make or keep air clean in our homes and surrounding environment (planting of trees and grass and avoiding frequent and uncontrolled burning)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners are assigned to design a concept map on the causes, prevention and control of air pollution."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners draw and use a Future's Wheel to trace the effects of water pollution on the environment."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.2",
+          "title": "LIFE CYCLES OF ORGANISMS",
+          "description": "Relating plant structures to functions and comparing seed germination.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.2.2.1",
+              "description": "Demonstrate understanding of life cycle of a plant",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.2.1.1",
+                  "description": "Relate structure of the parts of a plant (leaves, stem, root, flower) to the functions they perform",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss functions of parts of plants with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners go on a nature walk to uproot young plants from school surroundings and bring them to class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners, in groups, observe parts of the plants and relate them to the functions they perform, e.g. the thin and large surface area of leaves and the presence of green colouring matter enhance their work. The roots are for anchorage and absorption of nutrients from the soil. The stem supports the upper part of the plant; conduct water and minerals from the roots to the leaves; carry food from leaves to other parts of the plant."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners draw and colour a plant and label the parts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.2.1.2",
+                  "description": "Compare the differences in germination of bean and maize seeds",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners are assisted to review the previous knowledge on seed germination."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Put learners in groups and provide them with dry beans and maize seeds."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners are assisted to plant the bean and maize seeds using transparent containers and soil."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners are guided to observe (1) the dry seed (2) when it absorbs water and swells (3) rapturing of the seed coat (4) sprouting of the root (5) sprouting of the stem and seed leaves (6) the elongation of the root and stem."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners find out where the seed leaves (cotyledons) remain, inside the soil or above the soil."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "NB: This activity will take some days."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.3",
+      "title": "SYSTEMS",
+      "description": "Understanding human respiratory system, solar system, and ecosystems.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5.3.1",
+          "title": "THE HUMAN BODY SYSTEMS",
+          "description": "Identifying and understanding the respiratory system.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.3.1.1",
+              "description": "Recognise that different parts of the human body work interdependently to perform a specific function",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.1.1.1",
+                  "description": "Know the parts of the respiratory system in humans",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce the lesson with songs on the parts of the body, e.g. head, shoulders, knees and toes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to breathe in and out for some time."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Relate the act of breathing to the respiratory system and guide learners to identify the organs of the system using charts or models."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use role-play to guide learners to identify the functions of each part (different learners assume and role-play the functions of parts of the respiratory system, e.g. Ama is the lungs and Amina is the diaphragm)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Engage learners in an activity to design a breathing model using plastic bags, balloons, rubber bands and polythene bags."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners draw and label the respiratory system and state its function."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Learners are tasked to find out the diseases and lifestyles that affect the respiratory system adversely."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Project: Assist learners to design an improvised breathing apparatus using plastics."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.2",
+          "title": "THE SOLAR SYSTEM",
+          "description": "Identifying components of the solar system.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.3.2.1",
+              "description": "Show understanding of the orderliness of the sun, planets and satellites in the solar system, as well as the important role of the sun in the existence of the solar system",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.2.1.1",
+                  "description": "Identify the components of the solar system (sun, earth, moon, other planets, satellite)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Present learners with a chart, model or video depicting the solar system or draw the solar system on the board, using different colours to illustrate the different bodies."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners recite the poem, 'I see the moon, and the moon sees me'."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Initiate a discussion on the importance of the sun to life on earth."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain to the learners that the earth orbits (moves around) the sun, leading to changes in seasons (it takes a year for the earth to move around the sun)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners are made to understand that heavenly bodies that move around the sun are called planets."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners observe the planet Venus, the brightest object in the sky before sunset or several hours after sunrise."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Learners are guided to role- play the sun and the planets in the solar system."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Share folktales about the sun and moon with learners."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Learners should understand that all the planets move around the sun."
+                    },
+                    {
+                      "orderIndex": 10,
+                      "description": "Project: Planning, designing and making a model of the Solar System. Learners build a model of the solar system using suitable materials such as blu tack, clay, cardboard and wood. etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.3.3",
+          "title": "ECOSYSTEM",
+          "description": "Understanding interactions and adaptations in an ecosystem.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.3.3.1",
+              "description": "Show understanding of ecosystem, interdependency of organisms in an ecosystem and appreciate the interactions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.3.1.1",
+                  "description": "Know how various organisms are adapted to survive in their habitat",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Begin the lesson with a matching activity using flashcards (write the names of different organisms on flashcards and a list of habitats on another set of flashcards for learners to match with)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners explain why a bird cannot live in water."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners discuss various habitats of animals and plants."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Brainstorm with learners to come out with the meaning of the term habitat."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners are asked to give examples of animals that live in water, land and trees."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners are assisted to discuss how various organisms adapt to their habitat, e.g. what enables fish to live in rivers, birds to live on trees?"
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Project: Designing a habitat. Learners plan, design and make a model of a habitat using card board, paper, blu tack and clay to show the homes of some animals."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.4",
+      "title": "FORCES AND ENERGY",
+      "description": "Exploring energy transformation, conservation, heat, and friction.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B5.4.1",
+          "title": "SOURCES AND FORMS OF ENERGY",
+          "description": "Understanding energy forms, transformation, conservation, and heat.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.4.1.1",
+              "description": "Demonstrate understanding of the concept of energy, its various forms and sources and the ways in which it can be transformed and conserved",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.1.1.1",
+                  "description": "Explain how energy is transformed from one form to another",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore learners' previous knowledge on the forms of energy (e.g. Electrical, heat, light, sound)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use some common devices (e.g. torch, radio, television, etc.) to demonstrate transformation of energy."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners discuss energy transformations that take place in the school, e.g. ringing of bell, beating of gong-gong, drumming, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, learner's identity other forms of energy transformations in the school community and present their findings for discussion in the class."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners design a flow chart to explain how energy from the sun is transformed into energy for walking."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.1.1.2",
+                  "description": "Know how to use electricity efficiently in the home",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention names of things that use electricity in the home."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Brainstorm with learners to come out with how they use the electrical gadgets."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about what will happen if electrical gadgets are not switched off when not in use."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Elaborate on and link learners' ideas with the issue of power outages and crisis which come as a result of the efficient use of electricity in our homes and industries."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners, in a think-pair-share activity, identify how they can use electricity efficiently in the home, community and school. e.g. ironing in bulk, putting off television sets and freezers when ironing, using energy-efficient bulbs and other electrical gadgets with higher energy efficient ratings: (more stars imply higher energy efficiency)."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.4.1.2",
+              "description": "Show understanding of the concept of heat energy in terms of its importance, effects, sources and transfer from one medium to another",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.4.1.2.1",
+                  "description": "Show the relationship between heat and temperature",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Review previous lesson on temperature with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In a group discussion, learners find out what will happen when heat is applied to a substance or lost from a substance, e.g. when a substance is placed in the sun for a while or when a substance is put in a fridge."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners undertake an activity of placing objects such as metal plates, pieces of stone in the sun."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners initially touch the objects to feel their degree of warmness before they are put in the sun."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "After 20 minutes, learners touch the objects again and feel the difference in temperature."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners should then place the stones or metals in a bowl of water and afterwards, touch again to determine whether they become hotter or colder."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Elaborate on learners' ideas, emphasising heat as the factor that changes temperature."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Summarise lesson by explaining to learners that when heat is lost, temperature reduces, when heat is gained, temperature increases."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.1.2.2",
+                  "description": "Measure and record temperature using thermometer",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners, in groups, to produce their own improvised thermometers using plastic bottles, plastic straws, dyes and water."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "If available, bring clinical and laboratory thermometers to class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners recall their previous knowledge on the concept, 'temperature'."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners discuss the relationship between hotness and coldness in terms of heat transfer, (when an object loses heat, it cools and when it gains heat, it becomes warm or hot)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners identify the instrument used for measuring the amount of heat in a body and give examples of places where the thermometer is used."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners are assisted to use the clinical thermometer to measure and record their body temperatures and the laboratory thermometer to measure the temperature of warm water."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.2",
+          "title": "ELECTRICITY AND ELECTRONICS",
+          "description": "Identifying components of electrical circuits and their functions.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.4.2.1",
+              "description": "Demonstrate knowledge of generation of electricity, its transmission and transformation into other forms of energy",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.2.1.1",
+                  "description": "Identify the components of an electric circuit and their functions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Begin by asking learners what comes into their minds when they hear the term, 'electric circuit'."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners watch pictures and videos of simple electrical circuits and how they work."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners, in groups, construct simple electric circuits using connecting wire, dry cells and a bulb/LED to light up the bulb."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assist learners to identify the components and their uses."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners find out other materials that can be used in place of dry cells, connecting wires and bulb."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Project: Learners build an LED lantern using the above circuit and plastic bottle."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.4.3",
+          "title": "FORCES AND MOVEMENT",
+          "description": "Understanding friction and its effects.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.4.3.1",
+              "description": "Know that movement is caused by applied forces due to the release of stored energy",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.3.1.1",
+                  "description": "Explain the term, 'friction', its effects and applications",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Review the previous lesson on forces with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners recall some examples of forces and their effects/applications."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners explain why cars usually drive slowly on wet roads."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Task them to explain what happens when one accidentally step into an oil spill on the floor."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Ask learners these questions: What is friction? What does it do? How does it work? Then discuss their prior knowledge of the topic."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners rub their palms together for several sections and talk about what they notice."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Explain to learners that the warmth they feel is caused by a force called friction and that friction is the force that opposes the movement of two surfaces against each other."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Some learners remove their shoes to show the shrunken heels/soles as an example of the effect of friction between the sole of the shoe and the ground which one walks on."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Emphasise the fact that it is because of the friction between the shoes and the ground that we do not fall whilst walking or running."
+                    },
+                    {
+                      "orderIndex": 10,
+                      "description": "Explain to learners again that on a rainy day or on a smooth/polished surface, friction is reduced, which means the shoes of the one walking or the tyres of the car are not firmly gripped to the ground or the road because friction has reduced. Thus, this is what causes people to fall or slip on oily or wet surfaces."
+                    },
+                    {
+                      "orderIndex": 11,
+                      "description": "Project: Investigating the effect of friction. Learners demonstrate the effect of friction by using a toy car on rough and smooth surfaces."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.5",
+      "title": "HUMANS AND THE ENVIRONMENT",
+      "description": "Understanding hygiene, diseases, science in industry, and climate change.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B5.5.1",
+          "title": "PERSONAL HYGIENE AND SANITATION",
+          "description": "Importance of washing clothes and keeping the environment clean.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.1",
+              "description": "Recognise the importance of personal hygiene",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.1.1",
+                  "description": "Know why it is important to wash clothes regularly",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage learners in groups to discuss among themselves what items are needed to wash their clothes and underwear."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Groups present their ideas to the whole class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Present to learners, real items (soap, water, dirty clothes, etc.) needed to wash clothes and underwear and demonstrate how washing is done."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners demonstrate how washing is done (a learner from each group)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Engage learners to watch a video or pictures showing other methods of washing clothes and underwear, apart from the hands."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "In pairs, learners share ideas on what will happen if they don't wash their clothes and underwear regularly."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Guide learners to design personal roster for washing their clothes, indicating the days and times which they will use to wash their dirty clothes."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5.5.1.2",
+              "description": "Identify, discuss and appreciate the natural and human features of the environment and the need to keep the environment clean",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5.5.1.2.1",
+                  "description": "Know how to keep washrooms clean",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners watch pictures and videos on how to keep washrooms clean."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Engage them in a discussion on how to keep the lavatory clean."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Emphasise such key points as: flushing immediately after use, urinating directly in the toilet bowl, keeping used tissues in waste containers rather than throwing them on the floor, regularly removing used tissues and burning them."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners investigate the risks associated with the use of dirty washrooms."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Evaluate learners by asking them to design a poster to be pasted in their school's washroom."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.2.2",
+                  "description": "Demonstrate how to clean the environment regularly",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Assemble various items for cleaning the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Begin the lesson with a song on cleanliness."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Take the learners on a trip to observe tidy and untidy parts of the nearby community or show different pictures depicting clean and unclean environments."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Engage learners to discuss how to make the unclean environments as clean as those that are clean."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners discuss some materials that are used for cleaning the home, the school and the community."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Demonstrate to learners the correct way of using the cleaning tools, e.g. brooms, rags, ceiling brush, dustpans and dustbins."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Learners are assisted to know the need to keep the environment clean."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Engage learners to use local cleaning tools to clean the classroom and the school environment."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Project: Learners design posters to create awareness on the need to keep the school, home and Community clean and exhibit their work in the school."
+                    },
+                    {
+                      "orderIndex": 10,
+                      "description": "NB: Teachers are encouraged to form an environmental awareness club in the class after this lesson."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.2",
+          "title": "DISEASES",
+          "description": "Understanding causes, symptoms, and prevention of common diseases.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.5.2.1",
+              "description": "Know common diseases of humans; causes, symptoms, effects and prevention",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.2.1.1",
+                  "description": "Explain the causes, symptoms and control of chicken pox",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners watch pictures, videos or charts on causes, symptoms and control of chicken pox or invite a health personnel or School Health Education Programme (SHEP) coordinator to give a talk on chicken pox."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In pairs, learners answer the following questions based on the pictures and video: (1) What causes chicken pox? (2) What are the symptoms of chicken pox? (3) What should be done if someone has chicken pox? (4) What are the ways of preventing the spread of chicken pox?"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Project: Learners develop a concept map to trace the causes, symptoms and prevention of chicken pox."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.2.1.2",
+                  "description": "Identify causes, symptoms and prevention of cholera",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners watch pictures and videos or images showing the causes, symptoms and prevention of cholera."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Invite a local health officer or SHEP coordinator to give a presentation on cholera to the learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Engage learners, in groups, to discuss the causes of cholera, using everyday scenarios, e.g. eating contaminated food and living in a dirty environment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners are provided one large cardboard for all the groups to write different ideas on the causes, prevention and symptoms of cholera."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners display the cardboard in the classroom."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.3",
+          "title": "SCIENCE AND INDUSTRY",
+          "description": "Recognising the impact of science and technology on society.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.5.3.1",
+              "description": "Recognise the impact of science and technology in society",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.3.1.1",
+                  "description": "Identify the raw materials used in some local industries (kenkey production, gari production, ceramic and pottery production)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Take learners to a local gari, kenkey, shea butter, cooking oil, blacksmith, basketry, carpentry or pottery production site or show videos of such ventures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners observe critically and identify the raw materials used in the various industries."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Engage the learners in a matching activity to match some local products with their raw materials."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Project: Designing an Industry. Learners plan and design a factory in their locality, showing the raw materials they use and the finished products."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.4",
+          "title": "CLIMATE CHANGE",
+          "description": "Understanding the impact of deforestation on climate change.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.5.4.1",
+              "description": "Know that climate change is one of the most important environmental issues facing the world today",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.4.1.1",
+                  "description": "Identify the impact of deforestation on climate change",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Put learners into groups and let them discuss the importance of trees in the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Take them on a trip around the school environs and help them to appreciate the importance of trees such as provision of shade, food, fresh air, production of rain, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners brainstorm on what will happen if people continuously cut down trees."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Engage each group to present their ideas to the whole class and re-shape their ideas by writing all key points on tree-felling and its impact to the environment as well as its long-term effect on the climate."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners brainstorm on what measures to take to stop people from tree-cutting."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners are assisted to plant trees in their school environment and at strategic locations within the community."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Learners are supervised to take good care of the trees they plant."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 2",
+  "subject": "History",
+  "name": "Basic 2 History",
+  "slug": "basic-2-history",
+  "orderIndex": 1,
+  "description": "The Basic 2 History curriculum focuses on the people of Ghana, their ethnic groups and characteristics, major historical locations, significant Ghanaian women, and the history of European trade in Ghana.",
+  "strands": [
+    {
+      "code": "B2.2",
+      "title": "My Country Ghana",
+      "description": "Exploring the people, historical locations, and significant individuals of Ghana.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B2.2.1",
+          "title": "The People of Ghana",
+          "description": "Understanding the ethnic groups and their characteristics.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.2.1.1",
+              "description": "Demonstrate knowledge of the ethnic groups in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.1.1.1",
+                  "description": "Identify the ethnic groups in each region in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the administrative regions of Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Locate the ethnic groups in each region on a map of Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "With the aid of a slide/video/TV/internet, identify the regions and ethnic groups in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Match the ethnic groups with their region."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "List the administrative regions in the order in which they created (starting with the oldest region)."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.2.1.2",
+              "description": "Show understanding of the characteristics of some of the ethnic groups in Ghana",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B2.2.1.1.1",
+                  "description": "State the characteristics of the ethnic groups in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the characteristics (food, festivals, dressing, language, political institutions, social and economic activities, taboos, oaths etc.) of some of the ethnic groups in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show documentary/pictures/ internet of a festival of one of the ethnic groups."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss what the documentary entails."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.2.4",
+          "title": "Major Historical Locations",
+          "description": "Exploring the history of major locations in Ghana.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.2.4.1",
+              "description": "Exhibit knowledge of the history of the major historical locations in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.4.1.1",
+                  "description": "Discuss the history of Ghana's major historical locations.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the major historical locations in Ghana (starting with the oldest location)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show and discuss video/documentary/stories/slides about the history of these major historical locations in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Retell the history of these major historical locations in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Interact with knowledgeable persons/ opinion leaders/ chiefs/ resource persons to tell the history of any historical location in your community or district."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Visit any historical site in their community."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Retell the history of major sites in their community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.2.5",
+          "title": "Some Selected Individuals",
+          "description": "Highlighting the contributions of Ghanaian women to national development.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B2.2.5.1",
+              "description": "Exhibit understanding of Ghanaian women who have contributed significantly to Ghana's development",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.5.1.1",
+                  "description": "Identify Ghanaian women who have made significant contributions to national development",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Name some outstanding women in the history of Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Match these women with their achievements in Ghana e.g. Mrs Charity Zormelo-Fiawoo - first woman university graduate; Squadron Leader Melody Danquah - First female pilot; Elizabeth Ohene - First female editor of a newspaper (Daily Graphic); Justice Georgina Wood - First female Chief Justice; Justice Joyce Bamford-Addo - First female Speaker of Parliament etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Using anecdotes/videos learners retell the contributions of these leaders to national development."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Think pair-share-activity: Individual learners identify a woman who they admire most in the community. They choose partners and discuss the reasons for their choice."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.3",
+      "title": "Europeans in Ghana",
+      "description": "Understanding the history of European contact and trade.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B2.3.2",
+          "title": "International Trade Including Slave Trade",
+          "description": "Examining the nature of early trade between Ghanaians and Europeans.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.3.2.1",
+              "description": "Understand that trade was the major reason why the Europeans settled in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.2.1.1",
+                  "description": "Describe how early trade was carried out between Ghanaians and Europeans",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe how early trade was carried out between Ghanaians and the Europeans."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise learning corners with real items or pictures of items brought by the Europeans such as Gin, Gun, Gun Powder, Textiles, Tobacco, Iron Bars, Elephant tusks, Ivory, Gold."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play the barter trade in those items."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use internet to identify countries with the items they brought that remained part of everyday Ghanaian life. e.g. the Dutch and wax prints."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Name the towns that emerged on the coast as a result of European trade with Ghanaians."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,803 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 9",
+  "subject": "Ghanaian Language",
+  "name": "JHS 3 Ghanaian Language",
+  "slug": "jhs-3-ghanaian-language",
+  "orderIndex": 1,
+  "description": "The JHS 3 Ghanaian Language curriculum consolidates knowledge in customs, oral language, reading, grammar, and writing. It focuses on marriage rites, naming systems, the clan system, traditional government, advanced conversation, reading comprehension, translation, grammar usage, and composition writing.",
+  "strands": [
+    {
+      "code": "B9.1",
+      "title": "CUSTOMS AND INSTITUTIONS",
+      "description": "Understanding rites of passage, naming systems, clans, and chieftaincy.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B9.1.1",
+          "title": "RITES OF PASSAGE: MARRIAGE",
+          "description": "Exploring marriage rites and their significance.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.1.1.1",
+              "description": "Demonstrate an understanding of marriage of their culture and compare with other cultures of Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.1.1.1",
+                  "description": "Discuss the processes involved in performing marriage rites in their culture",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what marriage is"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read and discuss a text on marriage"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify types of marriage"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify some of the marriage rites in their culture and write them"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss marriage rites performance"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Explore the significance of the processes involved in performing marriage rites"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.2",
+                  "description": "Compare and contrast the marriage rites in their culture to other cultures in Ghana",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Present marriage rites among their people"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Relate the marriage rites of their culture to those of other Ghanaian cultures"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.3",
+                  "description": "Compare and contrast the traditional marriage rites to the contemporary marriage rites and dramatise both",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain some of the contemporary marriage rites in their culture"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare and contrast the traditional to the contemporary marriage rites"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Dramatise marriage rites session of their culture"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.2",
+          "title": "NAMING SYSTEMS - CIRCUMSTANTIAL, REINCARNATION, DEITY NAMES",
+          "description": "Understanding circumstantial, reincarnation, and deity names.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.1.2.1",
+              "description": "Exhibit knowledge of the understanding and application of circumstantial, reincarnation and deity names",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.2.1.1",
+                  "description": "Identify and discuss circumstances that result in naming children in their community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain circumstances that lead to circumstantial names"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write some of the names and relate them to the circumstances"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the significance of circumstantial names"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.2",
+                  "description": "Discuss reincarnation names and their meanings",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify reincarnation names and discuss their meanings"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the significance of reincarnation names"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.3",
+                  "description": "Identify and discuss deity names",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain circumstances that lead to giving new borns deity names (e.g. Akan: Tutu, Antoa; Ewe: Afram, Klu)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the significance of deity names"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.3",
+          "title": "THE CLAN SYSTEM",
+          "description": "Understanding trends and factors affecting the clan system.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.1.3.1",
+              "description": "Demonstrate understanding and knowledge of the factors that militate against the clan system",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.3.1.1",
+                  "description": "Discuss trends affecting the clan system",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and discuss the trends affecting the clan system"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss ways by which the clan system can be strengthened"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the similarities and differences between the various clan systems in their locality"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.4",
+          "title": "CHIEFTAINCY: TRADITIONAL GOVERNMENT",
+          "description": "Understanding traditional governing structures.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.1.4.1",
+              "description": "Exhibit knowledge and understanding of the traditional governing structure (chief/queenmother, chief priest, traditional military, sub chiefs, king makers) of their society and their duties",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.4.1.1",
+                  "description": "Explore the traditional governing structure of their community and discuss the duties of the functionaries",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read and discuss a text on traditional governance"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the traditional governing structure of their community"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and write down the duties of the functionaries"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss and write the importance of the functionaries"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.2",
+      "title": "LISTENING AND SPEAKING",
+      "description": "Developing advanced oral communication skills.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B9.2.1",
+          "title": "CONVERSATION/EVERYDAY DISCOURSE",
+          "description": "Using appropriate language in various contexts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.2.1.1",
+              "description": "Demonstrate use of appropriate language orally in specific situations",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.1.1.1",
+                  "description": "Use appropriate register in everyday communication (informal and formal) with diverse partners on grade-level topics/texts/issues",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify some slang words and jargons accepted locally and internationally"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use everyday, informal topics and situations that are more appropriate for the use of slang and jargon"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and act scenes on texts/issues/topics using both formal and informal register to distinguish characters"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.2",
+                  "description": "Ask questions that link the ideas of several speakers and respond to others' questions in a discussion",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use open ended questions to enable speaker link ideas of other speakers on topics/issues"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Listen attentively to view points on topics/issues in a conversation and respond appropriately"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Engage in conversations on topics/issues with several speakers and respond to different views"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.3",
+                  "description": "Use appropriate language orally to discuss grade-level national issues fluently",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify grade-level national issues (the youth in agriculture, sanitation, life style diseases, free SHS, etc.)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss grade-level national issues in detail using appropriate register"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.4",
+                  "description": "Express opinions and advice on a range of everyday issues and situations clearly",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify a range of everyday issues e.g. road/domestic accidents, domestic violence, child abuse"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Engage in conversations on these issues giving your opinion and advice"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.5",
+                  "description": "Demonstrate appropriate turn taking and use techniques for effective argument (debate)",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify interesting topics/issues appropriate for argument and debate"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Observe and use the skills of turn taking in arguments and debates"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.2",
+          "title": "LISTENING COMPREHENSION",
+          "description": "Listening to and discussing complex texts.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.2.2.1",
+              "description": "Demonstrate the ability to listen to extended reading and identify key information",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.2.1.1",
+                  "description": "Listen to a more natural level-appropriate interactions with multiple speakers for example, TV shows, dramas, films, etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and write key information e.g. message, theme, tone, mood in level appropriate texts/speeches"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Listen to and compare information written from texts/speeches"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.2.1.2",
+                  "description": "Initiate and participate in meaningful and collaborative discussions on texts and related materials building on others' ideas and expressing their own clearly and persuasively",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to and identify key issues in level appropriate texts/speeches/dialogues"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Initiate discussions on ideas and share opinions on level appropriate texts/speeches/dialogues"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Engage in conferences to discuss ideas noted from texts/speeches/dialogues and express their own clearly and persuasively"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.4",
+          "title": "TONES",
+          "description": "Using tones correctly in context.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.2.4.1",
+              "description": "Demonstrate knowledge and understanding in the use of the basic tones correctly in speaking and reading",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.4.1.1",
+                  "description": "Apply the idea of tones correctly when speaking and reading in contexts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage in a conversation on a given topic using the basic tones correctly"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read sentences using the correct tones"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read a passage using the correct tone patterns to depict the right context"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.6",
+          "title": "PRESENTATION: EVERYDAY EXPERIENCES",
+          "description": "Presenting reports on complex topics.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.2.6.1",
+              "description": "Describe their everyday experiences on more complex topics using appropriate presentational skills",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.6.1.1",
+                  "description": "Discuss complex topics related to everyday activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a text on deforestation in Ghana, same sex marriage, insecurity, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss some of the everyday activities in the factory, traditional occupational shops, settlement of cases at the palace, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.6.1.2",
+                  "description": "Compose their own group report on some topical issues",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Develop their own report on a range of suitable familiar and unfamiliar, concrete and abstract topics"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make a presentation on the topics above to the class for discussion"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.3",
+      "title": "READING",
+      "description": "Reading comprehension and translation.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B9.3.1",
+          "title": "READING",
+          "description": "Reading longer passages and summarising.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.3.1.1",
+              "description": "Read longer passages silently, identify main ideas, answer questions and summarise the passage",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.1.1.1",
+                  "description": "Locate the main and subsidiary points in a range of texts and rewrite logically with accuracy in their own words",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read and understand a passage of between 200-250 words from different subject areas silently"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the main ideas in the passage"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Rewrite the ideas logically in their own words"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Answer recall, meaning and inferential questions based on the passage"
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.1.2",
+                  "description": "Summarise passages read in given number of sentences",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Arrange the main ideas in a range of passages logically and coherently"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Summarise a passage of two hundred words in fifty words"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.2",
+          "title": "TRANSLATION",
+          "description": "Translating texts.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.3.2.1",
+              "description": "Demonstrate knowledge of translating texts from source language to the target language",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.2.1.1",
+                  "description": "Decode the meaning of texts and translate from source to target language",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Translate texts of about one hundred words from source to a target language"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read and discuss the translated text"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.4",
+      "title": "LANGUAGE AND USAGE",
+      "description": "Applying grammar rules in writing.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B9.4.2",
+          "title": "INTEGRATING GRAMMAR IN WRITTEN LANGUAGE (NOUNS, ADJECTIVES)",
+          "description": "Using nouns and adjectives correctly.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.4.2.1",
+              "description": "Demonstrate knowledge of the use of singular and plural nouns in sentences and passages",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.2.1.1",
+                  "description": "Discuss nouns under singular and plural forms in an increasing and abstract range of texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and classify nouns in a passage according to their singular and plural forms"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct simple and compound sentences with the singular and plural nouns in speech and in writing"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.2.2",
+              "description": "Demonstrate knowledge of how adjectives are combined in a sentence",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.2.2.1",
+                  "description": "Discuss how adjectives follow each other in a sentence",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify adjectives in texts"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Form sentences with two or three adjectives"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.3",
+          "title": "INTEGRATING GRAMMAR IN WRITTEN LANGUAGE (VERBS, ADVERBS)",
+          "description": "Using verbs and adverbs correctly.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.4.3.1",
+              "description": "Exhibit knowledge and understanding of the use of auxiliary verbs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.3.1.1",
+                  "description": "Discuss auxiliary verbs in sentences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify types of verbs in a recorded/read passage"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss auxiliary verbs (where applicable)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct sentences with auxiliary verbs"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.3.2",
+              "description": "Demonstrate knowledge of how adverbs are combined in a sentence",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.3.1.3",
+                  "description": "Discuss how adverbs follow each other in a sentence",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify adverbs in texts"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct sentences with two or three adverbs correctly"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.5",
+      "title": "COMPOSITION WRITING",
+      "description": "Structuring and organizing ideas in compositions.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B9.5.1",
+          "title": "STRUCTURE AND ORGANISE IDEAS IN COMPOSITION WRITING",
+          "description": "Writing coherent essays.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.5.1.1",
+              "description": "Demonstrate knowledge and understanding of the features of the various text types discussed and use the knowledge to write a coherent essay on the text types",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.1.1.1",
+                  "description": "Plan and structure a range of extended texts using paragraphs to show progression from one idea to the next and linking paragraphs using cohesive language",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a coherent essay on any of the text types (e.g. narrative, descriptive, creative, academic, and argumentative and letter writing) on a given topic"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and write the topic and supporting sentences in the paragraphs"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.6",
+      "title": "LITERATURE",
+      "description": "Exploring drum language, prose, poetry, and drama.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B9.6.1",
+          "title": "DRUM/HORN/XYLOPHONE LANGUAGE, PROSE, POETRY AND DRAMA",
+          "description": "Understanding traditional and written literature.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.6.1.1",
+              "description": "Demonstrate an understanding of drum language, appellations and war songs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.6.1.1.1",
+                  "description": "Explore drum language/appellations and war songs respectively",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the features of drum language/appellation"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss drum language/appellation"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the occasions/situations on/in which drum language/appellation is used"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "State the importance of drum language/appellation"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Appreciate war songs in your language"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss the importance of war songs"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.6.1.2",
+              "description": "Demonstrate knowledge and understanding in the writer's use of language in a prose, poetry and drama texts",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.6.1.2.1",
+                  "description": "Discuss how writers use language to create effect in an increasing range of prose, poetry and drama",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss characterisation in relation to prose, poetry and drama texts and give examples from texts"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore ways that writers use a wide range of literary devices (personification, alliteration, assonance) in a range of prose, poetry and drama texts"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss how writers use settings to create different effects in a range of prose, poetry and drama"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss how writers use language to create mood and tone in an increasing range of prose, poetry and drama"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the ways writers structure texts in a range of prose, poetry and drama texts"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

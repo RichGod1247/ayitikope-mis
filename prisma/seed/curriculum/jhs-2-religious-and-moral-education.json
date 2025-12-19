@@ -1,0 +1,543 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 8",
+  "subject": "Religious and Moral Education",
+  "name": "JHS 2 Religious and Moral Education",
+  "slug": "jhs-2-religious-and-moral-education",
+  "orderIndex": 1,
+  "description": "The JHS 2 Religious and Moral Education curriculum deepens learners' understanding of creation stories, religious practices such as rites of passage, the role of authority and obedience in the family and community, the exemplary lives of religious leaders, moral teachings, and economic life including the wise use of money and avoiding bribery and corruption.",
+  "strands": [
+    {
+      "code": "B8.1",
+      "title": "GOD, HIS CREATION AND ATTRIBUTES",
+      "description": "Understanding creation stories and their moral lessons.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B8.1.1",
+          "title": "THE CREATION STORIES OF THE THREE MAJOR RELIGIONS IN GHANA",
+          "description": "Creation stories and their moral values.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8 1.1.1",
+              "description": "Outline and explain the moral lessons in the creation stories of the three main religions in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8 1.1.1.1",
+                  "description": "Discuss the creation stories of the three main religions in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give account of the creation stories in the various religions: Christianity (Genesis chapter 1), Islam (Qur'an 2:164, 3:190-191, 10:3-4) and Indigenous African Religion (Narrate oral traditions of learners' indigenous society)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In three groups, learners dramatise their own interpretation of the creation stories."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 1.1.1.2",
+                  "description": "Identify and explain the moral values in each of the creation stories",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Brainstorm to identify the moral values in each of the creation stories. E.g. hard work, orderliness, creativity, responsibility, caring and giving."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, learners dramatise how they apply the moral values in their daily life."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.2",
+      "title": "RELIGIOUS PRACTICES",
+      "description": "Rites of passage and their significance.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B8.2.1",
+          "title": "RITES OF PASSAGE",
+          "description": "Naming ceremonies, puberty rites, marriage, and death rites.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8 2.1.1",
+              "description": "Explain rites of passage and identify the moral lessons in them",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8 2.1.1.1",
+                  "description": "Describe the naming ceremonies/outdooring in the three major religions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the meaning of rites of passage."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the various stages in human life: Birth, Puberty, Marriage, Death."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify factors to be considered in choosing a name for a child."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe how the naming ceremony is performed in the three major religions (Christianity, Islam, Indigenous)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss importance of naming ceremonies."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners to role play a naming ceremony in their community."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 2.1.1.2",
+                  "description": "Explain physical and emotional changes that characterise puberty",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the meaning of puberty."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss physical and emotional changes that occur at puberty for boys and girls."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 2.1.1.3",
+                  "description": "Describe how puberty rites are performed in traditional Ghanaian societies",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe activities performed during puberty in some Traditional Societies (e.g. Bragro, Dipo, Baala, Sodji-wi)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners to role play how puberty rites are performed in their community."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the significance of puberty rites."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In two groups, learners debate the motion 'Puberty rites are outmoded'."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 2.1.1.4",
+                  "description": "Describe how a marriage is contracted in the three main religions in Ghana",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the term marriage."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe how marriage is performed in the three major religions (Indigenous African Religion, Christianity, Islam)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In three groups, learners use a short sketch to demonstrate how marriage rites are performed in each of the three religions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify and explain the importance of marriage rites."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 2.1.1.5",
+                  "description": "Describe how death rites are performed in the three major religions in Ghana",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of death in the three major religions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In three groups, learner's role play how death rites are performed in the three religions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify and explain the importance of death rites."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 2.1.1.6",
+                  "description": "Identify and explain the moral lessons in the rites of passage",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the moral lessons in the rites of passage (e.g. Truthfulness, Honesty, Hard work)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Dramatise how to apply the moral lessons from rites of passage in their everyday life activities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.3",
+      "title": "THE FAMILY AND THE COMMUNITY",
+      "description": "Authority, obedience, and rules.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B8.3.1",
+          "title": "AUTHORITY AND OBEDIENCE",
+          "description": "Respecting authority and obeying rules.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8 3.1.1",
+              "description": "Identify and explain the importance of obeying authority",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.1.1.1",
+                  "description": "Identify and explain the various sources of authority",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the sources of authority at home, school and community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using a video clip or pictures, identify how people come to have authority."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups learners dramatise the right and wrong use of authority."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 3.1.1.2",
+                  "description": "Explain the need to obey God, parents and those in authority",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to identify and discuss different reasons for obeying authority."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 3.1.1.3",
+                  "description": "Demonstrate how to apply the rules and regulations from authority in daily life",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Dramatise how to apply rules and regulations from authority (Home/family, School, Communal, Religious, National)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.4",
+      "title": "RELIGIOUS LEADERS AND PERSONALITIES",
+      "description": "Lives and missions of prophets and caliphs.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B8.4.1",
+          "title": "PROPHETS AND CALIPHS",
+          "description": "Mission and moral lessons from prophets and caliphs.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8 4.1.1",
+              "description": "Identify and explain the moral lessons that can be learned from the exemplary lives of the prophets and caliphs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8 4.1.1.1",
+                  "description": "Describe the mission of the prophets",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the meaning of a prophet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Watch video clips and/or pictures of prophets in both Christianity and Islam."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify some prophets in the video or the pictures."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Read part of the Qur'an and the Bible on the selected prophets (Noah/Nuh, Abraham/Ibrahim, Moses/Musah) and discuss their background, call and mission."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 4.1.1.2",
+                  "description": "Outline the mission and exemplary lives of the Caliphs",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the meaning of Caliph in Islam."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the Caliphs (Abu Bakr, Umar, Usman, Ali)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "State the contributions of the Caliphs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 4.1.1.3",
+                  "description": "Examine lessons from the exemplary lives of the Prophets and Caliphs",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explain the moral lessons in the lives of the prophets and the Caliphs (e.g. Patriotism, Perseverance, Courage)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Dramatise aspects of the lives of the prophet and the Caliphs."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Project Work: Write an essay on the mission of each of the three named prophets and the Caliphs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.5",
+      "title": "ETHICS AND MORAL LIFE",
+      "description": "Moral teachings and their application.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B8.5.1",
+          "title": "MORAL TEACHINGS IN THE THREE MAJOR RELIGIONS IN GHANA",
+          "description": "Teachings from scriptures and oral traditions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8 5.1.1",
+              "description": "Exemplify the moral teachings from the Bible, Qur'an and Oral Traditions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8 5.1.1.1",
+                  "description": "Identify and explain the moral teachings from the Bible, Qur'an and Oral Traditions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss examples to identify key moral teachings of the three major religions (Christian, Islam, Indigenous African Religion, Proverbs, Taboos)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 5.1.1.2",
+                  "description": "Demonstrate how to apply the moral teachings from the three main religions in their daily life",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the application of the moral teachings in their daily life."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Dramatise the moral teachings of the three major religions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.6",
+      "title": "RELIGION AND ECONOMIC LIFE",
+      "description": "Money management and corruption.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B8.6.1",
+          "title": "MONEY",
+          "description": "Wise use and honest acquisition of money.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8 6.1.1",
+              "description": "Plan the wise use of money",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8 6.1.1.1",
+                  "description": "Explain the term \"money\" and indicate its usefulness",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Look at pictures of money or real Ghanaian currency notes and coins, and explain the meaning of money and its usefulness."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 6.1.1.2",
+                  "description": "Identify and explain honest ways of acquiring money",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, learners explain the honest ways of acquiring money as taught by the three major religions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give reasons for acquiring money honestly."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Develop habit of saving money for future use."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 6.1.1.3",
+                  "description": "Discuss the appropriate ways of using money",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners brainstorm to identify good ways of using money from the perspective of the three major religions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss bad ways of using money from the perspective of the three religions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put learners into two groups to come out with a sketch to demonstrate a good way and a bad way of using money."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 6.1.1.4",
+                  "description": "Discuss the benefits of the SSNIT pension scheme and people who are qualified to benefit",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the SSNIT Pension Scheme, who qualifies, and the roles of employer/employee."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.6.2",
+          "title": "BRIBERY AND CORRUPTION",
+          "description": "Avoiding bribery and corruption.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8 6.2.1",
+              "description": "Explain the need to avoid bribery and corruption and the ways to do so",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8 6.2.1.1",
+                  "description": "Explain the terms \"bribery\" and \"corruption\"",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Differentiate between 'bribery' and 'corruption'."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8 6.2.1.2",
+                  "description": "Identify the causes and effects of bribery and corruption",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, learners identify the causes of bribery and corruption."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using Think-Pair and Share, learners discuss the effects of bribery and corruption on the state."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the need to avoid bribery and corruption."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine the moral values that can be used to address bribery and corruption."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,922 @@
+{
+  "part": "1/1",
+  "phase": "Lower Primary",
+  "level": "Basic 3",
+  "subject": "Our World and Our People",
+  "name": "Basic 3 Our World and Our People",
+  "slug": "basic-3-our-world-and-our-people",
+  "orderIndex": 1,
+  "description": "The Basic 3 OWOP curriculum aims to produce morally upright, responsible citizens who can maintain a healthy lifestyle and preserve the environment. It covers themes such as the nature of God, personal hygiene, community relationships, environmental protection, national values, and global citizenship.",
+  "strands": [
+    {
+      "code": "B3.1",
+      "title": "ALL ABOUT US",
+      "description": "Understanding God, self, family, and the community.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B3.1.1",
+          "title": "Nature of God",
+          "description": "Understanding God's creation and promises.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.1.1.1",
+              "description": "Demonstrate understanding of the purpose of God's creation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.1.1.1.1",
+                  "description": "Examine the purpose of God's creation of human beings",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the creation of humankind. i. Who were the first people God created? ii. Who was created first? Learners tell creation stories."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain why God created human beings e.g. to take care of other creatures, to worship and serve Him, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners think-pair-share on why we should protect and care for God's creation: i. to maintain creation for generations; ii. it is a command from God; iii. our survival depends on other creation: food, medicine, shelter, air, etc.; iv. it is service to God and humankind."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Group learners to discuss the usefulness of plants and animals to human beings using pictures, models (use videos where available). With pictures, learners identify uses of plants and animals."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Guide learners to perform series of activities to consolidate learning e.g. draw and colour food plants and domestic animals."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners talk about ways of caring for the environment: tree planting, proper disposal of waste, legal mining, clean-up exercises, avoiding environmental pollution, etc."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Learners draw and colour some of the creations of God in the environment. Learners organise and do clean-up exercises in the school environment."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Learners, in groups, to do a project on clearing a rubbish dump, planting trees, checking erosion, clearing choked gutters, etc."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.1.1.2",
+              "description": "Appreciate God's promises to humankind",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B3.1.1.2.1",
+                  "description": "Explain God's promises to humankind",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through questions and answers, guide learners to identify the promises God made to humankind: the call of Abraham (Ibrahim) God promised him with eternal life, the call of Moses (Musa), etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners discuss the call of Abraham (Ibrahim) and Moses (Musa). Let learners present their work to class for discussion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners role play the call of Moses (Musa)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners mention the ways we respond to God's call: i. prayer; ii. service to humankind; iii. caring for the environment; iv. helping the needy (charity), etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.1.2.2",
+                  "description": "Identify benefits of responding to God's call",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, guide learners to mention the benefits of responding to God's call: i. drawing closer to God; ii. long life; iii. prosperity; iv. eternal life, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about the moral lessons derived from responding to God's call: i. obedience; ii. respect; iii. sacrifice; iv. commitment; v. reverence for God; vi. humility etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.1.2",
+          "title": "Myself",
+          "description": "Personal hygiene and safety.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.1.2.1",
+              "description": "Demonstrate knowledge of promoting personal hygiene and safety",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.1.2.1.1",
+                  "description": "Explain ways of promoting personal hygiene and safety as a responsible citizen",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about things they need to promote personal hygiene: water, soap, tooth brush and tooth paste, nail cutter, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about things they do to show personal hygiene, through think-pair-share, e.g. bathing twice a day, brushing of the teeth at least twice daily, washing of clothes regularly, washing of hands regularly, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners draw items used in keeping our bodies clean."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners sing and tell stories about the importance of keeping personal hygiene"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.1.3",
+          "title": "My Family and the Community",
+          "description": "Roles and relationships in the family and community.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B3.1.3.1",
+              "description": "Show understanding of roles in the family and community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.1.3.1.1",
+                  "description": "Explain factors that promote good relationships at home, school and community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about good relationship."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, guide learners to talk about things that promote good relationship, e.g. comportment, respect, love, obedience, humility, friendliness, honesty."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play behaviours that show good relationship"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, learners talk about the need to promote good relationship e.g. it promotes peace, unity, development, friendliness"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.1.4",
+          "title": "Home and School",
+          "description": "Understanding locations and directions.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B3.1.4.1",
+              "description": "Demonstrate understanding of the home and other important locations in the neighbourhood",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.1.4.1.1",
+                  "description": "Sketch a map of the neighbourhood showing major home, major routes and other important locations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss location of their homes and other important places in their neighbourhood."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw/sketch a map of their neighbourhood showing their home and other important places in the community e.g. the chief's palace, post office, the market, police station"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners write simple sentences giving direction to their home and important places in the community"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.2",
+      "title": "ALL AROUND US",
+      "description": "Environment, weather, plants, animals, mapping, population and settlement.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B3.2.1",
+          "title": "The Environment and the Weather",
+          "description": "Land and water use, environmental protection.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.2.1.1",
+              "description": "Appreciate the problems associated with the use of land and water",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.1.1.1",
+                  "description": "Explain problems with the use of land and water",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through pictures/films of illegal mining sites e.g. Galamsey sites, indiscriminate dumping of refuse, choked gutters, roads with potholes etc. Compare situations in the pictures with what pertains in their area."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about the problems with the use of land: i. Describe activities taking place on land in your community. (Slash and bush burning, sand winning, quarrying)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Teacher shows pictures of water bodies or conduct a study tour to observe water bodies within their communities."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners talk about activities taking place around water bodies in their community e.g. fishing, swimming, irrigation, farming, throwing waste in water bodies, defecating in streams."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.1.1.2",
+                  "description": "Identify ways of protecting land and water as a responsible citizen",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Suggest ways in which these practices can be mitigated e.g. do not cut down trees anyhow, do not win sand along water bodies, do not defecate in water bodies."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.2.2",
+          "title": "Plants and Animals",
+          "description": "Importance of gardening.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.2.2.1",
+              "description": "Demonstrate understanding of the importance of gardening",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.2.1.1",
+                  "description": "Explain how to make and maintain a garden",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the importance of gardens in the home, school and community"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners visit various gardens e.g. school garden, flower garden"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners make a simple garden in the school and care for them e.g. flower pots, flower beds, vegetable beds"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners watch picture/films of gardens"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.2.3",
+          "title": "Map Making and Land Marks",
+          "description": "Skills in map making and landmarks.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B3.2.3.1",
+              "description": "Demonstrate understanding of skills in map making",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.3.1.1",
+                  "description": "Sketch the shape of the classroom and indicate the position of the teacher's desk",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sketch the shape of the classroom."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Through questions and answers, guide learners to indicate where they sit in the classroom, on their sketches with a small round shape."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners show on their sketches the location of the following: i) Chalk/White board (Bb/Wb); ii) Cupboard (C); iii) Teacher's table (Tt)"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners label their objects with abbreviations as in the list of objects."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners describe the shape of the cupboard."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.3.1.2",
+                  "description": "Mention reasons why records should be taken regularly, as a responsible citizen",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through think-pair-share, learners talk about the need to take records regularly, e.g. for future use, for accuracy."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.2.3.2",
+              "description": "Demonstrate understanding of landmarks on the school compound",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B3.2.3.2.1",
+                  "description": "Make a sketch of the school compound and show locations of some landmarks",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to explore the school compound through a study tour and do the following: i. Identify the position of buildings in relation to one another. ii. Draw the outline of the classroom on the chalk/white board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call learners to come up to mark out their sitting positions on the outline."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.2.4",
+          "title": "Population and Settlement",
+          "description": "Knowledge of settlements and community pride.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B3.2.4.1",
+              "description": "Demonstrate knowledge of settlements",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.4.1.1",
+                  "description": "Recognise the need to be proud of their communities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the need to be proud of their communities e.g. that is where they live, peace"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Through role play/dramatisation/fieldtrip guide learners to talk about how they will protect their environment and the facilities in their community. e.g. do not litter the environment, do not engage in open defecation, report people who destroy public utilities, switch off light in public place if not in use, shut open tap if not in use, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.3",
+      "title": "OUR BELIEFS AND VALUES",
+      "description": "Worship, festivals, human rights, and leadership.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B3.3.1",
+          "title": "Worship",
+          "description": "Importance of religious worship and scriptures.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.3.1.1",
+              "description": "Demonstrate understanding of the importance of religious worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.3.1.1.1",
+                  "description": "Explain the reasons for studying the sacred scriptures of the three major religions among their followers",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention and talk about why they study the sacred scriptures: The Holy Bible (Christianity), The Holy Qur'an, Hadith (Islam), Sacred Myths, parables and taboos (Traditional Religion), etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners recite simple texts from the scriptures: Al-fatihah (Islam), Psalm 23 (Christianity) and Sacred Myths, folktales, parables, etc. (Traditional Religion). Let learners recite texts from the scriptures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners to talk about the moral lessons from the scriptures."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.3.2",
+          "title": "Festivals",
+          "description": "Importance of religious festivals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.3.2.1",
+              "description": "Demonstrate understanding of the importance of religious festivals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.3.2.1.1",
+                  "description": "Describe how various festivals are celebrated",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention religious festivals they have witnessed: i. Islam-Eid-ul-Fitr, Eid-ul-Adha; ii. Christianity-Easter, Christmas, Ash Wednesday, Pentecost Day; iii. Traditional- Aboakyer, Hogbetsotso, Adae, Fetu Afahye, Feok, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures and videos of religious festivals."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play activities that take place during the festivals and talk about them."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners narrate the events in the festivals they have participated in and their importance."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners draw scenes they saw during the festival they witnessed."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.3.3",
+          "title": "Basic Human Rights",
+          "description": "Importance of human rights.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B3.3.3.1",
+              "description": "Demonstrate understanding of the importance of human rights",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.3.3.1.1",
+                  "description": "Describe ways of claiming one's rights",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In small groups, learners talk about how to claim their rights. The individual can claim his/her rights through: joining civic clubs, reporting to Social Welfare, reporting to the law courts, reporting to CHRAJ, reporting to the police, embarking on lawful public demonstrations, using negotiation, reporting to relevant institutions, e.g. FIDA."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners share experiences of cases they have experienced or seen being handled by any of these institutions or agencies."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.3.4",
+          "title": "Being a Leader",
+          "description": "Knowledge of life stories of religious leaders.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B3.3.4.1",
+              "description": "Demonstrate knowledge of the life stories of leaders of the major religions in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.3.4.1.1",
+                  "description": "Describe the youthful lives of the leaders of the three major religions in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the youthful lives of the religious leaders: (i). The Lord Jesus Christ; (ii). The Holy Prophet Muhammad (S.A.W.); (iii). A Traditional Religious Leader"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, learners talk about the occupations of the religious leaders: (i). The Lord Jesus Christ as a Carpenter; (ii). The Holy Prophet Muhammad (S.A.W) as a Businessman; (iii). A Traditional Religious Leader, eg. Egya Ahor as a farmer."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, learners write short paragraphs on the occupational lives of the religious leaders and present to class for discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.3.4.1.2",
+                  "description": "Identify moral lessons of the lives of the religious leaders",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners, the moral lessons of the youthful lives of the religious leaders: piety, honesty, sacrifice, patience, hard work, courage, perseverance, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about how they can apply the moral lessons they learnt from the lives of the religious leaders in their daily lives."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play the moral lives of the religious leaders."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.4",
+      "title": "OUR NATION GHANA",
+      "description": "Citizenship, law and order, authority, resource use, and farming.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B3.4.1",
+          "title": "Being a Citizen",
+          "description": "Good manners in society.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.4.1.1",
+              "description": "Demonstrate knowledge of good manners in the society",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.4.1.1.1",
+                  "description": "Identify good manners in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners work in groups to identify good manners in the Community e.g. Greeting, Courtesy, Commitment, Love, Peace, Honesty, Tolerance, Respect for others, High achievement, Patriotism, Hard work and observing good manners"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about good manners and the importance of upholding societal values e.g. preserves the society, promotes unity, gives us a sense of identity, promotes law and order, makes people responsible"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about things they can do to uphold values in the community"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Note: Learners read Courtesy for Boys and Girls for more examples of observing good manners"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.4.2",
+          "title": "Power and Authority",
+          "description": "Maintaining law and order, respecting authority.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.4.2.1",
+              "description": "Demonstrate how law and order is maintained in the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.4.2.1.1",
+                  "description": "Explain how law and order is maintained in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss how law and order is maintained in the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners mention agencies responsible for maintaining law and order in the community e.g. the police, lawyers"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play how law and order is maintained in the community"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.2.2",
+              "description": "Demonstrate respect for symbols of authority",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B3.4.2.2.1",
+                  "description": "Show respect to national symbols",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about why national symbols (Coat of Arms, Pledge, National Anthem, Flag, adinkra) should be respected e.g. promote sense of belonging among individuals and to the nation"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about the various ways of showing respect national symbols e.g. singing the National Anthem, reciting the National Pledge"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.4.3",
+          "title": "Responsible Use of Resources",
+          "description": "Knowledge of responsible energy use.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B3.4.3.1",
+              "description": "Demonstrate knowledge of responsible use of energy",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.4.3.1.1",
+                  "description": "Explain ways of conserving energy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the importance of conserving energy in the home."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners identify positive attitudes towards energy conservation e.g. switch off light when not in use, use energy saving bulbs, put all gadgets off when leaving home."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play how energy can be conserved in the community."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners reflect on what they can do to serve as ambassadors for energy efficiency and energy conservation in their homes and communities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.4.4",
+          "title": "Farming in Ghana",
+          "description": "Understanding Ghana's agricultural products.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B3.4.4.1",
+              "description": "Show understanding of Ghana's agricultural products",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.4.4.1.1",
+                  "description": "Identify Ghanaian agricultural products",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about agricultural products in Ghana and the need to eat our local foods e.g. Ghana chocolate, yam, cocoyam, poultry, rice"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners watch videos and pictures of Ghanaian agricultural products"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about reasons why we should appreciate and use Ghanaian agricultural products, e.g. to create employment, revenue for government."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.5",
+      "title": "MY GLOBAL COMMUNITY",
+      "description": "Neighbouring countries and computing.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B3.5.1",
+          "title": "Our Neighbouring Countries",
+          "description": "Knowledge of Ghana's neighbours.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.5.1.1",
+              "description": "Demonstrate knowledge of Ghana's neighbours",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.5.1.1.1",
+                  "description": "Describe the location of Ghana and her neighbouring countries",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners watch Ghana's neighbouring countries on a map or the globe."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners describe Ghana's neighbouring countries e.g. Togo stretches from the North to the South on the eastern part, La Cote d'Ivoire stretches from the North to the South on the western part, Burkina Faso joins the northern part of Ghana. Note: Ghana shares boundaries with the three countries. In the south is the Atlantic Ocean."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.5.2",
+          "title": "Introduction to Computing",
+          "description": "Understanding computer parts.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.5.2.1",
+              "description": "Demonstrate an understanding of the parts of a computer",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.5.2.1.1",
+                  "description": "Identify the parts of the computer and how they work",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learner identify parts of the computer and how they work (i.e. hard disk, power supply) or pictures of the computer parts to class, ask learners to pick one item in turns and differentiate selected items."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners identify the bottom row, Caps Lock and Tab keys on the real keyboard or by the use of pictures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners practise typing e.g. four-letter words and simple sentences on the key pad with proper positioning of fingers on the keyboard."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners explore the insertion and ejection of DVD/CD-ROM as well as connecting of a pen drive."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Through demonstration guide leaners to play computer games to re-enforce keyboard and mouse skills."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.5.3",
+          "title": "Sources of Information",
+          "description": "Understanding sources of information.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B3.5.3.1",
+              "description": "Demonstrate understanding of sources of information",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.5.3.1.1",
+                  "description": "Demonstrate sending and sharing information",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about where one can receive or send information, e.g. letter writing or text messaging, posters, newspapers, telephones calls, SMS etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to role-play a telephone conversation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "NB: Recall content in B2 and add to it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.5.4",
+          "title": "Technology in Communication",
+          "description": "Understanding use of technology.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B3.5.4.1",
+              "description": "Demonstrate understanding of the use of technology in the community (communication)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.5.4.1.1",
+                  "description": "Identify the importance of technology in communication",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about ways of communicating with others e.g. Story telling, conversations, gesturing etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about the importance of technology in communication, e.g. it is faster, it is saves money, it makes us contact people easily."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about how to protect technology tools in communication, e.g. handling with care, not leaving them in the Sun, cleaning them regularly."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners practise how to use mobile phone to communicate politely e.g. how to make a call and how to receive a call. Learners talk about how to speak on phone politely."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

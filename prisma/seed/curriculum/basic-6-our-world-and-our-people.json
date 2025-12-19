@@ -1,0 +1,846 @@
+{
+  "part": "1/1",
+  "phase": "Upper Primary",
+  "level": "Basic 6",
+  "subject": "Our World and Our People",
+  "name": "Basic 6 Our World and Our People",
+  "slug": "basic-6-our-world-and-our-people",
+  "orderIndex": 1,
+  "description": "The Basic 6 Our World and Our People curriculum focuses on the nature of God, adolescence, family relationships, food safety, environmental conservation, map reading, migration, religious practices, human rights, citizenship, and global cooperation.",
+  "strands": [
+    {
+      "code": "B6.1",
+      "title": "ALL ABOUT US",
+      "description": "Developing understanding of God, self, family, and the community.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B6.1.1",
+          "title": "Nature of God",
+          "description": "Understanding the attributes of God.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.1.1.1",
+              "description": "Demonstrate understanding of the Nature of God as the Creator",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.1.1.1",
+                  "description": "Describe the attributes of God",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups discuss the attributes of God e.g. love, patience, merciful, Omniscient- All-knowing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play scenarios to reflect the attributes of God in their lives."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners write essays on the attributes of God in relations to themselves."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.2",
+          "title": "Myself",
+          "description": "Understanding adolescence and personal development.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.1.2.1",
+              "description": "Demonstrate understanding of challenges that occur during adolescence",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.2.1.1",
+                  "description": "Explain problems associated with adolescence",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about and list changes that occur during adolescence."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners think-pair-share on challenges associated with adolescence."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners illustrate challenges facing adolescence using the Future's Wheel e.g. engaging in sexual activity can result in acquiring sexually transmitted infections (STIs) including HIV, teenage pregnancy and parenthood, streetism and poverty, drug use and abuse, negative peer pressure leading to criminal activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.2",
+                  "description": "Explain how to manage the problems that occur during adolescence",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups discuss how to manage the challenges that come with changes during adolescence. e.g. counselling from a responsible adult, discussing problems with peers and siblings, dressing in a modest way to avoid enticing the opposite sex, being assertive, respecting the sexual rights of others."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.2.2",
+              "description": "Demonstrate understanding of personal hygiene during adolescence",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.1.2.2.1",
+                  "description": "Explain how to maintain personal hygiene during adolescence",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners think-pair-share on how to maintain personal hygiene during adolescence e.g. keeping their teeth clean, bathing regularly and using lime/deodorant, keeping their clothes clean, keeping their rooms and environment clean, taking good health care of their genital organs, changing their pads regularly during menstruation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss how adolescent problems affect national development e.g. decrease in productivity, increase in cost of health care, increase in poverty."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.2.3",
+              "description": "Demonstrate how adolescents can harness their potentials to achieve their goals in life",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B6.1.2.3.1",
+                  "description": "Explain how to prepare and accomplish aspirations in life",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify what they want to become in life and discuss why they chose particular vocations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners share their views about how they intend to prepare themselves towards achieving their aspirations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups discuss things that could prevent them from achieving their goal e.g. HIV/AIDS, early pregnancy."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners role play scenarios on how to overcome challenges that could prevent them from accomplishing their aspirations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.3",
+          "title": "My Family and the Community",
+          "description": "Understanding family relationships and community members.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.1.3.1",
+              "description": "Demonstrate understanding of attitudes and behaviours of a responsible family member",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.3.1.1",
+                  "description": "Explain the need for cordial relationships among family members",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups, discuss attitudes and behaviours of a responsible family member: taking part in family activities responsibly, obedience to elders, respect for family members, accepting responsibility, taking initiatives, helping needy relatives."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the importance of being committed to the family: to promote unity, to gain respect, to be considered a trustworthy person, to uplift family image."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners engage in role-play and other activities that will teach them to become family members who are committed e.g. mock family meetings, naming ceremonies."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.4",
+          "title": "Home and School",
+          "description": "Understanding food safety.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.1.4.1",
+              "description": "Demonstrate knowledge of food safety practices",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.4.1.1",
+                  "description": "Identify ways of promoting food safely",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss ways of ensuring food safely e.g. wash hands well, cover food well, serve in clean plates, serve cooked food hot."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners demonstrate how to cook and serve hot food safely."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.2",
+      "title": "ALL AROUND US",
+      "description": "Exploring the environment, weather, plants, animals, and settlement patterns.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B6.2.1",
+          "title": "The Environment and the Weather",
+          "description": "Knowledge of trees and their importance.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.2.1.1",
+              "description": "Demonstrate understanding of the importance of trees in our environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.1.1.1",
+                  "description": "Plant trees in their communities as a civic duty",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss the importance of trees in their communities e.g. clean air, shade."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners undertake a tree planting project in the school to check erosion or provide shade."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Project activities include: a visit to the forestry commission for seedlings, planting the seedlings and take care of them in the school, write down the processes about their project e.g. daily watering, measuring the height of the trees weekly."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.2",
+          "title": "Plants and Animals",
+          "description": "Importance of animals to plants.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.2.2.1",
+              "description": "Demonstrate understanding of the importance of animals to plants in the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.2.1.1",
+                  "description": "Explain the importance of animal waste to plants",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners watch pictures/videos of manure and discuss the importance of manure e.g. soil fertility."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Obtain different plant and animal waste from the community and use such materials to prepare manure."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.3",
+          "title": "Map Making and Land Marks",
+          "description": "Understanding the map of Ghana.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.2.3.1",
+              "description": "Demonstrate understanding of the map of Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.3.1.1",
+                  "description": "Identify the political regions on a sketch map of Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the political regions of Ghana e.g. the sixteen regions, their names and capitals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners show the locations of the political regions on a sketch map of Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Observe a map of Africa and write out the countries, which border Ghana to the North, East and West."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compose a song that locates the position of Ghana in relation to other countries along the Coast of West Africa."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.4",
+          "title": "Population and Settlement",
+          "description": "Understanding internal migration.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.2.4.1",
+              "description": "Show understanding of internal migration in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.4.1.1",
+                  "description": "Describe internal migration in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain migration as the movement of people from one place to another with the intention of settling there."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners in groups discuss the patterns of internal migration in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners brainstorm the reasons for migration Ghana e.g. better living conditions, to find work, for marriage, inadequate road networks."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners show the migration pattern on a sketch map of Ghana."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners brainstorm and come out with challenges associated with urban settlements: poor sanitation, environmental pollution, traffic congestion."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "In groups discuss measures that can be taken to solve challenges associated with rural and urban settlements."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.3",
+      "title": "OUR BELIEFS AND VALUES",
+      "description": "Exploring worship, festivals, human rights, and leadership.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B6.3.1",
+          "title": "Worship",
+          "description": "Importance of prayer and worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.3.1.1",
+              "description": "Demonstrate understanding of the importance of prayer, worship and other acts of worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.1.1.1",
+                  "description": "Describe the importance of prayer in our lives",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss the meaning of prayer."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about the types of prayer in Christianity, Islam, and Traditional religion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners discuss the importance of prayer: brings us closer to God, shows our dependence on God."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners demonstrate how prayer is done in the three major religions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.3.2",
+          "title": "Festivals",
+          "description": "Significance of celebrations.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.3.2.1",
+              "description": "Demonstrate knowledge of the significance of celebrations in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.2.1.1",
+                  "description": "Identify two ways of making festivals beneficial to the communities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about ways of making celebrations of festivals beneficial to the communities e.g. use festival occasions to plan for development, encourage youth participation, gender and inclusivity, settle disputes, honour hardworking people, showcasing the culture of the people."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw a durbar of chiefs during festival celebrations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.3.3",
+          "title": "Basic Human Rights",
+          "description": "Understanding fundamental human rights.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.3.3.1",
+              "description": "Demonstrate understanding of fundamental human rights",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.3.1.1",
+                  "description": "Identify sources of help",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss human rights abuses against children e.g. neglect, emotional abuse, physical and sexual abuse, child labour."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss how to get help in case of abuse e.g. responsible adults, police (DOVVSU), Social Welfare, CHRAJ."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners discuss how to speak out and not keep quiet over an abuse."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners create posters speaking against child abuse and also show where to go for help in case of abuse."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.3.4",
+          "title": "Being a Leader",
+          "description": "Understanding the latter lives of religious leaders.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.3.4.1",
+              "description": "Demonstrate understanding of the latter lives of the leaders of the three major religions in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.4.1.1",
+                  "description": "Narrate the story of the latter lives of the leaders of the major religions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss the latter lives of the religious leaders: Jesus Christ, The Holy Prophet Muhammad (S.A.W.), Traditional leaders."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures or video clips on the latter lives of Jesus Christ and a traditional leader to learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups explore moral lessons in the latter lives of the religious leaders which they can relate to their lives in nation building e.g. humility, forgiveness, faithfulness, obedience, perseverance, patriotism."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners role play the moral lessons they have learnt in the latter lives of the religious leaders."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.4",
+      "title": "OUR NATION GHANA",
+      "description": "Developing national identity and citizenship.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B6.4.1",
+          "title": "Being a Citizen",
+          "description": "Understanding peaceful living and social accountability.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.4.1.1",
+              "description": "Demonstrate understanding of behaviours and attitudes for peaceful living",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.1.1.1",
+                  "description": "Describe activities for peaceful living",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss ways of living peacefully with each other e.g. love, tolerance, forgiveness, self-control."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the importance of peaceful living e.g. togetherness, security, development."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners engage in a role-play and other activities to demonstrate peaceful living."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.1.1.2",
+                  "description": "Describe skills for resolving conflict in the community",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain domestic violence and conflict."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the causes of domestic violence and conflict in the family."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners share experiences of domestic violence and conflict in the community."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the effects of domestic violence on the family."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners role play peaceful resolution of conflict in the school, family and community."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.4.1.2",
+              "description": "Demonstrate understanding of the importance of social accountability",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.4.1.2.1",
+                  "description": "Explain the importance of public accountability",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain public accountability."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the importance of public accountability in promoting social justice."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups learners identify ways by which people can be held accountable for their stewardship."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.2",
+          "title": "Authority and Power",
+          "description": "Understanding authority and good governance.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.4.2.1",
+              "description": "Demonstrate understanding of the need to obey and submit to authority",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.2.1.1",
+                  "description": "Identify the role of children in promoting harmony with other family members",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss what it takes to live in harmony."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners in pairs, list roles they can play to promote harmony in the family e.g. Children must be respectful, obedient, humble, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners in pairs, list roles other family members can play to ensure harmony in the family."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Ask learners to role-play the duties of their grandparents, uncles, cousins, aunts, etc., in moulding their character."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.4.2.2",
+              "description": "Demonstrate understanding of the need for good governance",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.4.2.2.1",
+                  "description": "Explain and appreciate the importance of democratic governance",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify various persons and bodies who are responsible in governing their school."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the importance of good governance in their school."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups suggest ways in which school governance could be improved."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners demonstrate how to elect a leader in a democratic way."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners discuss why good governance is important for national development."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners discuss the features of democratic governance in Ghana."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Learners discuss how individuals can promote democratic governance."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.3",
+          "title": "Responsible use of Resources",
+          "description": "Protecting water bodies.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.4.3.1",
+              "description": "Demonstrate understanding of individual responsibilities in protecting water bodies",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.3.1.1",
+                  "description": "Identify individual responsibilities in protecting water bodies",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners watch pictures/videos on strategies to protect water bodies."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the pictures/videos and suggest individual responsibilities for protecting water bodies."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners form protecting water bodies clubs."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners undertake tree planting exercise along water bodies."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.6",
+          "title": "Farming in Ghana",
+          "description": "Job opportunities in agriculture.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.4.6.1",
+              "description": "Demonstrate knowledge of job opportunities in the agricultural value chain",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.4.1.1",
+                  "description": "Describe the agricultural value chain and the job opportunities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss the meaning of agricultural value chain."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about job opportunities in the agricultural value chain e.g. crop farming, livestock, fisheries, agro-chemicals industry, meat processing."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners write essays on their choice of job opportunities in the agricultural value chain."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.5",
+      "title": "MY GLOBAL COMMUNITY",
+      "description": "Connecting with neighbouring countries and climate change.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B6.5.1",
+          "title": "Our Neighbouring Countries",
+          "description": "Cooperation with other nations and climate change.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.5.1.1",
+              "description": "Demonstrate understanding of how Ghana cooperates with other nations",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.1.1.1",
+                  "description": "Explain how Ghana co-operates with other nations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners recall countries that surround Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners identify countries surrounding Ghana on a map of West Africa."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners discuss how Ghana co-operates with her neighbours e.g. trade, sports, political."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners talk about the reasons why Ghana should continue to co-operate with other nations."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners dramatise the processes to follow in accepting help from other nations."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.5.1.2",
+              "description": "Demonstrate understanding of climate change",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.5.1.2.1",
+                  "description": "Investigate the effects climate change on the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use video clips, field trips and pictures to help learners identify the effects of over concentration of greenhouse gases and climate change on the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss human activities in their community that contribute to the emission of greenhouse gases."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups suggest ways by which human beings can adapt to climate change."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

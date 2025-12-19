@@ -1,0 +1,493 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 4",
+  "subject": "Religious and Moral Education",
+  "name": "Basic 4 Religious and Moral Education",
+  "slug": "basic-4-religious-and-moral-education",
+  "orderIndex": 1,
+  "description": "The Basic 4 Religious and Moral Education curriculum focuses on the nature of God as the Creator, environmental stewardship, the significance of religious practices and festivals, the call of religious leaders, and the importance of commitment, authority, and obedience in the family and community.",
+  "strands": [
+    {
+      "code": "B4.1",
+      "title": "God, His Creation and Attributes",
+      "description": "Exploring the nature of God as Creator and the environment.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B4.1.1",
+          "title": "God the Creator",
+          "description": "Understanding the nature of God and the uniqueness of humankind.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.1.1.1",
+              "description": "Explore the nature of God as the Creator",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.1.1.1",
+                  "description": "Explain the nature of God as the Creator.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to discuss the nature of God as the Creator: originator of all things, He created all things such as human beings, trees, animals, water bodies, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Take learners on nature walk to observe and document things created by God: human beings, trees, animals, water bodies, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, learners put their findings together and present them to the class for discussion."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.1.2",
+              "description": "Appreciate the uniqueness of humankind and other creatures",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.1.1.2.1",
+                  "description": "Identify the uniqueness of humankind from other creatures.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners in groups identify how different humankind is from other creatures of God: human beings versus animals; human beings versus plants."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners, in groups, write down the characteristics of humankind: our thinking ability, ability to speak, knowing what is good and evil, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let each group present its list for peer-review and class discussion."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners draw an animal and a human being and draw the comparison between the two."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners write down the characteristics of humankind that are different from animals."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.2",
+          "title": "The Environment",
+          "description": "Understanding the effects of human activities on the environment.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.1.2.1",
+              "description": "Explain the effects of human activities on the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.2.1.1",
+                  "description": "Discuss the effects of human activities on the environment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to talk about the human activities in the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures and video clips on human activities that destroy the environment: illegal mining (galamsey), indiscriminate cutting down of trees (deforestation), pollution of water bodies, air pollution, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners write the effects of human activities on the environment: climate change heat, floods, rain storms, less rainfall, famine, drought, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.2",
+      "title": "Religious Practices and their Moral Implications",
+      "description": "Understanding religious worship and festivals.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B4.2.1",
+          "title": "Religious Worship, Prayer and other Religious Practices",
+          "description": "Understanding the forms and purpose of worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.2.1.1",
+              "description": "Appreciate the importance of prayer, worship and other acts of worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.1.1.1",
+                  "description": "Name the various forms of worship.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to mention the various forms of worship in the three main religious groups in Ghana: Christianity, Islam and Traditional."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners observe pictures depicting various forms of worship and discuss them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, let learners write down the activities that go on during worship."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners dramatise the modes of worship among the three major religious groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.1.1.2",
+                  "description": "State the purpose of worship in the three main religions.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Together with learners, discuss why we worship God: to draw closer to God, to communicate with God, to show obedience to God, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, learners should recognise the need to take active part in worship."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners draw and colour a worship scene."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.1.1.3",
+                  "description": "Differentiate between religious and non-religious songs.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to mention songs sung in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners differentiate between religious and non-religious songs by comparing the lyrics: religious songs express faith in God while non-religious songs portray worldly ideas, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let groups list titles of religious and non-religious songs."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners sing some religious and non-religious songs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.2",
+          "title": "Festivals in the Three Major Religions",
+          "description": "Exploring the significance of religious festivals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.2.2.1",
+              "description": "Explore the significance of religious festivals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.2.1.1",
+                  "description": "Discuss festivals in their neighbourhood.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention festivals that are celebrated in their communities: Christmas, Easter, Eid-Ul-Fitr, Eid-Ul-Adha, Odwira, Aboakyir, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use pictures, charts or video clips to demonstrate how the various religious festivals are celebrated."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners recite texts and sing songs that accompany festivals celebrated in their communities."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Put learners in groups to write activities that take place during festivals."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "In their same groups or in pairs, let learners discuss the specific activities that take place during festivals, bringing out the following values: Moral, Social and Economic."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let groups present their findings for class discussions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.3",
+      "title": "Religious Leaders",
+      "description": "Understanding the call of religious leaders.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B4.3.3",
+          "title": "The Call of the Leaders of the Three Major Religions",
+          "description": "Explaining the significance of the call of religious leaders.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.3.3.1",
+              "description": "Explain the significance of the call of the main religious leaders",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.3.1.1",
+                  "description": "Describe the call of the religious leaders.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners discuss the leaders of the three major religions in Ghana: The Lord Jesus Christ as the son of God-His Baptism; The Holy Prophet Muhammad (S.A.W) - His encounter with Angel Jibril (Gabriel) in the Cave-Hijrah; The call of Traditional Religious Leader-OkomfoAnokye, TogbuiTsali, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Invite a resource person to talk about the call of each religious personality."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to discuss what they have heard about the religious personalities."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, ask learners to dramatise or role-play the call of the religious personalities."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners write on the call of the religious personalities and present their works to class for discussion."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.4",
+      "title": "The Family and Community",
+      "description": "Understanding roles, relationships, and commitment in the family and community.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B4.4.1",
+          "title": "Roles and Relationships",
+          "description": "Exhibiting commitment to God and understanding the need for good deeds.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.4.1.1",
+              "description": "Exhibit the need to be committed to God",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.1.1.1",
+                  "description": "Explain the need to be committed to God.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention the ways by which we are committed to God: Prayer, service to humankind, caring for the environment, helping the needy (charity), etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to discuss the need to be committed to God: God created us; It is a command from Him, He provides our needs, we get good things from Him, we worship Him, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups or in pairs, let learners mention the benefits of being committed to God: blessings from God, drawing closer to God, health, long life, prosperity, eternal life, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, let learners discuss why they have to be committed to God."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners in pairs, write the benefits of responding to God's call and present their works for class discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.1.1.2",
+                  "description": "Identify deeds that attract rewards.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to discuss deeds, attitudes and actions towards others and things in the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to write down good deeds: helping one another; obedience to the constitution of Ghana, parents, teachers, school authorities, elders and rulers, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to know that refusal to do good deeds attracts punishment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Put learners in groups to write down actions that are rewarded and those that are punished and present to class for discussion."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners select texts from the sacred scriptures that talk about good deeds and dramatise them: The Good Samaritan (Luke-10:25-37), The Feeding of the Five Thousand-a little boy offered his loaf of bread (Mathew 14:16-21), Righteous Deeds (Surah Hud, The Holy Quran 11:11) and Traditional folktales and proverbs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.1.1.3",
+                  "description": "Give reasons for rewarding good deeds.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to re-call good deeds."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners mention types of rewards: handshakes, hugs, praises, certificates, prizes, gifts, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to discuss the importance of good deeds: to ensure law and order in society, to help everyone to develop good moral life, to encourage hardworking, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners, in pairs or groups, write essays on good deeds: Why I will always do good; The rewards of being good; Every good turn deserves another"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.5",
+      "title": "The Family, Authority and Obedience",
+      "description": "Understanding authority, obedience, and family roles.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B4.5.1",
+          "title": "Authority and Obedience",
+          "description": "Explaining the need to obey authority.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.5.1.1",
+              "description": "Explain the need to obey and submit to authority",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.1.1.1",
+                  "description": "Explain authority at home, school and in the community.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through questions and answers, let learners explain authority."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "With the aid of picture cards, videos, wall charts, etc., let learners identify people in authority in their immediate community. NB Where possible, films can be used to guide the learners to identify the people in authority in the immediate communities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to identify those in authority at home, school and in their community: parents, head teachers, teachers, class prefect, sectional leaders, chiefs, pastors, Imams, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners dramatise or role-play authority at home, school and in the community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.5.2",
+          "title": "Roles, Relationships in the Family and Character Formation",
+          "description": "Explaining the importance of being a loyal family member.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.5.2.1",
+              "description": "Explain the importance of being a loyal member of the family",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.2.1.1",
+                  "description": "Discuss the importance of being a committed member of the family.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Assist learners to explain who a committed person is."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners mention behaviours that show that a person is committed."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners to describe a committed family member. A person who: takes part in family activities, is obedient to elders of the family, respects other family members, accepts responsibility (performing assigned duties), takes initiatives, helps needy relatives, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Help learners to discuss the importance of being a committed family member: to promote unity, to gain respect, to be considered a trustworthy person, etc."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners role-play or mime roles committed family members."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,708 @@
+{
+  "part": "1/2",
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "Ghanaian Language",
+  "name": "Basic 5 Ghanaian Language",
+  "slug": "basic-5-ghanaian-language",
+  "orderIndex": 1,
+  "description": "The Basic 5 Ghanaian Language curriculum focuses on advanced oral language skills, reading comprehension, and fluency. It includes the study of traditional songs, poems, folktales, and drama, as well as developing vocabulary and phonics knowledge.",
+  "strands": [
+    {
+      "code": "B5.1",
+      "title": "Oral Language (Listening and Speaking)",
+      "description": "Enhancing listening and speaking skills through various oral art forms and daily interactions.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5.1.1",
+          "title": "Songs",
+          "description": "Understanding and performing cradle songs and lullabies.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.1.1.1",
+              "description": "Show an understanding of cradle songs/lullaby",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.1.1.1",
+                  "description": "Sing cradle songs/lullaby with the correct rhythms and discuss importance of cradle songs/lullaby to the baby, mother and caretaker",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show a clip of a baby crying and discuss what a mother does."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play a recorded cradle song and lead learners to sing with correct rhythm."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the importance of lullabies (e.g., makes baby sleep, allows mother to work)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Role-play a mother singing a lullaby."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.3",
+          "title": "Poems",
+          "description": "Exploring poems and understanding their themes.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.1.3.1",
+              "description": "Demonstrate knowledge and understanding of selected poems by discussing them",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.3.1.1",
+                  "description": "Explore a poem of about six to seven lines correctly",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to a poem accompanied by audio and perform gestures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to explore poems correctly."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.2",
+                  "description": "Recognise the key words in the poem and discuss the theme of the poem",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to a poem recital and discuss key issues."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify key words in the poem."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the theme of the poem in groups."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.4",
+          "title": "Listening and Story Telling",
+          "description": "Retelling folktales and understanding their structure.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.1.4.1",
+              "description": "Demonstrate knowledge on the structure and features of folktales",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.4.1.1",
+                  "description": "Retell a folktale of about five scenes and discuss the moral/values of it",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss evening activities and folktales."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Tell a folktale and allow learners to retell it."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the structure and moral lessons of the folktale."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.4.1.2",
+                  "description": "Recognise the characters in the folktales",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify characters in a folktale told by a learner."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write briefly on the identified characters."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.5",
+          "title": "Dramatisation and Role Play",
+          "description": "Transforming stories into drama.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.1.5.1",
+              "description": "Demonstrate an understanding of how a story can be changed into a drama",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.5.1.1",
+                  "description": "Narrate a story of about six to seven characters and recognise the characters, setting and stage",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a story and discuss unfamiliar words."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss key considerations in changing a story to a drama."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify characters, setting, and costumes for the drama."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.5.1.3",
+                  "description": "Perform a drama of about six to seven characters",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the features of a drama."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Direct learners to perform a drama piece based on the storyline."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.6",
+          "title": "Conversation",
+          "description": "Discussing items used at home and school.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.1.6.1",
+              "description": "Name and discuss some basic items used at home and in school",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.6.1.1",
+                  "description": "Recognise and discuss items used at home",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and name items like buckets, plates, stools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the uses of these items and improvise their use."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.6.1.2",
+                  "description": "Recognise and discuss things used at school",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify items in the school environment (e.g., chalk, books)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the items and their uses in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.6.1.3",
+                  "description": "Demonstrate how some of the items used at home and in school are maintained",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate maintenance of items found at home and school."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the benefits of maintenance."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.7",
+          "title": "Talking about Oneself, Family, People and Places",
+          "description": "Demonstrating courtesy through expressions and behavior.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.1.7.1",
+              "description": "Demonstrate knowledge on the recognition of expressions and behaviour that show courtesies",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.7.1.1",
+                  "description": "Demonstrate and say expressions that show courtesy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify courteous expressions from a video (e.g., 'Please', 'Thank you')."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate courteous behavior in various situations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.7.1.3",
+                  "description": "Demonstrate non-verbal behaviour that depict courtesy",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate and discuss non-verbal actions of courtesy."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.9",
+          "title": "Asking and Answering Questions",
+          "description": "Using polar question markers correctly.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.1.9.1",
+              "description": "Demonstrate knowledge on understanding and use of polar question markers",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.9.1.1",
+                  "description": "Recognise and use polar question markers",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Form questions and identify polar question markers (e.g., Yes/No questions)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.9.1.2",
+                  "description": "Explain and use polar question markers",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use polar question markers correctly in speech and conversation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify where markers occur in sentence structure."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.10",
+          "title": "Giving and Following Commands/Instructions",
+          "description": "Using landmarks for directions and understanding home cleaning.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.1.10.1",
+              "description": "Exhibit knowledge of understanding and use of landmarks in giving directions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.10.1.1",
+                  "description": "Recognise landmarks in your area and other areas",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify landmarks on a sketch and in the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give directions to home using landmarks."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.1.2",
+                  "description": "Use landmarks to give directions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give directions from one point to another on a sketch using landmarks."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use GPS/digital address systems."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.11",
+          "title": "Presentation",
+          "description": "Cleaning the home.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B5.1.11.1",
+              "description": "Demonstrate an understanding of the process of cleaning the home",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.11.1.1",
+                  "description": "Discuss things that make the home unclean",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify items that make the home unclean (e.g., rubbish, stagnant water)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.11.1.2",
+                  "description": "Discuss the items used in cleaning the home",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and demonstrate use of cleaning items (e.g., broom, mop)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.11.1.3",
+                  "description": "Give reasons for cleaning the home",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss consequences of an unclean home and reasons for cleaning (e.g., health)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.2",
+      "title": "Reading",
+      "description": "Developing reading skills through phonics, vocabulary, comprehension, and fluency.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5.2.4",
+          "title": "Phonics: Letter and Sound Knowledge",
+          "description": "Recognising sounds, diagraphs, and syllables.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.2.4.1",
+              "description": "Demonstrate the ability to listen to and pronounce words with identical sounds from a list of words",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.4.1.1",
+                  "description": "Read and recognise words with familiar sounds",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Form words using specific sounds."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify words with similar sounds in poems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.4.1.2",
+                  "description": "Read and recognise diagraphs in words found in paragraphs",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Group words with and without diagraphs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify diagraphs in words and use them to form new words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.4.1.3",
+                  "description": "Blend two or more syllables to form words and read them",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Divide words into syllables and use them to form new words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.4.1.4",
+                  "description": "Recognise and say consonant clusters in words found in paragraphs",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify words with consonant clusters in a paragraph."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.5",
+          "title": "Vocabulary (Sight and Content Vocabulary)",
+          "description": "Reading aloud with correct pronunciation and tone.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.2.5.1",
+              "description": "Show an understanding of recognising and reading about things in their environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.5.1.1",
+                  "description": "Read paragraphs of passages aloud with correct pronunciation and tone",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read sentences and paragraphs aloud in groups and individually."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.5.1.2",
+                  "description": "Read stories aloud with correct pronunciation and tone",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read sample texts and stories in groups."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.6",
+          "title": "Comprehension",
+          "description": "Answering questions based on texts.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.2.6.1",
+              "description": "Exhibit knowledge of answering questions based on texts presented",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.6.1.1",
+                  "description": "Explain the meaning of unfamiliar words in context",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explain unfamiliar words from a passage."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.6.1.2",
+                  "description": "Answer factual and inferential questions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage and answer factual and inferential questions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.7",
+          "title": "Silent Reading",
+          "description": "Reading for comprehension and understanding figurative expressions.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.2.7.1",
+              "description": "Demonstrate knowledge on reading for comprehension",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.7.1.1",
+                  "description": "Explain the meaning of unfamiliar words in a text",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read silently and explain unfamiliar words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.7.1.2",
+                  "description": "Explain the meaning of figurative expression in a text and answer questions on the passage",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explain figurative expressions in a passage."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Answer questions based on the passage."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.8",
+          "title": "Fluency",
+          "description": "Reading longer texts with minimal mistakes.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.2.8.1",
+              "description": "Exhibit the ability to read longer texts with minimal mistakes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.8.1.1",
+                  "description": "Read longer texts with minimal mistakes",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read longer passages aloud and discuss unfamiliar words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.8.1.2",
+                  "description": "Read naturally",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read longer passages silently with minimal mistakes."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.9",
+          "title": "Summarising",
+          "description": "Summarising texts and identifying main ideas.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.2.9.1",
+              "description": "Show an understanding of how main ideas are extracted from a text",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.9.1.1",
+                  "description": "Give the summary of longer texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recognise and write down main ideas from paragraphs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give summaries orally and in writing."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.9.1.2",
+                  "description": "Write main ideas in a given text",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select and write main ideas from a text in simple sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

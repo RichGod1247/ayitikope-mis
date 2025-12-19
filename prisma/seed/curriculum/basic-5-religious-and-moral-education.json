@@ -1,0 +1,492 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "Religious and Moral Education",
+  "name": "Basic 5 Religious and Moral Education",
+  "slug": "basic-5-religious-and-moral-education",
+  "orderIndex": 1,
+  "description": "The Basic 5 Religious and Moral Education curriculum focuses on appreciating the nature of God as the Creator, caring for the environment, understanding religious practices and their moral significance, the ministry of religious leaders, family commitment, authority, obedience, and responsible family membership.",
+  "strands": [
+    {
+      "code": "B5.1",
+      "title": "God, His Creation and Attributes",
+      "description": "Appreciating God's creation and attributes.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5.1.1",
+          "title": "God the Creator",
+          "description": "Understanding God's nature and gifts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.1.1.1",
+              "description": "Appreciate the nature of God as the Creator",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.1.1.1",
+                  "description": "Explain how special each individual is.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through various activities such as working in pairs or in groups, let learners discuss how each person is unique and different from one another: some are short, tall, intelligent, fair in complexion, black in complexion, serious, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to demonstrate the uniqueness of each individual, using themselves."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put learners into groups according to: height, colour, mass, intelligence, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners put in writing how different they are from each other."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.2",
+                  "description": "State the qualities of God that humankind should demonstrate.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention qualities of God that humankind should demonstrate: love, patience, mercy, kindness, forgiveness, honesty, accountability etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners discuss among those qualities of God they should possess to make them God's children."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners, in pairs or in groups, discuss how they can use their God-given unique qualities: Serve God and humankind, Protect and preserve the environment, Live together in harmony, Contribute to development, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners present their work for appreciation and discussion in class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.3",
+                  "description": "Mention why individuals should maintain their God-given gifts of form and colour.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners give reasons why they should maintain their God-given form and colour: God has a purpose for creating everybody as they are. No-one creates himself or herself. Our bodies serve as the Temple of God."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners discuss possible purposes for which each one is created in a unique form."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use pictures or video clips (where possible) to demonstrate the effects of destroying our bodies."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Put learners in groups to discuss how to maintain their God-given form and colour and not to deform their bodies. We should be proud of how we were created. We should avoid bleaching the skin."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.2",
+          "title": "The Environment",
+          "description": "Understanding how to care for the environment.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.1.2.1",
+              "description": "Explain how to care for the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.2.1.1",
+                  "description": "Discuss the effects of human activities on the environment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to talk about the human activities in the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures and video clips on human activities that destroy the environment: illegal mining (galamsey), indiscriminate cutting down of trees (deforestation), pollution of water bodies, air pollution, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners write the effects of human activities on the environment: climate change heat, floods, rain storms, less rainfall, famine, drought, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.2.1.2",
+                  "description": "Demonstrate ways to care for the environment.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through questions and answers, learners explain what they think a clean environment should be."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using Think-Pair-Share, learners talk about ways of caring for the environment through: tree planting, proper disposal of wastes, legal mining, clean-up exercises, avoiding environmental pollution, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners organise and do clean-up exercises in the school environment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners in groups to do a project on: clearing a rubbish dump, planting trees, checking erosion, clearing choked gutters, etc."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners discuss and write down the importance of caring for the environment: the importance may include: it helps to improve climatic conditions such as adequate rainfall, balanced temperature on earth, etc."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners present their work in class for appreciation and discussion."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.2",
+      "title": "Religious Practices and their Moral Implications",
+      "description": "Understanding religious worship and festivals.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5.2.1",
+          "title": "Religious Worship in the Three Major Religions in Ghana",
+          "description": "Understanding the importance of prayer and worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.2.1.1",
+              "description": "Appreciate the importance of prayer, worship and other acts of worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.1.1.1",
+                  "description": "Discuss the moral importance of worship.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Help learners (in groups) to explain modes of worship: charity, prayer, song ministration, evangelism, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners give reasons why we worship: humankind is under the authority of the Creator, we demonstrate that we depend on God for survival, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Through questions and answers, assist learners to talk about the importance of worship: to get blessings from God, to get closer to God, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Have children show how they pray."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.1.1.2",
+                  "description": "Explain the moral significance of religious songs and recitations.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners identify religious songs of the three major religions in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners listen to cassette (CD) player of religious songs in the three major religions and indicate how they can apply the theme in their daily lives."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put learners into religious groups to take turns to perform various religious music and dance."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners, in groups, discuss the importance of religious songs in worship: they encourage worship; they make worship lively, they tell us about the nature and attributes of God in melodious and harmonious manner, etc."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let Learners compose simple religious songs and poems."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.2.2",
+          "title": "Festivals in the Three Major Religions",
+          "description": "Explaining the significance of religious festivals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.2.2.1",
+              "description": "Explain the Significance of Religious Festivals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.2.1.1",
+                  "description": "Identify the moral significance of sacred passages and oral traditions in the three main religions.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give selected passages and or oral traditions for learners to study e.g. the Ten Commandments - (Exodus 20,), Al-Fatihah, folktales, etc. and show how they can apply them in their daily lives."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to identify sacred passages and oral traditions in the three main religions in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners isolate moral elements that can be found in the passages and narratives: this reinforces trust in God, helps to control stress, gives hope, guides our behaviours, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.3",
+      "title": "Religious Leaders",
+      "description": "Understanding the ministry of religious leaders.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5.3.4",
+          "title": "Ministry of the Leaders of the Three Major Religions in Ghana",
+          "description": "Understanding the ministry of major religious leaders.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.3.4.1",
+              "description": "Show an understanding of the ministry of each of the major religious leaders",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.4.1.1",
+                  "description": "Describe the key events in the ministry of the leaders of the three religions.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to describe the key events associated with the ministry of the leaders of the three main religions: The Lord Jesus Christ- Baptism, temptation, call of the disciples, teaching, etc.; The Holy Prophet Muhammad (S.A.W.) call, triumphant entry to Makkah, etc.; Traditional Leader- training, teaching, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners role-play some aspects of the ministry of: The Lord Jesus Christ, The Holy Prophet Muhammad and A Traditional Religious Leader."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.4.1.2",
+                  "description": "Outline the moral lessons from the ministry of the various leaders.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Put learners in groups to identify the significant roles by the religious leaders in their ministries: obedience; commitment; patience, leadership, sacrifice etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners dramatise portions of the scripture that depict moral lessons, e.g. submissiveness, humility, loyalty, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.4",
+      "title": "The Family and Commitment",
+      "description": "Understanding family commitment and community roles.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B5.4.1",
+          "title": "The Family and the Community",
+          "description": "Explaining family commitment.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.4.1.1",
+              "description": "Explain Family Commitment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.1.1.1",
+                  "description": "Explain the need to be a committed member of the family.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners mention behaviours and attitudes needed to be a committed family member: Initiates activities for family members eg. Periodic get-together, Supports common family projects eg. Taking care of needy person in the family, Visitation (taking time off to visit elders, parents, etc.), Accepting responsibility (support family members who lag behind in performing their assigned duties), Helping to instil discipline among younger family members, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss the need for being a committed family member: to promote unity, to gain respect, to bring unity and peace in the family, to strengthen the family support system, to be considered a trustworthy person, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, let learners role-play a family sketch centred on commitment. The sketch should have commitment as its theme."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.1.1.2",
+                  "description": "Demonstrate things to do to show commitment as members of the family.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to sketch a demonstration on the following: taking part in family programmes and activities, contributing to and attending weddings, funerals, naming ceremonies, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners discuss things they have to do to show commitment to their family."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.5",
+      "title": "The Family, Authority and Obedience",
+      "description": "Appreciating obedience, authority, and responsible family roles.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B5.5.1",
+          "title": "Authority and Obedience",
+          "description": "Appreciating the need to obey and submit to authority.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.1",
+              "description": "Appreciate the need to obey and submit to authority",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.1.1",
+                  "description": "Recognise parents as sources of discipline and character formation.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through questions and answers, let learners mention how they are disciplined by their parents and other elders at home: scolding, reprimanding, deprivation of gifts and other interests, prayer and worship at home, parents act as role models to children/learners, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to talk about the benefits they get from their parents because of their obedience to them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, let learners demonstrate how their parents discipline them at home."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.1.2",
+                  "description": "Explain the need to demonstrate responsible behaviour at home.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners identify ways by which they can be responsible: be a good child to avoid punishment, emulate parents and other family members, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners dramatise responsible behaviours as parents."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, let learners write essays on how to become responsible adults."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners present their works to the class for appreciation and discussion."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.2",
+          "title": "Roles, Relationships in the Family and Character Formation",
+          "description": "Explaining the contributions of a responsible family member.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.5.2.1",
+              "description": "Explain the contributions of a responsible family member",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.2.1.1",
+                  "description": "Discuss the importance of being a responsible member of the family.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Assist learners to explain a responsible person in the family."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners describe attitudes and behaviours that show that a person is responsible."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners to describe a responsible family member: show commitment in taking family activities, obedience to elders of the family, respect for family members, accepting responsibility (performing assigned duties), taking initiatives, helping needy relatives, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners to discuss the importance of being a responsible family member: to promote unity, to gain respect, to be considered a reliable person, etc."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners role-play activities of responsible family members."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,469 @@
+{
+  "part": "3/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 2",
+      "subject": "English Language",
+      "name": "Basic 2 English Language",
+      "slug": "basic-2-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 2 English Language curriculum focuses on developing foundational skills in listening, speaking, reading, and writing. It adopts an integrated, thematic approach to help learners acquire effective communication skills, appreciate values, and develop core competencies like critical thinking and collaboration.",
+      "strands": [
+        {
+          "code": "B2.4",
+          "title": "Writing",
+          "description": "Developing writing skills through penmanship, labelling, sentence construction, and composition.",
+          "orderIndex": 10,
+          "subStrands": [
+            {
+              "code": "B2.4.2",
+              "title": "Penmanship/Handwriting",
+              "description": "Copying and rewriting sentences correctly.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B2.4.2.1",
+                  "description": "Copy and rewrite sentences correctly",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.4.2.1.1",
+                      "description": "Copy sentences clearly",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Demonstrate copying (sentences) on the board."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners practise writing legibly and correctly on the board or into their books."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners copy sentences from a book into their books."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Draw attention to inter and intra word spacing and alignment of letters, as well as clarity or writing."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.4.3",
+              "title": "Writing Letters - Small and Capital",
+              "description": "Using skills to write legibly and boldly.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B2.4.3.1",
+                  "description": "Use general skills, strategies and knowledge of letter sounds to enable them write legibly and boldly",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.4.3.1.1",
+                      "description": "Copy words in lower and upper case using correct spacing",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners write letters, both in upper and lower cases."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Copy words from learners' reading book on the board as learners observe."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners take turns to read out words from the list."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Draw attention to appropriate spelling and alignment of letters."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Let learners copy the words. Let them check correct spelling, formation of letters and spacing."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.4.3.1.2",
+                      "description": "Use lower and upper case letters appropriately in words and simple sentences",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners to choose level-appropriate topics. e. g. My Family, My Pet, My Friend, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners talk about the topic."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Write what learners say about the topic on the board. e. g. My family: There are six people in my family. My father is a teacher. My mother is a nurse, etc."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners read the sentences."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Re-write the sentences with wrong capitalisation and ask learners re-write them appropriately. e. g. my Father is a teacher."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.4.3.1.3",
+                      "description": "Space words appropriately in sentences",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Write the sentences on the board."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners copy the sentences, paying attention to spacing of words in the sentence."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Encourage learners to display their work."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.4.4",
+              "title": "Labelling Items",
+              "description": "Drawing and labelling simple pictures.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B2.4.4.1",
+                  "description": "Draw and label simple pictures",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.4.4.1.1",
+                      "description": "Draw and label objects found in their environment",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Take learners round to look at charts showing labelled objects."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put learners into groups and ask them to choose an area in the environment where they will want to make a list of objects found there (e.g. home, market, shops etc.)."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners draw and label objects from the area studied by their group."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Help them to edit their work particularly spelling and spacing."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Let learners write their names under their work and post their charts on the walls of the classroom for peer review."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.4.5",
+              "title": "Writing Simple Words and Sentences",
+              "description": "Using grammar and vocabulary to write correctly.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B2.4.5.1",
+                  "description": "Use knowledge of grammar and vocabulary to write words and sentences correctly.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.4.5.1.1",
+                      "description": "Write simple sentences to express feelings",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Put learners in groups to share their feelings."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let each one write, at least, one sentence to express a feeling, e.g. \"I am happy.\""
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.4.5.1.2",
+                      "description": "Write simple and meaningful sentences on objects found in the environment",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Take learners out on a field-trip outside the school to observe things."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss the trip and write their observations in simple sentences on the board. e.g. i. There is a blue house near the school. ii. The house is small. iii. I saw a big bus. iv. The bus has a driver. v. A big shop is near the school. vi. Taxi cabs are on the road. etc."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Put learners into groups to write simple sentences about the objects and places found in the environment."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Encourage each group to add pictures to their sentences."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Publish their work on the walls and encourage gallery walk."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.4.5.1.3",
+                      "description": "Draw a picture and write at least a sentence to share an opinion",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Show pictures of 'smiley/images on your phone or card', e.g. smiling, angry, indifferent or frightened faces, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners study the pictures and interpret them."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners, in pairs, discuss their opinions. Note: The learner's opinion is very important and whatever interpretation learners give must be accepted."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.4.7",
+              "title": "Controlled Writing",
+              "description": "Writing simple compositions.",
+              "orderIndex": 5,
+              "contentStandards": [
+                {
+                  "code": "B2.4.7.1",
+                  "description": "Write simple compositions",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.4.7.1.1",
+                      "description": "Write or copy correct sentences from substitution tables",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have a simple 3-4 column substitution table on the board. e.g. [I/We/The Boys] [go to/play at/read in] [School/Home/the park]."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners identify the words that make up the table."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "With an example, let learners form sentences from the substitution table."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners read out their sentences and write down their sentences in their books."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.4.7.1.2",
+                      "description": "Match parts of sentences to compose meaningful texts",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners talk about the topic (My House) by using descriptive words in sentences."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Write the sentences on the board. e.g. i. My house is big. ii. The walls are blue. iii. The house has many windows. iv. The windows are big. v. The doors and windows are blue."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Write the sentences and break each into two parts for learners to match the beginning with their correct endings."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Encourage learners to do peer editing."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.4.7.2",
+                  "description": "Matching parts of sentences to composition",
+                  "orderIndex": 2,
+                  "indicators": [
+                    {
+                      "code": "B2.4.7.2.1",
+                      "description": "Re-arrange jumbled sentences logically",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Tell/Read an interesting story to learners."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let them retell the story."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Jumble up the sentences making up the story and ask learners to re-arrange them."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.4.8",
+              "title": "Guided Composition",
+              "description": "Composing short paragraphs.",
+              "orderIndex": 6,
+              "contentStandards": [
+                {
+                  "code": "B2.4.8.1",
+                  "description": "Compose short paragraphs through answering questions",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.4.8.1.1",
+                      "description": "Develop two coherent paragraphs on one idea or concepts using leading questions",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Write selected topics on the board, e.g. \"Myself\"."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Teacher and learners brainstorm to generate ideas about the topic."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Put learners in groups and ask leading questions to guide them develop the ideas generated into one or two paragraphs."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.4.10",
+              "title": "Narrative Writing",
+              "description": "Narrating situations and expressing feelings.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B2.4.10.1",
+                  "description": "Narrate situations, express feelings and convey point of view about the real or fictional world",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.4.10.1.1",
+                      "description": "Write about real or imagined experiences or events using the process approach",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Ask learners simple questions on their daily routines."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners brainstorm and choose a topic for the day. e. g. \"A visit to the market\" or \"A visit to the beach\""
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Using questions, assist learners to write a paragraph or two about their experiences. e. g. i. What is the name of the market? ii. Where is the market? iii. What did you buy from the market?"
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Let learners write a short paragraph and paste it on the notice board. Note: Learners may create imaginary experiences and write about them."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.4.12",
+              "title": "Descriptive Writing",
+              "description": "Demonstrating knowledge of description in writing.",
+              "orderIndex": 8,
+              "contentStandards": [
+                {
+                  "code": "B2.4.12.1",
+                  "description": "Demonstrate knowledge of description in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.4.12.1.1",
+                      "description": "Use simple sentences to describe feelings",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners name and describe common objects using adjectives."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners name various objects in the classroom."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Explain what they have to do."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Demonstrate the activity by describing an object in 3-5 sentences. Write the sentences on the board."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Let individuals choose objects and describe them orally and then in writing."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

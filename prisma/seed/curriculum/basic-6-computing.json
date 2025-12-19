@@ -1,0 +1,1433 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 6",
+  "subject": "Computing",
+  "name": "Basic 6 Computing",
+  "slug": "basic-6-computing",
+  "orderIndex": 1,
+  "description": "The Basic 6 Computing curriculum further advances learners' knowledge in computer systems, software applications, internet usage and digital literacy. It covers topics such as the generation of computers, advanced Windows interface operations, data manipulation, presentation and word processing skills, programming concepts, internet safety and the impact of technology on society.",
+  "strands": [
+    {
+      "code": "B6.1",
+      "title": "Introduction to Computing",
+      "description": "Deeper dive into computer hardware, software and operating systems.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B6.1.1",
+          "title": "Generation of Computers and Parts of a Computer and Other Gadgets",
+          "description": "Understanding computer generations, components and peripherals.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.1.1.1",
+              "description": "Identify parts of a computer, technology tools and history of computers",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.1.1.1",
+                  "description": "Learn about the Generation of Computers",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss the Generation of Computers. Microprocessors - Super Computers, Mainframe, Minicomputers and Microcomputers, Mobile Phones, etc"
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.2",
+                  "description": "Identify components of a Computer System: Hardware, Software and Liveware.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify Hardware (input, output, storage and communication), Software, Liveware and discuss the components and how they are used. NB: the discussion should be limited to definition level."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.3",
+                  "description": "Identify the left, right mouse button, holding of mouse, performing single, double and triple clicking, dragging object and using the scroll wheel.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to master the use of mouse through practical sessions and games."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.4",
+                  "description": "Demonstrate proper use of keyboarding technique.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to type stories using Word Processor or typing tutorial (e.g. Mavis Beacon) to improve typing speed."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.5",
+                  "description": "Summarise the generation of computers (second generation of computers.)",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Group learners into groups. Guide them to summarise the generation of computers. After, let them present their findings in groups to the class. eg. First generation, Second generation, Third generation etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.2",
+          "title": "Introduction to MS-Windows Interface (Desktop Background and Locations of the Computer)",
+          "description": "Advanced desktop customization and file management.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.1.2.1",
+              "description": "Demonstrate the use of the Desktop Background as well as working with folders.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.2.1.1",
+                  "description": "Explore the use of the desktop Background, changing the themes colours and User account. (e.g. classic, icons and Taskbar of the background)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to the use of the desktop Background, change the themes colours and the User account."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.2",
+                  "description": "Demonstrate the use of the Recycle Bin or Trash Can.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use the recycle bin by deleting and viewing deleted files."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.3",
+                  "description": "Perform permanent delete or Empty Trash can and restoring files or icons in the recycle bin.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Support learners to liken the Recycle bin and its use to the real-world office trash can."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.4",
+                  "description": "Explore the use of Copy, Paste, Delete tools, the moving of folders by using the Desktop Pop-Up menu.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to the use of the Copy, Paste, Delete tools, the moving of folders by using the Desktop Pop-Up menu."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.5",
+                  "description": "Illustrate the use of File Explorer window and locations of the computer through the file explorer.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to the use File Explorer window and locations of the computer through the file explorer."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.6",
+                  "description": "Locate the hard drives, and other removable storage icons in the File explorer.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to locate the hard drives and other removable storage icons in the File explorer."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.7",
+                  "description": "Use the File Explorer Ribbon (Home Ribbon only), that is, the use of the Clipboard and Organise tools of the Home Ribbon of the File Explorer, as well as the Open New Window and Close tools of the File Menu of the File Explorer.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use the File Explorer Ribbon (Home Ribbon only); the use of the Clipboard and Organise tools of the Home Ribbon of the File Explorer, and Open New Window and Close tools of the File Menu of the File Explorer."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.8",
+                  "description": "Demonstrate the use of the navigation Pane of the File Explorer to access different locations of the computer from the navigation pane.",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to the use of the navigation Pane of the File Explorer to access different locations of the computer from the navigation pane."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.9",
+                  "description": "Demonstrate the use of Frequent Folders Section of the File Explorer to access frequently used locations of the computer.",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the use of Frequent Folders Section of the File Explorer to access frequently used locations of the computer."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.10",
+                  "description": "Demonstrate the use of Recent Files Section of the File Explorer to access frequently used files of the computer.",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the use of Recent Files Section of the File Explorer to access frequently used files of the computer."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.3",
+          "title": "Data, Sources and Usage",
+          "description": "Advanced data handling, analysis and sharing.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.1.3.1",
+              "description": "Demonstrate the use of Data and identify sources of data",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.3.1.1",
+                  "description": "Identify types of data. (Integers, double, characters, float etc.)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify and record data in the different forms."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.2",
+                  "description": "Identify more sources of data and information e.g. internet (emailing, Skype, SMS etc.)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss where one can get data and information."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.3",
+                  "description": "Demonstrate sending and receiving information from other gadgets e.g. Bluetooth, Infrared, Radio, Fax, Telephones calls, SMS etc.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention or talk about where one can receive or send information."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.4",
+                  "description": "Demonstrate basic manipulations on sample data e.g. arranging data in a matrix table, sorting and calculations etc.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to sort data in alphabetical order (increasing and decreasing order) and perform basic calculations such as multiplying, dividing and adding vales of sample data. Learners can also be guided to generate age data from dates of birth."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.5",
+                  "description": "Demonstrate how to manage users of the Desktop",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to brainstorm how to manage users of the Desktop. Use videos or pictures that show how to manage users of the Desktop. Facilitate learners to do same."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.6",
+                  "description": "Demonstrate how to collect data (e.g. listening to radio, reading newspapers, interviews use of questionnaires etc.)",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to collect data the community using simple questionnaire, surveys, documents, observations, and record their findings data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.7",
+                  "description": "Demonstrate the use of the tools for collecting data.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring tools or pictures of the tools for collecting data e.g. case studies, interviews, checklists, etc.."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.8",
+                  "description": "Demonstrate data interpretation by computing data to gain required information (e.g. Finding sum or grand total using Electronic Spreadsheet).",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to make meanings out of data collected using tables, charts or Spreadsheet."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.9",
+                  "description": "Demonstrate data presentation in different forms.",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to write data in tables, pictures, charts, maps, words etc. as well as type them in a Spreadsheet."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.10",
+                  "description": "Demonstrate how to store data.",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use the tools stated above to store data in different formats. eg. handwriting, phone recording, magnetic tapes, optical disc etc.."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.11",
+                  "description": "Manipulate data to gain required output (e.g. Finding sum, mean, grand totals, maximum, minimum, mode, division, multiplication etc.)",
+                  "orderIndex": 11,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to find the mode, product, minimum value, maximum value etc.."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.4",
+          "title": "Technology in the Community",
+          "description": "Understanding communication technology and its impact.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.1.4.1",
+              "description": "Demonstrate the use of Technology in the community.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.4.1.1",
+                  "description": "Define communication.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Put learners into groups, to discuss communication and present findings to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.4.1.2",
+                  "description": "Identify three more technological tools for communication in the community.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention and describe the importance of technology in communication."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.4.1.3",
+                  "description": "Demonstrate communication with others.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to demonstrate communication (explain how communication is done via TV, radio, phone call, satellite etc.)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.4.1.4",
+                  "description": "Identify three more importance of technology in communication.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention the importance of technology in communication."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.2",
+      "title": "Presentation",
+      "description": "Advanced Microsoft PowerPoint usage.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B6.2.1",
+          "title": "Introduction to MS-PowerPoint",
+          "description": "Using advanced features of PowerPoint ribbons.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.2.1.1",
+              "description": "Demonstrate how to use Microsoft PowerPoint",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.1.1.1",
+                  "description": "Demonstrate how to use the File menu, the Insert and Design Ribbon from B5.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use File menu, Insert and Design Ribbons."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.1.1.2",
+                  "description": "Demonstrate how to use icons in the Text group in the Insert Ribbon.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to properly use the icons in the Insert Ribbon."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.1.1.3",
+                  "description": "Be able to give a 5-side presentation in MS-PowerPoint using tools of the ribbons studied.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to present their work to the class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.3",
+      "title": "Word Processing",
+      "description": "Advanced Word Processing skills.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B6.3.1",
+          "title": "Introduction to Word Processing",
+          "description": "Using advanced features of Word ribbons.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.3.1.1",
+              "description": "Illustrate the use of word processing application",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.1.1.1",
+                  "description": "Demonstrate how to use the File menu and Insert, Design, and Layout Ribbons from B5.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use File menu, Insert, Design and Layout Ribbon."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.1.1.2",
+                  "description": "Demonstrate how to use icons in the Text group in the Insert Ribbon.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to properly use the icons in the Insert Ribbon."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.1.1.3",
+                  "description": "Be able to use the attributes of the ribbons studied in a paragraph.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide the learners to create and format text in a document."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.5",
+      "title": "Programming and Databases",
+      "description": "Advanced database concepts and spreadsheet manipulation.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B6.5.1",
+          "title": "Introduction to Databases, Algorithm and Programming Languages",
+          "description": "Database structures, design and SQL basics.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.5.1.1",
+              "description": "Demonstrate how to manipulate data in Databases",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.1.1.1",
+                  "description": "Describe Databases.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners through discussion in groups, to list and describe databases."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.1.1.2",
+                  "description": "Identify databases and data structures.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify databases structures, ie. database structure is the collection of record type and field type definitions that comprises of the database."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.1.1.3",
+                  "description": "Explain Fundamental Database concepts.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners apply the fundamental database concepts to a sample database in a class discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.1.1.5",
+                  "description": "Describe the basics of Relational Data model.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to describe the basics of Relational Data model. ie. rows and columns."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.1.1.6",
+                  "description": "Identify the basics of logical Database Design.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to list the basics of logical database design and develop sample database design."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.1.1.7",
+                  "description": "Illustrate basics of relational algebra.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners apply the basics of relational algebra in a sample database."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.1.1.8",
+                  "description": "Operate basics SQL: querying and manipulating data.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to write simple queries to retrieve specific names of students from a database of the names of all students in class database design. eg. CREATE DATABASE, SELECT and UPDATE."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.1.1.9",
+                  "description": "Operate basics SQL: querying and manipulating data.",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to write simple queries to retrieve specific names of students from a database of the names of all students in class. e.g CREATE TABLE, DELETE and INSERT INTO."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.3",
+          "title": "Introduction to Electronic Spreadsheet",
+          "description": "Working with Excel ribbons, worksheets and data.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.5.3.1",
+              "description": "Demonstrate how to use Spreadsheet.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.3.1.1",
+                  "description": "Demonstrate how to use the ribbons under the home ribbons. (i.e. clip board, styles, fonts, paragraph and editing)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to do a presentation on the use of the ribbons under the home button."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.3.1.2",
+                  "description": "Learners to create basic worksheets using Microsoft Excel 2016.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to develop worksheet consisting of list of names ie. teachers, students, friends, families, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.3.1.3",
+                  "description": "Perform calculations in an MS-Excel worksheet.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to develop worksheet that will help in calculating multiplication, addition and subtraction."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.3.1.4",
+                  "description": "Modify an MS-Excel worksheet.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to modify worksheet by adding the age of learners in the class to the list of learners created in an earlier class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.3.1.5",
+                  "description": "Modify the appearance of data within a worksheet.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show examples of modified data in (a) worksheet(s), either on projected screens or pictures. Guide learners to modify the appearance of data within a worksheet."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.3.1.6",
+                  "description": "Manage Excel workbooks.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to properly name MS-Excel workbooks and store them in folders for retrieval later."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.3.1.7",
+                  "description": "Print the content of an MS-Excel worksheet.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to adjust margins to suit the A4 paper size for printing in landscape and portrait."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.6",
+      "title": "Internet and Social Media",
+      "description": "Advanced internet concepts, web browsing, email and IoT.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B6.6.1",
+          "title": "Network Overview",
+          "description": "Understanding internet facilities and information types.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.6.1.1",
+              "description": "Demonstrate how to Network computers.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.1.1.1",
+                  "description": "Give examples of facilities the internet offers.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to give examples of internet facilities ie. e-mail, FTP's, www, etc. for presentation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.1.1.2",
+                  "description": "Describe the types of information available on the Internet.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify and describe the types of Information available on the Internet. eg. Educational, Financial, entertainment, etc. Group learners into groups to do this task."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.1.1.3",
+                  "description": "Identify data duplication.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display list of names of learners on the board and ask them to identify the duplicated data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.1.1.4",
+                  "description": "Outline what one needs to connect to the Internet.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Encourage learners to bring any device or pictures of devices that are needed. eg. desktop computers, Laptop computers, Mobile phones, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.2",
+          "title": "Web Browsers and Web Pages",
+          "description": "Using advanced browser features.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.6.2.1",
+              "description": "Demonstrate the use of a Web Browser",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.2.1.1",
+                  "description": "Identify the address or links window.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify the address or links window on phones other electronic gadgets with browsers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.2.1.2",
+                  "description": "Recognise the status bar and list its use.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring a picture of a window that has the status bar and ask the learners to point out the status and mention its functions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.2.1.3",
+                  "description": "Illustrate using help button.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to do an activity you have not tackle in class and ask them to use the help button to navigate and find the steps involved. Guide learners to carry out the stated steps."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.2.1.4",
+                  "description": "Recognise internet explorer speed keys.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to use the speed keys to open a new browser, make font size bigger in a browser, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.2.1.5",
+                  "description": "Recognise Uniform Resource Locators (URLs).",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss the properties of URLs, their uses and where they are located. Learners can practise how to enter URLs in a browser."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.2.1.6",
+                  "description": "Demonstrate how to return to a URL.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide the learners to navigate using the back button to go to a previous page."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.2.1.7",
+                  "description": "Show how to find items on a page.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to search for items using the search textbox."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.3",
+          "title": "Surfing the World Wide Web",
+          "description": "Advanced surfing techniques and URL handling.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.6.3.1",
+              "description": "Demonstrate Surfing The World Wide Web",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.3.1.1",
+                  "description": "Recognize resource locators (URLs).",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify what URLs is. Group learners into groups of five or less, to explore on how to recognise URLs so as to aid learners to locate a resource on the web."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.2",
+                  "description": "Illustrate how to jump directory to URLs.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners a project on how to jump directory to URLs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.3",
+                  "description": "Demonstrate how to return to a URL.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to investigate how to return to a URL."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.4",
+                  "description": "Show how to find items on a page.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss on how to find items on a page. Guide learners present their ideas or findings to class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.5",
+                  "description": "Illustrate how to print pages.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners on how to print pages e.g. selected pages, only selected pages etc.."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.4",
+          "title": "Favourite Places and Search Engine",
+          "description": "Managing favourites and using links toolbar.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.6.4.1",
+              "description": "Demonstrate searching for information on the Web.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.4.1.1",
+                  "description": "Show how to create a favourite link.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create an Internet favourite link."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.4.1.2",
+                  "description": "Demonstrate deleting favourite links.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to delete a favourite link they have created."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.4.1.3",
+                  "description": "Create favourite folder.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create a favourite folder or subfolder. Help learners by aiding them through the necessary steps to create a favourite folder."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.4.1.4",
+                  "description": "Use the links toolbar and Favourite Places.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use the links toolbar."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.5",
+          "title": "Using Online Forms",
+          "description": "Advanced usage of online forms and file handling.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B6.6.5.1",
+              "description": "Demonstrate the Usage of Forms",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.5.1.1",
+                  "description": "Demonstrate the types and uses of form elements.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the uses of check boxes, radio buttons, textboxes etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.5.1.2",
+                  "description": "Demonstrate the filing of forms offline.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to open and save a page. Lead them to fill the forms offline."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.5.1.3",
+                  "description": "Demonstrate uploading of files.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to explore the upload button by adding pictures, audio, pdf etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.5.1.4",
+                  "description": "Illustrate retrieving text, pictures, sounds and programs.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to explore the download button by downloading pictures, audio, pdf etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.5.1.5",
+                  "description": "Discuss more about security on the form submission.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to Investigate and identify security issues when typing account details online (Antivirus, Credit card details, personal passwords etc.)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.6",
+          "title": "Customizing Your Browser",
+          "description": "Understanding browser customization options.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B6.6.6.1",
+              "description": "Show how to Customize a Browser",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.6.1.1",
+                  "description": "Identify reasons for customising a web browser.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the reasons needed for customising an item (i). to gain access to quick commands or information (ii) for side by side browsing (iii) for beautifications."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.6.1.2",
+                  "description": "Illustrate how to set themes.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore on customisation, locate the more settings, Under appearance."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.6.1.3",
+                  "description": "Show how to customise the toolbar.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to explore in customising a browser... e.g. themes, wallpaper, tools etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.6.1.4",
+                  "description": "Set bookmarks.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the meaning of bookmarks - Bookmarks, makes you save shortcuts to your favourite webpages and navigate to them in seconds from anywhere."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.6.1.5",
+                  "description": "Show how to set cookies demonstrate the steps in turning on cookies in a browser.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to turn on cookies in a browser: 1. From the Tools menu, select Internet Options and enable session cookies, click the Privacy tab. 2. From the Settings section of the tab, click Advanced. NB: Locate and click the checkbox next to Always allow session cookies."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.7",
+          "title": "Electronic Email",
+          "description": "Advanced email operations.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B6.6.7.1",
+              "description": "Demonstrate the use of Electronic Mail",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.7.1.1",
+                  "description": "Show how to create and access e-mail messages.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to receive email."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.7.1.2",
+                  "description": "Illustrate how to reply to and forward received messages.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use forward and reply buttons in email."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.7.1.3",
+                  "description": "Demonstrate how to delete messages.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide leaners to delete email messages."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.7.1.4",
+                  "description": "Illustrate filing of e-mail messages.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create folders in the Inbox and sorting emails into them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.7.1.5",
+                  "description": "Create address list.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create an address list."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.7.1.6",
+                  "description": "Demonstrate attaching files to e-mail messages.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to attach files to email."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.7.1.7",
+                  "description": "Demonstrate some e-mail tips.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Assist learners in writing email using techniques as NOT writing in caps. Check the extension of files before downloading and use the subject line for summary etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.8",
+          "title": "Internet of Things (IoT)",
+          "description": "Exploring IoT hardware and applications.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B6.6.8.1",
+              "description": "Demonstrate the use of Internet of Things (IoT)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.8.1.1",
+                  "description": "Describe other hardware used in IoT Internet of Things.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss the loT hardware in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.8.1.2",
+                  "description": "Give more examples of internet of things with a consumer part and an industrial/business segment.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to list at least five gadgets used for loT (e.g. Nest Smart Thermostat, Samsung SmartThings Hub, August Smart Lock, etc.)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.8.1.3",
+                  "description": "Mention at least five more terms and acronyms of loT.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to describe loT use."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.9",
+          "title": "Digital Literacy",
+          "description": "Enhancing digital proficiency and safety.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B6.6.9.1",
+              "description": "Demonstrate proficiency in Digital Literacy",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.9.1.1",
+                  "description": "Demonstrate how to handle private and personal information.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners on how not post detailed personal information online."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.9.1.2",
+                  "description": "Devise various techniques on how to protect oneself from online identity theft.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use strong passwords or passphrases in online sites, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.9.1.3",
+                  "description": "Debate a spam and solicited messages.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide leaners to differentiate spam from solicited messages."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.9.1.4",
+                  "description": "Differentiate between virtual friends and real friends.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide leaners to characterise virtual and real friends."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.10",
+          "title": "Internet Etiquette",
+          "description": "Applying internet etiquette and responsible use.",
+          "orderIndex": 10,
+          "contentStandards": [
+            {
+              "code": "B6.6.10.1",
+              "description": "Demonstrate the application of Internet Etiquette",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.10.1.1",
+                  "description": "Explain Internet etiquette and how to deal with it.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explain Internet etiquette and elaborate on some rules associated with it."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.10.1.2",
+                  "description": "Investigate on the responsible use of computers.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to investigate on the responsible use of computers. i. Information privacy ii. Copy right. Hardware, Software and information theft."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.7",
+          "title": "Health and Safety in Using ICT Tools",
+          "description": "Applying health and safety measures.",
+          "orderIndex": 7,
+          "subStrands": [
+            {
+              "code": "B6.7.1",
+              "title": "Health and Safety in Using ICT Tools",
+              "description": "Addressing health hazards and finding solutions.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B6.7.1.1",
+                  "description": "Demonstrate how to apply Health and Safety measures in Using ICT Tools",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B6.7.1.1.1",
+                      "description": "Identify five (5) major health hazards associated with the use of ICT tools. Discuss Eye strain, Eye irritation and Eye fatigue.",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners to discuss some major health hazards associated with the use of ICT tools."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B6.7.1.1.2",
+                      "description": "Demonstrate solutions for the health related problems in ICT.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners to brainstorm to find the solutions to the health hazards associated with the use of ICT tools."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

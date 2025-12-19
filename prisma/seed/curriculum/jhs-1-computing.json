@@ -1,0 +1,1203 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 7",
+  "subject": "Computing",
+  "name": "JHS 1 Computing",
+  "slug": "jhs-1-computing",
+  "orderIndex": 1,
+  "description": "The JHS 1 Computing curriculum introduces learners to the fundamental concepts of computing, including hardware components, the role of technology in the community, health and safety, productivity software (word processing, presentation, spreadsheet), communication networks, and computational thinking (programming, algorithms, robotics, AI).",
+  "strands": [
+    {
+      "code": "B7.1",
+      "title": "INTRODUCTION TO COMPUTING",
+      "description": "Understanding computer components, technology in the community, and health and safety.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B7.1.1",
+          "title": "COMPONENTS OF COMPUTERS AND COMPUTER SYSTEMS",
+          "description": "Examining computer parts and desktop features.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.1.1.1",
+              "description": "Examine the parts of a computer",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.1.1.1",
+                  "description": "Discuss the fourth-generation computers",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss features of fourth generation computers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify a microchip."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the architecture of a processor."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.2",
+                  "description": "Demonstrate understanding in the use of input devices(barcode, scanner, etc.)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch video or picture of input devices e.g. wireless keyboard, mouse and touchscreen in class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of input devices in a computer laboratory/classroom."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Distinguish manual (e.g. keyboard, etc.) and automatic (e.g. barcode readeretc.) input devices."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explore the advantages and disadvantages of input devices."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explore areas where different types of input devices are used."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.3",
+                  "description": "Examine the uses of the output devices: graphing plotter, data and multimedia projectors as well as pico projector",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch video or pictures of output devices in use."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of output devices in a computer laboratory/classroom."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the advantages and disadvantages of output devices."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.4",
+                  "description": "Examine full-sized external hard drives, hard drive speed, disk caching, Storage portable hard drives, Optical Discs and Drives",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify magnetic storage devices, portable hard drives/Optical Discs and Drives or pictures of these items to class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the features of hard drives/Optical Disc storage media."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the maximum capacities of these storage devices."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explore the different write speeds of these storage devices."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explore the differences in the various Hard Disk Drives (HDD)."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.1.1.2",
+              "description": "Demonstrate the use of the features of the Windows Desktop",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.1.1.2.1",
+                  "description": "Discover the latest Windows Operating System (Start screen, Use of tiles, Taskbar buttons, Preview thumbnails), temporal peeking into a window on a taskbar",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show the desktop, tiles, taskbar."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate how to preview thumbnails."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the features of the taskbar."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Demonstrate how to preview windows on the taskbar."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.2.2",
+                  "description": "Practise file management techniques (file & folder management, Users & Accounts)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate file management techniques by following the naming conventions and organising files in folders and subfolders."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore the types and importance of file extensions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore different account levels for users of computer systems."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explore different permission levels that are applied to files and folders."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.2",
+          "title": "TECHNOLOGY IN THE COMMUNITY",
+          "description": "Using technology tools for learning and understanding their impact.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.1.2.1",
+              "description": "Demonstrate the use of Technology in the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.2.1.1",
+                  "description": "Describe and give examples of at least five technology tools for learning in each subject (e.g. Spreadsheets, Virtual Museum, Scrabble, Presentation, Scratch, etc.)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the various technology tools that can be used for learning."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.2",
+                  "description": "Demonstrate the use of at least three technology tools identified in B7.1.2.1.1",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the use of a technology tool in groups and present to thewhole class how that tool works."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.3",
+                  "description": "Discuss the benefits of using technology tools in learning",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss in pairs the benefits of using technology tools in learning (e.g. using spreadsheet to draw graphs)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.4",
+                  "description": "Examine the negative impact of computers and computeruse on the environment",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe people who use and work with computers in the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Visit websites or watch videos/pictures of how computers, including other electronic components, are disposed of."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the impact of computers and computer use on the environment."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.5",
+                  "description": "Propose environmentally responsible practices that can be used to reduce the negative impact of computers and computer use on the environment",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss how the negative effects identified can be reduced."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Evaluate environmentally responsible practices."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Propose measures to effectively manage e-waste in a particular environment (e.g. Agbogbloshie)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.6",
+                  "description": "Create a component from disposed computer parts",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Collect disposed computer/electronic parts from the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Watch a video/picture depicting the recycling of computer parts."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.3",
+          "title": "HEALTH AND SAFETY IN THE USE OF ICT TOOLS",
+          "description": "Applying health and safety measures in ICT usage.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.1.3.1",
+              "description": "Demonstrate how to apply Health and Safety measures in using ICT Tools",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.3.1.1",
+                  "description": "Describe health measures and current regulatory requirements and potential computing-related disorders",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch videos on the health hazards of prolonged use of computing devices or show pictures of bad body postures and other hazards in using computing devices e.g. hearing impairment from loud Public Address (PA) Systems, vision impairment from the monitor, repetitive strain injury, Carpaltunnel syndrome, computer vision syndrome, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the health hazards associated with each device."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Provide preventive measures regarding the stated health and safety risks."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.1.2",
+                  "description": "Describe Safety measures in using ICT tools",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the danger of spilling liquids on a computer device or on the electronic circuit."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss tripping over power cables and touching the negative and positive terminals of electrical wires."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.1.3",
+                  "description": "Demonstrate how to apply Health and Safety measures in Using ICT Tools",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the risks associated with workstations and how to overcome them (e.g. wrist pains, eye problems, back and neck pains, faulty electrical connections, etc.)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.1.4",
+                  "description": "Explore safety measures at workstations",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify measures that will help to eliminate workstation hazards and where they cannot be eliminated, discuss how to minimise the risk. (e.g. evaluating display screen, adjusting the chair for comfort, avoiding potential slips and falls, re-positioning of devices, etc.)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.2",
+      "title": "PRODUCTIVITY SOFTWARE",
+      "description": "Introduction to word processing, presentation, and spreadsheet software.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B7.2.1",
+          "title": "INTRODUCTION TO WORD PROCESSING",
+          "description": "Editing and formatting text in Microsoft Word.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.2.1.1",
+              "description": "Demonstrate how to use Microsoft Word (Editing)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.1.1.1",
+                  "description": "Explain the importance of word processing software",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the meaning of word processors."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Brainstorm to elicit the importance of word processors."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Brainstorm to elicit examples of some common word processing software packages (e.g. MS-Word, Corel WordPerfect, AbiWord, Google Docs, LibreOffice Writer, Notepad, WordPad, etc.)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.2",
+                  "description": "Demonstrate how to insert, select, delete and move text",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show projected examples of MS-Word interface with the aid of a computer, projector or pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore tools for editing in MS Word."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the use of the overtype or insert option by right-clicking the statusbar."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.3",
+                  "description": "Demonstrate how to find and replace content and undo edited changes",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Make use of the Find and Replace tool in MS-Word under the Home tab."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore the use of the Editing group under the Home tab."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.4",
+                  "description": "Demonstrate how to spell check, carry out content translation, language setting",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the use of the Proofing and Language group under the Review tab."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show how to use the Language, Spelling & Grammar, Thesaurus and other tools in MS-Word under the Home tab."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.5",
+                  "description": "Demonstrate how to use text-decoration, change text case, text size and colour",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Font group under the Home tab."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of sentence case, font size, colour and font decoration features in MS-Word."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Project examples of MS-Word interface to learners with the aid of a projector or pictures."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.6",
+                  "description": "Demonstrate how to align text, indent paragraphs, bullet, line space and shade",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Paragraph group, using the align left, centre, align right and justified in MS-Word under the Home tab."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore the use of Bullets, Decrease and Increase Indentation under the Home tab."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the use of the Border Button and set line spacing using the dialogue Box Launcher button under the Home tab."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.7",
+                  "description": "Demonstrate how to set tabs and apply formatting",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the Tab button to set the centre and right tabs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.2",
+          "title": "INTRODUCTION TO PRESENTATION SOFTWARE",
+          "description": "Editing and formatting slides in Microsoft PowerPoint.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.2.2.1",
+              "description": "Demonstrate how to use Microsoft PowerPoint (Editing)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.2.1.1",
+                  "description": "Explain the importance of presentation software",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the meaning of presentation software."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the benefits of using presentation software."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Brainstorm to elicit the names of some common presentation software packages (e.g. MS-PowerPoint, Corel Presentation, Adobe persuasion, Google Slides, Keynotes etc.)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.2",
+                  "description": "Explore features of MS-PowerPoint interface",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show examples of MS-PowerPoint interface with the aid of a projector or pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore MS-PowerPoint themes and templates."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the use of the Proofing and Language group under the Review tab."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Demonstrate the use of the Language, Spelling & Grammar, Thesaurus and other buttons in MS-PowerPoint under the Review tab."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.3",
+                  "description": "Demonstrate how to use Special Characters",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of special characters section under the Insert tab under the symbol group."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present a prepared project or exercise using the editing group of the ribbons studied."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use projected examples of a PowerPoint interface with the aid of a projector or pictures."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Design a 7-slide presentation in MS-PowerPoint using the tools under the Insert ribbon."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.2.2.2",
+              "description": "Demonstrate how to use Microsoft PowerPoint (Formatting)",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.2.2.2.1",
+                  "description": "Demonstrate how to change text case, text size, text colour and decorate text",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Font group under the Home ribbon."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make use of the sentence case, font size, colour and font decoration features in MS-PowerPoint."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Project examples of PowerPoint interface to learners with the aid of a projector or pictures."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.2.2",
+                  "description": "Demonstrate how to align text, indent paragraphs, borders and shades",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Proofing and Language Sections under the Review ribbon."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the Language, Spelling & Grammar, Thesaurus and other buttons in MS-PowerPoint under the Review ribbon."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.2.3",
+                  "description": "Demonstrate the use of the Slide Master, design template, and be able to give a 5-slide presentation in MS-PowerPoint using the tools of the ribbons studied",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of Master Views group under the View ribbon."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Prepare and present a prepared project or exercise using what has been studied."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.3",
+          "title": "INTRODUCTION TO ELECTRONIC SPREADSHEET",
+          "description": "Editing, formatting, and creating formulas in electronic spreadsheets.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.2.3.1",
+              "description": "Demonstrate how to use the Spreadsheet (Editing Worksheets)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.3.1.1",
+                  "description": "Explain the importance of electronic spreadsheet",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the meaning of electronic spreadsheet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the benefits of using electronic spreadsheet software."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Brainstorm to elicit response some common electronic spreadsheet software packages (e.g. MS Excel, Lotus 1-2-3, LibreOffice Calc, Google Sheets etc.)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.3.1.2",
+                  "description": "Explore features of MS-Excel interface",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show projected examples of MS-Excel interface with the aid of a projector or pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore operations of inserting, selecting, deleting and moving data."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate how to insert, select, delete and move data using a sample data set."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.3.1.3",
+                  "description": "Demonstrate how to set the cell datatype (General, Number, Currency, etc.)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Investigate how to set and modify the cell type of values and text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Enter values, text, dates and time in worksheet cells and change the formats for presentation. E.g. General, Number, Currency, Accounting, Dates, Time, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.3.1.4",
+                  "description": "Demonstrate how to use Align Text, Merge & Wrap, Borders and Shades",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate how to change text alignment (Horizontal & Vertical), merge cells and wrap text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Investigate how to access border & shade features and format the appearance of a worksheet as group work."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.2.3.2",
+              "description": "Demonstrate how to format a worksheet",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.2.3.2.1",
+                  "description": "Demonstrate how to adjust margins and set page orientation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate how to adjust margins and set page orientation for printing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform margin adjustment on different page sizes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore the display of worksheets in different views as listed on the View tab."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.3.2.2",
+                  "description": "Demonstrate how to set up a header and a footer",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate how to set up header and footer elements."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore the use of page numbers, current date, time and file name in setting up headers and footers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.3.2.3",
+                  "description": "Demonstrate the use of the Autofill function in MS-Excel worksheet",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the use of the Autofill function e.g. to generate the days of the week, months of the year, set of numbers (e.g. counting numbers, odd numbers, multiplication tables etc.)."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.2.3.3",
+              "description": "Demonstrate how to use spreadsheet formula",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B7.2.3.3.1",
+                  "description": "Demonstrate how to create formulas",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create simple formulas starting with the equal sign (=)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.3",
+      "title": "COMMUNICATION NETWORKS",
+      "description": "Understanding computer networks, internet, social media, information security, and web technologies.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B7.3.1",
+          "title": "COMPUTER NETWORKS",
+          "description": "Network topologies, types of networks, and networking opportunities.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.3.1.1",
+              "description": "Identify the concept of computer networking for global communications",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.1.1.1",
+                  "description": "Draw diagrams to illustrate features of the network topologies (Bus, Star, Ring, Mesh)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore key hardware for setting up network systems (such as server, client, hub, switch, cable, etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain network topologies."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the features of each network topology."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Present in groups diagrams of well-elaborated network topologies."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.1.2",
+                  "description": "Describe types of networks [Personal Area Network (PAN), Local Area Network (LAN), Metropolitan Area Network (MAN), Wide Area Network (WAN)]",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the various types of networks available (e.g. PAN, LAN, MAN, WAN, WLAN, INTERNET, etc.)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.1.3",
+                  "description": "Discuss the entrepreneurial opportunities in networking computing devices",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the benefits and challenges of networking in different environments (school, business, health, etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify different environments where the various types of networks can be applied."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the business aspect of networking and how they can be turned into a lucrative business."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.2",
+          "title": "INTERNET AND SOCIAL MEDIA",
+          "description": "Using social networking and electronic mail.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.3.2.1",
+              "description": "Demonstrate the use of Social Networking and Electronic Mail",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.2.1.1",
+                  "description": "Identify the various types and uses of Social Media sites such as those for Social Networking (Facebook, LinkedIn, WhatsApp) and Microblogging (Twitter, Tumblr)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Illustrate the use of social networking sites such as Facebook, LinkedIn, WhatsApp, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of microblogging platforms such as Twitter, Tumblr, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.1.2",
+                  "description": "Demonstrate the use of the following features of Electronic mail: Attachment and Address book",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the steps in creating, sending and receiving email."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate replying to and forwarding email."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate, giving reasons for using From:, To: cc:, bcc: and subject features when sending an email."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.3",
+          "title": "INFORMATION SECURITY",
+          "description": "Recognizing data threats and means of protection.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.3.3.1",
+              "description": "Recognise data threats and means of protection",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.3.1.1",
+                  "description": "Discuss the key principles of information security (confidentiality, integrity and availability)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research in pairs the key principles of information security."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the three key principles of information security."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Research scenarios involving information security."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.3.1.2",
+                  "description": "Explore the legal issues regarding intellectual property rights (e.g. Copyright, Patent, Trademark, Piracy, Copyright Infringement)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss issues pertaining to copyright (e.g. freeware, shareware, crippleware)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Differentiate between the various legal issues mentioned."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the consequences associated with breaking these laws."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.3.1.3",
+                  "description": "Evaluate information security forensic auditing and criminal laws against offenders",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch a video of how offenders of data security breach are identified."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the laws protecting data and the applicable sanctions for their breach."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify some common occurrences of data security breaches that people in the community overlook and their corresponding sanctions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.4",
+          "title": "WEB TECHNOLOGIES",
+          "description": "Using web browsers and evaluating web pages.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B7.3.4.1",
+              "description": "Demonstrate the use of a Web Browser (Search engine)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.4.1.1",
+                  "description": "Identify the importance of the web in learning [Virtual Learning Environments (VLEs)]",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the importance of VLEs for learning. Allow self-paced learning (E-learning). Create opportunity to learn new skills without having to use a regular classroom."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.4.1.2",
+                  "description": "Explore the use of open learning websites in the classroom",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the uses of open learning websites in the classroom e.g. Khan Academy, Coursera, Edx, Saylor, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.4.1.3",
+                  "description": "Demonstrate the techniques for evaluating web pages (Accuracy, Credibility, Content, Current, Functionality)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the techniques for evaluating web pages based on Accuracy, Credibility, Content, Current, Functionality."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.4",
+      "title": "COMPUTATIONAL THINKING",
+      "description": "Understanding programming concepts, algorithms, robotics, and artificial intelligence.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B7.4.1",
+          "title": "INTRODUCTION TO PROGRAMMING",
+          "description": "Understanding programming terminologies, data types, variables, and constants.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.4.1.1",
+              "description": "Show an understanding of the concept of programming",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.1.1.1",
+                  "description": "Demonstrate the correct use of programming terminologies",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List the terminologies in alphabetical order or grouping to aid recall."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain each of the terminologies."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.1.2",
+                  "description": "Demonstrate understanding in the use of data types (e.g. float, integer, string, char, etc.)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Develop key questions around daily activities to identify the data type. Example: The first name of your best friend is written as a string data type."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.1.3",
+                  "description": "Demonstrate the use of constants and variables used in programming",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show how constants and variables are used in programming."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the benefits of using variables instead of constants."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.4.2",
+          "title": "ALGORITHM",
+          "description": "Analyzing step-by-step procedures and algorithms.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.4.2.1",
+              "description": "Analyse the correct step-by-step procedure in solving any real-world problem",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.2.1.1",
+                  "description": "Understand the use of sequence, selection and iteration in writing a programme. Describe the meanings of the terms algorithm, decomposition and abstraction",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write numbers (1-10) in an orderly arrangement to represent sequence. Write your itinerary for a day in a logical order (Sequence)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present a case study that has more than one option to choose from and still achieve the same outcome with any option chosen. For example, tea with or without sugar options can still meet a beverage outcome (selection)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Develop a solution to a problem which uses iteration to control the flow of the programme (iteration)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.2.1.2",
+                  "description": "Perform a linear search",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Locate a given value position out of listed values."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Arrange some given values or data in increasing and decreasing order."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.4.3",
+          "title": "ROBOTICS",
+          "description": "Understanding robot intelligence concepts and applications.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.4.3.1",
+              "description": "Discuss Robot Intelligence Concepts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.3.1.1",
+                  "description": "Review the various applications of robotic machines in society",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "State the applications and uses of robots in society (e.g. manufacturing, health, education, assembling and packing, transport, surgery, laboratory research, mass production of consumer and industrial goods, taking pictures,etc.)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore prospects and challenges of using robots in various operations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.4.4",
+          "title": "ARTIFICIAL INTELLIGENCE",
+          "description": "Discussing artificial intelligence concepts and applications.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B7.4.4.1",
+              "description": "Discuss Artificial intelligence concepts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.4.1.1",
+                  "description": "Discuss the application of various areas of artificial intelligence (Machine learning, Artificial Neural Networks, Virtual Reality, Augmented Reality, Mixed Reality, Gamification",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compare the key technologies: machine learning, Artificial Neural Networks (ANN), Reality, Augmented reality, Gamification, Deep Learning, Artificial Data Mining and Analytics. (NB: general definitions only)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the uses and importance of Artificial Intelligence (Al) to society."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Watch video/picture of the use of Al in society (intelligent robots)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

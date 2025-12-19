@@ -1,0 +1,403 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 4",
+  "subject": "History",
+  "name": "Basic 4 History",
+  "slug": "basic-4-history",
+  "orderIndex": 1,
+  "description": "The Basic 4 History curriculum focuses on the importance of studying history, sources of historical evidence, the history of Ghana's major kingdoms and historical locations, significant traditional rulers, European missionary activities, the establishment of British rule, and the history of the Republics.",
+  "strands": [
+    {
+      "code": "B4.1",
+      "title": "History as a Subject",
+      "description": "Understanding the importance and sources of history.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B4.1.1",
+          "title": "Why and How We Study History",
+          "description": "Exploring the importance of history and its sources.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.1.1.1",
+              "description": "Show understanding of the importance of studying history",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.1.1.1",
+                  "description": "Explain the importance of studying the history of Ghana.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage learners to discuss how history defines our identity as Ghanaians."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Role-play to show how history teaches us customs, values, traditions all of which ensure the survival of our nation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play how history can promote national pride, patriotism and integration."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.1.2",
+              "description": "Understand the sources for writing history",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.1.1.2.1",
+                  "description": "Identify the sources of history including archaeology, numismatics, oral tradition, wall paintings etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List the sources of history including funeral brochures, oral tradition, old photographs, old letters and diaries, arts and craft works, old newspapers, dirges, appellation and books."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Classify these sources under primary and secondary sources."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain how relevant historical information can we obtain from old newspapers and diaries? (E.g. Natural disasters - drought, bushfire etc.)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.2",
+      "title": "My Country Ghana",
+      "description": "Exploring the people, historical locations, and significant individuals of Ghana.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B4.2.1",
+          "title": "The People of Ghana",
+          "description": "Understanding the rise and decline of major kingdoms.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.2.1.1",
+              "description": "Show understanding some of the factors that led to the rise, expansion and decline of one major kingdom",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.1.1.1",
+                  "description": "Describe how one major Kingdom was formed and the reasons behind its expansion.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the reasons for the rise, expansion and decline of one Kingdom. Eg Savanna Belt States-Mole-Dagbani and Gonja; Forest Belt States - Bono, Adansi, Asante, Denkyira and Akwamui; Coastal Belt States - The Anlo, The Fante, Ga-Adangme and Effutu."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using the map of Ghana, locate where this major Kingdom is found."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "By animations, play games on location of major Kingdoms."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.1.1.2",
+                  "description": "State the factors that led to decline of the Kingdom you have studied.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give reasons why some of the Kingdoms declined. E.g. Internal disputes (rebellions, succession disputes), British interference, conquest by another kingdom, desire to expand territories - Akwamu's location to the east of the Volta in 1733, Denkyira's decline in 1701, Asante's decline in 1874."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.4",
+          "title": "Major Historical Locations",
+          "description": "Exploring the history of major locations in Ghana.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.1.4.1",
+              "description": "Demonstrate knowledge of the history of some historical locations in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.4.1.1",
+                  "description": "Describe the history of Ghana's major historical locations, specifically, Flagstaff house, Burma camp, James Town light house, Gbewa Palace, Larabanga Mosque etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "With the use of internet, identify the major historical locations in Ghana (where they are located, who built them when and why they were built)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain some of the uses to which these historical locations have been put since they were built."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Match these historical locations to where they can be located."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Show and discuss a documentary/ slides on these locations in Ghana."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Retell the stories behind some of the historical location including Flagstaff house, GBC, Burma camp, Kumasi military museum, Komfo Anokye Sword in Kumasi etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.5",
+          "title": "Some Selected Individuals",
+          "description": "Highlighting the role of significant traditional rulers.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.2.5.1",
+              "description": "Demonstrate understanding of the role of significant traditional rulers in Ghana's history",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.5.1.1",
+                  "description": "Identify the role played by some traditional rulers in the national development including Dode Akaibi of Accra, Ndewura Jakpa of Gonja, Osei Tutu I of Asante, Gbewaa of Pusiga, Togbe Sri I., Sir Ofori Atta of Akim Abuakwa, Nana Kobina Nketsia I of Esikado etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Name some traditional chiefs and queen-mothers from the major ethnic groups and state the reasons why they are considered significant in Ghana's history. Dode Akaibi of Accra, Ndewura Jakpa of Gonja, Osei Tutu I of Asante, Gbewaa of Pusiga, Nana Kobina Nketsia I of Esikado etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show photographs/ documentaries on the roles played by these traditional rulers in national development."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Retell the live story of any of these from a documentary show."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify the traditional rulers whose work inspires you most and give reasons for your choice."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.3",
+      "title": "Europeans in Ghana",
+      "description": "Understanding European activities in Ghana.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B4.3.3",
+          "title": "Missionary Activities",
+          "description": "Exploring European engagement beyond trade.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.3.3.1",
+              "description": "Demonstrate knowledge of Europeans' engagement in other activities other than trade in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.3.1.1",
+                  "description": "Describe European missionary activities in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the missionary societies that came to Ghana (starting from the first to the last)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Locate places where they operated (e.g. Basel-Akuapem, Bremen-Peki etc)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss Christianity and formal education as some of the major impacts of European presence in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Show and discuss video/documentary of European activities in Ghana."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss other activities they engaged in (trade, vocational training centres, health facilities, development of alphabets for some local languages and translation of the Bible into local languages)."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Debate the effects of European activities in Ghana."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.4",
+      "title": "Colonisation and Developments under Colonial Rule in Ghana",
+      "description": "Understanding the process of colonisation and British rule.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B4.4.1",
+          "title": "Establishing British Rule in Ghana",
+          "description": "Examining the Bond of 1844 and the formation of the Gold Coast.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.4.1.1",
+              "description": "Demonstrate understanding of the gradual process of colonisation and recall the initial steps the British took to colonise Ghana.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.1.1.1",
+                  "description": "Examine the Bond of 1844",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss events leading to the signing of the Bond of 1844."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using primary evidence provide students with the content of 1884 and discuss it with them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "With the use of the internet/pictures show the Palaver Hall where the Bond was signed."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Brainstorm the significance of the Bond of 1844?"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.4.1.2",
+              "description": "Show understanding of how the various parts of the country were brought together.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.4.1.2.1",
+                  "description": "Describe how the different areas The Colony, Asante, The Northern Territories and The British Mandated Togoland-became one territory known as the Gold Coast",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Define the term colonialism."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Role play on the role of George Ekem Ferguson in the acquisition of The Northern Territories."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Illustrate how the Asante and the Northern Territories became protectorates with the aid of a map."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Locate the areas classified as British Togoland on a map."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Compare the map of the Gold Coast in 1955 and the map of Ghana, today. Discuss your observations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.6",
+      "title": "Independent Ghana",
+      "description": "Understanding the Republics of Ghana.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B4.6.1",
+          "title": "The Republics",
+          "description": "Exploring the concept of Republics and their leaders.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.6.1.1",
+              "description": "Understand that there have been four Republics in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.6.1.1.1",
+                  "description": "Explain that Ghana up to June 1960, though independent, had the Queen of The United Kingdom (UK) as Head of State of the Ghana and made limitations on Ghana's independence.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Define the term Republic?"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the limitations on Ghana's independence up to June 1960."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the internet identify the positions controlled by British officials up to June 1960."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.6.1.1.2",
+                  "description": "State the dates and names of the leaders of the four Republics of Ghana since 1960",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Differentiate between 'President' and 'Head of State'."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Match the names of the leaders of the four Republics to the period in which they ruled."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

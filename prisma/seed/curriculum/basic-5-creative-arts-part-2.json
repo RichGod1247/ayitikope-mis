@@ -1,0 +1,1438 @@
+{
+  "part": "2/4",
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "Creative Arts",
+  "name": "Basic 5 Creative Arts",
+  "slug": "basic-5-creative-arts",
+  "orderIndex": 1,
+  "description": "The Basic 5 Creative Arts curriculum expands on the concepts learned in Basic 4. It focuses on generating and organizing ideas, creating, displaying, and appraising artworks that reflect the history, culture, environment, and topical issues of Africa.",
+  "strands": [
+    {
+      "code": "B5 1.1",
+      "title": "VISUAL ARTS",
+      "description": "Thinking and exploring ideas for visual arts based on African culture and environment.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5 1.1.1",
+          "title": "Thinking and Exploring Ideas",
+          "description": "Generating ideas for artistic expression based on African history, culture, environment, and topical issues.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5 1.1.1.1",
+              "description": "Demonstrate understanding of how to generate own ideas for artistic expressions about the people based on their history and culture, the environment and topical local/national/global issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5 1.1.1.1",
+                  "description": "Study some visual artworks created by Ghanaian and other African visual artists living in Africa and examine how the artworks reflect the history and culture of the people in Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Study the artworks e.g. sculpture, textiles, metal arts, paintings, cartoons, photography, ceramics created by Ghanaian and African visual artists e.g. El-Anatsui, Nnenna Okore, Cheri Samba, Goncalo Mabunda, Abdoulaye Konate, Peju Alatise, William J. Kentridge, Justine Mahoney living in Africa."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Gather information through library studies, surfing the internet, visiting art studios, galleries, museums, exhibitions etc. watching short videos/documentaries or observing photographs of sample works of the collections of other Ghanaian and African artists."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Talk about the works of the artists in relation to the history and culture of the people of Africa."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify and discuss various items (symbols) found in the works being studied that reflect the history and culture of the people of Africa."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write a brief about their choice of artist using guidelines: Name, Country of origin, Training, Type of artworks, Title of some works, Medium of expression."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.1.1.2",
+                  "description": "Explore to generate ideas by studying visual artworks created by selected Ghanaian and other African visual artists living in Africa that reflect the history and culture of the people of Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select an artwork of any of the artists studied (e.g., El-Anatsui's 'Warrior')."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Reflect on the theme or purpose of the work (e.g., 'Warrior' reflects the link between Africa, Europe, and America)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Study the materials and methods used in designing and making the artwork (e.g., bottle tops representing liquor, copper wire representing connection)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Generate ideas for own artworks that will reflect the history and culture of the people of Ghana."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.1.1.3",
+                  "description": "Study some artworks created by Ghanaian and other African visual artists studied that reflect the physical and social environments of some African communities",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select the works of Ghanaian and other African visual artists that reflect ideas from the physical and social environment of some African communities."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Appreciate: talk about the works in-pairs and share views on type of artwork, theme, idea reflected, materials used, and method of production."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare the works in terms of type, function, materials, methods, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.1.1.4",
+                  "description": "Generate own ideas for designing and creating own visual artworks that reflect the physical and social environments of some African communities",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Go out for field observation (environmental walk) to interact with the physical and social environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Observe and record by sketching or taking photographs of structures (buildings, bridges), automobiles, consumer services, packaging designs, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use open educational resources (OERs) to study the physical and social environments of other African communities."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Reflect on experiences to analyse and generate concepts for designing and making own artworks."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.1.1.5",
+                  "description": "Study the artworks of Ghanaian and other African visual artists that reflect topical issues in Africa",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select works of Ghanaian and other African visual artists that reflect current topical issues of concern in Africa (e.g. climate change, water and air pollution, slums, inclusion, diversity)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Appreciate: discuss the works of the selected African artists with focus on type of artwork, theme, materials, tools, method, and style."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.1.1.6",
+                  "description": "Brainstorm and come out with ideas for creating own visual works that will reflect topical issues in Africa",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learn about current topical issues of concern in Africa using available OERs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create portfolios by downloading videos, jotting notes, taking pictures, making photocopies, or recording sound."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make presentations for class discussions and peer review."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Reflect on feedback to generate concepts for designing and making own artworks."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5 2.1",
+      "title": "PERFORMING ARTS",
+      "description": "Thinking and exploring ideas for performing arts based on African culture.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5 2.1.1",
+          "title": "Thinking and Exploring Ideas",
+          "description": "Generating ideas for performance based on African history, culture, environment, and topical issues.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5 2.1.1.1",
+              "description": "Demonstrate understanding of how to generate own ideas for artistic expressions on the people based on their history and culture, the environment and topical local/national/global issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5 2.1.1.1",
+                  "description": "Explore and study some compositions and performances of Ghanaian and other African performing artists living in Africa and discuss how their works reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Study the compositions and performances of artists (e.g. Salif Keita, Angelique Kidjo, Chinua Achebe, Hugh Masekela) by gathering information through OERs and visits."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Appreciate: discuss the compositions and performances and find out how they reflect the history and culture of Africans."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a brief about any of the artists using guidelines: Name, Country of origin, Training, Type of compositions, Title of works, Style."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.1.1.2",
+                  "description": "Study how the compositions and performances of the Ghanaian and other African performing artists studied reflect the history and culture of the people of Africa and generate ideas for creating own artworks",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select any composition or performance of a preferred artist."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Reflect on the theme or purpose of the music, dance or drama (e.g., \"Shaka the Zulu\")."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Study the art-forms, concepts, elements, dynamics, harmony, melody, pitch, rhythm, tempo, texture, instruments, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Generate ideas for creating own performing artworks that will reflect the history and culture of the people of Africa."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.1.1.3",
+                  "description": "Study some compositions and performances of Ghanaian and other African performing artists that reflect the physical and social environments of some African communities",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select the works of Ghanaian and other African performing artists that reflect ideas from the physical and social environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Appreciate: talk about the art-forms in-pairs and share views on type, theme, idea reflected, style, and method."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare the works in terms of type, function, elements, tempo, rhythm, methods, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.1.1.4",
+                  "description": "Generate own ideas for composing and performing own artworks that will reflect the physical and social environments of some African communities",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use OERs to study the physical and social environment of other African communities."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Observe movement patterns, arrangements and activities (e.g. structures, automobiles, commercials, environmental sounds)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Reflect on information gathered, analyse and generate concepts for composing and performing own music, dance and drama."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.1.1.5",
+                  "description": "Study the compositions and performances of Ghanaian and other African performing artists that reflect topical issues in Africa",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select compositions and performances that reflect current topical issues of much concern in Africa (e.g. climate change, water pollution)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Appreciate: discuss the compositions with focus on type of art-forms, theme, elements, dynamics, tempo, instruments, style, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.1.1.6",
+                  "description": "Brainstorm to generate ideas for creating own compositions and performances that reflect topical issues in Africa",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learn about current topical issues of much concern in Africa using OERs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create portfolios by downloading videos, jotting notes, taking pictures, or recording sound."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make presentations for class discussions and peer review."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Reflect on feedback to generate concepts for designing and making own artworks."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5 1.2",
+      "title": "VISUAL ARTS",
+      "description": "Planning, making, and composing visual arts based on African culture and environment.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5 1.2.2",
+          "title": "Planning, Making and Composing",
+          "description": "Experimenting with media and techniques to create artworks based on African themes.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5 1.2.2.1",
+              "description": "Demonstrate understanding of how to organise own ideas through experimenting with available media and techniques for creating/composing artworks based on the history, culture, environment and topical local/national/global issues of other communities.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5 1.2.2.1",
+                  "description": "Experiment with available relevant visual arts media and methods to create own visual artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the local environment to select available materials and tools suitable for making artworks."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Study and experiment with materials and tools to create simple artworks reflecting history and culture (e.g., clay modeling, weaving, construction, painting)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and share experiences through jury and peer review."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use available materials to make artworks similar to works studied."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.2.2.2",
+                  "description": "Experiment with available relevant visual arts media and methods to create own visual artworks that reflect the physical and social environments of some African communities",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the local environment for suitable materials and tools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Study and test the use of materials and tools using appropriate methods (e.g., clay for modeling, straw for weaving, odds and ends for assemblage)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and share experiences through open discussion and peer assessment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use available materials to make artworks that look like the visual artworks studied."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.2.2.3",
+                  "description": "Experiment with available relevant visual arts media and methods to create own visual artworks that reflect topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the local environment to select materials and tools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Study and experiment with materials and tools to create simple artworks reflecting topical issues (e.g., using clay, straw, odds and ends, paint)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and share experiences through discussion and peer assessment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use available materials to make own visual artworks representing the artworks studied."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5 1.2.3",
+              "description": "Demonstrate understanding of how to create expressive artworks based on own ideas by applying knowledge of media and methods of production to reflect other cultures in Africa, as well as the visual artists, their culture, the environment and emerging topical issues.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5 1.2.3.1",
+                  "description": "Create own visual artworks based on own ideas, knowledge and understanding of artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate basic knowledge and skills in the use and application of elements and principles of art and design."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make own comprehensive designs based on reflective memory of history and culture."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Follow own design to produce personal artworks using suitable materials (clay, paper, wood, glue) and tools (brushes, scissors, chisels)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Select suitable production methods (painting, weaving, carving, etc.) and finishing techniques."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.2.3.2",
+                  "description": "Create own visual artworks based on own ideas, knowledge and understanding of artworks that reflect the physical and social environments of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate knowledge and skills in using art elements and principles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make own designs based on reflections on the physical and social environment of African communities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Follow own design to produce personal artwork using available materials and tools."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use appropriate manual/mechanical production and finishing techniques."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.2.3.3",
+                  "description": "Create own visual artworks based on own ideas, knowledge and understanding of artworks that reflect topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate knowledge and skills in using art elements and principles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make own designs based on reflective memory of current topical issues in Africa."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Follow own design to produce personal artwork using suitable materials, tools, and techniques."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5 2.2",
+      "title": "PERFORMING ARTS",
+      "description": "Planning, making, and composing performing arts based on African culture and environment.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B5 2.2.2",
+          "title": "Planning, Making and Composing",
+          "description": "Experimenting with media and techniques to create performing artworks based on African themes.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5 2.2.2.1",
+              "description": "Demonstrate understanding of how to organise own ideas through experimenting with available media and techniques for creating/composing artworks based on the history, culture, environment and topical local/national/global issues of other communities.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5 2.2.2.1",
+                  "description": "Experiment with available relevant performing arts media and techniques to create own performing artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the local environment to select instruments, equipment, sounds, etc. for composing and performing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Experiment with available instruments to perform compositions reflecting African history and culture."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and share experiences through peer review."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.2.2.2",
+                  "description": "Experiment with available relevant performing arts media and techniques to create own performing artworks that reflect the physical and social environments of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the local environment to select instruments and sounds."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Experiment with instruments and sounds to perform compositions reflecting the physical and social environment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and share experiences through peer review."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.2.2.3",
+                  "description": "Experiment with available relevant performing arts media and techniques to create own performing artworks that reflect topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the local environment to select instruments and sounds."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Experiment with instruments and sounds to perform compositions reflecting topical issues in Africa."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and share experiences through peer review."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5 2.2.3",
+              "description": "Demonstrate understanding of how to create expressive artworks based on own ideas by applying knowledge of media and methods of production to reflect other cultures in Africa as well as the visual artists, their culture, the environment and emerging topical issues",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5 2.2.3.1",
+                  "description": "Create own performing artworks based on own ideas, knowledge and understanding of artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate basic knowledge and skills in using performing arts elements and instruments."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make own compositions based on reflective memory of history and culture."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Produce music, dance, drama based on own skills by selecting appropriate instruments and production methods."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.2.3.2",
+                  "description": "Create own performing artworks based on own ideas, knowledge and understanding of artworks that reflect the physical and social environments of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate basic knowledge and skills in using performing arts elements."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make own compositions based on reflective memory of physical and social environments."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Produce music, dance, drama using suitable instruments, production methods, and props."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.2.3.3",
+                  "description": "Create own performing artworks based on own ideas, knowledge and understanding of artworks that reflect topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate basic knowledge and skills in using performing arts elements."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make own compositions based on reflective memory of current topical issues."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Produce music, dance, drama using suitable instruments, production methods, and props."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5 1.3",
+      "title": "VISUAL ARTS",
+      "description": "Displaying and sharing visual arts based on African culture and environment.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B5 1.3.4",
+          "title": "Displaying and Sharing",
+          "description": "Planning and executing exhibitions of visual artworks.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5 1.3.4.1",
+              "description": "Demonstrate understanding of how to plan a display/presentation of a portfolio of own artworks by identifying, and preparing a venue, selecting and grouping of artworks and inviting target audience for the planned display/performance.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5 1.3.4.1",
+                  "description": "Plan an exhibition of own portfolio of visual artworks to educate and share creative experiences of artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch a short video on an exhibition or visit an exhibition centre."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the need for displaying portfolio of own visual artworks."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Develop a roadmap for the exhibition (fixing date, selecting venue, inviting audience)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Brainstorm to agree on a theme (e.g. African History and Culture)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Send invitations to target audience."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Select works for the exhibition considering creativity, originality, and relevance."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Decide on mode of display and plan layout."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Clean and prepare the hall and plan for post-exhibition activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.3.4.2",
+                  "description": "Plan an exhibition of own portfolio of visual artworks to educate and share creative experiences of artworks that reflect the physical and social environments in some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch a short video on an exhibition or visit an exhibition centre."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the need for displaying portfolio."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Develop a roadmap for the exhibition."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Brainstorm to agree on a theme (e.g. Our Environment)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Send invitations and select works based on criteria."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Decide on mode of display and plan layout."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Prepare the hall and plan post-exhibition activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.3.4.3",
+                  "description": "Plan an exhibition of own portfolio of visual artworks to educate and share creative experiences of artworks that reflect the topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch a short video on an exhibition or visit an exhibition centre."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the need for displaying portfolio."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Develop a roadmap for the exhibition."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Brainstorm to agree on a theme (e.g. The Future of Africa)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Send invitations and select works based on criteria."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Decide on mode of display and plan layout."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Prepare the hall and plan post-exhibition activities."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5 1.3.5",
+              "description": "Demonstrate understanding of how to display/present a portfolio of art works that share own knowledge, concepts, ideas and experiences with audience through display/presentation; and using senses/manual/digital applications where necessary, to record for reporting on the events.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5 1.3.5.1",
+                  "description": "Exhibit portfolio of own and others' visual art artworks to share creative experiences of artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Decide on types and number of artworks to exhibit based on space and theme."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Display artworks by hanging, draping, placing, spreading, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Label the works using manual or ICT prints."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assign tasks and responsibilities (e.g., leading visitors, explaining concepts)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Check/monitor visitors, organize opening/closing, and clean up."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.3.5.2",
+                  "description": "Exhibit portfolio of own and others' art artworks to share creative experiences of artworks that reflect the physical and social environments of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Decide on artworks to exhibit based on space and theme."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Display artworks effectively."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Label the works."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assign tasks and responsibilities."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Manage the exhibition process including opening/closing and clean up."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.3.5.3",
+                  "description": "Exhibit portfolio of own and others' art artworks to share creative experiences of artworks that reflect topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Decide on artworks to exhibit based on space and theme."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Display artworks effectively."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Label the works."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assign tasks and responsibilities."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Manage the exhibition process including opening/closing and clean up."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5 2.3",
+      "title": "PERFORMING ARTS",
+      "description": "Displaying and sharing performing arts based on African culture and environment.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B5 2.3.4",
+          "title": "Displaying and Sharing",
+          "description": "Planning and executing performances.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5 2.3.4.1",
+              "description": "Demonstrate understanding of how to plan a display/presentation of a portfolio of own artworks by identifying, and preparing a venue, selecting and grouping of artworks and inviting target audience for the planned display/performance.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5 2.3.4.1",
+                  "description": "Plan a display of own portfolio of performing artworks to educate and share creative experiences of artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch a short video or live performances reflecting African history and culture."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the need for performing compositions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Develop a roadmap for the performances (date, venue, audience)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Brainstorm to agree on a theme (e.g. The Pride of African Culture)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Send invitations."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Select compositions considering creativity, originality, and relevance."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Decide on mode and arrangement of performances."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Plan sequence of events and site plan."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Clean and prepare venue and plan post-performance activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.3.4.2",
+                  "description": "Plan a display of own portfolio of performing artworks to educate and share creative experiences of artworks that reflect the physical and social environments of some communities of Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch videos or live performances reflecting African environments."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss need for performances."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Develop roadmap (date, venue, audience)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Brainstorm theme (e.g. Our Continent Africa)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Send invitations and select compositions."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Decide on mode and arrangement."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Plan sequence of events and prepare venue."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Plan post-performance activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.3.4.3",
+                  "description": "Plan a display of own portfolio of performing artworks to educate and share creative experiences of artworks that reflect the topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch videos or live performances reflecting topical issues."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss need for performances."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Develop roadmap."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Brainstorm theme (e.g. The Future of Africa)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Send invitations and select compositions."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Decide on mode and arrangement."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Plan sequence of events and prepare venue."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Plan post-performance activities."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5 2.3.5",
+              "description": "Demonstrate understanding of how to display/present a portfolio of art works that share own knowledge, concepts, ideas and experiences with audience through display/presentation; and using senses/manual/digital applications where necessary, to record for reporting on the events.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5 2.3.5.1",
+                  "description": "Stage a display of own portfolio of performing artworks to share creative experiences of compositions that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Decide on compositions to perform based on theme and audience."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assign tasks (MC, ushering, etc.) and ensure successful execution."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Arrange sequence of performances."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Follow programme of the day."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.3.5.2",
+                  "description": "Stage a display of own portfolio of performing artworks to share creative experiences of compositions that reflect the physical and social environments of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Decide on compositions to perform."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assign tasks and responsibilities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Arrange sequence of performances."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Follow programme of the day."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.3.5.3",
+                  "description": "Stage a display of own portfolio of performing artworks to share own creative experiences of compositions that reflect the topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Decide on compositions to perform."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assign tasks and responsibilities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Arrange sequence of performances."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Follow programme of the day."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5 1.4",
+      "title": "VISUAL ARTS",
+      "description": "Appreciating and appraising visual arts.",
+      "orderIndex": 7,
+      "subStrands": [
+        {
+          "code": "B5 1.4.6",
+          "title": "Appreciating and Appraising",
+          "description": "Developing guidelines for appraising visual artworks.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5 1.4.6.1",
+              "description": "Demonstrate understanding of how to analyse, appreciate, appraise/critique and present report on own works and that of others based on established guide for judging artworks (the theme, subject matter, media, techniques, elements and principles of design, social, aesthetic, cultural and functional values), the recordings and reports",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5 1.4.6.1",
+                  "description": "Develop guidelines for appreciating and appraising own and others' visual artworks that reflect the history and culture of the African people",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and accept a guide for appreciating and appraising artworks."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify correct vocabulary for appreciation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Agree on use of appraisal report and sharing methods."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Agree on recording methods (manual/digital)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Fix a date for appraisal."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Use suggested guidelines: Description of work, Subject matter, Appraisal, Experiences to share."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.4.6.2",
+                  "description": "Develop guidelines for appreciating and appraising own and others' visual artworks that reflect the physical and social environments of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and accept a guide for appreciation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify vocabulary."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Agree on report usage and sharing."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Agree on recording methods."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Fix date."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Use suggested guidelines."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.4.6.3",
+                  "description": "Develop guidelines for appreciating and appraising own and others' visual artworks that reflect the topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and accept a guide for appreciation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify vocabulary."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Agree on report usage and sharing."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Agree on recording methods."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Fix date."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Use suggested guidelines."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5 1.4.7",
+              "description": "Demonstrate understanding of how to make informed decisions on displays, presentations, performances, recordings and/or reports based on established guide for judging artworks (the theme, subject matter, media, techniques, elements and principles of design, social, aesthetic, cultural and functional values) for correlation, correction and future modifications",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5 1.4.7.1",
+                  "description": "Analyse and appreciate own or others' visual artworks and present reports as feedback on artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display selected works reflecting African history and culture."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about works dispassionately using agreed guidelines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use appraisal outcome to modify works or produce new ones."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record and share activity using social media."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.4.7.2",
+                  "description": "Analyse and appreciate own or others' visual artworks and present reports as feedback on artworks that reflect the physical and social environments of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display selected works reflecting physical/social environments."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about works using guidelines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use appraisal outcome for modification."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record and share activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 1.4.7.3",
+                  "description": "Analyse and appreciate own or others' visual artworks and present reports as feedback on artworks that reflect topical issues of much concern in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display selected works reflecting topical issues."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about works using guidelines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use appraisal outcome for modification."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record and share activity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5 2.4",
+      "title": "PERFORMING ARTS",
+      "description": "Appreciating and appraising performing arts.",
+      "orderIndex": 8,
+      "subStrands": [
+        {
+          "code": "B5 2.4.6",
+          "title": "Appreciating and Appraising",
+          "description": "Developing guidelines for appraising performing artworks.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5 2.4.6.1",
+              "description": "Demonstrate understanding of how to analyse, appreciate, appraise/critique and present report on own works and that of others based on established guide for judging artworks (the theme, subject matter, media, techniques, elements and principles of design, social, aesthetic, cultural and functional values), the recordings and reports",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5 2.4.6.1",
+                  "description": "Develop guidelines for appreciating and appraising own and others' performing artworks that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and accept a guide for analysis and appraisal."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify correct vocabulary."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Agree on appraisal report usage."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Agree on recording methods."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Fix date for appraisal."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Use suggested guidelines for Music, Dance, and Drama."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.4.6.2",
+                  "description": "Develop guidelines for appreciating and appraising own and others' performing artworks that reflect the physical and social environment of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and accept a guide for analysis and appraisal."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify correct vocabulary."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Agree on appraisal report usage."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Agree on recording methods."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Fix date for appraisal."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Use suggested guidelines."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.4.6.3",
+                  "description": "Develop guidelines for appreciating and appraising own and others' performing artworks that reflect topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and accept a guide for analysis and appraisal."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify correct vocabulary."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Agree on appraisal report usage."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Agree on recording methods."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Fix date for appraisal."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Use suggested guidelines."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B5 2.4.7",
+              "description": "Demonstrate understanding of how to make informed decisions on displays, presentations, performances, recordings and/or reports based on established guide for judging artworks (the theme, subject matter, media, techniques, elements and principles of design, social, aesthetic, cultural and functional values) for correlation, correction and future modifications",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B5 2.4.7.1",
+                  "description": "Analyse and appreciate own or others' performing artworks and present reports as feedback on compositions that reflect the history and culture of the people of Africa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display selected performances reflecting African history and culture."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about performances using guidelines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use appraisal outcome for modification."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record and share activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.4.7.2",
+                  "description": "Analyse and appreciate own or others' performing artworks and present reports as feedback on compositions that reflect the physical and social environments of some communities in Africa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display selected performances reflecting physical/social environments."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about performances using guidelines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use appraisal outcome for modification."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record and share activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5 2.4.7.3",
+                  "description": "Analyse and appreciate/appraise own or others' performing artworks and present reports as feedback on compositions that reflect topical issues in Africa",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display selected performances reflecting topical issues."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about performances using guidelines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use appraisal outcome for modification."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record and share activity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

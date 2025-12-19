@@ -1,0 +1,617 @@
+{
+  "phase": "KG",
+  "level": "KG1",
+  "subject": "Our World and Our People",
+  "imagePrompts": [
+    {
+      "nodeType": "strand",
+      "strandCode": "K1.2",
+      "subStrandCode": null,
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A warm collage of Ghanaian family life: an extended family sharing a meal of fufu and soup, a naming ceremony with people in traditional cloth, and children in school uniforms playing together. It represents family roles, history, and community."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A domestic scene showing family roles. A mother is cooking in an open kitchen, a father is mending a net or tool, and children are sweeping the compound. It shows responsibility and cooperation in a Ghanaian home."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children in a classroom role-play corner. One child wears a pretend mustache like a father, another ties a cloth like a mother carrying a doll. They are acting out helping each other. The atmosphere is playful and imitative."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A community circle time. Learners are seated on mats. One child stands and gestures, describing their family members. A poster on the wall shows different family types (nuclear and extended)."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting in a semi-circle. A teacher uses a conversational poster showing a large extended family eating together. Learners are raising hands to talk about who lives in their house."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher holding a storybook, pointing to the title on the front cover. Beside her on the board is a drawing of a book cover. Children are looking and comparing the real book to the drawing."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Interactive reading session. The teacher runs her finger under the text from left to right. She pauses to point at an illustration of a family, helping children connect the picture to the story."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children listening to a story. The teacher holds a Big Book showing a mother and father. Children are holding up fingers to count the family members they see in the book illustration."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher doing a picture walk through a book about families. Learners are predicting what happens next. On the floor, children are using counters to subtract numbers based on the story characters."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children dancing in a circle. They freeze when the music stops. The teacher calls out a name (e.g., 'Kofi'). Children whose names start with the same sound step forward."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom game. Learners are grouped in corners labeled with letters (K, A, Y). They are counting how many friends are in their 'letter group'. A fun literacy and numeracy mix."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children warming up their fingers by tapping them on their thumbs. The teacher models writing a vertical line from top to bottom on the board. Children copy the action in the air."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Learners sitting at tables practicing writing vertical lines on paper or slates. They are focused, moving pencils from top to down. The teacher walks around assisting."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A data collection activity. Empty milk tins are stacked in columns to represent the number of children born on different days. Children compare the height of the stacks to see which is 'more'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children pointing to two groups of students standing up. One group has many students, the other has few. They are using the concept 'more than' to describe the larger group."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Role-play center. A child pretending to be 'dad' is holding a newspaper. Another pretending to be 'mom' is holding a cooking pot. A 'child' helps sweep. They are acting out family responsibilities."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.1",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children dramatizing a home scene. They are using props like plastic dishes and brooms. They are talking to each other using polite family language."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A large map of Ghana on the classroom wall with strings connecting the school location to different regions. Children are dressed in varied traditional attire, celebrating diverse origins."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting in a circle listening to an elder (or teacher dressed as one) telling a story about the history of a tribe. They look fascinated. Some wear traditional smocks or kente."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Pairs of children facing each other, greeting in their home languages. One bows slightly, another waves. It shows cultural exchange in the classroom."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher telling a story about the origin of the Ashantis or Ewes. She uses hand gestures. Children are listening intently. A simple map or symbol (like a Golden Stool or a drum) is drawn on the board."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child holding a book and pointing to the cover illustration. The teacher asks 'What do you think this story is about?'. Other children raise hands to guess."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher pointing to the last sentence on a page in a Big Book. Children are counting the words in that sentence together 'One, two, three, four'. Comparing sentence lengths."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A large map of Ghana on the wall. The teacher uses a pin for the school's location and threads stretching to different regions. Children watch as she connects the school to a hometown."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children dancing to traditional music played from a phone. They are moving rhythmically. Some try traditional dance moves from their region. Joyful cultural expression."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children standing up when their hometown name is called. The teacher writes names like 'Kumasi' and 'Konongo' on the board. They are identifying similar beginning sounds."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children grouped in corners based on the first letter of their hometown. One group is counting their members. They are comparing which group is largest."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children practicing writing curves in the sand or on slates. They are drawing simple circular shapes (heads). The teacher models the left-to-right direction."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting in pairs counting drawings of heads on a paper. They are counting how many are 'males' and how many are 'females'. Numeracy integrated with art."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom graph made of milk tins. There are stacks of different heights representing language groups. A child points to the tallest stack saying 'More'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher asking 'Which group has more?'. Children point to the larger group of students standing on one side of the room. Visualizing quantity."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child drawing a simple family tree on paper. They draw circles for faces of grandparents, parents, and self. The teacher helps them connect the lines."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.2",
+      "contentStandardCode": "K1.2.2.1",
+      "indicatorCode": "K1.2.2.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Small groups of children comparing their family tree drawings. They are counting the number of girls and boys in their pictures. Discussing family size."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A colorful celebration scene in class. Children are pretending to celebrate a festival or birthday. Some wear party hats, others traditional beads. There is a feeling of joy and sharing."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children dancing and drumming in a circle. They are celebrating a traditional festival. One child acts as a chief with a paper crown. The mood is festive."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. A poster shows a festival scene. Children discuss what they see. Some act out drumming or dancing. Sharing family traditions."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children singing 'Happy Birthday' and clapping. Others demonstrate a traditional dance. They are sharing how they celebrate special days."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child holding a book carefully with two hands, showing how to open it gently. The teacher watches approvingly. Book handling skills practice."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting on a mat doing 'Pretend Reading'. They turn pages carefully from right to left (revealing the next page). They are counting the pages."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Interactive read aloud using a KWL chart. The teacher reads about a local festival. Children ask questions. Vocabulary words like 'gift' and 'happy' are emphasized."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing their favorite part of a festival story. One draws a drummer. They share why they liked it. Connecting story to experience."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children shaking hands in the air to warm up muscles. They practice writing vertical lines on tablets or slates. Teacher models top-to-bottom stroke."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A close-up of a child's hand holding a crayon, drawing straight lines from top to bottom on paper. Concentration on writing direction."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children grouped by birth month (e.g., January group, February group). They count members in each group. They discuss which group is 'more' or 'less'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Empty cans arranged in lines to represent data. One line is long, one is short. Children point to the long line saying 'More'. Data representation."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting at a table designing colorful birthday cards with crayons. They are drawing pictures on folded paper. Creative arts session."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.3",
+      "contentStandardCode": "K1.2.3.1",
+      "indicatorCode": "K1.2.3.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting their handmade cards into piles—one pile for 'Parents', one for 'Siblings'. They count the piles. Integrating math and art."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A peaceful, orderly classroom scene. Children are raising hands to speak, sharing toys, and lining up neatly. A poster on the wall shows simple class rules with pictures."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting in a circle creating rules. The teacher writes their ideas on a board. One child mimes 'listening ears'. Cooperative rule-making."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle discussion. Children talking about school members (headteacher, friends). They suggest rules like 'Be kind'. Safe and respectful environment."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher writing 'Classroom Rules' on a chart. Children contribute ideas. Pictures of 'walking feet' and 'quiet mouth' are pasted on the chart."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher reading a Big Book about rules. She points to words with a pointer. Children track the text. They count words in a sentence."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing a picture of a school friend. They describe their drawing. They notice illustrations in the book match the story."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children creating visual rules. They draw simple pictures (e.g., a bin for 'tidy up') and color them. They post them on the wall. Vocabulary in action."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Using a number line on the floor. Children play a game adding 'one more' rule to the list. Counting rules. Integration of math and civics."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children reciting a rhyme like 'Hey Diddle Diddle'. They clap when they hear rhyming words. Fun oral language activity."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting objects into two sets on a table. One set has animals from a rhyme, the other has objects. They count the items in each set."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher writing a large letter (e.g., 'S') on the board. Children practice writing it in the air. A chart shows words like 'School' and 'Sobolo'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting at desks writing the letter of the week in their books. Some stand up if their name has the letter. Active letter recognition."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children looking at a birthday chart. They compare columns of birthdays. Teacher asks 'Which group has less?'. Solving comparison problems."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.2",
+      "subStrandCode": "K1.2.4",
+      "contentStandardCode": "K1.2.4.1",
+      "indicatorCode": "K1.2.4.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child writing a 'less than' sign or number on the board during a math game. Peers are checking the answer. Use of concrete objects like money or toys for counting."
+    }
+  ]
+}

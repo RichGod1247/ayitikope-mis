@@ -1,0 +1,450 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 2",
+  "subject": "Religious and Moral Education",
+  "name": "Basic 2 Religious and Moral Education",
+  "slug": "basic-2-religious-and-moral-education",
+  "orderIndex": 1,
+  "description": "The Basic 2 Religious and Moral Education curriculum focuses on appreciating God's creation, understanding religious practices and festivals, learning about the early lives of religious leaders, and recognizing roles and relationships within the family and community.",
+  "strands": [
+    {
+      "code": "B2.1",
+      "title": "God, His Creation and Attributes",
+      "description": "Appreciating God's creation and understanding His attributes.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B2.1.1",
+          "title": "God the Creator",
+          "description": "Demonstrating an appreciation of God's creation.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.1.1.1",
+              "description": "Demonstrate an appreciation of God's creation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.1.1.1.1",
+                  "description": "Mention attributes of God that reveal His nature as Sustainer of life.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, lead learners to discuss the attributes of God as the Sustainer of life: Giver of rain and sunshine, the One who makes plants grow, the Giver of air, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners mention other attributes of God in their local languages."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners explain the attributes of God relevant to their daily life, e.g. God gives life, rain and air."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.1.2",
+          "title": "The Environment",
+          "description": "Appreciating the environment as God's creation.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.1.2.1",
+              "description": "Appreciate the environment as God's creation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.1.2.1.1",
+                  "description": "Explain the importance of the environment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Take a nature walk of the school environment with learners to observe: things of natural existence (objects God created): trees, stones, animals, etc., and things created by humankind: buildings, cars, tables, chairs, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners examine things made by humankind and identify the materials used in making the things."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to talk about the importance of the environment for the survival of God's creation: air, food, water, shelter, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.1.2.1.2",
+                  "description": "Demonstrate human activities that destroy God's creation or the environment.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to talk about activities that destroy the environment: indiscriminate cutting down of trees, illegal mining activities (galamsey), pollution of water bodies, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners know that all these activities lead to climate change such as heat, floods, rainstorms, less rainfall, drought and famine."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Group learners to record data on human activities that destroy the environment and present to class for discussion. Nature walks, video clips and pictures on environmental degradation can be used."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners draw and colour various aspects of the environment: safe environment, unsafe environment, etc., and talk about the desired environment."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.1.3",
+          "title": "Purpose of God's Creation",
+          "description": "Appreciating things created by God.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B2.1.3.1",
+              "description": "Appreciate things created by God",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.1.3.1.1",
+                  "description": "Explain the purpose of God's creation.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Group learners to discuss the usefulness of plants and animals to humankind."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners identify the uses of animals and plants."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners draw and colour useful plants and animals."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.2",
+      "title": "Religious Practices and their Moral Implications",
+      "description": "Understanding religious worship and festivals in Ghana.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B2.2.1",
+          "title": "Religious Worship in the Three Major Religions in Ghana",
+          "description": "Explaining the importance of religious worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.2.1.1",
+              "description": "Explain the importance of religious worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.1.1.1",
+                  "description": "Explain the importance of worship.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Engage learners with video clips or pictures of people at worship. If possible, take learners to the church, mosque or the shrine to observe the mode of worship."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to talk about the importance of worship at home, church or mosque and in school, e.g. it is a command from God to serve Him."
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.2.1.1.2",
+                  "description": "Sing and recite simple texts from the three main religions in Ghana.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to mention popular religious songs and recitations in the three main religions in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners sing or recite some simple verses from the Bible or Quran and some sayings from the oral tradition, e.g. The Lord's Prayer (Christian), Al-Fatihah (Islam) and a traditional prayer (ATR)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners write simple texts from the religious songs and recitations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.2.2",
+          "title": "Festivals in the Three Major Religions",
+          "description": "Explaining the importance of religious festivals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.2.2.1",
+              "description": "Explain the importance of religious festivals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.2.1.1",
+                  "description": "Demonstrate activities which take place during the celebration of festivals.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention religious festivals they have witnessed or heard of. Islam: Eid-ul-Fitr, Eid-ul-Adha, etc.; Christianity: Easter, Christmas, etc.; Traditional: Kundum, Odwira, Damba, Bugum, Yam Festival, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners, in groups, describe how various festivals are celebrated."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners role-play or dramatise activities that take place during the festivals such as merry-making, sharing, family re-union and worship."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners draw scenes from festivals."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.3",
+      "title": "Religious Leaders",
+      "description": "Narrating the early life stories of the leaders of the three major religions.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B2.3.1",
+          "title": "Early Life of the Leaders of the three Major Religions",
+          "description": "Narrating the early life stories of the leaders of the three main religions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.3.1.1",
+              "description": "Narrate the early life stories of the leaders of the three main religions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.1.1.1",
+                  "description": "Narrate the story of the early life of the religious leaders in the three religions in Ghana.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention the names of the religious leaders: Jesus Christ, the Holy Prophet Muhammad (SAW), Okomfo Anokye, Toha Zie, Egya Ahor, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss with learners the early lives of these religious leaders such as the Lord Jesus Christ, the Holy Prophet Muhammad (SAW), and a traditional leader."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, let learners role-play some important aspects of the early life of a religious leader."
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.3.1.1.2",
+                  "description": "Outline the moral lessons in the early lives of the religious leaders.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to talk about the moral lessons they have learnt from the discussions about the religious leaders of the three main religions in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to explain how they will apply the moral lessons learnt from the religious leaders in their daily lives."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners dramatise the moral lives of the religious leaders."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.4",
+      "title": "The Family and the Community",
+      "description": "Describing roles and responsibilities within the family and community.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B2.4.1",
+          "title": "Roles and Relationships",
+          "description": "Describing the roles of the family and community in their daily lives.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.4.1.1",
+              "description": "Describe the roles of the family and community in their daily lives",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.4.1.1.1",
+                  "description": "Identify things that families do to show their commitment to God.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention the religious activities their families perform such as morning devotion and going to church, mosque or the shrine."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners in groups identify the number of times religious activities are performed during the day, week and on special occasions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners role-play what their families do to show commitment to God, e.g. worship, offertory, Sadaqah, Zakat, prayer and fasting."
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.4.1.1.2",
+                  "description": "Explain the need for commitment to God.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explain the meaning of commitment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners discuss why we need to be committed to God, e.g. it is a command from God and it attracts blessings from God."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners talk about things they do to show their commitment to God."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners, in pairs, share their personal experiences about things they do at home, school, church or mosque and in the community to show their commitment to God."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Through questions and answers, let learners share their personal experiences in class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.4.1.1.3",
+                  "description": "Describe factors that promote good relationships between children and their parents.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to talk about good relationships."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners talk about things that promote good relationships such as comportment, respect, love, obedience, humility and friendliness."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners identify their friends and say things they like about them."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners dramatise behaviours that show good relationships."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.4.2",
+          "title": "Personal Safety in the Community",
+          "description": "Identifying ways of caring for the body and promoting safety in the community.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.4.2.1",
+              "description": "Identify ways of caring for the body",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.4.2.1.1",
+                  "description": "Describe ways of promoting personal hygiene and safety in the community.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Personal hygiene: Have learners mention things they need in promoting personal hygiene practices such as water, soap, tooth brush and tooth paste, nail cutter, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners talk about things they do to show personal hygiene practices such as bathing twice a day, brushing of the teeth at least twice daily, washing of clothes regularly and washing of hands regularly."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Through dramatisation, let learners demonstrate personal hygiene practices."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners draw items used in keeping their bodies clean."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Safety in the community: Have learners mention things they need in promoting safety in the community such as brooms, scrubbing brushes, rakes, cutlasses and street lights."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners talk about things that must be done to ensure safety in the community such as clearing of surroundings, de-silting choked gutters, creating watch-dog groups and reporting crimes or criminals."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Help learners demonstrate safe community practices."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Let learners draw items used in keeping communities clean."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Let learners draw people who keep communities safe."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

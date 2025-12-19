@@ -1,0 +1,1037 @@
+{
+  "phase": "KG",
+  "level": "KG1",
+  "subject": "Our World and Our People",
+  "imagePrompts": [
+    {
+      "nodeType": "strand",
+      "strandCode": "K1.1",
+      "subStrandCode": null,
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A vibrant, wide-angle view of a Ghanaian kindergarten classroom and outdoor area. In one corner, children are comparing their heights; in another, a group is washing hands at a Veronica bucket. Outside, learners are playing safe games. The scene captures the themes of self-identity, hygiene, and safety."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A close-up of a diverse group of 4-year-old Ghanaian children standing together in their uniforms. They have different hairstyles and heights. One child points to themselves smiling, while others look on happily. The sunlight highlights their unique features."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "An outdoor scene on a grassy compound where KG1 children are standing near some goats and chickens. The children are laughing and comparing their hands and feet to the animals, noticing the differences. It is a moment of discovery about being human."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A circle of children sitting on mats under a tree. One child stands in the center, gesturing to their face and body while speaking. The other children and the teacher listen attentively. The setting is calm and supportive."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A large circle of children sitting on the grass. They are playing a 'pass the ball' game. A young girl holds a colorful soft ball and smiles as she talks about herself. The teacher stands nearby encouraging her. Other children wait eagerly."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A lively classroom scene where children are standing and singing an action song. They are touching their heads, shoulders, knees, and toes in unison. The teacher is at the front demonstrating. The children are laughing and participating."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children in a classroom performing 'Head, Shoulders, Knees and Toes'. They are bending down to touch their knees. The teacher claps the rhythm. Charts on the wall show labeled body parts. The mood is energetic."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher holding up a Big Book in front of seated children. She points to the front cover. Next to her is a drawing of a child on the chalkboard, drawing a parallel between the book's 'front' and the child's 'front'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A close-up of a teacher's hands holding a Big Book, pointing to the cover illustration. KG learners are sitting on a mat, looking at the book. The teacher is turning a page to show illustrations. Bright classroom setting."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child standing next to a large conversational poster showing body parts. The child points to 'legs' on the poster and then to their own legs. The teacher gives a thumbs up. Other children watch."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom wall displaying a colorful poster of a boy and girl. A real KG1 student stands beside it, comparing their height to a mark on the wall, smiling. A teacher asks questions about their height."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.3.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting in pairs on a mat. One child counts the fingers of their partner. They are smiling and counting 'one, two, three...'. A chalkboard nearby shows the alphabet."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.3.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A semi-circle of children clapping their hands rhythmically while singing an alphabet song. One child stands in the middle pointing to body parts mentioned in the song. The wall has a colorful A-Z chart."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child sitting at a low wooden table with crayons. They have drawn a colorful picture of themselves and are making scribbles underneath it. They look proud of their work."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Two children sitting side-by-side at a desk. One is showing their drawing of a self-portrait to the other, pointing to the scribbles at the bottom. The friend listens with interest. Crayons are on the table."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A numeracy lesson on the floor. Children are grouping pictures of eyes and ears. They place two paper eyes together and the number card '2'. They look focused on the counting task."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.1",
+      "contentStandardCode": "K1.1.1.1",
+      "indicatorCode": "K1.1.1.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A small group of children matching body parts. One child holds up five fingers and another points to a card with the number '5'. Drawings of eyes and ears are grouped in sets on the floor."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom scene where a teacher points to a large poster of a human body. She points to the eyes and mimes 'looking'. The children copy her, making 'binoculars' with their hands. The focus is on body functions."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children engaging in a sensory game. One child is blindfolded, trying to identify a ball by touch. Another child is smelling a flower. The scene highlights using different body parts for their functions."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.1.2.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A circle time activity where everyone is pointing to their eyes. A conversational poster of a boy and girl is on the chalkboard. The teacher is leading a song about body parts."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.1.2.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom game demonstrating body functions. One child is blindfolded reaching for a toy. Another holds hands over ears. A third folds arms, trying to pick up a pencil without hands. Playful inquiry."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.1.2.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher sitting on a low chair holding a Big Book. She runs her finger under the text from left to right. KG1 children sit on mats, looking at illustrations of hands and feet."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.1.2.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children looking at the cover of a book showing a child running. One learner gestures to explain what they think the book is about based on the cover. The teacher nods encouragingly."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children in the playground performing actions. One child hops on one leg, another claps hands. They are shouting out what they are doing. Active use of body parts."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A dynamic outdoor scene. A child kicks a football (using legs). Another waves to a friend (using hands). The focus is on the action and body part used."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children clapping their hands to a song's rhythm. They sing 'Head, Shoulders, Knees' and clap once for each word. A teacher holds up 3 fingers to show the count."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A numeracy activity. Children act out walking and place counters on the floor to count parts used. Some match pictures of body parts to number cards on the floor."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A whole class singing and acting. The teacher calls 'Eyes!' and everyone mimes seeing. The teacher calls 'Legs!' and everyone stomps feet. High-energy session."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children dancing and pointing to body parts. They are singing 'What can you do with your eyes?'. The atmosphere is musical and active with alphabet charts visible."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child sitting at a desk coloring a simple outline drawing of a foot with a crayon. Another child is coloring a hand. They show their pictures to each other."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Close up of a child's hand coloring a drawing of a boy running. The paper is on a wooden desk. Other children are visible in the background doing the same."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children pairing up to look at shapes. One makes a circle with arms for a 'head shape'. Another holds an arm straight for a 'line'. They compare shapes."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.2",
+      "contentStandardCode": "K1.2.1.1",
+      "indicatorCode": "K1.2.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher drawing a circle (head) and a straight line (arm) on the chalkboard. Children touch their own heads and arms, noticing the difference in shape. Simple geometry lesson."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A hygiene corner in a Ghanaian classroom. A Veronica bucket with soap is set up. Children are washing hands. A poster shows steps for brushing teeth and bathing."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children pantomiming hygiene actions. Groups pretend to brush teeth, wash faces, and trim fingernails. They look clean and happy."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A community circle time where children sing and act out 'This is the way I brush my teeth'. They make brushing motions near their mouths. The teacher leads the song."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting in a semi-circle singing. The teacher calls 'Face!' and everyone mimes washing their face. The teacher calls 'Teeth!' and everyone mimes brushing. Interactive and rhythmic."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children watching a short educational video on a laptop or TV screen. The screen shows a character brushing teeth. The children are attentive and pointing."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A table with real hygiene items: soap, toothbrush, toothpaste, sponge. A child counts them 'One, two...'. Another child sorts the items by color."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher reading a Big Book about hygiene. She pauses to show a picture of a child washing hands. Students discuss using soap and water. Cozy reading corner."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children rotating through activity centers. One child pretends to wash a doll's face. Another pretends to brush a doll's teeth. They practice body care."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher holding a book open, running her finger under the text from left to right. Children watch closely. The book has large, clear pictures."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child holding a picture book, turning the page from right to left (revealing the next page on the right). They describe images to a friend. Collaborative literacy."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children singing and emphasizing words like 'WASH' and 'BRUSH' with loud claps. Standing in a circle. Cut-out pictures of soap and brushes on the board."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A 'Pick and Act' game. A child picks a card showing a toothbrush and mimes brushing teeth. Other children guess. The teacher smiles encouragingly."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A matching activity on a table. A child connects a picture of a hand to soap with a line. Another connects teeth to a toothbrush. They colour matching pairs."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Close-up of a worksheet where a child colors a bar of soap blue and a hand blue to show they match. The child is focused. Simple child-friendly drawing."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A numeracy lesson. A child counts 'One, two' pointing to two eyes on a face chart. They place the number card '2' next to the eyes. A teacher assists."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Small groups of children with sets of body part pictures. They match these picture sets (e.g. 5 toes) to large number cards (5). Busy, interactive floor."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.8",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child placing five bottle tops next to a picture of five fingers. They count aloud. A number chart 1-5 is visible on the wall."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.3",
+      "contentStandardCode": "K1.1.3.1",
+      "indicatorCode": "K1.1.3.1.8",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child drawing lines in a workbook to match pictures of body parts to numbers (e.g. 2 ears to '2'). Using a big pencil. Clear workbook pages."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A vibrant market stall scene with local Ghanaian foods: yam, plantain, kontomire, oranges, and beans. A mother and child choose healthy foods. Illustrates good food choices."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A split scene: A child eats a nutritious meal (e.g., rice and beans). A friendly nurse gives a child vaccination drops in a clinic. The child looks healthy and strong."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle time. The teacher holds a poster showing 'Body Building' and 'Energy Giving' foods. Children raise hands to mention home foods like rice and eggs."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting around a mat with food pictures scattered. They sort them into groups: fruits, vegetables, grains, and proteins. They discuss which ones make them grow."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child holding a Big Book open to a picture of a fruit basket. The child tells a made-up story about the fruit. Other children listen attentively."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher pointing to the word 'Mug' on the board. She asks for rhyming words. Children shout 'Jug!', 'Hug!'. Interactive linguistic session."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A listening comprehension session. The teacher reads a story about healthy eating. Afterwards, one child stands to say: 'I eat beans to be strong'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children inspecting their lunch boxes. They point out healthy parts like rice, stew, and an orange. They look happy about their healthy food."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children jumping and clapping. They jump once for each food word the teacher says: 'Yam!' (jump), 'Fish!' (jump). They count the jumps. Fun physical literacy game."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher clapping rhythmically while saying 'Ba-na-na'. Children copy the clap pattern. They hold up three fingers to show the number of claps."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A large alphabet chart. A child points to 'B' and holds up a real banana. Another points to 'M' with a mango. They sing an alphabet song."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A table with two baskets labeled 'B' and 'Not B'. Children sort plastic food items. Bread goes in 'B', pepper in 'Not B'. Fun sorting game."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child drawing a big yellow banana with crayons. Underneath, they carefully write the letter 'B'. The teacher models 'B' in the air nearby."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children writing the letter 'B' in sand trays. They trace the shape with fingers. Beside the tray is a picture card of beans. Tactile writing lesson."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A sorting activity on a table. Children put oranges (round) in one hoop and bananas (curved) in another. They talk about which group has 'more'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children comparing two piles of plastic fruits. One pile is big, one small. A child points to the big pile saying 'More!'. Learning quantity and classification."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.8",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A joyous scene of children dancing in a circle to traditional Ghanaian music. Some play percussion instruments. They sing a local song about food."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.4",
+      "contentStandardCode": "K1.1.4.1",
+      "indicatorCode": "K1.1.4.1.8",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children clapping and moving to a rhythm. The teacher calls out a local food name, and children mime eating it while dancing. Music, culture, and health."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A clean school compound scene. Children pick up litter and put it in a dustbin. Others sweep with local brooms. The environment looks tidy and safe."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A dual scene: children cleaning a gutter on one side, and happy, healthy children playing football on the other. Links cleanliness to strength and health."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom discussion. Teacher shows a poster of a dirty environment. Children suggest solutions like 'Clean it!'. Problem-solving discussion."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children in pairs talking. One child pretends to throw rubbish in a bin, showing the other the 'right' way. Discussing how to keep school clean."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher reading a Big Book. She points to text, then to a picture of a clean house. Children observe words and pictures telling the story."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "An interactive reading session. A child points to a picture in the Big Book, explaining what is happening. The text matches the description."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A KWL chart on the chalkboard. Teacher writes children's ideas about diseases from dirt. Children are attentive and participating."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children walking on the school compound. They spot and pick up empty cans that could breed mosquitoes. Practical hygiene lesson."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children telling a story from pictures. They look at illustrations of a clean village and describe it with words like 'clean', 'neat'. Creative storytelling."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child drawing a tidy classroom. Others play a word game with cards labeled 'clean' and 'dirty'. They sort the cards."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A large 'a' written on the board. Teacher holds a picture of an 'ant'. Children sing a song emphasizing the 'a' sound."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children standing up if their name contains 'a' or 'b'. They smile and say their names. Active phonics game."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children shaking hands and wiggling fingers to warm up for writing. They sing a local song. Energetic and preparatory."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children tracing the letter 'a' on a friend's back. They laugh and concentrate. Others write in the air or on slates. Multi-sensory writing."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Small groups making posters. They paste pictures of rubbish on cards and write a big red 'NO'. Collaborative art project."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sticking 'NO littering' posters on trees or walls in the school compound. They look proud of their contribution."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.8",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A table with 3D objects: stone, tin can, box, ball. Children touch them and describe their shape."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.5",
+      "contentStandardCode": "K1.1.5.1",
+      "indicatorCode": "K1.1.5.1.8",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children holding up objects found on a nature walk (leaf, pebble, seed). They show them to the class and describe size and shape."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A safety-themed montage. Shows a child waiting at a roadside with an adult, staying away from a hot coal pot, and saying 'No' to a stranger. Illustrates safety."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children in safety role-play. A learner acts as a traffic light while others cross 'the road' safely holding hands. Fun, safe learning."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle discussion. Teacher holds a picture of a sharp knife and asks 'Is this safe?'. Children shake heads. Discussing home safety."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children reciting a traffic light rhyme. They do actions—freezing for 'Red' and walking for 'Green'. Learning road safety playfully."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A Language Experience Approach session. A child dictates a safety story to the teacher, who writes it. The child watches words become text."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing their favorite part of a safety story. One draws a policeman helping a child. Interpreting story through art."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher reading a book about safety. She stops to ask 'What should she do now?'. Children raise hands to answer. Interactive reading."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children role-playing safe practices. One pretends to hold a knife carefully. Another looks left and right before crossing a mat road."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children clapping syllables for safety words. They clap 'El-ec-tri-ci-ty' and 'Wa-ter'. Smiling and counting on fingers."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child adding syllables using counters. Putting counters for 'Tra-ffic' and 'Li-ght', then counting all. Fun literacy and numeracy."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Two children practicing safety dialogue. One says 'Don't touch!' pointing to a pretend wire. Using new vocabulary. 'Show and Tell' with safety pictures."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A matching game. Children match real objects (like a plastic knife) to cards showing the accident they can cause. Discussing safety."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting objects into 'Flat' and 'Fat' piles. Boxes, tins, and paper on a table. Exploring shapes."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child holding a tin can saying 'This is 3D'. Another holds paper saying 'This is flat'. Geometry discovery lesson."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children coloring outlines of 'dangerous items' (like fire or knife) in red. Focused on coloring work."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.1",
+      "subStrandCode": "K1.1.6",
+      "contentStandardCode": "K1.1.6.1",
+      "indicatorCode": "K1.1.6.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child showing their drawing of a 'harmful situation' to the class and explaining why it is unsafe. Peer learning."
+    }
+  ]
+}

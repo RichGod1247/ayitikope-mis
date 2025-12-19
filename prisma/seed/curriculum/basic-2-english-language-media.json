@@ -1,0 +1,266 @@
+[
+  {
+    "indicatorCode": "B2.1.1.1.1",
+    "slug": "b2-1-1-1-1-interpret-familiar-songs"
+  },
+  {
+    "indicatorCode": "B2.1.2.1.1",
+    "slug": "b2-1-2-1-1-interpret-rhymes-and-tongue-twisters"
+  },
+  {
+    "indicatorCode": "B2.1.4.1.1",
+    "slug": "b2-1-4-1-1-story-characters-and-real-life"
+  },
+  {
+    "indicatorCode": "B2.1.4.1.2",
+    "slug": "b2-1-4-1-2-retell-story-sequence"
+  },
+  {
+    "indicatorCode": "B2.1.4.1.3",
+    "slug": "b2-1-4-1-3-cultural-background-stories"
+  },
+  {
+    "indicatorCode": "B2.1.5.1.1",
+    "slug": "b2-1-5-1-1-dramatise-role-play-stories"
+  },
+  {
+    "indicatorCode": "B2.1.6.1.1",
+    "slug": "b2-1-6-1-1-special-occasion-greetings"
+  },
+  {
+    "indicatorCode": "B2.1.6.1.2",
+    "slug": "b2-1-6-1-2-talk-about-events-at-home"
+  },
+  {
+    "indicatorCode": "B2.1.6.1.3",
+    "slug": "b2-1-6-1-3-talk-about-places-at-home"
+  },
+  {
+    "indicatorCode": "B2.1.6.1.4",
+    "slug": "b2-1-6-1-4-talk-about-manners"
+  },
+  {
+    "indicatorCode": "B2.1.6.2.1",
+    "slug": "b2-1-6-2-1-turn-taking-conversation"
+  },
+  {
+    "indicatorCode": "B2.1.6.2.2",
+    "slug": "b2-1-6-2-2-ask-and-answer-for-clarification"
+  },
+  {
+    "indicatorCode": "B2.1.7.1.1",
+    "slug": "b2-1-7-1-1-listen-and-interact-with-drama"
+  },
+  {
+    "indicatorCode": "B2.1.7.1.2",
+    "slug": "b2-1-7-1-2-sequence-of-events-in-drama"
+  },
+  {
+    "indicatorCode": "B2.1.7.1.3",
+    "slug": "b2-1-7-1-3-discuss-story-events-and-moral"
+  },
+  {
+    "indicatorCode": "B2.1.7.1.4",
+    "slug": "b2-1-7-1-4-share-facts-from-texts-heard"
+  },
+  {
+    "indicatorCode": "B2.1.8.1.1",
+    "slug": "b2-1-8-1-1-pronunciation-and-intonation-wh-questions"
+  },
+  {
+    "indicatorCode": "B2.1.9.1.1",
+    "slug": "b2-1-9-1-1-give-and-respond-to-commands"
+  },
+  {
+    "indicatorCode": "B2.1.9.1.2",
+    "slug": "b2-1-9-1-2-make-and-respond-to-polite-requests"
+  },
+  {
+    "indicatorCode": "B2.1.9.1.3",
+    "slug": "b2-1-9-1-3-respond-to-commands-instructions-requests"
+  },
+  {
+    "indicatorCode": "B2.1.10.1.1",
+    "slug": "b2-1-10-1-1-speak-with-confidence"
+  },
+  {
+    "indicatorCode": "B2.1.10.1.2",
+    "slug": "b2-1-10-1-2-posture-eye-contact-and-cues"
+  },
+  {
+    "indicatorCode": "B2.2.2.1.1",
+    "slug": "b2-2-2-1-1-blend-syllables-to-produce-words"
+  },
+  {
+    "indicatorCode": "B2.2.2.1.2",
+    "slug": "b2-2-2-1-2-decode-unknown-words-alphabetic-knowledge"
+  },
+  {
+    "indicatorCode": "B2.2.2.1.3",
+    "slug": "b2-2-2-1-3-structural-analysis-unknown-words"
+  },
+  {
+    "indicatorCode": "B2.2.3.1.1",
+    "slug": "b2-2-3-1-1-rhyming-endings-decode-words"
+  },
+  {
+    "indicatorCode": "B2.2.3.1.2",
+    "slug": "b2-2-3-1-2-digraphs-in-meaningful-sentences"
+  },
+  {
+    "indicatorCode": "B2.2.6.1.1",
+    "slug": "b2-2-6-1-1-sight-words-in-sentences"
+  },
+  {
+    "indicatorCode": "B2.2.6.1.2",
+    "slug": "b2-2-6-1-2-context-clues-infer-meaning"
+  },
+  {
+    "indicatorCode": "B2.2.6.1.3",
+    "slug": "b2-2-6-1-3-homonyms-different-meanings"
+  },
+  {
+    "indicatorCode": "B2.2.6.1.4",
+    "slug": "b2-2-6-1-4-use-dictionaries-and-glossaries"
+  },
+  {
+    "indicatorCode": "B2.2.7.1.1",
+    "slug": "b2-2-7-1-1-predictions-from-illustrations-and-clues"
+  },
+  {
+    "indicatorCode": "B2.2.7.1.2",
+    "slug": "b2-2-7-1-2-factual-and-inferential-questions"
+  },
+  {
+    "indicatorCode": "B2.2.7.1.3",
+    "slug": "b2-2-7-1-3-retell-text-in-own-words"
+  },
+  {
+    "indicatorCode": "B2.2.7.2.1",
+    "slug": "b2-2-7-2-1-information-text-purpose-and-features"
+  },
+  {
+    "indicatorCode": "B2.2.7.2.2",
+    "slug": "b2-2-7-2-2-describe-events-in-story"
+  },
+  {
+    "indicatorCode": "B2.2.7.2.3",
+    "slug": "b2-2-7-2-3-connect-characters-ideas-information"
+  },
+  {
+    "indicatorCode": "B2.2.7.2.4",
+    "slug": "b2-2-7-2-4-read-with-little-support"
+  },
+  {
+    "indicatorCode": "B2.2.7.2.5",
+    "slug": "b2-2-7-2-5-visualisation-mental-images"
+  },
+  {
+    "indicatorCode": "B2.2.9.1.1",
+    "slug": "b2-2-9-1-1-reading-fluency-pace-expression"
+  },
+  {
+    "indicatorCode": "B2.2.9.1.3",
+    "slug": "b2-2-9-1-3-self-correct-using-contextual-clues"
+  },
+  {
+    "indicatorCode": "B2.4.2.1.1",
+    "slug": "b2-4-2-1-1-copy-sentences-clearly"
+  },
+  {
+    "indicatorCode": "B2.4.3.1.1",
+    "slug": "b2-4-3-1-1-copy-words-lower-upper-spacing"
+  },
+  {
+    "indicatorCode": "B2.4.3.1.2",
+    "slug": "b2-4-3-1-2-capitalisation-in-words-and-sentences"
+  },
+  {
+    "indicatorCode": "B2.4.3.1.3",
+    "slug": "b2-4-3-1-3-space-words-appropriately"
+  },
+  {
+    "indicatorCode": "B2.4.4.1.1",
+    "slug": "b2-4-4-1-1-draw-and-label-environment-objects"
+  },
+  {
+    "indicatorCode": "B2.4.5.1.1",
+    "slug": "b2-4-5-1-1-write-sentences-to-express-feelings"
+  },
+  {
+    "indicatorCode": "B2.4.5.1.2",
+    "slug": "b2-4-5-1-2-write-sentences-about-environment-objects"
+  },
+  {
+    "indicatorCode": "B2.4.5.1.3",
+    "slug": "b2-4-5-1-3-draw-and-write-to-share-opinion"
+  },
+  {
+    "indicatorCode": "B2.4.7.1.1",
+    "slug": "b2-4-7-1-1-substitution-table-sentences"
+  },
+  {
+    "indicatorCode": "B2.4.7.1.2",
+    "slug": "b2-4-7-1-2-match-sentence-parts-meaningful-texts"
+  },
+  {
+    "indicatorCode": "B2.4.7.2.1",
+    "slug": "b2-4-7-2-1-rearrange-jumbled-sentences"
+  },
+  {
+    "indicatorCode": "B2.4.8.1.1",
+    "slug": "b2-4-8-1-1-guided-paragraphs-with-leading-questions"
+  },
+  {
+    "indicatorCode": "B2.4.10.1.1",
+    "slug": "b2-4-10-1-1-process-writing-real-or-imagined-experiences"
+  },
+  {
+    "indicatorCode": "B2.4.12.1.1",
+    "slug": "b2-4-12-1-1-describe-feelings-in-simple-sentences"
+  },
+  {
+    "indicatorCode": "B2.5.1.1.1",
+    "slug": "b2-5-1-1-1-capitals-places-and-days"
+  },
+  {
+    "indicatorCode": "B2.5.1.1.2",
+    "slug": "b2-5-1-1-2-capitals-beginning-of-sentences"
+  },
+  {
+    "indicatorCode": "B2.5.2.1.1",
+    "slug": "b2-5-2-1-1-full-stops-and-question-marks"
+  },
+  {
+    "indicatorCode": "B2.5.4.1.1",
+    "slug": "b2-5-4-1-1-simple-present-habits-and-feelings"
+  },
+  {
+    "indicatorCode": "B2.5.5.1.1",
+    "slug": "b2-5-5-1-1-adjectives-weather-quantity-position"
+  },
+  {
+    "indicatorCode": "B2.5.7.1.1",
+    "slug": "b2-5-7-1-1-identify-prepositions-days-dates-places"
+  },
+  {
+    "indicatorCode": "B2.5.7.1.2",
+    "slug": "b2-5-7-1-2-prepositions-position-and-time"
+  },
+  {
+    "indicatorCode": "B2.5.9.1.1",
+    "slug": "b2-5-9-1-1-identify-simple-sentence-structure"
+  },
+  {
+    "indicatorCode": "B2.5.9.1.2",
+    "slug": "b2-5-9-1-2-identify-nouns-and-verbs"
+  },
+  {
+    "indicatorCode": "B2.5.10.1.1",
+    "slug": "b2-5-10-1-1-spell-irregular-phonics-words"
+  },
+  {
+    "indicatorCode": "B2.6.1.1.1",
+    "slug": "b2-6-1-1-1-extensive-reading-author-chair"
+  }
+]

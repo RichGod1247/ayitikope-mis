@@ -1,0 +1,893 @@
+{
+  "phase": "KG",
+  "level": "KG2",
+  "subject": "Mathematics",
+  "name": "KG2 Mathematics (Numeracy)",
+  "slug": "kg2-numeracy",
+  "orderIndex": 1,
+  "description": "The KG2 Numeracy curriculum deepens the understanding of whole numbers, operations, algebra, geometry, and data handling. It is integrated within themes such as 'All About Me', 'My Family', and 'Our World and Our People', encouraging learners to apply mathematical concepts to real-life situations involving measuring, comparing, classifying, and problem-solving.",
+  "strands": [
+    {
+      "code": "K2.1",
+      "title": "All About Me",
+      "description": "Integration of numeracy concepts within the theme of self-identity, body parts, and personal safety.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "K2.1.1",
+          "title": "I am a wonderful and Unique creation",
+          "description": "Counting and matching body parts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.1.1.1",
+              "description": "Demonstrate the understanding that all learners are wonderful and have unique body features that make them different from other people and other God's creation in the environment.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.1.1.7",
+                  "description": "Create sets of human parts that have same number and represent them with numbers up to 5.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In pairs, the learners check on the body parts that have similar numbers and draw them in sets, count them and represent them with numbers 1-10. E.g. two eyes match with 2 feet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Pose story problems about what total number you will get if you put different number of parts together. What will be the total no of eyes? What will the total number of hands of 5 people? Give opportunity to learners to count parts of group members and their parts."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.2",
+          "title": "The parts of the human body and their functions",
+          "description": "Comparing objects and numerals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.1.2.1",
+              "description": "Demonstrate the knowledge of appropriate names of the parts of the internal body that we cannot see and their functions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.2.1.7",
+                  "description": "Compare objects and numerals between 1 to 20",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use words such as: \"equal to\" \"heavier than\" \"greater than\", \"smaller than, less than\", \"10 more than\", \"10 less than\" and symbols such as \"<\", \"=\", \">\" to compare and order whole numbers up to 20."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.3",
+          "title": "Personal hygiene and caring for the parts of the body",
+          "description": "Comparing items by weight and number.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.1.3.1",
+              "description": "Demonstrate understanding of personal hygiene and care of the human body.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.3.1.7",
+                  "description": "Compare objects and numerals between 1 to 20",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Collect a set of items we use to care for our bodies and weigh them. Compare the items by using words such as: \"heavier than\", \"smaller than, less than\", \"5 more than\", \"10 less than\"."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Move on to teach the learners the symbols such as \"<\", \"=\", \">\" to compare and order whole numbers up to 20."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.4",
+          "title": "Eating good food and taking my vaccinations to keep my body healthy",
+          "description": "Comparing sizes and weights of food items.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "K2.1.4.1",
+              "description": "Demonstrate the understanding and knowledge of keeping our bodies healthy by eating good food and visiting the hospital when sick.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.4.1.7",
+                  "description": "Compare the sizes and weight of different food items that we can eat to keep us healthy.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring a variety of food items that we eat daily and water bottles. Have learners compare the sizes, weight and length. E.g. yam is bigger than sweet potatoes, a big bottle of water is heavier than a small bottle of water. Ask learners to compare fruits and other things."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.5",
+          "title": "My Environment and My Health",
+          "description": "Classifying objects by shape and colour.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "K2.1.5.1",
+              "description": "Demonstrate understanding of the environment and how to keep it safe",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.5.1.6",
+                  "description": "Classify objects according to their shape and colour.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using the household learning centre, guide learners to sort and group the objects according to their use. Grouping dangerous and non-dangerous ones."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.6",
+          "title": "Protecting ourselves from road accidents and harmful strangers",
+          "description": "Sorting and comparing numbers.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "K2.1.6.1",
+              "description": "Demonstrate understanding of how to be safe and identify strangers.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.6.1.6",
+                  "description": "Sort out objects by their length, colours and shapes and compare their numbers using words such as more than, less than, equal to.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide different items and objects. In small groups, learners sort and classify the items by same colours, shapes, length, etc. Learner count the items in each group and represent them with numbers. They compare the number of items in each group with others, using the signs of more than, less than and equal to {<, >, =}."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.2",
+      "title": "My Family",
+      "description": "Integration of numeracy concepts within the theme of family life.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "K2.2.1",
+          "title": "Types and members of my Family",
+          "description": "Solving word problems using addition.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.2.1.1",
+              "description": "Demonstrate understanding of the rights, roles and responsibilities of family members.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.2.1.1.6",
+                  "description": "Solve word problems related to family using the concept of addition to find sums up to 10.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using pictures of different families, scaffold learners to add numbers up to 10 and finding how many people altogether live in a family. e.g. if you add 3 learners and 2 parents it will give you 5 members altogether in one family."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Move gradually from use of word problems and number names to abstract addition of numerals (2+3=5)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.2",
+          "title": "Origin and Family History",
+          "description": "Comparing length and distance.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.2.2.1",
+              "description": "Demonstrate understanding of the origin and history of our families and the languages spoken.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.2.2.1.7",
+                  "description": "Comparing length and distance from their school to their homes and hometowns using non-standard and standardised measures.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Scaffold learners to measure different length and spaces in the classroom and outside the classroom. In small groups, have learners use non standardised tools such as their feet, rope or thread to measure the length of their tables, their classroom, distance of their classroom to the headteacher's office, the football park, distance from school to their homes and finally measuring the distance from present place to their hometown on a big map of Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give them rulers to measure some spaces and compare the length using phrases like longer than, shorter than. Engage learners actively in the measurement exercise adding and estimating. Have ground rules as to how to do the task."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.3",
+          "title": "Family Celebrations and Festivals",
+          "description": "Preparing shopping lists and using money.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.2.3.1",
+              "description": "Demonstrate understanding of importance of the activities that we engage in during festivals and family celebrations.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.2.3.1.7",
+                  "description": "Prepare a shopping list, use money to shop for ingredients for the festival special meal.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners apply the concept of addition and subtraction as they use real money to go shopping for some essential ingredients in the classroom store. Count the number of people in the family and buy enough food for them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve addition and subtraction word problems during the week."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.4",
+          "title": "My School Family",
+          "description": "Comparing length and height using non-standard measures.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "K2.2.4.1",
+              "description": "Demonstrate understanding of the rules and regulations for learners and teachers at school.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.2.4.1.7",
+                  "description": "Comparing length of items and height of learners in the school using non-standard and standardised measures.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Scaffold learners to measure different length of spaces in the classroom and outside the classroom. In small groups, learners use non-standardised tools such as their feet, rope or thread to measure the length of different spaces and objects in the school, tables, their classroom space, the football park, etc. and compare them using phrases such as longer than, shorter than, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using non-standardised measures, compare the heights of different learners in the class to find out who is shorter or taller than the other by having them stand side by side or back to back. Use the phrases taller than or shorter than to describe the learners."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.3",
+      "title": "Values and Beliefs",
+      "description": "Integration of numeracy concepts within values, beliefs, and religion.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "K2.3.1",
+          "title": "My Personal Values",
+          "description": "Composing and decomposing numbers.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.3.1.1",
+              "description": "Demonstrate understanding of their personal value in relation to their likes and dislikes.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.3.1.1.6",
+                  "description": "Compose and decompose numbers up to 10 using concrete materials",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to count counters, either bottle tops or sticks from 1 to 10 (Compose). Ask them to form two groups of the 10 counters given to them (decompose) in any manner they want it. E.g. They can break the 10 counters into 5 and 5 or 4 and 6, or 9 and 1. Ask them to put the piles together and check how many they get altogether."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give different numeral cards to small groups of learners and ask them to identify and count objects/counters to match the number."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.2",
+          "title": "My Cultural Values",
+          "description": "Composing and decomposing numbers up to 15.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.3.2.1",
+              "description": "Demonstrate understanding of the virtues, good manners and behaviour patterns our community values and why.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.3.2.1.6",
+                  "description": "Compose and decompose numbers up to 15 using concrete materials",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners identify a number on the numeral chart, count objects up to that number on the card. E.g. Point 15. Ask them to share the 15 counters to two people any how they want. Ask in what different ways will they share it."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Have them decompose and compose the 15 counters given to them. Scaffold them and support them when they struggle."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.3",
+          "title": "My National and Civic Values",
+          "description": "Recognizing patterns.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.3.3.1",
+              "description": "Demonstrate understanding of the values and virtues we need to exhibit as Ghanaian learners.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.3.3.1.6",
+                  "description": "Recognize and describe some simple repeating non numerical patterns (up to a repetition of 3, 1, 2 pattern).",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify the numbers on cards, arrange them and let them continue the pattern you started. E.g. 1,3 5, 7..."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Have learners identify patterns and arrange numeral cards in a particular order and read."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.4",
+          "title": "Our Beliefs",
+          "description": "Recognizing non-numerical patterns.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "K2.3.4.1",
+              "description": "Demonstrate understanding of relating well with people with different beliefs.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.3.4.1.6",
+                  "description": "Recognise and describe some simple repeating non numerical patterns (up to a repetition of 3, 1, 2 pattern)",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show number cards and let learners work in small groups to identify the pattern."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to arrange the numeral cards to patterns. E.g. 11,22, 33, ...."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.4",
+      "title": "My Local Community",
+      "description": "Integration of numeracy concepts within the theme of community.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "K2.4.1",
+          "title": "Knowing the Special Places in My Community",
+          "description": "Creating simple patterns.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.4.1.1",
+              "description": "Demonstrate understanding of the special places in our local community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.4.1.1.7",
+                  "description": "Create simple patterns with more than one shape, colour, size,",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Encourage learners to use different colours/sizes of shapes to create the patterns. Arrange different colours of shapes in a particular pattern."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.4.2",
+          "title": "Knowing (Who) the Important People / Occupation in My Community",
+          "description": "Creating patterns with multiple attributes.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.4.2.1",
+              "description": "Demonstrate understanding of knowing the important people / occupation in our community.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.4.2.1.6",
+                  "description": "Create simple patterns with more than one of shape, colour, size, sounds or movements.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using the coloured rubber counters, or legos, or different bottle tops, guide learners to create patterns with different colours."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.4.3",
+          "title": "Knowing the Special Leaders in Our Community and Country",
+          "description": "Comparing objects based on length and weight.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.4.3.1",
+              "description": "Demonstrate understanding and knowledge of the special leaders in our community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.4.3.1.6",
+                  "description": "Compare objects based on length and weight of various items and objects.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to compare the length of objects around them and those in the picture and use the words \"longer than\" and \"shorter than\" to compare length of various items measured with non standardized scales."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners also compare the weight of some objects around them and use words, \"heavier than\" and \"lighter than\". Get them scales and rulers to use and compare the length and height of items measured."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.5",
+      "title": "My Nation Ghana",
+      "description": "Integration of numeracy concepts within the theme of national history.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "K2.5.1",
+          "title": "History and Celebrations of Ghana",
+          "description": "Identifying money and patterns.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.5.1.1",
+              "description": "Demonstrate understanding of history and celebrations of Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.5.1.1.4",
+                  "description": "Identify the beginning and ending rhyming sounds in words, delete and replace the rhyming sounds to get another rhyming pair.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give an example of two syllables that rhyme. e.g... [ to, mo.] Say the sound and have learners repeat the two words that have same rhyming ending. Repeat the two words slowly again, and have learners repeat after you. Ask them what they notice about the two words. Delete the ending vowel and replace with a new vowel sound to make a new syllable with a different rhyming pair. Replace the o with [a] and we get {ta and ma}. Do this for the beginning sound too. First delete the /s/ in [Sabala] and you get [abala], Replace /S/ with /t/ and you get [tabala}. Have learners manipulate the sound in a playful way."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.7",
+                  "description": "Identify Ghanaian coins and money by name and use it to buy and sell in the classroom store.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display the various coins currently being used for transaction in Ghana. Have learners touch, feel and say the features of each coin. Play games with the learners asking them to identify the coins and buying things with them in the classroom store."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.6",
+      "title": "All Around Us",
+      "description": "Integration of numeracy concepts within the theme of the physical and natural world.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "K2.6.1",
+          "title": "Living and Non-Living Things",
+          "description": "Position and motion of objects.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.6.1.1",
+              "description": "Demonstrate understanding of why some things are referred to as living and non- living things.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.1.1.7",
+                  "description": "Tell the position and motion of objects in space. Using words such as below, to the right, behind etc.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using objects in the class, scaffold learners to describe the various position that objects are at in the classroom. E.g. the teacher's table, a non-living is at the front."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Have learners describe their siting position relative to other learners. Introduce them to vocabularies such as: in front of, behind, on the third row, and other words that show position. e.g. Sesi is behind Neni. Scaffold learners to understand that object as well as humans can change their position any time moving from position to position in space."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.2",
+          "title": "Living Things - Domestic and Wild Animals",
+          "description": "Comparing size and height.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.6.2.1",
+              "description": "Demonstrate understanding of the importance of domestic and wild animals.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.2.1.7",
+                  "description": "Compare the size and height of different animals using the phrases, bigger than, taller than.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using picture, guide learners to compare the size and height of animals. E.g. elephant is bigger than the fox, the giraffe is taller than the lion."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.3",
+          "title": "Water",
+          "description": "Measuring capacity.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.6.3.1",
+              "description": "Demonstrate understanding that water is an important natural resource that helps all living things, human, plants and animals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.3.1.7",
+                  "description": "Measure, estimate and compare the capacity of different containers of water",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide different containers of water in the classroom and have learners fill the bottles, bowls and the containers, measure and estimate the volumes and compare the weight. Have learners use the different litres of existing water bottles and check which weight is heavier or less heavy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Centre time: Measure water with different sizes of bottles and compare volumes of different sizes of containers of water. Set up stations for different uses of water"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.4",
+          "title": "Air",
+          "description": "Classifying objects by weight and counting.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "K2.6.4.1",
+              "description": "Demonstrate understanding that air is all around us and it is an important and beneficial natural resource for all living things.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.4.1.7",
+                  "description": "Classify objects in the environment according to those that have weight and heavy and those without weight and less heavy, count the number of objects in each category up to 20",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide learners with variety of objects picked from the environment and around the school, e.g. leaves, pens, paper, balloons, paper aeroplanes, bottle tops, bottles with water, empty bottles, rocks. Working in small groups, have learners use non-standardized scales to estimate the weight of these objects and then classify them into two groups, objects that have weight and heavy, and objects that have little weight and less heavy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using bottle tops or other countable objects, guide learners to pick and count the number of objects in each category. Pick the numeral card which matches with the number of objects."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.5",
+          "title": "Plants - 1",
+          "description": "Classifying and counting objects.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "K2.6.5.1",
+              "description": "Demonstrate understanding of the knowledge that there are different parts of plants and are important sources of food and medicine for other living things",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.5.1.7",
+                  "description": "Classify different food items into the parts of the plant from which we get it from.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide a variety of food items and have the learners sort and classify them into five categories=food from the root, stem, leaves, fruits, or seed. Count the number of objects in each category up to 20. E.g. guide learners to count the number of food item and pick a numeral card which matches the number quantity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.6",
+          "title": "Plants - 2",
+          "description": "Classifying and counting objects.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "K2.6.6.1",
+              "description": "Demonstrate understanding of how plants grow and how they prepare their food.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.6.1.7",
+                  "description": "Classify different types of food items according to categories and count the number of objects in each category up to 20.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Provide a variety of fruits, vegetables and seeds. Have the learners sort and classify them into their three categories. Fruits in one group, seeds and vegetables."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Count the number of objects in each category up to 20. E.g. guide learners to count the number of food item and pick a numeral card which matches the number quantity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.7",
+          "title": "Types of Soil and Gardening",
+          "description": "Measuring length and breadth.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "K2.6.7.1",
+              "description": "Demonstrate understanding of types of soil we find around us and which one helps plant to grow well.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.7.1.6",
+                  "description": "Prepare beds outside for Gardening by measuring the length and breadth of the land.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Put the class into 4 groups, discuss what each group will like to plant. Assign areas for gardening to the groups. Teacher guides each group to draw a box around the portion they have been assigned. Using a non standardized measurement tool, such as, a rope or stick, learners measure the long side (length) and then the short side (breadth) of the plot."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Teacher demonstrates how to measure with stick and write the number down. In turns each group uses the stick to measure the long and short sides of their portion. They count as they measure. They record the number of sticks on a paper to show to their peers."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.8",
+          "title": "Natural and Man-Made (Artificial) Sources of Light",
+          "description": "Position and motion of objects, counting and matching numerals.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "K2.6.8.1",
+              "description": "Demonstrate understanding of the knowledge that the different types of lights we use during the day or in the night can be classifies as of l into natural and manmade and its usefulness.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.8.1.6",
+                  "description": "Use number names, counting sequences and how to count to find out \"how many\"? (up to 9)",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners a number of counting objects, recap lessons on counting and sequencing. Using cut out number name cards, assist learners to pick a number name card and count the number using given counters. Let them be in pairs and play \"pick and count\" (one person picks and the other counts)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let them do this activity individually where learners pick a numeral card and then quickly count objects to match the numeral card. Extend this activity to matching objects with the number name. Do interactive reading on a concept book on number names (if you do not number name create one), and let learner interact actively linking number names with respective numbers. Let learners play with number name cards during the reading and the post-reading stages to enhance their understanding."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.7",
+                  "description": "Tell the position and motion of objects in space. Using words such as below, to the right, behind etc.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model how to describe the various position that objects are at in the classroom and in space. Introduce them to vocabularies such as: in front of, behind, in the sky, above, on the wall, on the third row, and other words that show position. e.g. Sesi is behind Neni."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Scaffold learners to understand that object as well as human being can change their position any time moving from position to position in space. The sun moves from the east to the west so does the moon Let them change position of objects and describe their new positions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.9",
+          "title": "Changing Weather Conditions",
+          "description": "Data collection, handling, and subtraction.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "K2.6.9.1",
+              "description": "Demonstrate understanding of positive and negative effects of weather conditions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.9.1.7",
+                  "description": "Collect and handle data on learner's preference of weather conditions.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners interview each other about what weather conditions each person like most. Learners count and represent data in a graphical form and in groups. Use the data to ask questions such e.g. Which group has the most members? Count them. Which group has few members? Is there a group with no one? Etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Also scaffold learners to develop conceptual understanding of subtraction (0 to 20). Ask if the whole class has 20 members and 10 pupils do not prefer any weather condition, how many will be left to dress up? Guide learners to subtract numbers using countable objects."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.7",
+      "title": "My Global Community",
+      "description": "Integration of numeracy concepts within the theme of global connection.",
+      "orderIndex": 7,
+      "subStrands": [
+        {
+          "code": "K2.7.1",
+          "title": "Connecting and Communicating with the Global Community",
+          "description": "Addition and subtraction in buying and selling context.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.7.1.1",
+              "description": "Demonstrate understanding of different ways we connect and communicate with the global world.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.7.1.1.8",
+                  "description": "Developing a conceptual understanding of addition and subtraction in the buying and selling that goes in between different countries.",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Set up an international market in the classroom where all kinds of international traders come and shop. Demonstrate buying and selling, practicing addition and subtraction of money and giving change. The store keeper can receive calls from abroad for orders."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

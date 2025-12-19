@@ -1,0 +1,1348 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 7",
+  "subject": "Career Technology",
+  "name": "JHS 1 Career Technology",
+  "slug": "jhs-1-career-technology",
+  "orderIndex": 1,
+  "description": "The JHS 1 Career Technology curriculum introduces learners to essential health and safety practices, materials for production, tools and equipment, technology, designing and making artefacts, and entrepreneurial skills. It aims to equip learners with practical skills and knowledge for problem-solving and creativity in a technological world.",
+  "strands": [
+    {
+      "code": "B7.1",
+      "title": "PERSONAL HYGIENE AND FOOD HYGIENE",
+      "description": "Understanding personal hygiene, food safety, and environmental health.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B7.1.1",
+          "title": "PERSONAL HYGIENE AND FOOD HYGIENE",
+          "description": "Maintaining personal and food hygiene.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.1.1.1",
+              "description": "Demonstrate knowledge of basic concept of staying healthy",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.1.1.1",
+                  "description": "Discuss the need to stay healthy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by staying healthy. E.g. Staying healthy: physical, mental, and social wellbeing, and as a resource for living a full life-exercise the body, have enough rest, eat a balanced diet, avoid drug abuse and negative peer pressure."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss and present in groups the consequences of not taking good care of one's body E.g., Contract disease and fall ill."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Research and write on materials and strategies (ways) used for improving personal hygiene and discuss, in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.2",
+                  "description": "Describe ways of maintaining personal hygiene",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, discuss ways of maintaining personal hygiene. E.g., Wash the body often, Clean the teeth at least twice a day, Wash hands after visiting the toilet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the following in groups. E.g., Care of finger nails, hair, nose, ear, mouth and teeth."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.3",
+                  "description": "Discuss food hygiene",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by food hygiene. E.g., Conditions and measures needed to ensure safety of food from production to consumption."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Research into food hygiene practices, in groups and report in class for discussion. E.g., Proper storage and preservation of food."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.2",
+          "title": "PERSONAL, WORKSHOP AND FOOD LABORATORY SAFETY",
+          "description": "Preventing accidents in workshops and laboratories.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.1.2.1",
+              "description": "Demonstrate knowledge of preventing accidents in the workshop/site and laboratory",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.2.1.1",
+                  "description": "Describe accidents in the workshop/site/laboratory",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by accidents. E.g., Accidents in the workshops are injuries that occur in the workshop/site or laboratory unexpectedly."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the types of accidents that occur in the workshop. E.g., Falls, cuts, bruises and explosions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Predict the causes of accidents that can occur in the workshop/food laboratory. E.g., Tiredness/fatigue, poor lightening and ventilation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.2",
+                  "description": "Explain the need for keeping the workshop/site and the laboratory safe",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify personal safety measures in the workshop/site/food laboratory. E.g., Proper use of personal protective equipment in the workshop and laboratory and adherence to safety rules and regulations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss how to keep tools and equipment safe to prevent accidents in the workshop/site/food/sewing laboratory. E.g., Proper storage of food, materials, tools and equipment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate ways of preventing accidents in the workshop/site//food laboratory. E.g. Follow instructions and do not rush through work, Good lighting and ventilation, work systematically and carefully, Keep oneself from harm, observe safety precautions, Wear personal protective equipment (PPE) such as goggles, nose masks and boots."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.3",
+          "title": "ENVIRONMENTAL HEALTH",
+          "description": "Understanding environmental health concepts.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.1.3.1",
+              "description": "Demonstrate knowledge of basic concept of Environmental Health",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.3.1.1",
+                  "description": "Discuss the factors of environmental health",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by Environmental Health. E.g., It is a way of protecting quality of life through the prevention and treatment of disease that relates to the natural and built environment that may affect human health and fosters healthy and safe communities."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the factors (constituents/pillars) of environmental health, in groups. E.g., Disease control, clean water, sanitation and hygiene."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify and discuss the causes of environmental health and other sources of poor environmental health, in groups and report in class for discussions. E.g., Air, water and soil pollutions, chemical exposures."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Research the consequences of poor environmental health and present for class discussions. E.g., Transmission of diseases such as cholera, diarrhoea, dysentery, hepatitis A, typhoid, polio, Novel Coronavirus (COVID-19) and exacerbates stunting."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.1.2",
+                  "description": "Demonstrate the preventive measures of environmental health",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify preventive measures of poor environmental health. E.g. Avoid polluting water bodies, Avoid littering, Avoid defecating indiscriminately."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present findings in groups."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Undertake a project in tree planting around the school/community."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Document the growth stages of the tree and report in class for appraisal using charts, pictures and videos."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.2",
+      "title": "MATERIALS FOR PRODUCTION",
+      "description": "Understanding properties and uses of various materials.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B7.2.1",
+          "title": "COMPLIANT MATERIALS",
+          "description": "Understanding compliant materials like paper, card, and fabric.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.2.1.1",
+              "description": "Demonstrate knowledge of basic concept of compliant materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.1.1.1",
+                  "description": "Describe compliant materials",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by compliant materials E.g., Compliant materials are materials that have recognised, predictable and consistent properties such as paper/card, fabric/textiles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sort out compliant materials from the variety of available materials."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a summary of the explanation and sorting."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.2",
+                  "description": "Distinguish between types of compliant materials",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Classify the various compliant materials under their types: Paper, Card, Fabric/Textile."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give examples of each class of compliant materials: Paper-copy paper, construction paper; Card-solid white board, corrugated card; Fabric/Textile-cotton, nylon."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read out the summary of the lesson."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Create a photo album and display for appraisal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.3",
+                  "description": "Explain how compliant materials are manufactured/produced",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Search for information on how paper/card is obtained, in groups. E.g., Paper is made from wood; a tree is felled, broken into chips, chips are boiled in water and chemicals added to form pulp; the pulp is pressed with rollers. The more the layers, the thicker the paper i.e. card."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find information from books and other sources on how fabric/textile is obtained, in groups. E.g., Fabric/Textile is obtained from natural and man-made fibres which are turned into yarns and threads. They are made through weaving, knitting, crocheting, braiding or bonding, knotting, and felting."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write out findings and present in class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.2",
+          "title": "RESISTANT MATERIALS",
+          "description": "Understanding resistant materials like wood, metal, and plastics.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.2.2.1",
+              "description": "Demonstrate knowledge of basic concept of resistant materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.2.1.1",
+                  "description": "Describe resistant materials",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by resistant materials. E.g., Resistant materials are materials that are not pliable or flexible and cannot be easily compressed with bare hands (plastic, wood, metal, ceramics, glass)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sort out resistant materials from the variety of available materials E.g., plastic, wood, metal, ceramics, glass and their composites."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write down the summary of the explanation and sorting."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.2",
+                  "description": "Distinguish between the types of resistant materials",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sort out different resistant materials into various categories E.g., Plastics-thermosetting plastics and thermoplastics; Wood-hardwoods, softwoods and manufactured (man-made) boards; Metals-ferrous, non-ferrous, alloys and smart."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and write the names of the various types of resistant materials under their categories and present in class for discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.3",
+                  "description": "Explain how each of the resistant materials is manufactured/produced",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the two main sources (natural and synthetic) from which plastics are obtained. E.g. Natural resources: plants (cellulose), trees, animals, insects; By-products: table tennis balls, acetate films, wrapping; rubber, roads, paint, decoration, glues, polish; Synthetic sources: crude oil, coal and natural gas; By-products: chemically produced plastics-polymerising vinyl chloride (PVC), polystyrene, polyethylene, acrylic."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find out information from different sources including online, on the two types of plastics and give examples. E.g. Thermoplastics: polythene, PVC, nylon; Thermosetting plastics: urea formaldehyde, polyester resin, epoxy resin."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make a table and match products to the types of plastics they are made from."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain briefly how wood is obtained. E.g., A mature living tree is felled, the branches are cut off to obtain the log, which is then converted (sawn) to standard sizes, then seasoned."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Distinguish between solid timber and man-made boards and give examples. E.g., Solid timber is made from harvested trees or similar natural sources, whereas man-made boards are often produced from small pieces of wood or waste wood."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Compare the weight of products made from solid timber and man-made boards. E.g. Solid timber products: heavier in weight, less flexible; Man-made board products: lighter in weight, more flexible."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Explain briefly how metals are obtained. E.g., The raw material is mined from the earth; it undergoes processes such as crushing, washing and grading; several other processes are carried out to get it in a refined form."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Identify products made from each category of metals. E.g.: Ferrous metals: machine parts, nails, hand tools; Non-ferrous metals: kitchen cooking utensils, window frames, electrical wires; Alloys: sculptures, statues, ornaments; Smart: shape memory alloy (SMA)."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Identify and classify materials used for building. E.g. Natural: sand, stones, clay; Man-made: cement, lime."
+                    },
+                    {
+                      "orderIndex": 10,
+                      "description": "Discuss the sources of the natural building materials. E.g. Sand is obtained from pits, river banks, sea; Stone is obtained from quarries."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.3",
+          "title": "SMART AND MODERN MATERIALS",
+          "description": "Understanding smart and modern materials.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.2.3.1",
+              "description": "Demonstrate understanding of the properties of smart and modern materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.3.1.1",
+                  "description": "Explore the general properties of smart and modern materials",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe smart and modern materials. E.g. Smart materials (intelligent or responsive materials) are designed materials that have one or more properties that can be significantly changed in a controlled fashion by external stimuli. Modern materials are materials developed through the invention of new or improved process to have improved properties."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the main factors that affect the properties of smart and modern materials. E.g. Light, temperature (hot/cold/warm), moisture."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the effects of light on smart and modern materials and products. E.g. Light causes photomechanical materials to change shape when exposed to it. Photochromic materials change colour in response to light."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain the effects of temperature on smart and modern materials and products. E.g., Thermochromic materials change in colour depending on temperature."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss how moisture affects products made from smart and modern materials and products. E.g., Graphene oxide (electrical insulator) based materials bend when exposed to moisture."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Present finding in class for discussion."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.4",
+          "title": "FOOD COMMODITIES (ANIMAL AND PLANT SOURCES)",
+          "description": "Understanding basic food commodities.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B7.2.4.1",
+              "description": "Demonstrate knowledge of basic food commodities",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.4.1.1",
+                  "description": "Discuss food commodities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by food. E.g., Food is any edible substance either solid or liquid which when eaten is used by the body to maintain life."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain what is meant by food commodities. E.g., Food commodities generally refer to ingredients needed to produce different varieties of food."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Give examples of common food commodities in the community E.g., fish, cassava, okro, orange, milk, meat."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Enumerate the two (2) main sources of food commodities. E.g. Plant and animal."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Classify food commodities under the two main sources, i.e., plant source and animal source. Animal: fish, milk, meat; Plant: cassava, okro, orange."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss reasons for eating food; E.g., To satisfy our hunger, build body, provide heat energy, protect body from diseases."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Make a chart on the two (2) main sources of food commodities and their examples."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.3",
+      "title": "TOOLS, EQUIPMENT AND PROCESSES",
+      "description": "Identifying and using tools and equipment for production.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B7.3.1",
+          "title": "MEASURING AND MARKING OUT",
+          "description": "Measuring and marking out tools.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.3.1.1",
+              "description": "Demonstrate understanding of measuring and marking out tools and equipment for production.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.1.1.1",
+                  "description": "Classify and use measuring and marking out tools and equipment for production.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and classify the types of measuring and marking out tools and equipment. Example: Food laboratory (measuring cups), Sewing workshop (tape measure), Building site (surveyor's tape), Wood workshop (folding rule), Metal/plastic workshop (steel rule)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Think-write-pair and share at plenary session, the uses of each tool and equipment found in various workshops."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the importance of measuring and marking out tools. E.g., Accuracy, avoidance of waste of material, achieving desired results."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify from displayed realia or pictures, tools and equipment used for measuring and marking out."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Sketch and label parts of measuring and marking out tools and display sketches for appraisal."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Demonstrate how to use the measuring and marking out tools and equipment."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.1.2",
+                  "description": "Demonstrate how to care for and maintain measuring and marking out tools and equipment used for production",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Share experiences from home on how to care for tools and equipment used for production."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss cleaning agents/materials used to clean and maintain tools and equipment based on the respective material used in making the tool. E.g. Silvo for cleaning silver, Brasso for cleaning brass, oil to avoid rust, cloth for cleaning and dusting."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate how to care for measuring and marking out tools and equipment according to the material used in making them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.2",
+          "title": "CUTTING/SHAPING",
+          "description": "Cutting and shaping tools.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.3.2.1",
+              "description": "Demonstrate understanding of cutting/shaping tools and equipment for production",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.2.1.1",
+                  "description": "Identify cutting and shaping tools and equipment used for production.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the displayed cutting tools: Food laboratory (kitchen knives, biscuit cutters), Sewing workshop (Scissors, pinking shears), Woodwork (Rip saws, cross cut saw), Building (Bolster, brick hammer), Metal/plastics (Hacksaw, hand file)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the uses of the various types of cutting and shaping tools, in groups, and present in class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Sketch and label cutting and shaping tools, and display them for appraisal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.1.2",
+                  "description": "Use appropriate skills in cutting, chopping, slicing, dicing and shaping products",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the appropriate techniques in cutting, chopping, slicing and dicing in food production."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the appropriate techniques in cutting, paring, moulding in wood, metal and building."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.1.3",
+                  "description": "Demonstrate how to care for and maintain cutting and shaping tools used for production",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Share experiences on how to care for, and maintain cutting and shaping tools and equipment for production. E.g., oil metal parts of tools, wash and clean mould box."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify cleaning agents used to clean tools and equipment according to the material used in cleaning cutting and shaping tools E.g., Silvo and grounded and sifted egg shell for cleaning stainless steel, oil for cleaning metal parts of tools."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate how to care for and maintain cutting and shaping tools and equipment according to the material used in making them and discuss in class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.3",
+          "title": "JOINING AND ASSEMBLING",
+          "description": "Joining and assembling tools.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.3.3.1",
+              "description": "Demonstrate understanding of joining and assembling materials, tools and equipment used for production",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.3.1.1",
+                  "description": "Describe joining and assembling materials, tools and equipment used for making artefacts/products",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify joining and assembling materials, tools and equipment used for: Sewing and crocheting (Thread, needle), Food production (Corn starch, egg white), Woodwork (Mallet, glues), Metal work (Soldering bit, bolts), Building (cement), Paper (glue)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Research for more joining and assembling materials, tools and equipment using ICT tools and other sources and discuss in groups."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Sketch/make an album of joining and assembling materials, tools and equipment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Display the sketches/album for appraisal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.3.1.2",
+                  "description": "Use appropriate skills for joining and assembling artefacts using the materials, tools and equipment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the appropriate techniques in using joining and assembling materials and tools in: Sewing and crocheting, Food production, Wood products, Metal products/Plastic, Building, Paper work."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.3.1.3",
+                  "description": "Demonstrate how to care for and maintain tools and equipment used for joining and assembling",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate how to care for and maintain tools and equipment used for joining and assembling the following: Sewing workshop/laboratory-dust and oil sewing machine after use, Building site-wash and clean tools, Wood workshop-clean tools, oil metal parts of tools, Metal/plastic workshop-clean tools, oil metal parts of tools."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.4",
+          "title": "KITCHEN ESSENTIALS",
+          "description": "Understanding kitchen essentials.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B7.3.4.1",
+              "description": "Demonstrate knowledge and understanding of the Kitchen Essentials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.4.1.1",
+                  "description": "Describe kitchen essentials",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by basic kitchen essentials. E.g., Kitchen essentials are indispensable/vital tools and equipment needed/necessary for meal preparation and service, e.g. saucepan, plate, can opener, colander, cutting board, vegetable peeler, soup tureen, crockery."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.4.1.2",
+                  "description": "Demonstrate skills in the classification of kitchen essentials",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and classify kitchen essentials according to sizes. E.g. Small: spoons, can opener; Large: refrigerator, cooker, broilers, cupboard; Mechanical: blender, food mixers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present responses on the classified kitchen essentials for appraisal."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.5",
+          "title": "FINISHES AND FINISHING",
+          "description": "Understanding finishes and finishing.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B7.3.5.1",
+              "description": "Demonstrate knowledge of finishes and finishing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.5.1.1",
+                  "description": "Identify finishes and finishing applied to products/ artefacts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by finishes and finishing. E.g., Finishes are the substances applied on the surfaces of products/artefacts. Finishing is the final surface treatment given to products/artefacts to improve their beauty, attractiveness and protection."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify types of finishes E.g., lacquer, emulsion paint, oil paint, vanish, ceramic tiles, stones, plaster of Paris (POP), 3-D floor, wall paper."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify solvents used to thin finishes. E.g., thinner for lacquer polish, turpentine for oil paint, water for emulsion paint."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain what is meant by garnishes. E.g., Garnishes are small, colourful, bits of food that are used to enhance the appearance and texture of dishes."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss ways of applying finishing to food products. E.g., Food can be 'finished' using garnishes."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Choose garnishes of colour and flavours that complement the food to be garnished."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Identify the types of garnishes - Savoury garnishes and Sweet garnishes."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Explain what is meant by edge finishes. E.g., Processes worked on to neaten the raw edges of articles."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Identify edges of articles that are finished. E.g., Neckline, armhole, hemline."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.4",
+      "title": "TECHNOLOGY",
+      "description": "Understanding structures and mechanisms.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B7.4.1",
+          "title": "SIMPLE STRUCTURES AND MECHANISMS, ELECTRIC AND ELECTRONIC SYSTEMS",
+          "description": "Understanding structures in construction.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.4.1.1",
+              "description": "Demonstrate understanding of structures in construction",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.1.1.1",
+                  "description": "Outline the uses of structures in construction",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by structures in construction. E.g., Method of supporting loads (triangulation, truss) to prevent collapse."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and classify structures under natural and man-made."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Classify structures under frame and shell."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the uses of structures in construction."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Make sketches of both frame and shell structures and prepare a sketch album to use as materials for learning structures."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Display the sketch album for appraisal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.1.2",
+                  "description": "Discuss the causes of structural failures in construction",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by structural failure in construction. E.g., when a structure collapses or fails to do its job."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify types of structural failure E.g., cracks, splits, breakages in structures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Observe where structural failures occur in structures in the environment. E.g., buildings, bridges, furniture."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss causes of structural failures. E.g., poor design, poor material, weak joint and fatigue."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss how static and dynamic forces can cause structures to fail."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Make sketches and notes on structural failures, in groups."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Display sketches for appraisal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.1.3",
+                  "description": "Design and make simple structures",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify compliant and resistant materials, tools and equipment for making structures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Plan and design the artefact."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make mock-ups of simple structures."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Test and evaluate the mock-ups by indicating the strengths and weaknesses of the structures and make modifications."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Display the mock-ups for appraisal."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.5",
+      "title": "DESIGNING AND MAKING OF ARTEFACTS/PRODUCTS",
+      "description": "Designing and making artefacts.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B7.5.1",
+          "title": "COMMUNICATING DESIGNS",
+          "description": "Drawing materials and skills.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.5.1.1",
+              "description": "Demonstrate knowledge and skills of drawing materials, instruments/equipment, lines and their applications, and freehand sketching",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.1.1.1",
+                  "description": "Identify drawing materials, instruments and equipment used for Graphic Communication",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify drawing materials, instruments and equipment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the uses of drawing materials, tools and equipment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate appropriate usage and manipulation of drawing materials, instruments and equipment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Demonstrate how to care for and maintain the drawing materials and instruments/equipment."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use a clean tissue to wipe the surface of the instruments/equipment."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.1.1.2",
+                  "description": "Discuss the types of lines used in graphic communication",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify lines used in communicating ideas."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the features and uses of the lines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Illustrate the applications of lines in drawn objects."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Make a chart on how the lines are applied in drawing."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Present the chart for appraisal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.1.1.3",
+                  "description": "Make sketches of lines, curves, objects, and write the letterings",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify lower- and upper-case letters."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the principles of lettering."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Set out drawing paper and prepare title block indicating name, school, class, date and drawing number."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.1.1.4",
+                  "description": "Make sketches of objects",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss what is meant by sketching."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Illustrate the techniques of sketching objects in two-dimensional (2-D) plane figures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Illustrate the techniques of sketching objects in three dimensional (3-D)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Practise sketching of plane objects and pictorial objects to build an album and display for appraisal."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.5.2",
+          "title": "DESIGNING",
+          "description": "Understanding designing.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.5.2.1",
+              "description": "Demonstrate understanding of Designing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.2.1.1",
+                  "description": "Work with a given design brief",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Study a given design brief to identify the problem."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Analyse the problem and list the possible ideas for the solution."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss ideas in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.2.1.2",
+                  "description": "Generate ideas",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use freehand sketching to generate three possible ideas for solving the identified problem and write descriptive notes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Verify if the generated ideas satisfy the solution for the problem identified."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Select the best design and draw it in a pictorial form."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Provide suitable dimensions to the selected design."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Prepare a simple working drawing of the selected design for the working drawing prepared in communication design such as front elevation, plan and end view."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.5.3",
+          "title": "PLANNING FOR MAKING ARTEFACTS/PRODUCTS",
+          "description": "Planning for making artefacts.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.5.3.1",
+              "description": "Demonstrate understanding of planning for making artefacts/products",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.3.1.1",
+                  "description": "Discuss the factors to consider when planning a meal",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explain the different types of meals served in a day."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the factors to consider when planning meals."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.3.1.2",
+                  "description": "Demonstrate skills in planning for preparing food using moist methods of cooking",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss reasons for cooking food, in groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the different moist methods of cooking."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the three types of boiling."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the advantages and disadvantages of boiling food."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explain what is meant by stewing."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Identify foods that can be stewed."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Discuss the principles of/guidelines for stewing."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Discuss the advantages and disadvantages of stewing foods."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.5.4",
+          "title": "MAKING ARTEFACTS FROM COMPLIANT, RESISTANT MATERIALS AND FOOD INGREDIENTS",
+          "description": "Making artefacts and products.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B7.5.4.1",
+              "description": "Demonstrate skills of making artefacts/ products",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.4.1.1",
+                  "description": "Demonstrate skills in preparing food using moist methods of cooking BOILING & STEWING",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Prepare a meal by choosing from any one of the three (3) types of boiling methods of cooking with an accompaniment stew, in groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present /display meals for appraisal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.4.1.2",
+                  "description": "Demonstrate skills of making artefacts/products in sewing and crocheting",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Make specimens or samples of basic sewing stitches individually."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Display specimens for appraisal."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make specimens of basic crocheting stitches."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Display specimens for appraisal."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.4.1.3",
+                  "description": "Make mock-ups using compliant materials",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Organise the card board or paper as the main materials in place for the work."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the cutting list together with the working drawings to undertake the measuring, marking out and cutting of the various parts of the design using appropriate tools and equipment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Check the various parts and dimensions to ensure an accurate surface development of the artefact."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Fold the parts of the surface developed to obtain the required artefact."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use appropriate joining materials, tools/equipment to complete the required artefact."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Apply a suitable finish on the artefact."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Test and evaluate artefact for modifications."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.6",
+      "title": "ENTREPRENEURIAL SKILLS",
+      "description": "Understanding entrepreneurship and small business management.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B7.6.1",
+          "title": "CAREER PATHWAYS AND CAREER OPPORTUNITIES",
+          "description": "Awareness of career pathways.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.6.1.1",
+              "description": "Demonstrate awareness of own learning styles, interests, biases, beliefs and reasons for pursuing Career Technology",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7. 6.1:1.1",
+                  "description": "Evaluate own learning styles, interests and reasons for pursuing Career Technology",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Think-pair-share with whole class' own learning styles, interests and reasons for pursuing Career Technology. Why are you studying Career Technology?"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine own biases and beliefs, as a male or female, about some vocations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.6.2",
+          "title": "ESTABLISHING AND MANAGING A SMALL BUSINESS ENTERPRISE",
+          "description": "Establishing and managing small businesses.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.6.2.1",
+              "description": "Demonstrate understanding of Establishing and managing a Small business Enterprise",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.6.2.1.1",
+                  "description": "Explain what is meant by 'entrepreneurship' and 'entrepreneur'",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Entrepreneurship is the activity of setting up a business or businesses, taking on financial risks in the hope of profit."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "An entrepreneur is a person who sets up a business or businesses taking on financial risks in the hope of making profit."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.6.2.1.2",
+                  "description": "Describe the characteristics of a successful entrepreneur",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the characteristics of an entrepreneur."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the characteristics that lead to successful entrepreneurship."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.6.2.1.3",
+                  "description": "Explain the advantages and disadvantages of being an entrepreneur",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss in groups, the advantages and disadvantages of being an entrepreneur."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.6.2.1.4",
+                  "description": "Identify entrepreneurial opportunities in the locality",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore your locality, observe, and interact with entrepreneurs, taking into consideration the safety and welfare of learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Research for entrepreneurial opportunities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write down the names of some popular enterprises seen in your locality."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Visit a few enterprises in your potential trade area and find out the following: How the business was started, The challenges the business is facing, Solutions to the challenges."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write down the findings for presentation in class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

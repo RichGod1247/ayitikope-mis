@@ -1,0 +1,654 @@
+{
+  "part": "1/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 2",
+      "subject": "Creative Arts",
+      "name": "Basic 2 Creative Arts",
+      "slug": "basic-2-creative-arts",
+      "orderIndex": 1,
+      "description": "The Basic 2 Creative Arts curriculum encourages learners to generate and organize ideas, create expressive artworks, and display and appraise them. It integrates Visual and Performing Arts, focusing on history, culture, the environment, and topical issues.",
+      "strands": [
+        {
+          "code": "B2 1.1",
+          "title": "VISUAL ARTS",
+          "description": "Thinking and exploring ideas for visual arts.",
+          "orderIndex": 1,
+          "subStrands": [
+            {
+              "code": "B2 1.1.1",
+              "title": "Thinking and Exploring Ideas",
+              "description": "Generating ideas for artistic expression based on history, culture, environment, and topical issues.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B2 1.1.1.1",
+                  "description": "Demonstrate understanding of how to generate own ideas for artistic expressions about the people, based on their history and culture, the environment and topical local/national/global issues",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2 1.1.1.1",
+                      "description": "Explore own experiences to talk about visual artworks that reflect the history and culture of people in other Ghanaian communities",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Watch documentaries on the history and culture of people from other parts of Ghana."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Identify the history and culture of people from other parts of Ghana to identify their cultural activities such as their food, taboos, religion, festivals, buildings, symbols of authority."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Interview and interact with leaders of the community such as ethnic groups and associations (e.g. Ga, Ewe, Akan, Dagaare), heads of institutions and traditional leaders."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Visit historical sites, museums, galleries, etc."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Document and record the visits by taking photographs, making videos, making line sketches and collecting objects of historical importance to develop a 'historical learning corner' in the classroom."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Draw concepts and ideas from the culture of the different groups of people for designing symbolic and functional visual artworks."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.1.1.2",
+                      "description": "Explore own experiences to talk about visual artworks that are produced or found in other communities in Ghana",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Talk about the visual artworks produced or found in other parts of Ghana (e.g. pots, wood carvings, woven baskets, woven/printed and dyed fabrics, leather products, canoes, cane/wood furniture, road signs, posters, jewellery, billboards)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss the materials and tools that were/are used in making these artworks, the processes and production techniques, and how they are used."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Discuss the theme of the artworks and its social and cultural importance."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Identify those who make artworks."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Study the subject matter of the different artworks."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Examine the type of materials used in making the artworks."
+                        },
+                        {
+                          "orderIndex": 7,
+                          "description": "Probe how the artworks are made, how they are made, the safety rules that are observed, taboos (if any) associated with the visual artworks."
+                        },
+                        {
+                          "orderIndex": 8,
+                          "description": "Explore the symbolism, function and uses of these artworks."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.1.1.3",
+                      "description": "Reflect on own experiences to talk about visual artworks that reflect the natural and manmade environments in other communities in Ghana",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Identify and talk about the natural and manmade environment (e.g. plants, animals, rivers, buildings, recreational centres, roads, bridges, markets, shopping malls)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Engage in a five minutes' environmental walks to observe elements of design (e.g. lines, shapes, colour) and principles of design (e.g. rhythm, balance, proportion) that can be seen in the natural and manmade environments (e.g. vegetation, animals, birds, buildings, recreational centres, roads, bridges, markets, shopping malls, drains, highlands, beaches)."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Collect some samples of objects found in the natural and manmade environments (e.g. bottles, pebbles, packages, bottle tops, stones, shells, twigs, fibre, straw, flowers) to create a 'learning corner' in the classroom and for general discussions and appreciation."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Document and record the things and objects found in the natural and manmade environments by taking photographs and making videos for preservation, storage, referencing."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Consider the characteristics of the things observed in the natural environment (e.g. clean, neat, dirty, beautiful, huge, big, small, young, old, smooth, rough, hard, soft, shiny, balanced, colour, tone, mood, tall, short, long, heavy, light, space, shape, form, line) to form ideas for making own artworks."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.1.1.4",
+                      "description": "Reflect on own experiences to talk about visual artworks produced or found in other parts of Ghana that reflect topical issues in those communities",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Discuss the topical issues (e.g. no rainfall, rising temperatures, poor disposal of waste, road safety, burglary) experienced in other communities in Ghana."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Identify the causes of those topical issues."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Discuss how to reduce or prevent these topical issues (e.g. protecting the environment, safe use of roads by pedestrians, motorbike riders, drivers of vehicles, and passengers)."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Discuss ways to instil good habits to save the natural environment at home and in the school."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2 1.2.2",
+              "title": "Planning Visual Artworks",
+              "description": "Planning and organising ideas and resources for visual artworks.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B2 1.2.2.2",
+                  "description": "Use experiences from people, environment and topical issues as source material to plan visual artworks.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2 1.2.2.1",
+                      "description": "Experiment with different media, tools and techniques to discover their expressive possibilities for planned artworks.",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Try out a range of art media (e.g. pencils, crayons, paint, paper collage, clay) to see the kinds of marks, textures and effects that can be produced."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss which media and tools are most suitable for different ideas and subjects."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.2.2.2",
+                      "description": "Arrange and plan compositions using shapes, colours and space for visual artworks.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use cut-out shapes or small sketches to experiment with different arrangements before starting a final artwork."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss balance, emphasis and movement in simple compositions created by learners."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.2.2.3",
+                      "description": "Collect and organise ideas in sketchbooks or idea journals to plan visual artworks.",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Create pages in sketchbooks where learners store drawings, colour tests and notes about artworks they want to make."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Share sketchbook pages in pairs or small groups and talk about how they could be developed into finished pieces."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.2.2.4",
+                      "description": "Select ideas from sketchbooks or idea banks to develop into finished visual artworks.",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners to choose one idea from their sketchbooks based on personal interest and clarity of message."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Support learners to refine their chosen ideas with additional sketches and planning notes."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2 1.3.5",
+              "title": "Creating Visual Artworks",
+              "description": "Producing visual artworks that communicate ideas about people, environment and topical issues.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B2 1.3.5.5",
+                  "description": "Create and display visual artworks that communicate ideas about people, environment and topical issues.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2 1.3.5.1",
+                      "description": "Produce visual artworks that show understanding of people and their history and culture in other Ghanaian communities.",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Create drawings, paintings or collage works that show people, festivals and important activities from other Ghanaian cultures."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Explain the meaning of selected artworks to classmates and how they reflect what was studied."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.3.5.2",
+                      "description": "Produce visual artworks that show understanding of natural and manmade environments in other communities in Ghana.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Make pictures that show buildings, rivers, markets or other features of the environment from different communities."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss how artworks can encourage people to care for the environment."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.3.5.3",
+                      "description": "Produce visual artworks that communicate ideas about topical issues in other communities in Ghana.",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Design posters or illustrations that address issues such as waste disposal, road safety or bush fires."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Share artworks with the school community and explain the messages they contain."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2 1.4.6",
+              "title": "Displaying and Reflecting on Visual Artworks",
+              "description": "Displaying, reflecting on and improving visual artworks.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B2 1.4.6.6",
+                  "description": "Display and reflect on visual artworks for learning and improvement.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2 1.4.6.1",
+                      "description": "Plan and arrange classroom displays of visual artworks that tell a clear story or message.",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Work in groups to plan how finished artworks will be arranged on walls or boards to communicate a theme."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Measure and space artworks neatly so the display looks organised and attractive."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 1.4.6.2",
+                      "description": "Reflect on displayed artworks and suggest ways to improve future visual art projects.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Discuss what went well and what could be improved in the display and in the artworks themselves."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Write or draw simple 'next time we will…' ideas in reflection journals or on class charts."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2 2.1",
+          "title": "PERFORMING ARTS",
+          "description": "Thinking and exploring ideas for performing arts.",
+          "orderIndex": 2,
+          "subStrands": [
+            {
+              "code": "B2 2.1.1",
+              "title": "Thinking and Exploring Ideas",
+              "description": "Generating ideas for artistic expression based on history, culture, environment, and topical issues.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B2 2.1.1.1",
+                  "description": "Demonstrate understanding of how to generate own ideas for artistic expressions about the people, based on their history and culture, the environment and the topical local/national/global issues",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2 2.1.1.1",
+                      "description": "Explore own experiences to talk about performing artworks that reflect the history and culture of people in other communities in Ghana",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Watch documentaries on the history and culture of people from other parts of Ghana."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Identify the history and culture of people from other parts of Ghana by studying their cultural activities such as staple foods, dressing, festivals, buildings, chiefs."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Listen to stories told by resource persons or interview leaders of different ethnic groups and associations (e.g. Ga, Ewe, Akan, Dagaare), opinion leaders, traditional rulers."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Visit historical sites such as centres for national culture, theatres, museums, galleries, festival grounds, studios of performing artists, and performing arts departments of educational institutions. Where possible, record the visits by taking photographs, making videos, making line sketches and collecting samples of objects that show the history and culture of people from other parts of Ghana."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Organise collection of samples to create a 'history learning corner' in the classroom."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Draw concepts and ideas from the activities to plan own performing artworks that express the history and culture of the people studied."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.1.1.2",
+                      "description": "Explore own experiences to talk about performing artworks that reflect people in other communities in Ghana",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Brainstorm on performing artworks (e.g. music, dance and drama) that are produced or performed by people in other parts of Ghana."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss the resources that are used (e.g. instruments, elements, costumes, props) for composing and performing those artworks."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Study the subject matter of those artworks and explore their importance and the occasions on which they are performed."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Probe how the artworks are made, who makes them, the safety rules that are observed and taboos (if any) associated with these performing artworks."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Improvise the skills and techniques observed in the performing artworks."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.1.1.3",
+                      "description": "Explore own experiences to talk about performing artworks that reflect the natural and manmade environments in other communities in Ghana",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Talk about the natural and manmade environments (e.g. plants, animals, rivers, buildings, recreational centres, roads, bridges, markets, shopping malls)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Engage in out-of-classroom walks to observe the surroundings and assess the state of the natural and built environment for making performing artworks."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Document the things found in the natural environment (e.g. movement and sounds made by vehicles, animals, birds, insects, waves, waterfalls, church bells and call to worship) by writing notes, or by audio or video recordings of sounds."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Collect samples of objects and things found in the surroundings (e.g. bottles, packaging, bottle tops, stones, shells, twigs, fibre, straw, flowers) to create a 'learning corner' in the classroom."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Discuss the characteristics of the things observed in the natural and manmade environments (e.g. slow or fast movement of crawling, running, walking, hopping, swinging, rolling, and jumping animals; rattling fruit pods)."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Find concepts from the written notes or recordings for composing own songs, stories or poems, and choreographing dance movements based on the natural and manmade environments."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.1.1.4",
+                      "description": "Explore own experiences to talk about performing artworks that reflect topical issues in other communities in Ghana",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Discuss the topical issues (e.g. no rainfall, rising temperatures, flooding, domestic and bush fires, road safety, burglary) of concern in Ghana."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Identify the causes of these topical issues (e.g. deforestation, poor waste disposal, unsafe driving, illegal mining)."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Brainstorm on how these topical issues can be reversed or prevented."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Develop own ideas and concepts for composing and performing own music, dance and drama based on topical issues in other communities."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2 2.2.3",
+              "title": "Planning Performing Artworks",
+              "description": "Planning and rehearsing performing artworks based on people, environment and topical issues.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B2 2.2.3.3",
+                  "description": "Plan and rehearse performing artworks based on people, environment and topical issues.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2 2.2.3.1",
+                      "description": "Experiment with movement, voice and simple instruments to explore ideas for performing artworks.",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use body percussion, everyday objects and simple instruments to explore rhythm, tempo and dynamics."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Create short movement patterns and vocal phrases based on people and activities in the community."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.2.3.2",
+                      "description": "Plan short performances (music, dance or drama) that communicate ideas about people, environment and topical issues.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Work in groups to plan simple performance pieces with a beginning, middle and end."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Draw or write simple performance plans showing roles, sequence of actions and needed resources."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.2.3.3",
+                      "description": "Rehearse short performing artworks with attention to coordination, expression and timing.",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Practise group performances focusing on clear entries, exits and cues."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Give supportive feedback to peers on clarity of message and performance skills."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.2.3.4",
+                      "description": "Select ideas and performance pieces that are ready to be presented to an audience.",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Discuss which performance pieces are clear, safe and suitable to share in class or assembly."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Prepare simple announcements or programme lists for class presentations."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2 2.3.5",
+              "title": "Presenting Performing Artworks",
+              "description": "Presenting performing artworks to communicate ideas about people, environment and topical issues.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B2 2.3.5.5",
+                  "description": "Present performing artworks to communicate ideas about people, environment and topical issues.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2 2.3.5.1",
+                      "description": "Perform short pieces that reflect people, their history and culture in other communities in Ghana.",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Present short songs, dances or drama scenes based on festivals, stories or customs from other Ghanaian cultures."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Explain the meaning of the performance to the audience in simple language."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.3.5.2",
+                      "description": "Perform short pieces that reflect the natural and manmade environments in other communities in Ghana.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Create and present performances that use movement and sound to show rivers, markets, roads or other environmental features."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss how the performances encourage people to care for their environment."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.3.5.3",
+                      "description": "Perform short pieces that communicate ideas about topical issues in other communities in Ghana.",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Present performances that address issues such as waste disposal, flooding, bush fires or road safety."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Invite questions and comments from the audience about the messages in the performances."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2 2.4.6",
+              "title": "Reflecting on Performing Artworks",
+              "description": "Reflecting on performing artworks and planning improvements for future performances.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B2 2.4.6.6",
+                  "description": "Reflect on performing artworks and suggest improvements for future performances.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2 2.4.6.1",
+                      "description": "Discuss what went well and what could be improved in class and group performances.",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use simple reflection questions such as 'Was the message clear?' and 'Could we hear and see everyone?'."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Record key points from the discussion on a class chart or in learners’ journals."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2 2.4.6.2",
+                      "description": "Make simple plans for improving future performances.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Agree on at least one thing each group will change or practise more next time they perform."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Link reflection points to specific skills such as timing, expression, coordination or use of space."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

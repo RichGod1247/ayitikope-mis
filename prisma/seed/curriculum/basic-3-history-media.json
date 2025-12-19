@@ -1,0 +1,86 @@
+[
+  {
+    "subjectSlug": "basic-3-history",
+    "strandCode": "B3.2",
+    "subStrandCode": "B3.2.1",
+    "contentStandardCode": "B3.2.1.1",
+    "indicatorCode": "B3.2.1.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-3/basic-3-history/b3.2.1.1.1-origins-major-ethnic-groups.png",
+    "altText": "Map of Ghana showing migration routes and the origins of major ethnic groups such as Akan, Ewe, Ga-Adangme, Guan and Mole-Dagbani.",
+    "detailedDescription": "A child-friendly classroom poster: a map of Ghana with colored arrows tracing simplified migration routes of major ethnic groups into their present-day areas. Include a Basic 3 teacher pointing to the map and learners working in groups. Keep it respectful and non-stereotypical.",
+    "tags": ["History", "Basic 3", "Ghana", "Ethnic groups", "Origins", "Migration", "Map", "NaCCA"],
+    "pageNumberInPdf": 37
+  },
+  {
+    "subjectSlug": "basic-3-history",
+    "strandCode": "B3.2",
+    "subStrandCode": "B3.2.2",
+    "contentStandardCode": "B3.2.2.1",
+    "indicatorCode": "B3.2.2.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-3/basic-3-history/b3.2.2.1.1-intergroup-exchanges.png",
+    "altText": "Illustration showing different ethnic groups in Ghana exchanging goods, forming friendships, and cooperating through alliances and intermarriage.",
+    "detailedDescription": "A classroom illustration split into panels: (1) trade exchange, (2) intermarriage/family connection, (3) alliance/handshake, (4) conflict shown symbolically (no violence). Focus on benefits of exchanges and peaceful cooperation.",
+    "tags": ["History", "Basic 3", "Inter-group relations", "Exchange", "Trade", "Alliances", "Intermarriage", "NaCCA"],
+    "pageNumberInPdf": 38
+  },
+  {
+    "subjectSlug": "basic-3-history",
+    "strandCode": "B3.2",
+    "subStrandCode": "B3.2.2",
+    "contentStandardCode": "B3.2.2.1",
+    "indicatorCode": "B3.2.2.1.2",
+    "imagePath": "/curriculum/lower-primary/basic-3/basic-3-history/b3.2.2.1.2-barter-to-cowries.png",
+    "altText": "Trade items like salt, fish, gold, kola, shea butter, pottery, cloth and iron tools displayed with cowries showing early mediums of exchange.",
+    "detailedDescription": "A learning-corner table display: labelled icons of common trade items exchanged among groups, plus cowries as a medium of exchange. Add a small note card about the origin of the name 'cedi' (cowry shell). Keep it simple and child-safe.",
+    "tags": ["History", "Basic 3", "Trade items", "Barter", "Cowries", "Cedi", "Exchange", "NaCCA"],
+    "pageNumberInPdf": 38
+  },
+  {
+    "subjectSlug": "basic-3-history",
+    "strandCode": "B3.2",
+    "subStrandCode": "B3.2.2",
+    "contentStandardCode": "B3.2.2.1",
+    "indicatorCode": "B3.2.2.1.3",
+    "imagePath": "/curriculum/lower-primary/basic-3/basic-3-history/b3.2.2.1.3-conflicts-and-alliances.png",
+    "altText": "Map-and-symbol poster showing examples of conflicts and alliances among ethnic groups in Ghana with emphasis on unity and peace.",
+    "detailedDescription": "A non-violent educational poster: simple Ghana map, symbols representing groups, arrows showing alliances coming together. Use labels only; no battle violence imagery.",
+    "tags": ["History", "Basic 3", "Conflicts", "Alliances", "Inter-group relations", "Unity", "Peace education", "NaCCA"],
+    "pageNumberInPdf": 38
+  },
+  {
+    "subjectSlug": "basic-3-history",
+    "strandCode": "B3.2",
+    "subStrandCode": "B3.2.4",
+    "contentStandardCode": "B3.2.4.1",
+    "indicatorCode": "B3.2.4.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-3/basic-3-history/b3.2.4.1.1-forts-and-castles-coast.png",
+    "altText": "Ghana coastline map with icons showing major forts and castles and a simple comparison of a fort versus a castle.",
+    "detailedDescription": "A child-friendly coastal map: Ghana coast line with location pins for forts/castles. Include a small comparison box showing 'Fort' vs 'Castle' and modern uses (tourism, education).",
+    "tags": ["History", "Basic 3", "Forts", "Castles", "Coast", "Heritage", "Ghana", "NaCCA"],
+    "pageNumberInPdf": 39
+  },
+  {
+    "subjectSlug": "basic-3-history",
+    "strandCode": "B3.2",
+    "subStrandCode": "B3.2.5",
+    "contentStandardCode": "B3.2.5.1",
+    "indicatorCode": "B3.2.5.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-3/basic-3-history/b3.2.5.1.1-ghanaian-entrepreneurs.png",
+    "altText": "Classroom poster showing Ghanaian entrepreneurs and their contributions such as food processing, transport, and manufacturing.",
+    "detailedDescription": "A classroom poster collage: entrepreneurs represented by roles (food processing, haulage, manufacturing) with learners discussing who inspires them. Keep it modern, positive, and Ghanaian.",
+    "tags": ["History", "Basic 3", "Entrepreneurs", "National development", "Role models", "Industry", "Ghana", "NaCCA"],
+    "pageNumberInPdf": 40
+  },
+  {
+    "subjectSlug": "basic-3-history",
+    "strandCode": "B3.3",
+    "subStrandCode": "B3.3.1",
+    "contentStandardCode": "B3.3.1.1",
+    "indicatorCode": "B3.3.1.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-3/basic-3-history/b3.3.1.1.1-portuguese-chief-alliance.png",
+    "altText": "Dramatized meeting scene where Portuguese traders form an alliance with a local chief on the Gold Coast.",
+    "detailedDescription": "A respectful, child-safe dramatization: Portuguese traders meeting a Ghanaian coastal chief and elders, offering goods and forming an alliance/handshake. No weapons or slavery imagery.",
+    "tags": ["History", "Basic 3", "Europeans", "Gold Coast", "Alliance", "Local chiefs", "Settlement", "NaCCA"],
+    "pageNumberInPdf": 41
+  }
+]

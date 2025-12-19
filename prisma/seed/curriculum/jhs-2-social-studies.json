@@ -1,0 +1,765 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 8",
+  "subject": "Social Studies",
+  "name": "JHS 2 Social Studies",
+  "slug": "jhs-2-social-studies",
+  "orderIndex": 1,
+  "description": "The JHS 2 Social Studies curriculum delves deeper into environmental challenges like water pollution and energy conservation. It also covers mapping skills, understanding the natural world, family life including adolescent health and population issues, sense of purpose, law and order, socio-economic development, and nationhood.",
+  "strands": [
+    {
+      "code": "B8.1",
+      "title": "ENVIRONMENT",
+      "description": "Environmental issues and mapping skills.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B8.1.1",
+          "title": "ENVIRONMENTAL ISSUES",
+          "description": "Water pollution and energy conservation.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.1.1.1",
+              "description": "Demonstrate skills in dealing with environmental challenges",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.1.1.1",
+                  "description": "Examine water pollution as an environmental challenge",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain pollution."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Watch a documentary of polluted water bodies for discussion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the causes of water pollution, including human, animal and industrial waste."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine the effects of water pollution, including death of fish and the contamination of water leading to diseases such as cholera, typhoid and dysentery."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Presentation on the need and how to prevent water pollution."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.1.1.2",
+              "description": "Analyse the sources and ways of conserving energy in Ghana",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.1.1.2.1",
+                  "description": "Examine the means of conserving energy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain energy conservation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss responsible use of energy to minimise economic and environmental costs."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play how different members of the community might conserve energy."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Debate the need for energy conservation."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Apply the knowledge and skills acquired to help conserve energy in learners' homes and school."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Project work: Use sun or wind to generate energy."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.2",
+          "title": "MAPPING SKILLS",
+          "description": "Sketching maps and interpreting landscapes.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.1.2.1",
+              "description": "Demonstrate skills in sketching maps and interpreting landscapes from maps",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.2.1.1",
+                  "description": "Sketch maps and interpret landscapes from maps",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sketch a map of your school compound."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw a diagram showing an eight-point compass."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Using a map with grid squares, locate some important landmarks."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Draw/ sketch the map of the community indicating important landmarks."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Sketch a map of the school compound to scale."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Show directions to important places in the community."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Sketch maps showing the positions or directions to your home using a compass directions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.3",
+          "title": "UNDERSTANDING OUR NATURAL WORLD",
+          "description": "Weather, climate, and natural disasters.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.1.3.1",
+              "description": "Demonstrate understanding of the significance of weather and climate to the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.3.1.1",
+                  "description": "Assess the significance of weather and climate to the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts: Climate and Weather."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the elements of climate, including temperature, humidity, atmospheric pressure and precipitation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss various ways of measuring the elements of weather and climate."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Sketch the map of Ghana and indicate the different climatic zones."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the world climatic zones."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Examine the factors that affect climate, including latitude, altitude and distance from the sea."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.1.3.2",
+              "description": "Demonstrate understanding of natural disasters and their management",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.1.3.2.1",
+                  "description": "Discuss natural disasters",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch some documentaries on natural disasters."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine natural disasters and share the understanding of the term."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine the causes of flooding, including human action."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Investigate the effects of flooding on the environment."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Carry out a project to raise awareness in the community about the need for certain flood control measures."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.2",
+      "title": "FAMILY LIFE",
+      "description": "Family issues and population.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B8.2.2",
+          "title": "THE FAMILY",
+          "description": "Family systems and inheritance.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.2.2.1",
+              "description": "Show understanding of the family and family life issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.2.1.1",
+                  "description": "Examine the composition and functions of the nuclear and the extended families",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of family."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Differentiate nuclear from extended family systems."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the roles of various members of the nuclear family."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain the roles of the extended family."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the advantages and disadvantages of the nuclear family systems."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Compare the Ghanaian family system and that of any country in the Western world."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "In groups, discuss the importance of the family as an institution."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Discuss the role of the family in supporting gender equality."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.2",
+                  "description": "Discuss the issues of inheritance in Ghana",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In pairs, discuss the concept of inheritance and share thoughts with the class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and discuss the systems of inheritance in Ghana, including matrilineal, patrilineal and Intestate Succession."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Invite a resource person in the community to talk about any of the systems of inheritance."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the positive and negative effects of the inheritance systems in Ghana."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Suggest ways of improving the indigenous inheritance system."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Role play one system of inheritance in Ghana."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Debate the Intestate Succession law versus the indigenous inheritance system in Ghana."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.4",
+          "title": "POPULATION",
+          "description": "Population structure.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.2.4.1",
+              "description": "Analyse the population structure in Ghana and its related issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.4.1.1",
+                  "description": "Compare the population structure of high-income and middle/low income countries",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what population structure means."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw/sketch the population structure of your school."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine the population structure of Ghana as set out in a population pyramid."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine the population structure of any developed country in the world."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the population structures of low, middle and high-income countries."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Suggest reasons for the population pyramids of low, middle and high-income countries with different shapes."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.3",
+      "title": "SENSE OF PURPOSE",
+      "description": "Individual and community roles.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B8.3.2",
+          "title": "THE INDIVIDUAL AND THE COMMUNITY",
+          "description": "Role of individuals and volunteerism.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.3.2.1",
+              "description": "Demonstrate knowledge of the role of the individual in the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.2.1.1",
+                  "description": "Examine the role of the individuals in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Watch a documentary about different communities and discuss observations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain what community development involves."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain the factors to be considered in community decision-making process."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Invite a resource person to talk about the importance of community development."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Identify a specific need or problem of the community and show how learners can help solve it."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.2",
+                  "description": "Discuss the relevance of volunteerism to community development",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of volunteerism."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the ways by which one can volunteer in the community responsibly."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify some volunteering roles in the community and their contribution to community development."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the importance of volunteerism to socio-economic development of the community."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Project work: form voluntary clubs and discuss their functions within the community."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Do a voluntary work in the community and write a report on it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.4",
+      "title": "LAW AND ORDER",
+      "description": "Rights, responsibilities, and conflict management.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B8.4.1",
+          "title": "CITIZENSHIP AND HUMAN RIGHTS",
+          "description": "Rights and responsibilities.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.4.1.1",
+              "description": "Investigate the rights and responsibilities of a citizen",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.1.1.1",
+                  "description": "Examine the importance of human rights in the Ghanaian society",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept \"human rights\"."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the United Nations declaration on human rights."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify some examples of human rights enshrined in the 1992 constitution."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assess the importance of the protection of human rights."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Examine the rights and responsibilities of a citizen."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Role play rights and responsibilities of citizens."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Undertake a project in the community on citizens' rights and how to safeguard them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.2",
+          "title": "CONFLICT PREVENTION AND MANAGEMENT",
+          "description": "Managing conflicts.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.4.2.1",
+              "description": "Analyse ways of preventing and managing conflict",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.2.1.1",
+                  "description": "Examine ways of preventing and managing conflict in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the following terms: Conflict, Conflict prevention, Conflict management."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Watch and discuss video or pictures on conflict and its effects on the larger society."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify and discuss some causes of conflict in your community."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the effects of conflict in your community."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Examine attitudes and values needed to prevent conflict in your community."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Assess the role of women in conflict prevention and management."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Suggest ways to manage conflict situations in your community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.5",
+      "title": "SOCIO-ECONOMIC DEVELOPMENT",
+      "description": "Financial issues and tourism.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B8.5.2",
+          "title": "FINANCIAL AND INVESTMENT ISSUES",
+          "description": "Social security and pension schemes.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.5.2.1",
+              "description": "Demonstrate understanding of employer and employee relations in social security and pension schemes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.2.1.1",
+                  "description": "Exhibit knowledge on employer and employee relation in social security and pension schemes",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the following concepts: Employment, Employer, Employee."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the obligations of an employer in social security and pension schemes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, discuss the obligations of an employee towards social security and pension schemes."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.3",
+          "title": "TOURISM",
+          "description": "Tourism and development.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.5.3.1",
+              "description": "Evaluate tourism as an important economic sector for national development",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.3.1.1",
+                  "description": "Assess the importance of tourism to socio-economic development of Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use videos/pictures to identify some tourist sites."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Visit tourist sites and suggest ways of improving them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss how new tourist sites can be developed."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine the importance of tourism to socio-economic development."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Compare the development of tourism between Ghana and other countries."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.6",
+      "title": "NATIONHOOD",
+      "description": "The Republics.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B8.6.2",
+          "title": "THE REPUBLICS",
+          "description": "The First and Second Republics.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.6.2.1",
+              "description": "Analyse the main developments in the Republics between 1960 and 1972",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.6.2.1.1",
+                  "description": "Explain how the First Republic came into being",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the Internet, print media and oral sources to find out how the First Republic was established."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the outcome of 27 April 1960 referendum."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the outcome of 27 April 1960 presidential elections."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Dramatise the inauguration of Kwame Nkrumah as president."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Produce a chart showing major political events from 1951 to 1960."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.6.2.1.2",
+                  "description": "Explain political developments under the first republic",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the main features of the 1960 Constitution."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the changes that happened in the country as a result of the 1960 Constitution."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Debate the effects of the changes in the 1960 Republican Constitution."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe the membership of the cabinet under the 1960 Constitution."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.6.2.1.3",
+                  "description": "Explain how the Second Republic came into being",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the internet, print media and oral sources to find out how the Second Republic was established."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the outcome of the 1969 general elections."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Dramatise the handing over of power from the NLC to Dr K.A Busia."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compare the First Republican Constitution and the second Republican Constitution."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.6.2.1.4",
+                  "description": "Explain political developments under the Second Republic",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the main features of the 1969 Constitution."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the changes that happened in the country as a result of the 1969 Constitution."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the membership of the cabinet under the 1969 Constitution."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

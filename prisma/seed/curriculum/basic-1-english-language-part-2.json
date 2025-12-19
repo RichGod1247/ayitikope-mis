@@ -1,0 +1,619 @@
+{
+  "part": "2/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 1",
+      "subject": "English Language",
+      "name": "Basic 1 English Language",
+      "slug": "basic-1-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 1 English Language curriculum focuses on developing foundational skills in listening, speaking, reading, and writing. It adopts an integrated, thematic approach to help learners acquire effective communication skills, appreciate values, and develop core competencies like critical thinking and collaboration.",
+      "strands": [
+        {
+          "code": "B1.2",
+          "title": "Reading",
+          "description": "Developing reading skills through pre-reading activities, phonics, word families, vocabulary, comprehension, and fluency.",
+          "orderIndex": 2,
+          "subStrands": [
+            {
+              "code": "B1.2.1",
+              "title": "Pre-Reading Activities",
+              "description": "Understanding text concepts and manipulating sounds.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B1.2.1.1",
+                  "description": "Know how a text works for reading and writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.2.1.1.1",
+                      "description": "Handle books appropriately",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners Think-Pair-Share the reasons for keeping books neat and handling them well."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Lead learners to make some rules to guide the handling of books."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Demonstrate how to handle books, e.g. holding it, turning a book, opening the pages properly, etc."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Discuss the information on the cover and title pages with learners, e. g. What can you find on the cover? The title, Author, Illustrations and illustrators, etc."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Call learners in turns to demonstrate how to handle books, e.g. opening a book, holding a book, etc."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Let learners, in groups, role-play how to handle books, e.g. keeping them neat."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.1.2",
+                  "description": "Manipulate the sounds of the letters of English",
+                  "orderIndex": 2,
+                  "indicators": [
+                    {
+                      "code": "B1.2.1.2.1",
+                      "description": "Orally blend two or three sounds together to make one syllable word, e.g. (a-sh = ash, b-i-n = bin)",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Make individual sounds and have learners blend them together to make one-syllable words, e.g. (a-sh = ash, b-i-n = bin, a-t = at, a-m = am, i-n = in, c-o-t = cot)."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.1.2.2",
+                      "description": "Orally segment spoken syllables/words into individual sounds e.g. stop = s-t-o-p",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Model segmenting spoken syllables/words into individual sounds, e.g. (stop = s-t-o-p, am = a-m, pot = p-o-t)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Provide opportunities for learners to practise segmenting syllables/words into individual sounds."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.1.2.3",
+                      "description": "Say the new word when asked to delete, add initial sound or substitute an initial, middle or final sound (Phoneme deletion, addition, substitution)",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Say a word and model using phoneme deletion, addition and substitution strategies to say new words from the given word, e.g. phoneme deletion: brat - rat, etc.; phoneme substitution: cat - bat, bat - bet, bet - bell, etc.; phoneme addition: all - ball, etc."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.2.2",
+              "title": "Phonics",
+              "description": "Connecting sounds to letters and blending them to read and write.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B1.2.2.1",
+                  "description": "Connect sounds to letters and blend letters/syllables in order to read and write",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.2.2.1.1",
+                      "description": "Identify the alphabet in order",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce the lesson with alphabet songs paying attention to the letters as they sing."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Show an alphabet chart and have learners identify the letters of the alphabet (aA- zZ)."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Use alphabet cards, alphabet trees, picture cards, etc. to play alphabet games."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Let learners play matching games with the cards, e.g. Sound Ball Game, Find My Partner, etc."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.2.1.2",
+                      "description": "Recognise and produce letter names and sounds randomly",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners play alphabet games to practice recognition of letter names at random. e.g. Lucky Dip game, Treasure Hunt."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners use letter cards to order the letters of the alphabet."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners find out which letter comes before the other, among a given set of letters, as a whole class, in groups, in pairs and individually."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Select letters whose sound you intend to teach, e.g. two letters at a time."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Say each sound first in context and then in isolation, e.g. ants-a."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Have learners repeat it after you."
+                        },
+                        {
+                          "orderIndex": 7,
+                          "description": "Give examples of words that contain each sound at the initial, medial and final positions, e.g. bag, table, bulb."
+                        },
+                        {
+                          "orderIndex": 8,
+                          "description": "Have learners work in pairs to provide examples of words that contain the sounds."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.2.1.3",
+                      "description": "Understand the relationship between spelling of words and sounds of speech",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Blend vowel sounds with consonant sounds to produce words, e.g. am, at."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners segment the sounds in the words and blend them by using blending games."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Ask learners to give examples of words."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Write the words and have learners sound the individual letters and blend them to produce words."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Have learners work in pairs/groups to further practise sound segmentation and blending to produce the words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.2.1.4",
+                      "description": "Blend sounds to produce simple syllables/words and blend syllables to produce words",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Blending sounds: Clap the syllables of common words. e.g. table, pencil, pen, book, boy, girl, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners clap the syllables of words after teacher."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Put learners into groups/pairs. Distribute letter cards to the groups."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Demonstrate blending using letter cards, e.g. f-a-n = fan, b-a-g = bag, b-e-d = bed, p-e-n = pen."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Use learners' words to build a vocabulary chart and encourage them to go round to read."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Blending syllables: Have learners use think-pair-share to come out with single syllables and blend them to form words, e.g. sis + ter = sister."
+                        },
+                        {
+                          "orderIndex": 7,
+                          "description": "Let the pairs present their words and guide them by using the words to form two-word or three-word sentences. e. g. My sister is happy."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.2.1.5",
+                      "description": "Segment syllables/words into sounds",
+                      "orderIndex": 5,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise the sounds of letters and words learners have learnt."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Demonstrate syllable segmentation by breaking two-syllable words into syllables. e.g. pencil = pen-cil, baby = ba-by, mother = mo-ther."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners read the words and use them in sentences."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.2.1.6",
+                      "description": "Use alphabetic knowledge to decode known words",
+                      "orderIndex": 6,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners sing an alphabet song."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put them into groups and write sentences containing some new words for learners to decode by segmentation. e.g. This is a mango. This is my sister."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners read similar words from the word charts."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.2.3",
+              "title": "Word Families, Rhyming Endings and Common Digraphs",
+              "description": "Using rhyming endings and digraphs to enhance reading comprehension.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B1.2.3.1",
+                  "description": "Employ knowledge of rhyming endings to enhance reading comprehension",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.2.3.1.1",
+                      "description": "Use common rhyming endings to decode simple words",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to simple word formation using the phonic slide to change the sound at the initial, medial and final positions of words, e.g. pat, mat, fat."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners build on these rhyming endings."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "In groups, let learners read out their words."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners form sentences with these rhyming words."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.2.6",
+              "title": "Vocabulary",
+              "description": "Understanding word meanings and usages.",
+              "orderIndex": 6,
+              "contentStandards": [
+                {
+                  "code": "B1.2.6.1",
+                  "description": "Understand word meanings and usages",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.2.6.1.1",
+                      "description": "Read level-appropriate sight words and use many of them in meaningful sentences",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce the appropriate sight words beginning with the commonest. Write them on the board, e.g. chair, table, child, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Use the word \"tree\" to teach the sight words."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners repeat the words aloud."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners use the sight words in meaningful sentences."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Tell a story and have learners identify sight words in the story. Have learners use the sight words in meaningful sentences, e.g. determiners - the: The boy is my friend."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.6.1.2",
+                      "description": "Ask questions to find out the meaning of new words",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "As learners listen carefully, tell a story twice."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners answer questions based on the story."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have them mention words they hear in the story."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Let learners tell the meanings of some of the words."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Have learners make their own simple sentences using the key words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.6.1.3",
+                      "description": "Use words acquired through talk and reading in conversation",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "In groups, let learners engage in conversation using familiar and high frequency words on given topics. e. g. My Classroom."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.2.7",
+              "title": "Comprehension",
+              "description": "Understanding texts read using skills and strategies.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B1.2.7.1",
+                  "description": "Understand texts read",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.2.7.1.1",
+                      "description": "Use illustrations, text clues (title, headings) and context to make inferences and predictions",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners use illustrations, text and context clues to make predictions before, during and after reading to enhance comprehension of text."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.7.1.2",
+                      "description": "Ask and answer factual and inferential and applicative questions about level-appropriate texts",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners read level appropriate texts independently, with minimal support from peers/teacher."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Encourage them to ask and answer factual and inferential questions about the texts to enhance comprehension."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.7.1.3",
+                      "description": "Retell level-appropriate texts in own words",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use the Simple Herring Bone strategy to guide learners to retell the story in their own words. (when? what? who? how? why?)"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.7.2",
+                  "description": "Use knowledge skills and techniques of reading to understand",
+                  "orderIndex": 2,
+                  "indicators": [
+                    {
+                      "code": "B1.2.7.2.1",
+                      "description": "Demonstrate understanding of the purpose and features of narrative texts",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use examples of short and simple texts to guide learners to understand the purpose and features of narrative texts."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners identify the different purposes in different narrative texts read/heard."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have them identify the features of given texts in pairs or in groups."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.7.2.2",
+                      "description": "Describe characters and their actions in a story",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Put learners in groups to identify and describe characters and their actions in stories read."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.7.2.3",
+                      "description": "Connect, ideas and information in stories to own experiences and knowledge of the world",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Tell/read out texts."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners answer simple questions based on the events, characters and values, etc. in the text."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have them relate ideas and information in the stories to personal experiences and knowledge of the world."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.7.2.4",
+                      "description": "Read level-appropriate texts with prompting and support",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners read texts with all the prompting and support that can help them in their reading."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.7.2.5",
+                      "description": "Use a variety of comprehension-strategies e. g prediction before reading a text, cover page, etc",
+                      "orderIndex": 5,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Begin the comprehension lesson with before reading activities that develop and activate the background knowledge of learners. e.g. K of KWL (What learners know about the topic of information text, prediction using pictures, title, treatment of vocabulary, etc.)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Continue with while reading activities to enhance their understanding of the text. e.g. Herring Bone strategy (what? who? when? how? why?) or W of KWL (What the learners want to know)."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "End the lesson with after reading activities that help learners to organize their ideas, remember the story, use the information acquired from the text and relate it to their daily lives, e.g. answering questions, retelling the story in their own words, learners linking story to their everyday life experiences etc."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.7.2.6",
+                      "description": "Identify the structure of a story e.g. beginning part, middle and the end",
+                      "orderIndex": 6,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Narrate a suitable story."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners identify the structure of the story by recalling what happened at the beginning, middle and ending."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.2.9",
+              "title": "Fluency",
+              "description": "Reading texts with good speed, accuracy, and expression.",
+              "orderIndex": 9,
+              "contentStandards": [
+                {
+                  "code": "B1.2.9.1",
+                  "description": "Read texts with good speed, accuracy and expression",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.2.9.1.1",
+                      "description": "Read short and simple sentences at good pace",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Teacher models reading at a reasonable pace."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners read short and simple sentences at a reasonable pace."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners read in small groups."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.2.9.1.2",
+                      "description": "Recognise one hundred and twenty sight words including content words",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners go over the sight words they have learnt during the period."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners echo-read simple texts."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners play vocabulary games for vocabulary consolidation, e.g. Lucky Dip game, Pick and Say, Word Hunt."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners make simple meaningful sentences with the sight words."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

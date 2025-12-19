@@ -1,0 +1,1361 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 2",
+  "subject": "Our World and Our People",
+  "name": "Basic 2 Our World and Our People",
+  "slug": "basic-2-our-world-and-our-people",
+  "orderIndex": 1,
+  "description": "The Basic 2 OWOP curriculum continues to nurture honest, creative, and responsible citizens. It focuses on understanding God as the Sustainer of life, self-identity, family roles, environmental cleanliness, weather elements, map making, and religious values through worship and festivals.",
+  "strands": [
+    {
+      "code": "B2.1",
+      "title": "ALL ABOUT US",
+      "description": "Deepening understanding of God, self-identity, family roles, and obedience to rules.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B2.1.1",
+          "title": "Nature of God",
+          "description": "Understanding God as the Sustainer of life.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.1.1.1",
+              "description": "Demonstrate knowledge of the attributes of God",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.1.1.1.1",
+                  "description": "Mention the attributes of God that reveal His nature as Sustainer of life",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention the attributes of God as sustainer of life: Giver of rain and sunshine, The One who makes plants grow, The Giver of air."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners mention these attributes of God in their local languages."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about the attributes of God relevant to their daily lives, e.g. God gives life, rain and air."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.1",
+                      "subStrandCode": "B2.1.1",
+                      "contentStandardCode": "B2.1.1.1",
+                      "indicatorCode": "B2.1.1.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A peaceful outdoor scene showing nature's gifts: rain falling on green plants, the sun shining brightly, and children breathing in fresh air. The children look happy and thankful."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.1.2",
+          "title": "Myself",
+          "description": "Developing a sense of self-identity and worth.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.1.2.1",
+              "description": "Demonstrate understanding of self as a unique individual",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.1.2.1.1",
+                  "description": "Identify things to do to develop a sense of self identity and self-worth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about themselves individually and appreciate the way God created them e.g. \"I am black and beautiful, I like the way God created me. I have great qualities\"."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play scenarios and engage in activities that teach them the importance of developing a strong self-identity."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners compose poems/write essays about themselves and what they can do to feel more valued at home, school and the community."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.1",
+                      "subStrandCode": "B2.1.2",
+                      "contentStandardCode": "B2.1.2.1",
+                      "indicatorCode": "B2.1.2.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A confident Ghanaian child standing in front of a mirror or peers, smiling and gesturing to themselves, expressing pride in their appearance and abilities. Diverse friends cheer them on."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.1.3",
+          "title": "My Family and the Community",
+          "description": "Appreciating roles and responsibilities within the family.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B2.1.3.1",
+              "description": "Show appreciation of the roles of members of the family in their daily lives",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.1.3.1.1",
+                  "description": "Identify the role and responsibilities of the individual members of the family",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners, in groups, talk about their roles and roles of their parents in the family: Parents: Provision of shelter, food, security and education. Children: running errands, performing house chores, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play the functions of the various members in the family, e.g. learners play the role of a father, mother, etc."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.1",
+                      "subStrandCode": "B2.1.3",
+                      "contentStandardCode": "B2.1.3.1",
+                      "indicatorCode": "B2.1.3.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A detailed family scene in a Ghanaian home. A father is repairing a bicycle or reading, a mother is cooking or helping with homework, and children are sweeping the compound or fetching water."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.1.4",
+          "title": "Home and School",
+          "description": "Understanding the importance of obeying rules.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B2.1.4.1",
+              "description": "Demonstrate understanding of the need to obey rules",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.1.4.1.1",
+                  "description": "Explain the need for obeying rules in the home and school",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners work in groups to talk about rules in the home, school and community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play scenarios on obeying rules in the home, school and community."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners compose rhymes on obeying rules in the home and school"
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.1",
+                      "subStrandCode": "B2.1.4",
+                      "contentStandardCode": "B2.1.4.1",
+                      "indicatorCode": "B2.1.4.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A classroom scene where children are following rules: walking in a line, raising hands to speak, and tidying up books. A poster on the wall lists 'Class Rules' with simple pictures."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.2",
+      "title": "ALL AROUND US",
+      "description": "Exploring the environment, plants, animals, mapping, and population.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B2.2.1",
+          "title": "The Environment and the Weather",
+          "description": "Keeping the environment clean and understanding weather elements.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.2.1.1",
+              "description": "Demonstrate knowledge of keeping the environment clean and safe",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.1.1.1",
+                  "description": "Describe ways of making the environment clean and safe",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Take a nature walk of the school environment and observe things in the environment-man made and natural: water, trees, stones, animals, buildings, cars, tables, chairs, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about things they can do to make the environment clean and safe e.g. planting trees, proper waste disposal, avoid bush burning, avoid defecating in water bodies, legal mining."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners demonstrate safe practices in the community, e.g. sweeping school compound, picking litter."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.2",
+                      "subStrandCode": "B2.2.1",
+                      "contentStandardCode": "B2.2.1.1",
+                      "indicatorCode": "B2.2.1.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "Children actively cleaning their school compound. Some are sweeping with local brooms, others are picking up litter into a bin, and one group is planting a small tree."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.2.1.2",
+              "description": "Demonstrate understanding of elements of the weather",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B2.2.1.2.1",
+                  "description": "Explain the elements of weather",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain the elements of weather, e.g. temperature, rainfall/precipitation, humidity, wind and cloud cover."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw weather chart using symbols."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners watch videos or pictures of different weather conditions."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.2",
+                      "subStrandCode": "B2.2.1",
+                      "contentStandardCode": "B2.2.1.2",
+                      "indicatorCode": "B2.2.1.2.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A classroom weather station. A child is changing a weather chart on the wall to show 'Sunny' and 'Windy' symbols. Other children are looking out the window observing the sky."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.2.2",
+          "title": "Plants and Animals",
+          "description": "Recognising important plants and animals in the community.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.2.2.1",
+              "description": "Recognise important plants and animals in the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.2.1.1",
+                  "description": "Explore the important plants in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify and talk about crops like cocoa, yam, maize, shea butter, etc, and talk about why they are important to the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw and colour the important crops in their community"
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.2",
+                      "subStrandCode": "B2.2.2",
+                      "contentStandardCode": "B2.2.2.1",
+                      "indicatorCode": "B2.2.2.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A montage of important Ghanaian crops: a cocoa tree with pods, a maize plant, and a yam mound with vines. A child is standing next to one, admiring it."
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.2.2.1.2",
+                  "description": "Explore the important animals in the community",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention some domestic animals in the community and talk about why they are important"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners observe some of the animals in the community and how people take care of them"
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.2",
+                      "subStrandCode": "B2.2.2",
+                      "contentStandardCode": "B2.2.2.1",
+                      "indicatorCode": "B2.2.2.1.2",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A child feeding domestic animals in a village setting. There are chickens pecking grain, a goat tied nearby, and a sheep. The scene shows care for animals."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.2.3",
+          "title": "Map Making and Land Marks",
+          "description": "Sketching and locating things in the classroom.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B2.2.3.1",
+              "description": "Demonstrate understanding of the skills needed to map the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.3.1.1",
+                  "description": "Sketch and locate things in the classroom",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sketch and colour the shape of the classroom, e.g. Square, Rectangle, Round."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Through questions and answers, guide learners to indicate where they sit in the classroom, on their sketches with a small round shape."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners show on their sketches the location of the following: Chalk/White board (Bb/Wb), Cupboard (C), Teacher's table (Tt)."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.2",
+                      "subStrandCode": "B2.2.3",
+                      "contentStandardCode": "B2.2.3.1",
+                      "indicatorCode": "B2.2.3.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A bird's-eye view sketch of a classroom layout on a chalkboard. It shows the teacher's desk at the front, rows of student desks, and a cupboard at the back, labeled with simple abbreviations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.2.4",
+          "title": "Population and Settlement",
+          "description": "Understanding population changes.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B2.2.4.1",
+              "description": "Demonstrate basic understanding of population changes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.2.4.1.1",
+                  "description": "Explain the need to accept and adapt to a change in the total number of people, as a responsible citizen",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners role play problems of a large family size."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Represent the number of family members in your house with a bar chart."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain what happens to the class size when a new learner joins or leaves your class."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.2",
+                      "subStrandCode": "B2.2.4",
+                      "contentStandardCode": "B2.2.4.1",
+                      "indicatorCode": "B2.2.4.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A classroom scene welcoming a new student. The teacher introduces a new boy or girl to the class, illustrating a change in class population. A simple chart on the wall shows class numbers."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.3",
+      "title": "OUR BELIEFS AND VALUES",
+      "description": "Exploring worship, festivals, human rights, and leadership.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B2.3.1",
+          "title": "Worship",
+          "description": "Appreciating the importance of religious worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.3.1.1",
+              "description": "Demonstrate understanding of the importance of religious worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.1.1.1",
+                  "description": "Explain the importance of worship",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Take learners to a place of worship such as the church, mosque or the shrine to observe the mode of worship or show pictures videos of the various modes of worship."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play demonstrate/talk about the importance of worship at home, school, church/mosque/shrine."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.1",
+                      "contentStandardCode": "B2.3.1.1",
+                      "indicatorCode": "B2.3.1.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A respectful montage showing children at different places of worship: singing in a church, praying in a mosque, and observing a traditional ceremony. They look reverent and peaceful."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.3.2",
+          "title": "Festivals",
+          "description": "Understanding festivals and family roles in religion.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.3.2.1",
+              "description": "Show understanding of festivals celebrated in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.2.1.1",
+                  "description": "Describe activities which take place during the celebration of festivals",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about festivals they have witnessed (Islam, Christianity, Traditional)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play activities that take place during the festivals: merry-making, sharing, family re-union, worship, etc."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.2",
+                      "contentStandardCode": "B2.3.2.1",
+                      "indicatorCode": "B2.3.2.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A festive scene showing a traditional festival durbar with a chief in a palanquin, drummers, and dancers. People are cheering and celebrating."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.3.2.2",
+              "description": "Investigate the roles of the family and community in their daily lives",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B2.3.2.2.1",
+                  "description": "Identify things that families do to show their commitment to God",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the religious activities their families perform to show commitment to God: morning devotion, going to church, mosque or the shrine."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play what their families do to show commitment to God, e.g. worship, offertory, Sadaqah, Zakat, prayer and fasting."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.2",
+                      "contentStandardCode": "B2.3.2.2",
+                      "indicatorCode": "B2.3.2.2.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A family gathered for morning devotion in their living room, heads bowed in prayer. Another scene showing a family walking together to a place of worship."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.3.3",
+          "title": "Basic Human Rights",
+          "description": "Understanding the importance of rights.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B2.3.3.1",
+              "description": "Demonstrate understanding of human rights as a citizen",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.3.1.1",
+                  "description": "Explain the importance of respecting the rights of others",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the importance of allowing others to enjoy their rights, e.g. peace, cooperation, teamwork"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role-play ways of allowing others to enjoy their rights e.g. tolerance, love, respect, etc"
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.3",
+                      "contentStandardCode": "B2.3.3.1",
+                      "indicatorCode": "B2.3.3.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "Two children peacefully sharing a book or toy, demonstrating respect for each other's rights. Another scene shows children waiting their turn in a queue."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.3.4",
+          "title": "Being a Leader",
+          "description": "Narrating stories of religious leaders.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B2.3.4.1",
+              "description": "Narrate the early life stories of the leaders of the three main religions in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.4.1.1",
+                  "description": "Narrate the story of the early life of the religious leaders in the three religions in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention the names of the religious leaders: Jesus Christ, the Holy Prophet Muhammad (S.A.W.), Okomfo Anokye, Toha Zie, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play some important aspects of the early life of a religious leader."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners explain how they will apply the moral lessons from the religious leaders in their daily lives."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.4",
+                      "contentStandardCode": "B2.3.4.1",
+                      "indicatorCode": "B2.3.4.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A child dressed in simple costume role-playing a young religious leader (like Jesus in the temple or young Muhammad). Other children sit and listen attentively."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.3",
+      "title": "OUR BELIEFS AND VALUES",
+      "description": "Exploring worship, festivals, human rights, and leadership.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B2.3.1",
+          "title": "Worship",
+          "description": "Appreciating the importance of religious worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.3.1.1",
+              "description": "Demonstrate understanding of the importance of religious worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.1.1.1",
+                  "description": "Explain the importance of worship",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Take learners to a place of worship such as the church, mosque or the shrine to observe the mode of worship or show pictures videos of the various modes of worship."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play demonstrate/talk about the importance of worship at home, school, church/mosque/shrine."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners sing/recite popular religious songs/creed in the three main religions in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners role play or talk about the importance of religious tolerance, e.g. peaceful coexistence, love, humility, sharing, caring, respect, unity."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.1",
+                      "contentStandardCode": "B2.3.1.1",
+                      "indicatorCode": "B2.3.1.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A respectful collage showing children observing different modes of worship: quiet prayer in a mosque, singing in a church, and traditional libation. The scenes show reverence and unity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.3.2",
+          "title": "Festivals",
+          "description": "Understanding festivals and family roles in religion.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.3.2.1",
+              "description": "Show understanding of festivals celebrated in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.2.1.1",
+                  "description": "Describe activities which take place during the celebration of festivals",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about festivals they have witnessed: i. Islam Eid-ul-Fitr, Eid-ul-Adha; ii. Christianity - Easter, Christmas; iii. Traditional - Kundum, Odwira, Damba, Bugum, Yam Festival."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about how the various festivals are celebrated."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play activities that take place during the festivals: merry-making, sharing, family re-union, worship, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners draw scenes from festivals."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.2",
+                      "contentStandardCode": "B2.3.2.1",
+                      "indicatorCode": "B2.3.2.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A vibrant festival scene in a Ghanaian community. People in traditional cloth are drumming and dancing. A family is sharing a meal of fufu. Children look happy and involved."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.3.2.2",
+              "description": "Investigate the roles of the family and community in their daily lives",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B2.3.2.2.1",
+                  "description": "Identify things that families do to show their commitment to God",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the religious activities their families perform to show commitment to God: morning devotion, going to church, mosque or the shrine."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners, in groups, identify the number of times religious activities are performed during the day, week and occasionally."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play what their families do to show commitment to God, e.g. worship, offertory, Sadaqah, Zakat, prayer and fasting."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.2",
+                      "contentStandardCode": "B2.3.2.2",
+                      "indicatorCode": "B2.3.2.2.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A family sitting together for morning devotion. Another scene showing a family giving alms (Sadaqah) to a needy person. The mood is charitable and devout."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.3.3",
+          "title": "Basic Human Rights",
+          "description": "Understanding the importance of rights.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B2.3.3.1",
+              "description": "Demonstrate understanding of the importance of human rights",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.3.1.1",
+                  "description": "Describe ways of claiming one's rights",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In small groups, learners talk about how to claim their rights. The individual can claim his/her rights through: joining civic clubs, reporting to Social Welfare, reporting to the law courts, reporting to CHRAJ, reporting to the police, embarking on lawful public demonstrations, using negotiation, reporting to relevant institutions, e.g. FIDA."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners share experiences of cases they have experienced or seen being handled by any of these institutions or agencies."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.3",
+                      "contentStandardCode": "B2.3.3.1",
+                      "indicatorCode": "B2.3.3.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A child politely speaking to a teacher or police officer, reporting an issue. A poster in the background shows symbols of justice or child rights (like CHRAJ)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.3.4",
+          "title": "Being a Leader",
+          "description": "Narrating stories of religious leaders.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B2.3.4.1",
+              "description": "Demonstrate knowledge of the life stories of leaders of the major religions in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.3.4.1.1",
+                  "description": "Describe the youthful lives of the leaders of the three major religions in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the youthful lives of the religious leaders: (i). The Lord Jesus Christ, (ii). The Holy Prophet Muhammad (S.A.W.), (iii). A Traditional Religious Leader."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, learners talk about the occupations of the religious leaders: (i). The Lord Jesus Christ as a Carpenter, (ii). The Holy Prophet Muhammad (S.A.W) as a Businessman, (iii). A Traditional Religious Leader, eg. Egya Ahor as a farmer."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.4",
+                      "contentStandardCode": "B2.3.4.1",
+                      "indicatorCode": "B2.3.4.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "Scenes showing the youth of religious leaders: young Jesus working with wood, young Muhammad trading, and a young traditional leader farming. They look hardworking and focused."
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.3.4.1.2",
+                  "description": "Identify moral lessons of the lives of the religious leaders",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners, the moral lessons of the youthful lives of the religious leaders: piety, honesty, sacrifice, patience, hard work, courage, perseverance, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about how they can apply the moral lessons they learnt from the lives of the religious leaders in their daily lives."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play the moral lives of the religious leaders."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.3",
+                      "subStrandCode": "B2.3.4",
+                      "contentStandardCode": "B2.3.4.1",
+                      "indicatorCode": "B2.3.4.1.2",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "Children role-playing virtues: one child helping another up (kindness), another returning a lost item (honesty). They are emulating the good examples of leaders."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.4",
+      "title": "OUR NATION GHANA",
+      "description": "Developing a sense of national identity and citizenship.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B2.4.1",
+          "title": "Being a Citizen",
+          "description": "Understanding individual values and responsibilities.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.4.1.1",
+              "description": "Recognise individual values and responsibilities in the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.4.1.1.1",
+                  "description": "Explain values cherished by individuals in society",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups list values and behaviours cherished in the community e.g. respect, teamwork, honesty, hard work, obedience, tolerance"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play the roles of members of the community in the upbringing of its members: education, discipline, counselling, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play the following: i. Patriotism, ii. Tolerance, iii. Volunteerism, iv. Love"
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.4",
+                      "subStrandCode": "B2.4.1",
+                      "contentStandardCode": "B2.4.1.1",
+                      "indicatorCode": "B2.4.1.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "Children engaging in community service: picking up litter or helping an elderly person cross the road. They are demonstrating volunteerism and respect."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.4.2",
+          "title": "Power and Authority",
+          "description": "Understanding national symbols and respecting authority.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.4.2.1",
+              "description": "Demonstrate understanding of national symbols",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.4.2.1.1",
+                  "description": "Explain ways to appreciate national symbols, as a responsible citizen",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners demonstrate various ways of showing respect to the national symbols e.g. standing while the National Anthem is being played"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners sing/recite the National Anthem and Pledge"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners, through role play, to talk about ways they can help to protect national symbols, e.g. obedience, reporting people who destroy the national symbols, respect for the symbols."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.4",
+                      "subStrandCode": "B2.4.2",
+                      "contentStandardCode": "B2.4.2.1",
+                      "indicatorCode": "B2.4.2.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "School children standing at attention in their uniforms during assembly, facing the Ghana flag. They are singing the anthem respectfully. The teacher stands by saluting."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.4.3",
+          "title": "Responsible Use of Resources",
+          "description": "Understanding energy conservation.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B2.4.3.1",
+              "description": "Exhibit knowledge of conserving energy",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.4.3.1.1",
+                  "description": "Describe ways of conserving energy in the home, school and community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners, through questions and answers, to explain energy conservation e.g. the prevention of the wasteful usage of energy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners, through think-pair-share, to talk about strategies for energy conservation, e.g. using solar or wind energy instead of petroleum, making efforts to reduce the consumption of energy (e.g. turning off lights when leaving the room and recycling plastics or paper, using more natural light from the sun)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe conserving energy in their homes or in the community, using small group drama."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners talk about ways of conserving energy, e.g. turning off the light, television, iron and fan after use."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Leaners sing and recite rhymes on how energy can be conserved in the community."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.4",
+                      "subStrandCode": "B2.4.3",
+                      "contentStandardCode": "B2.4.3.1",
+                      "indicatorCode": "B2.4.3.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A child switching off a light switch as they leave a room. Another child is turning off a tap. Sun shines through the window, illuminating the room naturally. Illustrates energy conservation."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.4.4",
+          "title": "Farming in Ghana",
+          "description": "Understanding farming activities and tools.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B2.4.4.1",
+              "description": "Demonstrate knowledge of the importance of farming in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.4.4.1.1",
+                  "description": "Explain the importance of farming in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about various farming activities in Ghana"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners visit and observe different farm activities: poultry farm, crop farm, flower garden, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups talk about importance of farming in their community"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners draw the main farm activity in their community"
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.4",
+                      "subStrandCode": "B2.4.4",
+                      "contentStandardCode": "B2.4.4.1",
+                      "indicatorCode": "B2.4.4.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A visit to a farm. Children observing a poultry farm with chickens, or a vegetable garden with tomatoes and peppers. They look interested and are asking a farmer questions."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.4.4.2",
+              "description": "Recognise types of simple agricultural tools",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B2.4.4.2.1",
+                  "description": "Identify the types of simple agricultural tools and their uses",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners observe simple agricultural tools and talk about their uses"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners visit the school garden/farms or gardens close to the school and let learners observe and talk about tools used for digging, pruning, harvesting, weeding, watering."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show pictures/videos of different types of agricultural tools from books, and let learners talk about their differences and draw."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners sketch different agricultural tools."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners in groups talk about ways of caring for agricultural tools e.g. clean the tools after use, oil metallic agricultural tools, keep the tools in appropriate place, use the tool for the appropriate work."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.4",
+                      "subStrandCode": "B2.4.4",
+                      "contentStandardCode": "B2.4.4.2",
+                      "indicatorCode": "B2.4.4.2.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A display of clean agricultural tools: a hoe, a cutlass, a rake, and a watering can. A child is pretending to use a hoe to weed. Another is wiping a tool clean."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B2.5",
+      "title": "MY GLOBAL COMMUNITY",
+      "description": "Connecting with the wider world through geography and technology.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B2.5.1",
+          "title": "Our Neighbouring Countries",
+          "description": "Demonstrating knowledge of Ghana's neighbours.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B2.5.1.1",
+              "description": "Demonstrate knowledge of Ghana's neighbouring countries",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.5.1.1.1",
+                  "description": "Mention Ghana's neighbours and locate them on a map",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners locate Ghana's neighbours on a map of West Africa using the idea of the cardinal points"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners compose a song/rhyme on Ghana and her neighbours"
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.5",
+                      "subStrandCode": "B2.5.1",
+                      "contentStandardCode": "B2.5.1.1",
+                      "indicatorCode": "B2.5.1.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A child standing next to a large wall map of West Africa. They are pointing to Ghana and its neighbors (Togo, Cote d'Ivoire, Burkina Faso). The countries are brightly colored."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.5.2",
+          "title": "Introduction to Computing",
+          "description": "Demonstrating understanding of computer parts.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B2.5.2.1",
+              "description": "Demonstrate understanding of the parts of a computer",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.5.2.1.1",
+                  "description": "Identify the left, right mouse buttons, use the mouse to perform single and double clicking",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify the parts of a mouse."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners point out parts of the mouse and call out the name of the parts pointed."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners demonstrate how to use the mouse e.g. the left button and perform single and double clicks in a game exercise."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.5",
+                      "subStrandCode": "B2.5.2",
+                      "contentStandardCode": "B2.5.2.1",
+                      "indicatorCode": "B2.5.2.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "Close-up of a child's hand holding a computer mouse. They are clicking the left button. A computer screen in the background shows a simple game or icon being selected."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.5.3",
+          "title": "Sources of Information",
+          "description": "Demonstrating understanding of sources of information.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B2.5.3.1",
+              "description": "Demonstrate understanding of sources of information",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.5.3.1.1",
+                  "description": "Identify sources of information",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring real items or pictures of telephone, mobile phone, radio etc., to class. Learners talk about the use of these technological tools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw the items used for receiving and sending information e.g. mobile phone."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.5",
+                      "subStrandCode": "B2.5.3",
+                      "contentStandardCode": "B2.5.3.1",
+                      "indicatorCode": "B2.5.3.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A table displaying communication tools: a radio, a mobile phone, and a newspaper. Children are looking at them and discussing how they get news and information."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.5.4",
+          "title": "Technology in Communication",
+          "description": "Demonstrating understanding of data collection skills.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B2.5.4.1",
+              "description": "Demonstrate understanding of data collection skills",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B2.5.4.1.1",
+                  "description": "Demonstrate sending and receiving information from other gadgets",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners through demonstration to talk about where one can send and receive information in a discussion e.g. Poster, road signs, newspapers, telephones calls, SMS, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Bring sources of data e.g. newspapers or class registers to class. Guide learners, through demonstration, to identify data and record them in their books, e.g. listening to radio, newspaper, talking to people, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Through group work, guide learners to talk about the type of information they should pay attention to e.g. information on their education, parents."
+                    }
+                  ],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.5",
+                      "subStrandCode": "B2.5.4",
+                      "contentStandardCode": "B2.5.4.1",
+                      "indicatorCode": "B2.5.4.1.1",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "Children role-playing sending messages. One types on a toy phone, another reads a notice on a board. They are collecting information and writing it down."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

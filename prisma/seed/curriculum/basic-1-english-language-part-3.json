@@ -1,0 +1,594 @@
+{
+  "part": "3/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 1",
+      "subject": "English Language",
+      "name": "Basic 1 English Language",
+      "slug": "basic-1-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 1 English Language curriculum focuses on developing foundational skills in listening, speaking, reading, and writing. It adopts an integrated, thematic approach to help learners acquire effective communication skills, appreciate values, and develop core competencies like critical thinking and collaboration.",
+      "strands": [
+        {
+          "code": "B1.4",
+          "title": "Writing",
+          "description": "Developing writing skills through pre-writing, penmanship, labelling, sentence construction, and simple compositions.",
+          "orderIndex": 10,
+          "subStrands": [
+            {
+              "code": "B1.4.1",
+              "title": "Pre-Writing",
+              "description": "Developing muscular control and hand-eye coordination.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B1.4.1.1",
+                  "description": "Write patterns for muscular control and hand-eye coordination",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.1.1.1",
+                      "description": "Make given patterns, trace and draw various objects",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Demonstrate vertical, horizontal and oblique strokes/patterns. e.g. /// \\\\\\ |||"
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners write these strokes/patterns in the air."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners write them in their books."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Note: If need be, learners may first make these strokes by tracing and/or joining dots. Ensure correct sitting posture and correct grip of the writing tool."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.4.1.1.2",
+                      "description": "Model various objects of interest",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Use papers to model an object as learners observe."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners, in their groups, choose and model different objects."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners tell the name of the object and what it can be used for."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.2",
+              "title": "Penmanship/Handwriting",
+              "description": "Copying and writing letters correctly.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B1.4.2.1",
+                  "description": "Copy and write letters of the alphabet correctly",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.2.1.1",
+                      "description": "Copy letters of the alphabet clearly",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to the lines and spaces they will be expected to write in."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Demonstrate the letter on the board and in the air several times."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Give ample practice. Let learners practise writing in the air, on sheets of paper or in jotters."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Let learners execute the writing task."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Give feedback after assessing learners' work."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.3",
+              "title": "Writing Letters - Small and Capital",
+              "description": "Using skills to write legibly and boldly.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B1.4.3.1",
+                  "description": "Use general skills strategies and knowledge of letter sounds to write legibly and boldly",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.3.1.1",
+                      "description": "Match lower and upper case letters",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Show a chart of letters (small and capital). e.g. ABCDE... abcde..."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Place letter cards (small and capital letters) on teacher's table."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Put learners into groups and ask representatives of the groups to take turns to pick and match the letter cards to the letters on the chart. Those who are able to match them correctly win points for their groups and receive stars."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Let learners write the letters in their books."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.4.3.1.2",
+                      "description": "Copy the names of objects correctly in both upper and lower case letters",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners go round and observe labelled objects in the classroom."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners go with their books and change sitting positions to enable them copy the names of the objects."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners sit in groups to edit their work."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have them share their work by exchanging their books with other groups to appreciate one another's work."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.4.3.1.3",
+                      "description": "Write words using both capital and small letters",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Write words in upper and lower cases."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Model pronunciation of target words for learners to repeat."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners copy the words from the board."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Encourage learners to space out letters appropriately in the words. Let group leaders help other learners (who are not able to write some letters correctly)."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.4",
+              "title": "Labelling Items",
+              "description": "Drawing and labelling simple objects.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B1.4.4.1",
+                  "description": "Draw and label simple objects",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.4.1.1",
+                      "description": "Draw simple pictures of peers or various objects and use invented spelling to write about oneself",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have a picture of a friend or anybody and write at least three lines about the person. Paste this in a corner of the class. Have a chart of various objects labelled (e.g. objects at home in, the environment etc.) and post them on the walls of the classroom."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners go round to observe the pictures."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "In groups, let learners share their observations."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Ask learners to draw and label three objects of their choice."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Have each learner choose and draw a peer and write a line or two about that person."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Assist learners with spelling where necessary."
+                        },
+                        {
+                          "orderIndex": 7,
+                          "description": "Have learners share their work with their partners. Similarly, let learners draw pictures of themselves and write a sentence or two about them."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.5",
+              "title": "Writing Simple Words and Sentences",
+              "description": "Writing words and sentences correctly.",
+              "orderIndex": 5,
+              "contentStandards": [
+                {
+                  "code": "B1.4.5.1",
+                  "description": "Write words and sentences",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.5.1.1",
+                      "description": "Make a list of objects in the school",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners with questions to talk about the various areas or places in the school e.g. head teacher's office, canteen etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put learners into groups. Let each group choose a name for their group and an area or place they want to work on."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let each group list the objects found in the place of their choice."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have a big chart on the wall and copy their lists on the chart. Let groups take turns to edit their work."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Let learners copy the edited words into their books."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.4.5.1.2",
+                      "description": "Write simple familiar words",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners mention their favourite dishes or food."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners select one food and talk about the ingredients used in its preparation, e.g. Jollof."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners mention the ingredients as teacher writes them on the board."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Let them then work as individuals, choose their own special food or dish and write the ingredients."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Let learners do peer editing."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.4.5.1.3",
+                      "description": "Use basic descriptive words in writing simple sentence",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners identify objects in the classroom, e. g. tables, chairs, bags, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners tell the sizes, shapes and colours of the objects. Explain simply to them that the words talk about objects."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners work in pairs to write simple sentences, describing objects in the classroom, e. g. My classroom is big. The board is long and white. The doors and windows are big."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Encourage learners to write two simple sentences each (Exceptional learners should write four simple sentences)."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.7",
+              "title": "Controlled Writing",
+              "description": "Writing simple compositions.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B1.4.7.1",
+                  "description": "Write simple compositions",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.7.1.1",
+                      "description": "Find, read and copy sentences from a given substitution tables",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have a simple 3-4 column substitution table on the board."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners identify the words that make up the table."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "With examples, guide learners to form oral sentences from the substitution table."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners write their sentences."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Ask pairs to do peer editing."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Invite learners to read out their sentences to the class for feedback."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.4.7.1.2",
+                      "description": "Write a simple composition using a substitution table",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Write a simple and short composition in a substitution table and have learners copy this out."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Using Think-Pair-Share, have learners read their compositions."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.4.7.1.3",
+                      "description": "Match parts of sentences to compose meaning texts",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Demonstrate the activity."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners rearrange jumbled parts of sentences to make meaningful texts."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners read their sentences to the class for feedback."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.12",
+              "title": "Descriptive Writing",
+              "description": "Demonstrating knowledge of description in writing.",
+              "orderIndex": 12,
+              "contentStandards": [
+                {
+                  "code": "B1.4.12.1",
+                  "description": "Demonstrate Knowledge of description in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.12.1.1",
+                      "description": "Use words and simple sentences to describe self",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Model describing yourself in 2-3 simple sentences using simple descriptive words."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Write some descriptive words and discuss them with learners."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Through questions, have pairs of learners describe themselves to each other. e.g. What is your name? My name is... How old are you? I am..."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Assist learners to write out their sentences."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.5",
+          "title": "Using Writing Convention/Grammar Usage",
+          "description": "Applying grammar rules and conventions in writing.",
+          "orderIndex": 5,
+          "subStrands": [
+            {
+              "code": "B1.5.1",
+              "title": "Using Capitalisation",
+              "description": "Applying capitalisation rules.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B1.5.1.1",
+                  "description": "Apply knowledge of capitalisation in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.1.1.1",
+                      "description": "Write capital letters correctly",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Through pick and write activity, revise writing of capital letters with learners."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.5.1.1.2",
+                      "description": "Use capital letters at the beginning of titles and names of people",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Demonstrate knowledge of capital letters and invite individuals to write names with capital letters on the board."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Assist learners to write their names. Let them begin with capital letters, e.g. Kofi, Ama, Samuel, Sule."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Lead learners to write titles of people. e.g. Mr Badu, Mrs Darko."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.5.1.1.3",
+                      "description": "Use capital letters to write other proper nouns",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let them write the names of towns and particular places they are familiar with, beginning with capital letters, e.g. names of schools, Adukrom Primary School."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.5.4",
+              "title": "Using Action Words",
+              "description": "Applying knowledge of action words in communication.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B1.5.4.1",
+                  "description": "Apply knowledge of action words in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.4.1.1",
+                      "description": "Use the present tense of verbs to describe habitual actions",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce the activity and tell learners two things you do daily."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put learners in groups to talk about the things they do everyday: e. g. I wash my face every morning."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Write the two things you do in two simple sentences and read it out to learners."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have each learner write two of the habitual things they do. You may assist them with spelling."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Invite each of them to present their work to the class for the class to react to the presentations."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.5.4.1.2",
+                      "description": "Use the present tense of verbs to express the present state of things or situations",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce the activity and demonstrate it."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Guide learners with questions to describe the state of given things or situations, e.g. My bag is red."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.5.4.1.3",
+                      "description": "Use the present tense continuous form of verbs",
+                      "orderIndex": 3,
+                      "exemplars": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

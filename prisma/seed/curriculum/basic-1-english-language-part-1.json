@@ -1,0 +1,619 @@
+{
+  "part": "1/4",
+  "phase": "Lower Primary",
+  "level": "Basic 1",
+  "subject": "English Language",
+  "name": "Basic 1 English Language",
+  "slug": "basic-1-english-language",
+  "orderIndex": 1,
+  "description": "The Basic 1 English Language curriculum focuses on developing foundational skills in listening, speaking, reading, and writing. It adopts an integrated, thematic approach to help learners acquire effective communication skills, appreciate values, and develop core competencies like critical thinking and collaboration.",
+  "strands": [
+    {
+      "code": "B1.1",
+      "title": "Oral Language (Listening and Speaking)",
+      "description": "Developing listening and speaking skills through songs, rhymes, storytelling, dramatisation, conversation, and presentation.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B1.1.1",
+          "title": "Songs",
+          "description": "Demonstrating understanding of a variety of songs.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.1.1.1",
+              "description": "Demonstrate understanding of a variety of songs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.1.1.1",
+                  "description": "Listen to and sing familiar songs with appropriate expressions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners identify some familiar songs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners sing familiar songs and clap, tap and or dance to the rhythm."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners answer a variety of questions on the songs."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the moral lesson in the songs with learners."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.2",
+          "title": "Rhymes",
+          "description": "Appreciating a variety of literary pieces through rhymes and tongue-twisters.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B1.1.2.1",
+              "description": "Appreciate a variety of literary pieces",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.2.1.1",
+                  "description": "Listen to and recite rhymes and tongue-twisters with accompanying actions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners recite familiar rhymes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Introduce new rhymes by performing them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to echo-read the rhymes."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners recite the lines in groups/pairs and as individuals, as they tap or clap to the rhythm."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Guide learners to identify rhyming words and teach the accompanying actions."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Note: Recycle the rhymes in the next few days for learners to memorise them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.3",
+          "title": "Story Telling",
+          "description": "Responding to stories, identifying characters, and retelling stories.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B1.1.4.1",
+              "description": "Respond to stories",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.3.1.1",
+                  "description": "Listen to stories and be able to identify characters with their roles",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Mount appropriate story pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to tell the story logically, using the pictures at each stage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Pause and show pictures for learners to ask questions or answer questions to predict the next stage."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners retell the story in a chain, using the pictures, if necessary."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Tell learners your personal response and guide them to do same. e.g. i. Why do you like the story? ii. I like the story because... iii. Which part do you like best? iv. I like where..."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.4.1.2",
+                  "description": "Retell short stories",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures to guide learners to retell a story told in class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners follow the pictures to retell the story logically/sequentially."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners tell other stories they know."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let storyteller pause for others to sing any appropriate song."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.5",
+          "title": "Dramatisation and Role-Play",
+          "description": "Performing stories through dramatisation.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B1.1.5.1",
+              "description": "Perform stories",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.5.1.1",
+                  "description": "Dramatise stories heard",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Begin the lesson with the narration of a familiar story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Have learners identify the characters in the story and their roles."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Have learners role-play some specific characters in groups."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners talk about theirs and others' roles."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.6",
+          "title": "Conversation",
+          "description": "Talking about Oneself, Family, People, Places, Greetings, Customs, Events, Social/Cultural Values, Manners and other Themes.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B1.1.6.1",
+              "description": "Use certain culturally acceptable language for communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.6.1.1",
+                  "description": "Use appropriate greetings for different times of the day",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise daily greetings by having learners identify greeting times in the day. e.g. Morning-Good morning, Afternoon-Good afternoon, Evening-Good evening."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the correct responses to these greetings."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners take turns to demonstrate greetings at different times of the day and also practise the appropriate responses."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the importance of greetings."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.6.1.2",
+                  "description": "Describe the home, people or places",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Welcome children and have them sit in a semi-circle. Greet them and introduce the topic for discussion. Use the Community Circle Time Strategy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners are provided with an opportunity to interact freely with the teacher and peers, starting with greetings."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Have learners use appropriate responses and non-verbal language (body language and facial expression) as they greet each other."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Show pictures of homes, people and places and have learners think-pair-share their observation with the person sitting next to them and with the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.6.1.3",
+                  "description": "Talk about their school and places in the school",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the Community Circle Time Strategy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures of their school and places in the school (the library, the computer lab, the headmaster's office, the playing field etc.)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Have learners think-pair-share ideas/views about the pictures in pairs and then with the large group."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Have learners talk about the activities that go on in these places and their importance to the individual."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.6.1.4",
+                  "description": "Use a wide variety of words to describe different situations and events",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a conversational poster on different situations/events."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Have learners think-pair-share, looking at the various illustrations on the poster."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Have them use expressions learnt and other new ones to describe the situations and events."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Have learners, working in groups, role-play the situations and events on the poster."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.1.6.2",
+              "description": "Use culturally acceptable language for communication (Engagement)",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B1.1.6.2.1",
+                  "description": "Engage in collaborative conversation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners, working in groups, talk about some common places in the school (e.g. canteen, head teacher's office, library, etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners, with questions, to talk about the places and their importance."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners identify the importance of the places listed above."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In pairs/small groups, let learners engage in conversations on specific topics."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.6.2.2",
+                  "description": "Talk about likes and dislikes: food, animals, toys, etc.",
+                  "orderIndex": 2,
+                  "exemplars": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.7",
+          "title": "Listening Comprehension",
+          "description": "Using appropriate skills and strategies to process meaning from texts.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B1.1.7.1",
+              "description": "Use appropriate skills and strategies to process meaning from texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.7.1.1",
+                  "description": "Listen to and reproduce narrative texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Before Reading: Activate the previous knowledge of the learners by making them think-pair-share with their friends, the cover illustrations and pictures accompanying the story. Have them predict the story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "During Reading: Read a story. Pause at vantage points and have learners talk about the content of the text."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "After Reading: Have the learners answer simple questions based on the text. Have them role-play the events in the story."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.7.1.2",
+                  "description": "Recognise and relate the sequence of events in a narrative text",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a narrative text aloud to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Put learners in pairs/groups to identify and talk about the parts of the story (e.g. beginning, middle and ending)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.7.1.3",
+                  "description": "Recognise and discuss characters in a story",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a story aloud to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Have them discuss, in pairs/small groups, the main and minor characters in the story."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Have groups/pairs share their views with the whole class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.7.1.4",
+                  "description": "Listen to and produce descriptions of pictures and objects (e.g. vehicles, animals)",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures of common objects and animals to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Have learners think-pair-share what they see in the picture."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Have them describe, in groups/pairs, the pictures to one another in turns."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.8",
+          "title": "Asking and Answering Questions",
+          "description": "Demonstrating understanding in asking and answering questions.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B1.1.8.1",
+              "description": "Demonstrate understanding in asking and answering questions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.8.1.1",
+                  "description": "Use appropriate pronunciation and intonation in asking and answering Yes/No questions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate Yes/No questions and their responses."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Drill learners on the questions and responses."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let pair of learners ask and answer questions, e.g. Pupil A: Is this a book? Pupil B: Yes, it is / No, it isn't."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.8.1.2",
+                  "description": "Use appropriate pronunciation and intonation in asking and answering Wh-questions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise Yes/No questions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners identify some objects in the class (e.g. board, bag, chair, etc.) and use them in asking simple questions, e.g. Should I clean the board? Is that your chair? Do you have a pencil in your bag?"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Introduce Wh-questions in context. e.g. i. What is this? ii. What is your name? iii. How old are you? iv. How are you?"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Pair learners to ask and answer questions."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Note: Yes/No questions use rising intonation and Wh is falling intonation. However, answers for both use the falling intonation."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.9",
+          "title": "Giving and Responding to Commands, Instructions, Directions and Making Requests",
+          "description": "Demonstrating understanding in commands, instructions, directions and requests.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B1.1.9.1",
+              "description": "Demonstrate understanding in commands, instructions, directions and requests",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.9.1.1",
+                  "description": "Give and respond to commands and instructions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give commands and instructions to learners. e.g. Command: Keep quiet. Hands up. Sit down. Bring your books. Start work, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Pair learners to give/obey commands."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Have learners listen to simple instructions and act in response."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners practise by giving commands in pairs, etc. e. g. Instructions: Draw a circle. Draw a triangle in the circle. Draw a square in the triangle. Response: [Learners draw according to instructions]"
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.9.1.2",
+                  "description": "Make and respond to polite requests using the word \"Please\"",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate knowledge of requests and their responses. Let learners respond to requests using; yes, ok, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Pair with learners to take turns to make and respond to polite requests. e.g. Please give me your pencil. A: May I use your pen? B: Yes/No. Let them change roles."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.1.10",
+          "title": "Presentation",
+          "description": "Planning and presenting information and ideas for a variety of purposes.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B1.1.10.1",
+              "description": "Plan and present information and ideas for a variety of purposes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.10.1.1",
+                  "description": "Identify audience and purpose of presentation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners to do \"show and tell\" to introduce a friend to his/her parents at his/her birthday party."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create more scenarios for learners to introduce their friends. Note: Introduce expressions like \"Hello, meet my Dad\", etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.10.1.2",
+                  "description": "Generate and select ideas on a given topic for presentation e.g. My father, My friend, etc",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce the activity and as learners listen and observe, talk about the topic, e.g. \"My friend\". Briefly discuss your presentation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners take turns to talk about their friends."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Encourage others to ask questions after each presentation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.10.1.3",
+                  "description": "Speak with confidence before different audiences, e.g. small group, class, etc",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners draw members of their nuclear family."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Through think-pair-share strategy, let learners show and talk about their family members in pairs, smaller groups and as a class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use probing questions to have learners talk more about their family members. e.g. i. Who is this one? ii. Why did you draw him or her first? Encourage shy learners to speak."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

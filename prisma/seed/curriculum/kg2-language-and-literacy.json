@@ -1,0 +1,1983 @@
+{
+  "phase": "KG",
+  "level": "KG2",
+  "subject": "Language and Literacy",
+  "name": "KG2 Language and Literacy",
+  "slug": "kg2-language-and-literacy",
+  "orderIndex": 1,
+  "description": "The KG2 Language and Literacy curriculum builds upon KG1 foundations, focusing on advanced oral language, print concepts, phonological awareness, and early writing. It emphasizes blending sounds, recognizing sight words, reading simple sentences, and creating texts using the Language Experience Approach (LEA) within integrated thematic strands.",
+  "strands": [
+    {
+      "code": "K2.1",
+      "title": "All About Me",
+      "description": "Expanding language skills through self-identity, internal body functions, hygiene, and safety.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "K2.1.1",
+          "title": "I am a wonderful and unique creation",
+          "description": "Describing self and unique features using positive language.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.1.1.1",
+              "description": "Demonstrate the understanding that all learners are wonderful and have unique body features that make them different from other people and other God's creation in the environment.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.1.1.1",
+                  "description": "Identify and describe in simple sentences (using home language), the wonderful features of our body that make us unique and different from other God's creation.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "With learners seated in a big semi-circle in the classroom, engage learners in active interaction about the theme using a 'pass a ball' game. Let them use positive language to appreciate themselves and describe how wonderful God has created them."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.2",
+                  "description": "Recognize and describe the different parts of book, (the front/ cover page of a book and back of a book) and relate the content of the text to our body parts.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "As part of the process of the daily read aloud lesson, have learners talk about the front/cover and the back page of a book, and ask them to make connections to their own body."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.3",
+                  "description": "Use positive words learnt from the Shared reading of the Big Book to talk about how wonderful and unique they are",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Shared reading of a Big Book. Do a picture walk through the text. Learners interact with each other and share their personal comments freely on the theme. Learners relate the characters in the story to their lives."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.4",
+                  "description": "Begin to Identify and randomly recognize the letter sound in their names and match it with another pair.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sing an alphabet song while pointing to the letters on the wall. Teacher creates two name cards for each pupil. Play a game where you show up a name tag and the child who has a similar tag runs to you."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.5",
+                  "description": "Identify and recognize individual letter-sounds in words related to the theme and write the words in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise the letter sounds learnt so far. Introduce a tongue twister or a rhyme. Introduce the letter by writing the capital and lowercase boldly. Teacher models writing the letter in the air, learners take turns writing in the air and then on friends' back. Learners write the letter sound and its key word in their exercise book."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.1.1.6",
+                  "description": "Draw any two parts of the body that you like and write the names underneath",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners draw their favourite part and colour it nicely, after which they turn and talk to another child sitting next to them why they like that part."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.2",
+          "title": "The parts of the human body (both external and internal) and their functions",
+          "description": "Vocabulary and comprehension regarding internal body parts.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.1.2.1",
+              "description": "Demonstrate the knowledge of appropriate names of the parts of the internal body that we cannot see and their functions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.2.1.1",
+                  "description": "Using a conversational poster of body parts, learners talk about the parts of the human body that we can see and cannot see.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, ask learners to observe themselves and identify parts they cannot see. Have each child put their hands on the left chest and observe themselves. Put up a Conversational poster showing important internal body parts (brain, stomach, chest, heart, intestines)."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.2",
+                  "description": "identify and share the function of the invisible parts of the body as learners listen attentively to the Teacher-read aloud text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the KWL strategy as you read the informational text. K-What do you know about the functions of invisible body parts. W-Ask learners what they want to know. L-Read to them and ask them to share what they have learnt."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.3",
+                  "description": "Apply new words acquired from the read aloud text to own life.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners are encouraged to form simple sentences with words leant from the text read to them related to the main theme. Example: The Stomach stores and digests the food we eat."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.4",
+                  "description": "Identify and recognize individual letter-sound in words related to the theme and write the words in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Introduce tongue twister. Introduce letter writing (capital and lowercase). Teacher models writing in the air, learners practice in air and on friends' back, then write in exercise books."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.5",
+                  "description": "Sing an action song that helps you name the parts of the body and point to them",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sing different songs in their local language and/or in the English language that identify parts of the body and perform actions on it. E.g. Head, shoulders knees and toes."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.2.1.6",
+                  "description": "Draw themselves and label the parts of the body",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners draw themselves and label the parts of the body in a drawing book. Write a simple sentence about yourself using invented writing."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.3",
+          "title": "Personal hygiene and caring for the parts of the body",
+          "description": "Oral language and print awareness related to hygiene.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.1.3",
+              "description": "Demonstrate understanding of personal hygiene and care of the human body.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.3.1.1",
+                  "description": "Learners use simple language to describe and engage in conversation about how to care for different part of their bodies.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sit in a semi-circle, sing a song (This is the way I brush my teeth), ask and answer questions and call out parts of the body mentioned in the song."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.2",
+                  "description": "Talk about the visual information on the cover page and respond to a read aloud text about caring of the human body.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show and explain visual information at the front of a book. Use KWL strategy to read informational text. Have learners act out key words from the text."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.3",
+                  "description": "Identify the rhyming sounds at the end of words and create more rhyming end of words",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sing action songs and rhymes related to care of the body and repeat sounds they hear at the end of sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.4",
+                  "description": "Begin to learn the letter of the alphabet, randomly recognize the individual letters in their names and match it with another pair.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sing alphabet song pointing to letters. Play a name tag game where learners pick up their name tags and peg it unto the one on the line."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.5",
+                  "description": "Begin to learn and Identify individual letter-sound of the alphabet in key words related to the theme and write the letters and key words legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Introduce tongue twister. Introduce letter writing. Teacher models writing in air, learners practice on friends' back/arms, then write in exercise book."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.3.1.6",
+                  "description": "Draw and colour items we use in caring for parts of the body and copy their functions boldly and legibly underneath the drawing.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners prepare their own dictionary by drawing and colouring items we use to care of our body and copy their names from the chalk/whiteboard."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.4",
+          "title": "Eating good food and taking my vaccinations to keep my body healthy",
+          "description": "Vocabulary, phonics, and comprehension regarding health.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "K2.1.4.1",
+              "description": "Demonstrate the understanding and knowledge of keeping our bodies healthy by eating good food and visiting the hospital when sick",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.4.1.1",
+                  "description": "Talk about how to keep our bodies healthy by eating balanced meal and visiting the hospital for our vaccinations.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Engage learners in active interaction about food items to keep healthy. Show a chart on balanced diet and conversational poster. Let learners contribute to the good food we eat."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.2",
+                  "description": "Answer questions during and after listening to the interactive read aloud on the theme and show how the visual information help readers understand print.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teacher shows pictures while reading text on balanced diet/diseases. Explain how illustrations help understand unfamiliar words. Learners answer comprehension questions and act out key words."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.3",
+                  "description": "Break the sound in a multi-syllabic word and clap out the syllables and blend them again as one word.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select long words related to theme (e.g. Vaccination). Learners stretch words, identify and count syllables through clapping, then blend sounds. Practice with words like tuberculosis."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.4",
+                  "description": "Identify and use more sight words found in the text of the six killer diseases and write simple sentences with them in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain sight words. Learners identify sight words in text. Learners identify sight words on flash cards. Use sight words to form simple sentences orally and in writing."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.5",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week. Model writing in air, practice on arms/backs, then write on blue and red lines in exercise books."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.4.1.6",
+                  "description": "Draw and colour different food items that keep our body healthy and label them using invented spelling.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners freely draw food items of their choice into their Self-Dictionary colour it nicely and label them. Teacher supports by writing names on board."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.5",
+          "title": "My Environment and My Health that help me",
+          "description": "Language skills focused on environmental safety.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "K2.1.5",
+              "description": "Demonstrate understanding of the environment and how to keep it safe",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.5.1.1",
+                  "description": "Take a walk in the environment, discuss and point to things that are safe and unsafe to play with.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Display conversational poster on Pollution. Discuss how environment affects health. Take nature walk to observe state of environment. Discuss importance of cleanliness."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.2",
+                  "description": "Learners ask questions and find answers to them as they listen attentively to the text read aloud to them.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show book on environment, identify cover/back page, illustrator, author. Read big book aloud (e.g. Adzoa has malaria). Discuss actions to take not to get sick."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.3",
+                  "description": "Identify the initial and ending sounds of names of objects in the environment; clap the syllables on selected words related to harmful objects around us.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify the initial, middle sounds of names of objects around us. E.g. sand: initial sound -/s/, ending sound- /d/."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.4",
+                  "description": "Blend letter-sounds learnt to form simple words related to the topic and copy the word in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners are guided to blend letter sounds to form words related to the theme. E.g. /c//u//t//l//a//s//s/ -cutlass. Learners copy words in exercise books using red and blue lines."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.5.1.5",
+                  "description": "Draw and label some dangerous objects in the environment.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using a picture, guide learners to draw and label some objects found in the environment. e.g. knife, banana peel, socket."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.1.6",
+          "title": "Protecting ourselves from road accidents and harmful strangers",
+          "description": "Vocabulary and literacy related to safety.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "K2.1.6.1",
+              "description": "Demonstrate understanding of how to be safe and identify strangers.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.1.6.1.1",
+                  "description": "Role-play, sing songs and discuss some of the safety measures to protect ourselves in the environment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Display conversational poster and materials. Engage learners in discussion. Have learners role-play various safety measures and sing songs alongside (traffic light song)."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.6.1.2",
+                  "description": "Identify the basic components, show and explain why learners' books are open from left to right and respond to a shared reading of a book related to the theme.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Scaffold learners to identify basic components of a book. Use KWL strategy for reading informational text. Pick key words to act out. Read aloud opening from left to right."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.6.1.4",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week. Model writing in air, learners practice on friends' back/arms, then write in exercise books on blue/red lines."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.1.6.1.5",
+                  "description": "Draw and colour an object that can hurt, harm, have a sharp edge, etc. and legibly write/scribe the name under it.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners think-pair-share on what to draw. Draw a scene of choice (e.g. child running from stranger), colour it and talk about it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.2",
+      "title": "My Family",
+      "description": "Developing literacy through family history, roles, and celebrations.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "K2.2.1",
+          "title": "Types and members of my Family",
+          "description": "Vocabulary and phonics related to family.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.2.1",
+              "description": "Demonstrate understanding of the rights, roles and responsibilities of family members",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.2.1.1.1",
+                  "description": "Say a poem about the family, talk about and discuss the rights and roles of the members.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Display conversational poster (Extended Family). Engage learners in discussion. Learners name family members and discuss rights and roles."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.2",
+                  "description": "Talk about the important roles and responsibilities of every family member and practice proper way of opening books from left to right.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show learners books about family, scaffold opening from left to right. Use KWL strategy to read informational text. Learners share what they learnt."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.3",
+                  "description": "Identify the initial sounds in the name of every family member and clap the syllables in the names of the family members and other key words.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention names of family members. Identify sounds that begin the names. Clap syllables. Identify letter sounds of family members (e.g. father - /f/)."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.4",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.1.1.5",
+                  "description": "Design a collage or family tree using pictures and follow basic concepts of writing, from left to right and top to bottom to write the names of family members",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners design a family tree with cutting and pasting. Warm up fingers. Teacher models writing letter. Learners write letter and keyword in exercise books on blue and red lines."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.2",
+          "title": "Origin and Family History",
+          "description": "Oral history, reading comprehension, and sight words.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.2.2.1",
+              "description": "Demonstrate understanding of the origin and history of our families and the languages spoken.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.2.2.1.1",
+                  "description": "Sing indigenous songs, talk about and discuss the origin and history of the learners' family.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community circle time: Sing indigenous songs. Talk about home language and family names. Discuss family background, origin, history, and food."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.2",
+                  "description": "Identify who an author, illustrator and title is and answer \"wh\" questions during and after listening to the read aloud text on the history of a family to learners.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using a narrative story (Family Picture), identify author/illustrator. Predict story. Read aloud using Herringbone strategy (answering who, what, where, how, why questions)."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.3",
+                  "description": "Read level appropriate sight words relating to the origin and history of a family.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify high frequency words in text (e.g. brother, sister). List on board. Pronounce words. Read words in big book and on flash cards. Write words in word banks."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.4",
+                  "description": "Say and clap syllables of the various tribes and languages.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to say and clap syllables in names related to theme (e.g. E-we). Use letter sounds to decode words."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.5",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.2.1.6",
+                  "description": "Tell a story and dramatize the history of different families",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Invite resource person to tell stories of origin. Learners retell stories. Dramatize origin stories in costume. Sing traditional songs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.3",
+          "title": "Family Celebrations and Festivals",
+          "description": "Reading and vocabulary related to celebrations.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.2.3.1",
+              "description": "Demonstrate understanding of importance of the activities that we engage in during festivals and family celebrations.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.2.3.1.1",
+                  "description": "discuss importance of activities we engage in during festivals and family celebrations and sing folk tunes and religious songs.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community circle time: Discuss theme. Display poster on Celebration. Discuss activities, costumes, and religious festivals."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.2",
+                  "description": "Use the cover page and title to predict what happens in a story, listen and answer simple \"wh\" questions on the read aloud text about the theme",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using narrative story, predict text. Listen to read aloud. Answer 'wh' questions using Herringbone strategy."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.3",
+                  "description": "Read level appropriate sight words relating to celebration and festival of a family automatically.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow steps in learning sight words. Focus on five sight words per week."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.4",
+                  "description": "Identify the initial sounds, clap and count the number of syllables in different words related to festivals and celebrations",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List names of festivals/celebrations. Identify syllables by clapping. Identify/write beginning letter sounds."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.3.1.5",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week. Write letter names beginning family celebrations in exercise books on blue/red lines."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.2.4",
+          "title": "My School Family",
+          "description": "Literacy skills focused on school rules and vocabulary.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "K2.2.4.1",
+              "description": "Demonstrate understanding of the rules and regulations for learners and teachers at school.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.2.4.1.1",
+                  "description": "Talk about and discuss the rules and regulations that guide us to live as good friends in the school family",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display conversational posters (In the classroom, At the library). Discuss theme, members of school family, and rules. Come up with simple rules."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.4.1.2",
+                  "description": "Use visual information (illustrations) and title of Big book to make predictions and answer simple \"wh\" questions about the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Predict story from cover. Read story. Use Herringbone strategy to answer 'wh' questions."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.4.1.3",
+                  "description": "Use vocabulary acquired to form sentences related to the theme.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List new vocabulary on word cards. Practice pronunciation. Use words to construct simple sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.4.1.4",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound. Write in air/arms and in ruled books."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.2.4.1.5",
+                  "description": "Trace, colour and label a picture of an object in the school which communicates rules.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify objects communicating rules (e.g. bell, drum). Draw and label it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.3",
+      "title": "Values and Beliefs",
+      "description": "Literacy development integrated with personal and cultural values.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "K2.3.1",
+          "title": "My Personal Values",
+          "description": "Communicating personal likes and dislikes.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.3.1.1",
+              "description": "Demonstrate understanding of their personal value in relation to their likes and dislikes.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.3.1.1.1",
+                  "description": "Engage in a conversation about what we like and don't like with our friends and discuss more cultural values that should influence the way we live among people.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time. Pair learners to discuss likes/dislikes. Role play conversation. Discuss culturally sound values."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.1.1.2",
+                  "description": "Use illustrations on the cover page and title of Big book to make predictions and answer simple \"wh\" questions about the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow Herringbone strategy procedure. Read traditional story (e.g. The Cat's Hat). Share learnings. Act out new words. Create meaningful sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.1.1.3",
+                  "description": "Randomly identify letters of the alphabet and recognize them in words and names related to the theme and clap the syllables,",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play game 'Listen to the sound, pick the letter and a word...'. Listen to word, find beginning letter, find word with sound, pronounce and clap syllables."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.1.1.4",
+                  "description": "Write or copy words related to the theme in a self dictionary or journal.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use word cards to identify and read key words by sight. Copy words into self-dictionary and draw picture."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.2",
+          "title": "My Cultural Values",
+          "description": "Reading and vocabulary regarding cultural virtues.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.3.2.1",
+              "description": "Demonstrate understanding of the virtues, good manners and behaviour patterns our community values and why.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.3.2.1.1",
+                  "description": "Recognize and use appropriate facial expressions, gestures and body language that convey meaning to accompany greetings.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Display conversational poster on Greetings. Discuss how we greet/why/body language. Role play greetings."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.2.1.2",
+                  "description": "Use illustrations on the cover page and title of Big book to make predictions and answer simple story map questions on the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Predict story. Read aloud. Use Story Map strategy (setting, characters, problem, resolution). Repeat new words. Construct short sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.2.1.3",
+                  "description": "Randomly identify letters of the alphabet and recognize them in words and names related to the theme and clap the syllables.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play game 'Listen to the sound, pick the letter and a word...'."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.2.1.4",
+                  "description": "Read, use and copy daily greetings and some culturally appropriate and polite language in their self-dictionary/note book.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List greetings/polite words on board. Read key words. Pair up to use words. Copy into self-dictionary."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.3",
+          "title": "My National and Civic Values",
+          "description": "Reading and vocabulary regarding civic duties.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.3.3.1",
+              "description": "Demonstrate understanding of the values and virtues we need to exhibit as Ghanaian learners.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.3.3.1.1",
+                  "description": "Brainstorm good behaviours and acceptable practices that we should exhibit as Ghanaian learners.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Display conversational poster. Share thoughts on good behaviours. Dramatize appropriate behaviour (greeting, hospitality, politeness)."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.3.1.2",
+                  "description": "Use illustrations on the cover page and title of Big book to make predictions and answer simple story map questions about the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Predict story. Read aloud narrative (e.g. On Kwame Nkrumah). Use Story Map strategy to answer questions."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.3.1.3",
+                  "description": "Use new vocabulary acquired to create their own drama on how to show themselves as patriotic citizens of their country.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss/list civic values. Use words to create short drama (e.g. police catching thief, truthfulness). Discuss respect for National Anthem."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.3.1.4",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.3.4",
+          "title": "Our Beliefs",
+          "description": "Vocabulary and reading about diverse beliefs.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "K2.3.4.1",
+              "description": "Demonstrate understanding of relating well with people with different beliefs.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.3.4.1.1",
+                  "description": "Describe why and how to relate well with everyone regardless of their culture, language or belief.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Display poster/materials. Discuss different people we live with and appropriate behaviour. Sort/group learners by tribe/language, then pick friend from different group to exchange pleasantries."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.4.1.2",
+                  "description": "Use illustrations in a Big book to make predictions and answer simple story map questions about the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Picture walk. Predict story. Read narrative (Little David and Goliath). Use Story Map strategy. Write level appropriate words."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.4.1.3",
+                  "description": "Read level-appropriate sight words from the big book",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display sight words on cards. Guide learners to read. Find words in big book. Use words to form sentences. Copy words. Write content vocabulary."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.3.4.1.4",
+                  "description": "Connect spoken words and sounds to letters in a playful way.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Practice letter ladder-game. Draw grid with letters on floor. Divide class into groups. Read sound/word, volunteer hops on letter."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.4",
+      "title": "My Local Community",
+      "description": "Literacy focused on community places, people, and leaders.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "K2.4.1",
+          "title": "Knowing the Special Places in My Community",
+          "description": "Reading and vocabulary regarding community locations.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.4.1.1",
+              "description": "Demonstrate understanding of the special places in our local community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.4.1.1.1",
+                  "description": "Talk about familiar, places, things and events with prompting and support.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Display conversational poster of special places. Discuss places (chief's house, market, etc.). Field trip to chief's palace/police station. Share learnings."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.1.1.2",
+                  "description": "Listen attentively to a read aloud of an informational text about special places and participate actively in the KWL reading technique asking and answering one's own questions.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow KWL technique (Know, Want to know, Learnt) with informational text."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.1.1.3",
+                  "description": "Read level-appropriate sight words from the big book",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display/read sight words. Find in big book. Form sentences. Copy words. Write content vocabulary."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.1.1.4",
+                  "description": "Recognize at least 50% of the letter sounds of the alphabet",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play Alphabet Relay Game. Teams compete to write small and capital letters on board."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.1.1.5",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.4.2",
+          "title": "Knowing (Who) the Important People / Occupation in My Community",
+          "description": "Vocabulary and reading about occupations.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.4.2.1",
+              "description": "Demonstrate understanding of knowing the important people / occupation in our community.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.4.2.1.1",
+                  "description": "Talk about and discuss the various occupations in our community.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Community Circle time: Display conversational poster. Discuss occupations in vicinity. Show pictures. Indicate preferred occupation."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.2.1.2",
+                  "description": "Listen attentively to the teacher-read-aloud of the big book which relates to the theme, track words and share lessons learnt on the theme of the week.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow KWL strategy with informational text. Check K, W, L. Share learnings. Draw chosen profession and match with sentence."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.2.1.3",
+                  "description": "Use vocabulary acquired from the week to compose oral composition about their future profession and write simple sentences which relates to the theme in their word bank.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Dress up in career uniform, dramatize and describe career using vocabulary. Talk about preferred occupation."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.2.1.4",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.4.3",
+          "title": "Knowing the Special Leaders in Our Community and Country",
+          "description": "Reading and phonics regarding leaders.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.4.3.1",
+              "description": "Demonstrate understanding and knowledge of the special leaders in our community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.4.3.1.1",
+                  "description": "Talk about and describe the roles of the political, traditional and religious leaders in our community.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Theme discussion: Community circle time. Display poster. Discuss political, traditional, and religious leaders."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.3.1.2",
+                  "description": "Listen attentively to the teacher-read-aloud of the big book (The Chief) which relates to the theme, track words and share lessons learnt on the roles of the chiefs.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow KWL strategy with informational text (Chiefs and Queen mothers). Check K, W, L."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.3.1.3",
+                  "description": "Use key words about the theme to create meaningful sentences in real life situation.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List keywords (fly whisk, durbar, etc.). Learners identify words and form sentences. Dramatize roles."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.4.3.1.4",
+                  "description": "Blend individual letter-sound to form one syllabic words.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teach blending using a game. Teacher writes letters, points slowly, blends sounds. Pupils Blending: two pupils hold cards and move together."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.5",
+      "title": "My Nation Ghana",
+      "description": "Literacy centered on national history and identity.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "K2.5.1",
+          "title": "History and Celebrations of Ghana",
+          "description": "Reading, writing, and phonics about Ghana.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.5.1.1",
+              "description": "Demonstrate understanding of history and celebrations of Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.5.1.1.1",
+                  "description": "Learners talk about activities that are done during 6th March Celebration and listen to historical stories about Ghana`s Independence.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Theme discussion: Use KWL strategy. Discuss 6th March. Resource person shares ideas/reads book. Learners share learned info (L). Sing National Anthem."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.2",
+                  "description": "Interact actively with teacher during the Shared reading of the text on celebration of Independence Day and other national celebrations of the country.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow read aloud procedure of KWL. K-Ask learners what they know. W-Share what they want to know. Read book, pausing to find answers."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.3",
+                  "description": "Use the new vocabulary learnt about the Independence Day celebration to construct simple sentences and copy them correctly into their journal or self-dictionary of pictures and words.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use new sight and content vocabulary to construct simple sentences orally. Dramatize activities (e.g. March past). Recite national anthem."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.4",
+                  "description": "Identify the beginning and ending rhyming sounds in words, delete and replace the rhyming sounds to get another rhyming pair.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give example of rhyming syllables. Learners repeat. Delete ending vowel and replace to make new syllable. Do for beginning sound. Manipulate sounds playfully."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.5.1.1.5",
+                  "description": "Connect letters to spoken words and identify letters in print",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play Practice ladder game of letters. Draw grid on floor. Divide class into groups. Call word, volunteer hops on beginning letter."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.6",
+      "title": "All Around Us",
+      "description": "Literacy development through exploring the physical and natural world.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "K2.6.1",
+          "title": "Living and Non-Living Things",
+          "description": "Reading and vocabulary about living/non-living things.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.6.1.1",
+              "description": "Demonstrate understanding of why some things are referred to as living and non- living things.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.1.1.1",
+                  "description": "Talk about different types of living and non-living things around us",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Theme discussion: Community circle time. Display poster/materials. Discuss living vs non-living. Nature walk to identify things. Classify things seen."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.1.1.2",
+                  "description": "Participate actively in the shared reading of the big book which relates to the theme, and share more lessons learnt on the theme of the week.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow KWL strategy. K-Share previous knowledge. W-Ask questions. Read and pause for answers. L-Share lessons learnt."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.1.1.3",
+                  "description": "Keep record of sight words and new content vocabulary learnt from the reading text on the theme.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List key words on board, learn pronunciation/meaning. Show words on cards, study spelling, use in sentences. Copy words in books."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.1.1.4",
+                  "description": "Recognize at least 75% of letter sounds in words",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play Alphabet Relay. Groups compete to write small and capital letters on board."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.1.1.5",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week. Look for words with new letter."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.2",
+          "title": "Living Things - Domestic and Wild Animals",
+          "description": "Language skills focused on animals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "K2.6.2.1",
+              "description": "Demonstrate understanding of the importance of domestic and wild animals.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.2.1.1",
+                  "description": "Talk about different types of animals that live at home and in the bush and how human being care for domestic animals.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Theme discussion: Community circle time. Display conversational poster. Discuss home vs bush animals. Discuss care for domestic animals."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.2.1.2",
+                  "description": "Listen to a shared reading on a traditional story on how some animals became domestic animals.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Picture reading/predicting. Decode words using illustration. Read aloud. Ask Story map questions. Brainstorm differences between domestic/wild animals."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.2.1.3",
+                  "description": "Create an informational text on different types of animals using a variety of new vocabulary learnt from the conversational poster on domestic animals.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use Language Experience Approach (LEA). Learners observe poster, create/dictate sentences. Teacher writes story on big sheet."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.2.1.4",
+                  "description": "Tap and clap and count the syllables of the names of animals and lines of the song.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Mimic animal sounds. Play song (Old Macdonald), sing along, mention animals, clap syllables. Clap parts of song lines. Count claps."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.2.1.5",
+                  "description": "Identify the letter-sound learnt for the week in words related to the theme and write the letter and key word boldly and legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach letter sound for the week. Teach blending to form one syllabic words (Pupils blending)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.3",
+          "title": "Water",
+          "description": "Reading and vocabulary regarding water.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "K2.6.3.1",
+              "description": "Demonstrate understanding that water is an important natural resource that helps all living things, human, plants and animals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.3.1.1",
+                  "description": "Discuss where we get water from, its importance to living things and how to care for water sources.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Theme discussion: Community circle time. Display conversational poster. Discuss sources of water. Recite poem/rhyme. Observe poster and dictate story or watch video. Use LEA to create text."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.3.1.2",
+                  "description": "Participate actively in the shared reading of the big book which relates to the theme, answer inferential questions, and demonstrate how sentences are written with spaces between the words",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use Big book (Thirsty Crow). Picture walk/guess. Read aloud. Ask Story map questions. Brainstorm importance of water."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.3.1.3",
+                  "description": "Use a variety of new vocabulary learnt about the sources and importance of water to all living things to create a text for reading using LEA",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use LEA to create informational text on Water. Learners dictate sentences. Teacher writes story. Add illustrations."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.3.1.4",
+                  "description": "Blend the letter-sounds learn so far into syllables, read and write the syllables boldly and legibly in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach blending individual letter sounds to form one syllabic words. Use Pupils blending process. Learners make own simple words and copy them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.4",
+          "title": "Air",
+          "description": "Literacy centered on air.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "K2.6.4.1",
+              "description": "Demonstrate understanding that air is all around us and it is an important and beneficial natural resource for all living things.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.4.1.1",
+                  "description": "Share their ideas with teacher and peers about the presence and importance of air to human being, animals and plants as they listen to a read aloud using an informational text.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Theme discussion: Community circle time. Display conversational poster/materials. Activities showing air is around. Share experiences. Nature Walk. Perform experiments."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.4.1.2",
+                  "description": "Use a variety of new vocabulary learnt about importance of air to create an informational text for reading using LEA",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use LEA to create informational text on Air. Learners observe conversational poster, dictate sentences, teacher scribes. Add illustrations."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.4.1.3",
+                  "description": "Participate actively in the teacher-read-aloud of the text on Air, share lessons learnt on the theme of the week and demonstrate that words have spaces in a sentence.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow KWL strategy. Read aloud informational text. Perform simple activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.4.1.4",
+                  "description": "Recognise and read 25% of sight words instantly and automatically",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use Practice Ladder-Sight words game. Draw grid with sight words. Divide class. Teacher reads word, volunteer hops on word."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.4.1.5",
+                  "description": "Blend the letter-sounds learnt so far into syllables, read and write the syllables boldly and legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Teach blending to form one syllabic words. Use Pupils blending process."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.5",
+          "title": "Plants - 1",
+          "description": "Vocabulary and reading about plants.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "K2.6.5.1",
+              "description": "Demonstrate understanding of the knowledge that there are different parts of plants and are important sources of food and medicine for other living things",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.5.1.1",
+                  "description": "Talk freely about different parts of a plants and their uses",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Theme discussion: Community circle time. Display conversational poster. Engage in discussion on parts of a plant. Observe pictures. Discuss uses."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.5.1.2",
+                  "description": "Use a variety of new vocabulary learnt about plants to create an informational text for reading using LEA",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use LEA to create informational text on Plants. Learners observe poster, dictate sentences, teacher writes."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.5.1.3",
+                  "description": "Participate actively in the teacher-read-aloud of the LEA text which relates to the theme, and share lessons learnt from the text.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow KWL strategy. Read aloud informational text. Learners share K, ask W, listen, share L."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.5.1.4",
+                  "description": "Recognise and read 25% of sight words instantly and automatically",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use Practice Ladder-Sight words game."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.5.1.5",
+                  "description": "Blend the letter-sound learnt so far into syllables, read and write the syllables boldly and legibly in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Revise blending one syllabic words. Teach blending monosyllabic words to form two syllabic words. Use Pupil blending process."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.6",
+          "title": "Plants - 2",
+          "description": "Literacy about plant growth.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "K2.6.6.1",
+              "description": "Demonstrate understanding of how plants grow and how they prepare their food.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.6.1.1",
+                  "description": "Share ideas about the things (Nutrients) plants need to grow well.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sing songs about plants. Theme discussion: Community circle time. Display conversational poster. Nature walk. Discuss nutrients. Experiments with plant growth."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.6.1.2",
+                  "description": "Use a variety of new vocabulary learnt about plants to create an informational text for reading using LEA",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use LEA to create informational text on Plants. Learners observe poster, dictate sentences, teacher writes."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.6.1.3",
+                  "description": "Participate actively in the teacher-read-aloud of the big book which relates to the theme, and share lessons learnt from the reading.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teacher reads Big Book, answer questions, use info to conduct experiments."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.6.4",
+                  "description": "Blend the letter-sounds learn so far into syllables, read and write the syllables boldly and legibly in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rapidly revise letter sounds. Revise blending. Teach blending monosyllabic words to form two syllabic words. Use Pupil blending process."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.7",
+          "title": "Types of Soil and Gardening",
+          "description": "Vocabulary and phonics regarding soil.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "K2.6.7.1",
+              "description": "Demonstrate understanding of types of soil we find around us and which one helps plant to grow well.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.7.1.1",
+                  "description": "Talk about different types of soil we find around us and which one is best used for gardening.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Say rhyme/sing songs. Community circle time. Display conversational poster. Discuss types of soil/uses."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.7.1.2",
+                  "description": "Participate actively in the teacher-read-aloud of the big book which relates to the theme, count words in a sentence and answer inferential questions on the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Before reading activities. Read aloud informational text. Answer questions. Count words in cut-up sentences and rearrange."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.7.1.3",
+                  "description": "Use a variety of new vocabulary learnt about soil to create an informational text for reading using LEA",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use LEA to create informational text on Soil and Gardening."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.7.1.4",
+                  "description": "identify the beginning sounds in words and practise creating new words through phoneme substitution.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify beginning letter sound in words. Delete beginning sound and replace with another. Prepare word wall."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.8",
+          "title": "Natural and Man-Made (Artificial) Sources of Light",
+          "description": "Reading and phonics about light.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "K2.6.8.1",
+              "description": "Demonstrate understanding of the knowledge that the different types of lights we use during the day or in the night can be classifies as of l into natural and manmade and its usefulness.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.8.1.1",
+                  "description": "Talk about the natural and artificial sources of light and what each is best used for.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Say poem. Community circle time. Discuss sources of light. Brainstorm sources. Classify as natural/man-made."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.2",
+                  "description": "Participate actively in the teacher-read-aloud of the big book which relates to the theme, count words in a sentence and answer simple questions on the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Before reading activities. Read aloud narrative story. Ask questions. Relate story to life. Count words in cut-up sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.3",
+                  "description": "Use a variety of new vocabulary learnt about the theme to create an informational text for reading using LEA",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use LEA to create informational text on types of light."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.4",
+                  "description": "Recognize instantly at least 75% of letter sounds in names of items in the environment by playing Letter Bingo games",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sing alphabet song. Play bingo game finding/ticking beginning letters."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.8.1.5",
+                  "description": "Use individual letter-sounds to form simple mono syllabic content and sight words.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give groups picture and letter cards. Form words matching picture."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "K2.6.9",
+          "title": "Changing Weather Conditions",
+          "description": "Literacy regarding weather.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "K2.6.9.1",
+              "description": "Demonstrate understanding of positive and negative effects of weather conditions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.6.9.1.1",
+                  "description": "Identify and describe the elements the different weather conditions.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learn rhyme. Community circle time. Display poster. Discuss weather elements."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.9.1.2",
+                  "description": "Participate actively in the shared reading of the big book which relates to the theme and answer simple questions on the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow KWL strategy. Read aloud. Answer questions. Discuss experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.9.1.3",
+                  "description": "Use a variety of new vocabulary learnt about the theme to create an informational text for reading using LEA",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use LEA to create informational text on changing weather."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.9.1.4",
+                  "description": "Read level appropriate content sight words and use them to form sentences and also copy them in their books.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show key words. Provide word chart. Scaffold reading/decoding."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.6.9.1.5",
+                  "description": "Recognize and identify most letter names and their sounds in different names of people from other cultures.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write names on cards. Play game finding names."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "K2.7",
+      "title": "My Global Community",
+      "description": "Literacy focused on global connections.",
+      "orderIndex": 7,
+      "subStrands": [
+        {
+          "code": "K2.7.1",
+          "title": "Connecting and Communicating with the Global Community",
+          "description": "Reading and vocabulary regarding global communication.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "K2.7.1.1",
+              "description": "Demonstrate understanding of the various ways we connect with the global world.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "K2.7.1.1.1",
+                  "description": "Sing or recite poems about the theme and discuss the various ways new connect with the outside world",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recite poem. Community circle time. Show globe/map. Discuss modes of transport and communication."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.2",
+                  "description": "Participate actively in the shared reading of the big book which relates to the theme and answer simple questions on the text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Follow KWL strategy. Read aloud. Answer questions. Share lessons learnt."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.3",
+                  "description": "Use a variety of new vocabulary learnt about the theme to create an informational text for reading using LEA",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use LEA to create informational text on ways we communicate."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.4",
+                  "description": "Identify sounds of letters and be able to write them",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play Alphabet Relay."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.5",
+                  "description": "Identify letter-sounds in key words about the theme and be able to write them in their books.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use flash cards to identify key words. Flash letter cards. Dictate words for writing."
+                    }
+                  ]
+                },
+                {
+                  "code": "K2.7.1.1.6",
+                  "description": "Sing songs from different cultures and languages (French songs) and perform actions on them.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learn and sing French songs. Learn names of days in other languages."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

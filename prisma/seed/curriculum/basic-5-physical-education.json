@@ -1,0 +1,478 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "Physical Education",
+  "name": "Basic 5 Physical Education",
+  "slug": "basic-5-physical-education",
+  "orderIndex": 1,
+  "description": "The Basic 5 Physical Education curriculum focuses on refining motor skills, applying movement concepts, assessing physical fitness, understanding fitness principles, and developing positive social values. It includes advanced locomotor and manipulative skills, strategies for games, fitness testing and planning, and the application of psychological and sociological concepts in physical activity.",
+  "strands": [
+    {
+      "code": "B5.1",
+      "title": "MOTOR SKILL AND MOVEMENT PATTERNS",
+      "description": "Developing competence in motor skills and movement patterns for various physical activities.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5.1.1",
+          "title": "LOCOMOTOR, MANIPULATIVE AND RHYTHMIC SKILLS",
+          "description": "Developing advanced locomotor, manipulative and rhythmic skills.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.1.1.1",
+              "description": "Demonstrate competence in the motor skills and movement patterns needed to perform a variety of physical activities (games, athletics gymnastics and dance)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.2.1.1",
+                  "description": "Walk on straight lines edges",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw a straight line on the floor for learners to walk on it. Learners walk as individually and in a groups under the watch of the teacher."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.2",
+                  "description": "Skip and leap continuously",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners bend their needs, push against the ground to skip and leap as many times as they can at their own pace in a demarcated area."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.4.1.3",
+                  "description": "Roll ball using a stick through obstacles (arranged cones)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Arrange ten cones in a straight form and zigzag. Learners roll balls through in turns."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.5.1.4",
+                  "description": "Perform simple small-group balance stunts by distributing weight and base of support",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learner stands straight and hold on to another person. Stand slowly on tip toe and move as high as possible and distribute body weight on toes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.5.1.5",
+                  "description": "Change direction quickly whiles walking with an object within obstacles but keep one's balance",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After general and specific warm ups, learners hold lime and spoon. Learners move on command through the obstacles whiles maintaining their balance and individuals in turns at their own pace."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.6.1.6",
+                  "description": "Striking a dropping light ball upward and forward to a teammate using the hands or feet",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners toss balls and swing their feet from behind to strike the ball to a partner at appropriate distance. Partners strike the ball back to continue the rally."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.7.1.7",
+                  "description": "Strike a dropped ball, with a racket or paddle, toward a target by using the forehand and back hand movement pattern to a partner",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners toss a ball and swing the bat/paddle from behind to strike the ball to a partner about 6m away using a racquet or paddle."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.8.1.8",
+                  "description": "Throw a ball to a moving partner to catch while walking, jogging and running",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Group learners in pairs with a ball. Partners stand at appropriate distance facing the each other. Learners perform throwing and catching whiles walking, jogging and running."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.8.1.9",
+                  "description": "Catch a ball below the waist and away from the body while jogging and running",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners perform throwing and catching ball below the waist and away from the body level as they move from one point to the other."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.1.10",
+                  "description": "Stop a kicked ball by trapping it with the foot while standing or moving",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners after warm-up stand in pairs facing each other with a ball. The partner with the ball throws it to the partner to trap(control the movement) with the foot, tigh or chest."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.10.1.11",
+                  "description": "Dribble a ball (by hand) while preventing another person from stealing the ball",
+                  "orderIndex": 11,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners dribble their peers with their foot as in football or with their hands as in handball but through cones or similar obstacles. Learners progress to advance dribbling their peers prevent them from taking possession of the balls."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.11.1.12",
+                  "description": "Dribble a ball (by foot) and kick it to a partner at a distance of about five metres",
+                  "orderIndex": 12,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners to dribble a ball through cones, skittles or object and kick it to a partner at five metres."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.12.1.13",
+                  "description": "Organise traditional music and dance",
+                  "orderIndex": 13,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "The teacher organise traditional music and dance for learners. Learners dance in pairs base on their ability level."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.2",
+      "title": "MOVEMENT CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Understanding movement concepts, principles, and strategies.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5.2.1",
+          "title": "SPACE AWARENESS, DYNAMICS, RELATIONS, BODY MANAGEMENT AND STRATEGIES",
+          "description": "Understanding space, dynamics, and body management.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.2.1.2",
+              "description": "Demonstrate knowledge of movement concepts, principles, and strategies that apply to the learning and performance of physical activities",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.1.2.1",
+                  "description": "Describe ways to create more space between an offensive player and a defensive player",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explains with examples the need for players to create space for themselves in order to have enough room to operate."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.2.2.2",
+                  "description": "Explain the differences in applying and receiving force when jumping for height and distance",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explains to learners that in jumping for height, the performer has to displace the force of gravity acting on the body from the sky by placing it outside the centre of the body. At the same time, the performer should take advantage of reaction force by pushing hard on the ground during take-off so as to gain height."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.3.2.3",
+                  "description": "Compare the difference in throwing a ball with the 'left hand and right hand' and kicking a ball with 'left foot and right foot for distance'",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners compare and discuss the difference as; obviously one hand would be stronger than the other. It is much easier for the stronger hand to execute a task."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.4.2.4",
+                  "description": "Explain the purpose of using a side orientation when striking a ball from a batting tee",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain the purpose of using the side orientation as: i. Give accuracy ii. Speed iii. Direction iv. Spinning, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.5.2.5",
+                  "description": "Distinguish between volleying and kicking and describe the similarities and differences",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Volleying is when a ball is strike before it touches the ground. It common in soccer, volleyball, tennis, cricket etc. Kicking is the act of striking a ball from the ground which is common in Soccer."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.3",
+      "title": "PHYSICAL FITNESS",
+      "description": "Assessing and maintaining physical fitness.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5.3.1",
+          "title": "AEROBIC CAPACITY, STRENGTH, ENDURANCE AND FLEXIBILITY",
+          "description": "Activities to improve physical fitness.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.3.1.3",
+              "description": "Assess and maintain a level of physical fitness to improve health and performance",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.1.3.1",
+                  "description": "Perform 10 minutes jogging with music",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Choose music that can aid learners to jog. Learners jog at their own pace for 10 minutes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.2.3.2",
+                  "description": "Perform continuous pull-ups",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners after general and specific warm-ups, learners hung on a bar and perform pull-ups at their own ability level and at their own pace."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.3.3.3",
+                  "description": "Perform two set of continuous push-ups",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners with their palms flat on the ground by their side, extend their arms to move their trunk up and flex the arms again to move the body back to lying position."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.4.3.4",
+                  "description": "Perform standing bend and reach the knee with the forehead",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners stand straight shoulder with apart. Arms by their sides tilt to one side of their body till the hand reaches the knees. Same should be done to the other side."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.5.3.5",
+                  "description": "Identify the capabilities of the various body types",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "There are three main body types: Ectomorph, Endomorph and Mesomorph."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.4",
+      "title": "PHYSICAL FITNESS CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Understanding fitness concepts for health and performance.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B5.4.1",
+          "title": "FITNESS PROGRAMME, HEALTHY DIET, SAFETY AND INJURIES, SUBSTANCES/DRUGS AND BODY COMPOSITION",
+          "description": "Concepts related to fitness, health, and safety.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.4.1.4",
+              "description": "Demonstrate knowledge of physical fitness concepts, principles, and strategies to improve health and performance",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.4.1.4.1",
+                  "description": "Monitor the intensity of one's heart rate during physical activity",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners determine heart rate using their age. Learners learn how to take the heart beat by palpating at the radial artery or carotid artery."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.1.4.2",
+                  "description": "Describe how muscle strength and muscle endurance enhance motor skill performance",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explains that muscles aid in movement, lifting, etc. Strong arm, chest, and back muscles will therefore facilitate movements in these parts of the body."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.2.4.3",
+                  "description": "Explain why dehydration impairs temperature regulation and physical and mental performance",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "The body is made of 75% water. Water lubricates our joints and keeps the body temperature in check by releasing unwanted heat through sweat."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.3.4.4",
+                  "description": "Describe the role of muscle strength and proper lifting in the prevention of back injuries",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teacher explains to learners that muscles aid in movement, lifting, etc. Strong arm, chest, and back muscles will therefore facilitate movements in these parts of the body."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.4.4.4.5",
+                  "description": "List factors that cause injuries when using PE equipment",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explains that injuries may occur when the learner had not gone through proper warm-up and stretching. Warm up prevents injuries to the muscles and the joints."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.5",
+      "title": "VALUES AND PSYCHO-SOCIAL CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Developing values and social skills through physical activity.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B5.5.1",
+          "title": "SELF-RESPONSIBILITY, SOCIAL INTERACTION, GROUP DYNAMICS AND CRITICAL THINKING",
+          "description": "Values, social interaction, and critical thinking.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.5",
+              "description": "Demonstrate value and utilize knowledge of psychological and sociological concepts, principles, and strategies that apply to the learning and performance of physical activity",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.5.1",
+                  "description": "Participating independently in fitness and skill development activities outside school",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners are self-motivated to participate in physical activities at least once outside the school physical education programme."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.5.2",
+                  "description": "Acknowledge orally the contributions and strengths of others",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners appreciate each individual's strengths, weaknesses and contributions in group settings by praising them such as 'ayikoo', good work, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.3.5.3",
+                  "description": "Identify and define the role of each participant in a cooperative physical activity",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Teacher should study the learners and appoint them who have the potentials as leaders. There could be a general leader and groups leaders in a class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.4.5.4",
+                  "description": "Contribute ideas and listen to the ideas of others in cooperative problem-solving activities",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explains the need to listen attentively to peers or people when speaking or contributing to an issue whiles waiting for their turn."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

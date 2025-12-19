@@ -1,0 +1,98 @@
+[
+  {
+    "subjectSlug": "basic-1-history",
+    "strandCode": "B1.1",
+    "subStrandCode": "B1.1.1",
+    "contentStandardCode": "B1.1.1.1",
+    "indicatorCode": "B1.1.1.1.1",
+    "imageFileBase": "B1.1.1.1.1",
+    "pageNumberInPdf": 24,
+    "altText": "Learners recalling past events like their first day at school to understand that history is about what happened in the past.",
+    "detailedDescription": "A Ghanaian Basic 1 classroom scene where the teacher helps learners remember past activities (first day at school, a past school assembly, a family event). The visual should communicate that history is about past human activities learners witnessed or participated in.",
+    "tags": ["History", "Basic 1", "Past events", "First day at school", "Human activities", "Ghana", "NaCCA"]
+  },
+  {
+    "subjectSlug": "basic-1-history",
+    "strandCode": "B1.1",
+    "subStrandCode": "B1.1.1",
+    "contentStandardCode": "B1.1.1.1",
+    "indicatorCode": "B1.1.1.1.2",
+    "imageFileBase": "B1.1.1.1.2",
+    "pageNumberInPdf": 24,
+    "altText": "Learners using a photo album and classroom records to learn that evidence helps us know what happened in the past.",
+    "detailedDescription": "Teacher shows learners sources of historical evidence: family photographs in an album, a simple classroom birthday register on manila card, and a picture/video moment from a celebration. The visual should emphasize 'evidence' (photos, records, songs) used to learn about the past.",
+    "tags": ["History", "Basic 1", "Historical evidence", "Photographs", "Records", "Birthday register", "Celebrations", "Ghana", "NaCCA"]
+  },
+  {
+    "subjectSlug": "basic-1-history",
+    "strandCode": "B1.1",
+    "subStrandCode": "B1.1.4",
+    "contentStandardCode": "B1.1.4.2",
+    "indicatorCode": "B1.1.4.2.1",
+    "imageFileBase": "B1.1.4.2.1",
+    "pageNumberInPdf": 26,
+    "altText": "Learners comparing historical places in two communities to find similarities and differences.",
+    "detailedDescription": "A split-scene comparison: two Ghanaian communities showing examples of historical sites (e.g., an old chapel, a chief’s palace, a post office, a grove/forest/wetland). Learners and a teacher are observing and sketching, highlighting similarities and differences.",
+    "tags": ["History", "Basic 1", "Community history", "Historical sites", "Similarities", "Differences", "Ghana", "NaCCA"]
+  },
+  {
+    "subjectSlug": "basic-1-history",
+    "strandCode": "B1.2",
+    "subStrandCode": "B1.2.3",
+    "contentStandardCode": "B1.2.3.1",
+    "indicatorCode": "B1.2.3.1.1",
+    "imageFileBase": "B1.2.3.1.1",
+    "pageNumberInPdf": 27,
+    "altText": "Gold nuggets and coastal trade imagery showing why Ghana was called the Gold Coast in the past.",
+    "detailedDescription": "Child-friendly illustration connecting gold resources to the coast: gold nuggets/mining pans, a coastline, and an old trading ship offshore (no violence). The idea is: people associated the area with gold along the coast, hence 'Gold Coast'.",
+    "tags": ["History", "Basic 1", "Gold Coast", "Ghana name", "Gold", "Coast", "Trade", "NaCCA"]
+  },
+  {
+    "subjectSlug": "basic-1-history",
+    "strandCode": "B1.2",
+    "subStrandCode": "B1.2.3",
+    "contentStandardCode": "B1.2.3.1",
+    "indicatorCode": "B1.2.3.1.2",
+    "imageFileBase": "B1.2.3.1.2",
+    "pageNumberInPdf": 28,
+    "altText": "A simple timeline-style scene showing the change from Gold Coast to Ghana as the country’s official name.",
+    "detailedDescription": "A classroom-friendly visual showing a 'before and after' of national identity: old-era coastal trade imagery transitioning to modern Ghana identity (Ghana flag raised, children celebrating). Keep it simple and symbolic, not text-heavy.",
+    "tags": ["History", "Basic 1", "Ghana name", "Gold Coast", "National identity", "Flag", "NaCCA"]
+  },
+  {
+    "subjectSlug": "basic-1-history",
+    "strandCode": "B1.2",
+    "subStrandCode": "B1.2.5",
+    "contentStandardCode": "B1.2.5.1",
+    "indicatorCode": "B1.2.5.1.1",
+    "imageFileBase": "B1.2.5.1.1",
+    "pageNumberInPdf": 28,
+    "altText": "Different Ghanaian professionals (artist, athlete, musician, filmmaker) showing how people contribute to national development.",
+    "detailedDescription": "A montage of Ghanaian role models from diverse fields: an artist designing national symbols, a footballer training, a musician composing, and a filmmaker with a camera. Avoid exact real-person portraits; keep it generic but Ghanaian and aspirational for Basic 1 learners.",
+    "tags": ["History", "Basic 1", "National development", "Role models", "Professions", "Ghana", "NaCCA"]
+  },
+  {
+    "subjectSlug": "basic-1-history",
+    "strandCode": "B1.3",
+    "subStrandCode": "B1.3.1",
+    "contentStandardCode": "B1.3.1.1",
+    "indicatorCode": "B1.3.1.1.1",
+    "imageFileBase": "B1.3.1.1.1",
+    "pageNumberInPdf": 29,
+    "altText": "A map showing ships traveling from Europe to Ghana to represent the Europeans who came to the Gold Coast.",
+    "detailedDescription": "Simple child-friendly map showing Europe and Ghana/West Africa with several ships moving toward the Ghana coast. Optionally include small flag icons (Portugal, Britain, France, Netherlands etc.) without heavy text.",
+    "tags": ["History", "Basic 1", "Europeans", "Arrival", "Map", "Ships", "Global citizenship", "NaCCA"]
+  },
+  {
+    "subjectSlug": "basic-1-history",
+    "strandCode": "B1.6",
+    "subStrandCode": "B1.6.1",
+    "contentStandardCode": "B1.6.1.1",
+    "indicatorCode": "B1.6.1.1.1",
+    "imageFileBase": "B1.6.1.1.1",
+    "pageNumberInPdf": 30,
+    "altText": "Learners arranging picture cards in a classroom gallery to learn about Ghana’s presidents since 1960.",
+    "detailedDescription": "A Basic 1 classroom 'gallery station' scene: learners working in groups arranging portrait cards on a large cardboard display with the Ghana flag nearby. Keep portraits generic/stylized (not exact real faces) to support matching, ordering, and discussion activities.",
+    "tags": ["History", "Basic 1", "Presidents", "Republic", "Gallery walk", "Civic education", "Ghana", "NaCCA"]
+  }
+]

@@ -1,0 +1,372 @@
+{
+  "part": "1/2",
+  "phase": "Upper Primary",
+  "level": "Basic 4",
+  "subject": "English Language",
+  "name": "Basic 4 English Language",
+  "slug": "basic-4-english-language",
+  "orderIndex": 1,
+  "description": "The Basic 4 English Language curriculum focuses on consolidating and extending literacy skills. It emphasizes oral language development through songs, poetry, and drama, and advances reading skills with a focus on comprehension, fluency, and summarizing. It also introduces more complex writing tasks and grammar usage.",
+  "strands": [
+    {
+      "code": "B4.1",
+      "title": "Oral Language (Listening and Speaking)",
+      "description": "Developing listening and speaking skills through songs, poetry, storytelling, dramatisation, conversation, and listening comprehension.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B4.1.1",
+          "title": "Songs",
+          "description": "Using songs to develop critical thinking and cultural awareness.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.1.1.1",
+              "description": "Demonstrate understanding of a variety of songs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.1.1.1",
+                  "description": "Draw conclusions from songs heard",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to a variety of songs and sing them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the theme and values in the song."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Express personal opinion on the songs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.2",
+          "title": "Poetry",
+          "description": "Appreciating poetry and recitals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.1.2.1",
+              "description": "Demonstrate understanding of poems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.2.1.1",
+                  "description": "Listen to and recite poems",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to a variety of poems."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recite poems with appropriate stress and intonation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss values in the poems."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.3",
+          "title": "Story Telling",
+          "description": "Developing storytelling skills and analyzing narratives.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.1.3.1",
+              "description": "Demonstrate understanding of the main idea and supporting points in texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.3.1.1",
+                  "description": "Identify the main idea and supporting ideas in stories",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to stories and identify the main ideas."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify supporting ideas in the stories."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Retell the story in their own words highlighting the main and supporting ideas."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.4",
+          "title": "Dramatisation",
+          "description": "Using drama to interpret stories and express cultural values.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.1.4.1",
+              "description": "Demonstrate understanding of roles and characters in stories",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.4.1.1",
+                  "description": "Role-play characters in stories heard",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to a story and identify the characters."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the roles of the characters."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role-play the characters in the story."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the moral lessons in the story."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.5",
+          "title": "Conversation",
+          "description": "Engaging in meaningful conversations on various topics.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B4.1.5.1",
+              "description": "Demonstrate understanding of how to express oneself in a conversation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.5.1.1",
+                  "description": "Engage in conversation on everyday issues",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss everyday issues such as personal hygiene, good manners, and safety."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use appropriate vocabulary and expressions in conversations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Take turns in conversations and respect the views of others."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.6",
+          "title": "Listening Comprehension",
+          "description": "Listening for specific information and understanding.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B4.1.6.1",
+              "description": "Demonstrate understanding of texts heard",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.6.1.1",
+                  "description": "Listen to texts and answer questions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to a variety of texts (narrative, descriptive, expository)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Answer literal and inferential questions on the text."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Summarise the text heard."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.2",
+      "title": "Reading",
+      "description": "Developing reading skills through phonics, vocabulary, comprehension, and fluency.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B4.2.1",
+          "title": "Phonics",
+          "description": "Consolidating phonics skills for reading.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.2.1.1",
+              "description": "Demonstrate understanding of phonics for reading",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.1.1.1",
+                  "description": "Use phonics knowledge to decode words",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and blend sounds to read words."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read words with consonant blends, digraphs, and diphthongs."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use word families to read new words."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.2",
+          "title": "Vocabulary",
+          "description": "Expanding vocabulary and understanding word meanings.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.2.2.1",
+              "description": "Demonstrate understanding of word meanings and usage",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.2.1.1",
+                  "description": "Use context clues to determine the meaning of unknown words",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read sentences and paragraphs containing unknown words."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use clues in the text to guess the meaning of the words."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Verify meanings using a dictionary."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.3",
+          "title": "Comprehension",
+          "description": "Applying strategies to understand and analyze texts.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.2.3.1",
+              "description": "Demonstrate understanding of written texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.3.1.1",
+                  "description": "Read and answer questions on texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a variety of texts suited for the level."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Answer literal, inferential, and critical thinking questions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the main idea and supporting details."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.4",
+          "title": "Fluency",
+          "description": "Reading with speed, accuracy, and expression.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.2.4.1",
+              "description": "Demonstrate the ability to read with fluency",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.4.1.1",
+                  "description": "Read level-appropriate texts with accuracy and speed",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read passages aloud observing punctuation marks."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read with appropriate expression and intonation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Engage in choral and pair reading activities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

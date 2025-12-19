@@ -1,0 +1,457 @@
+{
+  "phase": "KG",
+  "level": "KG1",
+  "subject": "Our World and Our People",
+  "imagePrompts": [
+    {
+      "nodeType": "strand",
+      "strandCode": "K1.4",
+      "subStrandCode": null,
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A vibrant panorama of a Ghanaian local community. It shows a chief's palace with traditional symbols, a busy market with colorful stalls, a police station, and community workers like nurses and farmers interacting with children. The atmosphere is bustling and communal."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A field trip scene. A line of KG1 children in school uniforms, holding hands and walking with their teacher through their community. They are passing a chief's palace and a post office, pointing excitedly at the buildings."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children in a classroom creating a model of their community. They are using cardboard boxes to build a police station and a market. Some are painting the boxes. A poster of community places is on the wall."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher showing a poster of special community places (market, hospital, chief's palace). Children are sitting on mats, raising hands to share stories about visiting these places. One child points to the market picture."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children standing outside a real police station on a field trip. A friendly police officer is waving to them. Back in class, children are drawing the police station and grouping their drawings by type."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher doing a 'Picture Walk' with a Big Book about community places. She flips the pages, showing illustrations of a clinic and a school. Children are predicting what the story says based on the pictures."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A 'Pick and Act' game. A child picks a card with a picture of a library and mimes reading a book silently. Other children guess the place. The teacher guides the vocabulary game."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher reading aloud from a Big Book. Children are listening attentively. Afterward, children are sorting pictures of places they have visited versus places they haven't. They arrange counters to represent the numbers."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children retelling a story about a community visit. They are using pebbles to count how many places were mentioned in the story. They arrange the pebbles in a vertical line on their tables."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher writing a large letter 'k' on the board. She shows a picture of a 'kite' and a 'key'. Children are looking around the classroom or outside for objects that start with the 'k' sound."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children saying a tongue twister with the 'k' sound. They are laughing. Then, the teacher models writing 'k' in the air. Children copy the movement. A word wall shows 'K' words."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting at tables with crayons. They are coloring a drawing of a market scene. They are writing invented spelling labels under their pictures. The artwork is colorful and expressive."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child pasting their colored drawing of a 'Police Station' on the classroom wall. The caption reads 'PO-LIS'. The teacher smiles and admires the work."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom 'market' set up with empty cartons and plastic fruit. Children are 'buying' items using paper money. They are combining 2 oranges and 3 bananas to find the total. Practical addition."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.1",
+      "contentStandardCode": "K1.4.1.1",
+      "indicatorCode": "K1.4.1.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children working in pairs with counters. One child puts 3 stones together with 2 stones. They count them all to find '5'. They are solving simple addition problems in their exercise books."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A collage of community helpers: a nurse in uniform, a farmer with a cutlass, a teacher with a book, and a police officer. Children in the center are dressed up in oversize adult uniforms, pretending to be these workers."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A 'Career Day' scene in class. Children are wearing different professional uniforms (doctor, police, pilot). They are standing in groups, talking about what they do. A resource person (a real nurse) is visiting."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle time. A poster shows various workers (fishermen, traders). Children discuss their parents' jobs. One child mimes casting a net. They are identifying occupations."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting cards of occupations into 'Formal' (nurse, teacher) and 'Informal' (farmer, trader). They count the cards in each pile. They match the number of cards to a numeral."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "The 'Be the word' game. Five children stand in a line, each holding a card with one word. Together they form a sentence. They stand with spaces between them to show word separation."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children rearranging cut-up sentence strips on a table. They place finger spaces between the paper words. They read the sentence 'The nurse helps us' aloud."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A real police officer in uniform visiting the classroom. Children are sitting on mats asking questions. A KWL chart is visible on the board. The atmosphere is curious and respectful."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children role-playing occupations after a visitor has left. One child pretends to check another's heartbeat with a toy stethoscope. They are sharing what they learnt (L) from the resource person."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher holding up word cards. Children put their hands on their heads if they hear the target sound (e.g., 'k' in 'Kofi'). They keep hands down if not. An active listening game."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A 'Treasure Hunt' in the classroom. Groups of children looking for objects or pictures that start with a specific letter sound. One group finds a 'Kite' and cheers."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children exercising their fingers by squeezing soft balls. Then they practice writing a letter in the air. The teacher writes the letter boldly on the board. A name 'Kofi' is written next to it."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children forming sentences with word cards on their desks. They count the words 'I - am - a - nurse'. They write the number '4' in their books."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Classroom wall decorated with children's drawings of themselves in different uniforms. A child is explaining their drawing of a 'Doctor' to a friend. They are discussing why they chose that job."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children grouped by their aspired profession. The 'Teachers' group is counting their members. The 'Doctors' group is arranging themselves. They are visually representing data."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A market role-play. A 'seller' has 5 oranges. A 'buyer' takes 2 oranges. They count how many are left. Real-life subtraction practice."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.2",
+      "contentStandardCode": "K1.4.2.1",
+      "indicatorCode": "K1.4.2.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children solving subtraction problems in exercise books using counters. They separate a group of counters and count the remainder. Focused individual work."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A cultural display showing a Chief in regalia under an umbrella, an Imam, and a Pastor. Children are looking at the pictures and talking about leaders. It highlights leadership in the community."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children dramatizing a community durbar. One child sits as a chief with a paper crown. Others are community members asking for help. They are learning about the role of leaders."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher showing a poster of religious leaders (Imam, Pastor). Children discuss who they see in their churches or mosques. Role-playing a leader speaking to the community."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child pretending to turn the pages of a Big Book from right to left (for Arabic/Hebrew context) or left to right, showing awareness of different books. They count the leaders shown in the book."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "KWL session. Children asking questions about what a chief does. The teacher reads an informational text about leaders. Children listen and raise hands to answer questions."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sharing what they learnt (L) about leaders. One child stands and says 'The Chief helps us'. The teacher writes the sentence on the board."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A music and dance session. Children playing local instruments (shakers, drums). Half the class claps, the other half dances to a traditional song. Joyful cultural expression."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children taking turns playing a shaker. They change hands to keep the rhythm. They are smiling and moving to the beat."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher introducing a new vowel sound. Children practicing writing the letter in the air and on slates. Teacher holds up word cards for identification."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children identifying the letter sound in names of items from home. A child points to a card with 'Umbrella' and identifies the starting vowel sound."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children dressed in traditional regalia for a role-play. A 'Chief' sits under a colorful umbrella made of paper. A 'Queen Mother' sits next to him. They are holding a meeting."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children creating Adinkra symbols (Gye Nyame) using stamps or drawing on paper. They are decorating a paper umbrella for the chief. Creative arts integration."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A story problem enactment. A child acting as a 'Chief' gives 5 boxes of books to the class from a pile of 7. Children count how many boxes are left with the chief. Subtraction in context."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.4",
+      "subStrandCode": "K1.4.3",
+      "contentStandardCode": "K1.4.3.1",
+      "indicatorCode": "K1.4.3.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sharing school materials. One child takes away 3 pencils from a pack of 10. The group counts the remaining pencils to find the answer. Practical math."
+    }
+  ]
+}

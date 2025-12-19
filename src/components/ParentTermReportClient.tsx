@@ -1,0 +1,698 @@
+// src/components/ParentTermReportClient.tsx
+"use client";
+
+import React, { useEffect, useState } from "react";
+
+type GesRemark = {
+  grade: number;
+  label: string;
+  band: string;
+};
+
+type SubjectAssessmentSummary = {
+  subject: string;
+  itemCount: number;
+  totalObtained: number;
+  totalMax: number;
+  percentage: number | null;
+  ges: GesRemark | null;
+};
+
+type AssessmentSummary = {
+  totalItems: number;
+  totalObtained: number;
+  totalMax: number;
+  percentage: number | null;
+  ges: GesRemark | null;
+  subjects: SubjectAssessmentSummary[];
+  note?: string | null;
+};
+
+type AssessmentSummaryResponse = {
+  ok: boolean;
+  studentId?: string;
+  term?: string;
+  academicYear?: string;
+  summary?: AssessmentSummary;
+  error?: string;
+};
+
+type AttendanceSummary = {
+  totalSessions: number;
+  daysPresent: number;
+  daysAbsent: number;
+  daysLate: number;
+  attendanceRate: number | null;
+  note?: string | null;
+};
+
+type AttendanceSummaryResponse = {
+  ok: boolean;
+  studentId?: string;
+  term?: string;
+  academicYear?: string;
+  summary?: AttendanceSummary;
+  error?: string;
+};
+
+type FeeSummary = {
+  totalBilled: number;
+  totalPaid: number;
+  balance: number;
+  lastPaymentDate?: string | null;
+  lastPaymentAmount?: number | null;
+  note?: string | null;
+};
+
+type FeeSummaryResponse = {
+  ok: boolean;
+  studentId?: string;
+  term?: string;
+  academicYear?: string;
+  summary?: FeeSummary;
+  error?: string;
+};
+
+type SettingsResponse = {
+  ok: boolean;
+  term?: string;
+  academicYear?: string;
+  error?: string;
+};
+
+type ParentTermReportClientProps = {
+  initialStudentId?: string | null;
+  initialGuardianPhone?: string | null;
+  initialTerm?: string | null;
+  initialAcademicYear?: string | null;
+};
+
+// Fallbacks in case settings API fails
+const FALLBACK_TERM = "1st Term";
+const FALLBACK_ACADEMIC_YEAR = "2025/2026";
+
+const ParentTermReportClient: React.FC<ParentTermReportClientProps> = ({
+  initialStudentId,
+  initialGuardianPhone,
+  initialTerm,
+  initialAcademicYear,
+}) => {
+  // Core identifiers
+  const [studentId, setStudentId] = useState<string>(
+    initialStudentId || ""
+  );
+  const [guardianPhone, setGuardianPhone] = useState<string>(
+    initialGuardianPhone || ""
+  );
+
+  // Term / year
+  const [term, setTerm] = useState<string>(
+    initialTerm || FALLBACK_TERM
+  );
+  const [academicYear, setAcademicYear] = useState<string>(
+    initialAcademicYear || FALLBACK_ACADEMIC_YEAR
+  );
+  const [settingsError, setSettingsError] = useState<string | null>(
+    null
+  );
+
+  // High-level
+  const [studentName, setStudentName] = useState<string>(
+    "Learner (name to be wired later)"
+  );
+
+  // Loading + errors
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+
+  // Actual summaries
+  const [assessmentSummary, setAssessmentSummary] =
+    useState<AssessmentSummary | null>(null);
+  const [attendanceSummary, setAttendanceSummary] =
+    useState<AttendanceSummary | null>(null);
+  const [feeSummary, setFeeSummary] = useState<FeeSummary | null>(
+    null
+  );
+
+  // -------------------------
+  // Step 1: load current term/year from settings API (if not provided)
+  // -------------------------
+  async function loadSettingsIfNeeded() {
+    // If both term and academicYear came from server, we just trust them.
+    if (initialTerm && initialAcademicYear) {
+      return;
+    }
+
+    try {
+      setLoadingSettings(true);
+      setSettingsError(null);
+
+      const res = await fetch("/api/settings/current-term-year");
+      const data: SettingsResponse = await res.json().catch(() => ({
+        ok: false,
+        error: "Invalid server response.",
+      }));
+
+      if (!res.ok || !data.ok || !data.term || !data.academicYear) {
+        setSettingsError(
+          data.error ||
+            "Using default term and academic year settings."
+        );
+        // Use fallbacks already in state
+        return;
+      }
+
+      setTerm(data.term);
+      setAcademicYear(data.academicYear);
+    } catch (err) {
+      console.error(
+        "[ParentTermReportClient] loadSettingsIfNeeded error",
+        err
+      );
+      setSettingsError(
+        "Could not load term/year settings. Using defaults."
+      );
+    } finally {
+      setLoadingSettings(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadSettingsIfNeeded();
+  }, []);
+
+  // -------------------------
+  // Step 2: load assessment, attendance and fees for this learner
+  // -------------------------
+  async function loadTermReport() {
+    setGlobalError(null);
+
+    const trimmedStudentId = studentId.trim();
+    if (!trimmedStudentId) {
+      setGlobalError(
+        "Missing learner ID. This page is best opened from a secure link generated by the school."
+      );
+      return;
+    }
+
+    try {
+      setLoadingReport(true);
+
+      const paramsAssessment = new URLSearchParams({
+        studentId: trimmedStudentId,
+        term,
+        academicYear,
+      });
+      const paramsAttendance = new URLSearchParams({
+        studentId: trimmedStudentId,
+        term,
+        academicYear,
+      });
+      const paramsFees = new URLSearchParams({
+        studentId: trimmedStudentId,
+        term,
+        academicYear,
+      });
+
+      const [assessmentRes, attendanceRes, feeRes] = await Promise.all(
+        [
+          fetch(
+            `/api/parent/assessment/summary?${paramsAssessment.toString()}`
+          ),
+          fetch(
+            `/api/parent/attendance/summary?${paramsAttendance.toString()}`
+          ),
+          fetch(
+            `/api/parent/fees/summary?${paramsFees.toString()}`
+          ),
+        ]
+      );
+
+      const assessmentData: AssessmentSummaryResponse =
+        await assessmentRes.json().catch(() => ({
+          ok: false,
+          error: "Invalid assessment server response.",
+        }));
+
+      const attendanceData: AttendanceSummaryResponse =
+        await attendanceRes.json().catch(() => ({
+          ok: false,
+          error: "Invalid attendance server response.",
+        }));
+
+      const feeData: FeeSummaryResponse = await feeRes
+        .json()
+        .catch(() => ({
+          ok: false,
+          error: "Invalid fees server response.",
+        }));
+
+      // Small logic: if any of them fail, we still show others.
+      if (!assessmentRes.ok || !assessmentData.ok) {
+        setAssessmentSummary(null);
+      } else {
+        setAssessmentSummary(assessmentData.summary || null);
+      }
+
+      if (!attendanceRes.ok || !attendanceData.ok) {
+        setAttendanceSummary(null);
+      } else {
+        setAttendanceSummary(attendanceData.summary || null);
+      }
+
+      if (!feeRes.ok || !feeData.ok) {
+        setFeeSummary(null);
+      } else {
+        setFeeSummary(feeData.summary || null);
+      }
+
+      // Basic global message if everything failed
+      if (
+        (!assessmentRes.ok || !assessmentData.ok) &&
+        (!attendanceRes.ok || !attendanceData.ok) &&
+        (!feeRes.ok || !feeData.ok)
+      ) {
+        setGlobalError(
+          assessmentData.error ||
+            attendanceData.error ||
+            feeData.error ||
+            "Could not load report data for this learner."
+        );
+      } else {
+        setGlobalError(null);
+      }
+    } catch (err) {
+      console.error("[ParentTermReportClient] loadTermReport error", err);
+      setGlobalError(
+        "Something went wrong while loading the report. Please try again."
+      );
+      setAssessmentSummary(null);
+      setAttendanceSummary(null);
+      setFeeSummary(null);
+    } finally {
+      setLoadingReport(false);
+    }
+  }
+
+  // Auto-load once when we have a studentId
+  useEffect(() => {
+    if (studentId && term && academicYear) {
+      void loadTermReport();
+    }
+  }, [studentId, term, academicYear]);
+
+  // -------------------------
+  // Small helpers for UI
+  // -------------------------
+  function formatDate(date?: string | null): string {
+    if (!date) return "";
+    try {
+      return new Date(date).toLocaleDateString();
+    } catch {
+      return "";
+    }
+  }
+
+  function formatMoney(amount?: number | null): string {
+    if (amount == null) return "0.00";
+    return amount.toFixed(2);
+  }
+
+  // -------------------------
+  // Render panels
+  // -------------------------
+  function renderAssessmentPanel() {
+    if (!assessmentSummary) {
+      return (
+        <p className="text-xs text-slate-600">
+          No assessment summary available for this term yet.
+        </p>
+      );
+    }
+
+    const overall = assessmentSummary;
+    const ges = overall.ges;
+
+    return (
+      <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">
+              Total CA items
+            </div>
+            <div className="mt-0.5 font-semibold text-slate-900">
+              {overall.totalItems}
+            </div>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">
+              Overall percentage
+            </div>
+            <div className="mt-0.5 font-semibold text-slate-900">
+              {overall.percentage != null
+                ? `${overall.percentage.toFixed(1)}%`
+                : "N/A"}
+            </div>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">
+              GES grade (BECE)
+            </div>
+            <div className="mt-0.5 font-semibold text-slate-900">
+              {ges
+                ? `Grade ${ges.grade} – ${ges.label}`
+                : "Not available"}
+            </div>
+          </div>
+        </div>
+
+        {overall.subjects.length > 0 && (
+          <div className="space-y-1.5">
+            <div className="text-[11px] font-semibold text-slate-800">
+              Subject breakdown
+            </div>
+            {overall.subjects.map((s) => (
+              <div
+                key={s.subject}
+                className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px]"
+              >
+                <div className="font-medium text-slate-900">
+                  {s.subject}
+                </div>
+                <div className="text-right text-slate-600">
+                  <div>
+                    {s.percentage != null
+                      ? `${s.percentage.toFixed(1)}%`
+                      : "N/A"}
+                  </div>
+                  {s.ges && (
+                    <div className="text-[10px]">
+                      Grade {s.ges.grade} – {s.ges.label}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {overall.note && (
+          <p className="text-[11px] text-slate-500">{overall.note}</p>
+        )}
+      </div>
+    );
+  }
+
+  function renderAttendancePanel() {
+    if (!attendanceSummary) {
+      return (
+        <p className="text-xs text-slate-600">
+          No attendance summary available for this term yet.
+        </p>
+      );
+    }
+
+    const s = attendanceSummary;
+
+    return (
+      <div className="space-y-2">
+        <div className="grid grid-cols-4 gap-2 text-xs">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">
+              Total sessions
+            </div>
+            <div className="mt-0.5 font-semibold text-slate-900">
+              {s.totalSessions}
+            </div>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">Present</div>
+            <div className="mt-0.5 font-semibold text-emerald-700">
+              {s.daysPresent}
+            </div>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">Absent</div>
+            <div className="mt-0.5 font-semibold text-red-700">
+              {s.daysAbsent}
+            </div>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">Late</div>
+            <div className="mt-0.5 font-semibold text-amber-700">
+              {s.daysLate}
+            </div>
+          </div>
+        </div>
+
+        <p className="text-[11px] text-slate-500">
+          Attendance rate:{" "}
+          {s.attendanceRate != null
+            ? `${s.attendanceRate.toFixed(1)}%`
+            : "N/A"}
+        </p>
+        {s.note && (
+          <p className="text-[11px] text-slate-500">{s.note}</p>
+        )}
+      </div>
+    );
+  }
+
+  function renderFeesPanel() {
+    if (!feeSummary) {
+      return (
+        <p className="text-xs text-slate-600">
+          No fees summary available for this term yet.
+        </p>
+      );
+    }
+
+    const f = feeSummary;
+
+    return (
+      <div className="space-y-2 text-xs">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">
+              Total billed
+            </div>
+            <div className="mt-0.5 font-semibold text-slate-900">
+              ₵{formatMoney(f.totalBilled)}
+            </div>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">
+              Total paid
+            </div>
+            <div className="mt-0.5 font-semibold text-emerald-700">
+              ₵{formatMoney(f.totalPaid)}
+            </div>
+          </div>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+            <div className="text-[10px] text-slate-500">Balance</div>
+            <div className="mt-0.5 font-semibold text-red-700">
+              ₵{formatMoney(f.balance)}
+            </div>
+          </div>
+        </div>
+
+        {f.lastPaymentDate && (
+          <p className="text-[11px] text-slate-500">
+            Last payment: ₵{formatMoney(f.lastPaymentAmount)} on{" "}
+            {formatDate(f.lastPaymentDate)}
+          </p>
+        )}
+        {f.note && (
+          <p className="text-[11px] text-slate-500">{f.note}</p>
+        )}
+      </div>
+    );
+  }
+
+  // -------------------------
+  // Render
+  // -------------------------
+  return (
+    <div className="min-h-[70vh] bg-slate-50 px-4 py-6">
+      <div className="mx-auto max-w-3xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-base font-semibold text-slate-900">
+              Learner Term Report (Parent View)
+            </h1>
+            <p className="text-xs text-slate-600">
+              A simple, parent-friendly summary of performance, attendance and
+              fees for the selected term.
+            </p>
+            {settingsError && (
+              <p className="mt-1 text-[11px] text-amber-700">
+                {settingsError}
+              </p>
+            )}
+          </div>
+          <div className="text-right text-[11px] text-slate-500">
+            <div>
+              Term:{" "}
+              <span className="font-semibold text-slate-900">
+                {term}
+              </span>
+            </div>
+            <div>
+              Academic year:{" "}
+              <span className="font-semibold text-slate-900">
+                {academicYear}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Debug / context form (for now, mainly for you + headteacher) */}
+        <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
+          <div className="mb-2 font-semibold text-slate-800">
+            Report context
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label className="block text-[10px] font-medium text-slate-700">
+                Learner ID (internal)
+              </label>
+              <input
+                className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                placeholder="Usually filled automatically from a secure link"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-[10px] font-medium text-slate-700">
+                Guardian phone (optional)
+              </label>
+              <input
+                className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                value={guardianPhone}
+                onChange={(e) => setGuardianPhone(e.target.value)}
+                placeholder="e.g. 0240000000"
+              />
+            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-[10px] text-slate-500">
+              In future, this page will be opened from a personalised link
+              (SMS/WhatsApp) so these fields auto-fill.
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadTermReport()}
+              disabled={loadingReport || !studentId.trim()}
+              className="inline-flex items-center rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loadingReport ? "Refreshing…" : "Reload report"}
+            </button>
+          </div>
+        </div>
+
+        {globalError && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+            {globalError}
+          </div>
+        )}
+
+        {/* Learner badge (for now just a placeholder name) */}
+        <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+          <div className="text-xs font-semibold text-slate-900">
+            {studentName}
+          </div>
+          <div className="mt-0.5 text-[11px] text-slate-600">
+            Learner ID:{" "}
+            <span className="font-mono text-slate-800">
+              {studentId || "Not provided"}
+            </span>
+          </div>
+          {guardianPhone && (
+            <div className="mt-0.5 text-[11px] text-slate-600">
+              Guardian phone: {guardianPhone}
+            </div>
+          )}
+        </div>
+
+        {/* Three main panels */}
+        <div className="space-y-3">
+          {/* Assessment */}
+          <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+            <div className="mb-1 flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-900">
+                Assessment summary
+              </div>
+              {loadingReport && (
+                <div className="text-[10px] text-slate-500">
+                  Loading…
+                </div>
+              )}
+            </div>
+            {renderAssessmentPanel()}
+          </div>
+
+          {/* Attendance */}
+          <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+            <div className="mb-1 flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-900">
+                Attendance summary
+              </div>
+              {loadingReport && (
+                <div className="text-[10px] text-slate-500">
+                  Loading…
+                </div>
+              )}
+            </div>
+            {renderAttendancePanel()}
+          </div>
+
+          {/* Fees */}
+          <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+            <div className="mb-1 flex items-center justify-between">
+              <div className="text-xs font-semibold text-slate-900">
+                Fees & payments
+              </div>
+              {loadingReport && (
+                <div className="text-[10px] text-slate-500">
+                  Loading…
+                </div>
+              )}
+            </div>
+            {renderFeesPanel()}
+          </div>
+
+          {/* Health placeholder */}
+          <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+            <div className="mb-1 text-xs font-semibold text-slate-900">
+              Health & wellbeing (coming soon)
+            </div>
+            <p className="text-[11px] text-slate-600">
+              Later, this section will summarise important health notes and
+              temperature checks recorded by the school so you can quickly act
+              on any red flags.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer note */}
+        <div className="mt-5 border-t border-slate-100 pt-3 text-[10px] text-slate-500">
+          <p>
+            This report is part of <span className="font-semibold">
+              EduLife OS
+            </span>{" "}
+            – built to help parents and schools work together with love,
+            clarity and responsibility.
+          </p>
+          <p>
+            Term: {term} • Academic year: {academicYear}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ParentTermReportClient;

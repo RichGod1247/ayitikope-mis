@@ -1,0 +1,849 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 9",
+  "subject": "Social Studies",
+  "name": "JHS 3 Social Studies",
+  "slug": "jhs-3-social-studies",
+  "orderIndex": 1,
+  "description": "The JHS 3 Social Studies curriculum focuses on environmental issues, natural and human resources, family life, culture and national identity, law and order, socio-economic development, and nationhood.",
+  "strands": [
+    {
+      "code": "B9.1",
+      "title": "ENVIRONMENT",
+      "description": "Understanding environmental issues and resources.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B9.1.1",
+          "title": "ENVIRONMENTAL ISSUES",
+          "description": "Air pollution and energy conservation.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.1.1.1",
+              "description": "Demonstrate skills in dealing with environmental challenges",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.1.1.1",
+                  "description": "Examine air pollution as an environmental challenge",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what air pollution means."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify activities in the environment that lead to air pollution, including fumes from vehicles, industry and smoke from fires."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the effects of air pollution, including causing health problems such as asthma."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss ways to prevent air pollution."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Do a project in the community to educate members on the ways to reduce air pollution."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.1.1.2",
+              "description": "Evaluate the sources and ways of conserving energy",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.1.1.2.1",
+                  "description": "Assess global sources and the means of conserving energy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify global energy sources and conservation in countries such as Ghana, United Kingdom, Germany."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "With the use of the Internet, research alternative energy sources and do a presentation in class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss gender issues related to energy production, supply and usage."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe the processes and devices for measuring and metering energy consumption."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "In groups, create posters on the advantages of energy conservation to educate others in the community."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Present a report on energy conservation education that you have undertaken."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.4",
+          "title": "OUR NATURAL AND HUMAN RESOURCES",
+          "description": "Investigating resources for development.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.1.4.1",
+              "description": "Investigate the natural and human resources around us",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.4.1.1",
+                  "description": "Examine the importance of natural resources to the development of Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by natural resources."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Through the use of videos or pictures, identify the natural resources of the country, including renewable and non-renewable resources."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "On the map of Ghana, show the location of the natural resources."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss efficient ways of exploiting natural resources."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explain the importance of natural resources for the development of the country."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss the difficulty in exploiting natural resources effectively, including low level of technology, limited technical expertise and limited capital resources."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.4.1.2",
+                  "description": "Evaluate the importance of human resources to the development of Ghana",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by human resource."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify ways of developing human resource."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Through group work, discuss why an educated and trained human resource is the most important asset of the country."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain how Ghana’s human resource can be efficiently used in the production of goods and services."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Investigate how some people in the community use their human resource abilities to help the community develop."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Suggest new ways by which they would use their human resource abilities to help develop the community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.2",
+      "title": "FAMILY LIFE",
+      "description": "Marriage and population issues.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B9.2.2",
+          "title": "THE FAMILY",
+          "description": "Marriage and responsible parenting.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.2.2.1",
+              "description": "Evaluate the institution of marriage in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.2.1.1",
+                  "description": "Examine the importance of marriage as a social institution in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of marriage as a social institution."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss ways of contracting marriages in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the ways in which marriage is important as a social institution."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Investigate the causes of broken marriages."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Dramatise the effects of broken marriages on the family structure."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Suggest ways of sustaining marriages."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.2.2.2",
+              "description": "Assess the need for responsible parenting in the family",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.2.2.2.1",
+                  "description": "Examine the importance of responsible parenting within the family system",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts: Parenthood and Parenting."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Differentiate parenthood from parenting."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the responsibilities of parents."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss inappropriate parenting behaviour and its consequences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Examine how some behaviours by children can cause their parents to act inappropriately."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Suggest ways for handling parent-child conflicts."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Carry out an education programme in the community on the need for parents to be responsible."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.4",
+          "title": "POPULATION",
+          "description": "Population structure and development.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.2.4.1",
+              "description": "Analyse the population structure in Ghana and its related issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.4.1.1",
+                  "description": "Assess population structure in Ghana and its associated development issues",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recap on Basic 8 work on the population structure in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, analyse the effects of rapid population growth on the family, the community and the nation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Dramatise the effects of large family size on the up keep of the family."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Suggest ways in which social problems and rapid population growth could be minimised."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.3",
+      "title": "SENSE OF PURPOSE",
+      "description": "Culture and national identity.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B9.3.3",
+          "title": "CULTURE AND NATIONAL IDENTITY",
+          "description": "Promoting national identity.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.3.3.1",
+              "description": "Evaluate the place of culture in national identity",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.3.1.1",
+                  "description": "Assess the significance of symbols, music and ceremonies in promoting national identity",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of national identity."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sing patriotic songs and discuss how songs promote national identity."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "With the use of videos or pictures, identify some national and traditional symbols and discuss their features and significance."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Interpret some national and traditional symbols and evaluate their importance in fostering national unity."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss ways of fostering national unity and defending the integrity of the nation."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss how national ceremonies can be used to foster national unity."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Discuss how respecting the customs and culture of other groups plays a part in celebrating diversity in Ghana."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.4",
+      "title": "LAW AND ORDER",
+      "description": "Constitution, peace, security, and democracy.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B9.4.3",
+          "title": "THE 1992 CONSTITUTION",
+          "description": "Significance of the 1992 Constitution.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.4.3.1",
+              "description": "Assess the relevance of the 1992 Constitution",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.3.1.1",
+                  "description": "Examine the 1992 Constitution and its significance to national development",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the meaning of a constitution."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Outline the main features of the 1992 Constitution."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use videos or pictures to identify the functions of the three main organs of government."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, discuss the rights, freedoms and obligations of citizens under the 1992 Constitution."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Examine the conditions under which the rights of a citizen can be curtailed by the 1992 Constitution."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Explain the importance of the 1992 Constitution to Ghanaians."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.3.1.2",
+                  "description": "Discuss the rights of the child as enshrined in the 1992 Constitution",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts of child rights."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the provisions of child rights in the 1992 Constitution."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Invite a resource person to discuss the need for children’s rights."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Carry out a project on the responsibilities of children."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explain the concept of child abuse."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Identify acts that constitute child abuse, including child labour and early marriages."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Examine the effects of child abuse, including physical injury, psychological trauma and poor health."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.4",
+          "title": "PEACE AND SECURITY IN OUR NATION",
+          "description": "Relevance of peace and security.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.4.4.1",
+              "description": "Assess the role of peace and security in national development",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.4.1.1",
+                  "description": "Examine the relevance of peace and security in our community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts of peace and security."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss ways of promoting peace and security."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "With the use of video and pictures, compare a country destroyed by conflict and another that has enjoyed a long period of peace."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Using documentaries and pictures, examine safety measures in the community."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss the importance of peace and security in community development."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Role play how peace can be maintained in your neighbourhood."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.5",
+          "title": "PROMOTING DEMOCRACY AND POLITICAL STABILITY",
+          "description": "Democracy, elections, and stability.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.4.5.1",
+              "description": "Show understanding of how to promote democracy and political stability",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.5.1.1",
+                  "description": "Examine election as a way of promoting democracy and political stability",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts of democracy and election."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the role of free and fair elections in promoting democracy."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the processes involved in conducting an election."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify and discuss the importance of electoral materials."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Watch videos of people casting their votes at a polling station peacefully and discuss your observations."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Demonstrate how free and fair elections can be conducted using role-play."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Assess the role of the Electoral Commission."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.5.2",
+              "description": "Demonstrate understanding of the District Assembly concept in Ghana",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.5.2.1",
+                  "description": "Examine the role of the District Assembly in promoting decentralisation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of decentralisation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the structure of the District Assembly."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine the role of District Assemblies in the development of the districts."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine the contribution of the Assemblies."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Invite a resource person to talk about the workings of the MMDAs."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.5.3",
+              "description": "Evaluate the importance of political stability in Ghana’s development",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B9.4.5.3.1",
+                  "description": "Assess the significance of political stability in national development",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain political stability."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the ways of achieving political stability."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss some of the threats to political stability in the country."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the importance of political stability."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Suggest ways of promoting political stability in Ghana."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.5",
+      "title": "SOCIO-ECONOMIC DEVELOPMENT",
+      "description": "Science, technology, and finance.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B9.5.4",
+          "title": "SCIENCE AND TECHNOLOGY",
+          "description": "Role of science and technology in development.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.5.4.1",
+              "description": "Analyse the contribution of science and technology to national development",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.4.1.1",
+                  "description": "Examine how science and technology can be used to promote development",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts: Science and Technology."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the difference(s) between ‘Science’ and ‘Technology’."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss how science and technology can be used for development and production in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine the role of science and technology in specific sectors of the economy."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Investigate and make presentations on the role of science and technology in the development of Ghana."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Examine the problems impeding the development of science and technology in Ghana."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Suggest ways of promoting science and technology in Ghana."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Project: Identify a problem in the school and use the knowledge acquired in science and technology to solve it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.5.2",
+          "title": "FINANCIAL AND INVESTMENT ISSUES",
+          "description": "National Pensions Act 766 and PNDC Law 247.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.5.2.1",
+              "description": "Show understanding of the provisions under National Pensions Act 766 and PNDC Law 247",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.2.1.1",
+                  "description": "Exhibit knowledge on pension rights under National Pensions Act 766 and PNDC Law 247",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the provisions under National Pensions Act 766."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In small groups, do a presentation on the provisions under PNDC Law 247."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Invite a resource person to talk about social security in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In small groups, do a presentation on the benefits under the Three Tier Pension Scheme."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Research the application processes for the various SSNIT benefits."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.6",
+      "title": "NATIONHOOD",
+      "description": "The Republics.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B9.6.2",
+          "title": "THE REPUBLICS",
+          "description": "Third and Fourth Republics.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.6.2.1",
+              "description": "Demonstrate understanding that Ghana had two republics between 1979 and 2000",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.6.2.1.1",
+                  "description": "Explain how the Third Republic came into being (1979-1981)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the internet, print media and oral sources to find out how the Third Republic was established."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the main political parties that took part in the June 1979 elections."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the outcome of the June 1979 elections."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Dramatise the handing over of power from the AFRC to Dr Hilla Liman’s People’s National Party."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9 6.2.1.2",
+                  "description": "Explain political developments under the Third Republic",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the main features of the 1960 Constitution of the First Republic."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the changes that happened in the country as a result of the 1960 Constitution."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Debate the effects of the changes in the 1960 Republican Constitution."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe the membership of the cabinet under the 1960 Constitution."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.6.2.1.3",
+                  "description": "Explain how the Fourth Republic came into being",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the Internet, print media and oral sources to find out how the Fourth Republic was established."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the outcome of the 28 April 1992 referendum."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the political parties that took part in the 1992 elections."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the nature of the First Parliament of the Fourth Republic."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Dramatise the inauguration of the first president of the Fourth Republic."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Analyse the 1992 constitution vis-a-vis the American constitution and the Westminster system."
+                    }
+                  ]
+                },
+                {
+                  "code": "B.9.6.1.1.4",
+                  "description": "Explain political developments under the Fourth Republic",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the features of the Fourth Republican constitution."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Debate the pros and cons of the First Parliament of the Fourth Republic."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assess the advantages of the President being Head of State and Government."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compare Ghana’s presidential system of government and the Westminster system."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

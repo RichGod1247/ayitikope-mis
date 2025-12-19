@@ -1,0 +1,756 @@
+{
+  "part": "2/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 2",
+      "subject": "English Language",
+      "name": "Basic 2 English Language",
+      "slug": "basic-2-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 2 English Language curriculum continues to develop oral language and reading skills. It focuses on listening comprehension, asking and answering questions, following instructions, presentation skills, phonics, word families, vocabulary, and reading fluency and comprehension.",
+      "strands": [
+        {
+          "code": "B2.1",
+          "title": "Oral Language (Listening and Speaking)",
+          "description": "Enhancing listening and speaking skills through comprehension, questions, instructions, and presentation.",
+          "orderIndex": 1,
+          "subStrands": [
+            {
+              "code": "B2.1.7",
+              "title": "Listening Comprehension",
+              "description": "Using skills and strategies to process meaning from oral texts.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B2.1.7.1",
+                  "description": "Use appropriate skills and strategies to process meaning from texts",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.1.7.1.1",
+                      "description": "Listen to and interact actively with drama",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Before Reading: Activate the previous knowledge of the learners by making them think pair and share with their friends."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss illustrations accompanying the text."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have them predict the content of the text."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Teach key vocabulary."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "During Reading: Read the text aloud to learners. Pause often and have learners talk about the content of the text and answer simple questions based on the text."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "After Reading: Have learners retell the story."
+                        },
+                        {
+                          "orderIndex": 7,
+                          "description": "Let learners role-play the story."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.1.7.1.2",
+                      "description": "Recognise and relate the sequence of events (beginning, middle and end) in drama",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Read a narrative text aloud to learners."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Put learners in groups to identify and talk about the parts of the drama (beginning, middle and ending)."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.1.7.1.3",
+                      "description": "Recognise and discuss events in a story (characters, settings, moral, etc.)",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Read aloud a story to learners."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have them identify and discuss (in pairs) the events in the story."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have groups share their views with the whole class."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.1.7.1.4",
+                      "description": "Share facts from texts heard with a partner, groups or the teacher",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Read an information text aloud to learners, using the KWL Strategy."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Before reading, have learners think-pair-share and talk about what they already know(K) about the title of the text. Have learners ask questions about what they want to know (W). While you read the text, pause often to give the children the chance to share what they have learned or answer the questions they have asked before reading."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "After the reading, have learners share what they have learned."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Put learners in groups to share facts from the text heard."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.1.8",
+              "title": "Asking and Answering Questions",
+              "description": "Demonstrating understanding in asking and answering questions.",
+              "orderIndex": 8,
+              "contentStandards": [
+                {
+                  "code": "B2.1.8.1",
+                  "description": "Demonstrate understanding in asking and answering questions",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.1.8.1.1",
+                      "description": "Use appropriate pronunciation and intonation in asking and answering Wh - questions",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise Yes/No questions and have learners answer some such question."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Ask Wh questions and have learners answer them. e.g. Questions: Who took my pen? Where is the book? Answers: I did. It is on the table."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Ask them to say what is common to all the questions introduced by Wh words (what? when? why? how?). e.g. Why did you eat her food?"
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Guide learners to use appropriate pronunciation and intonation in asking and answering simple Wh-questions in pairs. One asks a Wh question and the other answers. They then reverse roles."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Let learners write out simple Wh - questions on their own."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.1.9",
+              "title": "Giving and Responding to Commands, Instructions, Directions and Making Requests",
+              "description": "Demonstrating understanding in commands, instructions, directions and requests.",
+              "orderIndex": 9,
+              "contentStandards": [
+                {
+                  "code": "B2.1.9.1",
+                  "description": "Demonstrate understanding in commands, instructions, directions and requests",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.1.9.1.1",
+                      "description": "Give and respond to commands",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise verbs (action words) by having learners identify the present form of verbs and use them in sentences, e.g. come, go, sit, etc. (action)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have several learners obey commands such as 'stand up', 'close the door'."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "The teacher gives commands which the class/individuals promptly obey."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have Learners role-play giving and responding to commands."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.1.9.1.2",
+                      "description": "Make and respond to polite requests",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners demonstrate in pairs how they ask for favours."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss polite requests using examples. e. g. Can you hold the bag?"
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Discuss words used in polite requests. e.g. Please, could you..., do you mind.... May I..."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners take turns to make and respond to polite requests using the word, \"please\"."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Discuss the importance of the word, \"please\", in making requests."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.1.9.1.3",
+                      "description": "Respond to commands, instructions and requests",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce instructions by having learners respond to typical classroom instructions."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Create situations for learners to practise giving and responding to instruction."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners role-play parents, teachers, prefects, learners giving and responding to instructions, etc. e. g. Instruction: 1. Draw a circle in a square. 2. Write the letter 'A' in the circle."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.1.10",
+              "title": "Presentation",
+              "description": "Planning and presenting information and ideas for a variety of purposes.",
+              "orderIndex": 10,
+              "contentStandards": [
+                {
+                  "code": "B2.1.10.1",
+                  "description": "Plan and present information and ideas for a variety of purposes",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.1.10.1.1",
+                      "description": "Speak with confidence before different audience",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Put learners in pairs to share their holiday plans with each other."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have each person share his/her friend's plans with the class."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Use probing questions to get learners give additional information: e.g. i. Where will he go first? ii. What will he be doing there? etc."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.1.10.1.2",
+                      "description": "Maintain appropriate posture, eye contact and use appropriate verbal and non-verbal cues to convey meaning",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Model appropriate posture, eye contact and use verbal and non-verbal clues."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners observe and do same."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Discuss when to use various postures, eye contact, verbal and non-verbal clues when talking to different people e.g. teacher, friend."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners role-play how to maintain appropriate posture, verbal and non-verbal clues in communication. e.g. crossed arms and unblinking eye gaze to indicate disapproval."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B2.2",
+          "title": "Reading",
+          "description": "Developing reading skills through phonics, word families, vocabulary, comprehension, and fluency.",
+          "orderIndex": 2,
+          "subStrands": [
+            {
+              "code": "B2.2.2",
+              "title": "Phonics",
+              "description": "Connecting sounds to letters and blending them to read and write.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B2.2.2.1",
+                  "description": "Connect sounds to letters and blend letters/syllables in order to read and write",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.2.2.1.1",
+                      "description": "Blend syllables to produce words",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce the lesson with a recital that links the letters of the alphabet."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners work in pairs, groups or individually to blend syllables to form meaningful words."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Use word families as a guide to help build on the words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.2.1.2",
+                      "description": "Use the alphabetic knowledge to decode unknown words (e. g. use beginning and ending consonants, consonant blends, consonant digraphs, vowel sounds, vowel digraphs and word patterns)",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Begin the lesson with an alphabet song, a rhyme or a poem."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Play games with the alphabet to decode unknown words, changing the position of the letters from beginning to middle and to ending."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Use demonstrations to show learners that whenever a letter moves (especially the consonant), it may still sound the same."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners play alphabet games in pairs and groups."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.2.1.3",
+                      "description": "Use elements of structural analysis to decode unknown words.",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners analyse the basic structure of unknown two-syllable words using specific indicators as a guide (root words, prefixes like un-, suffixes like -ly)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners look at the different features of compound words."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Give learners the opportunity to work as teams/groups to come up with their own features, e. g. \"class\" and \"room\" will give \"classroom\"."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.2.3",
+              "title": "Word Families-Rhyming Endings and Common Digraphs",
+              "description": "Using rhyming endings and digraphs to enhance reading comprehension.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B2.2.3.1",
+                  "description": "Employ knowledge of rhyming endings and common digraphs to enhance reading comprehension",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.2.3.1.1",
+                      "description": "Use common rhyming/endings to decode simple words",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to simple word formation by changing the beginning letter of words. e.g. pan, man, fan (You may use a phonic slide to give practice)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners build on these rhyming endings."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "In groups, let learners read out their words."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners form sentences with these rhyming words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.3.1.2",
+                      "description": "Use words containing digraphs to make meaningful sentences.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to simple digraphs as in; ch- church, ph- photo, sh - shirt."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners build as many words as possible from digraphs."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners form meaningful sentences with the words."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.2.6",
+              "title": "Vocabulary",
+              "description": "Understanding word meanings and usages.",
+              "orderIndex": 6,
+              "contentStandards": [
+                {
+                  "code": "B2.2.6.1",
+                  "description": "Understand word meanings and usages",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.2.6.1.1",
+                      "description": "Read level-appropriate sight words, understand and use many of them in meaningful sentences",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce the selected sight words, one at a time, in context and write them on the board."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Start from the basic words they already know."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners repeat the words aloud a number of times."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Write the words on the board."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Have learners read the words in order and at random."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Use think-pair-share to have learners form sentences with them."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.6.1.2",
+                      "description": "Use context clues to infer meanings of words",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Create a story around a theme, using specific key words or vocabulary items you wish to teach."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners use context to find the meaning of the key words."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners make their own sentences using these key words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.6.1.3",
+                      "description": "Show awareness that homonyms have different meanings in different contexts",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Provide examples in contexts to help learners discover that homonyms have different meanings in different contexts. e.g. right and bat. a. You are right. Raise your right hand. b. I saw a bat fly this morning. My mother bought a tennis bat for me."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.6.1.4",
+                      "description": "Use dictionaries and glossaries to clarify meaning of words",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to the use of picture dictionaries and glossaries."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners use guide words to find meaning of words used."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners practise in pairs."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.2.7",
+              "title": "Comprehension",
+              "description": "Understanding and analysing texts read.",
+              "orderIndex": 7,
+              "contentStandards": [
+                {
+                  "code": "B2.2.7.1",
+                  "description": "Understand and analyse texts read",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.2.7.1.1",
+                      "description": "Use illustrations, text clues and context to make predictions during reading",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners use text features like title, illustrations and text clues to make meaning and inferences."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners predict, brainstorm on the topic and have them read to confirm their predictions."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners pause frequently during reading to make predictions to enhance comprehension."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.7.1.2",
+                      "description": "Ask and answer factual and inferential questions about level-appropriate texts",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners read level-appropriate texts in pairs."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Guide learners to ask and answer simple inferential questions on the texts."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.7.1.3",
+                      "description": "Retell level-appropriate texts in own words",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Revise some previous stories told."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners retell a story using simple herring-bone strategies."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.2.7.2",
+                  "description": "Use knowledge skills and techniques of reading to understand and interpret texts",
+                  "orderIndex": 2,
+                  "indicators": [
+                    {
+                      "code": "B2.2.7.2.1",
+                      "description": "Demonstrate understanding of the purpose and features of information texts",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners read informational texts to identify their purpose and features through think-pair-share."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.7.2.2",
+                      "description": "Describe events in a story",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners retell stories sequentially."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have them identify and describe events in the stories."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Guide learners to unfold the events in a story sequentially."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.7.2.3",
+                      "description": "Connect characters, ideas and information within a text",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners connect the ideas and information within a text to help construct meaning."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.7.2.4",
+                      "description": "Read level-appropriate texts with little support",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners read different texts with little support from teacher."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Gradually, scaffold to help learners read independently."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.7.2.5",
+                      "description": "Use visualisation strategy (form mental images about texts) to enhance understanding of level-appropriate texts",
+                      "orderIndex": 5,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Model using visualisation strategy to construct meaning from a text."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Through appropriate questions, guide learners to practise using visualisation strategy to construct meaning from texts. Note: visualisation strategy = forming mental image about texts."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B2.2.9",
+              "title": "Fluency",
+              "description": "Reading texts with good speed, accuracy, and expression.",
+              "orderIndex": 9,
+              "contentStandards": [
+                {
+                  "code": "B2.2.9.1",
+                  "description": "Read texts fluently",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B2.2.9.1.1",
+                      "description": "Read texts/stories/passages with good pace, accuracy and expression",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Model reading aloud with the focus on pace and expression."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners, in group/pairs, read short texts aloud with the appropriate pace, accuracy and expression."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.9.1.2",
+                      "description": "Read and recognise 120 sight words",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Introduce learners to more sight words in context."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have them identify and use at least 120 sight-words."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Remember to focus on a few at a time."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B2.2.9.1.3",
+                      "description": "Use contextual clues to confirm or self-correct pronunciation while reading aloud",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners use the context in which words are found to confirm or self-correct pronunciation of words while they read aloud."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Check intonation as they read to make meaning."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1312 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 5",
+  "subject": "Computing",
+  "name": "Basic 5 Computing",
+  "slug": "basic-5-computing",
+  "orderIndex": 1,
+  "description": "The Basic 5 Computing curriculum delves deeper into computer hardware, software, and networks. It covers the generation of computers, Windows interface customization, data sources and usage, advanced presentation and word processing skills, databases, spreadsheets, internet usage, and digital literacy.",
+  "strands": [
+    {
+      "code": "B5.1",
+      "title": "Introduction to Computing",
+      "description": "Exploration of computer generations, hardware, software, and the Windows interface.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B5.1.1",
+          "title": "Generation of Computers and Parts of a Computer and Other Gadgets",
+          "description": "Understanding output devices, analogue vs digital, and computer generations.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.1.1.1",
+              "description": "Identify parts of a computer and technology tools",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.1.1.1",
+                  "description": "Recognise and use output devices.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to recall what they learnt in the previous classes and ask them to mention computer devices that produce output (Softcopy- computer monitor/projector, audio electrical signals etc. Hardcopy- printed images, pictures documents)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.2",
+                  "description": "Describe the types of output device and identify their uses.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify types of output devices and their uses. Assist them to list them on the board as well as their uses."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.3",
+                  "description": "Distinguish the difference and similarities between analogue and digital devices e.g. telephone, mobile phone, radio, tablets, satellite etc.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide the learners to identify the similarities and differences between analogue and digital devices. Present examples of analogue and digital devices to learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.4",
+                  "description": "Identify the left, right mouse button, holding of mouse, performing single, double and triple clicking and dragging object.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use the mouse to perform performing single, double and triple clicking and dragging object into a folder or bring picture(s) describing the processes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.5",
+                  "description": "Identify home row keys, top row, bottom row keys, numerical pad and type (short sentences).",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to type using top row keys, bottom row keys, numerical pad and type an essay (50 words) using Word Processor or typing tutorial."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.6",
+                  "description": "Introduction to Windows Interface.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to list the features (i.e. Start Menu Returns, Cortana on Desktop, Xbox App, Project Spartan Browser, etc.) and compatibility issues of Windows 10."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.1.1.7",
+                  "description": "Summarise the generation of computers.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to recall what has been learnt in previous classes and ask leading questions, use scenarios to help learners identify the difference between the types of computers, their advantages and disadvantages."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.2",
+          "title": "Introduction to MS-Windows Interface (Desktop Background and Locations of the Computer)",
+          "description": "Customizing the desktop and managing files.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.1.2.1",
+              "description": "Demonstrate the use of the Desktop Background as well as working with folders.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.2.1.1",
+                  "description": "Personalise the Desktop Background and edit its images (e.g. image, icons and Taskbar of the background).",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create their own background picture using any application (e.g. paints). Guide them to use it as background picture."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.2.1.2",
+                  "description": "Recognise how to customise the Desktop Background using Change Background, Start menu and Pin to taskbar or start menu.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify and use task bar, start menu, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.2.1.3",
+                  "description": "Describe how to Personalise the Desktop Background using advance tools and settings.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to customize the Start Menu and the Notification Area."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.2.1.4",
+                  "description": "Creating a short cut, adding or removing common icons on the desktop.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create shortcuts of icons on the computers' desktop."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.2.1.5",
+                  "description": "Moving, copying and pasting a file or icon into and from a folder on the desktop",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to copy and paste a file or icon into and from a folder on the desktop."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.2.1.6",
+                  "description": "Demonstrate understanding of the File Explorer window and locations of the computer through the file explorer.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use the file explorer to locate files."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.3",
+          "title": "Data, Sources and Usage",
+          "description": "Identifying data types, sources, and performing basic data manipulation.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.1.3.1",
+              "description": "Illustrate the use of Data and identify their sources.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.3.1.1",
+                  "description": "Use Strategies for identifying data from results of an experiment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify the types of data (qualitative and quantitative) by asking leading questions. Task them to convert data from one format to another without losing its value."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.2",
+                  "description": "Identify primary sources of information e.g. photographs, audio, video recordings, letters etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention or talk about primary sources of information. Task learners to record data from the primary source and bring them to class for discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.3",
+                  "description": "Identify secondary sources of information e.g. radio, fax, telephones calls, SMS etc.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention or talk about where one can receive or send information by asking leading questions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.4",
+                  "description": "Demonstrate sending and sharing information e.g. arranging data, sorting and calculations etc.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Task learners to sort data in alphabetical order (increasing and decreasing order) and perform basic calculations such as multiplying, dividing and adding vales of sample data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.5",
+                  "description": "Demonstrate basic calculations on sample data e.g. arranging and summing and averaging data.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to add and find the average data collected and present their findings to the class"
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.6",
+                  "description": "Recognise data types (integer, double, float).",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Divide learners into two groups and ask one group to mention a number and the other group to identify the type of data mentioned"
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.7",
+                  "description": "Demonstrate sending and sharing information.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to send messages to each other via SMS, email. etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.8",
+                  "description": "Select the samples and collect data (e.g. listening to radio, newspaper, talking to people etc.)",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Put learners into groups, task them to interview teachers using simple questionnaire, and record the data in books."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.9",
+                  "description": "Make simple tables and diagrams from the collected data.",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring tools or pictures of the tools in a box or container and ask learners to select tools for collecting data out of the box or container."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.3.1.10",
+                  "description": "Analyse tables, maps, diagrams, photographs and charts, and generalize the results and make suggestions (e.g. Finding sum or grand total).",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Task learners to calculate the average, mean, sum and difference between data collected in an earlier class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.1.4",
+          "title": "Technology in the Community (Communication)",
+          "description": "Impact of technology and digital systems.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.1.4.1",
+              "description": "Demonstrate the use of Technology in the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.1.4.1.1",
+                  "description": "List the effects of technology on the community.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to investigate the types and types importance of compression of document. Positive effects - health care, education, manufacturing, agriculture etc. Negative effects - resource depletion, pollution, privacy and security etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.4.1.2",
+                  "description": "Explain the fundamentals of digital system components (hardware, software and networks).",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to brainstorm the basics of digital system components such as hardware, software and networks)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.4.1.3",
+                  "description": "Discuss how technology is used to save lives in community and how they are used",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore how technology is used to save lives in communities. Group them into groups of a maximum of five and let them present their findings to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.1.4.1.4",
+                  "description": "Discuss the effects of technology on the community.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to brainstorm the effects of technology on the community. Show learners videos or pictures of effects of technology on the community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.2",
+      "title": "Presentation",
+      "description": "Introduction to Microsoft PowerPoint features.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B5.2.1",
+          "title": "Introduction to MS-PowerPoint (Tabs and Ribbons)",
+          "description": "Working with Insert, Design, Animation, and Transition tabs.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.2.1.1",
+              "description": "Demonstrate how to use Microsoft PowerPoint",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.2.1.1.1",
+                  "description": "Show the use of Insert, design, animation and transition in the ribbons section. (New, Open, Save, Save As, Print and Close) and the Insert and design ribbon.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to use \"File menu\", \"Insert\" and \"Design Ribbons\" to create a new MS-PowerPoint slide and use shapes in the \"Insert ribbon\" to draw the Ghana flag\"."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.2.1.1.2",
+                  "description": "Show a 5-slide presentation using of Insert, design, animation and transition of the ribbons studied.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to use \"File menu\", \"Insert\" and \"Design Ribbons\" to design a colourful 5-paged MS-PowerPoint on the topic \"Myself\""
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.3",
+      "title": "Word Processing",
+      "description": "Introduction to Word Processing tabs and ribbons.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B5.3.1",
+          "title": "Introduction to Word Processing (Tabs and Ribbons)",
+          "description": "Working with Insert, Design, and Layout tabs.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.3.1.1",
+              "description": "Illustrate the use of word processing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.3.1.1.1",
+                  "description": "Demonstrate the use of Insert, Design, and Layout (New, Open, Save, Save As, Print and Close) and Insert, Design, and Layout ribbons. (i.e. clipboard, slides, fonts and paragraph).",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use File menu, Insert, Design and Layout Ribbon."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.3.1.1.2",
+                  "description": "Illustrate the use Insert, Design and Layout.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide the learners to create and format a document."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.5",
+      "title": "Programming and Databases",
+      "description": "Introduction to databases, algorithms, and programming languages.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B5.5.1",
+          "title": "Introduction to Databases, Algorithm and Programming Languages",
+          "description": "Understanding databases and basic programming concepts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.3",
+              "description": "Demonstrate how to use Databases",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.3.1",
+                  "description": "Describe databases.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify the features of a database and the types of databases that exist."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.3.2",
+                  "description": "Discuss the importance and uses of database.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play a video of the importance and uses of databases and ask learners to mention other uses of database and their importance."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.3.3",
+                  "description": "Describe the types of database.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to describe the types of database."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.3.4",
+                  "description": "Identify types of databases and data.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to investigate on the types of databases and data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.3.5",
+                  "description": "Explain fundamental database concepts.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the fundamental database concepts e.g. tables and data types, data selection and manipulation, security, and backup and restore."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.3.6",
+                  "description": "Discuss programming languages and their use (e.g. scratch, vb.net etc.)",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to investigate in groups on the programming languages and their use (e.g. scratch, vb.net etc.)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.5.2",
+          "title": "Introduction to Electronic Spreadsheet (Tabs and Ribbons Manipulation)",
+          "description": "Basics of electronic spreadsheets.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.5.1.2",
+              "description": "Demonstrate how to use Electronic Spreadsheet.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.5.1.2.1",
+                  "description": "Identify Electronic Spreadsheets and their uses.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play video on Electronic Spreadsheets and their uses in society. Assist learners to list examples of Electronic Spreadsheets (MS Excel, Numbers, Google sheets, Lotus 1-2-3 etc.)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.2.2",
+                  "description": "Learners discuss the importance of Electronic Spreadsheets.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss the importance of Electronic Spreadsheets and what they are used for."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.2.3",
+                  "description": "Learners get familiar with the interface of MS-Excel",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide Learners to demonstrate how to access MS-Excel on any computer or gadget and display text in MS-Excel."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.2.4",
+                  "description": "Learners to create basic worksheets using Microsoft Excel 2016.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to develop worksheet consisting of list of names ie. teachers, students, friends, families, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.2.5",
+                  "description": "Perform calculations in an MS-Excel worksheet.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to develop worksheet that will help in calculating multiplication, addition and subtraction"
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.2.6",
+                  "description": "Modify an MS-Excel worksheet.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to modify worksheet by adding the age of learners in the class to the list of learners created in an earlier class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.5.1.2.7",
+                  "description": "Modify the appearance of data within a worksheet.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show examples of modified data in (a) worksheet(s), either on projected screens or pictures. Guide learners to modify the appearance of data within a worksheet."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B5.6",
+      "title": "Internet and Social Media",
+      "description": "Understanding networks, web browsers, and online communication.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B5.6.1",
+          "title": "Network Overview",
+          "description": "Introduction to computer networks and the internet.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B5.6.1.1",
+              "description": "Demonstrate how to Network computers.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.1.1.1",
+                  "description": "Explain what a network is.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide the learners to discuss how devices communicate. Demonstrate simple connectivity between nodes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.1.1.2",
+                  "description": "Describe how the internet works.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to distinguish between PAN, LAN, MAN, WAN and Internet."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.1.1.3",
+                  "description": "Explain what the Internet is.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss the inter-connection of the internet computers (learners should be made to realise that the internet is a network of networks). Also, guide learners to come out with examples of Internet Communication."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.2",
+          "title": "Web Browsers and Web Pages",
+          "description": "Using web browsers and understanding web pages.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B5.6.2.1",
+              "description": "Demonstrate how to use Web Pages.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.2.1.1",
+                  "description": "Explain what a web browser is and its use.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to understand the concept and use of browsers through practical lessons. Show interfaces or images of browsers to learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.2",
+                  "description": "Identify web browsers.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to list the various types of browsers e.g. Firefox, Internet Explorer, Chrome etc. through practical lessons or the use of pictures"
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.3",
+                  "description": "Demonstrate the use of MS-Internet Explorer.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to launch MS-Internet Explorer and use the components (navigation, browse, etc.)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.4",
+                  "description": "Show how to create and remove a favorites link.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to practice how to create or remove favorite links in practical session(s)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.5",
+                  "description": "Create favorites folder.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to practice how to create a favorites folder through practical session(s)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.6",
+                  "description": "Use the links toolbar.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to practice the use of link toolbar through practical session(s)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.7",
+                  "description": "Explain what a Web Page is.",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore features of a Web Page (text, graphics, audio, video, animation etc. through practical lessons)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.8",
+                  "description": "Explain what a home page is.",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify a home page from other web pages, through practical lessons."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.2.1.9",
+                  "description": "Movement within and between web pages using hyperlinks.",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to practice clicking hyperlinks, through practical lessons."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.3",
+          "title": "Surfing the World Wide Web",
+          "description": "Using favourite places and search engines.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B5.6.3.1",
+              "description": "Demonstrate how to use Favorite places",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.3.1.1",
+                  "description": "Show how to create a favorite link.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create a favorite link."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.3.1.2",
+                  "description": "Demonstrate deleting favorite links.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to delete favorite links they have created in the previous lesson."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.3.1.3",
+                  "description": "Create favorite folder.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create a favorite folder."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.3.1.4",
+                  "description": "Use the links toolbar.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use the links toolbar."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.4",
+          "title": "Favourite Places and Search Engine",
+          "description": "Demonstrating search engine usage.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B5.6.4.1",
+              "description": "Demonstrate how to use Search Engines.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.4.1.1",
+                  "description": "Identify common search engines.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss search engines and the different types search engines (Google, DuckDuckGo, Yahoo etc.)"
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.4.1.2",
+                  "description": "Explore how smart search engines work.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to how smart search engines work (i.e. how professionals or people seek information for their work or interests and what information they draw from it)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.4.1.3",
+                  "description": "Demonstrate how to handle search results.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore how to handle search results from a search engine."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.5",
+          "title": "Using Online Forms",
+          "description": "Understanding and using online forms.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B5.6.5.1",
+              "description": "Demonstrate the Usage of Forms",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.5.1.1",
+                  "description": "Identify and describe forms in a web page.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to fill out dropdown boxes, combo box, Text fields etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.5.1.2",
+                  "description": "Demonstrate working on or offline.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to register or fill out online forms as well as offline through practical sessions. Learners can be guided to use created PDF or Word forms to practice filling out forms offline."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.5.1.3",
+                  "description": "Demonstrate downloading of files (e.g. pictures, audio, pdf etc.).",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to download a file through practical session(s)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.5.1.4",
+                  "description": "Illustrate retrieving text, pictures, sounds and programs.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to explore the download button by downloading pictures, audio, pdf etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.5.1.5",
+                  "description": "Discuss more about security on the form submission.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to Investigate and identify security issues when typing account details online (Antivirus, Credit card details, personal passwords etc.)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.6",
+          "title": "Customizing Your Browser",
+          "description": "Modifying browser settings and features.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B5.6.6.1",
+              "description": "Show how to Customize a Browser",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.6.1.1",
+                  "description": "Demonstrate how to set default search engines.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to set default search engines."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.6.1.2",
+                  "description": "Show how to set homepages.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to set homepages."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.6.1.3",
+                  "description": "Show how to make Browser apps, add-ons, plug-ins, and extensions.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to make Browser apps, add-ons, plug-ins, and extensions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.6.1.4",
+                  "description": "Illustrate how to customise the browser toolbar.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Facilitate learners to customise the browser toolbar."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.6.1.5",
+                  "description": "Identify cookies in web browsers.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Aid learners to recognize cookies in web browsers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.6.1.6",
+                  "description": "Illustrate how to set disk space or cache usage.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to set disk space or cache usage."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.7",
+          "title": "Electronic Email",
+          "description": "Understanding and using email.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B5.6.7.1",
+              "description": "Demonstrate the use of Electronic Mail",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.7.1.1",
+                  "description": "Identify the various e-mail service providers.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore on the various email service providers (email, outlook.com, icloud mail)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.7.1.2",
+                  "description": "Demonstrate the use of internet e-mail addresses.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to start an email address. Assist learners to use email address."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.7.1.3",
+                  "description": "Creating an email account e.g. Yahoo mail or Gmail account.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create email account (i.e. the possible steps)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.7.1.4",
+                  "description": "Illustrate viewing received messages and Create or Compose messages.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to write messages, format text, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.8",
+          "title": "Internet of Things (IoT)",
+          "description": "Understanding IoT concepts and components.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B5.6.8.1",
+              "description": "Demonstrate the use of Internet of Things (IoT)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.8.1.1",
+                  "description": "Describe the purpose Internet of Things.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss the loT in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.8.1.2",
+                  "description": "Give examples of Internet of Things with a consumer part and an industrial/business segment.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to give, explore and present in class examples of Internet of Things with a consumer part and an industrial/business segment."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.8.1.3",
+                  "description": "Identify components of Internet of Things.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the components of the Internet of Things. e.g. Hardware, Data, Software and Connectivity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.8.1.4",
+                  "description": "Identify the role of smart sensors in the Internet of Things.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to the explore the role of smart sensors in the Internet of Things e.g. Sensing and data collection capability such as climatic change (e.g. Electronic Doors, RFID, CCTV camera, etc.), define at least five terms and acronyms of loT."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.9",
+          "title": "Digital Literacy",
+          "description": "Promoting digital proficiency and safety.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B5.6.4.9.1",
+              "description": "Demonstrate proficiency in Digital Literacy.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.4.9.1.1",
+                  "description": "Describe private and personal information.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Encourage learners to tell you what they know about private and personal information online. Ask leading questions to help them bring out points they could not make out."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.4.9.1.2",
+                  "description": "Discuss various techniques on online protection from online identity theft.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss security measures online such as logging out after browsing, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.6.10",
+          "title": "Digital Literacy",
+          "description": "Understanding network etiquette and responsible computer use.",
+          "orderIndex": 10,
+          "contentStandards": [
+            {
+              "code": "B5.6.10.1",
+              "description": "Demonstrated the application of Network Etiquette (Netiquette).",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B5.6.10.1.1",
+                  "description": "Define digital footprint.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explain digital footprint."
+                    }
+                  ]
+                },
+                {
+                  "code": "B5.6.10.1.2",
+                  "description": "Illustrate how to keep some information from public when using the internet.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learner to avoid posting personal information."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B5.7",
+          "title": "Health and Safety in Using ICT Tools",
+          "description": "Promoting healthy habits while using technology.",
+          "orderIndex": 7,
+          "subStrands": [
+            {
+              "code": "B5.7.1",
+              "title": "Health and Safety in Using ICT Tools",
+              "description": "Identifying health hazards and proper posture.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B5.7.1.1",
+                  "description": "Demonstrate the application of Health and safety measures, in using ICT tools.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B5.7.1.1.1",
+                      "description": "Identify some major health hazards associated with the use of ICT tools' use.",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide the learners to discuss wrist pain and sitting posture (neck, back and waist pain)."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B5.7.1.1.2",
+                      "description": "Describe proper sitting posture.",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners in groups to discuss, identify and practise the proper sitting posture (i.e. siting at 90 degrees, wrist should be supported with a wrist pad, take short breaks etc.) when using the computer."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

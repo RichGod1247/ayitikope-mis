@@ -1,0 +1,321 @@
+{
+  "part": "2/2",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 1",
+      "subject": "Our World and Our People",
+      "name": "Basic 1 Our World and Our People",
+      "slug": "basic-1-our-world-and-our-people",
+      "orderIndex": 1,
+      "description": "The Basic 1 OWOP curriculum nurtures honest, creative, and responsible citizens. It focuses on developing self-awareness, understanding the environment, religious values, and national identity through themes like the nature of God, the community, the environment, and global citizenship.",
+      "strands": [
+        {
+          "code": "B1.4",
+          "title": "OUR NATION GHANA",
+          "description": "Developing a sense of national identity and citizenship.",
+          "orderIndex": 4,
+          "subStrands": [
+            {
+              "code": "B1.4.1",
+              "title": "Being a Citizen",
+              "description": "Understanding responsible citizenship.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B1.4.1.1",
+                  "description": "Demonstrate Understanding of the characteristics of a responsible citizen",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.1.1.1",
+                      "description": "Mention the characteristics of a responsible citizen",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Learners talk about who a responsible citizen is, e.g. obeying parents and school rules, respecting people, taking care of school property, keeping the environment tidy, being polite, keeping the environment tidy, loving your country etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Learners role play on some of the characteristics of a responsible citizen."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.2",
+              "title": "Authority and Power",
+              "description": "Understanding power, authority, and national symbols.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B1.4.2.1",
+                  "description": "Demonstrate understanding of obeying power and authority as a responsible citizen",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.2.1.1",
+                      "description": "Explore sources of power and authority",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Learners identify the national symbols and appreciate them: i. National Flag, ii. National Anthem, iii. National Pledge, iv. Coat of Arms, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Learners, in groups/pairs, tell how these national symbols can be preserved, e.g. pay attention to the National Anthem, protect the national symbols, report people who destroy the national symbols."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B1.4.2.1.2",
+                      "description": "Identify people who have power and authority and respect them, as a responsible citizen",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Learners talk about the people who have power and authority: i. at Home: father, mother, older siblings; ii. in class/school: head teacher, class teacher, school prefects, class prefects; iii. in the community: chiefs, parliamentarians, assembly members; iv. in the nation: president, vice president, speaker of parliament."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Learners give examples of persons occupying such positions."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.3",
+              "title": "Responsible Use of Resources",
+              "description": "Understanding the importance of energy.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B1.4.3.1",
+                  "description": "Demonstrate understanding of the importance of energy in our environment.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.3.1.1",
+                      "description": "Explore the importance of energy in the home, school and community",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Through questions and answers, learners mention the types of energy sources available in their homes and communities, e.g. sun, wind, firewood, charcoal, kerosene and gas (LPG) (Whole class /small group discussion)."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Learners talk about uses of energy, e.g. cooking, smoking and drying of food items."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Learners draw a bulb, flashlight coal pot, etc."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Share their drawings with peers in the class in order to appreciate the sources of energy in the home and community."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.4.4",
+              "title": "Farming in Ghana",
+              "description": "Understanding farming activities and tools.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B1.4.4.1",
+                  "description": "Demonstrate understanding of farming as an important activity",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.4.4.1.1",
+                      "description": "Describe farming activities in the community",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Learners look around the school or community and talk about different farm activities the people do/watch pictures/ films on different types of farm activities e.g. growing of vegetable, fruits, corn, goats, sheep, pigs, cattle, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Learners draw some farming activities e.g. weeding the farm or garden, feeding animals"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.4.4.2",
+                  "description": "Show understanding of simple agricultural tools use in Ghana",
+                  "orderIndex": 2,
+                  "indicators": [
+                    {
+                      "code": "B1.4.4.2.1",
+                      "description": "Identify simple agricultural tools",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Learners look at pictures of simple agricultural tools or the real tools people use in the community to farm. Tools such as cutlass, hoe, watering cans, hand trowels, spade can be used."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Draw some of the agricultural tools used in Ghana, e.g. cutlass, hoe, mattock, rake, hand fork, axe, watering can, etc."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B1.5",
+          "title": "MY GLOBAL COMMUNITY",
+          "description": "Connecting with the wider world through geography and technology.",
+          "orderIndex": 5,
+          "subStrands": [
+            {
+              "code": "B1.5.1",
+              "title": "Our Neighbouring Countries",
+              "description": "Identifying Ghana's neighbors.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B1.5.1.1",
+                  "description": "Demonstrate knowledge of Ghana's Neighbouring Countries",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.1.1.1",
+                      "description": "Mention Ghana's Neighbours",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Learners identify their unique country, Ghana and her neighbours."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Learners demonstrate the positions of Ghana's neighbouring countries by using the body e.g. to my right is Togo, to my left is La Cote d'Ivoire, to my front is Burkina Faso and to my back is the sea (the Atlantic Ocean)"
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Learners compose a song/rhyme and draw a learner with arm stretched showing Ghana's neighbours"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.5.2",
+              "title": "Introduction to Computing",
+              "description": "Understanding computer parts.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B1.5.2.1",
+                  "description": "Demonstrate understanding of the parts of a computer",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.2.1.1",
+                      "description": "Identify parts of a computer and how they connect to each other",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Learners talk about the parts of a computer e.g. mouse."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Learners work in small groups to explore how the gadgets connect to each other. Each group is given one item at a time, i.e. a mouse, keyboard, monitor or system unit. Guide learners to connect the gadgets."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Guide learners to tell how the gadgets are connected (i.e. the connection of mouse, keyboard, monitor, system unit, etc.)."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.5.3",
+              "title": "Sources of Information",
+              "description": "Understanding data and information.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B1.5.3.1",
+                  "description": "Demonstrate understanding of data and sources of information",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.3.1.1",
+                      "description": "Collect types of data",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners to collect various items from the environment, count and record them in a book, e.g. count the number of tables, chairs, exercise books, textbooks and record them. Talk about the various types of data gathered."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B1.5.4",
+              "title": "Technology in Communication",
+              "description": "Recognising communication tools.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B1.5.4.1",
+                  "description": "Recognise technology tools in communication",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B1.5.4.1.1",
+                      "description": "Identify technology tools in communication",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Learners in groups talk about technology tools used for communication e.g. gong gong, drums, bells, mobile vans, and community information centres."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Learners draw and colour drums, bells, gong gong to assemble people."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

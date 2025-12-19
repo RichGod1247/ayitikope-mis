@@ -1,0 +1,1081 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 6",
+  "subject": "Mathematics",
+  "name": "Basic 6 Mathematics",
+  "slug": "basic-6-mathematics",
+  "orderIndex": 1,
+  "description": "The Basic 6 Mathematics curriculum consolidates skills in number sense, algebra, geometry, and data handling. It introduces numbers up to 1,000,000,000, operations with larger numbers, advanced fraction concepts including ratios and proportions, algebraic expressions and equations, 3D shapes like prisms, geometric transformations, and advanced data interpretation including probability.",
+  "strands": [
+    {
+      "code": "B6.1",
+      "title": "Number",
+      "description": "Developing number sense, operations, fractions, ratios, and proportion.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B6.1.1",
+          "title": "Counting, Representation & Cardinality",
+          "description": "Working with numbers up to 1,000,000,000.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.1.1.1",
+              "description": "Demonstrate an understanding of quantities and place value for multi-digit numerals up to 1,000,000,000 or 1 billion",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.1.1.1",
+                  "description": "Model number quantities up to 1,000,000 using graph sheets and multi-base block",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model number quantities up to 1,000,000 using graph sheets or multi-base materials."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Model numbers by shading graph sheet squares."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use token currency notes to model amounts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.2",
+                  "description": "Read and write numbers in figures and in words up to 1,000,000,000",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use place value number wheel to generate and read 7-digit numbers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write given numbers in expanded form."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.3",
+                  "description": "Identify numbers in different positions around a given number in a number chart",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify numbers on a number chart in multiples of 1,500."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.4",
+                  "description": "Compare and order whole numbers up to 100,000 and represent the comparison using >, <, or =",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify numbers more or less than a given number and use comparison symbols."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Order a set of numbers in ascending or descending order."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare two large numbers and describe their relationship."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.5",
+                  "description": "Round (off, up, down) whole numbers up to 100,000 to the nearest ten thousands, thousands, hundreds and tens",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Round off numbers to the nearest 100,000, 10,000 and 1,000."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Round up and round down to estimate sums and differences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare two numbers between 10,000 and 1,000,000."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Work together to round up and round down to estimate sums and differences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.6",
+                  "description": "Skip count forwards and backwards in 5000s, 10,000s etc. up to and from 1,000,000",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Skip count in 5000s or 10,000s in groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify errors in skip counting sequences."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.1.2",
+              "description": "Demonstrate understanding of Roman Numerals up to C (i.e. 100)",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.1.1.2.1",
+                  "description": "Recognise Roman Numerals system up to C (i.e. 100)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify Roman numerals on a chart."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Match Roman numerals to Hindu-Arabic numerals."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.2.2",
+                  "description": "Count and convert Hindu Arabic numbers to Roman numerals up to 100 (C) and vice versa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read and write Roman numerals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Convert between Hindu-Arabic and Roman numerals."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve missing number puzzles involving Roman numerals."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.1.3",
+              "description": "Demonstrate understanding of factors, multiples and prime numbers from 1 to 100",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B6.1.1.3.1",
+                  "description": "Determine the HCF and the LCM of two or three numbers using prime factors",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use factor tree method to determine prime factors."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use prime factorization by inspection to determine HCF."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use prime factorization by inspection to determine LCM."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use Venn diagrams to find HCF and LCM."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use prime factorization table to determine LCM and HCF of three numbers."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.2",
+          "title": "Number Operations",
+          "description": "Operations with multi-digit numbers and integers.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.1.2.1",
+              "description": "Describe and apply mental mathematics strategies and number properties to determine answers for basic multiplication facts to 144 and related division facts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.2.1.1",
+                  "description": "Apply mental mathematics strategies and number properties",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use strategies like skip counting, doubling, patterns in 9s and 11s facts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recall multiplication facts to 81 and related division facts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.2",
+                  "description": "Apply mental mathematics strategies for multiplication using distributive property",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Multiply by annexing zeros."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use halving and doubling."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Apply the distributive property."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain property for multiplying by one and zero."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.2.2",
+              "description": "Demonstrate understanding of multiplication of a 2 or 3-digit number by a 2 or 3-digit number",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.1.2.2.1",
+                  "description": "Multiply multi digit numbers by 2 or 3-digit numbers efficiently",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use 'expand and box' method."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use column or vertical method."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use distributive property."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use lattice method."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.2.3",
+              "description": "Manipulate numbers, using basic division fact up to 144",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B6.1.2.3.1",
+                  "description": "Determine basic division fact up to 81",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Investigate divisibility tests for 6, 8, 9, and 11."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use multiplication charts for division games."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.2.4",
+              "description": "Demonstrate understanding of division of a 2 or 3-digit number by a 1 or 2-digit number",
+              "orderIndex": 4,
+              "indicators": [
+                {
+                  "code": "B6.1.2.4.1",
+                  "description": "Divide 3-digit numbers by 1-digit number efficiently",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use long division (repeated subtraction) method."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.2.5",
+              "description": "Translate word problems into mathematical sentences and solve",
+              "orderIndex": 5,
+              "indicators": [
+                {
+                  "code": "B6.1.2.5.1",
+                  "description": "Solve multi step word problems involving the four basic operations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model and solve problems involving addition and multiplication."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Model and solve problems involving division and subtraction."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Role play word problems."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.2.6",
+              "description": "Demonstrate an understanding of integers",
+              "orderIndex": 6,
+              "indicators": [
+                {
+                  "code": "B6.1.2.6.1",
+                  "description": "Locate, compare and order sets of integers using the number line and symbols < or >",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify integers on a number line."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.6.2",
+                  "description": "Solve simple addition and subtraction problems involving integers",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use number lines for addition of integers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use number lines for subtraction of integers."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve word problems involving integers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.6.3",
+                  "description": "Perform simple multiplication with integers",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use number lines to multiply integers."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.3",
+          "title": "Fractions",
+          "description": "Advanced operations with fractions.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.1.3.1",
+              "description": "Demonstrate understanding of strategies for comparing, adding, subtracting, multiplying and dividing common, decimal and percent fractions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.3.1.1",
+                  "description": "Compare and order a mixture of fractions: common, percent and decimal fractions (up to thousandths)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compare fractions by converting to a common form."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Locate fractions on a number line to order them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.2",
+                  "description": "Add and subtract unlike and mixed fractions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Add mixed fractions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Subtract mixed fractions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Add or subtract improper fractions using LCD."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.3",
+                  "description": "Use models to explain the result of multiplying a fraction by whole number, a whole number by a fraction and a fraction by fraction",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Multiply whole numbers by mixed fractions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Interpret multiplication as 'of' using models."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Multiply fractions by whole numbers."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.4",
+          "title": "Ratios and Proportion",
+          "description": "Understanding and applying ratios and proportion.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.1.4.1",
+              "description": "Demonstrate understanding of the concept of ratios and its relationship to fractions and to the multiplication and division of whole numbers",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.4.1.1",
+                  "description": "Use concrete models and pictorial representations to explain a ratio as a concept that shows the number of times one quantity can be obtained in another",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain ratio using concrete objects or pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain simplest form of a ratio."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve simple problems involving ratios."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.4.1.2",
+                  "description": "Express ratios in equivalent forms, compare and order ratios",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find equivalent ratios to compare."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve problems involving simplifying and comparing ratios."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve problems involving total ratios."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.4.2",
+              "description": "Understand the concept of proportion and its relationship to ratios and rates",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.1.4.2.1",
+                  "description": "Use models to explain proportion as a comparison between quantities with equal ratios",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain proportion using mapping diagrams."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify proportional mappings."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Work out proportion in given contexts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.4.2.3",
+                  "description": "Use various strategies to solve proportional reasoning problems involving rates and scales",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain rate using diagrams."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Work out rates and use them to solve problems."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain scale as a ratio comparing object and model sizes."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Work out scales and use them to solve problems."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.2",
+      "title": "Algebra",
+      "description": "Patterns, algebraic expressions, and equations.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B6.2.1",
+          "title": "Patterns and Relationships",
+          "description": "Advanced pattern recognition and prediction.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.2.1.1",
+              "description": "Determine the pattern rule to make predictions about subsequent elements",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.1.1.4",
+                  "description": "Represent a given pattern visually to verify predictions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Examine patterns with match sticks and complete tables."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine geometric patterns and describe relationships."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create questions based on patterns."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.1.1.7",
+                  "description": "Write a rule in words and in algebra to represent a given pattern",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "State rules in words and algebra for linear patterns."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.1.1.8",
+                  "description": "Describe the relationship in a given table or chart, using a mathematical expression",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain patterns in cost tables."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write questions based on patterns."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.2",
+          "title": "Algebraic Expressions",
+          "description": "Understanding and manipulating algebraic expressions.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.2.2.1",
+              "description": "Demonstrate understanding of algebraic expressions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.2.1.1",
+                  "description": "Demonstrate understanding of algebraic expressions as mathematical phrases",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write algebraic expressions for word problems."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write algebraic expressions for perimeter of shapes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write algebraic expressions for area of shapes."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Simplify basic algebraic expressions by grouping like terms."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Substitute values into expressions and calculate."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.3",
+          "title": "Variables and Equations",
+          "description": "Solving single variable equations.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.2.3.1",
+              "description": "Solve problems involving single variable, one-step equations with whole number coefficients",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.3.1.2",
+                  "description": "Identify the unknown, represent and solve",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find the value of x in equations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.3.1.3",
+                  "description": "Create a problem for a given equation",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create stories for equations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve puzzles by solving equations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.3",
+      "title": "Geometry and Measurement",
+      "description": "Prisms, geometric reasoning, and transformations.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B6.3.1",
+          "title": "Lines and Shapes",
+          "description": "Understanding prisms.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.3.1.1",
+              "description": "Demonstrate understanding of prisms",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.1.1.1",
+                  "description": "Identify examples of rectangular and triangular prisms",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Examine and describe cross sections of 3D shapes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sort 3D shapes with uniform cross sections (prisms)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.1.1.2",
+                  "description": "Construct rectangular and triangular prisms from their nets",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Examine nets of cardboard prisms."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw net of a square prism."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw net of a rectangular prism."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Draw net of a triangular prism."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.3.3",
+          "title": "Geometric Reasoning",
+          "description": "Position, direction, and transformation.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.3.3.5",
+              "description": "Describe the position of objects in space using the cardinal points",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.3.5.1",
+                  "description": "Tell the position and motion of objects in space using the cardinal points north-east, north-west, south-east and south-west",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe position using 8 cardinal points."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe positions in a grid."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Give directions."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.3.3.5",
+              "description": "Perform a single transformation (i.e. reflection translation) on a 2D shape",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.3.3.5.1",
+                  "description": "Perform and identify images of a single transformation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw reflection images."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Review reflection properties."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate translation using a grid."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss translation properties."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Draw translation images."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.3.5.2",
+                  "description": "Identify images of a single transformation",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify reflection images."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify translation images."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.4",
+      "title": "Data",
+      "description": "Data handling and probability.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B6.4.1",
+          "title": "Data Collection, Organisation, Presentation, Interpretation and Analysis",
+          "description": "Line graphs and data collection methods.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.4.1.1",
+              "description": "Create, label, and interpret line graphs to draw conclusions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.1.1.1",
+                  "description": "Draw a line graph",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Determine common attributes and draw line graphs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw line graph for temperature data."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Study line graphs and answer questions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.1.1.2",
+                  "description": "Determine whether a given set of data can be represented by a line graph",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Distinguish between discrete and continuous data."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write questions for data tables."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.1.1.3",
+                  "description": "Apply understanding of how to create a line graph",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw line graphs for various data sets."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Study line graphs and answer questions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write questions for line graphs."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.4.1.2",
+              "description": "Select, justify, and use appropriate methods of collecting data",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.4.1.2.1",
+                  "description": "Select a method for collecting data",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss decision making and data collection in situations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify methods of data collection."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.1.2.2",
+                  "description": "Design and administer a questionnaire",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Do surveys using question forms."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organize data using tables."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.1.2.3",
+                  "description": "Design and administer a questionnaire to solve problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create frequency tables."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw graphs and write conclusions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify survey questions and conduct surveys."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.2",
+          "title": "Chance or Probability",
+          "description": "Understanding probability outcomes.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.4.2.2",
+              "description": "Demonstrate an understanding of probability",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.2.2.1",
+                  "description": "List possible outcomes and determine probabilities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Understand theoretical vs experimental probability."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Carry out experiments (tossing coin, throwing dice)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare experimental and theoretical probabilities."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Work out probabilities for dice rolls."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Compare class results with theoretical probabilities."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Observe convergence of probabilities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.2.2.2",
+                  "description": "Predict the probability of a given outcome",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Carry out experiments with spinners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare spinner results with theoretical probabilities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.2.2.3",
+                  "description": "Explain that experimental probability approaches theoretical probability",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Combine class results for spinners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss convergence of probabilities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

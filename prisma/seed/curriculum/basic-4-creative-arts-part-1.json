@@ -1,0 +1,346 @@
+{
+  "part": "1/4",
+  "phase": "Upper Primary",
+  "level": "Basic 4",
+  "subject": "Creative Arts",
+  "name": "Basic 4 Creative Arts",
+  "slug": "basic-4-creative-arts",
+  "orderIndex": 1,
+  "description": "The Basic 4 Creative Arts curriculum builds on lower primary experiences, encouraging learners to generate ideas, create artworks, display them, and appraise art. It integrates Visual and Performing Arts, focusing on Ghanaian history, culture, the environment, and topical issues.",
+  "strands": [
+    {
+      "code": "B4 1.1",
+      "title": "VISUAL ARTS",
+      "description": "Thinking and exploring ideas for visual arts based on Ghanaian culture and environment.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B4 1.1.1",
+          "title": "Thinking and Exploring Ideas",
+          "description": "Generating ideas for artistic expression based on Ghanaian history, culture, environment, and topical issues.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4 1.1.1.1",
+              "description": "Demonstrate understanding of how to generate own ideas for artistic expressions about the people based on their history and culture, the environment and topical local/national/global issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4 1.1.1.1",
+                  "description": "Study and talk about visual artworks created by selected Ghanaian visual artists that reflect the history and culture of the people of Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Study the visual artworks (e.g. wood carvings, printed fabrics, wall paintings, cartoons, posters, photographs, clay pots) created by some Ghanaian visual artists (such as Amon Kotei, Theodosia Okoh, Ablade Glover, Oku Ampofo, Offei-Nyako, Kwame Amoah, Betty Acquah, Kofi Antubam)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Gather information from library books; surfing the internet; visiting art studios, galleries, museums or exhibitions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Watch videos, films or observing photographs of artworks of some Ghanaian visual artists."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine some artworks of the artists to find out how those artworks reflect the history and culture of the people of Ghana. For example, relate the colours and star in the Ghana Flag to the history of Ghana."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Identify and discuss symbols found in the artworks being studied that reflect the history and culture of the people of Ghana."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Write brief notes about one visual artist using the following guidelines: Name, Training, Type of artworks, Title of some works."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 1.1.1.2",
+                  "description": "Study and talk about visual artworks created by selected Ghanaian visual artists to generate ideas for designing and making own visual artworks",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select an artwork of one of the visual artists studied."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Think about the topic or purpose of that artwork. For example, flower pots/vases are made to hold flowers that decorate or beautify our surroundings."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine the materials and production methods the artist used to design and make the selected visual artwork being studied. For example, a) The pot is made out of clay; b) The methods used are pinching/slabbing/throwing; c) The pot is decorated with Adinkra symbols through embossing or incision; d) The pot is fired."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Generate ideas for making own artworks to reflect the history and culture of the people of Ghana."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 1.1.1.3",
+                  "description": "Generate ideas by studying visual artworks created by selected Ghanaian visual artists that reflect the natural and manmade environments of some communities in Ghana",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select artworks of some Ghanaian visual artists that show aspects of the natural and manmade environments."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Observe the artworks in detail and describe the ideas that make up the artworks (e.g. the type of artwork, topic/purpose, natural and manmade things they show, art materials used)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assess the artworks by comparing their size, purpose, colours, ideas expressed, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 1.1.1.4",
+                  "description": "Make decisions for designing and creating own visual artworks that will reflect the natural and manmade environments of some communities in Ghana",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Go on out-of-the-classroom walk to observe the natural and manmade surroundings."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Collect samples of natural and manmade objects, take photographs, or make videos of objects that interest them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine the samples/pictures for their shapes, texture, colours, size, lines, etc. and gather ideas on artworks suggested."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Reflect on the shapes, texture, colour, suggestions of movement, pattern, rhythm, etc. to generate ideas for designing and making own artworks."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 1.1.1.5",
+                  "description": "Develop ideas by studying the artworks of some Ghanaian visual artists that reflect topical issues in Ghana",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select works of Ghanaian visual artists that exhibit current topical issues of national concern (e.g. road safety, plastic waste, water pollution, climate change, migration of youth)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Share ideas on how the selected artworks express issues of national concern."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the artworks by their type, topic/theme, materials used, style of artist, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 1.1.1.6",
+                  "description": "Explore through brainstorming to generate ideas for creating own visual artworks that reflect topical issues in Ghana",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learn about issues of national concern through library studies, watching films, surfing the internet, interviewing people, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Document their findings by: a) writing simple notes and statements; b) taking photographs and drawing pictures; c) recording spoken words/voice messages, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss their findings in class with peers."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Think about comments made by peers on their findings during class discussions."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use knowledge gained to generate ideas for designing and making own artworks that will reflect topical issues of national concern."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4 2.1",
+      "title": "PERFORMING ARTS",
+      "description": "Thinking and exploring ideas for performing arts based on Ghanaian culture.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B4 2.1.1",
+          "title": "Thinking and Exploring Ideas",
+          "description": "Generating ideas for performance based on Ghanaian history, culture, environment, and topical issues.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4 2.1.1.1",
+              "description": "Demonstrate understanding of how to generate own ideas for artistic expressions about the people based on their history and culture, the environment and topical local/national/global issues",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4 2.1.1.1",
+                  "description": "Study the performing artworks created by some Ghanaian performing artists that reflect the history and the culture of the people in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Study the performing artworks (music, dance, drama/play, poetry) composed or performed by some Ghanaian performing artists such as Ephraim Amu, Grace Omaboe, the National Dance Ensemble, Agya Koo Nimoh, Atukwei Okai."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Gather information from library studies, newspapers, surfing the internet, visiting performing art studios/location of performing arts groups, cultural centres, watching short videos/films, live/recorded performances, etc. of some Ghanaian performing artists."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine some performing artworks and sharing ideas about the compositions and performances studied on how those artworks reflect the history and culture of the people of Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify and discuss the themes/topics of the compositions and performances that reflect the history and culture of the people of Ghana."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write notes about one performing artist using the following guidelines: Name, Training, Type of compositions and performances, Title of some works."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 2.1.1.2",
+                  "description": "Generate ideas from the performing artworks of some Ghanaian performing artists studied for planning own compositions and performances that will reflect the history and culture of the people of Ghana",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select a composition or performance of any of the Ghanaian performing artists studied."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Think about the topic/theme or purpose of the work. For example, 'Wogbedzɛke' by Nat Brew Amandzeba that traces the migration of the Ga people of Greater Accra region from Israel to their present location in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Study the words/lyrics, movement patterns and topics used by the artists in composing and performing their music, dance and drama (poetry/theatre)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Generate ideas for composing and performing own music, dance, drama or poetry that will reflect the history and culture of the people of Ghana."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 2.1.1.3",
+                  "description": "Study the performing artworks created of some Ghanaian performing artists that reflect the natural and manmade environments of some communities in Ghana",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select artworks of some Ghanaian performing artists that show aspects of the natural and manmade environments."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Study the artworks in detail and describe the ideas that make up the artworks (e.g. the type of artwork, topic/purpose, ideas taken from natural and manmade things, instruments used, words/lyrics, etc.)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assess the artworks by comparing their types, topics/themes, purpose, function, ideas expressed, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 2.1.1.4",
+                  "description": "Generate own ideas for composing and performing own artworks that will reflect the natural and manmade environments of some communities in Ghana",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Go on out-of-the-classroom walks to observe natural and manmade things in the surroundings."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Observe the movement patterns of natural and manmade objects (e.g. animals, birds, trees, vehicles, bicycles, rims of tyres, people)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Listen to sounds created by natural and manmade objects (e.g. moving vehicles, whistles, birds, flowing rivers/streams, drums, rain drops, wind)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record the movement and sounds of natural and manmade objects that interest the learners."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Study and analyse the movements and sounds observed, listened to or recorded."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Think about own collection of movement and sound patterns and use them to generate ideas for planning own music, dance, drama or poetry compositions and performances."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 2.1.1.5",
+                  "description": "Study the performing artworks of some Ghanaian performing artists that reflect topical issues in Ghana",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select compositions and performances of some Ghanaian performing artists that reflect topical issues of national concern (e.g. road safety, plastic waste, water pollution, climate change, migration of youth)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the compositions and performances to share ideas on how the selected artworks express topical issues of national concern in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assess the artworks by comparing the types, topic/theme, materials used, style of artist, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4 2.1.1.6",
+                  "description": "Explore through brainstorming to develop ideas for creating own performing artworks that will reflect topical issues in Ghana",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learn about issues of national concern from library books, newspapers, watching films, surfing the internet, interviewing people, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Document their findings by: d) writing simple notes and statements; e) taking photographs and making videos; f) recording spoken words/voice messages, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss their findings in class with peers."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Think about comments made by peers on their findings during class discussions."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use knowledge gained to generate ideas for designing and making own performing artworks that will reflect current topical issues of national concern in Ghana."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,457 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 4",
+  "subject": "Computing",
+  "name": "Basic 4 Computing",
+  "slug": "basic-4-computing",
+  "orderIndex": 1,
+  "description": "The Basic 4 Computing curriculum introduces learners to essential computer skills and concepts. It covers the identification of computer parts, usage of the desktop interface, introduction to word processing and presentation software, data collection and usage, and the role of technology in communication.",
+  "strands": [
+    {
+      "code": "B4.1",
+      "title": "Introduction to Computing",
+      "description": "Introduction to the basic components and functions of a computer system.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B4.1.1",
+          "title": "Generation of Computers and Parts of a Computer and Other Gadgets",
+          "description": "Understanding computer hardware and its evolution.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.1.1.1",
+              "description": "Identify parts of a computer and technology tools",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.1.1.1",
+                  "description": "Identify parts of a computer and technology tools (the mouse, keyboard, monitor, system unit and its components (memory, hard disk drive, CD-ROM etc.), speakers, and peripherals.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring items such as memory(i.e. memory cards, memory sticks), hard disk drive, CD-ROM etc. or pictures of these items to class and ask the learners to label selected items or computer parts in their note books."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.2",
+                  "description": "Describe the types of input devices of a computer and their uses. E.g. joystick, light pen, mouse, pointing stick etc. Bring input devices to class.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the types of input devices and their uses."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.3",
+                  "description": "Differentiate between RAM and ROM.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring a RAM or ROM to class or a picture of RAM and ROM to class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to differentiate between ROM and RAM."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.4",
+                  "description": "Type short phrases.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to type different phrases using any Word Processing Application."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.1.1.5",
+                  "description": "Summarise the first generation of computers which used vacuum tubes as a major piece of technology.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss about the first generation of computers. e.g. ENIAC, EDVAC, UNIVAC, IBM-701 etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.2",
+          "title": "Introduction to MS-Windows Interface",
+          "description": "Navigating and customizing the Windows desktop environment.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.1.2.1",
+              "description": "Demonstrate the use of the Desktop Background as well as working with folders.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.2.1.1",
+                  "description": "Describe the desktop background and explain its features (e.g. image, icons and Taskbar of the background).",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the desktop background and explain its features (i.e. wallpaper, icons of files and folders you have or may have saved to the desktop, taskbar etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show different desktop background images to learners. Assist them to explain its features."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.2.1.2",
+                  "description": "Demonstrate how to Personalise the Desktop Background using required tools and settings;",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show projected examples of personalised Desktop Background to learners with the aid of a projector or pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to personalise the Desktop Background using the required tools and settings."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.2.1.3",
+                  "description": "Demonstrate the use of the Sections of the Taskbar; Start Menu (Location and Launching only), Pinned Applications (Launched / Minimised programmes) and Notification Area or system tray (Date & Time, and Volume).",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the use of the Taskbar, Start Menu, and Pinned Applications and Notification Area."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.2.1.4",
+                  "description": "Adding and removing icons from the desktop.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to add and remove icons from the desktop"
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.2.1.5",
+                  "description": "Moving, selecting and hiding multiple icons on the desktop.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to move, select and hide icons on the desktop."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.2.1.6",
+                  "description": "Creating, naming and renaming a folder.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to create, name and rename a folder."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.3",
+          "title": "Data, Sources and Usage",
+          "description": "Understanding data types, sources, and collection methods.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.1.3.1",
+              "description": "Identify Data and collect data from different sources.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.3.1.1",
+                  "description": "Use strategies for identifying data in conversation and newspapers.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss strategies, which can be used to identify data and information. Use different approaches to aid identify data in conversation and newspaper e.g. grouping students, role play etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.1.2",
+                  "description": "Use strategies for classifying data into information (i.e. sorting and classifying)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify and record data in the different forms (e.g. age, shoe size, etc.) Assist learners to extract and classify the relevant data into information."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.1.3",
+                  "description": "Identify primary sources of information (photographs, audio recordings, video recordings, film, letters and diaries, speeches, published books, newspapers and magazines, government publications, oral histories, etc.)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners in groups to discuss where one can get data and information and make a presentation on it to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.1.4",
+                  "description": "Demonstrate Sending and sharing information to and from other gadgets. e.g., radio, fax, telephones calls, SMS etc.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention or talk about where one can receive or share information in the community and the world as a whole."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.1.5",
+                  "description": "Demonstrate basic calculations on sample data e.g. sum, percentage, average etc.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to perform basic calculations on sample data they have been made to collect using sum, average, percentages etc."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.3.2",
+              "description": "Demonstrate data collection using Data collection tools.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.1.3.2.1",
+                  "description": "Identify the steps and issues involved in data collection.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the steps involved in collection of data: a) identify the reason(s) for collecting data. b) select from the list of reasons for collecting the data and set goals. c) plan an approach and methods to collecting data and d. collect the data and interpret the data."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to explore the issues involved in collection of data: a) Unavailability of data b) Intentional manipulation of data c) Random errors etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.2.2",
+                  "description": "Describe various tools or techniques of data collection e.g. interview, observation, checklist etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the tools for collecting data and aid them to make practical examples of the various tools."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.3.2.3",
+                  "description": "Draw or sketch maps of the area to be surveyed.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring diagrams or pictures of area(s) surveyed. Guide learners to sketch maps of an area to be surveyed by them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.4",
+          "title": "Technology in the Community (Communication)",
+          "description": "Understanding the role and impact of technology in society.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.1.4.1",
+              "description": "Demonstrate the use of technology in the community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.4.1.1",
+                  "description": "Describe how digital systems are used and could be used at home, in school and the local community.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention and describe how digital systems (computers, mobile phones, megaphones etc.) are used and could be used at home, in school and the local community."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.4.1.2",
+                  "description": "Identify and list common examples of energy-efficient gadgets and techniques used in homes, in schools and in the local communities",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring pictures of energy-efficient gadgets or devices to class e.g. energy saving light bulbs, energy-efficient cooking stoves, toilet water saver, solar chargers, energy saving shower heads etc. to class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to discuss in groups of five or less and present to the whole class examples of energy-efficient devices and techniques."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.4.1.3",
+                  "description": "Describe how a range of digital systems (hardware and software) and their peripheral devices can be used for different purposes in the community.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to discuss in groups of three to five, the range of digital systems and their peripheral devices. How they can be used for different purposes in the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners present their findings to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.4.1.4",
+                  "description": "Identify technological changes in the community (e.g. Using automated irrigation for farming, eco-friendly pesticides and manure, etc.)",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore technological changes in the community or in the world."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners find examples of technological changes in the community or world around them. They should be encouraged to present their findings to the class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.2",
+      "title": "Presentation",
+      "description": "Introduction to presentation software and its features.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B4.2.1",
+          "title": "Introduction to MS-PowerPoint",
+          "description": "Basics of using Microsoft PowerPoint.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.2.1.1",
+              "description": "Demonstrate the use of MS- PowerPoint",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.1.1.1",
+                  "description": "Demonstrate the use of clipboard, slides, fonts, paragraph and editing in the ribbons under the home ribbons section.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to explore the use of the clipboard, slides, fonts, paragraph, and editing features in MS- PowerPoint under the Home tab."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.1.1.2",
+                  "description": "Show a 3-slide presentation using clipboard, slides, fonts, paragraph and editing of the ribbons studied.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to prepare and present a prepared project or exercise using clipboard, slides, fonts, paragraph and editing of the ribbons studied their work in MS-PowerPoint to the class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.3",
+      "title": "Word Processing",
+      "description": "Introduction to word processing software.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B4.3.1",
+          "title": "Introduction to Word Processing",
+          "description": "Basics of using Microsoft Word.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.3.1.1",
+              "description": "Demonstrate understanding of the use of word processing application",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.1.1.1",
+                  "description": "Demonstrate how to use the clipboard, styles, fonts, paragraph and editing.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use clipboard, styles, fonts, paragraph and editing in the Home Tab of MS-Word."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.1.1.2",
+                  "description": "Illustrate the use of the clip board, styles, fonts, paragraph and editing.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to use the clipboard, styles, fonts, paragraph and editing feature under the Home tab and let learners explore on a simple word document."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,577 @@
+{
+  "part": "3/4",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 3",
+      "subject": "English Language",
+      "name": "Basic 3 English Language",
+      "slug": "basic-3-english-language",
+      "orderIndex": 1,
+      "description": "The Basic 3 English Language curriculum focuses on developing foundational skills in listening, speaking, reading, and writing. It adopts an integrated, thematic approach to help learners acquire effective communication skills, appreciate values, and develop core competencies like critical thinking and collaboration.",
+      "strands": [
+        {
+          "code": "B3.4",
+          "title": "Writing",
+          "description": "Developing writing skills through penmanship, labelling, sentence construction, composition, and writing as a process.",
+          "orderIndex": 4,
+          "subStrands": [
+            {
+              "code": "B3.4.2",
+              "title": "Penmanship/Handwriting",
+              "description": "Copying and writing sentences correctly.",
+              "orderIndex": 2,
+              "contentStandards": [
+                {
+                  "code": "B3.4.2.1",
+                  "description": "Copy and write sentences correctly",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.2.1.1",
+                      "description": "Copy short paragraphs clearly",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Model copying a short paragraph on the board drawing attention to features such as clarity, spacing and alignment of letters."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners practise copying a short paragraph legibly and correctly on the board."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners copy short paragraphs from a book into their exercise books."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.3",
+              "title": "Writing /Copying Letters – Small and Capital",
+              "description": "Using letter-sound relationships to write legibly.",
+              "orderIndex": 3,
+              "contentStandards": [
+                {
+                  "code": "B3.4.3.1",
+                  "description": "Use general skills, strategies and knowledge of letter sounds to write legibly and boldly",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.3.1.1",
+                      "description": "Use letter-sound relationships to represent most letters in words correctly",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let learners play the alphabet sound game."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Dictate words and simple sentences for learners to write."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.4",
+              "title": "Labelling items",
+              "description": "Making lists and labelling objects in the environment.",
+              "orderIndex": 4,
+              "contentStandards": [
+                {
+                  "code": "B3.4.4.1",
+                  "description": "Draw and label simple pictures",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.4.1.1",
+                      "description": "Make a list of objects found in the environment",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Lead the class to make a list of objects found in a given thematic area. e.g. The Bus Stop."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let groups and pairs make similar lists from self-chosen or given areas. They may use invented spelling initially."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Guide learners to edit and self-correct the errors before presenting their work to the class. They may use children’s pictures, dictionaries and other sources."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.5",
+              "title": "Writing Simple Words and Sentences",
+              "description": "Writing accurately using acquired vocabulary and grammar.",
+              "orderIndex": 5,
+              "contentStandards": [
+                {
+                  "code": "B3.4.5.1",
+                  "description": "Write accurately using acquired vocabulary and knowledge of grammar",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.5.1.1",
+                      "description": "Write simple sentences to express personal opinions about favourite characters in texts",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Put learners in groups to discuss characters in a story read."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners write simple sentences to express personal opinions on favourite characters."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners exchange their books and do peer editing by checking for: i. correct spelling of words, ii. correct writing of capitals, iii. correct writing of small letters, iv. correct spacing of letters and words."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.4.5.1.2",
+                      "description": "Write simple meaningful sentences to express feelings and opinions about people and things",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Guide learners, with examples, to write simple sentences to express their feelings and opinions about their peers and things found in the environment."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have the groups edit their work and publish them."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.4.5.1.3",
+                      "description": "Draw pictures and write, at least, three sentences to share an opinion",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Show the images/‘smileys’ on a mobile phone."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Working in groups, let learners use the computer to search for these smiley/images. (The ICT teacher can guide learners by showing the appropriate icon to help them explore these)."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners draw their own pictures and write sentences to explain them. e.g. a drawing showing fruits can have a sentence such as “Eat fruits every day; Fruits have vitamin C; Fruits protect your body.”"
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Guide learners to do self and peer editing (The products can be transferred on to a manila card and posted on the walls in the classroom) to be appreciated and critiqued."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.4.5.1.4",
+                      "description": "Copy various sentences, verses and words of songs legibly (writing should be bold and clear)",
+                      "orderIndex": 4,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Explain the writing activity selected, stressing the need for accuracy, clarity, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "As learners observe, demonstrate it."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Assign them to do the exercise. They may copy from the board and books."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Provide feedback after assessing learners’ work."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.8",
+              "title": "Guided Composition",
+              "description": "Composing short paragraphs through answering questions.",
+              "orderIndex": 8,
+              "contentStandards": [
+                {
+                  "code": "B3.4.8.1",
+                  "description": "Compose short paragraphs through answering questions",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.8.1.1",
+                      "description": "Develop two coherent paragraphs on one idea or concept using leading questions",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners brainstorm to choose a topic, e. g. My home"
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Write the topic on the board."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Ask questions for learners to generate ideas on the topic"
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Discuss the questions with learners for them to answer appropriately e.g. My home i. Where do you live? ii. How many of you live there? iii. What kind of buildings are there?"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.9",
+              "title": "Writing as a Process",
+              "description": "Applying skills for idea generation, drafting, revising, and publishing.",
+              "orderIndex": 9,
+              "contentStandards": [
+                {
+                  "code": "B3.4.9.1",
+                  "description": "Apply the skills and strategies for idea generation, selection, development, organization and revision in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.9.1.1",
+                      "description": "Select a topic on familiar themes (e.g. Myself), brainstorm and organise before writing",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Take learners through the writing process: Pre-writing stage. Consider composition writing as a process. That is, it should be done in stages. Take learners through stages such as preparation, writing, editing and publishing."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Assist learners to prepare for writing by discussing the topic to write on, e.g. My school."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "In groups, let learners discuss their ideas."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Use learner strategies such as brainstorming to help learners generate ideas appropriate to the topic."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.9.2",
+                  "description": "Develop and express ideas coherently and cohesively in writing",
+                  "orderIndex": 2,
+                  "indicators": [
+                    {
+                      "code": "B3.4.9.2.1",
+                      "description": "Write ideas on a topic in simple sentences",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Writing stage: Have learners write their first draft in groups."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners write their ideas as they appear, without taking particular note of corrections or editing."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners add on new ideas that occur to them as they write."
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.9.3",
+                  "description": "Apply strategies for improving drafts for publishing",
+                  "orderIndex": 3,
+                  "indicators": [
+                    {
+                      "code": "B3.4.9.3.1",
+                      "description": "Review and revise the draft, adding to or taking out ideas",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "In groups, have learners revise their writing paying attention to little details."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners use these questions as a revision guide: i. Is my topic interesting? ii. Does the beginning catch the reader’s attention? iii. Are the ideas easy to understand? iv. Are all the sentences saying something about the topic?"
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Encourage learners to make as many changes as necessary to improve their work."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.4.9.3.2",
+                      "description": "Proofread draft to correct punctuation and spelling errors",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners proofread the revised draft of their writing for errors relating to the conventions of punctuation, capitalization, spelling, etc."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners check their editing through CUPS: C- Capitalisation, U- language Usage, P- Punctuation, S- Spelling"
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners do peer editing: learners check their partners’ writing for punctuation and spelling errors."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners write a neat final copy and read it once again to check for errors."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.4.9.3.3",
+                      "description": "Read aloud own writing to a group or whole class",
+                      "orderIndex": 3,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners publish their work by showing it to others in small groups or in pairs or posting it on the class or school notice board for others to view."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.10",
+              "title": "Narrative Writing",
+              "description": "Narrating situations, expressing feelings, and conveying points of view.",
+              "orderIndex": 10,
+              "contentStandards": [
+                {
+                  "code": "B3.4.10.1",
+                  "description": "Narrate situations, express feelings and convey point of view about the world/fictional world",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.10.1.1",
+                      "description": "Add more details of a story structure to narrative stories, for example setting, characters, problem and resolution of the problem",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Read a short narrative story to learners; concentrate on the setting and the characters."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners narrate their experiences."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Assist learners to pick a topic. e. g. The traffic light."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Let learners write on the topic, narrating their experience. E.g. On my way to school, I crossed the road. I looked left, right and left again. There was no vehicle coming. Then I walked quickly across the road."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.4.10.1.2",
+                      "description": "Engage and orient the reader by establishing a context and introducing a narrative",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Narrate a story stressing the setting and the characters for learners to listen."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners re-tell the story. They may do so in a chain."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Let learners create and write their own stories."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.12",
+              "title": "Descriptive Writing",
+              "description": "Describing places and personal experiences.",
+              "orderIndex": 12,
+              "contentStandards": [
+                {
+                  "code": "B3.4.12.1",
+                  "description": "Demonstrate knowledge of description of writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.12.1.1",
+                      "description": "Describe places in a coherent paragraph",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Have learners recall periods, times or moments that they had been happy or sad."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Discuss personal experiences with learners."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Guide them to state categorically some personal experiences they have encountered in their lives."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners share their experiences using simple descriptive words."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Discuss lessons learnt from the experiences shared."
+                        },
+                        {
+                          "orderIndex": 6,
+                          "description": "Have learners write experiences shared logically and sequentially. e.g. about interesting places they have visited."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.13",
+              "title": "Persuasive/Argumentative Writing",
+              "description": "Supporting opinions with clear reasons.",
+              "orderIndex": 13,
+              "contentStandards": [
+                {
+                  "code": "B3.4.13.1",
+                  "description": "Support an opinion in writing",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.13.1.1",
+                      "description": "Write a short paragraph to support an opinion or claims with clear reasons",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Choose a simple topic for an argument. e.g. Which food is better; rice or fufu? (It could be any food, depending on learners’ background.)"
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Let learners choose one of the meals and give reasons why they think it is better."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Put the class into two to argue on the topic."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B3.4.14",
+              "title": "Informative/ Academic Writing",
+              "description": "Writing about events and presenting information.",
+              "orderIndex": 14,
+              "contentStandards": [
+                {
+                  "code": "B3.4.14.1",
+                  "description": "Write on the events of the day",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3.4.14.1.1",
+                      "description": "Write picture events using simple sentences",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Using dictionaries and modelling, guide learners to give information on events of the day to their partners, class /groups/partners."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners represent this in the form of a picture."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Have learners write simple sentences to accompany the pictures."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Have learners share their work with the class. Note: (Give room for positive appreciation)."
+                        }
+                      ]
+                    },
+                    {
+                      "code": "B3.4.14.1.2",
+                      "description": "Make a radio/TV presentations/performances",
+                      "orderIndex": 2,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Let Learners rehearse presenting information on radio or TV."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Have learners generate ideas, plan and present them in groups as done on radio."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Assign groups to present their ideas to the whole class."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Plan for a live presentation/performance."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

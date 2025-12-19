@@ -1,0 +1,179 @@
+[
+  {
+    "phase": "PRIMARY",
+    "level": "B1",
+    "subject": "English Language",
+    "subjectSlug": "basic-1-english-language",
+    "strandCode": "B1.1",
+    "subStrandCode": "B1.1.1",
+    "contentStandardCode": "B1.1.1.1",
+    "indicatorCode": "B1.1.1.1.1",
+    "nodeType": "indicator",
+    "ageBand": "6-7",
+    "imageFileName": "B1.1.1.1.1-singing-familiar-songs.png",
+    "altText": "A Ghanaian Basic 1 teacher and children singing a familiar song together, clapping and dancing in a colourful classroom.",
+    "tags": [
+      "English",
+      "Basic 1",
+      "songs",
+      "oral language",
+      "classroom",
+      "Ghana"
+    ],
+    "prompt": "A colourful flat illustration of a Ghanaian Basic 1 classroom. A smiling teacher stands at the front leading a group of 6–7-year-old children as they sing a familiar local song. Some children clap, others tap their feet or move to the rhythm. The classroom has simple wooden desks, charts on the wall, and a blackboard with a short song line written on it. Warm lighting, joyful expressions, culturally accurate uniforms and hairstyles."
+  },
+  {
+    "phase": "PRIMARY",
+    "level": "B1",
+    "subject": "English Language",
+    "subjectSlug": "basic-1-english-language",
+    "strandCode": "B1.1",
+    "subStrandCode": "B1.1.2",
+    "contentStandardCode": "B1.1.2.1",
+    "indicatorCode": "B1.1.2.1.1",
+    "nodeType": "indicator",
+    "ageBand": "6-7",
+    "imageFileName": "B1.1.2.1.1-reciting-rhymes.png",
+    "altText": "Basic 1 pupils reciting rhymes and tongue-twisters with hand actions while the teacher guides them.",
+    "tags": [
+      "English",
+      "Basic 1",
+      "rhymes",
+      "tongue-twisters",
+      "oral language"
+    ],
+    "prompt": "An engaging illustration of a Basic 1 English lesson in Ghana. Children stand in a semicircle, reciting a rhyme or tongue-twister with big mouth movements and playful hand actions as the teacher leads them. Some children clap, others tap their hands on their desks in rhythm. A rhyme is written in large, clear letters on a chart at the front. Emphasise fun, rhythm, and facial expressions suitable for 6–7-year-olds."
+  },
+  {
+    "phase": "PRIMARY",
+    "level": "B1",
+    "subject": "English Language",
+    "subjectSlug": "basic-1-english-language",
+    "strandCode": "B1.1",
+    "subStrandCode": "B1.1.3",
+    "contentStandardCode": "B1.1.3.1",
+    "indicatorCode": "B1.1.3.1.1",
+    "nodeType": "indicator",
+    "ageBand": "6-7",
+    "imageFileName": "B1.1.3.1.1-story-pictures-and-characters.png",
+    "altText": "Learners looking at a series of story pictures, identifying the characters and their roles.",
+    "tags": [
+      "English",
+      "Basic 1",
+      "story telling",
+      "listening comprehension",
+      "characters"
+    ],
+    "prompt": "A sequence of three or four large story pictures displayed at the front of a Ghanaian classroom. Each picture shows the same simple story with clear characters, such as a child, a parent, and a friend, doing different actions. Basic 1 learners sit in small groups pointing at the pictures, discussing who the characters are and what they are doing. The teacher gently prompts them, holding a pointer. Style: bright, simple, easy for young children to interpret, with expressive character faces."
+  },
+  {
+    "phase": "PRIMARY",
+    "level": "B1",
+    "subject": "English Language",
+    "subjectSlug": "basic-1-english-language",
+    "strandCode": "B1.2",
+    "subStrandCode": "B1.2.1",
+    "contentStandardCode": "B1.2.1.2",
+    "indicatorCode": "B1.2.1.2.1",
+    "nodeType": "indicator",
+    "ageBand": "6-7",
+    "imageFileName": "B1.2.1.2.1-blending-sounds-into-words.png",
+    "altText": "Teacher and learners blending individual sounds like b-i-n into words on the board using sound cards.",
+    "tags": [
+      "English",
+      "Basic 1",
+      "phonological awareness",
+      "blending",
+      "reading"
+    ],
+    "prompt": "Inside a Ghanaian Basic 1 classroom, the teacher is at the board showing three large sound cards with letters such as 'b', 'i', 'n'. Children sit close, watching as the teacher slides the cards together to form the word 'bin'. Some learners hold their own small letter cards at their desks and try to blend sounds like 'a-m', 'c-o-t', 'a-t'. The scene should clearly show the idea of combining individual sounds to make one-syllable words, with big bold letters and simple visuals."
+  },
+  {
+    "phase": "PRIMARY",
+    "level": "B1",
+    "subject": "English Language",
+    "subjectSlug": "basic-1-english-language",
+    "strandCode": "B1.2",
+    "subStrandCode": "B1.2.2",
+    "contentStandardCode": "B1.2.2.1",
+    "indicatorCode": "B1.2.2.1.1",
+    "nodeType": "indicator",
+    "ageBand": "6-7",
+    "imageFileName": "B1.2.2.1.1-alphabet-in-order.png",
+    "altText": "Children using an alphabet chart and letter cards to identify the letters of the alphabet in order.",
+    "tags": [
+      "English",
+      "Basic 1",
+      "alphabet",
+      "phonics",
+      "reading"
+    ],
+    "prompt": "A Basic 1 class in Ghana learning the alphabet. A large colourful alphabet chart from A to Z hangs at the front. The teacher points to letters with a stick as children sing the alphabet song. On the floor or tables, some learners arrange individual letter cards into the correct order. The focus is on clear, legible letters (both upper and lower case) and a joyful learning environment that feels accessible to 6–7-year-olds."
+  },
+  {
+    "phase": "PRIMARY",
+    "level": "B1",
+    "subject": "English Language",
+    "subjectSlug": "basic-1-english-language",
+    "strandCode": "B1.2",
+    "subStrandCode": "B1.2.3",
+    "contentStandardCode": "B1.2.3.1",
+    "indicatorCode": "B1.2.3.1.1",
+    "nodeType": "indicator",
+    "ageBand": "6-7",
+    "imageFileName": "B1.2.3.1.1-rhyming-endings.png",
+    "altText": "Learners using word cards with rhyming endings like pat, mat, fat, reading them together in groups.",
+    "tags": [
+      "English",
+      "Basic 1",
+      "rhyming",
+      "phonics",
+      "word families"
+    ],
+    "prompt": "A small-group reading activity in a Ghanaian Basic 1 classroom. On each group’s table are simple word cards with rhyming endings like 'pat', 'mat', 'fat'. Children pick up cards, read them aloud, and notice that they sound similar at the end. A teacher moves between groups, smiling and pointing at the word endings. The scene should highlight the concept of word families and rhyming endings with big, clear text on the cards."
+  },
+  {
+    "phase": "PRIMARY",
+    "level": "B1",
+    "subject": "English Language",
+    "subjectSlug": "basic-1-english-language",
+    "strandCode": "B1.5",
+    "subStrandCode": "B1.5.10",
+    "contentStandardCode": "B1.5.10.1",
+    "indicatorCode": "B1.5.10.1.1",
+    "nodeType": "indicator",
+    "ageBand": "6-7",
+    "imageFileName": "B1.5.10.1.1-spelling-simple-words.png",
+    "altText": "Basic 1 learners writing simple two- and three-letter words like go, in, see, bow from word cards onto their slates.",
+    "tags": [
+      "English",
+      "Basic 1",
+      "spelling",
+      "writing",
+      "phonics"
+    ],
+    "prompt": "A Ghanaian Basic 1 writing session. Each learner has a small slate or exercise book. On the board and on word cards are simple two and three-letter words such as 'go', 'so', 'in', 'on', 'see', 'bow'. Learners carefully copy the words, sounding them out softly as they write. The teacher moves between rows, checking handwriting and encouraging them. Show close-up views of a few slates with correctly written simple words."
+  },
+  {
+    "phase": "PRIMARY",
+    "level": "B1",
+    "subject": "English Language",
+    "subjectSlug": "basic-1-english-language",
+    "strandCode": "B1.6",
+    "subStrandCode": "B1.6.1",
+    "contentStandardCode": "B1.6.1.1",
+    "indicatorCode": "B1.6.1.1.1",
+    "nodeType": "indicator",
+    "ageBand": "6-7",
+    "imageFileName": "B1.6.1.1.1-reading-a-variety-of-books.png",
+    "altText": "Children in a simple reading corner choosing and reading age-appropriate picture books during library time.",
+    "tags": [
+      "English",
+      "Basic 1",
+      "extensive reading",
+      "library time",
+      "books"
+    ],
+    "prompt": "A cosy reading corner in a Ghanaian Basic 1 classroom. There is a low shelf or box filled with colourful picture books and simple storybooks. The teacher is doing a short book talk or showing a picture book to introduce reading time, while learners select different books and sit on mats or small chairs, looking through them individually or in pairs. Emphasise variety of age-appropriate books and the joy of reading for pleasure."
+  }
+]

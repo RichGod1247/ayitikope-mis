@@ -1,0 +1,52 @@
+[
+  {
+    "subjectSlug": "basic-2-history",
+    "contentStandardCode": "B2.2.1.1",
+    "indicatorCode": "B2.2.1.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-2/basic-2-history/b2.2.1.1.1-ethnic-groups-by-region.png",
+    "altText": "Map of Ghana showing regions with learners identifying different ethnic groups in each region.",
+    "detailedDescription": "A child-friendly infographic style scene: a Ghana map divided into regions, with simple cultural icons and labels to show that different ethnic groups live in different regions. Include a Basic 2 classroom vibe with a teacher pointing at the map and learners participating. Keep it respectful and non-stereotypical.",
+    "tags": ["History", "Basic 2", "Ghana", "Regions", "Ethnic groups", "Map", "Culture", "NaCCA"],
+    "pageNumberInPdf": 32
+  },
+  {
+    "subjectSlug": "basic-2-history",
+    "contentStandardCode": "B2.2.1.2",
+    "indicatorCode": "B2.2.1.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-2/basic-2-history/b2.2.1.1.1-ethnic-group-characteristics.png",
+    "altText": "Learners comparing cultural characteristics like food, festivals, dressing, and language across Ghanaian ethnic groups.",
+    "detailedDescription": "A warm, classroom-friendly illustration showing learners discussing cultural characteristics (food, festivals, dressing, language, social/economic activities). Use a simple comparison board/chart with icons (drum for festival, cloth pattern for dressing, bowl for food) and emphasize respect, diversity, and national unity.",
+    "tags": ["History", "Basic 2", "Culture", "Festivals", "Food", "Dressing", "Language", "Tolerance", "NaCCA"],
+    "pageNumberInPdf": 32
+  },
+  {
+    "subjectSlug": "basic-2-history",
+    "contentStandardCode": "B2.2.4.1",
+    "indicatorCode": "B2.2.4.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-2/basic-2-history/b2.2.4.1.1-major-historical-locations.png",
+    "altText": "Collage of Ghana’s major historical locations with learners listening to a guide and taking notes.",
+    "detailedDescription": "A collage-style learning poster showing several major historical locations in Ghana (e.g., museum/heritage site, famous artifact display, commemorative site). Include a small group of Basic 2 learners on a visit with a guide explaining history. Keep visuals generic and respectful (no graphic content).",
+    "tags": ["History", "Basic 2", "Ghana", "Heritage", "Historical locations", "Museum", "Culture", "NaCCA"],
+    "pageNumberInPdf": 33
+  },
+  {
+    "subjectSlug": "basic-2-history",
+    "contentStandardCode": "B2.2.5.1",
+    "indicatorCode": "B2.2.5.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-2/basic-2-history/b2.2.5.1.1-ghanaian-women-leaders.png",
+    "altText": "Portrait-style classroom poster celebrating Ghanaian women who contributed to national development.",
+    "detailedDescription": "A classroom wall poster design: a few illustrated Ghanaian women leaders/professionals (pilot, judge, editor, graduate, etc.) with simple achievement captions (non-political, inspirational). Add learners pointing to the poster and discussing who inspires them most.",
+    "tags": ["History", "Basic 2", "Ghana", "Women leaders", "National development", "Role models", "NaCCA"],
+    "pageNumberInPdf": 34
+  },
+  {
+    "subjectSlug": "basic-2-history",
+    "contentStandardCode": "B2.3.2.1",
+    "indicatorCode": "B2.3.2.1.1",
+    "imagePath": "/curriculum/lower-primary/basic-2/basic-2-history/b2.3.2.1.1-early-trade-barter.png",
+    "altText": "Early trade scene showing barter between Ghanaians and Europeans with common trade items displayed on a table.",
+    "detailedDescription": "A simple historical illustration (non-violent): coastal trade setting with a barter table showing items like textiles, tobacco, iron bars, and gold. Keep it child-safe and educational. Include speech bubbles like “Let’s trade!” to show the idea of barter and early trade.",
+    "tags": ["History", "Basic 2", "Trade", "Barter", "Europeans in Ghana", "Goods", "Coast", "NaCCA"],
+    "pageNumberInPdf": 35
+  }
+]

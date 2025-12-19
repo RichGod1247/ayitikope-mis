@@ -1,0 +1,1235 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 9",
+  "subject": "English Language",
+  "name": "JHS 3 English Language",
+  "slug": "jhs-3-english-language",
+  "orderIndex": 1,
+  "description": "The JHS 3 English Language curriculum consolidates the skills acquired in JHS 1 and 2. It focuses on advanced oral language proficiency, critical reading and analysis, sophisticated grammar usage, and diverse writing forms including academic and creative writing. It aims to prepare learners for higher education and the world of work.",
+  "strands": [
+    {
+      "code": "B9.1",
+      "title": "ORAL LANGUAGE (LISTENING AND SPEAKING)",
+      "description": "Developing advanced listening and speaking skills through conversation, comprehension and articulation.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B9.1.1",
+          "title": "CONVERSATION/EVERYDAY DISCOURSE",
+          "description": "Using appropriate language in social interactions and discussions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.1.1.1",
+              "description": "Demonstrate the use of appropriate language orally in specific situations",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.1.1.1",
+                  "description": "Use appropriate register in everyday communication (informal and formal) with diverse partners on grade-level topics/texts/issue",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify some slang words and jargon accepted locally and internationally."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use these in conversation on grade-level topics/texts/issues, e.g. informal (talking about music, sports, hobbies, going out with friends, social media,) the cause of poor academic performance."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and act scenes dialogues/skits on texts/issues/topics using both formal and informal register to distinguish characters."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use appropriate register accurately in spontaneous conversation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.2",
+                  "description": "Ask questions that link the ideas of several speakers and respond to others' questions in a discussion",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use open ended questions to enable speaker link ideas of other speakers on topics/issues. E.g. In your opinion, what are the views of people on…?, What are the views of people on…?, How do you think we should . . .?, Why don’t you …?, Which of these do you prefer.....?"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Listen attentively to viewpoints on topics/issues in a conversation and respond appropriately."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Engage in conversations on topics/issues with several speakers and respond to different views."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.3",
+                  "description": "Use appropriate language and open-ended questions to discuss grade-level national and global issues",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify grade-level national issues (the youth in agriculture, sanitation, lifestyle diseases)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss grade-level national issues with several speakers, using appropriate register and open-ended questions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify and explain grade - level global issues e.g., violence, gender and inclusion, kidnaping, terrorism, child trafficking."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss orally, grade-level global issues/topics using appropriate language e.g. Register/Vocabulary, phrasal verbs, idioms."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.4",
+                  "description": "Demonstrate appropriate turn taking and use techniques for effective argument (debating)",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify interesting topic/issues appropriate for argument and debate e.g. children should be allowed to take decisions on matters concerning them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Engage in arguments and debates on topics/issues using appropriate register."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Observe and use the skills of turn taking in arguments and debates."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.2",
+          "title": "LISTENING COMPREHENSION",
+          "description": "Developing listening skills for understanding key information and participating in discussions.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.1.2.1",
+              "description": "Demonstrate the ability to listen to extended reading and identify key information",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.2.1.1",
+                  "description": "Listen to audio-visual texts attentively and support ideas with vocabulary/ language/figures",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to and watch audio-visuals for about two hundred( 200) words per two( 2) minutes and write key information (message, theme, tone, mood, character) from them. Examples of audio -visual texts include: Films, Television programmes, Documentaries, Recordings, Radio programmes, Music videos, Dramas."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make inferences (about purpose, intention, theme/ message) and simple connections to real life and personal experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.2",
+                  "description": "Initiate and participate in meaningful and collaborative discussions using texts and related materials, building on others' ideas and expressing their own clearly and persuasively",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to and identify key issues in level-appropriate texts/speeches/dialogues e.g. argumentative texts, news, presentations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Initiate discussions on ideas and share opinions on level-appropriate texts/speeches/dialogues."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Engage in conferences to discuss ideas noted from texts/speeches/dialogues and express your own clearly and persuasively."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.3",
+          "title": "ENGLISH SOUNDS",
+          "description": "Articulating English speech sounds correctly.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.1.3.1",
+              "description": "Articulate English speech sounds to develop confidence and skills in listening and speaking",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.3.1.1",
+                  "description": "Produce /r/ and /l/ sounds in different positions in word",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to and produce /r/ and /l/ in different positions in words. Positions in words: Beginning, Middle, End."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Distinguish between the sounds and reproduce them in speech."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.3.1.2",
+                  "description": "Produce consonant clusters in context",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to texts and produce consonant clusters in context (e.g. pl, pr, cr, cl, tr, sm, sp, spl, spr, gh, etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Produce consonant clusters accurately in connected speech."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.3.1.3",
+                  "description": "Produce mono-syllabic and di-syllabic words with accurate stress in speech",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Listen to and produce mono and di-syllabic words in context (dialogues)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Listen to and write words containing di-syllabic words, e.g. travel, visit, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Produce mono and di-syllabic words accurately in speech."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.2",
+      "title": "READING",
+      "description": "Developing reading comprehension and summarising skills.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B9.2.1",
+          "title": "COMPREHENSION",
+          "description": "Understanding and interpreting texts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.2.1.1",
+              "description": "Demonstrate increasing confidence and enjoyment in independent reading",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.1.1.1",
+                  "description": "Read a variety of grade level texts and demonstrate understanding",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a variety of age-appropriate texts for enjoyment and knowledge."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Set specific learning purposes to be achieved at the end of the reading task."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Apply appropriate strategies to answer questions on the texts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.2",
+                  "description": "Reflect on how reading impacts self and others see the world (contrasting viewpoints, evaluating reasoning, determining importance or credibility)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a variety of texts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify texts that give general view of oneself and others."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the different points of view through different approaches and texts."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compare the views of others in achieving success."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Peer edit information gathered."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.3",
+                  "description": "Evaluate ways that the media helps to disseminate information via different text types",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Gather samples of media messages/articles/stories kindle) from credible sources."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Critique these messages and suggest improvements."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify better ways to use the media for messaging."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Create your own articles/stories etc. and post using ICT."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.4",
+                  "description": "Expand various ideas and perspectives in texts",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a level appropriate text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the main ideas and the writer's point of view."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare own ideas with other points of view."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Peer review other ideas."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Put ideas together to expand the different perspectives."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.2.1.2",
+              "description": "Read, comprehend, and analyse varieties of texts",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.2.1.2.1",
+                  "description": "Read given text, within a specific time, for specific information",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read age-appropriate texts for the main ideas."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read within given time for specific information."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Answer simple questions on the texts."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Peer review the information gathered."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.2.2",
+                  "description": "Make predictions, identify patterns and relationships of ideas to analyse texts",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a set text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using prediction, make a summary of the main ideas."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Follow up with other strategies to find patterns and relationships between ideas."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Put all information together and peer edit."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.2.3",
+                  "description": "Make generalisations from text and link to real life situations",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a text and identify specific patterns that form generalisations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the highest points and link to real life situations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Modify portions of texts to suit the realities of life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.2.4",
+                  "description": "Compare the language, style, structure and purpose, as well as the ideas/information from different types of texts",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have different types of texts: narrative, expository, procedural."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare the language, style, structure and purpose, as well as the ideas/themes/information in any two related texts."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare ideas through discussion, notes etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.2.5",
+                  "description": "Read silently and answer more complex comprehension questions on texts /passages",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Skim for details."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Scan for main ideas."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read for details and answer questions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Relate passages to personal experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.2.6",
+                  "description": "Show the effect a text has on the reader",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify different literary devices used by the writer."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Link the effect of the devices to the meaning of the text."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the impact of literary devices on the reader and how they add to meaning."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.2.7",
+                  "description": "Interpret use of words/ phases (figurative, symbolic, sensory) in complex texts",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a variety of texts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Interpret text in simple sentences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the use of imagery for meaning; The senses, Symbolism, Figurative language."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify how language (words/ phrases) helps with interpreting meaning."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.2.8",
+                  "description": "Demonstrate conceptual understanding of academic, domain-specific, and technical vocabulary in varied context",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the use of different registers for specific texts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read texts that make distinctions in language use for a variety of purpose."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the right vocabulary in complex sentences/paragraphs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.2.9",
+                  "description": "Make conceptual connections between known and unknown words/phrases and analyse nuances of words/phrases in texts",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read grade-appropriate texts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify known and unknown words meaningfully."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Connect these words and phrases to the text and analyse the effect."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.2",
+          "title": "SUMMARISING",
+          "description": "Summarising texts.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.2.2.1",
+              "description": "Cite the textual evidence that supports an analysis of what the text says, determining the central idea of a text and provide an objective summary",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.2.1.1",
+                  "description": "Analyse critically a given text in entirety and provide an objective summary",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Analyse a text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the main and supporting ideas."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Provide an objective summary on the text. Provide answer questions for summary questions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.3",
+      "title": "GRAMMAR USAGE",
+      "description": "Applying grammar rules in communication.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B9.3.1",
+          "title": "GRAMMAR",
+          "description": "Using various word classes and sentence structures.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.3.1.1",
+              "description": "Apply the knowledge of phrases and clauses and their functions in Communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.1.1.1",
+                  "description": "Use noun phrases accurately in context",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use noun phrases in texts. e.g. i. I want a dress for Christmas. ii. The brown kente vase is up for sale. iii. I saw a beautiful bird. iv. Kwaku lives in a blue dorm. v. Having been a chef, he knew how to bake)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine and discuss the functions of noun phrases in texts. Functions: subject of sentences – The tall lady teaches English in Bakano JHS; subject complement – The man is an awesome welder; direct object of transitive verbs – I like the sleek Apple laptop; objects of prepositions – He bought a vehicle for the winner of the race; apposition – My hometown, Tamale, is a wonderful place. Kwame Aidoo, the class prefect of Grade 8, is my friend."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.1.2",
+                  "description": "Demonstrate command using multiple adjectives in the correct order, and using quantifiers effectively in speaking and writing",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use adjective phrases to provide vivid descriptions of: Participants - The dazzlingly beautiful winner walked down the aisle. The man covered with mud crawled his way out of the mudslide; Settings – The journey begun on a rainy Monday morning; Materials - Amma is wearing a bright coloured African print; Objects - The old rickety bus stopped in the middle of the road."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.1.3",
+                  "description": "Use more complex phrasal verbs accurately in speech and writing",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify phrasal verbs in texts and determine what they mean in context (come after, come along, blow up, make up, etc)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use phrasal verbs in developing meaningful paragraphs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.1.4",
+                  "description": "Use the knowledge of the adverbial phrase and its functions",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use adverb phrases to: Describe how — e.g. Aysha passed the exam quite easily; Describe where — e.g. I met Kwame near the bridge; Describe why — e.g. The law was abolished to end discrimination of girls in school; Describe when — e.g. The disgraced thief left the scene as quickly as possible."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.3.1.2",
+              "description": "Demonstrate understanding of the use of conditional tenses in communication",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.3.1.2.1",
+                  "description": "Use conditional sentences in communication to indicate an impossible condition in the past and its probable result",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use if- clauses to construct conditional sentences (type 3) to refer to an impossible condition in the past and its probable result. E.g. If I had worked harder, I would have passed the exam. You could have been on time if you had caught the bus."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct and analyse given conditional sentences (1-3) into main clauses and subordinate clauses (if-clauses)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.2.2",
+                  "description": "Use defining and non-defining relative clauses appropriately in speech and writing",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply the functions of dependent and independent clauses in sentences and texts."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.3.1.3",
+              "description": "Demonstrate command of structural and functional use of sentences",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B9.3.1.3.1",
+                  "description": "Identify and use subject and predicate in texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Distinguish elements of a sentence."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the knowledge of the composition of subject."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Know the composition of predicate of a sentence."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.3.1.4",
+              "description": "Demonstrate mastery of the use of active and passive voice",
+              "orderIndex": 4,
+              "indicators": [
+                {
+                  "code": "B9.3.1.4.1",
+                  "description": "Use passive forms appropriately in speech and in writing",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Change active to passive sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct an opinion using active and passive sentences in speech and in writing."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.4.2",
+                  "description": "Demonstrate command of the use of reported speech",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use reported speech in oral communication."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compose text using reported speech."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.2",
+          "title": "PUNCTUATION AND CAPITALISATION",
+          "description": "Using punctuation marks correctly.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.3.2.1",
+              "description": "Demonstrate mastery of capitalisation and punctuation in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.2.1.1",
+                  "description": "Identify and use punctuation marks (dash, hyphen, bracket) in context",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the dash to: mark the beginning and the end of an interruption in a sentence. E.g. My son - where has he gone - will be happy to see you; introduce an explanation of a word or an expression earlier mentioned. E.g. It was not a lion - it was a tiger - furiously lashing its way through the undergrowth; introduce a list. E.g. Everyone needs good qualities – loyalty, discipline, honesty etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the hyphen to: form compound words. E.g. father-in-law; join words in attributive compound. E.g. a well-known artist; join a prefix to a root word. E.g. co-ordinate; mark expressions that look the same but different. E.g. a poor-rate collection, a poor rate-collection; separate two similar consonant or vowel sounds. E.g. pre-empt, Ross-shire etc; indicate fractions or multipliers. E.g. two-thirds, hundred-folds etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the hyphen at the end of a line when writing to indicate that the word is not hyphenated. It is broken for lack of space. Such words should be broken at a syllable. E.g. education, information etc. o She gave me information about the lost boy."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the bracket to: enclose something that is added to the sentence but not considered to be of major importance; offer explanation to something that was said earlier; enclose cross reference."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.3",
+          "title": "VOCABULARY",
+          "description": "Applying vocabulary and spelling conventions.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.3.3.1",
+              "description": "Demonstrate appropriate use of vocabulary and spelling conventions in communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.3.1.1",
+                  "description": "Interpret vocabulary appropriately in more complex texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate appropriate use of vocabulary in context."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.4",
+      "title": "WRITING",
+      "description": "Developing writing skills for various purposes and audiences.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B9.4.1",
+          "title": "PRODUCTION AND DISTRIBUTION OF WRITING",
+          "description": "Developing coherent and cohesive texts.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.4.1.1",
+              "description": "Develop, organise and express ideas coherently and cohesively in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.1.1.1",
+                  "description": "Compose logically connected paragraphs to show unity, completeness and coherence using appropriate cohesive devices, e.g., connectors, pronouns, repetition of vocabulary or grammatical structures",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use coordinating conjunctions to join clauses in compound sentences: and, but, nor, or, so, then, yet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use subordinating conjunctions to join clauses in complex sentences: time clauses, conditional clauses, purpose clauses, reason clauses, result clauses, concessive clauses, place clauses, clauses of manner."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Expand sentences in to paragraphs using defining and non-defining relative clauses. E.g. the men who stole the car were jailed. (defining) The women, who stole the car, were jailed. (non-defining)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use noun phrases, adjectival phrases and adverbial phrases to expand sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use logical connectors, pronouns and the repetition of words, synonyms and antonyms to create a cohesive text (i.e. a text in which sentences and paragraphs are linked together to show meaning and beauty)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.1.2",
+                  "description": "Develop a paragraph to show paragraph unity and completeness using supporting details (e.g. explanation, elaboration, definition, examples)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write paragraphs showing the topic sentence, minor and major supporting sentences using transitional devices to bring about cohesion and coherence, e.g. and, again, and then, besides, equally important, finally; whereas, but, yet, on the other hand, however, nevertheless; yet, still, however, nevertheless, in spite of."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.1.2",
+              "description": "Create different paragraphs a given topic",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.1.2.1",
+                  "description": "Compose more complex paragraphs using appropriate strategies",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write mixed paragraph (paragraph with the topic sentence located in the middle) and periodic paragraphs (paragraph with the topic sentence at the end) using transitional devices to create effect and purpose."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise sentences in a logical sequence to create coherence and beauty that sustains interest in an introductory paragraph."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use logical connectors to link sentences in a paragraph: ordering ideas, addition, similarity, contrast, cause/effect, conditions, sequence in time."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use logical connectors, pronouns and the repetition of words, synonyms and antonyms to create cohesion and coherence and unity and completeness of paragraph."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.2",
+          "title": "TEXT TYPES AND PURPOSES",
+          "description": "Writing narratives, persuasive pieces, informative texts, and formal letters.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.4.2.1",
+              "description": "Use a process approach to compose descriptive, narrative/ imaginative, informational and persuasive, argumentative texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.2.1.1",
+                  "description": "Create effective descriptive sentences when describing characters, settings or mood",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write descriptive essays using the following: multiple, powerful adjectives for effect; sentence structure for effect e.g. frontloading, listing, climactic sentence structure."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make selective use of detail for effect when describing a character."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Proofread to self-correct or peer correct."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.2.1.2",
+                  "description": "Use different narrative techniques to manipulate time in a story",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compose narrative essays showing the following: Backstory; Flashback and flash forward; Foreshadowing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Express feelings and thoughts through free writing on self-selected topics, using emotive/ sensory details."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.2.1.3",
+                  "description": "Write a well-organised persuasive piece (e.g. argumentative) that states and defends a position",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compose an argumentative piece suitable following appropriate format/style using process approach."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use: the simple present for conveying timeless statements and facts; modals for persuasive effect and hedging; mental verbs (e.g. I think, I believe) for conveying a viewpoint; verb phrases."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a rejoinder for publication noting the following: An address to the rejoinder (own address.... ); A date. After the address comes a date; A reference should be included. All rejoinders require references; The recipient's address."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.2.1.4",
+                  "description": "Write an informative, explanatory text on a familiar or unfamiliar topic",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write an informational text to show how and why something happened: Vividly describe a situation; Give details of how a problem/situation occurs - show what needs to be done, indicate how it needs to be done, tell why it will work."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use appropriate, objective language to explain points."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Organise ideas and points in an information text logically."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Using selected topics, write reports that are devoid of decisions based on personal bias, cultural differences and any other criterion that cannot be measured or proven."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.2.2",
+              "description": "Apply writing skills to specific life situations",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.2.2.1",
+                  "description": "Compose formal writing (business letters, email, minutes, programme agenda reports) on given topics using appropriate format",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Formal letters: Use appropriate text features (e.g., section headings in letters/email, main and sub-headings, bullets/numbering) to write various formal letters on a variety of themes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Provide information, explain a situation and/or express points of view: Describe, elaborate on and/or support/explain key points."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Apply the appropriate format (e.g. salutation in letters/email, signing off for notes/letters)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use formal language, avoid using short forms and abbreviations."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Edit/Proofread the writing for sense or meaning, and effect."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Publish writing using various media including ICT."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.2.2.2",
+                  "description": "Compose short text (flyers, posters, invitation cards, email, etc. ) for different purposes and audiences",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write flyers or posters of varied kinds using: Small size e.g. A5 paper; Eye-catching headline, slogan or logo; Brief description of product; List of benefits or offers; Contact information e.g. website; Include a visual and or a design element."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Design an invitation card to incorporate the following: Nature of the event; Where it will take place; Date and time (could include dress code); Name of invitee (could include RSVP); Could have a visual and or a design element."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write emails to contacts, parents or teachers ensuring that the following are present: The recipient's address–which, in most cases, is the recipient's name and the server point. For example, aziz65(name)@gmail. (server); CC: These may be additional recipients whose attention are called to the email; Subject: This is a summary of the content of the email; Message; Sender's name and contact."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.2.2.3",
+                  "description": "Write articles (short reports, letters and case studies) on given issues for publication",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write short reports, case studies and letters to the Editor on given issues for publication, e.g. Self-publication; Letters to the Editor; Newspapers & publications with a staff of writers; Literary Magazines; Other types of magazines; Scholarly journals; Webzines."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.2.2.4",
+                  "description": "Compose speeches for different purposes and occasions",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compose a speech: Tell what you are going to tell them (introduction); Tell them (body); Tell them what you told them (conclusion)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the following to create effect: Emotive adjectives e.g. 'Wonderful, magnificent, fantastic, disgraceful, shocking, outrageous.'; Tripling e.g. \"It's your country, it's my country, it's our future!\"; Repetition; Parallel sentence structure; Powerful imagery e.g. \"I have a dream.\"; Use of 'we' to include everyone (inclusive language) e.g. \"We all know... you and I agree...\""
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.3",
+          "title": "BUILDING AND PRESENTING KNOWLEDGE",
+          "description": "Using research to build knowledge.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.4.3.1",
+              "description": "Research to build and present knowledge",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.3.1.1",
+                  "description": "Conduct short research projects based on focused questions, and present key findings in writing",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify issues of interest in your environment/school/community and conduct an investigation on them based on focused questions. E.g. Investigating into the different brands of a product and their prices, i.e., different brands of sachet/bottled water or variety of cocoa products (production and price)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sample research questions: What are the different types of cocoa products found in your area? How, where and from what is it produced? Manufacturing companies, prices, advertising and marketing?"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Record, organise findings for presentation."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Make a list of references to avoiding plagiarism."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Individual/group presentation of findings."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "NB: Digital sources can be used to collect data (information)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.5",
+      "title": "LITERATURE",
+      "description": "Analyzing narrative, drama, and poetry.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B9.5.1",
+          "title": "NARRATIVE, DRAMA AND POETRY",
+          "description": "Analyzing literary elements and themes.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.5.1.1",
+              "description": "Demonstrate understanding of how various elements of literary genres contribute to meaning",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.1.1.1",
+                  "description": "Analyse the use of language to convey characters in film/media, narratives and play scripts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe characters by their appearance, what they do, say, and what others say about them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.1.1.2",
+                  "description": "Create monologues and dialogues narratives in play scripts",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify monologues and dialogues in texts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create dialogue using appropriate punctuation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.1.1.3",
+                  "description": "Analyse the sequence of events across texts (descriptive, auto-biography, biography, narrative and play script/drama",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explain the key events in film/media, narratives and play scripts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare events across film/media, narratives and play scripts."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create film/media, narratives and play scripts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.1.1.4",
+                  "description": "Use literary devices (imagery) in texts",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use imagery such as personification, simile, metaphors, idiomatic expressions in speech and writing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create and apply imagery such as personification, simile, metaphors, idiomatic expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.1.1.5",
+                  "description": "Analyse common themes in texts",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify common themes in film/media, narratives and play scripts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Analyse common themes in film/media, narratives and play scripts."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Adapt a narrative form or style to compose own stories around given theme."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use a range of ICT tools to present their composition."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Note: The teacher should always encourage learners to reflect independently and critically on their writing."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

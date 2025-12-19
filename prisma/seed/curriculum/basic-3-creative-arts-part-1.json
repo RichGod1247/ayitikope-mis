@@ -1,0 +1,330 @@
+{
+  "part": "1/1",
+  "subjects": [
+    {
+      "phase": "Lower Primary",
+      "level": "Basic 3",
+      "subject": "Creative Arts",
+      "name": "Basic 3 Creative Arts",
+      "slug": "basic-3-creative-arts",
+      "orderIndex": 1,
+      "description": "Basic 3 Creative Arts helps learners think, plan, create, display and discuss visual and performing artworks drawn from African history, culture, environment and topical issues.",
+      "strands": [
+        {
+          "code": "B3 1.1",
+          "title": "VISUAL ARTS – Thinking and Exploring Ideas",
+          "description": "Generating ideas for visual artworks from African history, culture, environment and topical issues.",
+          "orderIndex": 1,
+          "subStrands": [
+            {
+              "code": "B3 1.1.1",
+              "title": "Thinking and Exploring Ideas",
+              "description": "Using experience, observation and imagination to generate ideas for visual artworks.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3 1.1.1.1",
+                  "description": "Demonstrate understanding of how to generate ideas for visual artworks about people, their history and culture, the environment and topical issues.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3 1.1.1.1",
+                      "description": "Study and talk about visual artworks produced or found in other African communities that reflect the history and culture of people in those areas.",
+                      "orderIndex": 1
+                    },
+                    {
+                      "code": "B3 1.1.1.2",
+                      "description": "Generate ideas from visual artworks produced or found in African communities for creating own artworks about people and their way of life.",
+                      "orderIndex": 2
+                    },
+                    {
+                      "code": "B3 1.1.1.3",
+                      "description": "Study and talk about visual artworks that show the natural and manmade environment in African communities.",
+                      "orderIndex": 3
+                    },
+                    {
+                      "code": "B3 1.1.1.4",
+                      "description": "Study and talk about visual artworks that comment on topical local, national or global issues in African communities.",
+                      "orderIndex": 4
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3 1.2",
+          "title": "VISUAL ARTS – Planning, Making and Composing",
+          "description": "Planning and producing visual artworks using appropriate tools, materials and techniques.",
+          "orderIndex": 2,
+          "subStrands": [
+            {
+              "code": "B3 1.2.2",
+              "title": "Planning, Making and Composing",
+              "description": "Making informed choices of tools, materials and processes to create two- and three-dimensional artworks.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3 1.2.2.2",
+                  "description": "Show increased skill in planning, making and composing visual artworks that link ideas, subject matter, media and techniques.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3 1.2.2.1",
+                      "description": "Identify and prepare suitable tools, materials and equipment for creating visual artworks.",
+                      "orderIndex": 1
+                    },
+                    {
+                      "code": "B3 1.2.2.2",
+                      "description": "Plan and make visual artworks that clearly link ideas, subject matter, media and techniques.",
+                      "orderIndex": 2
+                    },
+                    {
+                      "code": "B3 1.2.2.3",
+                      "description": "Apply elements and principles of design intentionally when composing visual artworks.",
+                      "orderIndex": 3
+                    },
+                    {
+                      "code": "B3 1.2.2.4",
+                      "description": "Record and share important stages in the planning and making process of their visual artworks.",
+                      "orderIndex": 4
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3 1.3",
+          "title": "VISUAL ARTS – Displaying and Sharing",
+          "description": "Displaying and sharing visual artworks appropriately with different audiences.",
+          "orderIndex": 3,
+          "subStrands": [
+            {
+              "code": "B3 1.3.5",
+              "title": "Displaying and Sharing",
+              "description": "Arranging and presenting visual artworks for effective viewing and communication.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3 1.3.5.5",
+                  "description": "Show understanding of how to display and share visual artworks to support personal, social and cultural development.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3 1.3.5.1",
+                      "description": "Plan and mount displays of visual artworks in appropriate spaces for viewing by different audiences.",
+                      "orderIndex": 1
+                    },
+                    {
+                      "code": "B3 1.3.5.2",
+                      "description": "Explain reasons for chosen ways of arranging and presenting visual artworks.",
+                      "orderIndex": 2
+                    },
+                    {
+                      "code": "B3 1.3.5.3",
+                      "description": "Describe how displaying and sharing visual artworks can support personal, social and cultural growth.",
+                      "orderIndex": 3
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3 1.4",
+          "title": "VISUAL ARTS – Appreciating and Appraising",
+          "description": "Analysing and talking about visual artworks using agreed guidelines.",
+          "orderIndex": 4,
+          "subStrands": [
+            {
+              "code": "B3 1.4.6",
+              "title": "Appreciating and Appraising",
+              "description": "Developing guidelines for viewing, interpreting and judging visual artworks.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3 1.4.6.6",
+                  "description": "Show understanding of how to analyse, appreciate and appraise visual artworks and present simple reports.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3 1.4.6.1",
+                      "description": "Agree on guidelines for viewing visual artworks and expressing personal feelings and thoughts about them, including works from other African communities.",
+                      "orderIndex": 1
+                    },
+                    {
+                      "code": "B3 1.4.6.2",
+                      "description": "Use agreed guidelines to examine, interpret and appraise visual artworks and report findings.",
+                      "orderIndex": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3 2.1",
+          "title": "PERFORMING ARTS – Thinking and Exploring Ideas",
+          "description": "Generating ideas for music, dance and drama performances from experience, environment and imagination.",
+          "orderIndex": 5,
+          "subStrands": [
+            {
+              "code": "B3 2.1.1",
+              "title": "Thinking and Exploring Ideas",
+              "description": "Using experience, observation and imagination to generate ideas for performing arts.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3 2.1.1.1",
+                  "description": "Demonstrate understanding of how to generate ideas for performances about people, their history and culture, the environment and topical issues.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3 2.1.1.1",
+                      "description": "Study and talk about performing artworks in other African communities that reflect history and culture or way of life.",
+                      "orderIndex": 1
+                    },
+                    {
+                      "code": "B3 2.1.1.2",
+                      "description": "Generate ideas from performing artworks produced or performed in African communities for creating own performances.",
+                      "orderIndex": 2
+                    },
+                    {
+                      "code": "B3 2.1.1.3",
+                      "description": "Study and talk about performing artworks that reflect natural and manmade environments in African communities.",
+                      "orderIndex": 3
+                    },
+                    {
+                      "code": "B3 2.1.1.4",
+                      "description": "Study and talk about performing artworks that address topical issues in African communities.",
+                      "orderIndex": 4
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3 2.2",
+          "title": "PERFORMING ARTS – Planning, Making and Composing",
+          "description": "Planning and creating music, dance and drama performances using appropriate resources.",
+          "orderIndex": 6,
+          "subStrands": [
+            {
+              "code": "B3 2.2.3",
+              "title": "Planning, Making and Composing",
+              "description": "Choosing and organising tools, materials and techniques to create performances.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3 2.2.3.3",
+                  "description": "Show increased skill in planning and creating performances that link ideas, subject matter, media and techniques.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3 2.2.3.1",
+                      "description": "Identify and prepare tools, materials and resources for composing and performing music, dance and drama.",
+                      "orderIndex": 1
+                    },
+                    {
+                      "code": "B3 2.2.3.2",
+                      "description": "Plan and create performances that clearly link ideas, subject matter, media and techniques.",
+                      "orderIndex": 2
+                    },
+                    {
+                      "code": "B3 2.2.3.3",
+                      "description": "Apply elements and principles of performing arts when composing and staging performances.",
+                      "orderIndex": 3
+                    },
+                    {
+                      "code": "B3 2.2.3.4",
+                      "description": "Record and share important stages in the planning and rehearsal process.",
+                      "orderIndex": 4
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3 2.3",
+          "title": "PERFORMING ARTS – Displaying and Sharing",
+          "description": "Presenting and sharing music, dance and drama performances with different audiences.",
+          "orderIndex": 7,
+          "subStrands": [
+            {
+              "code": "B3 2.3.5",
+              "title": "Displaying and Sharing",
+              "description": "Arranging, presenting and reflecting on performances.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3 2.3.5.5",
+                  "description": "Show understanding of how to present and share performances to support personal, social and cultural development.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3 2.3.5.1",
+                      "description": "Plan and present performances for appropriate audiences and settings.",
+                      "orderIndex": 1
+                    },
+                    {
+                      "code": "B3 2.3.5.2",
+                      "description": "Explain reasons for chosen ways of presenting and sharing performances.",
+                      "orderIndex": 2
+                    },
+                    {
+                      "code": "B3 2.3.5.3",
+                      "description": "Describe how presenting and sharing performances can support personal, social and cultural growth.",
+                      "orderIndex": 3
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3 2.4",
+          "title": "PERFORMING ARTS – Appreciating and Appraising",
+          "description": "Analysing and talking about performances using agreed guidelines.",
+          "orderIndex": 8,
+          "subStrands": [
+            {
+              "code": "B3 2.4.6",
+              "title": "Appreciating and Appraising",
+              "description": "Developing and applying guidelines for viewing, listening to and judging performances.",
+              "orderIndex": 1,
+              "contentStandards": [
+                {
+                  "code": "B3 2.4.6.6",
+                  "description": "Show understanding of how to analyse, appreciate and appraise performances and present simple reports.",
+                  "orderIndex": 1,
+                  "indicators": [
+                    {
+                      "code": "B3 2.4.6.1",
+                      "description": "Agree on guidelines for viewing and listening to performances and expressing personal responses, including performances from other African communities.",
+                      "orderIndex": 1
+                    },
+                    {
+                      "code": "B3 2.4.6.2",
+                      "description": "Use agreed guidelines to examine, interpret and appraise performances and report findings.",
+                      "orderIndex": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

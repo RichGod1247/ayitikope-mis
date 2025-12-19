@@ -1,0 +1,294 @@
+{
+  "part": "1/4",
+  "phase": "Upper Primary",
+  "level": "Basic 6",
+  "subject": "Creative Arts",
+  "name": "Basic 6 Creative Arts",
+  "slug": "basic-6-creative-arts",
+  "orderIndex": 1,
+  "description": "The Basic 6 Creative Arts curriculum further deepens learners' engagement with Visual and Performing Arts. It emphasizes generating ideas from international history and culture, the environment, and global topical issues, and expressing these ideas through planning, making, displaying, and appraising artworks.",
+  "strands": [
+    {
+      "code": "B6 1.1",
+      "title": "VISUAL ARTS",
+      "description": "Thinking and exploring ideas for visual arts based on global culture and environment.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B6 1.1.1",
+          "title": "Thinking and Exploring Ideas",
+          "description": "Generating ideas for artistic expression based on global history, culture, environment, and topical issues.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6 1.1.1.1",
+              "description": "Demonstrate understanding of how to generate own ideas for artistic expressions on the people based on their history and culture, the environment and topical local/national/global issues.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6 1.1.1.1",
+                  "description": "Explore and study the artworks of some international visual artists and analyse how their artworks reflect the history and culture of some communities in the world",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use OERs (e.g. library, videos, Facebook, internet) to study and share the artworks of some international visual artists (e.g. Meshack Asare, Zingaro, Leonardo, Michelangelo, Picasso, El-Anatsui, Kara Walker, Ibrahim Mahama, Rebecca Horn)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the works of the international artists studied in relation to the history and cultures of some communities in the world. For example, Ibrahim Mahama uses the transformation of materials to explore among other themes the issue of migration and the socio-economic and cultural heritage of a people."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Writing a brief about their choice of artist using the following guidelines: Name, Country of origin, Training, Type of artworks, Title of some works, Preferred Media, Contribution to the development of art."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 1.1.1.2",
+                  "description": "Study how the artworks of the international visual artists studied reflect the history and culture of some communities in the world and generate own ideas for creating own artworks",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select the work of any of the international artists studied."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Reflect on the themes or purposes of the works."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make an analytical study of artworks to identify the materials, tools, equipment, methods and styles used in designing and making them."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the experience gained to generate ideas for own artworks that will reflect the history and culture of some communities in the world."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 1.1.1.3",
+                  "description": "Study some artworks created by international visual artists that reflect the physical and social environments of some communities in the world",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select the designs and works of any international visual artist that reflect ideas from the physical and social environments of any community in the world (e.g. A bed designed from the concept of a vehicle, A building structure based on the concept of a canoe and sail, The seat of the government of Ghana developed from the concept of a stool)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Appreciate: discuss the selected artworks in groups and share findings with the rest of the class while focusing on the type of artwork, theme/purpose, the idea from the physical and social environment that it reflects, materials and methods/approaches used, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Select and compare any two of the artworks in terms type, material, method, finishing, function and suitability, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 1.1.1.4",
+                  "description": "Generate own ideas for designing and creating own visual artworks based on the physical and social environments of some communities in the world",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use OERs to study the physical and social environments of some communities in the world and select objects/ideas that interest them and what they want to do using spidergrams."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present and share selected ideas using the prepared spidergrams."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Reflect and generate ideas from the spidergrams into 'thumbnail' sketches."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 1.1.1.5",
+                  "description": "Study the artworks of some international visual artists that reflect topical issues in some communities in the world",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select works of international visual artists that reflect emerging topical national issues (e.g. war, racism, terrorism, corruption, rights and responsibilities of road users, counterfeiting, intellectual property etc. digital fraud or 'sakawa')."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the works in relation to the topical global issues (concepts)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Appreciate: talk about the works based on the type, theme/purpose, technique, style, materials, tools, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 1.1.1.6",
+                  "description": "Brainstorm and generate ideas for creating own visual artworks that will reflect topical issues in some communities in the world",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use available OERs (e.g. libraries, videos, documentaries, internet, Facebook) to research current topical issues of much concern in some communities in the world."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Document results of findings in the forms of notes, statements, downloads and recordings for presentations and class discussions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Reflect on feedback from class discussions and peer reviews to generate concepts for designing and making own artworks that will reflect current topical issues of much concern in the world."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6 2.1",
+      "title": "PERFORMING ARTS",
+      "description": "Thinking and exploring ideas for performing arts based on global culture.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B6 2.1.1",
+          "title": "Thinking and Exploring Ideas",
+          "description": "Generating ideas for performance based on global history, culture, environment, and topical issues.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6 2.1.1.1",
+              "description": "Demonstrate understanding of how to generate own ideas for artistic expressions on the people based on their history and culture, the environment and topical local/national/global issues.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6 2.1.1.1",
+                  "description": "Explore and study performing artworks of some international performing artists and analyse how their compositions reflect the history and culture of some communities in the world",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use OERs (e.g. library, videos, Facebook, internet) to study and share the artworks of some international performing artists (e.g. Michael Jackson, Fred Astaire, Elton John, Bright Okpocha (Basket Mouth), Osei Boateng, Fela Ransome Kuti, Bob Marley, Kojo Antwi, Seidou Keita, Eddie Murphy)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the works of the international artists studied in relation to the history and cultures of some communities in the world. For example, 'Exodus' by Bob Marley."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write briefs about choice of artists using the following guidelines: Name, Country of origin, Training, Type of artworks, Title of some works, Preferred compositions and performances, Contribution to the development of the performing arts industry."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 2.1.1.2",
+                  "description": "Study how the artworks of the international performing artists studied reflect the history and culture of some communities in the world and generate own ideas for creating own performing artworks",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select the work of any of the international artists studied in B6. 2.1.1.1."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Reflect on the themes or purposes of the works."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make an analytical study of compositions and performances to identify the musicality, vocabulary, movement patterns, costuming, time, rhythm, speed, energy, space, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the information gained to generate ideas for own artworks that will reflect the history and culture of some communities in the world."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 2.1.1.3",
+                  "description": "Study how the artworks of the international performing artists studied reflect the physical and social environments of some communities in the world",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select the compositions and performances of any international performing artist that reflect ideas from the physical and social environments of any community in the world."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Appreciate: discuss the selected artworks in groups and share findings with the rest of the class focusing on the type of composition or performance, theme/purpose, the idea from the physical and social environment that it reflects, vocabulary used, rhythm, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Select and compare any two of the compositions and performances in terms of type, material, method, finishing, function and suitability, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 2.1.1.4",
+                  "description": "Generate own ideas for creating own performing artworks based on the physical and social environments of some communities in the world",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use OERs to study the physical and social environments of some communities in the world and select objects/ideas that interest them and what they want to do using concept notes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present and share selected ideas using the prepared concept notes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Reflect and generate ideas from the concept notes into poems, songs, dance patterns and drama."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 2.1.1.5",
+                  "description": "Study how the artworks of the international performing artists studied reflect topical issues in some communities in the world",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select compositions and performance of international performing artists that reflect current topical issues of much concern in the world (e.g. war, racism, terrorism, corruption, rights and responsibilities of road users, counterfeiting, intellectual property rights, sakawa or digital fraud)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the works in relation to the topical global issues (concepts)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Appreciate: talk about the works based on the type, theme/purpose, technique, rhythm, style, instruments, movement patterns, costumes, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6 2.1.1.6",
+                  "description": "Brainstorm and generate ideas for creating own performing artworks that reflect topical issues in some communities in the world",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use available OERs (e.g. libraries, videos, documentaries, internet, Facebook) to research current topical issues of much concern in some communities in the world."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Document results of findings in the forms of notes, statements, downloads and recordings for presentations and class discussions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Reflect on feedback from class discussions and peer reviews to generate concepts for composing music, dance, drama, poem etc. on current topical issues of much concern in the world."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

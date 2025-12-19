@@ -1,0 +1,847 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 9",
+  "subject": "Computing",
+  "name": "JHS 3 Computing",
+  "slug": "jhs-3-computing",
+  "orderIndex": 1,
+  "description": "The JHS 3 Computing curriculum consolidates learners' knowledge in computer systems, productivity software, communication networks and computational thinking. It covers advanced concepts like next-generation computers, perceptual computing, cloud storage, advanced productivity tools, network security and artificial intelligence.",
+  "strands": [
+    {
+      "code": "B9.1",
+      "title": "INTRODUCTION TO COMPUTING",
+      "description": "Advanced computer components, technology in the community and health and safety.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B9.1.1",
+          "title": "COMPONENTS OF COMPUTERS AND COMPUTER SYSTEMS",
+          "description": "Next-generation computers, perceptual computing and storage systems.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.1.1.1",
+              "description": "Identify parts of a Computer and Technology Tools",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.1.1.1",
+                  "description": "Discuss the trends in the next generation of computers",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify features expected to be seen in the next generation of computers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe Google quantum computer (sycamore) and compare its processing power with other supercomputers (focus on processor)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.2",
+                  "description": "Examine the concept of Perceptual Computing",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the features of Perceptual Computing."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.3",
+                  "description": "Discuss the uses of Output devices such as Wearable Displays, E-Paper, E-Books, Kindle",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe Wearable Displays (e.g. Google Glass), E-Paper, E-Books (e.g. Kindle)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.4",
+                  "description": "Describe Storage Systems: Network and Cloud Storage Systems, Smart Cards, Holographic Storage, Storage Systems for Large Computer Systems (home servers or media servers)",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss Network and Cloud Storage Systems, Smart Cards, Holographic Storage, Storage Systems for Large Computer Systems (home servers or media servers)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore common cloud storage examples such as Google Drive, One Drive, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the pros and cons of using cloud storage."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.1.1.2",
+              "description": "Demonstrate the Use of the Desktop",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.1.1.2.1",
+                  "description": "Explore personalisation of the computer",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Change desktop icons."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Change mouse pointers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.2.2",
+                  "description": "Identify and use file management techniques (drivers and hardware)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and explore the use of device drivers e. g. sound drivers and video graphic drivers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain plug-and-play devices."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate how to install, update or delete drivers."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.2",
+          "title": "TECHNOLOGY IN THE COMMUNITY (COMMUNICATION)",
+          "description": "Applying technology to solve community problems.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.1.2.1",
+              "description": "Demonstrate the Use of Technology in the Community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.2.1.1",
+                  "description": "Evaluate problems in the community that can be solved with technology",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss problems in the community that can be solved using technology Work in pairs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.2",
+                  "description": "Propose solutions to the problems identified",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Present technological solutions to the problems identified in B9.1.2.1.1."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.3",
+                  "description": "Design the solution selected",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Design the solution selected."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Present the solution designed."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.3",
+          "title": "HEALTH AND SAFETY IN THE USE OF ICT TOOLS",
+          "description": "Evaluating health and safety risks in ICT usage.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.1.3.1",
+              "description": "Demonstrate How to Apply Health and Safety Measures in the Use ICT Tools",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.3.1.1",
+                  "description": "Evaluate health issues at workstations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the use of ergonomic tools such as ergonomic keyboard and paper stand."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the appropriateness of the lighting system while working with the computer."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.3.1.2",
+                  "description": "Evaluate Safety Risk Reduction at issues at workstations",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the heat generated by machines (e.g. computers, printers etc.) and how to reduce excess heat."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.2",
+      "title": "PRODUCTIVITY SOFTWARE",
+      "description": "Advanced features in Word Processing, Presentation, Desktop Publishing and Spreadsheets.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B9.2.1",
+          "title": "INTRODUCTION TO WORD PROCESSING",
+          "description": "Multimedia integration in Word.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.2.1.1",
+              "description": "Demonstrate How to Use Microsoft Word (Multimedia)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.1.1.1",
+                  "description": "Demonstrate how to add pictures, insert a screenshot and screen clipping and print screen",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the clip art, screenshot and screen clipping in the Insert Ribbon."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of the print screen key in capturing and inserting pictures."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.2",
+                  "description": "Demonstrate the use of SmartArt",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Illustrate the use of SmartArt in the Illustrations group of the Insert Ribbon."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.3",
+                  "description": "Demonstrate how to add Multimedia (audios, videos, animations), Charts and Hyperlinks",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the clip art and screenshot in the Insert Ribbon."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.2",
+          "title": "INTRODUCTION TO PRESENTATION",
+          "description": "Advanced multimedia features in PowerPoint.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.2.2.1",
+              "description": "Demonstrate How to use Microsoft PowerPoint (Multimedia)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.2.1.1",
+                  "description": "Demonstrate how to add pictures and insert screenshots",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the clip art and screenshot in the Insert Ribbon."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.2.1.2",
+                  "description": "Demonstrate how to animate slides in a presentation",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the use of transitions and animations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create a seven-slide presentation with animations and transitions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.2.1.3",
+                  "description": "Demonstrate how to add Multimedia (audios, videos etc.), tables and charts",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Insert Ribbon tab to add multimedia (e.g. audios, videos, etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the use of tables and charts in slides."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.3",
+          "title": "INTRODUCTION TO DESKTOP PUBLISHING",
+          "description": "Creating and evaluating desktop published documents.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.2.3.1",
+              "description": "Critique a Desktop Published Document",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.3.1.1",
+                  "description": "Create and present a desktop published document (flyer, advertisement, invitation cards, business cards)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create and present a four-page document with images and overflow e.g. flyer, advertisement, storybook."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.3.1.2",
+                  "description": "Describe a desktop published document",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give out your document to another learner assigned to you and collect the learner's document."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Examine the document received in terms of the position of text and images, use of colour, mechanics, content accuracy, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.3.1.3",
+                  "description": "Evaluate a desktop published document",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Evaluate the assigned document using, but not limited to the following criteria: position of text and images, general layout of the document, use of colour, mechanics (punctuation, spelling, italics, capitalisation, etc.), and appropriateness of the design for the intended purpose."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.4",
+          "title": "INTRODUCTION TO ELECTRONIC SPREADSHEET",
+          "description": "Advanced spreadsheet operations.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.2.4.1",
+              "description": "Demonstrate How to Use Spreadsheet (Advanced Operations)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.4.1.1",
+                  "description": "Perform data filtering, sorting and validation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe Fields (columns), Records (rows) and Tables (structured/ unstructured)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Illustrate examples of structured and unstructured tables."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct a structured data table of class members (e.g. data table may have the following fields: Surname, First name, Date of Birth, Sex, Home Town, Region, etc)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Apply validation rules to check for errors."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Convert data tables to a list in MS Excel. Demonstrate the process of entering data to a list."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Demonstrate the use of validation list in the Sex column (in Exemplar(s): 3) to provide options in a drop-down for data entry."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Demonstrate how to sort data in alphabetical order (ascending/descending) and filter data to display only selected data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.4.1.2",
+                  "description": "Demonstrate how to use styles, themes, templates and macros",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the difference between templates and macros."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create new spreadsheet documents from predefined templates in MS Excel."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate the use of styles and themes on sample worksheets."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Do a project on formatting a dataset by applying styles and themes."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explore the use of macros."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.4.1.3",
+                  "description": "Demonstrate the use of data tables, pivot tables, charts and pivot charts",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore pivot tables and charts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore the use of a pivot table to display a summary of the dataset."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Insert a pivot chart to display the number of males and females in the class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Demonstrate the use of the sort and filter features of the pivot table."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.3",
+      "title": "COMMUNICATION NETWORKS",
+      "description": "Advanced networking concepts, social media risks, and security.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B9.3.1",
+          "title": "COMPUTER NETWORKS",
+          "description": "E-commerce and eLearning.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.3.1.1",
+              "description": "Know the Concept of Computer Networking for Global Communications",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.1.1.1",
+                  "description": "Discuss types of e-commerce and the cashless society (Bitcoin, Transaction cards, Quick Response code (QR) payment system)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore the use of the Internet to engage in online business: selling, buying and paying for products online."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the use of online banking systems (e.g. using mobile money, bitcoin, the use of MasterCard, Visa card, QR code payment system, etc.)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.1.2",
+                  "description": "Justify eLearning potentials",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of eLearning, its benefits and disadvantages."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss projects on a collaborative platform (e.g. iBox network, the use of ad hoc network to share resources, Wikis, Google Docs] etc.)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.2",
+          "title": "INTERNET AND SOCIAL MEDIA",
+          "description": "Social media risks and email features.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.3.2.1",
+              "description": "Demonstrate the Use of Social Networking and Electronic Mail",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.2.1.1",
+                  "description": "Identify the advantages and risks in the use of social media platforms",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Illustrate the benefits of using social media sites."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the issues and risks surrounding the usage of social media platforms and how to avoid them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore reply, reply all, forward and forward all features in the use of emails."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.3",
+          "title": "INFORMATION SECURITY",
+          "description": "Cybersecurity concepts and hacking techniques.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.3.3.1",
+              "description": "Recognise data threats and the means of protection",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.3.1.1",
+                  "description": "Discuss cyberbullying, cyberstalking, digital footprint and digital shadow on the Internet",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch a film or do a reading on cyberbullying, cyberstalking, digital footprint, digital shadows."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the nature of cyberbullying, cyberstalking, digital footprint and digital shadows."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify examples of cyberbullying, cyberstalking, digital footprint and digital shadows."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the effects on cyberbullying on individuals."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.3.1.2",
+                  "description": "Explain ten (10) information hacking techniques on the Internet environment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Brainstorm information hacking techniques on the internet environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain ten (10) information hacking techniques e.g. phishing, keyloggers, Denial of Service attack, eavesdropping, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.4",
+          "title": "WEB TECHNOLOGIES",
+          "description": "Creating and publishing blogs.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.3.4.1",
+              "description": "Demonstrate the Use of a Web Browser (Blogging)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.4.1.1",
+                  "description": "Examine the importance of creating blogs",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the importance of creating blogs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.4.1.2",
+                  "description": "Develop a blog for the school or a social club",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Investigate the items to include in a school or social club blog."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Develop a blog for the school or a social club."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.4.1.3",
+                  "description": "Explore the steps in publishing a blog",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify steps in publishing a blog."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the procedure for publishing a blog and invite others to comment."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.4",
+      "title": "COMPUTATIONAL THINKING",
+      "description": "Programming logic, algorithms, robotics, and artificial intelligence.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B9.4.1",
+          "title": "INTRODUCTION TO PROGRAMMING",
+          "description": "Data conversion and programming tools.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.4.1.1",
+              "description": "Show an Understanding of the Concept of Programming",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.1.1.1",
+                  "description": "Describe the conversion of decimal into binary data type for computer to recognise the meaning, process and store",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Convert decimal, binary and hexadecimal data from one format to another."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show the results of calculating two or more binary numbers using the mathematical notation or operators in the number base two rule."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.1.2",
+                  "description": "Identify the different tools which are accessible in Integrated Development Environment (IDE) to aid the development of codes",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore programming languages such as Snap, Scratch and Python to explain the key terminologies (variables, operators, controls, events, etc.) around the coding environment. Explore a web development programme to create a simple website."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.2",
+          "title": "ALGORITHM",
+          "description": "Developing algorithms with flowcharts and pseudocode.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.4.2.1",
+              "description": "Analyse the Correct Step-by-step Procedure in Solving any Real-world Problem",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.2.1.1",
+                  "description": "Write a programme using flowchart and Pseudocode algorithm that includes sequence, selection and iteration choices in problem-solving",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss at least three ways to do proper hand-washing and prepare beverages with or without sugar and/or milk."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write an algorithm for Exemplar(s): 1 that focuses on procedure correctness and shortest time to execute."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.2.1.2",
+                  "description": "Translate a Flowchart algorithm to Pseudocode format and vice versa",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write an algorithm using flowchart format. Convert or translate the same flowchart algorithm into a Pseudocode format. (do a vice versa translation example to reinforce critical thinking)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.3",
+          "title": "ROBOTICS",
+          "description": "Constructing robots.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.4.3.1",
+              "description": "Discuss Robot Intelligence Concepts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.3.1.1",
+                  "description": "Construct a robot artefact using available lab components and tools or emulator/simulator software pack",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the three basic laws of robotics by Isaac Asimov i.e. Asimov's science fiction laws of robotics."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate how a robot is assembled using real robots' toolkit/video/pictures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explore a robotic software pack, e.g. Scratch, Webot, Snap, Mbot software, EV3 and Mobile Applications such as lightbot"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.4",
+          "title": "ARTIFICIAL INTELLIGENCE",
+          "description": "Expert systems and machine learning concepts.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.4.4.1",
+              "description": "Discuss Artificial intelligence Concepts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.4.1.1",
+                  "description": "Describe the knowledge-based systems (Expert systems) as the classical Artificial intelligence",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Illustrate the use of IF-THEN control structure for querying an expert system."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate how to input a request in any knowledge-based system to generate an output or result (e.g. Telemedicine system)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate how to go onto the web and use Google's Teachable Machine demo to get a basic understanding of how machine learning works (e.g. Whatisit as an open-source cloud-based app which can identify the object in an image/photo). NB: Demonstrate how data is collected and the extent to which information can be used. Also discuss thoughts on machine learning. https://teachablemachine.withgoogle.com"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

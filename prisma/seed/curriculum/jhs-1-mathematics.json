@@ -1,0 +1,1519 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 7",
+  "subject": "Mathematics",
+  "name": "JHS 1 Mathematics",
+  "slug": "jhs-1-mathematics",
+  "orderIndex": 1,
+  "description": "The JHS 1 Mathematics curriculum is designed to develop mathematical literacy, problem-solving skills, and critical thinking. It covers number systems, algebra, geometry and measurement, and handling data, preparing learners for real-life applications and further studies.",
+  "strands": [
+    {
+      "code": "B7.1",
+      "title": "NUMBER",
+      "description": "Developing number sense and operations.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B7.1.1",
+          "title": "NUMBER AND NUMERATION SYSTEMS",
+          "description": "Understanding place value and number operations.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.1.1.1",
+              "description": "Demonstrate understanding and the use of place value for expressing quantities recorded as base ten numerals as well as rounding these to given decimal places and significant figures",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.1.1.1",
+                  "description": "Model number quantities more than 1,000,000,000 using graph sheets, isometric papers and multi-base blocks",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model number quantities up to 1,000,000,000 (one billion) using graph sheets or multi-base ten materials."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use multiples of 10s, 50s, 100s and 200s to represent numbers in multiples of ways."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use tokens (or paper-made currency notes) such as GHC20, GHC50, GHC100 and GHC200 to work out how many of each denomination would be required to model given amount up to one billion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.2",
+                  "description": "Compare and order whole numbers more than 1,000,000,000 and represent the comparison using \">, <, or =\"",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Skip count forwards and backwards in 25s, 50s and 250s beginning from 1000."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify numbers which are for instance, 500,000 more than or less than a given 8-digit or 9-digit number."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use phrases such as \"is equal to\", \"is greater than\" and \"is less than\" as well as their symbols such as \">\", \"<\" and \"=\" to compare any two numbers."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify, read and write numbers in given positions in a number chart."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.3",
+                  "description": "Round (off, up, down) whole numbers more than 1,000,000,000 to the nearest hundred-thousand, ten-thousands, thousands, hundreds and tens",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Round off whole numbers up to over 1,000,000,000 to the nearest hundred-thousands, ten-thousands, thousands, hundreds, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the differences between the \"round up\" and \"round down\" concepts."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Express whole numbers to significant figures."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.4",
+                  "description": "Round decimals to the nearest tenth, hundredth, thousandths, etc.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Round (off, up and down) decimals to the nearest tenths, hundredths, thousandths."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.5",
+                  "description": "Express decimal numerals to given significant and decimal places",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain when zero (0) is significant in a decimal numeral."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Round given numbers to significant figures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Express decimal numbers to a given number of decimal places."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.2",
+          "title": "NUMBER OPERATIONS",
+          "description": "Performing operations with numbers.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.1.2.1",
+              "description": "Apply mental mathematics strategies and number properties used to solve problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.2.1.1",
+                  "description": "Multiply and divide given numbers by powers of 10 including decimals and benchmark fractions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recall multiplication facts up to 144 and related division facts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recall decimal names of given benchmark fractions converted to decimals or percentages (and vice versa)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Find the product of a given decimal number when it is multiplied by 10, 100, 1000, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.2",
+                  "description": "Apply mental mathematics strategies and number properties used to perform calculations",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply the halving and doubling techniques to determine the product of two given numbers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Apply the distributive property to determine the product of two given numbers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.3",
+                  "description": "Apply mental mathematics strategies to solve word problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play mental mathematics games using addition, subtraction, multiplication and division terms."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play mental mathematics games involving cost, weight, fractions, perimeter, area, angles, time and decimals."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.1.2.2",
+              "description": "Demonstrate an understanding of addition, subtraction, multiplication and division of (i) whole numbers, and (ii) decimal numbers, to solve problems",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.1.2.2.1",
+                  "description": "Add and subtract up to four-digit numbers",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use partitioning (or expanded form) and place value system to add and subtract whole and decimal numbers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.2.2",
+                  "description": "Multiply or divide multi-digit numbers by 1- and 2- digit numbers",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use partitioning/expanded form to multiply and divide efficiently."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Multiply whole numbers using the vertical place value method or lattice method."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the distributive property to multiply."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Investigate and determine basic division facts including divisibility test."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.2.3",
+                  "description": "Create and solve story problems involving decimals on the four basic operations",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve word problems involving addition, subtraction, multiplication and division."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve word problems on data presented in a table."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.1.2.3",
+              "description": "Demonstrate understanding and the use of powers of natural numbers in solving problems",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B7.1.2.3.1",
+                  "description": "Illustrate with examples the meaning of repeated factors using counting objects such as bottle tops or bundle sticks",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model repeated factors using counters or bottle tops."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain what is meant by a power of a number."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the features of a power."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.3.2",
+                  "description": "Express a given number as a product of a given number or numbers, as well as, in the form of a power or two such numbers as product of powers",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Express numbers as products of factors and in index form."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.3.3",
+                  "description": "Show that the value of any natural number with zero as its exponent or index is 1 and use it to solve problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Verify why the value of any natural number with exponent zero is 1."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.3.4",
+                  "description": "Find the value of a number written in index form",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate values of numbers in index form."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.3.5",
+                  "description": "Apply the concept of powers of numbers (product of prime) to find Highest Common Factor (HCF)",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Expand a given number using product of prime concept. Find the Highest Common Factor (HCF)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve real life problems using HCF."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve real life problems using LCM."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.3",
+          "title": "FRACTIONS, DECIMALS AND PERCENTAGES",
+          "description": "Working with fractions, decimals, and percentages.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.1.3.1",
+              "description": "Simplify, compare and order a mixture of positive fractions (i.e. common, percent and decimal) by changing all to equivalent (i) fractions (ii) decimals, or (iii) percentages",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.3.1.1",
+                  "description": "Determine and recall the percentages and decimals of given benchmark fractions (i.e. tenths, fifths, fourths, thirds and halves) and use these to compare quantities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Review the concept of fractions (shading, equivalent fractions, simplest form, mixed numbers, improper fractions)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Work out common, and decimal fractions and percent equivalences of given benchmark fractions to complete a table."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identifying fractions which are closer to half, one or zero."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Simplify, compare and order common fractions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.1.2",
+                  "description": "Compare and order fractions (i.e. common, percent and decimal fractions up to thousandths) limit to the benchmark fractions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Arrange fractions in descending order."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find which decimal fraction is greater."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Order decimal numbers from least to greatest."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compare and order common and decimal fractions and percent, and express them in one form."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.1.3.2",
+              "description": "Demonstrate an understanding of the process of addition and/or subtraction of fractions and apply this in solving problems",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.1.3.2.1",
+                  "description": "Explain the process of addition and subtraction of two or three unlike and mixed fractions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Add mixed fractions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Subtract mixed fractions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.2.2",
+                  "description": "Solve problems involving addition or subtraction of fractions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve word problems involving addition or subtraction of fractions."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.1.3.3",
+              "description": "Demonstrate an understanding of the process of multiplying and dividing positive fractions and apply this in solving problems",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B7.1.3.3.1",
+                  "description": "Explain the process of multiplying a fraction (i.e. common, percent and decimal fractions up to thousandths) by a whole number and by a fraction",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Multiply a whole number by a fraction."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Multiply a fraction by a whole number."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Calculate percentages of numbers."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Multiply a fraction by a fraction."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.3.2",
+                  "description": "Find a fraction of given quantity (i.e. money or given quantity of objects)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Multiply a given quantity by a fraction."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve word problems involving finding fractions of quantities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Interpret graphs involving fractions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.3.3",
+                  "description": "Explain the process of dividing a fraction (i.e. common, percent and decimal fractions up to thousandths) by a 1-digit whole number and by a fraction",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Divide a whole number by a fraction."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Divide a fraction by a fraction."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.3.3.4",
+                  "description": "Determine the result of dividing a quantity (i.e. money or objects) or a fraction by a fraction",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve word problems involving division by a fraction."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve word problems involving sharing quantities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Interpret graphs involving fractions and division."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.4",
+          "title": "NUMBER: RATIOS AND PROPORTION",
+          "description": "Understanding ratios and rates.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B7.1.4.1",
+              "description": "Demonstrate an understanding of the concept of ratios and its relationship to fractions and use it to solve problems that involve rates, ratios, and proportional reasoning",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.4.1.1",
+                  "description": "Find ratio and use ratio language to describe relationship between two quantities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Determine ratio of given quantities."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Express two quantities as a ratio."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe quantities with ratio language."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.4.1.2",
+                  "description": "Use the concept of a unit rate associated with a ratio a:b with b≠0, and use rate language in the context of a ratio relationship",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write given ratios as unit rates."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Work out rates and use them in solving problems."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use tables/diagrams to explain the concept of rate."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.4.1.3",
+                  "description": "Make tables of equivalent ratios (written as common fractions) relating quantities that are proportional",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve problems involving sharing quantities in given ratios."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.4.1.4",
+                  "description": "Use the proportional reasoning to find missing values in the tables, and plot pairs of values on the coordinate plane",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find the missing value in a table of equivalent ratios."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.4.1.5",
+                  "description": "Find a percent of a quantity as a rate per 100 (e.g. 30% of a quantity means 30/100 times the quantity)",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve problems involving commission, discount, and interest."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.2",
+      "title": "ALGEBRA",
+      "description": "Patterns, algebraic expressions, and variables.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B7.2.1",
+          "title": "PATTERNS AND RELATIONS",
+          "description": "Identifying and extending patterns.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.2.1.1",
+              "description": "Derive the rule for a set of points of a relation, draw a table of values to graph the relation in a number plane and make predictions about subsequent elements of the relation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.1.1.1",
+                  "description": "Extend a given relation presented with and without symbolic materials and explain how each element differs from the preceding one",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Extend a given symbolic relation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Study numerical patterns and complete tables."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Extend a given number relation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.2",
+                  "description": "Describe the rule for a given relation using mathematical language such as one more, one less, one more than twice, etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe given relations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the rule for a relation using mathematics language."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "State the rules in words to represent a given relation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.3",
+                  "description": "Identify the relation or rule in a pattern/mapping presented numerically or symbolically and predict subsequent elements",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Determine the rule for a given symbolic pattern."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine the rule for a given numerical pattern."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Determine an element when given the rule."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.1.1.4",
+                  "description": "Locate points on the number plane, draw a table of values of a given relation, draw graphs for given relations and use them to solve problems",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Make a table of values for a given rule."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Locate points on the number plane."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw graphs for given relations."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use knowledge of identifying and plotting points in a number plane to solve problems."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.2",
+          "title": "ALGEBRAIC EXPRESSIONS",
+          "description": "Simplifying and evaluating expressions.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.2.2.1",
+              "description": "Simplify algebraic expressions involving the four basic operations and substituting values to evaluate algebraic expressions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.2.1.1",
+                  "description": "Create simple algebraic expressions using simple logic to translate a set of instructions into an algebraic expression",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Form algebraic expressions for given mathematical statements."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Form algebraic expressions from real life situations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.2",
+                  "description": "Perform addition and subtraction of algebraic expressions with rational coefficients",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Add algebraic expressions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Subtract algebraic expressions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Adding and subtracting algebraic expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.3",
+                  "description": "Perform multiplication and division of algebraic expressions with rational coefficients",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve multiplication of algebraic expressions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve division of algebraic expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.4",
+                  "description": "Substitute values to evaluate algebraic expressions",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Simplify expressions and substitute values to evaluate them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Substitute values into more complex expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.5",
+                  "description": "Use properties of the four operations to simplify algebraic expressions with rational coefficients",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Simplify algebraic expressions involving the four operations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.3",
+          "title": "VARIABLES AND EQUATIONS",
+          "description": "Solving linear equations.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.2.3.1",
+              "description": "Demonstrate an understanding of linear equations of the form x + a = b (where a and b are integers) by modelling problems as a linear equation and solving the problems concretely, pictorially, and symbolically",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.3.1.1",
+                  "description": "Translate word problems to linear equations in one variable and vice versa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a flag diagram for equations and their inverses to solve equations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Translate word problems to linear equations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write word problems for given linear equations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.3.1.2",
+                  "description": "Model and solve linear equations using concrete materials (e.g., counters and integer tiles) and describe the process orally and symbolically",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model and solve linear equations set with objects on a balance."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Model and solve linear equations set with shapes on a balance."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.3.1.3",
+                  "description": "Model linear equations, then write mathematical expressions and describe the process of solving the equation using algebraic tiles",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Model equations with tiles and solve."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use tiles to model equations with variables on both sides."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.3.1.4",
+                  "description": "Solve linear equations in one variable",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using the idea of balance solve simple linear equations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.3",
+      "title": "GEOMETRY AND MEASUREMENT",
+      "description": "Angles, constructions, perimeter, area, bearings, and vectors.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B7.3.1",
+          "title": "SHAPE AND SPACE",
+          "description": "Angles and geometric constructions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.3.1.1",
+              "description": "Demonstrate understanding of angles including adjacent, vertically opposite, complementary, supplementary and use them to solve problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.1.1.1",
+                  "description": "Measure and classify angles according to their measured sizes - right, acute, obtuse and reflex",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sort angles into those which are right, acute, obtuse or reflex angles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use a protractor to draw angles."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.1.2",
+                  "description": "Apply the fact that (i) complementary angles are two angles that have a sum of 90°, and (ii) supplementary angles are two angles that have a sum of 180° to solve problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Determine missing angles in complementary angles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine missing angles in supplementary angles."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.1.3",
+                  "description": "Use adjacent, supplementary and vertically opposite angles to solve problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Determine angles in adjacent and supplementary settings."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify pairs of angles as adjacent, vertically opposite, complementary or supplementary."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify and label angles in a figure."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use adjacent, vertically opposite, complementary or supplementary angles to solve problems."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.3.1.2",
+              "description": "Demonstrate how to construct a perpendicular to a line from a given point, bisect a line, bisect angles, and construct angles of the following sizes: 30°, 45°, 60°, 75° and 90°",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.3.1.2.1",
+                  "description": "Construct a line segment perpendicular to another line segment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a pair of compasses and a ruler to construct a copy of a given line segment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct a perpendicular at a point on a line segment and from a point outside a line segment."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.2.2",
+                  "description": "Construct the perpendicular bisector of a line segment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a pair of compasses and a ruler to construct a perpendicular bisector of a given line segment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw and bisect lines of specific lengths."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.2.3",
+                  "description": "Copy and bisect angles",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a pair of compasses and a ruler to copy a given angle."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform geometric construction to bisect a given angle."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify correct angle bisectors."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.2.4",
+                  "description": "Construct angles of 90° and 45°",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a pair of compasses and a ruler to construct an angle of 90°."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct an angle of 45° by bisecting an angle of 90°."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.2.5",
+                  "description": "Construct angles of 60° and 30°",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a pair of compasses and a ruler to construct an angle of 60°."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct an angle of 30° by bisecting an angle of 60°."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.2.6",
+                  "description": "Construct angles whose measures 15° and 75°",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Construct an angle of 15° by bisecting an angle of 30°."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct various angles."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct an angle of 75°."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Construct and bisect an angle of 75°."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.2.7",
+                  "description": "Describe examples of perpendicular line segments, perpendicular bisectors and angle bisectors in the environment",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify angle bisectors and perpendicular bisectors in structures and artefacts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Estimate the measure of the size of angles in artefacts, tools, and structures."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.2",
+          "title": "MEASUREMENT",
+          "description": "Perimeter, area, bearings, and vectors.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.3.2.1",
+              "description": "Demonstrate the ability to find the perimeter of plane shapes including circles using the concept of pi (π) to find the circumference of a circle",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.2.1.1",
+                  "description": "Calculate the perimeter of given shapes whose dimensions are in two units (i.e. cm and mm, m and cm, or km and m)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate perimeter by converting to smaller unit."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Calculate perimeter by converting to decimal fractions in larger unit (cm)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Calculate perimeter by converting to decimal fractions in larger unit (m)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.1.2",
+                  "description": "Use the relationships between the diameter and the circumference to deduce the formula for finding the circumference of a circle and use it to solve problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and name parts of a circle."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Measure radius, diameter and circumference of circular objects."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain relationship between diameter and circumference."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the relationship between diameter and circumference to solve problems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.1.3",
+                  "description": "Draw in a square grid rectangles and triangles with given dimensions",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw rectangles based on area or dimensions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw triangles with specific area."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Determine area of triangle in grid and draw different triangles with same area."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.3.2.2",
+              "description": "Derive the formula for determining the area of a triangle and use it to solve problems",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.3.2.2.1",
+                  "description": "Use the relationships between a triangle and a rectangle (or parallelogram) to deduce the formula for determining the area of a triangle",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Determine unit squares in triangles and area."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Spot rectangle enclosing triangle to find area."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Spot parallelogram from which triangle was formed to find area."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.2.2",
+                  "description": "Determine the area of a triangle",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate the area of given triangles."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.3.2.3",
+              "description": "Demonstrate understanding of bearings, vector and its components using real life cases",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B7.3.2.3.1",
+                  "description": "Describe the bearing of a point from another point",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use protractor to find marked angles and write three-digit bearing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recognise true bearings."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Express vectors graphically."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Draw vectors and measure angles."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.3.2",
+                  "description": "Explain how to find the back bearing when the direction of travel has a bearing which is less than 180° and/ or greater than 180°",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find bearings and back bearings from diagrams."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Calculate back bearing given forward bearing."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Calculate back bearing given forward bearing."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.3.3",
+                  "description": "Distinguish between scalar and vector quantities",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read on scalar and vector quantities."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Group examples under scalar and vector quantities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify a vector as a movement along a given bearing."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Draw a vector given length and bearing."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Identify distance as magnitude and angle as bearing."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Identify zero vector."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.3.4",
+                  "description": "Represent vector in the column (component) form and determine its magnitude and direction",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write vectors as column vectors using graph."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write vectors as column vectors without graph and find magnitude and direction."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.2.3.5",
+                  "description": "Convert vectors in the column (component) form to the Magnitude–Bearing form and vice versa",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use Pythagorean theorem to find length of vector."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find magnitude and direction of given vectors."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.3",
+          "title": "POSITION AND TRANSFORMATION",
+          "description": "Geometric transformations: reflection and translation.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.3.3.1",
+              "description": "Perform a single transformation (i.e. reflection and translation) on a 2D shape using graph paper (including technology) and describe the properties of the image under the transformation (i.e. congruence, similarity, etc.)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.3.1.1",
+                  "description": "Determine shapes in real life that have reflectional (or fold) symmetries",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify designs with reflectional symmetries."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Shade squares to create line of symmetry."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Plot points and draw images under reflection in axes and lines y=x, y=-x."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Derive coordinate rules for reflection."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.3.1.3",
+                  "description": "Plot points and shapes (i.e. plane figures) on a coordinate plane and draw their images under translation by a given vector",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Relate translation to sliding."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Plot points and shapes using translating vector and describe changes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe single transformation mapping a shape to its image."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.3.1.4",
+                  "description": "Verify the concept of congruent and similar shapes in coordinate plane using properties of both the object(s) and image(s); and in real life situations",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Verify similar and congruent shapes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify congruent shapes."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.4",
+      "title": "HANDLING DATA",
+      "description": "Collecting, analyzing, and interpreting data.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B7.4.1",
+          "title": "DATA",
+          "description": "Data collection, presentation, and analysis.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.4.1.1",
+              "description": "Select, justify, and use appropriate methods to collect data (quantitative and qualitative), display and analyse the data (grouped/ungrouped) presented in frequency tables, line graphs, pie graphs, bar graphs or pictographs and use these to solve and/or pose problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.1.1.1",
+                  "description": "Select and justify a method to collect data (quantitative and qualitative) to answer a given question",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss decision making and data collection methods."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify data collection methods for situations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.1.2",
+                  "description": "Design and administer a questionnaire for collecting data to answer questions and record the results",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Conduct a survey using a questionnaire."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise data from questionnaire into a table."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.1.3",
+                  "description": "Organise and present data from a survey into a table and/or chart, and analyse it to solve and/or pose problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Organise data into frequency table and draw bar graph."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise data into frequency table and draw pie chart."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw graph or chart for data and answer questions."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.4.1.2",
+              "description": "Determine the measures of central tendency (mean, median, mode) for a given ungrouped data and use it to solve problems",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.4.1.2.1",
+                  "description": "Calculate the mean for a given ungrouped data and use it to solve problems",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find mean for a data set."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find mean for data in frequency table."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve problems involving mean."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.2.2",
+                  "description": "Calculate the median for a given ungrouped data and use it to solve problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find median for a data set."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find median for data in frequency table."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.4.2",
+          "title": "CHANCE OR PROBABILITY",
+          "description": "Understanding probability.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.4.2.1",
+              "description": "Identify the sample space for a probability experiment involving single events and express the probabilities of given events as fractions, decimals, percentages and/or ratios to solve problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.2.1.1",
+                  "description": "Demonstrate understanding of likelihood of a single outcome occurring by providing examples of events that are impossible, possible, or certain from personal contexts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe outcomes using impossible, possible, certain."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss outcomes of events."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.2.1.2",
+                  "description": "Classify the likelihood of a single outcome occurring in a probability experiment as impossible, possible, or certain",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss outcomes of throwing a die."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss outcomes of throwing two dice."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.2.1.3",
+                  "description": "Calculate the probability of the event and express the probability as fractions, decimals, percentages and/or ratios",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate probabilities and complete table."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

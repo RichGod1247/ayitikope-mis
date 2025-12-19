@@ -1,0 +1,137 @@
+{
+  "phase": "KG",
+  "level": "KG1",
+  "subject": "Our World and Our People",
+  "imagePrompts": [
+    {
+      "nodeType": "strand",
+      "strandCode": "K1.7",
+      "subStrandCode": null,
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom corner decorated as a 'Global Hub'. There is a globe on a table, toy airplanes hanging from the ceiling, and pictures of diverse people holding hands around the world. Children are exploring the items."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children interacting with modes of connection. One child holds a toy phone pretending to call. Another pushes a toy ship on a blue mat (sea). A map of the world is in the background."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A role-play scene of 'Travel and Trade'. Children carrying small suitcases or bags. They are handing paper money to a 'trader' sitting at a table with goods. It shows connecting with others."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle. Children holding pictures of an airplane, a ship, and a bus. They are miming the actions (flying arms, steering wheel). Discussing how we travel far away."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children grouping toy vehicles on the floor. They put planes in one hoop (Air), boats in another (Sea), and cars in a third (Road). They count the vehicles in each group."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A classroom market scene representing international trade. A child 'trader' displays shoes and bags. A 'traveler' arrives with a suitcase to buy items. Interactive play."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Language Experience Approach. Teacher writing a story on a chart about 'Buying and Selling'. Children are watching. Beside them, two children role-play trading goods with play money."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child holding a book, showing the back cover to the class. Another child points to the front cover. The teacher nods. They are identifying parts of a book."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Interactive reading. Teacher reads a sentence from a Big Book. Children repeat it (echo-reading). They point to illustrations of airplanes and ships in the book."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children arranging letter cards on a table to spell simple words like 'BUS' or 'VAN'. They blend the sounds. One child is writing the word in an exercise book."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing a picture of a means of transport (e.g. a trotro or bicycle). They label it with initial letters. They share their drawings with friends."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A child speaking to the class, holding a toy plane. They are forming a sentence like 'I travel to Dubai'. The teacher writes the sentence on a strip of paper."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.7",
+      "subStrandCode": "K1.7.1",
+      "contentStandardCode": "K1.7.1.1",
+      "indicatorCode": "K1.7.1.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A buying and selling role-play. A child counts paper money to pay for a toy car. The 'seller' hands over the car. They use polite words and simple sentences."
+    }
+  ]
+}

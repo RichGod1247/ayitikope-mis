@@ -1,0 +1,593 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 6",
+  "subject": "Physical Education",
+  "name": "Basic 6 Physical Education",
+  "slug": "basic-6-physical-education",
+  "orderIndex": 1,
+  "description": "The Basic 6 Physical Education curriculum focuses on refining complex motor skills, applying movement concepts in game situations, developing personal fitness plans, and understanding the psycho-social aspects of physical activity. It includes advanced skills in games like football, volleyball, and tennis, along with a deeper understanding of fitness components, safety, and social responsibility.",
+  "strands": [
+    {
+      "code": "B6.1",
+      "title": "MOTOR SKILL AND MOVEMENT PATTERNS",
+      "description": "Developing competence in motor skills and movement patterns for various physical activities.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B6.1.1",
+          "title": "LOCOMOTOR, MANIPULATIVE AND RHYTHMIC SKILLS",
+          "description": "Developing advanced locomotor, manipulative and rhythmic skills.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.1.1.1",
+              "description": "Demonstrate competence in the motor skills and movement patterns needed to perform a variety of physical activities (games, athletics gymnastics and dance)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.1.1.1",
+                  "description": "Develop a cooperative movement game that uses locomotor skills, object manipulation, and an offensive strategy and teach the game to another person",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners participate in a mini Handball, Volleyball, Basketball, Netball, Hockey, etc. base on the facilities and materials available."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners use strategies and tactics in playing the game as a team."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners play various roles in a team and cooperate with one another in achieving the teams' objectives."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.2",
+                  "description": "Jump for distance, landing on both feet and bending the hips, knees, and ankles to reduce the impact force",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After warm-up activities, learners perform long jump by practicing approach run and single take off with a comfortable foot."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Practice landing on both feet with emphasis on bending the hips, knees, and ankles to reduce the impact force."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.2.1.3",
+                  "description": "Perform the differences in applying and receiving force when jumping for height and distance (high jump)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners go through a vertical jumping approach. Learners use both arms efficiently to control balance as needed during approach run and take-off."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners control the flight phase by leaning their trunk slightly backwards, one-foot take-off, two feet take-off, feet land shoulder width apart and flexion of knees with the height of the jump and landing on the balls of feet (double landing)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.4",
+                  "description": "Roll ball using a stick in a game situation (hockey)",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After a warm-up, learners practice how to hold or handle a hockey stick and role the ball from place to place at learners' pace."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play a mini hockey game in groups using rolling skill."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.4.1.5",
+                  "description": "Perform simple small stunts while shifting base of support from one body part to the other",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners move into simple steps in a rhythm over a rotatory rope performed by two peers at a spot. As they jump, the rope is withdrawn from their feet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners hop over obstacles and land with the other foot whiles in motion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.5.1.6",
+                  "description": "Change direction quickly to maintain ones' balance whiles running with an object through obstacles",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Arrange set of cones in a straight line. Learners walk through the spaces within the cones. Learners jog through and stop at every cone/station to change direction. Learners run and stop in front of a cone and change direction."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.6.1.7",
+                  "description": "Strike a tossed ball with the hands above the forehead (tennis serve)",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Organize learners with volleyballs facing a target. Learners toss a ball and strike it with the palm or fist (overhead) to a target base on their ability."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners practice over hanged net (optional) by striking a tossed ball over it to the target for mastery of tennis serve. Learners play mini volleyball starting with tennis serve."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.8",
+                  "description": "Strike a gently tossed ball with a bat, using a forehand and backhand movement pattern",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Organize learners with table tennis balls and bats. Learners stand with one foot forward behind table tennis board, knees bent and trunk slightly leaning forward, holding bat with one hands and swing the bat from the side to strike the ball to the target."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners practice striking/service at different heights."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.8.1.9",
+                  "description": "Throw and catch a ball with a partner while both partners are moving",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate to learners with a ball to stand with the foot opposite the throwing hand forward. Let them stretch their hands backward but below the shoulder by bending the trunk sideways towards the stretched hand."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Instruct them to swing the stretched arm with the ball forcefully and throw the ball to the target by moving the trunk briskly up and pointing non-throwing hand towards the direction of throw."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.8.1.10",
+                  "description": "Show how to adjust body position to catch a ball thrown off-centre",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the correct hand, arm, body, feet position in the catching. Learners relax their arms by sides and keep their forearms in front."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Arms and body adjust to the path of the object (ball). Feet in a balanced stride position and eyes track the object throughout the catching action."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.8.1.11",
+                  "description": "Catch a flying ball above the head, below the waist, and away from the body while jogging and running",
+                  "orderIndex": 11,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners bounce ball on floor with their dominant hands and catch with two hands at the waist level. Toss ball in the air with the dominant hand and catch with two hands overhead."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners in pairs practice varied form of throwing (above the head, below the waist) whiles jogging or running to catch."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.9.1.12",
+                  "description": "Kick a ball, dropped from the hands, at a target (goalies' punting in football)",
+                  "orderIndex": 12,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Arrange about five cones with partners standing at the opposite sides about 5m away from the cones facing each other. Let the learner in front with the ball dribble through the cones and after the last cone kicks it to the partner standing in front of the other group."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.1.13",
+                  "description": "Dribble and pass a ball to a partner while being guarded",
+                  "orderIndex": 13,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners dribble while being prevented/guarded by their peers in pairs and in a group."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners' practice dribbling in handball, football/basketball base on facilities and material available."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.11.1.14",
+                  "description": "Dribble a ball and kick (shoot) it towards a goal while being guarded",
+                  "orderIndex": 14,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Arrange 5 cones in front of a goal post. The last cone should be about 5-10m away from the target or the goal post. Learners in front with the ball dribbles through the cones base on their capabilities and after the last cone kicks it into the goal post."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners play mini football game in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.12.1.15",
+                  "description": "Organize aerobic dance",
+                  "orderIndex": 15,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Organize aerobic dance with local or foreign music. Learners perform rhythmic exercise to develop and refine basic movements skills such as coordination, flexibility, muscular endurance, cardio-vascular endurance, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.13.1.16",
+                  "description": "Roll (body) smoothly forward and backward (combination of forward and backward roll)",
+                  "orderIndex": 16,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After a warm-up, learners curve their bodies adequately, tuck their head, push-off evenly with both feet, take the body weight on the hands and arms. The head and body stay tucked in throughout the roll."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners keep the front and top of the head from touching the mat. Learners roll back to their feet unaided at their own pace."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.2",
+      "title": "MOVEMENT CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Understanding movement concepts, principles, and strategies.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B6.2.1",
+          "title": "SPACE AWARENESS, DYNAMICS, RELATIONS, BODY MANAGEMENT AND STRATEGIES",
+          "description": "Understanding space, dynamics, and body management.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.2.1.2",
+              "description": "Demonstrate knowledge of movement concepts, principles, strategies that apply to the learning and performance of physical activities",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.1.2.1",
+                  "description": "Explain the importance of open space in playing team games",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain the importance of open space in playing team games as; it allows room for the beauty of the game, learners are able to operate in a conducive atmosphere."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Self-space and general space are very important when working in groups. Self-space is the amount of space one occupies when not travelling."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.2.2.2",
+                  "description": "Identify the time necessary to prepare for and begin a forehand stroke and a backhand stroke",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "To get started, one needs to learn four basic strokes: the forehand drive, the forehand push, the backhand drive and the backhand push. Once the learners mastered these strokes, the teacher can go on to more complex techniques that will raise the level of their game."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.3.2.3",
+                  "description": "Illustrate how the intended direction of an object is affected by the angle of the implement or body part at the time of contact",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners toss and catch for accuracy. Let them catch different positions. Let them high and low level."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.4.2.4",
+                  "description": "Explain the role of the legs, shoulders, and forearm in the forearm pass",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners swing their arms in preparation. Shoulder move forward horizontally as it extends. Forearm rotation through hips, legs and shoulders drop slightly. All together produce the final force to move the ball to the target."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.5.2.5",
+                  "description": "Identify opportunities to pass or dribble while being guarded (offense and defense)",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After general and specific warm-ups, guide learners to keep their body between opponent and the ball. Let them possess the ball in the opponents playing grounds. Dribble in a zigzag manner. Instruct them to pass the ball to their teammates when they are free."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.3",
+      "title": "PHYSICAL FITNESS",
+      "description": "Assessing and maintaining physical fitness.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B6.3.1",
+          "title": "AEROBIC CAPACITY, STRENGTH, ENDURANCE AND FLEXIBILITY",
+          "description": "Activities to improve physical fitness.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.3.1.3",
+              "description": "Assess and maintain a level of physical fitness to improve health and performance",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.1.3.1",
+                  "description": "Perform 8 minutes running with or without music",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in files music (any form) run for 8 minutes none stop for fitness test at the beginning of the term. Learners run at their own pace."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.2.3.2",
+                  "description": "Perform 15 continuous sit-ups",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sit on a mat with in a v shaped legs position. Keep their arms by their side. Perform continuous sit-ups the body continuously for 15 times. Learners test their abdominal muscular strength by counting and logging the number they are able to perform in a set at their own pace."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.3.3.3",
+                  "description": "Perform three set of 15 continuous push-ups",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners with their palms flat on the ground by their side, extend their arms to move their trunk up and flex the arms again to move the body back to lying position. Learners continue the process for a number of base on their ability in a set. Learners repeat the second and third set after rest base on their ability and progress at their own pace."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.4.3.4",
+                  "description": "Perform trunk rotation",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "After warm ups, learners sit with their right leg straight, left leg bent and crossed over the right knee. Learners keep left hand on the floor and turn their trunks as far as possible to the right but at their ability level. Learners repeat the action to the left for holistic development."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.5.3.5",
+                  "description": "Identify the capabilities of the various body types (mesomorph, ectomorph and endomorph)",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify the capabilities of each body types: i. Mesomorph-Sprinter, player (all roles) Lifter, etc. ii. Ectomorph- Long distance runner, midfielder, basketball shooter, etc. iii. Endomorph- Good swimmer, thrower, hockey goalkeeper, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.4",
+      "title": "PHYSICAL FITNESS CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Understanding fitness concepts for health and performance.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B6.4.1",
+          "title": "FITNESS PROGRAMME, HEALTHY DIET, SAFETY AND INJURIES, SUBSTANCES/DRUGS AND BODY COMPOSITION",
+          "description": "Concepts related to fitness, health, and safety.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.4.1.4",
+              "description": "Demonstrate knowledge of physical fitness concepts, principles, and strategies to improve health and performance",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.1.4.1",
+                  "description": "Develop a one-day personal physical fitness plan specifying the intensity, time, and types of physical activities for each component of health-related physical fitness",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners develop a one-day personal fitness which include: Jogging- muscular endurance, running cardio-respiratory endurance, push-ups- muscular strength, aerobic dance flexibility, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.1.4.2",
+                  "description": "Explain the role that weight bearing activities play in bone strength",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain that weight training develops muscular strength, makes the bones strong for fitness activities, stabilizes the body position, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.2.4.3",
+                  "description": "Plan a balance diet menu to improve performance in physical activity",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners understand the need to take in a balance diet to keep them healthy. It is important to food to gain energy. Food is made up of six classes of nutrients including carbohydrates, fat, protein, vitamins, minerals and water."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.3.4.4",
+                  "description": "List the benefit of safety procedures and rules associated with physical activity",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners list as; to come out with their best, gives them confidence to participate in any physical activity, prevents injuries, increase performance, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.4.4.5",
+                  "description": "Identify ways to minimise injuries when using PE equipment",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners develop guidelines for equipment use. They observe ample space between peers when working in groups, Throw/serve balls in the same directions, retrieve balls, equipment at the same time, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.5.4.6",
+                  "description": "Discuss with learners the effects of drug addiction",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss effects of drug addiction as; madness, uneasiness, death, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.6.4.7",
+                  "description": "Discuss with learners the capabilities of the various body types (mesomorph and ectomorph)",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss the body types: Mesomorph- medium body type and ectomorph-slim body type. Learners identify capabilities of various body types such as mesomorph-long distance runners', endomorphs- good swimmers, throwers, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.5",
+      "title": "VALUES AND PSYCHO-SOCIAL CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Developing values and social skills through physical activity.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B6.5.1",
+          "title": "SELF-RESPONSIBILITY, SOCIAL INTERACTION, GROUP DYNAMICS AND CRITICAL THINKING",
+          "description": "Values, social interaction, and critical thinking.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.5.1.5",
+              "description": "Demonstrate value and utilize knowledge of psychological and sociological concepts, principles, and strategies that apply to the learning and performance of physical activity",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.1.5.1",
+                  "description": "Participate productively in group physical activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Emphasis during physical activity that without cooperation learners cannot positively work together. Learners participate in a mini Handball, Volleyball, Basketball, Netball, Hockey, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.2.5.2",
+                  "description": "Provide positive feedback to peers during physical activities",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners provide positive feedback to their peers during physical activities by telling them the specific good performances and what they should improve on for high performance."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.3.5.3",
+                  "description": "Identify and agree on a common goal when participating in a cooperative physical activity",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners appreciate each individual's strengths, weaknesses and contributions in group settings to appreciate physical games and activities from different cultures around the globe. Should work together in a decision making."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.4.5.4",
+                  "description": "Evaluate individual responsibility in group efforts",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Evaluate individual learners' responsibility in group efforts and encourage them to do better."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

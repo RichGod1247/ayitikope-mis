@@ -1,0 +1,356 @@
+{
+  "phase": "Upper Primary",
+  "level": "Basic 6",
+  "subject": "History",
+  "name": "Basic 6 History",
+  "slug": "basic-6-history",
+  "orderIndex": 1,
+  "description": "The Basic 6 History curriculum focuses on the impact of European presence, political developments under colonial rule, the formation of political parties, the journey to independence, the Republics, and military rule in Ghana.",
+  "strands": [
+    {
+      "code": "B6.3",
+      "title": "Europeans in Ghana",
+      "description": "Assessing the impact of European presence.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B6.3.4",
+          "title": "Impact Of European Presence",
+          "description": "Assessing changes brought by Europeans.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.3.4.1",
+              "description": "Demonstrate knowledge of the impact of European presence on Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.4.1.1",
+                  "description": "Assess the changes that the European presence brought to Ghana.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show and discuss a documentary of European presence in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the activities the Europeans engaged in (trade, vocational training centres, health facilities, development of local alphabet, translation of the Bible)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Debate the impacts of European presence on Ghana."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.4",
+      "title": "Colonisation and Developments under Colonial Rule in Ghana",
+      "description": "Political developments under colonial rule.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B6.4.4",
+          "title": "Political Developments Under Colonial Rule",
+          "description": "Features of British colonial rule.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.4.4.1",
+              "description": "Show understanding of Political developments under colonial rule, 1874-1957.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.4.1.1",
+                  "description": "Describe the features of British colonial rule in Ghana including 'direct' and 'indirect' rule, 1874-1957.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concepts of 'direct' and 'indirect' rule."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the features of 'direct' and 'indirect' rule."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the division of the colony into provinces."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the advantages and disadvantages of 'direct' and 'indirect' rule."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Role play indirect rule in the Gold Coast."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.5",
+      "title": "Journey to Independence",
+      "description": "Political parties and the path to independence.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B6.5.2",
+          "title": "Formation of Political Parties",
+          "description": "Role of political parties in the independence struggle.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.5.2.1",
+              "description": "Appreciate the role played by the leadership of political parties in the struggle for independence from 1947 to 1957",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.2.1.1",
+                  "description": "Describe the role played by the leaders of the two major political parties (UGCC and CPP) in the independence struggle in the Gold Coast after the Second World War.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Define a political party."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the formation of the United Gold Coast Convention (UGCC) in 1947."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the formation of the Convention People Party (CPP) in 1949."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the role played by the leaders of the UGCC and CPP in the struggle for independence."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners map out specific roles by leaders such as Kwame Nkrumah, J.B. Danquah, Obetsebi Lamptey, Ako Adjei, William Ofori Atta and Edward Akuffo Addo."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners explain how these leaders became known as 'the Big Six'."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Show and discuss a documentary on the independence eve rally by the CPP."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Learners recount an Independence Day celebration in their community."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Enact the declaration of independence by Kwame Nkrumah."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.4",
+          "title": "Ghana Gains Independence",
+          "description": "Events leading to independence.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.5.4.1",
+              "description": "Demonstrate an understanding of the course of events leading to independence from 1948 to 1957",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.4.1.1",
+                  "description": "Explain post World War II developments in the Gold Coast",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the establishment of the Watson Commission."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Report on the findings of the Commission in the form of a paper or performance/poster/role play etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Recount lessons learnt from the Watson Commission's report, e.g. recommendation to set up the Coussey Committee to review the constitution of the Gold Coast."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the main recommendation in the Coussey committee report."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.4.1.2",
+                  "description": "Explain how Ghana gained independence through constitutional means.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the first general elections held in 1951."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use a resource person (retired educationalist, veteran soldier, retired police officer, senior citizens etc.) to discuss the sequence of events leading to the 1956 elections."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the outcome of the 1956 elections."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Enact a scene of an election at a polling station."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.6",
+      "title": "Independent Ghana",
+      "description": "Republics and Military Rule.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B6.6.1",
+          "title": "The Republics",
+          "description": "The Fourth Republic.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.6.1.1",
+              "description": "Demonstrate understanding of the Fourth Republic (1992 to date).",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.1.1.1",
+                  "description": "Describe the events leading to the emergence of the Fourth Republic.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the process leading to the emergence of the Fourth Republic (e.g. drawing of a new constitution, referendum, lifting of the ban on political parties, general elections of 1992 etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "List the names of all the Presidents of the Fourth Republics and their dates of tenure."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners use internet to find out some biographical details (name, date of birth, place of birth, family, educational backgrounds, hobbies etc.) about presidents of the Fourth Republic of Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Show and discuss a documentary on the inauguration of a new President of Ghana."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners recount an inauguration they have witnessed or seen on Television."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss other key figures in the Fourth Republic (e.g. Chief Justices, Speakers of Parliament, Vice Presidents etc.)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.1.1.2",
+                  "description": "Identify the political parties that have governed the country under the Fourth Republic",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the governments that have so far handed over power peacefully through an election."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "List the parties and their dates of tenure in office in the Fourth Republic."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the internet/resource persons/documentaries/visits to district/municipal assemblies to identify achievements of various governments within their respective districts."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners discuss their findings in class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.2",
+          "title": "Military Rule",
+          "description": "Military takeovers in Ghana.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.6.2.1",
+              "description": "Understand that military takeovers interrupted constitutional rule on four occasions since 1966, with some consequences.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.2.1.1",
+                  "description": "Identify the leaders of the coup d'états and names of their regimes.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List the military regimes since 1966 and their leaders."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show and discuss a documentary on any of the military take overs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.2.1.2",
+                  "description": "Assess the consequences of military takeovers on Ghana's development",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show and discuss a documentary of any military takeover."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Brainstorm the effects of the coup d'états and military rule on Ghana's development (e.g. human right abuse, overthrow of constitutions and imposition of harsh rules)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Debate the effects of military takeovers on Ghana's development."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

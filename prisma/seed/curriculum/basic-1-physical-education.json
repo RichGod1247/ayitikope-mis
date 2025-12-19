@@ -1,0 +1,592 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 1",
+  "subject": "Physical Education",
+  "name": "Basic 1 Physical Education",
+  "slug": "basic-1-physical-education",
+  "orderIndex": 1,
+  "description": "The Basic 1 Physical Education curriculum focuses on developing fundamental motor skills, movement concepts, physical fitness, and values. It covers locomotor and manipulative skills, rhythmic movements, space awareness, and the importance of physical fitness and social interaction in physical activities.",
+  "strands": [
+    {
+      "code": "B1.1",
+      "title": "MOTOR SKILL AND MOVEMENT PATTERNS",
+      "description": "Developing competence in motor skills and movement patterns for various physical activities.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B1.1.1",
+          "title": "LOCOMOTOR, MANIPULATIVE AND RHYTHMIC SKILLS",
+          "description": "Developing locomotor, manipulative and rhythmic skills.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.1.1.1",
+              "description": "Demonstrate competence in the motor skills and movement patterns needed to perform a variety of physical activities (games, athletics gymnastics and dance)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.1.1.1.1",
+                  "description": "Travel (move) over, under, in front of, behind, and through objects using locomotor skills (walk, jump, craw etc.)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate to learners how to move over objects and allow them to practice at their own pace."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate move under objects and allow learners to practice at their own pace."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in pairs practice move in front and behind and teacher or partners give the instruction."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners walk, jog or run through the objects as individuals and as a group."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.2.1.2",
+                  "description": "Jump individually taking-off on one foot and on both feet",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate to learners how to jump taking off on one foot and both feet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise mini long jump and high jump activity by organising obstacles for learners to jump over for height or distance."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.3.1.3",
+                  "description": "Roll a ball from stationary position using hands",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Roll a ball from stationary using hands by placing a ball in front, bend the trunk forward and place the palm behind the ball."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners can further use bats or sticks to roll the ball to challenge the fast learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Organise mini game for learners for fun and enjoyment."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.4.1.4",
+                  "description": "Balance oneself, demonstrating momentary stillness, in symmetrical and asymmetrical shapes using body parts other than both feet as a base of support",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate to learners balancing oneself in momentary stillness in symmetrical by standing shoulder width apart with arms stretched sideways."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners practice momentary stillness in symmetrical and asymmetrical shapes using body part."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.5.1.5",
+                  "description": "Walking with the arms or hands stretched by sides",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate to learners how to walk with arms stretched sideways from one point to the other."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Mark lines on the ground and let learners walk on them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.6.1.6",
+                  "description": "Strike a light ball upward continuously, using arms, hands, and feet",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Hang light balls on a cross bar and strike the ball upwards continuously."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let the advance learners toss balls and strike it with their hands and later with their feet continuously."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Organise mini football or volleyball for learners to apply the skills."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.7.1.7",
+                  "description": "Strike a light ball upward continuously, using a large, short-handled paddle",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Toss the ball up and strike it upwards continuously as it drops to your reach with short-handle paddle or bat."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise game for learners in pairs to serve and play a rally."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.8.1.8",
+                  "description": "Demonstrate the underhand throw pattern",
+                  "orderIndex": 8,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Swing the hand with the ball backward as you simultaneously step forward with the foot. Swing the hand forward and throw the ball with the palm facing forward."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise underarm throw for distance or target."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.8.1.9",
+                  "description": "Throw and catch a self-tossed ball",
+                  "orderIndex": 9,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate throw and catch self-tossed ball by throwing a ball with two hands up and catch the ball as it drops."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise mini handball/basketball or netball game."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.8.1.10",
+                  "description": "Catch a flying ball above the head",
+                  "orderIndex": 10,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate how to catch a flying ball by stretching the arms forward, fingers opened with thumbs and index fingers close to each other."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners in pairs to throw and catch flying balls in turns."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.9.1.11",
+                  "description": "Kick a stationary ball",
+                  "orderIndex": 11,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Swing the leg behind forward to kick the ball from stationary."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise a mini football game for learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.10.1.12",
+                  "description": "Bouncing and dribbling a ball (continuously) with one hand",
+                  "orderIndex": 12,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Move the ball through the cones by making slow and continuous push in a serpentine movement."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise mini handball game for learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.10.1.13",
+                  "description": "Move the ball forward while dribbling with the hand and with the foot by varying the amount of force (push)",
+                  "orderIndex": 13,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Move the ball through the cones with the hands and later with the feet by making slow and continuous push in a serpentine movement."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise mini football game for learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.11.1.14",
+                  "description": "Dribble a ball in a forward direction, using the inside of the foot",
+                  "orderIndex": 14,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Move the ball through the cones by making slow and continuous push in a serpentine movement."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise mini football game for learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.12.1.15",
+                  "description": "Marching to a beat(rhythm)",
+                  "orderIndex": 15,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate marching to a beat such as clapping, music (one-one, one-one, etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise marching and take salute."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.12.1.16",
+                  "description": "Demonstrate a smooth transition between even-beat and uneven-beat locomotor skills in response to music or an external beat",
+                  "orderIndex": 16,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate walking to an even beat and smooth transition to running when the beat changes to uneven beat."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise walking to jogging or walking to running game."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.1.13.1.17",
+                  "description": "Roll in log form from stationary to a distance and back (from lying position)",
+                  "orderIndex": 17,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Roll continuously from the start to the end with a maintained body posture. Roll back to the start."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise log roll game."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.2",
+      "title": "MOVEMENT CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Understanding movement concepts, principles, and strategies.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B1.2.1",
+          "title": "SPACE AWARENESS, DYNAMICS, RELATIONS, BODY MANAGEMENT AND STRATEGIES",
+          "description": "Understanding space, dynamics, and body management.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.2.1.2",
+              "description": "Demonstrate knowledge of movement concepts, principles, and strategies that apply to the learning and performance of physical activities",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.2.1.2.1",
+                  "description": "Identify personal space",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners a photo copy of a field with a marked space to colour."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.2.2.2",
+                  "description": "Distinguish between a jog and a run, a hop and a jump, and a gallop and a slide",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the pair of movements and ask learners to distinguish them by their names."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.2.2.3",
+                  "description": "Explain the key differences and similarities in jog and a run, a hop and a jump, and a gallop and a slide",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the movements and guide learners identify their similarities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.3.2.4",
+                  "description": "Identify body parts",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify the body parts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Label the body parts with the following names (head, hand, leg, neck and chest)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.4.2.5",
+                  "description": "Identify the base of support of balanced objects",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to identify base of support (e.g., legs when standing, chair when sitting)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.2.5.2.6",
+                  "description": "Identify different opportunities to use striking skills",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to identify different opportunities to use striking skills as in hockey, cricket, badminton, table tennis and tennis."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.3",
+      "title": "PHYSICAL FITNESS",
+      "description": "Assessing and maintaining physical fitness.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B1.3.1",
+          "title": "AEROBIC CAPACITY, STRENGTH, ENDURANCE AND FLEXIBILITY",
+          "description": "Activities to improve physical fitness.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.3.1.3",
+              "description": "Assess and maintain a level of physical fitness to improve health and performance",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.3.1.3.1",
+                  "description": "Perform 5 minutes dancing with music",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Organise a local dance with music and let learners dance for five minutes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.3.2.3.2",
+                  "description": "Perform four continuous push-ups (biceps and triceps)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Extend the arms to move the upper body weight up and flex the arms to move the body back to lying position."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.3.3.3.3",
+                  "description": "Perform sit and reach",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners sit with legs opened at shoulder width apart. Guide them to the toes of one leg with their hand and flex the trunk to touch the knee with their forehead."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.3.3.3.4",
+                  "description": "Identify human body parts",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use pictures and videos to help learners identify human body parts."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.4",
+      "title": "PHYSICAL FITNESS CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Understanding fitness concepts for health and performance.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B1.4.1",
+          "title": "FITNESS PROGRAMME, HEALTHY DIET, SAFETY AND INJURIES, SUBSTANCES/DRUGS AND BODY COMPOSITION",
+          "description": "Concepts related to fitness, health, and safety.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.4.1.4",
+              "description": "Demonstrate knowledge of physical fitness concepts, principles, and strategies to improve health and performance",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.4.1.4.1",
+                  "description": "Participate in enjoyable physical activities for increasing periods of time",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe and record the activities learners enjoy doing."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.4.2.4.2",
+                  "description": "Recognise the need to drink water during and after physical activity",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the need to drink water during physical activity as to prevent heat stroke, dehydration, to control the body temperature."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.4.3.4.3",
+                  "description": "Explain the purpose of warming up before physical activity and cooling down after physical activity",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss that warm-ups minimize injuries and cool down helps the body to relax quickly."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B1.5",
+      "title": "VALUES AND PSYCHO-SOCIAL CONCEPTS, PRINCIPLES AND STRATEGIES",
+      "description": "Developing values and social skills through physical activity.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B1.5.1",
+          "title": "SELF-RESPONSIBILITY, SOCIAL INTERACTION, GROUP DYNAMICS AND CRITICAL THINKING",
+          "description": "Values, social interaction, and critical thinking.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B1.5.1.5",
+              "description": "Demonstrate value and utilize knowledge of psychological and sociological concepts, principles, and strategies that apply to the learning and performance of physical activity",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B1.5.1.5.1",
+                  "description": "Participate willingly in physical activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find out whether learners participate willingly in physical activities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.5.2.5.2",
+                  "description": "Demonstrate the characteristics of sharing and cooperation in physical activity",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners share their equipment with others during physical education lessons."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learner cooperate with others when working in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.5.3.5.3",
+                  "description": "Demonstrate non-verbal appreciation",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners demonstrate non-verbal appreciation to their peers after performing physical activity by clapping."
+                    }
+                  ]
+                },
+                {
+                  "code": "B1.5.4.5.4",
+                  "description": "Demonstrate how to solve a problem with another person during physical activity",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners solve their disagreements during physical activity by saying sorry."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

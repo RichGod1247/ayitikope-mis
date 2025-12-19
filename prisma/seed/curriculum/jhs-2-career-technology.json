@@ -1,0 +1,1204 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 8",
+  "subject": "Career Technology",
+  "name": "JHS 2 Career Technology",
+  "slug": "jhs-2-career-technology",
+  "orderIndex": 1,
+  "description": "The JHS 2 Career Technology curriculum builds on the foundation of Basic 7, focusing on advanced health and safety practices, deeper exploration of materials, tools, and processes, and the application of technology in design and production. It also emphasizes entrepreneurial skills and career planning.",
+  "strands": [
+    {
+      "code": "B8.1",
+      "title": "HEALTH AND SAFETY",
+      "description": "Advanced practices in personal hygiene, food safety, and environmental health.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B8.1.1",
+          "title": "PERSONAL HYGIENE AND FOOD HYGIENE",
+          "description": "Maintaing personal and food hygiene standards.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.1.1.1",
+              "description": "Demonstrate understanding of basic practices that depict personal and food hygiene",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.1.1.1",
+                  "description": "Demonstrate skills of personal hygiene",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Think-pair-share on the causes of bad body odour. E.g., not bathing well."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Prepare personal hygiene cards/posters in groups to show causes of bad body odour."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify the appropriate materials used to prevent bad body odour. E.g., Lime/lemon, deodorant."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Demonstrate how to prevent bad body odour using the materials."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Plan and organise campaigns to educate the school community on the elimination of bad body odour."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.2",
+                  "description": "Demonstrate skills in keeping food safe (food hygiene)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Watch videos and pictures of the processes and skills of maintaining food hygiene and write down the observations. E.g., Store food appropriately, Keep hair clean, Wash hands regularly."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Role-play the skills of food hygiene in class for appraisal."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.2",
+          "title": "PERSONAL, WORKSHOP AND FOOD LABORATORY SAFETY",
+          "description": "First aid and safety in work environments.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.1.2.1",
+              "description": "Demonstrate knowledge of preventing accidents in the workshop/site/food/sewing laboratory",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.2.1.1",
+                  "description": "Demonstrate basic skills in applying First Aid to self and others",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain what is meant by First Aid. E.g., It is a help given to an injured/sick person till full medical treatment is available."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and discuss the contents of a First Aid box. E.g., plaster, gauze, scissors, methylated spirit."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate how to administer first aid to persons affected with cuts, burns, suffocation, scalds, and falls."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.3",
+          "title": "ENVIRONMENTAL HEALTH",
+          "description": "Desertification, deforestation, and waste management.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.1.3.1",
+              "description": "Demonstrate understanding of the basic concept of Environmental health",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.3.1.1",
+                  "description": "Discuss the causal factors, effects and prevention of desertification and deforestation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the causal factors and discuss the effects and preventive measures of desertification and deforestation, in groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Group Project: Research the causal factors, effects and preventive measures of desertification and deforestation and develop a folder."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Present project findings in a report for appraisal."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.1.3.2",
+              "description": "Demonstrate understanding of basic ways of disposing of household and industrial/workshop/site/laboratory waste",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.1.3.2.1",
+                  "description": "Identify proper management and disposal of household and industrial waste",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and report on the different ways of disposing off home and industrial waste (e.g., landfills, combustion) and proper disposal methods."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Undertake a project on how to recycle waste at home and in school."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.2",
+      "title": "MATERIALS FOR PRODUCTION",
+      "description": "Understanding properties of compliant, resistant, smart materials and food commodities.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B8.2.1",
+          "title": "COMPLIANT MATERIALS",
+          "description": "Properties of paper, card, and fabrics.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.2.1.1",
+              "description": "Demonstrate understanding of the properties of compliant materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.1.1.2",
+                  "description": "Discuss the basic characteristics of compliant materials",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the properties of paper (medium weight, smooth) and cardboard (stiff, smooth) that make them suitable for use."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the properties of fabrics/textiles that make them suitable for use. E.g. Absorbent, Durable."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.2",
+          "title": "RESISTANT MATERIALS",
+          "description": "Properties of resistant and building materials.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.2.2.1",
+              "description": "Demonstrate understanding of properties of resistant materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.2.1.1",
+                  "description": "Explain the basic properties of resistant materials",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the physical properties of resistant materials (e.g., density, fusibility)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Investigate the working properties of resistant materials (e.g., strength, hardness, malleability)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Make a chart on the various properties of resistant materials."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.2",
+                  "description": "Describe the properties of building materials",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the properties of cement, sand, stones."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss reasons for choosing a type of material for a building project."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Prepare a chart on properties of building materials."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Present chart for appraisal."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.3",
+          "title": "SMART AND MODERN MATERIALS",
+          "description": "Applications of smart and modern materials.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.2.3.1",
+              "description": "Demonstrate understanding and the use of smart and modern materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.3.1.1",
+                  "description": "Discuss smart and modern materials",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify areas where smart and modern materials are in use."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Search for products made from smart and modern materials using ICT tools and other sources."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.4",
+          "title": "FOOD COMMODITIES (ANIMAL AND PLANT SOURCES)",
+          "description": "Functions of food and meal planning.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.2.4.1",
+              "description": "Demonstrate understanding of the functions of food commodities",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.4.1.1",
+                  "description": "Explore the functions of food to the body",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Classify food according to their basic functions. E.g., body-building, energy-giving, protective."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Relate food commodities to their functions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Prepare a chart on the 3 functions of food commodities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.4.1.2",
+                  "description": "Discuss the basic food requirements for different members of the family",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the different members of the family and their basic food requirements."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Review lesson on factors to consider when planning meals."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Plan a meal for a member of the family."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Display plan for appraisal."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.3",
+      "title": "TOOLS, EQUIPMENT AND PROCESSES",
+      "description": "Using and maintaining tools for production.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B8.3.1",
+          "title": "MEASURING AND MARKING OUT",
+          "description": "Tools and techniques for measuring and marking.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.3.1.1",
+              "description": "Demonstrate understanding of measuring and marking out tools and equipment for production",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.1.1.1",
+                  "description": "Identify tools and equipment for measuring and marking out",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the procedure for measuring and marking out artefacts/articles/products in various workshops."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sketch and label parts of some measuring and marking out tools and equipment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Present the sketched tools and equipment for appraisal in class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.2",
+                  "description": "Take measurements of products/artefacts/articles",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the importance and guidelines for taking body measurements in sewing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Take each other's body measurements for garment construction."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate how to handle the tape measure, mark out measured parts, record measurements, and indicate dimensions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Demonstrate how to care for and maintain measuring and marking out tools."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.3",
+                  "description": "Use appropriate techniques to measure",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss portion control, equipment used and reasons."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Plan how to apply portion control in meal preparation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the inaccuracies in using faulty measuring tools."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Measure ingredients for pancake and make it."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Measure objects/materials and make models/mock-ups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.4",
+                  "description": "Demonstrate how to care for and maintain measuring and marking out tools used for production",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Share experiences on caring for tools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify cleaning agents for different materials."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Demonstrate cleaning of tools."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.2",
+          "title": "CUTTING/SHAPING",
+          "description": "Tools and techniques for cutting and shaping.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.3.2.1",
+              "description": "Demonstrate understanding of cutting/shaping tools and equipment used for making artefacts/ products",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.2.1.1",
+                  "description": "Discuss tools and equipment used for cutting and shaping",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify cutting and shaping tools in various trade areas."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Select appropriate cutting and shaping tools for making specific products."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write the procedure involved in making the products."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Prepare a chart showing activities and tools."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.2.1.2",
+                  "description": "Demonstrate how to use shaping and cutting tools and equipment for producing artefacts/products",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate use of cutting and shaping tools for making products like wooden cabinets, sheet metal dust bins, bricks, dresses, and meals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the procedure involved and exhibit products."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.2.1.3",
+                  "description": "Demonstrate how to care for and maintain shaping and cutting tools and equipment",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss care and maintenance of cutting/shaping tools in various trade workplaces."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.3",
+          "title": "JOINING AND ASSEMBLING",
+          "description": "Tools and techniques for joining and assembling.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.3.3.1",
+              "description": "Demonstrate understanding of joining and assembling materials, tools and equipment used for making artefacts/ products",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.3.1.1",
+                  "description": "Identify joining and assembling materials, tools and equipment used for making artefacts/products",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify materials, tools and equipment for joining from charts/realia in various trade areas."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sketch and label some tools."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.3.1.2",
+                  "description": "Use appropriate tools, equipment and techniques to join and assemble patterns/artefacts/products",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate techniques in sewing and crocheting."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate techniques for joining products made from wood, metal, bricks, plastics, and paper."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.3.1.3",
+                  "description": "Demonstrate how to care for and maintain tools and equipment used for joining and assembling",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate care and maintenance of joining tools in various workshops."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.4",
+          "title": "KITCHEN ESSENTIALS",
+          "description": "Maintenance of kitchen essentials.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.3.4.1",
+              "description": "Demonstrate understanding of maintaining kitchen essentials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.4.1.1",
+                  "description": "Demonstrate how to care for and maintain kitchen essentials",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss suitable cleaning materials for different kitchen essentials."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate care and maintenance (washing, cleaning, sterilising) of basic kitchen essentials."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.5",
+          "title": "FINISHES AND FINISHING",
+          "description": "Application of finishes.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B8.3.5.1",
+              "description": "Demonstrate understanding of application of finishes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.5.1.1",
+                  "description": "Demonstrate how to mix the various finishes",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify tools used for mixing finishes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate procedure for mixing lacquer, emulsion paint, and oil paint."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.5.1.2",
+                  "description": "Demonstrate skills of finishing edges of sewing articles and food products",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss reasons for finishing edges of sewing articles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate edge finishing skills (binding, hemming, etc.)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss and use garnishes for food products."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.4",
+      "title": "TECHNOLOGY",
+      "description": "Understanding structures, forces, and simple mechanisms.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B8.4.1",
+          "title": "SIMPLE STRUCTURES AND MECHANISMS, ELECTRIC AND ELECTRONIC SYSTEMS",
+          "description": "Principles of forces and structures.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.4.1.1",
+              "description": "Demonstrate understanding of application of principles of forces acting on structures",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.1.1.1",
+                  "description": "Perform experiments of principles of forces on structures",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research types of forces (tension, compression, shear, torsion, bending)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make sketches and notes of forces."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify materials for experiments."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Perform experiments to show how forces act on members."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write observations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.1.1.2",
+                  "description": "Design and make simple school technology projects",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify simple school technology projects (e.g. see-saw, bridge)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify materials and tools."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Prepare a folio, plan, make mock-up, test, and evaluate."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.5",
+      "title": "DESIGNING AND MAKING OF ARTEFACTS/PRODUCTS",
+      "description": "Drawing, designing, planning, and making artefacts.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B8.5.1",
+          "title": "COMMUNICATING DESIGNS",
+          "description": "Drawing plane figures and pictorial views.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.5.1.1",
+              "description": "Demonstrate understanding of drawing plane figures and solid objects using drawing instruments",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.1.1.1",
+                  "description": "Draw plane figures using instruments",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify 2-D figures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw circles, triangles, quadrilaterals and polygons using instruments."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Prepare an album of cut-out shapes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.1.1.2",
+                  "description": "Draw objects in pictorial using instruments",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain pictorial drawing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify methods of pictorial drawing (isometric, oblique, perspective)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Illustrate techniques and draw objects in isometric, oblique and perspective."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.2",
+          "title": "DESIGNING",
+          "description": "Writing design briefs, researching, and generating ideas.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.5.2.1",
+              "description": "Demonstrate knowledge and skills of Designing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.2.1.1",
+                  "description": "Write a design brief",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe problem situations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the problem situation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "State a suitable design brief."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.2.1.2",
+                  "description": "Research into design problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Develop analysis chart."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "State questions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Conduct research."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Analyse data and write report."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.2.1.3",
+                  "description": "Write Design Specifications",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Develop design specifications."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give reasons for specifications."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.2.1.4",
+                  "description": "Generate Ideas/possible solutions",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sketch ideas."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write notes on ideas."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Select best idea."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Develop selected idea and prepare working drawings."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.2.1.5",
+                  "description": "Make artefact using resistant materials",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Study design folios."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify materials/tools."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Organise environment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Make artefact."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Apply finish."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.2.1.6",
+                  "description": "Test and evaluate made products/artefacts",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Test artefact."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "State strengths/weaknesses."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Propose modifications."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Rate quality."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.2.1.7",
+                  "description": "Demonstrate basic skills in cutting out designs without patterns in SEWING",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain free-hand cutting."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Apply free-hand cutting to cut out a simple blouse/shirt."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Cut out using paper for practice."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.3",
+          "title": "PLANNING FOR MAKING ARTEFACTS/PRODUCTS",
+          "description": "Planning for production of artefacts and meals.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.5.3.1",
+              "description": "Demonstrate understanding of planning for making artefacts/products and table setting",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.3.1.1",
+                  "description": "Plan and make wooden, metal/plastic artefacts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Study design folio and working drawings."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Check workshop environment and safety."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.3.1.2",
+                  "description": "Plan and make building artefacts",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe properties of building materials."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make mock-ups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.3.1.3",
+                  "description": "Planning to make sewing artefacts/products",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain seams."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and classify seams."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss rules for making seams."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.3.1.4",
+                  "description": "Planning to set a table",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain table setting."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify tools and equipment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss importance."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss 'cover'."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.5.4",
+          "title": "MAKING ARTEFACTS FROM COMPLIANT, RESISTANT MATERIALS AND FOOD INGREDIENTS",
+          "description": "Skills in table setting, sewing, and making resistant material artefacts.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.5.4.1",
+              "description": "Demonstrate understanding of designing artefacts/ products, and models and table setting",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.5.4.1.1",
+                  "description": "Demonstrate Skills in table setting",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Set a table for one person."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.4.1.2",
+                  "description": "Demonstrate skills in making sewing artefacts/products using seams and arrangement of fullness",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Make samples of seams."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Sew a blouse or shirt."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify and explain methods of arranging fullness (e.g. gathering, darts)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Make samples of arrangement of fullness."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.5.4.1.3",
+                  "description": "Make artefacts/products using wood, metal/plastics",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Organise workshop."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Check dimensions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Follow operation sequence to make artefact."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Prepare surfaces and apply finish."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Test and evaluate."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.6",
+      "title": "ENTREPRENEURIAL SKILLS",
+      "description": "Career opportunities and small business management.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B8.6.1",
+          "title": "CAREER PATHWAYS AND CAREER OPPORTUNITIES",
+          "description": "Exploring career options.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.6.1.1",
+              "description": "Demonstrate knowledge of career opportunities in Career Technology",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.6.1.1.1",
+                  "description": "Explore the various career pathways and opportunities in Career Technology",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research career pathways."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write a report."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Examine interests and skills."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compare options against skills."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.6.2",
+          "title": "ESTABLISHING AND MANAGING A SMALL BUSINESS ENTERPRISE",
+          "description": "Managing small businesses.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.6.2.1",
+              "description": "Demonstrate understanding of establishing and managing micro and small business enterprises",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.6.2.1.1",
+                  "description": "Explain what is meant by Micro, Small and Medium-sized Business Enterprises",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss meaning of Micro, Small and Medium enterprises."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify known businesses fitting the criteria."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss steps in setting up."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "List local businesses."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Classify businesses."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

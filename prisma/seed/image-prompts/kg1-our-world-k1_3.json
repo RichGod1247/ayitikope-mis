@@ -1,0 +1,557 @@
+{
+  "phase": "KG",
+  "level": "KG1",
+  "subject": "Our World and Our People",
+  "imagePrompts": [
+    {
+      "nodeType": "strand",
+      "strandCode": "K1.3",
+      "subStrandCode": null,
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A harmonious classroom scene showing symbols of different values. Children are greeting elders politely, others are holding hands in a circle representing friendship. Posters on the wall show a church, a mosque, and a traditional stool. The atmosphere is respectful and peaceful."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A domestic setting showing family values. A child is offering a seat to an elderly person. Another child is helping set a table with local dishes. The scene depicts respect and helpfulness in a Ghanaian home context."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children in a classroom distinguishing between 'good' and 'bad' behaviors. One group holds up smileys for a picture of sharing toys. Another group looks concerned at a picture of fighting. They are discussing manners."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle time. Learners are sorting cards into two piles: 'Likes' (blue basket) and 'Dislikes' (red basket). They are discussing family rules. The teacher facilitates with a smile."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting on a mat sorting colored cards. They place cards showing 'fighting' into a 'Dislike' pile and 'sharing' into a 'Like' pile. They count the cards in each pile. Engaging moral education."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher pointing to a specific word in a Big Book with a pointer. She is explaining that the spoken word matches the written text. Children look attentively at the text and the illustration of a polite child."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Language Experience Approach session. The teacher writes a story dictated by children on a large manila card. Children are drawing pictures to match the story about being good. Collaborative literacy."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Storytelling time. The teacher uses hand gestures to tell an Ananse story about greetings. Children are laughing and listening. A poster of people greeting is visible."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children role-playing greetings. One child bows slightly to a 'teacher' (another child). Another waves to a friend. They hold cards with greeting words. 'Pick and Act' game context."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children singing an alphabet song and pointing to letters on the wall. They are stretching imaginary rubber bands with their hands to 'stretch' words and hear sounds. Phonics activity."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A phonics game. Children are replacing the first sound of 'pin' to make 'tin' and 'bin'. They use bottle tops to count the new words they create. Visual representation of sound manipulation."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "The teacher modeling writing a letter in the air. Children copy the movement. Some write on the back of a friend with a finger. Pre-writing practice."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children creating patterns with shapes (circle, triangle) on their tables. They clap the pattern rhythmically (e.g. 2 claps, 3 stamps). Integrating math and writing readiness."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher showing a large cardboard clock with moveable hands. She explains the 'long arm' and 'short arm'. Children hold smaller paper plate clocks and try to set the time."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children using play dough to make numbers on a clock face. They arrange the numbers 1-12 in a circle. They look focused on the layout."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.7",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children sitting at desks drawing simple clock faces on paper. They are writing '6 o'clock' under their drawings. They compare their clocks with a partner."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.1",
+      "contentStandardCode": "K1.3.1.1",
+      "indicatorCode": "K1.3.1.1.7",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A pair of children showing their work. One has drawn a clock showing 7:00, the other 2:00. They have written the numbers clearly. The teacher gives a thumbs up."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A cultural display corner. Children dressed in traditional Ghanaian smocks and kente cloths are role-playing greeting a chief. A girl is curtseying while a boy bows. Respectful cultural observation."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children demonstrating politeness. One child receives a pencil from another with two hands, saying 'Thank you'. The other nods. The environment is a friendly classroom."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Community circle time. The teacher uses cut-out speech bubbles with polite words (Please, Thank you). Children take turns demonstrating how to show respect to adults and peers."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A 'Pick and Act' game. A child picks a card showing a greeting scene and acts it out—kneeling slightly to greet an elder. Other children guess the action. Culturally relevant role-play."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher and children exploring a Big Book on 'Showing Respect'. They discuss the cover picture. The teacher points to the title and author name. Children predict the story."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children filling in missing letters of polite words on the board (e.g., 'm_y', 'pl_ase'). They count the letters they added and represent the number on a number line. Literacy and numeracy integration."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children dramatizing a story about a respectful child. One child acts as a parent, another as the respectful child offering a seat. The class watches and applauds."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children using vocabulary cards ('Sorry', 'Please') to make simple sentences. A child counts the number of words in their sentence and jumps along a number line to match the count."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A teacher saying words like 'dada'. Children listen for the 'd' sound. They point to the front of the room if it's at the beginning, or the back if at the end. Active listening game."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children using pebbles and shells to form a large letter on the floor. They are designing the target letter of the week. They look proud of their creative letter formation."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A Think-Pair-Share activity. Children use shells and sticks to represent things they 'like' vs 'dislike'. They compare the piles using terms 'more than' and 'less than'."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.2",
+      "contentStandardCode": "K1.3.2.1",
+      "indicatorCode": "K1.3.2.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A child writing the greater than (>) and less than (<) signs on the board between two groups of drawings (e.g. 5 happy faces vs 2 sad faces). Mathematical comparison."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A peaceful corner with symbols of different religions: a cross, a crescent, a traditional symbol. Children are sitting together, some holding hands, representing unity and moral values."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children role-playing 'good neighbors'. One child helps another up who has fallen. Another shares a toy. It depicts Christian and Muslim virtues of love and kindness."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children reciting a rhyme about love and forgiveness. They are holding hands in a circle. On the board are pictures of people hugging and making peace."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A 'Pick and Act' game. A small group picks a card showing 'sharing'. They act out sharing an orange. Other children watch and smile."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children practicing holding books upright and turning pages carefully. They are doing 'Pretend Reading' in pairs. A 'Book Hospital' corner is visible for mending torn books."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "A book mending session. Children helping the teacher tape a torn page of a storybook. They look concerned and careful. Learning respect for property."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Interactive read aloud about religious values. The teacher points to a picture of a church and mosque. Children identify 2D shapes (rectangles, triangles) in the building illustrations."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children grouping objects from a story illustration into 2D and 3D shapes. They use 'more than' and 'less than' signs to compare the groups. Integration of values and math."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Teacher holding a rubber band, stretching it while saying a word slowly to segment sounds. Children mimic the stretching action with their hands. Sound segmentation."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Sound blending game in pairs. One child stretches a word sound, the other blends it together. They are laughing and learning. Focus on phonemic awareness."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children engaging in pre-writing exercises, shaking wrists and clapping. The teacher writes a moral value word (e.g., 'LOVE') on the board. Children trace letters in the air."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children forming letters of a word using pebbles and straws on their tables. They count the letters they formed. A creative writing and numeracy activity."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.6",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A matching activity. Children match a word card (e.g. 'Good') to a number card that represents its letter count (4). They use counters to check."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.3",
+      "contentStandardCode": "K1.3.3.1",
+      "indicatorCode": "K1.3.3.1.6",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children creating patterns with shapes that represent letters (e.g. 2 triangles, 1 circle). They arrange them in a sequence on the floor. Patterning and shape recognition."
+    },
+    {
+      "nodeType": "subStrand",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": null,
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A diverse classroom scene showing children of different backgrounds sharing stories. Posters of a church, mosque, and traditional shrine are on the wall. The atmosphere is inclusive and respectful."
+    },
+    {
+      "nodeType": "contentStandard",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": null,
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children demonstrating different ways of worship. One mimics praying in a mosque, another singing in a church. They are smiling and appreciating each other's actions."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.1",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "KWL session on beliefs. Children asking questions about how their friends worship. One child demonstrates a prayer gesture. The teacher facilitates a respectful discussion."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.1",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sharing what they learned (L) from friends about God. They are sitting in a circle, listening to a friend speak. Posters of religious symbols decorate the room."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.2",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A display of religious scriptures (Bible, Quran, Storybooks). Children practice opening them respectfully, paying attention to page numbers. Teacher scaffolds the handling."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.2",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children drawing an object that identifies a religion (e.g. a cross or crescent). They show their drawing to the class. A moment of sharing and respect."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.3",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Read aloud of an informational text on religious groups. The teacher pauses to show pictures explaining 'mosque' and 'chapel'. Children relate the info to their own lives."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.3",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children role-playing religious leaders leading worship. One pretends to read from a book, another leads a song. They count letters in religious names (e.g. B-i-b-l-e) and compare lengths."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.4",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "Children at desks drawing a scene of worship (e.g. people praying). They are labeling it with one word copied from the board. Creative arts and literacy."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.4",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children sorting their drawings by religion or color. They match the groups with number cards (e.g. 3 drawings of a church = number 3). Numeracy integration."
+    },
+    {
+      "nodeType": "indicator",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.5",
+      "exemplarIndex": null,
+      "ageBand": "4–5 years",
+      "prompt": "A lively music session. Children playing local instruments (shakers, drums) and dancing to religious songs from different faiths. They appreciate each other's culture."
+    },
+    {
+      "nodeType": "exemplar",
+      "strandCode": "K1.3",
+      "subStrandCode": "K1.3.4",
+      "contentStandardCode": "K1.3.4.1",
+      "indicatorCode": "K1.3.4.1.5",
+      "exemplarIndex": 1,
+      "ageBand": "4–5 years",
+      "prompt": "Children using sight word cards to form sentences about the music session. Others are adding simple numbers representing money collected. Integrated learning scene."
+    }
+  ]
+}

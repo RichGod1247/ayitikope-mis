@@ -1,0 +1,724 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 7",
+  "subject": "Science",
+  "name": "JHS 1 Science",
+  "slug": "jhs-1-science",
+  "orderIndex": 1,
+  "description": "The JHS 1 Science curriculum focuses on introducing learners to the diverse world of science, including materials, life cycles, biological systems, forces and energy, and the interaction between humans and the environment. It aims to develop critical thinking, problem-solving, and practical scientific skills through inquiry-based learning.",
+  "strands": [
+    {
+      "code": "B7.1",
+      "title": "DIVERSITY OF MATTER",
+      "description": "Exploring materials, living cells, and atomic structure.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B7.1.1",
+          "title": "LIVING AND NON-LIVING THINGS",
+          "description": "Understanding atoms, elements, and the periodic table.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.1.1.1",
+              "description": "Show understanding of the particulate nature of matter",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.1.1.1",
+                  "description": "Classify materials into liquids, solids and gas",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create a list of materials and group them into liquids, solids, and gas."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the characteristics of the three states of matter (shape, volume and compressibility)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Group materials into liquids, solids and gas based on their characteristics."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.2",
+                  "description": "Explain the particulate nature of matter",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain that matter is made up of particles (atoms and molecules) that cannot be seen with the naked eyes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use models/digital content to explain the arrangement of particles in solids, liquids and gases."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the movement of particles in the three states of matter."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.1.3",
+                  "description": "Explain how the arrangement and movement of particles determine the state of matter",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain that the arrangement of particles in solids, liquids and gases is different."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate the movement of particles in solids, liquids and gases using role-play or digital content."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.1.1.2",
+              "description": "Demonstrate understanding of the first 20 elements of the periodic table",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.1.1.2.1",
+                  "description": "List and write the chemical symbols for the first 20 elements",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the first 20 elements on the periodic table."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the chemical symbol for each of the first 20 elements."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use a periodic table chart to match elements with their symbols."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.1.2.2",
+                  "description": "Explain the structure of the atom",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the structure of the atom (protons, neutrons and electrons)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw and label the structure of the atom."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the location and charge of protons, neutrons and electrons."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.1.2",
+          "title": "LIVING CELLS",
+          "description": "Understanding cell structure and function.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.1.2.1",
+              "description": "Demonstrate understanding of the structure and function of living cells",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.1.2.1.1",
+                  "description": "Describe the structure and function of plant and animal cells",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe plant and animal cells under a microscope or using digital content."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw and label plant and animal cells."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the functions of the main organelles (nucleus, cytoplasm, cell membrane, cell wall, chloroplast, mitochondrion and vacuole)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.1.2.1.2",
+                  "description": "State the differences between plant and animal cells",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compare plant and animal cells based on their structures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Tabulate the differences between plant and animal cells."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.2",
+      "title": "CYCLES",
+      "description": "Exploring earth science and life cycles.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B7.2.1",
+          "title": "EARTH SCIENCE",
+          "description": "Understanding the water cycle and carbon cycle.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.2.1.1",
+              "description": "Demonstrate understanding of the water cycle",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.1.1.1",
+                  "description": "Explain the process of the water cycle",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the stages of the water cycle (evaporation, condensation, precipitation and collection)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw and label the water cycle."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the importance of the water cycle to living things."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.2.1.2",
+              "description": "Demonstrate understanding of the carbon cycle",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.2.1.2.1",
+                  "description": "Explain the process of the carbon cycle",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the carbon cycle and its importance."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the sources of carbon in the environment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain how carbon is recycled in nature."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.2.2",
+          "title": "LIFE CYCLES OF ORGANISMS",
+          "description": "Understanding the life cycle of a flowering plant.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.2.2.1",
+              "description": "Demonstrate understanding of the life cycle of a flowering plant",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.2.2.1.1",
+                  "description": "Describe the life cycle of a flowering plant",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the stages of the life cycle of a flowering plant (germination, growth, flowering, pollination, fertilization and seed formation)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw the life cycle of a flowering plant."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the importance of each stage in the life cycle."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.2.2.1.2",
+                  "description": "Demonstrate the conditions necessary for germination",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Design an experiment to show the conditions necessary for germination (water, air and suitable temperature)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Record observations and draw conclusions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.3",
+      "title": "SYSTEMS",
+      "description": "Exploring human body systems and ecosystems.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B7.3.1",
+          "title": "THE HUMAN BODY SYSTEMS",
+          "description": "Understanding the digestive and respiratory systems.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.3.1.1",
+              "description": "Demonstrate understanding of the digestive system",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.1.1.1",
+                  "description": "Identify the parts of the digestive system",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a chart or model to identify the organs of the digestive system."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw and label the digestive system."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.1.2",
+                  "description": "Explain the functions of the parts of the digestive system",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the process of digestion from the mouth to the anus."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the role of enzymes in digestion."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B7.3.1.2",
+              "description": "Demonstrate understanding of the respiratory system",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B7.3.1.2.1",
+                  "description": "Identify the parts of the respiratory system",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a chart or model to identify the organs of the respiratory system."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw and label the respiratory system."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.1.2.2",
+                  "description": "Explain the mechanism of breathing",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the process of inhalation and exhalation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the exchange of gases in the lungs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.2",
+          "title": "THE SOLAR SYSTEM",
+          "description": "Understanding the components of the solar system.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.3.2.1",
+              "description": "Demonstrate understanding of the solar system",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.2.1.1",
+                  "description": "Identify the components of the solar system",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List the planets in order from the sun."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the characteristics of the inner and outer planets."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the position of the earth in the solar system."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.3.3",
+          "title": "ECOSYSTEMS",
+          "description": "Understanding interactions in ecosystems.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.3.3.1",
+              "description": "Demonstrate understanding of the interactions in an ecosystem",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.3.3.1.1",
+                  "description": "Explain the concept of an ecosystem",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Define an ecosystem."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the biotic and abiotic factors in an ecosystem."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.3.3.1.2",
+                  "description": "Describe the interactions between living and non-living things",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain how living things depend on non-living things for survival."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe food chains and food webs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.4",
+      "title": "FORCES AND ENERGY",
+      "description": "Exploring forms of energy and forces.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B7.4.1",
+          "title": "ENERGY",
+          "description": "Understanding forms and sources of energy.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.4.1.1",
+              "description": "Demonstrate understanding of the forms of energy and their conversions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.1.1.1",
+                  "description": "Identify the various forms of energy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List different forms of energy (light, heat, sound, electrical, chemical, potential and kinetic)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give examples of sources of each form of energy."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.1.2",
+                  "description": "Explain energy conversion",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe how energy is converted from one form to another."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give examples of energy conversion in everyday life (e.g. in a flashlight, electric iron)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.1.1.3",
+                  "description": "Demonstrate the law of conservation of energy",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "State the law of conservation of energy."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use examples to illustrate that energy is neither created nor destroyed but transformed."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.4.2",
+          "title": "ELECTRICITY AND ELECTRONICS",
+          "description": "Basic electrical circuits and components.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.4.2.1",
+              "description": "Demonstrate understanding of basic electrical circuits",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.2.1.1",
+                  "description": "Identify the components of a simple electrical circuit",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List the components (cell/battery, wire, switch, bulb/load)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the function of each component."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.2.1.2",
+                  "description": "Construct a simple electrical circuit",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Connect the components to form a complete circuit."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Draw a circuit diagram using standard symbols."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.4.3",
+          "title": "FORCES AND MOVEMENT",
+          "description": "Understanding forces and their effects.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B7.4.3.1",
+              "description": "Demonstrate understanding of forces and their effects",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.4.3.1.1",
+                  "description": "Explain the concept of force",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Define force as a push or a pull."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify different types of forces (friction, gravity, magnetic, electrostatic)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.4.3.1.2",
+                  "description": "Demonstrate the effects of forces on objects",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show how force can change the shape, speed or direction of an object."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform simple experiments to demonstrate the effects of forces."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B7.5",
+      "title": "HUMANS AND THE ENVIRONMENT",
+      "description": "Health, sanitation, and waste management.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B7.5.1",
+          "title": "WASTE MANAGEMENT",
+          "description": "Understanding waste management practices.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B7.5.1.1",
+              "description": "Demonstrate understanding of proper waste management",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.1.1.1",
+                  "description": "Classify waste into solid, liquid and gas",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify different types of waste generated in the school and community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Group waste into solid, liquid and gas."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.1.1.2",
+                  "description": "Explain the methods of waste disposal",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe proper methods of waste disposal (recycling, composting, incineration, landfill)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the effects of improper waste disposal on the environment and health."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B7.5.2",
+          "title": "HUMAN HEALTH",
+          "description": "Understanding common diseases and prevention.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B7.5.2.1",
+              "description": "Demonstrate understanding of common diseases and their prevention",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B7.5.2.1.1",
+                  "description": "Identify common diseases in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List common diseases (malaria, cholera, typhoid, ringworm)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the causes, symptoms and prevention of these diseases."
+                    }
+                  ]
+                },
+                {
+                  "code": "B7.5.2.1.2",
+                  "description": "Demonstrate personal hygiene practices",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the importance of personal hygiene."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate proper handwashing and other hygiene practices."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

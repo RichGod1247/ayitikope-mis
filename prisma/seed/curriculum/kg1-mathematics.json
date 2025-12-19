@@ -1,0 +1,428 @@
+{
+  "phase": "KG",
+  "level": "KG1",
+  "subject": "Mathematics",
+  "name": "KG1 Mathematics (Numeracy)",
+  "slug": "kg1-mathematics",
+  "orderIndex": 1,
+  "description": "Develop essential numeracy skills including counting, basic number operations, shapes, and data collection, along with generic and analytical skills to enable learners to solve everyday mathematical problems. The curriculum covers whole numbers, counting and representation, operations, non-numerical patterns, lines and shapes, position in space, measurement, and data handling.",
+  "strands": [
+    {
+      "code": "N1",
+      "title": "Number and Operations (0–10)",
+      "description": "Develop counting, comparison, and early addition and subtraction concepts with concrete materials and everyday situations.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "N1.1",
+          "title": "Counting and Representing Numbers",
+          "description": "Counting and matching quantities within 0–10 using real objects.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "N1.1.1",
+              "description": "Count and represent quantities within 0–10 using real objects and numerals.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N1.1.1.1",
+                  "description": "Count objects within 0–10 using real objects such as fruits, stones, bottle tops and say how many there are.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N1.1.1.2",
+                  "description": "Match numerals 0–10 to sets of objects that show the same quantity.",
+                  "orderIndex": 2
+                }
+              ]
+            },
+            {
+              "code": "N1.1.2",
+              "description": "Compare quantities in two or more sets using everyday language.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "N1.1.2.1",
+                  "description": "Compare two or more sets of objects and use words like more, fewer and same to describe them.",
+                  "orderIndex": 1
+                }
+              ]
+            },
+            {
+              "code": "N1.1.3",
+              "description": "Use a simple number line within 0–10 to support counting forward and backward.",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "N1.1.3.1",
+                  "description": "Use a simple number line on the floor or chart to count on and back within 0–10.",
+                  "orderIndex": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N1.2",
+          "title": "Early Addition and Subtraction",
+          "description": "Joining and taking away objects in real life situations.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "N1.2.1",
+              "description": "Join two or more sets of objects and find how many altogether.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N1.2.1.1",
+                  "description": "Join two sets of objects and count to find the total number of objects.",
+                  "orderIndex": 1
+                }
+              ]
+            },
+            {
+              "code": "N1.2.2",
+              "description": "Take away objects from a set and tell how many are left.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "N1.2.2.1",
+                  "description": "Take away some objects from a set and count to find how many are left.",
+                  "orderIndex": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N1.3",
+          "title": "Number Relationships",
+          "description": "Understanding one more and one less within 0–10.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "N1.3.1",
+              "description": "Explore one more and one less than a given number within 0–10.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N1.3.1.1",
+                  "description": "Use steps, counters or number tracks to find and talk about the number that is one more or one less than a given number within 0–10.",
+                  "orderIndex": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N1.4",
+          "title": "Counting in Real-Life Situations",
+          "description": "Using counting to talk about everyday objects and scenes.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "N1.4.1",
+              "description": "Use counting in simple market and home situations.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N1.4.1.1",
+                  "description": "Count and talk about goods and objects in simple home and market scenes using numbers within 0–10.",
+                  "orderIndex": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "N2",
+      "title": "Patterns",
+      "description": "Recognise, create, extend and talk about patterns using objects, movements, sounds and environmental examples.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "N2.1",
+          "title": "Patterns with Objects and Pictures",
+          "description": "Creating and extending repeating patterns with concrete materials and pictures.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "N2.1.1",
+              "description": "Create and extend simple repeating patterns using everyday objects.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N2.1.1.1",
+                  "description": "Create and extend simple AB repeating patterns using beads, bottle tops and other objects.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N2.1.1.2",
+                  "description": "Create and extend more complex repeating patterns such as ABC or AAB using everyday objects.",
+                  "orderIndex": 2
+                }
+              ]
+            },
+            {
+              "code": "N2.1.2",
+              "description": "Identify patterns in the environment and in cultural artefacts.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "N2.1.2.1",
+                  "description": "Identify and talk about repeating patterns found in kente cloth and in the local environment.",
+                  "orderIndex": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N2.2",
+          "title": "Movement and Sound Patterns",
+          "description": "Using body movements and sounds to experience patterns.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "N2.2.1",
+              "description": "Create and follow repeating patterns using movement and sound.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N2.2.1.1",
+                  "description": "Copy and create repeating patterns with body movements such as clap–touch head or step–step–jump.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N2.2.1.2",
+                  "description": "Copy and create repeating patterns with sounds such as clap–tap–shake.",
+                  "orderIndex": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N2.3",
+          "title": "Describing and Predicting Patterns",
+          "description": "Talking about the rule of a pattern and predicting what comes next.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "N2.3.1",
+              "description": "Use knowledge of patterns to predict and explain what comes next.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N2.3.1.1",
+                  "description": "Look at a repeating pattern, describe how it repeats and predict the next item in the pattern.",
+                  "orderIndex": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "N3",
+      "title": "Shape and Space",
+      "description": "Recognise, sort and use 2D shapes and talk about position and direction in space.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "N3.1",
+          "title": "2D Shapes in the Environment",
+          "description": "Recognising common 2D shapes and matching them to real objects.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "N3.1.1",
+              "description": "Recognise and name common 2D shapes in the classroom and school environment.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N3.1.1.1",
+                  "description": "Match circles, triangles and rectangles to everyday objects that have the same shapes.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N3.1.1.2",
+                  "description": "Go on a simple shape hunt around the school compound and find objects that look like common 2D shapes.",
+                  "orderIndex": 2
+                }
+              ]
+            },
+            {
+              "code": "N3.1.2",
+              "description": "Sort objects according to their shapes.",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "N3.1.2.1",
+                  "description": "Sort objects and pictures into groups according to shape and explain how they were sorted.",
+                  "orderIndex": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N3.2",
+          "title": "Composing Shapes",
+          "description": "Using shapes to build pictures and designs.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "N3.2.1",
+              "description": "Use simple shapes to make pictures of real objects.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N3.2.1.1",
+                  "description": "Use cut-out 2D shapes such as circles, triangles, rectangles and squares to make pictures of houses, cars, trees and other objects.",
+                  "orderIndex": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N3.3",
+          "title": "Position and Direction",
+          "description": "Using position words and following simple paths.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "N3.3.1",
+              "description": "Use everyday language to describe position and follow simple paths.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N3.3.1.1",
+                  "description": "Use words like in front, behind, under and on to describe the position of objects and people.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N3.3.1.2",
+                  "description": "Follow and describe a simple path with forward steps and left or right turns.",
+                  "orderIndex": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "N4",
+      "title": "Measurement and Time",
+      "description": "Compare length, weight and capacity using everyday materials and talk about time in simple ways.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "N4.1",
+          "title": "Length",
+          "description": "Comparing and ordering objects by length.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "N4.1.1",
+              "description": "Compare and order objects according to length.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N4.1.1.1",
+                  "description": "Compare the length of strings, sticks or other objects by lining them up from one end.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N4.1.1.2",
+                  "description": "Arrange two or more objects in order from shortest to longest or longest to shortest.",
+                  "orderIndex": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N4.2",
+          "title": "Weight",
+          "description": "Comparing objects by how heavy or light they are.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "N4.2.1",
+              "description": "Compare the weight of objects using simple tools and hands.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N4.2.1.1",
+                  "description": "Use a simple balance to compare the weight of objects and decide which is heavier or lighter.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N4.2.1.2",
+                  "description": "Use their hands like a balance to compare the weight of two objects and say which feels heavier or lighter.",
+                  "orderIndex": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N4.3",
+          "title": "Capacity",
+          "description": "Comparing how much containers can hold.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "N4.3.1",
+              "description": "Compare the capacity of containers using a non-standard unit.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N4.3.1.1",
+                  "description": "Use the same small container or cup to fill different containers and compare how many cupfuls each holds.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N4.3.1.2",
+                  "description": "Talk about containers as empty, half-full or full using water or other safe material.",
+                  "orderIndex": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "N4.4",
+          "title": "Time",
+          "description": "Talking about daily routines and reading simple o’clock times.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "N4.4.1",
+              "description": "Describe daily events in order and read simple o’clock times.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "N4.4.1.1",
+                  "description": "Talk about daily routines in the morning, afternoon and evening using pictures or stories.",
+                  "orderIndex": 1
+                },
+                {
+                  "code": "N4.4.1.2",
+                  "description": "Read and match simple o’clock times on clock faces to familiar daily activities.",
+                  "orderIndex": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

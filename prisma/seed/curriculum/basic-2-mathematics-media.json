@@ -1,0 +1,279 @@
+{
+  "subjectSlug": "basic-2-mathematics",
+  "phase": "Lower Primary",
+  "level": "Basic 2",
+  "assetDir": "curriculum/lower-primary/basic-2/basic-2-mathematics",
+  "items": [
+    {
+      "indicatorCode": "B2.1.1.1.1",
+      "asset": "B2.1.1.1.1-counting-skip-counting",
+      "title": "Counting and skip counting",
+      "altText": "A counting scene showing skip counting by 2s, 5s, or 10s up to 1000.",
+      "caption": "Use number names and counting sequences to find “how many?”",
+      "tags": ["Basic 2", "Mathematics", "Number", "Counting", "Skip counting"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.1.1.2",
+      "asset": "B2.1.1.1.2-number-chart-neighbours",
+      "title": "Number chart neighbours",
+      "altText": "A number chart highlighting a chosen number and the numbers around it (above, below, left, right).",
+      "caption": "Identify numbers in different positions around a given number on a number chart.",
+      "tags": ["Basic 2", "Mathematics", "Number", "Number chart", "Neighbours"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.1.1.3",
+      "asset": "B2.1.1.1.3-nonstandard-measurement-counting",
+      "title": "Non-standard measurement by counting",
+      "altText": "Measuring length or volume using non-standard units like handspans, sticks, cups, or bottles.",
+      "caption": "Use number names and non-standard units to count “how long?” or “how much?”",
+      "tags": ["Basic 2", "Mathematics", "Measurement", "Non-standard units", "Counting"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.1.1.4",
+      "asset": "B2.1.1.1.4-place-value-tens-ones",
+      "title": "Place value: tens and ones",
+      "altText": "Bundles of tens and single ones showing place value for a two-digit or three-digit number.",
+      "caption": "Demonstrate conceptual understanding of place value using tens and ones.",
+      "tags": ["Basic 2", "Mathematics", "Place value", "Tens", "Ones"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.1.1.5",
+      "asset": "B2.1.1.1.5-equivalent-representations",
+      "title": "Equivalent representations",
+      "altText": "A number represented in different but equal ways (decomposition, near multiples, comparisons).",
+      "caption": "Represent number quantities up to 1000 in equivalent ways focusing on place value and equality.",
+      "tags": ["Basic 2", "Mathematics", "Number", "Equivalence", "Place value"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.1.1.6",
+      "asset": "B2.1.1.1.6-compare-order",
+      "title": "Compare and order numbers",
+      "altText": "Two or more numbers compared with symbols >, <, and = and arranged in order.",
+      "caption": "Use place value to compare and order whole numbers using comparative language and symbols.",
+      "tags": ["Basic 2", "Mathematics", "Compare", "Order", "Greater than", "Less than"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.1.2.1.1",
+      "asset": "B2.1.2.1.1-add-subtract-within-100",
+      "title": "Add and subtract within 100",
+      "altText": "An addition/subtraction example within 100 using objects or number sentences.",
+      "caption": "Use conceptual understanding of addition and subtraction to add and subtract numbers to 100.",
+      "tags": ["Basic 2", "Mathematics", "Addition", "Subtraction", "Within 100"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.2.2.1",
+      "asset": "B2.1.2.2.1-equal-not-equal",
+      "title": "Equal and not equal",
+      "altText": "Two sets or number sentences showing equality (=) and inequality (≠).",
+      "caption": "Use the concept of “equal to” and “not equal to” in addition and subtraction problems.",
+      "tags": ["Basic 2", "Mathematics", "Equality", "Not equal", "Number sentences"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.2.3.1",
+      "asset": "B2.1.2.3.1-mental-math-to-19",
+      "title": "Mental math to 19",
+      "altText": "Quick mental strategies like doubles, making 10, counting up, and related subtraction facts.",
+      "caption": "Use mental strategies for basic addition facts to 19 and related subtraction facts.",
+      "tags": ["Basic 2", "Mathematics", "Mental math", "Addition facts", "Subtraction facts"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.2.4.1",
+      "asset": "B2.1.2.4.1-conventional-strategy",
+      "title": "Conventional strategy",
+      "altText": "A standard written method or structured frame for addition/subtraction within 100.",
+      "caption": "Use conventional strategies to add and subtract within 100 (with/without regrouping).",
+      "tags": ["Basic 2", "Mathematics", "Algorithms", "Regrouping", "Within 100"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.2.4.2",
+      "asset": "B2.1.2.4.2-personal-strategies",
+      "title": "Personal strategies",
+      "altText": "Flexible strategies like friendly jumps, compensation, splitting, and constant difference.",
+      "caption": "Use personal strategies to add and subtract within 100.",
+      "tags": ["Basic 2", "Mathematics", "Strategies", "Compensation", "Friendly jumps"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.2.4.3",
+      "asset": "B2.1.2.4.3-word-problems",
+      "title": "Word problems",
+      "altText": "A real-life addition/subtraction word problem scenario with quantities and a question.",
+      "caption": "Solve one-step and multi-step word problems within 100 using a variety of strategies.",
+      "tags": ["Basic 2", "Mathematics", "Word problems", "Addition", "Subtraction"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.1.3.1.1",
+      "asset": "B2.1.3.1.1-halves-quarters",
+      "title": "Halves and quarters",
+      "altText": "A whole object partitioned into 2 equal parts and 4 equal parts showing one-half and one-quarter.",
+      "caption": "Understand one-half and one-quarter as 1 part of 2 or 4 equal parts.",
+      "tags": ["Basic 2", "Mathematics", "Fractions", "Half", "Quarter"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.3.1.2",
+      "asset": "B2.1.3.1.2-count-halves-quarters",
+      "title": "Counting halves and quarters",
+      "altText": "Multiple halves or quarters shown and counted using fraction language (two-fourths, three-fourths).",
+      "caption": "Count in halves and quarters using concrete or pictorial representations.",
+      "tags": ["Basic 2", "Mathematics", "Fractions", "Counting", "Fourth"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.1.3.1.3",
+      "asset": "B2.1.3.1.3-halves-quarters-in-whole",
+      "title": "How many halves/quarters make a whole",
+      "altText": "A whole compared with halves and quarters showing relationships (2 halves = 1 whole, 4 quarters = 1 whole).",
+      "caption": "Determine the number of halves and quarters in a whole.",
+      "tags": ["Basic 2", "Mathematics", "Fractions", "Whole", "Equivalence"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.1.4.1.1",
+      "asset": "B2.1.4.1.1-ghana-money",
+      "title": "Ghana money",
+      "altText": "Ghanaian coins and notes (₵1, ₵2, ₵5, ₵10, ₵20, ₵50) arranged for counting total value.",
+      "caption": "Recognise Ghanaian coins and notes and find the value of collections up to at least 50 cedis.",
+      "tags": ["Basic 2", "Mathematics", "Money", "Ghana cedi", "Counting money"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.2.1.1.1",
+      "asset": "B2.2.1.1.1-increasing-decreasing-patterns",
+      "title": "Increasing and decreasing patterns",
+      "altText": "Number patterns increasing or decreasing by 2, 5, or 10 with missing terms to extend.",
+      "caption": "Demonstrate understanding of increasing and decreasing number patterns.",
+      "tags": ["Basic 2", "Mathematics", "Algebra", "Patterns", "Sequences"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.2.1.1.2",
+      "asset": "B2.2.1.1.2-pattern-rules-arrays",
+      "title": "Pattern rules and arrays",
+      "altText": "Simple patterns showing repeated addition/subtraction, skip counting, and arrays of objects.",
+      "caption": "Identify, create, and describe rules for simple number patterns using skip counting and arrays.",
+      "tags": ["Basic 2", "Mathematics", "Algebra", "Patterns", "Arrays"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.3.1.1.1",
+      "asset": "B2.3.1.1.1-3d-objects-features",
+      "title": "3D objects and features",
+      "altText": "3D objects (sphere, cylinder, cone, pyramid, cube) labeled with faces, edges, and vertices.",
+      "caption": "Identify common features of 3D objects of different orientations and sizes.",
+      "tags": ["Basic 2", "Mathematics", "Geometry", "3D shapes", "Faces edges vertices"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.3.1.1.2",
+      "asset": "B2.3.1.1.2-2d-shapes-features",
+      "title": "2D shapes and features",
+      "altText": "2D shapes (square, triangle, rectangle, circle, pentagon, hexagon) with sides and vertices highlighted.",
+      "caption": "Identify common features of 2D shapes of different orientations and sizes.",
+      "tags": ["Basic 2", "Mathematics", "Geometry", "2D shapes", "Sides vertices"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.3.1.1.3",
+      "asset": "B2.3.1.1.3-draw-shapes-attributes",
+      "title": "Create shapes from attributes",
+      "altText": "Drawing 2D shapes based on given number of sides and vertices, and identifying faces of 3D objects.",
+      "caption": "Create two-dimensional shapes based on given attributes such as sides and vertices.",
+      "tags": ["Basic 2", "Mathematics", "Geometry", "Drawing shapes", "Attributes"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.3.2.1.1",
+      "asset": "B2.3.2.1.1-length-invariant",
+      "title": "Length does not change with direction",
+      "altText": "Equal-length sticks shown in different orientations, then aligned to prove equal length.",
+      "caption": "Prove that placement or direction of an object does not change its length.",
+      "tags": ["Basic 2", "Mathematics", "Measurement", "Length", "Transformation"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.3.3.1.1",
+      "asset": "B2.3.3.1.1-nonstandard-units",
+      "title": "Measuring with non-standard units",
+      "altText": "Measuring objects using paper clips, hand spans, pencil lengths, or other non-standard units.",
+      "caption": "Measure length, capacity, or mass directly/indirectly using non-standard units.",
+      "tags": ["Basic 2", "Mathematics", "Measurement", "Non-standard units", "Estimating"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.3.3.1.2",
+      "asset": "B2.3.3.1.2-compare-three-items",
+      "title": "Compare three or more items",
+      "altText": "Three objects compared by length, mass, or capacity using words like longest, shortest, heaviest.",
+      "caption": "Develop understanding of measuring as comparing three or more items.",
+      "tags": ["Basic 2", "Mathematics", "Measurement", "Comparing", "Ordering"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.3.3.2.1",
+      "asset": "B2.3.3.2.1-need-standard-units",
+      "title": "Need for standard units",
+      "altText": "Different learners measure the same height with hand spans and get different results, showing need for standard units.",
+      "caption": "Recognize the need for standard units of measurement of length.",
+      "tags": ["Basic 2", "Mathematics", "Measurement", "Standard units", "Length"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.3.3.3.1",
+      "asset": "B2.3.3.3.1-calendar-days-months",
+      "title": "Calendar: days and months",
+      "altText": "A calendar page highlighting days of the week and months, showing before/after relationships.",
+      "caption": "Read the calendar and solve problems involving days in a week and months in a year.",
+      "tags": ["Basic 2", "Mathematics", "Time", "Calendar", "Days months"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.3.3.3.2",
+      "asset": "B2.3.3.3.2-clock-hour-arbitrary-units",
+      "title": "Time using hour and arbitrary units",
+      "altText": "A clock showing hours and examples of timing events using claps or other arbitrary timers.",
+      "caption": "Use arbitrary units and the hour on a clock to measure time for simple events.",
+      "tags": ["Basic 2", "Mathematics", "Time", "Clock", "Hour"],
+      "orderIndex": 1
+    },
+
+    {
+      "indicatorCode": "B2.4.1.1.1",
+      "asset": "B2.4.1.1.1-collect-organize-data",
+      "title": "Collect and organize data",
+      "altText": "A simple tally chart or checklist collecting class data such as favourite food or colour.",
+      "caption": "Use tallies, checkmarks, charts, lists, or objects to collect and organize data.",
+      "tags": ["Basic 2", "Mathematics", "Data", "Tally", "Charts"],
+      "orderIndex": 1
+    },
+    {
+      "indicatorCode": "B2.4.1.2.1",
+      "asset": "B2.4.1.2.1-pictograph-concrete-graph",
+      "title": "Pictographs and concrete graphs",
+      "altText": "A pictograph or concrete graph using one-to-many or one-to-one correspondence to show categories.",
+      "caption": "Draw and interpret concrete graphs and pictographs.",
+      "tags": ["Basic 2", "Mathematics", "Data", "Pictograph", "Graph"],
+      "orderIndex": 1
+    }
+  ]
+}

@@ -1,0 +1,1174 @@
+{
+  "part": "1/2",
+  "phase": "Upper Primary",
+  "level": "Basic 6",
+  "subject": "English Language",
+  "name": "Basic 6 English Language",
+  "slug": "basic-6-english-language",
+  "orderIndex": 1,
+  "description": "Part 1 of the Basic 6 English Language curriculum focuses on advanced Oral Language skills and Reading proficiency. It includes interpreting songs and poems, storytelling, dramatization, formal and informal conversation, and advanced reading strategies such as critical reading and summarizing.",
+  "strands": [
+    {
+      "code": "B6.1",
+      "title": "Oral Language (Listening and Speaking)",
+      "description": "Developing advanced listening and speaking skills through songs, poetry, storytelling, dramatisation, conversation, and presentation.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B6.1.1",
+          "title": "Songs",
+          "description": "Relating songs to personal experiences and composing songs around values.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.1.1.1",
+              "description": "Demonstrate understanding of variety of songs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.1.1.1",
+                  "description": "Relate the central messages in songs to personal experiences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sing familiar songs from cultural background."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the meaning of songs and relate to personal experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.2",
+                  "description": "Compose songs around values discussed",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify values in songs (e.g., love, honesty)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compose songs around identified values in small groups."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.3",
+          "title": "Poems",
+          "description": "Appreciating poems, discussing values, and composing poems.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.1.3.1",
+              "description": "Appreciate poems and other pieces of literary materials",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.3.1.1",
+                  "description": "Relate the central messages of poems to personal experiences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recite poems with rhythm and stress."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the central message and relate to personal experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.2",
+                  "description": "Discuss values in poems and talk about the importance of these values in society",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify values in poems."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Relate values to day-to-day living."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.3.1.3",
+                  "description": "Compose eight-line poems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write meaningful lines on a given topic in groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Arrange lines to form an eight-line poem."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.4",
+          "title": "Story Telling",
+          "description": "Connecting stories to experience and telling stories on themes.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.1.4.1",
+              "description": "Respond to stories",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.4.1.1",
+                  "description": "Make connections between texts or stories and personal experiences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Retell stories using story maps."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Relate story events to personal experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.4.1.2",
+                  "description": "Tell stories around given themes",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify themes in stories (e.g., honesty, patriotism)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Tell stories based on selected themes."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.5",
+          "title": "Dramatisation and Role Play",
+          "description": "Dramatizing stories and writing plays.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.1.5.1",
+              "description": "Appreciate pieces of literary materials through dramatisation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.5.1.1",
+                  "description": "Dramatise/role-play whole/parts of stories/scenes, events",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss plot and prepare for role-play."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform role-plays depicting selected themes."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.5.2",
+              "description": "Appreciate key issues in stories/sketches",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.1.5.2.1",
+                  "description": "Express personal opinion about moral lessons in sketches",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify moral values in sketches."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Express personal opinions on moral lessons."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.5.2.2",
+                  "description": "Write plays out of a story and perform them",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Convert a story into a play script."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform the written play."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.5.2.3",
+                  "description": "Justify the central messages in sketches performed",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and justify key issues and lessons in sketches."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.6",
+          "title": "Conversation",
+          "description": "Discussing objects, personalities, events, and engaging in collaborative conversation.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B6.1.6.1",
+              "description": "Explore certain culturally acceptable language for communication",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.6.1.1",
+                  "description": "Describe/talk about objects/personalities/events in the country and the world",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss personalities and events using appropriate vocabulary."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.6.2",
+              "description": "Demonstrate positive listening and viewing attitudes and behaviour",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.1.6.2.1",
+                  "description": "View and listen attentively and for a sustained period",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Maintain eye contact and record key issues during conversation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.6.2.2",
+                  "description": "Listen and view for the entire duration of text/speech/presentation/video etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss characters and traits from texts or videos."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.6.3",
+              "description": "Use knowledge of language and communicative skills to participate in conversation",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B6.1.6.3.1",
+                  "description": "Engage in collaborative conversation with unfamiliar audience",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss social issues and values in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.6.3.2",
+                  "description": "Demonstrate turn taking in conversation on different topics",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Converse following rules like listening and taking turns."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.6.3.3",
+                  "description": "Ask and answer questions about key details on topics under discussion",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Clarify key details in group discussions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.7",
+          "title": "Listening Comprehension",
+          "description": "Using strategies to process meaning, analyzing text structure and content.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B6.1.7.1",
+              "description": "Use appropriate skills and strategies to process meaning from texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.7.1.1",
+                  "description": "Employ Think Aloud and visualisation strategies to make meaning from level-appropriate texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use visualization to construct meaning from audio texts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.2",
+                  "description": "Relate the sequence of events (E.g. beginning, middle and end) stories/drama/texts",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and list events in sequence."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.3",
+                  "description": "Ask relevant questions to improve on understanding of moral lesson in text",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss characters, setting, and moral lessons."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.4",
+                  "description": "Use background knowledge to understand and build new knowledge while listening to informational text",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use KWL strategy with informational texts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.5",
+                  "description": "Express own opinions about the details of texts",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Share opinions about text details in groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.6",
+                  "description": "Identify the problems and solutions in texts",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Analyse texts for cause, effect, and solution."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.7",
+                  "description": "Make simple generalisations based on the main ideas and key details of a text",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Form generalizations from main ideas."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.8",
+          "title": "Asking and Answering Questions",
+          "description": "Using future expressions and question tags.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B6.1.8.1",
+              "description": "Demonstrate understanding in asking and answering questions correctly",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.8.1.1",
+                  "description": "Answer 'Yes' or 'No' questions correctly using the expressions that show the future",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask and answer questions about future activities."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.8.2",
+              "description": "Identify and use question tags correctly in speech",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.1.8.2.1",
+                  "description": "Use positive tags, negative tags and auxiliaries in speech",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Practice using question tags in pairs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.9",
+          "title": "Giving and Following Commands",
+          "description": "Using verbs for instructions and requests.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B6.1.9.1",
+              "description": "Explore the use of verbs in commands, instructions, requests and directions appropriately in speech",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.9.1.1",
+                  "description": "Create and present simple instructions or a manual on how to play a game",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create and present instructions for a game."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.9.1.2",
+                  "description": "Make and respond to polite requests for help from unfamiliar people",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Role-play polite requests with unfamiliar people."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.10",
+          "title": "Presentation",
+          "description": "Delivering speeches and news reports with appropriate structure and delivery.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B6.1.10.1",
+              "description": "Demonstrate knowledge of spoken grammar and register",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.10.1.1",
+                  "description": "Demonstrate awareness of the features of spoken language e.g. the use of modal expressions to convey tentativeness",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and use spoken language features like contractions and ellipsis."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.1.2",
+                  "description": "Demonstrate awareness of the differences between spoken and written forms of language",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compare formal (written) and informal (spoken) language."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.1.3",
+                  "description": "Demonstrate awareness of how meaning is conveyed through appropriate pace, stress, tone – through news reporting",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Prepare and present news reports focusing on delivery."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.10.2",
+              "description": "Demonstrate the ability to communicate with accurate pronunciation and appropriate intonation",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.1.10.2.1",
+                  "description": "Speak at a good pace and with expression",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Make short speeches using appropriate voice quality."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.2.2",
+                  "description": "Read aloud clearly, at a good pace and with expression",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read short texts and speeches aloud."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.1.10.3",
+              "description": "Plan and present information and ideas for a variety of purposes",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B6.1.10.3.1",
+                  "description": "Research and deliver speeches on given informational topics",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research and plan speeches on selected topics."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.3.2",
+                  "description": "Draw on prior knowledge to identify subject matter and organisational structure of speech",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify roles and structure in speech making."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.3.3",
+                  "description": "Gather and select facts and ideas from one or multiple print and/ or non-print sources",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Generate ideas from various sources for speeches."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.3.4",
+                  "description": "Support ideas and points of view with concrete examples to convey meaning",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select facts appropriate to audience and context."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.3.5",
+                  "description": "Identify and use the appropriate register for formal and informal contexts",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify vocabulary suitable for specific topics and contexts."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.3.6",
+                  "description": "Elaborate on points using experiences and feelings",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Expand points with details and personal experiences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.3.7",
+                  "description": "Speak with confidence before different audiences using appropriate verbal and non-verbal cues",
+                  "orderIndex": 7,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Practice speaking with confidence using appropriate cues."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.2",
+      "title": "Reading",
+      "description": "Developing reading skills through phonics, vocabulary, and comprehension.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B6.2.2",
+          "title": "Phonics",
+          "description": "Reading complex word endings and multisyllabic words.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.2.2.1",
+              "description": "Connect sounds to letters; and blend letters/syllables in order to read and write",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.2.1.1",
+                  "description": "Read words with ending sounds like 'sure', 'ture' and 'tch'",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read words with 'sure' (measure), 'ture' (creature), 'tch' (stretch)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.2.1.2",
+                  "description": "Read ccvcc, cccvc words and multisyllabic words",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read words like trust, scrap, communication."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.3",
+          "title": "Word Families: Minimal Pairs and Common Digraphs",
+          "description": "Using minimal pairs and digraphs to decode.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.2.3.1",
+              "description": "Identify minimal pairs and common digraphs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.3.1.1",
+                  "description": "Use common minimal pairs to decode words",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify minimal pairs (e.g., goat/coat, train/chain)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.3.1.2",
+                  "description": "Use words with digraphs to make meaningful sentences",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify words with digraphs (ch, ph, sh) and use them in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.4",
+          "title": "Diphthongs",
+          "description": "Identifying and using centering diphthongs.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.2.4.1",
+              "description": "Identify and use diphthongs to decode texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.4.1.1",
+                  "description": "Use words with centering diphthongs to make meaningful sentences",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use words with centering diphthongs (e.g., fear, prepare, pure) in sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.5",
+          "title": "Blends and Consonant Clusters",
+          "description": "Using blends and clusters to read multisyllabic words.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.2.5.1",
+              "description": "Identify and use consonant blends and clusters in reading",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.5.1.1",
+                  "description": "Orally produce three-syllable words by blending sounds, including consonant blends",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and list words with blends (e.g., black, brush, stone)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.5.1.2",
+                  "description": "Use the spelling-sound correspondences for common consonant digraphs",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Establish rules for spelling words with digraphs (ch, sh, gh)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.6",
+          "title": "Vocabulary",
+          "description": "Understanding word meanings, relationships, and formation.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B6.2.6.1",
+              "description": "Understand word meanings and usages",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.6.1.1",
+                  "description": "Use level-appropriate content words and function words appropriately",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify content words (nouns, verbs) and function words (prepositions) in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.6.1.2",
+                  "description": "Use terms: compound words, idiom, simile, synonym, antonym, prefix, suffix, phrasal verb etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use various vocabulary terms in spoken and written expression."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.2.6.2",
+              "description": "Build vocabulary",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.2.6.2.1",
+                  "description": "Develop a rich vocabulary stock through extensive reading",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read extensively and substitute words with synonyms."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.2.6.3",
+              "description": "Demonstrate a rich vocabulary that supports development of skills",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B6.2.6.3.1",
+                  "description": "Deduce meaning of words from how they relate to one another",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use hyponyms (fruit-apple) and meronyms (hand-finger) to build vocabulary."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.2.6.4",
+              "description": "Use words appropriately for purpose, audience, context and culture",
+              "orderIndex": 4,
+              "indicators": [
+                {
+                  "code": "B6.2.6.4.1",
+                  "description": "Recognise how words are formed through compounding",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify compound words (e.g., breakfast, classroom)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.6.4.2",
+                  "description": "Recognise the playful use of words (jokes, riddles, puns)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use jokes and riddles in speech."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.6.4.3",
+                  "description": "Use words suitable for purpose, audience, context and culture",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify key elements in writing (purpose, audience) and role play."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.7",
+          "title": "Comprehension",
+          "description": "Processing and analyzing texts.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B6.2.7.1",
+              "description": "Process and comprehend level appropriate texts",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.7.1.1",
+                  "description": "Construct meaning from texts",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Predict text content and adjust comprehension while reading."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.7.1.2",
+                  "description": "Note and recall main ideas in sequence",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use SQ3R strategy to recall ideas."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.7.1.3",
+                  "description": "Scan/skim for details",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Skim/scan text for main ideas and details."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.7.1.4",
+                  "description": "Read level-appropriate texts silently and closely for comprehension",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Practice silent reading using Directed Reading Activity (DRA)."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.2.7.2",
+              "description": "Apply critical reading, implied meaning, higher order thinking, judgment and evaluation",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B6.2.7.2.1",
+                  "description": "Respond to a text with reason, simple judgment and personal interpretations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create mental images and answer questions eliciting judgment and personal response."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.7.2.2",
+                  "description": "Compare and contrast two or more events in a text",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and compare events, characters, and settings."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.7.2.3",
+                  "description": "Demonstrate awareness of the structure of texts",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify introduction, body, and conclusion."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B6.2.7.3",
+              "description": "Demonstrate understanding of the use of words and phrases as used in the text",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B6.2.7.3.1",
+                  "description": "Determine the contextual meaning of words and phrases",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Work out meanings of words and phrases in context."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.8",
+          "title": "Silent Reading",
+          "description": "Reading silently for meaning.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B6.2.8.1",
+              "description": "Construct meaning from text read",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.8.1.1",
+                  "description": "Read silently and reasonably for meaning from a level-appropriate text",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read text silently and answer 'While Reading' questions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.8.1.2",
+                  "description": "Find meaning of words as used in context",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play vocabulary games to find meaning."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.8.1.3",
+                  "description": "Ask and answer questions based on a passage read",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Answer factual, inferential, and applicative questions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.9",
+          "title": "Fluency",
+          "description": "Reading with speed, accuracy, and expression.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B6.2.9.1",
+              "description": "Read fluently to enhance comprehension",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.9.1.1",
+                  "description": "Read grade-level text with meaning",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the three-stage reading approach."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.9.1.2",
+                  "description": "Read aloud with expressions that reflect the author's purpose and meaning",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read independently using self-correction strategies."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.10",
+          "title": "Summarizing",
+          "description": "Summarizing texts orally and in writing.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B6.2.10.1",
+              "description": "Read and summarize passages read",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.10.1.1",
+                  "description": "Summarise level-appropriate passages/text orally",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify main ideas and restate them in own words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.10.1.2",
+                  "description": "Write short summary of a level appropriate passage/text read",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a summary noting main ideas and sequence."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,267 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 3",
+  "subject": "History",
+  "name": "Basic 3 History",
+  "slug": "basic-3-history",
+  "orderIndex": 1,
+  "description": "The Basic 3 History curriculum focuses on the origins of major ethnic groups in Ghana, inter-group relations, major historical locations, significant Ghanaian entrepreneurs, and the arrival of Europeans.",
+  "strands": [
+    {
+      "code": "B3.2",
+      "title": "My Country Ghana",
+      "description": "Exploring the origins of ethnic groups, inter-group relations, historical locations, and significant individuals.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B3.2.1",
+          "title": "The People of Ghana",
+          "description": "Understanding the origins of major ethnic groups.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.2.1.1",
+              "description": "Exhibit knowledge of the unique history of the major ethnic groups in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.1.1.1",
+                  "description": "Discuss the origins of the major ethnic groups in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify some of the major ethnic groups. Eg. Guan, Mole-Dagbani/ Gonja, Akan, Ga/Adangme, Ewe"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use a map to trace the routes the major ethnic groups travelled to get to their present-day locations in Ghana"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, learners discuss the origin of the major ethnic groups"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compose a song with names of the major ethnic groups and where they originated (In the special schools, resource persons should assist the hearing impaired to sing)"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Draw a map to locate the migratory routes of the ethnic groups. (this can also be done on a manila card)"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Develop a timeline of the periods each ethnic group arrived in Ghana"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.2.2",
+          "title": "Inter-Group Relations",
+          "description": "Understanding exchanges, conflicts, and alliances among ethnic groups.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.2.2.1",
+              "description": "Demonstrate knowledge of how intergroup alliances, conflicts and other exchanges",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.2.1.1",
+                  "description": "Discuss the nature of exchanges among the ethnic groups",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the forms of exchanges including forms of trade, inter-marriage, conflict and alliances"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the benefit of these exchanges"
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.2.1.2",
+                  "description": "Name some of the items exchanged among the various groups",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify trade items that were exchanged among ethnic groups: salt. fish, gold, kola, Shea butter, pottery and cloth and iron utensils"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Match items with the areas / sources where the items were obtained. e.g. Shea butter - savannah belt"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the medium of exchange"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Trace the origin of the name 'cedi'"
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.2.1.3",
+                  "description": "Describe the conflicts and alliances that existed among the ethnic groups in Ghana",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss intergroup wars such as Battle of Feyiase and the Krepi war of 1833"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss instances where alliances were formed between different groups to fight a common enemy. E.g. The Battle of Akatamanso where the Asante army was defeated by an alliance made up of the British, Ga, Fante, Akyem, Akwamu, Krepi and Denkyira Anlo / Asante in the Ada War of 1869"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.2.4",
+          "title": "Major Historical Locations",
+          "description": "Understanding forts and castles in Ghana.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B3.2.4.1",
+              "description": "Demonstrate knowledge of the forts and castle built in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.4.1.1",
+                  "description": "Identify the forts and castles built along the coast of Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the differences between forts and castles"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "With the use of internet, identify the major forts and castles on Ghana's coast on a map (where they are located, which Europeans built them and when and why they were built)"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain some of the uses to which these forts and castles have been put since they were built. E.g. Seat of government, trading and education"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the use to which these forts and castles were put since Ghana gained independence"
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Match these forts and castles with where they can be located"
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners draw their favourite castle"
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Show and discuss a documentary/ slides on forts and castles in Ghana"
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Visit any of these facilities to model any fort and castle"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.2.5",
+          "title": "Some Selected Individuals",
+          "description": "Highlighting contributions of Ghanaian entrepreneurs.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B3.2.5.1",
+              "description": "Describe the contributions of some outstanding Ghanaian entrepreneurs",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.5.1.1",
+                  "description": "Describe Ghanaian entrepreneurs who have made significant contributions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Name Ghanaian entrepreneurs of note e.g. George Grant - Businessman, Winifred Tete-Ansa, Esther Ocloo - Nkulenu Industries, B.A. Mensah - Pioneer Tobacco Ltd. Kwabena Pepra - Paramount Distilleries, J.K. Siaw - Tata Brewery, Alhaji Adam Iddrisu - Global Haulage"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures of some outstanding entrepreneurs in Ghana"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Retell the live stories of any of these entrepreneurs from a documentary show"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify the entrepreneurs who work inspires you most and give reasons for your choice"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.3",
+      "title": "Europeans in Ghana",
+      "description": "Understanding the arrival and settlement of Europeans.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B3.3.1",
+          "title": "Arrival of Europeans",
+          "description": "Understanding European settlement and alliances.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.3.1.1",
+              "description": "Show understanding of the interactions between the local people and early settlers",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.3.1.1.1",
+                  "description": "Describe how the Europeans settled on the Gold Coast, including forming alliances with the local chiefs",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Dramatise the meeting between the Portuguese and Kwamina Ansah"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain why other Europeans who came later also settled on the Gold Coast"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Investigate how the Europeans settled on the Gold Coast including forming alliances with the local chiefs and marrying the local people"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

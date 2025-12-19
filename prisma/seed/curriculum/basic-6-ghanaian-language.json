@@ -1,0 +1,2683 @@
+{
+  "part": "1/1",
+  "phase": "Upper Primary",
+  "level": "Basic 6",
+  "subject": "Ghanaian Language",
+  "name": "Basic 6 Ghanaian Language",
+  "slug": "basic-6-ghanaian-language",
+  "orderIndex": 1,
+  "description": "The Basic 6 Ghanaian Language curriculum is designed to consolidate learners' language skills in listening, speaking, reading, and writing. It focuses on traditional oral arts, advanced conversation skills, reading comprehension, various forms of writing (narrative, descriptive, persuasive, etc.), and the correct use of grammar and writing conventions.",
+  "strands": [
+    {
+      "code": "B6.1",
+      "title": "Oral Language (Listening and Speaking)",
+      "description": "Developing listening and speaking skills through traditional songs, poems, storytelling, drama, and conversation.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B6.1.1",
+          "title": "Songs",
+          "description": "Investigating traditional dances and their songs.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.1.1.1",
+              "description": "Investigate some traditional dances and their songs.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.1.1.1",
+                  "description": "Sing some traditional songs which are used for traditional dances and their correct rhythms.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play back a recorded traditional song in class, and help learners to sing traditional songs with their correct rhythms."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate how some of the dances are performed."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow learners to dance to the rhythm of the song."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.1.1.2",
+                  "description": "Discuss the importance and some moral lessons of the songs and the dances.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "With a recorded traditional song played in class, let learners listen and sing along, and on their own."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to discuss some morals of the traditional song."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss some importance of traditional songs to the community and to the people."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners to discuss the history or relevance of the songs."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.3",
+          "title": "Poems",
+          "description": "Demonstrating knowledge and understanding of selected poems.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.1.3.1",
+              "description": "Demonstrate knowledge and understanding of selected poems by discussing them.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.3.1.1",
+                  "description": "Explore poems correctly and recognise the key words and talk about their themes.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give copies of poems to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read the poem aloud and let learners read the poem in turns."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Call a learner to explore the poem with the correct stress and rhythm."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners to explore poems in groups."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "With the given copies of poems, allow learners to read through the poem and discuss it."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Lead learners to recognise the key words in the poem."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "With the copies of the poem, brainstorm and lead learners to say the theme of the poem."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Bring a resource person to explore a poem, or play back a poem recital."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Put learners into groups to bring out the issues discussed in the poem and the theme."
+                    },
+                    {
+                      "orderIndex": 10,
+                      "description": "Listen to each group's theme and discuss it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.4",
+          "title": "Listening and Story Telling",
+          "description": "Understanding and comparing folktales and stories.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.1.4.1",
+              "description": "Demonstrate an understanding and comparison of folktales to stories.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.4.1.1",
+                  "description": "Indicate the similarities and differences between folktales and stories.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask a learner to tell a folktale and another learner to tell a story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Tell a folktale and a story."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Revise the lesson on the structure of a folktale and a story."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners discuss the similarities between folktales and stories in their groups."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let a learner recount a folktale and another learner a story."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners discuss the differences between folktales and stories in pairs."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Write out some of the differences on the board."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Let learners debate to confirm the differences found from the discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.4.1.2",
+                  "description": "Discuss the values or morals of folktales and of stories.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners discuss the values or morals of folktales and stories in groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let each group present the findings to the whole class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.5",
+          "title": "Dramatisation and Role Play",
+          "description": "Changing a story into a drama.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.1.5.1",
+              "description": "Demonstrate an understanding of how to change a story into a drama.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.5.1.1",
+                  "description": "Tell a story of about eight to ten characters, and recognise the characters, setting, costumes and the stage.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss a story line with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let a learner tell a story and lead learners to recognise the storyline."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write out the story line on the board."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners to recognise the characters, setting, costumes and of a play shown to them."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let the learners write the characters identified on the board and discuss their role in the story."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.5.1.2",
+                  "description": "Perform a drama.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Allow learners to read a story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to re-tell the story."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners identify the characters and suggest costumes for the characters where necessary."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners discuss the setting for the story read."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss with learners some processes and key considerations in changing a story into a drama."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Direct learners to perform the drama."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.6",
+          "title": "Conversation",
+          "description": "Exhibiting knowledge of towns, cities, villages, and rivers in Ghana.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B6.1.6.1",
+              "description": "Exhibit knowledge of the names of some towns, cities and villages and rivers in Ghana.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.6.1.1",
+                  "description": "Explore and say the names of cities in Ghana.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show learners a current map of Ghana and mention some of the capital towns."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners point to the cities on the map."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners mention the names of cities in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss some of the locations of the cities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.6.1.2",
+                  "description": "Explore or say some towns and villages in Ghana.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to mention names of towns and villages they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show learners a current map of Ghana and mention some of the capital towns."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners to mention the names of some towns and villages in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners discuss the locations of these towns and villages."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Ask learners to tell which villages they come from."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.6.1.3",
+                  "description": "Discuss the major rivers in Ghana and those close to the area.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to mention the sources of the water that flow in the taps or boreholes in community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write out some of the rivers mentioned by learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show learners a current map of Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners point to the rivers indicated on the map."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Lead learners to mention the major rivers in Ghana after looking at the map."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Talk about the locations of these rivers."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners look closely at the current map of Ghana."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Help learners to recognise the names of rivers in or close to their area and mention and write the names on the board."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Discuss whether these rivers serve as a source of water to the community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.7",
+          "title": "Talking about Oneself, Family, People and Places",
+          "description": "Differentiating between nuclear and extended families.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B6.1.7.1",
+              "description": "Demonstrate knowledge on the differentiation between the nuclear and extended families.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.7.1.1",
+                  "description": "Recognise the nuclear family and mention the members in it.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to mention the family members they live with."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss who a nuclear family comprises of."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Display a picture of a family."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Aid learners to recognise the nuclear family and mention the members in it."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.2",
+                  "description": "Recognise the extended family and mention some members in it.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Display a picture or watch a clip of an extended family in class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the members of the family seen in the video."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the concept of the extended family to learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Aid learners to recognise the extended family and mention some members in it."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.7.1.3",
+                  "description": "Use the appropriate terms to describe families.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "With flashcards, write terms used in describing members of the family."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the terms used to describe members with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask the learners to talk about their family using the appropriate terms."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, ask learners to act like a family and let learners use the appropriate terms to describe the families."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.9",
+          "title": "Asking and Answering Questions",
+          "description": "Answering questions using correct pronunciation and intonation.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B6.1.9.1",
+              "description": "Exhibit knowledge of answering questions using the correct pronunciation and intonation.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.9.1.1",
+                  "description": "Discuss the intonation used in asking question words.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write question words on flashcards."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners to use some of these question words to form questions orally."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Listen to the oral answers and discuss the intonation with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assist learners recognise the intonation used in asking questions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.9.1.2",
+                  "description": "Answer questions using the correct pronunciations and intonation.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Say and write question words or tags on flashcards."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Revise lesson on question formation with the words."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners come in pairs and use the question words to ask and answer questions with each other."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss some intonations in answering questions. Aid learners recognise how to answer questions using the correct pronunciations and intonations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.10",
+          "title": "Giving and Following Commands/Instructions",
+          "description": "Using landmarks for directions.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B6.1.10.1",
+              "description": "Exhibit knowledge and understanding in the use of landmarks in giving directions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.10.1.1",
+                  "description": "Recognise landmarks in your area.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain to learners what landmarks are."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to mention some landmarks that they see in their communities."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show learners a picture of a town with some important landmarks like Bank, church, mosque, big tress etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners recognise landmarks in their area."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.1.2",
+                  "description": "Use the landmarks to give directions to a house.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Mention a landmark in the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show a picture of a town with some important landmarks like Bank, church, mosque, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead the learners to recognise the landmarks in the picture."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Ask a learner to give directions from the landmark to the home."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Assist learners to use other landmarks to give directions to their house."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.10.1.3",
+                  "description": "Use the landmarks to give directions to your school.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show a picture of a town with some important landmarks like Bank, church, mosque, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assist learners to use the landmarks to give directions to their school."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.1.11",
+          "title": "Presentation",
+          "description": "Demonstrating safety measures in the environment.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B6.1.11.1",
+              "description": "Demonstrate knowledge on the need for safety measures in the environment.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.1.11.1.1",
+                  "description": "Recognise and discuss accidents that occur at home, school, roads, etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show learners a picture of a vehicle involved in a road accident."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the picture with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners recognise and mention accidents that occur at home, school, and on the roads."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.11.1.2",
+                  "description": "Discuss causes of accidents in the environment.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through brainstorming, ask learners to say some of the causes of accidents."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show learners a picture of a fallen tree."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners what they think caused the tree to fall."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Put learners in groups and give each group specific accident scene and ask the learners to brainstorm the causes."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Each group should discuss with the class the causes for each given accident."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.1.11.1.3",
+                  "description": "Discuss some safety measures to prevent accidents that occur at home, school and on roads.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Put learners into groups to discuss the accidents that occur in school, home, road etc. previously allocated to them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let the group discuss the preventive and safety measures for those incidents."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let each group discuss the safety measures of the given accident to the whole class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.2",
+      "title": "Reading",
+      "description": "Enhancing reading skills through phonics, vocabulary, comprehension, and fluency.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B6.2.4",
+          "title": "Phonics: Letter and Sound Knowledge",
+          "description": "Pronouncing words with identical sounds, digraphs, and syllables.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.2.4.1",
+              "description": "Demonstrate the ability to listen and pronounce words with identical sounds from a list of words.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.4.1.1",
+                  "description": "Read and recognise words with diagraphs in sentences and paragraphs.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the alphabet sounds briefly with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to mention some words and write them on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Group the words into two, those consisting of diagraphs and those without diagraphs."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the concept of diagraphs with learners."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write words which consist of diagraphs with their diagraphs underlined on flashcards."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Ask learners to say the words aloud."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Write sentences which have words that consist of diagraphs in them on flashcards."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Help learners to recognise the diagraphs in the words found in the sentences."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Ask learners to use the diagraphs identified to form some new words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.4.1.2",
+                  "description": "Blend three or more syllables to form words and read them.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on syllables with the learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write some words on the board and ask learners to form sentences with them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show flashcards with syllables written on them to the learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Help learners blend three or more syllables to form words and read them out aloud."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.4.1.3",
+                  "description": "Recognise and say consonant clusters in passages.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to mention words they know and write the words on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the sounds in the words and discuss consonant clusters."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show flashcards with words that have consonant clusters written on them to learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Help learners recognise and read the words with consonant clusters."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.5",
+          "title": "Vocabulary (Sight and content vocabulary)",
+          "description": "Recognising and reading words in the environment with correct pronunciation.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.2.5.1",
+              "description": "Show an ability to recognise and read about things in the environment.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.5.1.1",
+                  "description": "Read dialogues aloud with correct pronunciation and tone.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Do a sample reading for learners to hear."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In their groups, help learners to take turns to read dialogues, using correct pronunciations and tonations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.5.1.2",
+                  "description": "Read long text/passages aloud with correct pronunciation and tone.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Do a sample reading of a passage about diseases, drought, weather, etc. for learners to listen."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Select some of the unfamiliar words in the passage with the help of the learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Pronounce the words with the correct tone aloud for learners to repeat."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Help learners read passages aloud with correct pronunciation and tone in their groups."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.6",
+          "title": "Comprehension",
+          "description": "Answering questions and making predictions from texts.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.2.6.1",
+              "description": "Exhibit the ability to answer questions based on texts presented.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.6.1.1",
+                  "description": "Explain the meaning of unfamiliar words within their context.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners text to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call learners in turns to read a paragraph each."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners recognise unfamiliar words from the passage."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write the words on the board and read out the words aloud."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners explain the meaning of unfamiliar words from their context."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Call learners in turns to use the unfamiliar words to form sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.6.1.2",
+                  "description": "Answer factual and inferential questions.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners text to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners some factual questions and call learners to answer orally."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners answer factual and inferential questions from a given text."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.6.1.3",
+                  "description": "Make predictions of a given text.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners the text to read again."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss how to make predictions from a passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners to make predictions from the given text."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.7",
+          "title": "Silent Reading",
+          "description": "Summarizing and retelling stories from silent reading.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.2.7.1",
+              "description": "Demonstrate knowledge on reading for comprehension.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.7.1.1",
+                  "description": "Summarise a given story/text.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners a text to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners read a paragraph silently."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss how to do summary with the learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Ask a learner to summarise the paragraph read to the class."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Make learners summarise a given short text and discuss the summary made from groups."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.7.1.2",
+                  "description": "Retell the story sequentially.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners an interesting text to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners retell the story in the text in groups and then to the class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.2.9",
+          "title": "Summarising",
+          "description": "Extracting main ideas and topic sentences from texts.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B6.2.9.1",
+              "description": "Show an understanding of how selecting main ideas from a text.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.2.9.1.1",
+                  "description": "List the most important ideas from a paragraph.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners longer passages that are interesting to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss ideas that can be derived from the text."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to recognise and list the most important ideas of the given text."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.9.1.2",
+                  "description": "Recognise topic sentences in each paragraph.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners longer passages that are interesting to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Allow learners to read and discuss the ideas in the passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss topic sentences with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Help learners recognise topic sentences in each paragraph."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.2.9.1.3",
+                  "description": "Re-write the main ideas in a passage in a logical order.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners longer passages that are interesting to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Put learners in groups and help them to recognise the main ideas in each paragraph of the passages."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners re-write the main ideas from a passage logically."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.3",
+      "title": "Writing",
+      "description": "Developing writing skills through penmanship and composition.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B6.3.1",
+          "title": "Penmanship/Handwriting",
+          "description": "Writing sentences clearly and correctly with proper capitalization.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.3.1.1",
+              "description": "Write sentences clearly and correctly, using correct capitalisation where needed.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.3.1.1.1",
+                  "description": "Pay attention to ascending and descending letters that are not easy to write.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners longer sentences on flashcards to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show the flashcards to the learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners pay attention to ascending and descending letters that are not easy to write."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Give list of words and allow learners to write correct sentences from them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.3.1.1.2",
+                  "description": "Write sentences using joint scripts.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners longer sentences on flashcards to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss joint scripts with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use some joint scripts to write some sentences on the board."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Show the flashcards to the learners."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Help learners write sentences using joint scripts from the sentences on the flashcard."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.4",
+      "title": "Composition Writing",
+      "description": "Writing narratives, creative stories, descriptions, persuasive and argumentative essays.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B6.4.1",
+          "title": "Narrative Writing",
+          "description": "Understanding and writing narrative compositions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.4.1.1",
+              "description": "Show an understanding of writing a narrative composition.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.1.1.1",
+                  "description": "Write a report or account of a particular events or activity in which they were involved.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners how to write a narrative composition."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show a sample of a narrative writing and discuss its structure and key points."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners to narrate to the class an activity in which they took part."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the narration from the learner."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Assist learners to write a report or an account of a particular event or activity in which they were involved."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.1.1.2",
+                  "description": "Write a brief report on an event or activity they have witnessed.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners key points in writing a narrative composition."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask a learner to narrate an event witnessed to the class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners towrite a brief report on an event or activity e.g. rainfall, storm, drought they have witnessed."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.1.1.3",
+                  "description": "Write a report or account of a particular event or activity.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners types of narrative writing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Put learners in groups to discuss an event that took place in the school, home or community etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners to write a report or account of a particular event or activity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.2",
+          "title": "Creative/ Free Writing",
+          "description": "Writing short and long imaginative stories.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.4.2.1",
+              "description": "Show an understanding of writing good imaginative and real stories.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.2.1.1",
+                  "description": "Create and write a short imaginative story.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show some creative works like stories to learners to see."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the creative works with the learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss with learners how to create imaginative stories."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners create or narrate and write a short imaginative story."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.2.1.2",
+                  "description": "Write a long real story of about five paragraphs.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners how to write stories."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show samples of stories to learners and talk about the stories."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners write or narrate a real story which is a little bit longer of about five paragraphs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.2.1.3",
+                  "description": "Write a longer imaginative or real story.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise with learners how to write stories and talk about the setting, characters and titles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to write a longer imaginative or real story."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.3",
+          "title": "Descriptive Writing",
+          "description": "Writing descriptive compositions about objects, situations, and processes.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.4.3.1",
+              "description": "Exhibit the ability to understand, and write short descriptive stories.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.3.1.1",
+                  "description": "Write a descriptive composition on a given object.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show an object to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Pass the object round for learners to touch it."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Call learners in turns to describe the object."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss with learners how to write descriptive composition."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners write a descriptive composition on a given object."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.3.1.2",
+                  "description": "Write a descriptive essay about a situation.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners situations that can occur in the home or school or community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners describe any of the situations in groups and say to the class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss with learners how to write descriptive composition."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners to compose a descriptive essay about a situation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.3.1.3",
+                  "description": "Write a descriptive composition on a certain process.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners processes in doing things like cooking, installing a chief, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask a learner the process and describe it to the class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners towrite a descriptive composition on a certain process."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.4",
+          "title": "Persuasive Writing",
+          "description": "Writing persuasive essays on various topics.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.4.4.1",
+              "description": "Exhibit knowledge and understanding of persuasive essays.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.4.1.1",
+                  "description": "Write a persuasive essay on a given topic.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss ways that persuasion can be achieved."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss some vocabularies that are used in persuasion and write some on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss with learners how to writepersuasive essays by looking at structure and content."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners write a persuasive essay on a given topics."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.4.1.2",
+                  "description": "Write a persuasive essay about education.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners situations that can occur in the home or school or community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners describe any of the situations in groups and say to the class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss with learners how to write descriptive composition."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners to compose a descriptive essay about a situation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.4.1.3",
+                  "description": "Write a persuasive essay on a national issue.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners processes in doing things like cooking, installing a chief, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask a learner the process and describe it to the class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners to write a persuasive composition on a certain process."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.5",
+          "title": "Argumentative Writing",
+          "description": "Writing argumentative essays for or against a motion.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B6.4.5.1",
+              "description": "Exhibit knowledge and understanding of good argumentative essays by writing.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.5.1.1",
+                  "description": "Take a stand and write an argumentative essay for a given motion.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners how argumentation is done and the vocabularies used in argumentation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss with learners how to write an argumentative essay."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the structure, content and features .of an argumentative essay."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Select a topic and discuss with learners how to take a stand and write on it."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Assist learners to take a stand and write an argumentative essay for a given motion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.5.1.2",
+                  "description": "Take a stand and write an argumentative essay against a given motion.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson with learners on how to write argumentative essay."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assist learners to take a stand and write an argumentative essay against a given motion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.5.1.3",
+                  "description": "Write an argumentative essay on a given topic.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Select a topic and put learners into two groups."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make learners take a stand after discussions among themselves."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners of each group write individually, for or against the motion of an argumentative essay on a given topic."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.6",
+          "title": "Informative/ Academic Writing",
+          "description": "Writing informative academic compositions.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B6.4.6.1",
+              "description": "Exhibit knowledge in writing informative/ academic compositions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.6.1.1",
+                  "description": "Discuss the process of writing speeches, letter to the press and reports.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play a recorded speech to learners and discuss the speech."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Teach learners how to write speeches and letters to the press."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Assist learners to understand the process of writing speeches, letter to the press, and reports."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.6.1.2",
+                  "description": "Write speeches, letter to the press and reports using controlled composition.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise with learners the topic on how to write speeches, and letters."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show a sample speech written to press or report."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the vocabularies and structure of the report."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners to write speeches, letter to the press and reports using controlled composition."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.6.1.3",
+                  "description": "Write good speeches, letter to the press and reports.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show more samples of reports and speeches on various topics to learners and discuss the content."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to write good speeches, letter to the press and reports."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.6.1.4",
+                  "description": "Write good reports on various activities.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss various activities on which reports can be written."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Select an activity and write a sample report on the board; involve learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to write good reports on various activities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.7",
+          "title": "Literary Writing",
+          "description": "Writing simple literary works like poems, prose, and plays.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B6.4.7.1",
+              "description": "Demonstrate knowledge of simple literary works by writing them.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.7.1.1",
+                  "description": "Compose a simple poem.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a simple poem on a flashcard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the composition of poems such as the choice of words, rhyme and stanzas and theme."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the flashcards with short poems on them to help learners compose a good simple poems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.7.1.2",
+                  "description": "Create a prose on a given situation.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a simple prose on a flashcard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the features of the prose with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the flashcards with short prose written on them to help learners compose their own short prose on a given situation."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.7.1.3",
+                  "description": "Write a good play using daily activities and experiences.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Allow learners to discuss a play they have watched."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners watch a play and discuss the costume, characters and settings."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss daily activities and experiences with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Choose an experience and guide learners on how to write a play on that."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Allow learners to choose a daily activity in groups and write a short play on it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.4.8",
+          "title": "Letter Writing",
+          "description": "Writing formal letters.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B6.4.8.1",
+              "description": "Exhibit knowledge of writing formal letters",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.4.8.1.1",
+                  "description": "Comprehend the process in writing formal letters.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show types of letters to learners and discuss them."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Talk about formal letters and their structure."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a sample formal letter on the board."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss with the learners the processes of writing letters."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Assist learners to understand the process in writing formal letters."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.8.1.2",
+                  "description": "Write formal letters using controlled composition.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read out the formal letter the board and ask learners to talk about it."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners write formal letters using controlled composition."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.4.8.1.3",
+                  "description": "Write good formal letters.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Choose a place and discuss letters that can be written to that place by different categories of people."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.5",
+      "title": "Writing Conventions/ Usage",
+      "description": "Applying grammar rules in written language.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B6.5.1",
+          "title": "Integrating Grammar in Written Language (Capitalisation)",
+          "description": "Using capital letters appropriately.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.5.1.1",
+              "description": "Exhibit knowledge of using capital letters appropriately.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.1.1.1",
+                  "description": "Use the upper case letters after colons and question marks.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write well-punctuated sentences on flashcards."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the use of colon with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the flashcards to help learners understand the use of the upper case letters after the colon."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Give a passage and allow learners to put in the colon and the capital letters where necessary."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Explain to learners the use of the upper case letters after question mark."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Give a passage without the punctuations (question mark and capital letters)."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners put in the punctuations and read aloud to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.1.1.2",
+                  "description": "Use upper case letters to begin paragraphs and after exclamation mark.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners the use of capital letters to begin paragraphs and after an exclamation mark."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give a paragraph consisting of about ten sentences without the punctuations and capital letters."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put learners in groups to read the paragraphs, punctuate it and present to the class for discussion."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Check the use of the punctuations used by learners and give the comments."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.2",
+          "title": "Integrating Grammar in Written Language (Punctuation)",
+          "description": "Using punctuation marks appropriately in writing.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.5.2.1",
+              "description": "Show an understanding of using punctuation marks appropriately in writing.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.2.1.1",
+                  "description": "Use punctuation marks appropriately in writing paragraphs.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write well punctuated sentences on flashcards."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Teach learners what a paragraph is."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to show an understanding of using punctuation marks appropriately in writing paragraphs."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.2.1.2",
+                  "description": "Use punctuation marks appropriately in writing essays.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise punctuation marks with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give a topic for learners to write a short essay on."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Take learners' essays and discuss the punctuation used in them."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Give another essay topic for learners to write and discuss among themselves the punctuations used."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.2.1.3",
+                  "description": "Use punctuation marks appropriately in writing reports.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write well punctuated on flashcards."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the flashcards to help learners write their own reports."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Give a topic for learners to write a report on and check the use of their punctuations."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Give a report with no punctuation, ask learners to put in the punctuations marks and discuss them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.3",
+          "title": "Integrating Grammar in Written Language (Use of action words)",
+          "description": "Using action words in perfect tense.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.5.3.1",
+              "description": "Demonstrate knowledge on the appropriate use of action words.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.3.1.1",
+                  "description": "Recognise and use perfect tense action words in sentences.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention some action words and use them in sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the sentences on the board and discuss the perfect tense with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow a learner to give an action word (verb) and another learner to use it to form a sentence with the verb in the perfect tense."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Talk about the perfect tense and give examples on the board."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write some sentences and allow learners to identify the perfect action words in the sentences."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Allow the learners to use the verbs to form sentences orally."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Tell the learners to put the verbs in the perfect tense."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.3.1.3",
+                  "description": "Apply the use of the singular and plural subject and verb forms that go with them.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write sentences with the subject in singular form and discuss with learners the agreement between the verb and the subject."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Allow learners to give more sentences orally and talk about the subject-verb agreement."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Give other sentences with the subject in the plural form."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the agreement between the verb and plural subject."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Ask learners to give more examples and write them on the board."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Call learners in turns to underline the verb."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners change the verbs in the sentences into the perfect tense."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.4",
+          "title": "Integrating Grammar in Written Language (Use of qualifying words)",
+          "description": "Using adjectives and adverbs appropriately.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B6.5.4.1",
+              "description": "Demonstrate knowledge on the use of adjectives and adverbs appropriately.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.4.1.1",
+                  "description": "Explore the use of adjectives in sentences.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise lesson on qualifying words with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners mention some adjectives and write them on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Call learners in turns to use the adjectives written on the board to form sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write the sentences on the board and call a learner to read them aloud."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Give other sentences with adjectives on the board."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Call learners to come to the board and underline the adjectives in the sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.4.1.2",
+                  "description": "Write short description of people using adjectives.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Mention a famous personality in the community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to talk about the person and write out the adjectives that come up in the description."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Show to learners a manila card on which a short description of a person is written."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the description on the manila card with learners and ask learners to recognise the adjectives used in the description."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Ask learners to write a short description of their friends and read some aloud."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.4.1.3",
+                  "description": "Use the different types of adverbs in sentences.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let a learner do an action or activity such as walking or talking."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to describe the action done by the learner."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Introduce the adverb and explain to learners what it is."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Ask learners to mention some adverbs and use them to form sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Ask a learner to identify the adverbs and discuss the types of adverbs with learners."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Give the different types and allow learners to use them in sentences."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners read out their sentences on the board."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.5",
+          "title": "Integrating Grammar in Written Language (Use of postpositions)",
+          "description": "Using postpositions in paragraphs.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B6.5.5.1",
+              "description": "Demonstrate the use of postpositions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.5.1.1",
+                  "description": "Recognise postpositions in paragraphs.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Talk to learners about positions of objects in a particular location."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Put a book on a table or under a chair."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the location of the book with learners and write out the postpositions used by learners on the board."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write other postpositions and allow learners to use them to form sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write a paragraph of about ten to twelve sentences and ask learners to identify the postpositions in them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.5.1.2",
+                  "description": "Use postpositions in writing paragraphs appropriately.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write some postposition words on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners in turns to write a paragraph on a topic using some of the postpositions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.6",
+          "title": "Integrating Grammar in Written Language (Use of simple and compound sentences)",
+          "description": "Using conjunctions to form compound sentences.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B6.5.6.1",
+              "description": "Exhibit knowledge of using conjunctions in forming compound sentences.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.6.1.1",
+                  "description": "Recognise conjunctions such as unless in sentences writing.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners form simple sentences and write some on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Join some of the sentences and discuss with the learners the word used in joining the two simple sentences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain what conjunctions are to learners and give more examples."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write some more sentences and allow learners to recognise and underline the conjunctions in them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.6.1.2",
+                  "description": "Use conjunctions in forming compound sentences correctly.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners write some conjunctions in their books."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call learners in turns to mention and write them out on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners use the conjunctions to form about three sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain to learners the sentence type formed (Compound sentence)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners write some more compound sentences and read them aloud."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.7",
+          "title": "Integrating Grammar in Written Language (spelling)",
+          "description": "Recognising and spelling words correctly.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B6.5.7.1",
+              "description": "Recognise and spell words correctly.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.7.1.1",
+                  "description": "Write nine and ten-letter words correctly.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give a passage to learners to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Select all the nine and ten letter words in the passage and write them on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the words with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Spell out, together with learners, the words on the board."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Call individual learners to spell the words to the class."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Dictate the words for learners to write in their books."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Put learners into groups and do a spelling game among the groups"
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.7.1.2",
+                  "description": "Fill in missing words from a short passage.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give a passage with nine and ten letter words missing from it."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the missing words on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners to fill in the missing words in the passage."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.5.7.1.3",
+                  "description": "Write dictated passages.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read passages for learners to listen to."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the unfamiliar words."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Give the passages to learners to read."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Dictate the passage for the learners to write."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.5.8",
+          "title": "Integrating Grammar in Written Language(Conjunctions)",
+          "description": "Applying conjunctions in writing.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B6.5.8.1",
+              "description": "Apply the knowledge of conjunctions in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.5.8.1.1",
+                  "description": "Identify and use the conjunctions — so that, when, while, if, unless to express purpose, time, condition, etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the coordinating conjunctions – and, or, nor, and but, and subordinating conjunctions by having learners use them in sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Provide sentences for learners to join them with coordinating and subordinating conjunctions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Provide passages and let learners identify the conjunctions in those passages."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let them do other activities like filling blanks with suitable conjunctions and using conjunction in their own sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Introduce the conjunctions 'so that, when, while, if etc' in context."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Provide opportunities for learners to use the conjunctions learnt."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B6.6",
+      "title": "Extensive Reading/Children Literature/Library",
+      "description": "Fostering a culture of reading through magazines and diverse texts.",
+      "orderIndex": 6,
+      "subStrands": [
+        {
+          "code": "B6.6.1",
+          "title": "Building the Love and Culture of Reading in Learners",
+          "description": "Creating and appreciating magazines.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B6.6.1.1",
+              "description": "Exhibit knowledge of understanding and appreciating magazines.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.1.1.1",
+                  "description": "Recognise topics for magazine.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read an article on a particular topic to the class from a magazine."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the article read from the magazine"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to recognise topics for magazines."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the topic with the learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.1.1.2",
+                  "description": "Recognise features of articles for a class magazine.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give a magazine to learners to look at it and talk about the magazine"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the features of an article in the magazine with the class."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners see samples of articles and recognise features of articles for a class magazine."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.1.1.3",
+                  "description": "Write articles for class magazine.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss a topic for an article with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Encourage learners to write the article in their class magazine."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.1.1.4",
+                  "description": "Publish the articles in the magazines.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners read some of the articles in class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assist learners to publish the article in the class magazine."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.1.1.5",
+                  "description": "Appreciate the articles.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show the class magazine with the articles published in it."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners talk about the articles and appreciate them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.2",
+          "title": "Read Aloud with Children",
+          "description": "Reading dialogues and long passages with correct tone.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B6.6.2.1",
+              "description": "Exhibit knowledge of reading dialogue and long passages with correct tone",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.2.1.1",
+                  "description": "Read whole passage with correct tone.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a whole passage with correct intonation to learners"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to read a paragraph each of the passage in turns."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Call learners to read the whole passage in groups and individually."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B6.6.3",
+          "title": "Reading Texts, Poems Narratives and Short Stories and Responding to them",
+          "description": "Reading other materials and responding to them.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B6.6.3.1",
+              "description": "Demonstrate knowledge on reading materials other than the class reader with understanding.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B6.6.3.1.1",
+                  "description": "Read short texts, narratives or stories from other materials aloud and correctly.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Bring to class another material other than the class reader and ask learners to read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read a short text material aloud to learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners read short text, narratives or stories from other materials with correct intonation to one another."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Call individual learners to read the text to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.2",
+                  "description": "Answer questions that are based on the passage.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain unfamiliar words in the passage to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask questions based on the text read."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow learners to answer questions on the passage read."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.3",
+                  "description": "Read paragraphs, passages and stories of different text at a reasonable speed.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage aloud for learners to listen."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Make learners read paragraphs in turns"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow learners to read passages and stories of different texts at a reasonable speed as a game."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.4",
+                  "description": "Find the meaning of unfamiliar words from the dictionary and context.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage or text aloud for learners to listen."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners mention unfamiliar words and write them on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow learners to find the meaning of unfamiliar words from the dictionary and context."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.5",
+                  "description": "Answer factual and inferential questions from the passage read.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask questions based on the text read."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Allow learners to answer factual and inferential questions from the text read."
+                    }
+                  ]
+                },
+                {
+                  "code": "B6.6.3.1.6",
+                  "description": "Write a summary of the passage or text read.",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the topic on how to do summary with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners summarise a paragraph from the text read."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Listen to some of the ideas from the learners on the paragraph summary."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Read a text aloud for learners to listen and allow learners to read on their own."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Allow learners to write a summary of the text read."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

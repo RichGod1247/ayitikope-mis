@@ -1,0 +1,526 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 8",
+  "subject": "Physical Education and Health",
+  "name": "JHS 2 Physical Education and Health",
+  "slug": "jhs-2-physical-education-and-health",
+  "orderIndex": 1,
+  "description": "The JHS 2 Physical Education and Health curriculum focuses on nutrition, disease prevention, first aid, traditional games and dances, physical fitness, and organised sports. It emphasizes the development of core competencies like critical thinking, collaboration, and cultural identity.",
+  "strands": [
+    {
+      "code": "B8.1",
+      "title": "HEALTH EDUCATION",
+      "description": "Understanding nutrition, disease prevention, and first aid.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B8.1.1",
+          "title": "NUTRITION AND PHYSICAL ACTIVITY",
+          "description": "Food nutrients and their influence on physical activity.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.1.1.1",
+              "description": "Demonstrate understanding of the factors that influence the choice of food and feeding habits in relation to participation in sports and physical activity",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.1.1.1",
+                  "description": "Examine the factors that influence the choice of food and eating habits in relation to participation in physical activity",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In small groups, discuss the factors that influence the choice of food and eating habits including misconceptions, religion, age and state of health."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Research (through books, internet, etc.) and do a 5-minute oral presentation in small groups on the effects of good and bad eating habits on participation in sports and physical activity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.2",
+          "title": "DISEASE PREVENTION AND MANAGEMENT",
+          "description": "Common diseases associated with sedentary behavior.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.1.2.1",
+              "description": "Develop awareness of behaviours that promote regular participation in sports and physical activity",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.2.1.1",
+                  "description": "Explore and catalogue several ways of getting active in different contexts including home school, community, etc.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Based on the estimates of performance in your reflective journal (as your effort to increase involvement in physical activity), self-assess how often you participate in a variety of physical activities. Use tally to assess."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Interview your peers in groups on how often they engage in a variety of physical activities at home, school, community, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Plan and practise individually and in groups a variety of physical activities (such as active transportation, group aerobics, active play, keepfit, etc.) at home, school, and community to enhance good health and active lifestyle. Information generated would be used for goal setting and as intervention to increase regular participation in various forms of physical activity at school, home and community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.3",
+          "title": "FIRST AID, INJURY PREVENTION AND MANAGEMENT",
+          "description": "First aid, causes, prevention, and management of injuries.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.1.3.1",
+              "description": "Apply the principles of first aid in a variety of sports and physical activity settings to support environmental and personal safety",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.3.1.1",
+                  "description": "Discuss the concepts and principles of first aid and how to apply them to ensure environmental and personal safety",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, research and present to the class, the concept of first aid and how it can contribute to personal and environmental safety."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Think-pair-share in small groups, identify and discuss the basic principles of first aid (using appropriate first aid procedures and techniques, providing assurance and guidance to the casualty, how and where to get help etc.)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In small groups, explore how and where to get help in cases of emergency and share with the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.3.1.2",
+                  "description": "Apply the principles of first aid in a variety of sports and physical activity settings to develop or create a safe environment for performance",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and discuss the items in a first aid kit."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Demonstrate how to use the first aid items in managing physical activity-related injuries."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Plan and demonstrate how to apply first aid to a casualty who is (unconscious, bleeding, choked, etc. using internationally accepted basic principles.)"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, prepare and submit a first aid kit for injury management in a physical activity setting."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.2",
+      "title": "PHYSICAL ACTIVITY EDUCATION",
+      "description": "Participating in traditional games, dances, fitness activities, and sports.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B8.2.1",
+          "title": "TRADITIONAL RHYTHMIC GYMNASTICS, GAMES AND DANCE",
+          "description": "Traditional games, dances, and rhythmic gymnastics.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.2.1.1",
+              "description": "Perform a variety of traditional games and adaptations for inclusivity and cultural awareness, sensitivity, and appreciation of other cultures (e.g., socio-relational games)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.1.1.1",
+                  "description": "Classify and perform socio-relational traditional games (e.g., agblatsetse, kwanikwani, etc.) and adaptations for cultural awareness, sensitivity, and appreciation of other cultures",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explore and perform various socio-relational traditional games with adaptations, from various regions in the country (e.g., antoakyire, agblatsetse, kwanikwani, etc.)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Prepare a schedule with a variety of socio-relational traditional games and adaptation and perform at school and home."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Follow the video carefully to refine your understanding of probability in maths. Reflect in your journal."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.2.1.2",
+              "description": "Perform a variety of traditional dances and adaptations for inclusivity and cultural awareness (e.g., individual and group dance movements) for personal development and communication",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.2.1.2.1",
+                  "description": "Classify and perform individual and group traditional dance movements and adaptations in the different regions for personal development, communication, inclusivity, and cultural identity (e.g., kpanlogo, wan tiadoone, nwemboaba, etc.)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners research, list and perform a variety of individual and group traditional dance movements from your own locality."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create inclusive and adapted individual and group traditional dance movements and teach others in groups in school and community."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.2.1.3",
+              "description": "Demonstrate understanding and apply skills and movement techniques in global and traditional rhythmic gymnastics movements and adaptations for coordination and appreciation of global cultures",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B8.2.1.3.1",
+                  "description": "Classify and perform global and traditional rhythmic gymnastics movements (e.g., group dance movements- nobabie, hoo-londoreho! etc.) and adaptation for creativity, communication and cultural identity",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research and synchronise traditional individual and group dance movements and global rhythmic dance movements and perform."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create and perform combinations of global and traditional rhythmic dance gymnastics movements in small and large groups."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity. Select rhythmic dance movements from the various regions to expose learners to the wide range of cultures that exist in Ghana."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.2",
+          "title": "PHYSICAL FITNESS",
+          "description": "Physical fitness indicators and activities.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.2.2.1",
+              "description": "Demonstrate the ability to increase the level of participation in a variety of muscular strength and endurance activities",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.2.1.1",
+                  "description": "Participate in muscular strength and endurance activities at varying levels of challenge/difficulty for leisure and personal development",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Set muscular strength and endurance goals and pursue them through personal activities recorded in the B7 log. This may include increased frequency of bike riding, skipping, push-ups, sit-ups, leg-press, etc. done in home and school."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.2.2.2",
+              "description": "Demonstrate the ability to increase the level of participation in a variety of cardiorespiratory activities",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.2.2.2.1",
+                  "description": "Participate in cardiorespiratory activities at varying levels of challenge or difficulty for personal development and leisure",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Set cardiorespiratory strength and endurance goals and pursue them through personal activities recorded in the B7 performance log. This may include increased frequency of bike riding, skipping, swimming, running, walking, skipping, small sided football games done at home, school, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.2.2.3",
+              "description": "Demonstrate the ability to increase the level of participation in a variety of flexibility and balance activities",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B8.2.2.3.1",
+                  "description": "Participate in flexibility and balance activities at varying levels of challenge or difficulty",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Set flexibility and balance goals and pursue them through personal activities recorded in the B7 performance log. This may include increased frequency of line walking, balancing various objects on the head while walking, spoon and egg brisk walk, reaching activities and tumatu done at home and in school."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.3",
+          "title": "ORGANISED SPORTS AND PHYSICAL ACTIVITY PARTICIPATION",
+          "description": "Participating in non-contact, limited-contact, and full-contact sports.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.2.3.1",
+              "description": "Demonstrate the ability to apply movement concepts, principles and strategies in performing non-contact sports (e.g., ball and racket, athletics, and, individual and target sports)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.3.1.1",
+                  "description": "Apply movement concepts, principles, and strategies to perform beginning-intermediate level ball and racket sports (e.g., badminton, tennis and table tennis, etc.)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply movement concepts, principles and strategies in learning beginning-intermediate level ball and racket sports based on individual adaptation and pacing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use adapted rules and equipment to foster inclusion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and organise small-group competitions to develop confidence, empowerment and collaboration."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.2",
+                  "description": "Apply movement concepts, principles, and strategies to perform beginning-intermediate level athletics (e.g., middle distance, jumping and throwing)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply movement concepts, principles and strategies in learning beginning-intermediate level athletics based on individual adaptation and pacing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use adapted rules and equipment to foster inclusion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and organise competitions develop confidence, empowerment and collaboration."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity"
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.3",
+                  "description": "Apply movement concepts, principles, and strategies to perform beginning-intermediate level individual and target sports (e.g., local archery.)",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply movement concepts, principles and strategies in learning beginning-intermediate level individual and target sports (e.g., backward skating, basic stance, hold, draw and release - in local archery etc.) based on individual adaptation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use adapted rules and equipment to foster inclusion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and organise competitions to develop confidence, empowerment and collaboration."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.2.3.2",
+              "description": "Demonstrate the ability to apply movement concepts, principles and strategies in performing limited-contact sports (e.g., stick and ball sports and hand and ball sports)",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.2.3.2.1",
+                  "description": "Apply movement concepts, principles and strategies to perform beginning-intermediate level stick and ball sports (e.g., cricket, rounders, baseball, etc.)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply movement concepts, principles and strategies in learning beginning-intermediate level stick and ball sports based on individual adaptation and pacing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use adapted rules and equipment to foster inclusion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and organise small-group competitions to develop confidence, empowerment and collaboration."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.2.2",
+                  "description": "Apply movement concepts, principles, and strategies to perform beginning-intermediate level hand and ball sports (e.g., volleyball, netball, etc.)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply movement concepts, principles and strategies in learning beginning-intermediate level hand and ball sports based on individual adaptation and pacing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use adapted rules and equipment to foster inclusion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and organise small-group competitions to develop confidence, empowerment and collaboration."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.2.3.3",
+              "description": "Demonstrate the ability to apply movement principles and strategies in performing full-contact sports (e.g., invasion sports, martial art, and traditional wrestling)",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B8.2.3.3.1",
+                  "description": "Apply movement concepts, principles, and strategies in performing beginning-intermediate level of invasion sports (e.g., handball, basketball and football etc.)",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply movement concepts, principles and strategies in learning beginning-intermediate level invasion sports based on individual/team adaptations and pacing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use adapted rules and equipment to foster inclusion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and organise small-group competitions to develop confidence, empowerment and collaboration."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.3.2",
+                  "description": "Apply movement concepts, principles, and strategies in performing beginning-intermediate level martial art (e.g., karate, judo, taekwondo, etc.)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply movement concepts, principles and strategies in learning beginning-intermediate level martial art based on individual adaptation and pacing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use adapted rules and equipment to foster inclusion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and organise small-group competitions to develop confidence, empowerment and collaboration."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.3.3",
+                  "description": "Apply movement concepts, principles, and strategies in performing beginning-intermediate level traditional wrestling (e.g., arm wrestling, abotri etc.).",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply movement concepts, principles and strategies in learning beginning-intermediate level local wrestling, based on individual adaptation and pacing."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use adapted rules and equipment to foster inclusion."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Create and organise small-group competitions to develop confidence, empowerment and collaboration."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Record estimate of duration/measure of performance in your self-journal as your effort to increase involvement in physical activity."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

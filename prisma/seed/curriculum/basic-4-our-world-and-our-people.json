@@ -1,0 +1,852 @@
+{
+  "part": "1/1",
+  "phase": "Upper Primary",
+  "level": "Basic 4",
+  "subject": "Our World and Our People",
+  "name": "Basic 4 Our World and Our People",
+  "slug": "basic-4-our-world-and-our-people",
+  "orderIndex": 1,
+  "description": "The Basic 4 Our World and Our People curriculum focuses on the nature of God as the creator, self-awareness, family and community relationships, environmental safety, national identity, and global community interactions.",
+  "strands": [
+    {
+      "code": "B4.1",
+      "title": "ALL ABOUT US",
+      "description": "Developing understanding of God, self, family, and the community.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B4.1.1",
+          "title": "Nature of God",
+          "description": "Understanding God as the creator of human beings.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.1.1.1",
+              "description": "Demonstrate understanding of the Nature of God as the Creator of human beings",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.1.1.1",
+                  "description": "Explain how special each individual is",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups, learners discuss how each person is created as unique and different from one another: some are short, tall, dull, intelligent, fair in complexion, black in complexion, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners demonstrate the uniqueness of each individual e.g. My name is Esi, I am black and beautiful, there is no one like me, I'm special for who I am, how I look and where I live. I am a Ghanaian. I am proud to be a Ghanaian."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use pictures/video clips to demonstrate the effects of destroying our bodies."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Put learners into groups according to: height, colour, mass, intelligence, etc."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Learners write how different they are from one another."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Learners in groups discuss how they can use their God-given unique qualities: Serve God and human beings, protect and preserve the environment, live together in harmony, contribute to development."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Learners talk about their aspiration and how they want to achieve that."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.2",
+          "title": "Myself",
+          "description": "Understanding self-awareness and peaceful coexistence.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.1.2.1",
+              "description": "Demonstrate understanding of self-awareness and living peacefully with others",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.2.1.1",
+                  "description": "Identify one's strengths and weaknesses and how to promote interpersonal relations",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about their abilities and weaknesses, e.g. of strengths: friendliness, kindness, confidence: e.g. of weaknesses: selfishness, shyness, timidity, lack of confidence."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about ways of initiating good interpersonal relationships, e.g. greetings, respect, tolerance, caring, showing appreciation, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about ways of improving their abilities and overcoming their weaknesses e.g. education, constant, practice, training, counseling."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners use their assertive skills to express their feelings about what disturbs/hurts the e.g. being polite to people, being respectful, being firm."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.2.1.2",
+                  "description": "Mention reasons to live in harmony with one another as a responsible citizen",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention ways of living in harmony with one another, e. g. to promote peace and unity, law and order, growth and development, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In a think-pair-share session, learners talk about attitudes and behaviours that promote harmonious living at home, school, community, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.3",
+          "title": "My Family and the Community",
+          "description": "Understanding family relationships and community members.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.1.3.1",
+              "description": "Demonstrate understanding of family relationships",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.3.1.1",
+                  "description": "Explain and appreciate the importance of being a committed member of the family",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about family members e.g. mother, father, siblings, uncles, aunties, grandparents."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about behaviours expected of committed members of the family e.g. obedience, respect, dedication e.g. taking part in family activities, obedience to elders of the family, respect for family members, accepting responsibility (performing assigned duties), taking initiatives, helping needy relatives."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about the importance of being a committed family member e.g. to promote unity, to gain respect, to be considered a trustworthy person."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners draw and colour a family member e.g. father, mother."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.1.3.2",
+              "description": "Recognise and appreciate people in the community",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.1.3.2.1",
+                  "description": "Identify people in the community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about various people in the community e.g. Parents, Teachers, Pastors, Imams, Chiefs, Queens, Police, Traders, Drivers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play to bring out the characteristics of different people in the community, e.g. strangers, drug addicts, drunkards and people with questionable character and talk about people who are likely to help or harm people."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners draw and colour different people in the community."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners talk about how they can become good people in the community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.4",
+          "title": "Home and School",
+          "description": "Understanding work as a civic responsibility.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.1.4.1",
+              "description": "Demonstrate understanding of work as a civic responsibility",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.4.1.1",
+                  "description": "Explain importance of education and work as a responsible citizen",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups talk about the importance of work at home, school and the community"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about how education is linked to work e.g. Education opens avenues to get work to do, Education opens minds to set up work, Education provides skills to manage work"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners compose a song on the importance of education"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners tell stories of individuals who have been able to create their own jobs"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.2",
+      "title": "ALL AROUND US",
+      "description": "Exploring the environment, weather, plants, animals, and settlement patterns.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B4.2.1",
+          "title": "The Environment and the Weather",
+          "description": "Knowledge of environmental safety, pollution, and the sun.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.2.1.1",
+              "description": "Demonstrate knowledge of environmental safety",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.1.1.1",
+                  "description": "Explain ways of making the environment safe",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about ways of ensuring safety in the environment e.g. keeping the environment clean, planting trees, good sanitation, good roads, safe drinking water, reduce usage of chemicals, reduce burning of things."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show pictures and video clips on human activities that do not make the environment safe: illegal mining (galamsey), indiscriminate cutting down of trees (deforestation), pollution of the air and water bodies, throwing plastic bags around."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners in groups play games or engage in activities/projects that teach ways of ensuring safety in the community e.g. preventing flooding, preventing drowning, preventing fire outbreaks by putting off electrical gadget after use, make fire extinguisher available in homes, preventing road accidents, keeping the home and classroom or school clean, planting trees, recycling waste paper and plastics."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.2.1.2",
+              "description": "Demonstrate knowledge of reducing environmental pollution",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.2.1.2.1",
+                  "description": "Prevent pollution on the environment by performing simple activities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss human activities which pollute the land, water and air such us bush burning, smoke from vehicles and factories and dust from quarry and construction sites."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners in groups talk about the effects of pollution on the environment e.g. i. Heat ii. Health hazards iii. Depletion of natural habitats for animals iv. Flooding"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners play games or do activities that teach the importance of reducing air, water of land pollution."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.2.1.3",
+              "description": "Recognise the sun as an important body in our global environment.",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B4.2.1.3.1",
+                  "description": "Describe the sun as the source of light and heat to the earth",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss the sun as the ultimate source of energy and life on earth and learn more facts about the sun: it is a star, it is at the centre of the solar system, the earth moves round the sun, the sun is 149.6 kilometers from the earth, it is over one million times bigger than the earth."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners conduct experiment or engage in other activities to show how we get light and heat from the sun."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about some of the ways they can protect themselves against sun rays: use umbrella, do not wear heavy clothes, do not wear black and red cloths, wear white, cream, sea blue clothes on sunny days to reflect the heat."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners reflect on human activities that can lead to increase in the sun's heat on the earth."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.2",
+          "title": "Plants and Animals",
+          "description": "Relationship between living and non-living things.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.2.2.1",
+              "description": "Demonstrate understanding of how living and non-living things in the environment are related",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.2.1.1",
+                  "description": "Explore the relationship between living and non-living things in the environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners in groups, discuss the relationship between the following living and non-living things: i. Plants and soil ii. Plants and sunlight iii. Plants and water iv. Humans and air v. Humans and water vi. Humans and land"
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.2.1.2",
+                  "description": "Recognise the need to preserve living and non-living things in the environment as a responsible citizen",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Through group work guide learners to play games and use specific examples to talk about the importance of living and non-living things to humans. e.g. Plants provide oxygen, food, medicine, fuel wood, clothes. Animals provide food, medicine, manure, clothes. Water is used for drinking, washing, cooking, river transport, manufacturing of industrial goods."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.3",
+          "title": "Map Making and Land Marks",
+          "description": "Knowledge of school's physical features.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.2.3.1",
+              "description": "Demonstrate knowledge of the physical features of the school",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.3.1.1",
+                  "description": "Map the school environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify the key features of the school environment e.g. classroom blocks, canteen, library, playground, computer laboratory"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners draw a sketch map of the school and indicate key features on it"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.4",
+          "title": "Population and Settlement",
+          "description": "Understanding settlement patterns in Ghana.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.2.4.1",
+              "description": "Demonstrate understanding of settlements patterns in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.4.1.1",
+                  "description": "Describe the nature of settlements in Ghana.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss the importance of settlements e.g. people live with other people, we do not live in vacuum, for protection, for pooling resources together etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss and write about features that they will consider in choosing a good settlement that would make life easier and comfortable such areas free of floods, access to local raw materials, local water supply for drinking and washing and access to roads and transportation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners engage in activities that teach them to help keep their settlements safe, peaceful and clean."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.3",
+      "title": "OUR BELIEFS AND VALUES",
+      "description": "Exploring worship, festivals, human rights, and leadership.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B4.3.1",
+          "title": "Worship",
+          "description": "Recognizing the importance of prayer and worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.3.1.1",
+              "description": "Recognise the importance of prayer, worship and other acts of worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.1.1.1",
+                  "description": "Show obedience and respect to a supreme being through prayer and worship",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about why we worship God: to draw closer to God, to communicate with God, to show obedience to God, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about the forms of worship in the three main religious groups in Ghana: Christianity, Islam and Traditional: praying, singing, pouring libation, reading scriptures, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners engage in activities: role play, play games, recite prayers, read scriptures, watch videos, or look at pictures/videos - that teach ways of worship to show respect and obedience to God among the three major religious groups."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners draw and model a worship scene."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.3.2",
+          "title": "Festivals",
+          "description": "Significance of cultural practices and celebrations.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.3.2.1",
+              "description": "Explore the Significance of cultural practices, traditions and celebrations in Ghana",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.2.1.1",
+                  "description": "Identify celebrations, positive cultural practices and traditions of different cultures in Ghana",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about celebrations and traditions of different cultures in the community: Christmas, Easter, Eid-Ul-Fitr, Eid-Ul-Adha, Odwira, Aboakyir, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners use pictures, charts or video clips to demonstrate activities of celebrations and traditions of different cultures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners create stories, songs, poems, that teach them about the importance of celebrations and traditions different cultures of where they come from. e.g. Christmas teach us about the birth of Christ. Ohum festival teach us about the time for harvesting yam. Some celebrations remind us where our ancestors came from: Hogbetsotso."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners prepare traditional foods such as kenkey and fried fish, banku and okro stew, fufu and palm soup, tuo-zafi or sew traditional clothing for celebration for display or reflect and write about traditions their parents have passed down to them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.3.3",
+          "title": "Basic Human Rights",
+          "description": "Understanding human rights as a citizen.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.3.3.1",
+              "description": "Demonstrate understanding of human rights a citizen",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.3.1.1",
+                  "description": "Explain fundamental human rights of a child",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain human rights e.g. human rights are rights that acknowledge the dignity and worth of an individual and ensure that equal right and opportunities are available to all without discrimination."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners discuss their rights under equality e.g. right to life, right to family, right to protection."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners compose songs and rhymes on fundamental human rights in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners develop posters describing fundamental human rights of a child using pictures and internet."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.3.4",
+          "title": "Being a Leader",
+          "description": "Recognizing leadership as a value and civic duty.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.3.4.1",
+              "description": "Recognise leadership as an important value and civic duty",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.4.1.1",
+                  "description": "Describe leadership as a valuable skill",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners recall leaders in the community and others they know of (Jesus Christ, Mohammed, Okomfo Anokye, Togbui Tsali, President Mahama, Kwame Nkrumah, Edward Akuffo-Addo, Jerry John Rawlings, John Kofi Agyekum Kufour, John Evan Atta-Mills Yaa Asanteman etc.) and talk about their good leadership qualities: Setting good examples, inspiring people to be better, having clear vision, ability to communicate and understand, maintain positive attitude, take risks responsibly, make good decisions, encourage team activities."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play or engage in other leaders' activities that teach good leadership skills in the home, school and community such as developing self-confidence to needed to lead class members, making decisions about food to eat, as telling stories about Jesus and Mohammed."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners discuss stories about religious personalities and other community leaders who show examples of good leadership."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.4",
+      "title": "OUR NATION GHANA",
+      "description": "Developing national identity and citizenship.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B4.4.1",
+          "title": "Being a Citizen",
+          "description": "Understanding good manners, citizenship, and commitment.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.4.1.1",
+              "description": "Demonstrate good manners at appropriate places",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.1.1.1",
+                  "description": "Show good manners in the home, school and community",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the importance of observing good manners or etiquette in the home such as observing good table manners, greetings, helping others, showing respect and obedience to parents, teachers, school authorities, elders and rulers, respect for the elderly, obedience to authority, respect the Constitution of Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners play games, role play or engage in other activities that teach good manners and etiquette in the home, school and the community."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners talk about the importance of good manners: It ensures law and order in society. It helps everyone develop good moral life. It encourages hardworking. It encourages people to be patriotic etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners think-pair-share to write essays on good deeds: Why should I be courteous?"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.4.1.2",
+              "description": "Demonstrate understanding of who a citizen is",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.4.1.2.1",
+                  "description": "Identify the characteristics of a responsible citizen",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners the types of citizens e.g. i. Active citizen An active citizen is an individual who contributes to the well-being of his or her community. ii. Passive citizen A passive citizen is an individual who does not contribute to the well-being of his or her community."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners through think-pair-share to talk about the characteristics of a responsible citizen, e.g. i. obey rules and regulations ii. diligence iii. patriotism iv. honesty v. respect vi. hard work vii. commitment viii. listening/tolerance to other view points"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners, in groups, identify the characteristics of a good citizen. Case study Teacher uses case study approach to raise a variety of issues, e.g. A pupil finds money in the classroom and keeps it instead of finding the owner. Pupils to react and state their views on this issue."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.4.1.3",
+              "description": "Demonstrate understanding of commitment as a civic value and responsibility",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B4.4.1.3.1",
+                  "description": "Become committed to duties and responsibilities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners explain commitment: A promise, agreement, or understanding you make to/with someone or something."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners mention the ways by which they are expected to show commitment. For example: Show commitment to God such as praying everyday and reading scriptures, helping others showing charity. Show commitment to the family duties such as keeping room clean and taking care of pets. Showing commitment to school work by doing homework, keeping the classroom neat, and coming to school everyday."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners role play scenarios or engage in other activities that show the benefits for showing commitment. We show respect to God, teachers, parents and leaders. We develop positive self-identity. We develop good relationships etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.2",
+          "title": "Authority and Power",
+          "description": "Demonstrating respect for authority.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.4.2.1",
+              "description": "Demonstrate respect for people with authority and power",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.2.1.1",
+                  "description": "Show respect and obedience to those in authority",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners identify people (can use films and pictures) with authority and power in the community: parents, e.g. Home: parents, grandparents uncles, aunties School: headteacher, teachers, prefects Community: chiefs, pastors, Imams, Assembly members, police State: President, Speaker of Parliament, Members of Parliament."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners talk about why they should respect and obey people in authority: e.g. to promote unity, peace and harmony, to avoid punishment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, learners talk and write about why they should obey authority. Learners present their work for class discussion."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.3",
+          "title": "Responsible use of Resources",
+          "description": "Understanding water usage.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.4.3.1",
+              "description": "Demonstrate understanding of responsible use of water",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.3.1.1",
+                  "description": "Identify ways to use water responsibly",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Using pictures/videos, learners discuss ways to use water responsibly e.g. close the tap after fetching water, do not use treated water for watering plants"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners compose songs and play games on how to use water responsibly"
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners draw people using water responsibly"
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Learners form clubs to serve as ambassadors for responsible use of water"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.4",
+          "title": "Farming in Ghana",
+          "description": "Gardening basics and crop production.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.4.4.1",
+              "description": "Know about gardening basics such as preparing healthy soil and nursing activities for crop production (seed bed preparation)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.4.1.1",
+                  "description": "Prepare nursery beds nurse seeds, transplant seedlings and maintain small gardens",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners talk about the importance of gardening."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners undertake visits to vegetable gardens of farms or look at pictures of vegetable and fruit farms and talk about different vegetables farmers in Ghana grow."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Learners undertake practical activities in the home or school that will teach them how to prepare healthy soil for nursing seeds and prepare seedbeds, how to nurse and transplant seedlings, and how to care for small gardens of eggs, pepper, onion, cabbage, lettuce, okro, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Note: learners use the opportunity to learn good agricultural practices such as: Using the right tools in preparing nursery beds/bags. Filling nursery beds/boxes/poly bags with fertile soil in preparation for nursing seeds. Nursing the seeds in the soil at the required depth and water them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.5",
+      "title": "MY GLOBAL COMMUNITY",
+      "description": "Connecting with neighbouring countries.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B4.5.1",
+          "title": "Our Neighbouring Countries",
+          "description": "Cultural exchanges and knowledge of rocks.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.5.1.1",
+              "description": "Demonstrate knowledge of the cultural exchanges between Ghana and her neighbours",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.1.1.1",
+                  "description": "Describe cultural exchanges between Ghana and her neighbours",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners mention common cultural practices between Ghana and her neighbours e.g. language, food, farming"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners in groups describe common festivals and other cultural activities between Ghana and her neighbours e.g. Christmas, Eid-ul-Adha Food: gari, cassava, yam Dressing: kaba and slit, smock"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B4.5.1.2",
+              "description": "Demonstrate knowledge of rocks",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B4.5.1.2.1",
+                  "description": "Explain the uses of rocks",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Learners discuss the importance of rocks e.g. building houses and constructing roads"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Learners role play some of the uses of rocks"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

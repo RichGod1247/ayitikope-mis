@@ -1,0 +1,466 @@
+{
+  "phase": "Lower Primary",
+  "level": "Basic 3",
+  "subject": "Religious and Moral Education",
+  "name": "Basic 3 Religious and Moral Education",
+  "slug": "basic-3-religious-and-moral-education",
+  "orderIndex": 1,
+  "description": "The Basic 3 Religious and Moral Education curriculum focuses on environmental safety, the purpose of creation, religious worship and festivals, the early lives of religious leaders, and the roles of family and community in relationships and safety.",
+  "strands": [
+    {
+      "code": "B3.1",
+      "title": "God, His Creation and Attributes",
+      "description": "Understanding the environment and the purpose of God's creation.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B3.1.2",
+          "title": "The Environment",
+          "description": "Identifying ways of ensuring environmental safety.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.1.2.1",
+              "description": "Identify ways of ensuring environmental safety",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.1.2.1.1",
+                  "description": "Demonstrate ways to care for the environment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use questions and answers for learners to explain the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using Think-Pair-Share, let learners talk about ways of caring for the environment through: tree planting, proper disposal of waste, legal mining, clean-up exercises, avoiding environmental pollution, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners organise and do clean-up exercises in the school environment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners draw and colour activities of caring for the environment."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Guide learners in groups to do a project on: clearing a rubbish dump, planting trees, checking erosion, clearing choked gutters, etc."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners present their work in class for appreciation and discussion."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.1.3",
+          "title": "The Purpose of God's Creation",
+          "description": "Explaining the purpose of God's creation.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.1.3.1",
+              "description": "Explain the purpose of God's creation",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.1.3.1.1",
+                  "description": "Explain the purpose of God's creation of humankind.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners the creation of humankind. -Who were the first people God created? -Who was created first?"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners tell creation stories from the three religious groups in Ghana."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain why God created human beings: to take care of other creatures to worship and serve Him, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.3.1.2",
+                  "description": "Give reasons for protecting God's creation.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to think-pair-share on why we should protect God's creation: to preserve creation for generations, it is a command from God, our survival depends on other creation: food, medicine, shelter, air, etc. and it is service to God and humankind."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.1.3.1.3",
+                  "description": "Explain the need for good relationship among people of different ethnic groups.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to talk about good relationships."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners talk about things that promote good relationships: comportment, respect, love, obedience, humility, friendliness, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners identify their friends and say things they like about them."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners discuss in groups, the need for good relationships."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let groups present their findings to the class: we are people created by God to ensure peace and unity, companionship, teamwork, caring for one another, etc."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners dramatise behaviours that show good relationships."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.2",
+      "title": "Religious Practices and their Moral Implications",
+      "description": "Understanding religious worship and festivals.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B3.2.1",
+          "title": "Religious Worship in the Three Major Religions in Ghana",
+          "description": "Appreciating the importance of religious worship.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.2.1.1",
+              "description": "Appreciate the importance of religious worship",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.1.1.1",
+                  "description": "Name the sacred scriptures of the three major religions.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to mention the sacred scriptures: The Holy Bible (Christianity), The Holy Qur'an, Hadith (Islam), Sacred Myths, parables and taboos (Traditional Religion), etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners in groups, talk about the Holy Scriptures and which religion each belongs to."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to recite simple texts from the scriptures: Al-Fatihah (Islam), Psalm 23 (Christianity) and Sacred Myths, folktales, parables, etc. (Traditional Religion)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners write simple texts from the sacred scriptures."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.1.1.2",
+                  "description": "Give reasons for studying the sacred scriptures of the three major religions among their followers.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners talk about the religion they belong to."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners mention the scriptures their religion uses."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the importance of studying the sacred scriptures: they lead us to God, they help us to know the Truthfulness about God and the world, they help us to lead good moral lives, they give us messages from God, etc."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners recite texts from the scriptures."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Guide learners to talk about the moral lessons from the scriptures."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.2.2",
+          "title": "Festivals in the Three Major Religions",
+          "description": "Explaining the importance of religious festivals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.2.2.1",
+              "description": "Explain the importance of religious festivals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.2.2.1.1",
+                  "description": "Describe how various festivals are celebrated.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention religious festivals they have witnessed or heard about: Islam-Eid-ul-Fitr, Eid-ul-Adha, etc. Christianity-Easter, Christmas, Ash Wednesday, Pentecost Day, etc. Traditional-Aboakyer, Hogbetsotso, Adae, Fetu Afahye, Feok, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners, in groups, describe how various festivals are celebrated."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners dramatise activities that take place during the festivals."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners draw scenes from festivals: durbar of chiefs, drumming and dancing, merry-making, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.2.2.1.2",
+                  "description": "Demonstrate the importance of religious festivals.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show pictures and videos of religious festivals."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Using pictures and or video clips etc., let learners demonstrate how festivals are celebrated."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners talk about the scenes in the pictures or the videos."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners to narrate the events in the festivals they have participated in."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "In groups, guide learners to discuss the importance of festivals: to remember key events in the past, reconciliation, renewal of faith, thanksgiving, etc."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners draw scenes they saw during the festival they witnessed."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.3",
+      "title": "Religious Leaders",
+      "description": "Narrating the youthful life stories of religious leaders.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B3.3.1",
+          "title": "Early Life of the Leaders of the three Major Religions",
+          "description": "Narrating the youthful life stories of religious leaders.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.3.1.1",
+              "description": "Narrate the youthful life stories of the leaders of the major religions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.3.1.1.1",
+                  "description": "Describe the youthful lives of the leaders of the three major religions in Ghana.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Guide learners to talk about the youthful lives of the religious leaders: The Lord Jesus Christ, The Holy Prophet Muhammad (S.A.W), A Traditional Religious Leader."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners talk about the occupations of the religious leaders. The Lord Jesus Christ as a carpenter, The Holy Prophet Muhammad (S.A.W) as a businessman, A Traditional Religious Leader, e. g. Egya Ahor as a farmer."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In groups, let learners write short paragraphs on the occupational lives of the religious leaders and present to class for discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.3.1.1.2",
+                  "description": "Identify and explain the moral lessons of the youthful life of the religious leaders.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners the moral lessons of the youthful lives of the religious leaders: piety, honesty, sacrifice, patience, hard work, courage, perseverance, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Guide learners to talk about how they can apply the moral lessons they learnt from the lives of the religious leaders in their daily lives."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners dramatise the moral lives of the religious leaders."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B3.4",
+      "title": "The Family and the Community",
+      "description": "Appreciating the role of family and community in relationship with God and personal safety.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B3.4.1",
+          "title": "Roles and Relationships",
+          "description": "Appreciating family and community roles in relationship with God.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B3.4.1.1",
+              "description": "Appreciate the role of the family and the community in their relationship with God",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.4.1.1.1",
+                  "description": "Discuss God's promises to humankind.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to identify the promises God made to humankind: the call of Abraham (Ibrahim)-God promised him with eternal life, the call of Moses (Musa), etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners discuss the calls of Abraham (Ibrahim) and Moses (Musa)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners present their work to class for discussion."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners role-play the call of Moses (Musa)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.1.1.2",
+                  "description": "Identify the benefits of responding to God's call.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss with learners the ways we respond to God's call: Prayer, service to humankind, caring for the environment, helping the needy (charity), etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners mention the benefits of responding to God's call: blessings from God, drawing closer to God, long life, prosperity, eternal life, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Guide learners to discuss the benefits of responding to God's call."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners in their groups, write four benefits of responding to God's call and present their works for class discussion."
+                    }
+                  ]
+                },
+                {
+                  "code": "B3.4.1.1.3",
+                  "description": "Identify moral lessons learnt from responding to God's call.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners discuss moral lessons derived from responding to God's call."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Lead learners to mention the moral lessons they learnt from responding to God's call: obedience, respect, sacrifice, commitment, reverence for God, humility, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Using the sacred scriptures, let learners dramatise moral activities such as humility, obedience, reverence, commitment, respect, honouring promises, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B3.4.2",
+          "title": "Personal Safety in the Community",
+          "description": "Living safely with each other.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B3.4.2.1",
+              "description": "Explain the role of the family members in living safely with each other",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B3.4.2.1.1",
+                  "description": "Explain the need to live in harmony with one another.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Have learners mention ways of living in harmony with one another."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the need to live in harmony with one another: to promote peace and unity, law and order, growth and development, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "In a Think-Pair-Share session, let learners talk about attitudes and behaviours that promote harmonious living at home, school, community, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

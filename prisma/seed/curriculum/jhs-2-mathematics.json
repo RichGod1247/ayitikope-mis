@@ -1,0 +1,1200 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 8",
+  "subject": "Mathematics",
+  "name": "JHS 2 Mathematics",
+  "slug": "jhs-2-mathematics",
+  "orderIndex": 1,
+  "description": "The JHS 2 Mathematics curriculum builds on Basic 7 concepts, advancing into standard form, sets, operations with larger numbers and decimals, laws of indices, ratio and rates, linear inequalities, geometry including bearings and vectors, and data handling including probability.",
+  "strands": [
+    {
+      "code": "B8.1",
+      "title": "NUMBER",
+      "description": "Developing number sense, numeration systems, and operations.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B8.1.1",
+          "title": "NUMBER AND NUMERATION SYSTEMS",
+          "description": "Standard form, significant figures, and sets.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.1.1.1",
+              "description": "Demonstrate understanding and the use of place value for expressing quantities in standard form and rounding numbers and decimals to significant figures and a given number of decimal places",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.1.1.1",
+                  "description": "Apply the understanding of place value to read and write in number quantities over 1,000,000,000",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read and write numbers in words and vice versa."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.2",
+                  "description": "Skip count forwards and backwards in 10,000s, 100,000s, 500,000s, etc.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Count forward in 500,000s up to the fifth number."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Count backwards in 100,500s up to the fifth number."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.3",
+                  "description": "Compare and order whole numbers using \">, <, and =\"",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify numbers which are 100,000, 1,500,000, etc. more or less than given 8 to 9-digit number."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.4",
+                  "description": "Express integers of any size into standard form",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write integers as a power of 10."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write multiples of 10 in standard form."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write integers in standard form."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.5",
+                  "description": "Express integers in a given number of significant and decimal places",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Express any given integer to a given number of significant figures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Express numbers correct to given decimal places."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.1.6",
+                  "description": "Create and solve word or real-life problems on place values",
+                  "orderIndex": 6,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve word or story problems."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.1.1.2",
+              "description": "Apply the concepts and vocabulary of sets on sets of factors of numbers to identify perfect squares, determine their square root and solve real life problems involving union and intersection of two sets",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.1.1.2.1",
+                  "description": "Use the concept of sets to identify perfect squares and determine the square roots. Use the knowledge on sets and sets of factors of numbers to solve problems",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify perfect squares or perfect numbers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the knowledge on odd numbers to determine the square root of perfect numbers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.1.2.2",
+                  "description": "Use the knowledge on sets and sets of factors of numbers to solve real life problems involving union and intersection",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the set of factors of given numbers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve story and real-life problems involving union and intersection of sets."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.2",
+          "title": "NUMBER OPERATIONS",
+          "description": "Operations, mental strategies, and indices.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.1.2.1",
+              "description": "Apply mental mathematics strategies and number properties used to solve problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.2.1.1",
+                  "description": "Multiply and divide by power of 10 including decimals and the benchmark fractions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Recall multiplication facts up to 144 and related division facts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Recall decimal names of the benchmark fractions converted to decimals or percentages (and vice versa)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Determine a product when a decimal number is a multiple of 10, 100, 1000, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.2",
+                  "description": "Apply mental mathematics strategies and number properties to do calculation",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Apply halving and doubling to determine the product given product of two given numbers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.1.3",
+                  "description": "Apply mental mathematics strategies to solve word problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Play mental maths word games."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play mental maths word games to use mental strategies, short methods and sundry tables to develop fluency."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.1.2.2",
+              "description": "Apply the understanding of the addition, subtraction, multiplication and division of (i) whole numbers within 10,000, and (ii) decimals up to 1/1000, to solve problems and round answers to given decimal places",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.1.2.2.1",
+                  "description": "Add and subtract more than four-digit numbers",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use partitioning (or expanded form) and place value system to add and subtract whole and decimal numbers."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.2.2",
+                  "description": "Multiply or divide multi-digit numbers by 2- and 3-digit numbers",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the area model (Expand and Box method) to multiply and divide efficiently."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Multiply whole numbers using the vertical place value method."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Multiply whole numbers using the lattice method."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Investigate and determine basic division facts including divisibility test."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.2.3",
+                  "description": "Create and solve story problems involving decimals on the four basic operations",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve word problems."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve word problems on data presented in a table."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.1.2.3",
+              "description": "Demonstrate understanding and the use of the laws of indices in solving problems (including real life problems) involving powers of natural numbers",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B8.1.2.3.1",
+                  "description": "Identify and explain the laws of indices",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "State the Laws of Indices."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.3.2",
+                  "description": "Apply the laws of indices to simplify and evaluate numbers involving powers of numbers. (PEDMAS)",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the laws of indices to solve problems involving powers of number."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.3.3",
+                  "description": "Solve exponential equations",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve equations involving indices."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.2.3.4",
+                  "description": "Solve real life problems involving powers of natural numbers",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve real-life problems on populations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.3",
+          "title": "FRACTIONS, DECIMALS AND PERCENTAGES",
+          "description": "Advanced operations with fractions.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.1.3.1",
+              "description": "Apply the understanding of operation on fractions to solve problems involving fractions of given quantities and round the results to given decimal and significant places",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.3.1.1",
+                  "description": "Review fractions and solve problems involving basic operations on fractions",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Review the concept of fractions (shading, equivalent, simplest form, mixed numbers, improper fractions)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Review the basic operations on fractions (adding, subtracting, multiplying, dividing)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.3.1.2",
+                  "description": "Add and/or subtract, multiply and/or divide given fractions, by using the principle of the order of operations (the rule of BODMAS or PEMDAS), and apply the understanding to solve problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the order of operations (BODMAS or PEDMAS) to simplify whole number expressions with more than two operations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use the order of operations (BODMAS or PEDMAS) to simplify fractions with more than two operations."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.3.1.3",
+                  "description": "Review word problems involving basic operations on fractions and related concepts",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve word problems involving fractions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.1.4",
+          "title": "NUMBER: RATIOS AND PROPORTION",
+          "description": "Applying ratio, rate, and proportion.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B8.1.4.1",
+              "description": "Demonstrate an understanding of ratio, rate and proportions and use it these to solve real-world mathematical problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.1.4.1.1",
+                  "description": "Use ratio reasoning to convert measurement units; manipulate and transform units appropriately when multiplying or dividing quantities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Convert one unit of measure to another using ratio reasoning."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Manipulate and use units appropriately to solve problems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.4.1.2",
+                  "description": "Solve unit rate problems including those involving unit pricing and constant speed; and speed translation",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve rate problems (e.g. mowing lawns)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve unit rate problems (e.g. calories burned)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.4.1.3",
+                  "description": "Apply the knowledge of speed to draw and interpret travel graphs or distance-time graphs",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw a graph for a passage on a distance time graph."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Interpret a given travel graph."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.4.1.4",
+                  "description": "Recognise and represent proportional relationships between quantities by deciding whether two quantities are in a proportional relationship",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use given tables to check proportional relationships."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use graphs to check proportional and non-proportional relationship."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.1.4.1.5",
+                  "description": "Identify the constant of proportionality (unit rate) in tables, graphs, equations, diagrams, and verbal descriptions of proportional relationships",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find the constant of proportionality from a table of values, equation and a graph."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve problems involving constant of proportionality."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.2",
+      "title": "ALGEBRA",
+      "description": "Patterns, algebraic expressions, variables, and equations.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B8.2.1",
+          "title": "PATTERNS AND RELATIONS",
+          "description": "Linear relations, gradients, and equations of lines.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.2.1.1",
+              "description": "Demonstrate the ability to draw table of values for a linear relation, graph the relation in a number plane, determine the gradient of the line and use it to write equation of a line of the form y = mx + c",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.1.1.1",
+                  "description": "Calculate the gradient of a line and use it to write equation of a line of the form y = mx + c",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of gradient using real life examples."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine the formula for calculating the gradient of a line."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Determine the gradient when given two coordinates."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Determine the gradient of a straight line when its equation is given."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Determine the gradient from a graph."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Determine the slope-intercept form of the equation of a straight line."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Determine the point-slope form of the equation of a straight line."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.1.1.2",
+                  "description": "Use graph of a linear relation to determine subsequent missing elements in the ordered pairs of the relation",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use information from a graph to find missing elements."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use information from a graph to find missing elements (real life context e.g., growth of a tree)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.1.1.3",
+                  "description": "Use graphs of linear relations to solve real life problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw graphs for real life problems."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Nhyira paints portraits of people for a living (graph interpretation)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.2",
+          "title": "ALGEBRAIC EXPRESSIONS",
+          "description": "Solving problems with algebraic expressions.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.2.2.1",
+              "description": "Solve problems involving algebraic expressions (including multiplication of binomial expressions) factorise given expressions and substitute values to evaluate algebraic expressions",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.2.1.1",
+                  "description": "Use the distributive property to remove brackets and solve multiplication of binomial expression",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Expand expressions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Multiply binomial expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.2",
+                  "description": "Perform addition, subtraction, multiplication and division of algebraic expressions including fractions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve problems based on multiplication and division of algebraic fractions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve problems based on addition and subtraction of algebraic fractions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.3",
+                  "description": "Substitute values to evaluate algebraic expressions including fractions and use these to solve problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Simplify, then substitute in the value to evaluate the following expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.2.1.4",
+                  "description": "Factorise given expressions involving the four operations and use the experiences gained to solve problems",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Factorise expressions using common factors and grouping."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.2.3",
+          "title": "VARIABLES AND EQUATIONS",
+          "description": "Linear inequalities.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.2.3.1",
+              "description": "Demonstrate an understanding of linear inequalities of the form x + a >= b (where a and b are integers) by modelling problems as a linear inequalities and solving the problems concretely, pictorially, and symbolically",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.2.3.1.1",
+                  "description": "Translate word problems into linear inequalities in one variable and vice versa",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Make mathematical sentences involving linear inequalities from word problems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.2",
+                  "description": "Solve simple linear inequalities",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use the idea of balancing to solve simple linear inequalities."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.2.3.1.3",
+                  "description": "Determine solution sets of simple linear inequalities in given domains",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find solution sets for linear inequalities."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.3",
+      "title": "GEOMETRY AND MEASUREMENT",
+      "description": "Shapes, space, measurement, and transformations.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B8.3.1",
+          "title": "SHAPES AND SPACE",
+          "description": "Angles, triangles, and geometric constructions.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.3.1.1",
+              "description": "Demonstrate understanding and use of the relationship between parallel lines and alternate and corresponding angles and use the sum of angles in a triangle to deduce the angle sum in any polygon",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.1.1.1",
+                  "description": "Draw and determine the values of alternate and corresponding angles",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw diagrams and calculate the values of marked angles ."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Calculate the value of angles a, b, c, and d."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.1.2",
+                  "description": "Determine the values of angles in a triangle using knowledge of the sum of interior angles in a triangle and other properties",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate the values of y and the angles in the triangle."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Deduce the formula for the sum of interior angles in a polygon and determine the value of an angle in a regular hexagon."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use the formula (n-2)180 to determine the value of x in the hexagon."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.3.1.2",
+              "description": "Demonstrate the ability to perform geometric constructions of the angles (75, 105, 60, 135 and 150), and construct triangles and find locus of points under given conditions",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.3.1.2.1",
+                  "description": "Construct and bisect angles of 120, 105, 135 and 150",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Perform geometric construction of an angle of 120 and verify."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform geometric construction of an angle of 150 and verify."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Perform geometric construction of an angle of 135 and verify."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Perform geometric construction of an angle of 105 and verify."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.2.2",
+                  "description": "Construct scalene triangles, isosceles triangles, equilateral triangles, obtuse-angled triangle, and acute-angled triangles in different orientations under given conditions",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Construct an equilateral triangle when a side is given."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct an equilateral triangle by using point A as centre."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct an isosceles right-angled triangle when the base line is given."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Construct an isosceles triangle when all the sides are given."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Construct an isosceles triangle when the base angles and base side are known."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Construct acute-angled triangles, obtuse-angled triangles and right-angled triangles when a side and two angles are given."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Construct triangles when all the sides are given."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Construct triangles when two sides and one angle are given."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.1.2.3",
+                  "description": "Construct loci under given conditions",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the locus of a circle."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform geometric construction to locate the centre of a circle."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw circles of given radii at points as centre and chord."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Construct a regular hexagon within a circle given the length of a side."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use intersecting circles to construct a regular hexagon and measure its sides."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Construct a perpendicular bisector (mediator) as a locus."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Construct an angle bisector as a locus of points equidistant from two lines."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Construct parallel lines as a locus."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Perform geometric constructions to prove that two given lines are parallel."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.2",
+          "title": "MEASUREMENT",
+          "description": "Area of circle, Pythagoras theorem, trigonometry, and vectors.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B.8.3.2.1",
+              "description": "Apply the Pythagoras theorem, the primary trigonometric ratios and the formulas for determining the area of a circle to solve real problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.2.1.1",
+                  "description": "Use the relationship between the diameter and circumference of a circle to deduce the formula for finding its area, and use this to solve problems",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Deduce the area of a circle by arranging sectors to form a rectangle."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Solve problems on area of a circle."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.2.1.2",
+                  "description": "Establish the relationship between the hypotenuse 'c' and the two other sides 'a' and 'b' of a right-angled triangle (i.e. a² + b² = c²) and use it to solve problems",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Construct squares on the three sides of a right-angled triangle to state the relationship."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use compasses and ruler to construct squares on a right-angled triangle."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Solve problems involving the Pythagoras theorem."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.2.1.3",
+                  "description": "Use the Pythagorean theorem to solve problems on right angled triangle",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Find the altitude of an isosceles triangle."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find the length of indicated diagrams."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.2.1.4",
+                  "description": "Use the Pythagoras theorem to calculate the area of a triangle in real life problems",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Solve word problems using Pythagoras theorem (e.g., boat travel, picture frame, ladder)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Find height, area, and perimeter of an equilateral triangle."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.2.1.5",
+                  "description": "Establish the relationship between the basic trigonometric ratios and solve problems involving right-angled triangles",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and recognise the three primary trigonometric ratios (sine, cosine, tangent)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the angles of elevation and depression in real life situations."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use trig ratios and the Pythagoras theorem to solve problems involving angles of elevation and depression."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.3.2.2",
+              "description": "Demonstrate understanding of addition and subtraction of vectors and their applications in solving basic problems",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.3.2.2.1",
+                  "description": "Add, subtract and find the scalar multiplication of vectors in the component form",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Add vectors using the graphical method."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Add and subtract vectors in their corresponding components."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Multiply a vector by a scalar."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Solve vector addition and subtraction problems."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.2.2.2",
+                  "description": "Demonstrate understanding of vector equality",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Investigate the properties of equal vectors."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.3.3",
+          "title": "POSITION AND TRANSFORMATION",
+          "description": "Rotation and congruent shapes.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B8.3.3.1",
+              "description": "Perform a single transformation (i.e. rotation) on a 2D shape using graph paper (including technology) and describe the properties of the image under the transformation (i.e. congruence)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.3.3.1.1",
+                  "description": "Understand rotation and identify real-life situations involving rotation",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify examples of rotation situations in everyday life and the nature of rotational movements."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.3.1.2",
+                  "description": "Draw rotation image in a coordinate plane and determine the angle of rotation",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Rotate a shape through a given centre of rotation and angle of rotation."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine the angle of rotation using the points of an object, its images and centre."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.3.3.1.3",
+                  "description": "Investigate the concept of congruent shapes",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use multiple and varied examples of rotation on coordinate planes to verify congruent shapes."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B8.4",
+      "title": "HANDLING DATA",
+      "description": "Data collection, analysis, and probability.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B8.4.1",
+          "title": "DATA",
+          "description": "Data collection methods and analysis.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B8.4.1.1",
+              "description": "Select, justify, and use appropriate methods to collect data (quantitative and qualitative), use the data (grouped/ungrouped) to construct and interpret frequency tables, bar charts, pie charts, and pictograms to solve and/or pose problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.1.1.1",
+                  "description": "Identify types of given data including numerical, categorical, ungrouped and grouped data",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss information which may be numeric (discrete and continuous)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss information which may be non-numeric (ordinal and categorical)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify ungrouped and grouped data from test scores."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.1.1.2",
+                  "description": "Select and justify a method to collect data (quantitative and qualitative) to answer a given question",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify data collection methods for specific situations."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Select a study and design an appropriate form to be used in collecting data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.1.1.3",
+                  "description": "Organise data (grouped/ungrouped), present it in frequency tables, line graphs, pie graphs, bar graphs and/or pictographs (representations include info graphics, waffle diagrams, box and whisker plots and stem and leaf plots) and analyse it to solve and/or pose problems",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Present raw data in a frequency table."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Organise data and draw a bar chart and a pie chart."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use waffle charts to represent data."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Make a stem and leaf plot to represent data."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use stem and leaf plot to solve problems."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B8.4.1.2",
+              "description": "Demonstrate an understanding of measures of central tendency (mean, median, mode) and range for grouped data and explain when it's most appropriate to use the mean, median, or mode",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B8.4.1.2.1",
+                  "description": "Calculate the mean, median and mode for a given set of ungrouped data, and explain why these values may be the same or different",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate mean, median and mode for sales data."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Work out mean, median, mode for housing area data."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Calculate mean, median, mode for frequency data."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.1.2.2",
+                  "description": "Justify a context in which the mean, median or mode is the most appropriate measure of central tendency to use when reporting findings",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate measures and justify the best measure for given data."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B8.4.2",
+          "title": "CHANCE OR PROBABILITY",
+          "description": "Probability experiments with independent events.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B8.4.2.1",
+              "description": "Identify the sample space for a probability experiment involving two independent events and express the probabilities of given events as fractions, decimals, percentages and/or ratios to solve problems",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B8.4.2.1.1",
+                  "description": "Perform a probability experiment involving two independent events such as drawing coloured bottle tops from a bag with replacement and list the elements of the sample space",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List elements of sample space for picking bottle tops with replacement."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine sample space for throwing a die and tossing a coin."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss independent events."
+                    }
+                  ]
+                },
+                {
+                  "code": "B8.4.2.1.2",
+                  "description": "Express the probabilities of the events as fractions, decimals, percentages and/or ratios",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate probabilities for spinner outcomes and use tree diagrams."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Determine sample space and draw probability tree diagram for picking pens with replacement."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

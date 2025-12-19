@@ -1,0 +1,2859 @@
+{
+  "part": "1/1",
+  "phase": "Upper Primary",
+  "level": "Basic 4",
+  "subject": "Ghanaian Language",
+  "name": "Basic 4 Ghanaian Language",
+  "slug": "basic-4-ghanaian-language",
+  "orderIndex": 1,
+  "description": "The Basic 4 Ghanaian Language curriculum aims to develop listening, speaking, reading, and writing skills in the Ghanaian language. It focuses on oral language development through songs, poems, and storytelling, as well as reading comprehension, grammar usage, and composition writing. The curriculum emphasizes the integration of cultural values and the use of language in various contexts.",
+  "strands": [
+    {
+      "code": "B4.1",
+      "title": "Oral Language (Listening and Speaking)",
+      "description": "Developing listening and speaking skills through songs, poems, storytelling, dramatisation, and conversation.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B4.1.1",
+          "title": "Songs",
+          "description": "Using traditional and occupational songs to understand cultural values and work ethics.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.1.1.1",
+              "description": "Exhibit knowledge of traditional and occupational songs by recognising their types and their related songs.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.1.1.1",
+                  "description": "Sing and discuss songs connected to traditional occupations and their importance.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a familiar traditional song."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show learners a video of a traditional song being performed."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the lyrics of the song with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners sing songs connected to the traditional occupation in their locality (Pick one occupation at a time)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "After watching a video on a performed traditional occupation, allow the learners to discuss some importance of traditional occupation songs."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Work songs: - reduce fatigue, boredom provides enjoyment allows systematic work, inspires fellow workers to work harder etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.3",
+          "title": "Poems",
+          "description": "Exploring and understanding poems and their moral lessons.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.1.3.1",
+              "description": "Demonstrate knowledge and understanding of selected poems by discussing them.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.2.1.1",
+                  "description": "Explore the poems of about five lines correctly and discuss the moral lessons in the poem.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a popular traditional song."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explore a poem to learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let them listen and take note of keywords words in the poem."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Ask learners to mention the words they heard."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write the words on the board."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Lead learners to say the words aloud."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners say the words and use them to form their own sentences."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Let learners explore the poem correctly."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Put learners in groups."
+                    },
+                    {
+                      "orderIndex": 10,
+                      "description": "Let them discuss the moral lessons in the poems in groups and tell the class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.4",
+          "title": "Listening and Story Telling",
+          "description": "Understanding the structure and features of folktales.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.1.4.1",
+              "description": "Demonstrate knowledge on the structure and features of folktales.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.4.1.1",
+                  "description": "Retell a folktale of about three scenes and recognise its beginning and end and discuss the features of the folktale.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a popular song."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play a video of someone telling a folktale."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Encourage learners to take note of whatever they see and hear."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Teach learners what a folktale is."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Call learners individually to retell what they saw and heard in the video."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Put learners into groups and ask them to compose a folktale on any topic of their choice."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners present their folktales to the class."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "After watching the video on someone telling a folktale, lead learners to discuss what they saw and heard."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Tell learners a folktale."
+                    },
+                    {
+                      "orderIndex": 10,
+                      "description": "Discuss the beginning and end of the folktale with learners. E.g. Beginning or opening, middle or body and end or conclusion."
+                    },
+                    {
+                      "orderIndex": 11,
+                      "description": "Let learners discuss the features of the folktale. E.g. People, animals, spirits, tress, river, mountains, etc."
+                    },
+                    {
+                      "orderIndex": 12,
+                      "description": "It has a moral lesson and is very interesting."
+                    },
+                    {
+                      "orderIndex": 13,
+                      "description": "It is usually a comedy or tragedy."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.5",
+          "title": "Dramatisation and Role Play",
+          "description": "Understanding how to change a story into a drama.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.1.5.1",
+              "description": "Demonstrate an understanding of changing a story to drama.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.5.1.1",
+                  "description": "Narrate a story line of a story of about five characters and recognise and discuss the characters and setting of the story.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing any traditional work song they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Invite a guest teacher to tell a short story made up of five characters."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss what a story line is with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners through discussion to find out the story line of the story they have heard."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners listen to the story again from the guest teacher."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss what a setting and a character is with learners."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Allow learners to recognise the characters and setting of the story."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.5.1.2",
+                  "description": "Perform the drama of about five characters.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the story that the guest teacher told the class again with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assign roles to them and direct learners to perform the drama."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the performance with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "The strengths and weaknesses must be emphasized in order to improve on subsequent performances."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.6",
+          "title": "Conversation",
+          "description": "Talking about personal experiences and responding to others' stories.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B4.1.6.1",
+              "description": "Talk about personal experiences and that of others",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.6.1.1",
+                  "description": "Narrate any interesting experiences in life.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Ask learners to mention some traditional plays they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Ask learners to sing the songs associated with the plays."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Give an account of any interesting experience you have had in life as a teacher."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss the narrated experience with learners."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Allow learners to also narrate any interesting experience they have had in life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.6.1.2",
+                  "description": "Respond/react to other peoples' stories or narratives.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners narrate their experiences in life (it could be an experience at the hospital, school, home or the playing field)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the experience narrated with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners express their views on the experiences narrated."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners to recognise the various positive reactions to other people's experiences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.7",
+          "title": "Talking about Oneself, Family, People and Places",
+          "description": "Understanding the environment and its preservation.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B4.1.7.1",
+              "description": "Show an understanding of what an environment is and the effect of environmental degradation.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.7.1.1",
+                  "description": "Talk about the environment and recognise and discuss things that destroy the environment.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Take a stroll with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Tell them to take note of the things they see as you take the stroll."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners mention the names of things in their environment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In class, discuss what an environment is with learners."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "In class, discuss the trip with learners and lead them to recognise some of the actions of man that destroy the environment."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners recognise other things that destroy the environment. E.g. Bushfires, erosion, de-forestation, pollutions in various forms, etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.7.1.2",
+                  "description": "Describe how to prevent things that destroy the environment.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the actions that destroy the environment again with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Group learners and ask them to brainstorm in their various groups on what they think must be done to prevent the destruction of the environment."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let each group present whatever they have written down to the class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners discuss the points raised by their friends and select the major ideas that they bring out (the teacher can add more ways of preventing the destruction of the environment in case the points raised by learners are not very strong)."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Show learners a video on how to prevent things that destroy the environment."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Discuss the video with them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.9",
+          "title": "Asking and Answering Questions",
+          "description": "Using polar question markers.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B4.1.9.1",
+              "description": "Demonstrate knowledge on understanding and use of polar question markers",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.9.1.1",
+                  "description": "Recognise polar question markers.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on giving and responding to commands with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call one learner and use the questions and answers strategy to get information from him or her as the rest of the learners listen."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss what polar question markers are with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners to recognise polar question markers in a group of questions written on the board."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Eg. Have you eaten? Yes/No. Are you from this town? Yes/No"
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.9.1.2",
+                  "description": "Recognise and use polar question markers correctly.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners come out in pairs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let one ask a polar question for the other to answer and vice versa (supervise the questioning so that you provide an assistance where necessary)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use question and answer strategy, to get information from one of the learners on the use of polar question markers."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let them recognise polar questions in your question."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Lead learners to recognise how to use polar question markers correctly."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.10",
+          "title": "Giving and Following Commands/Instructions",
+          "description": "Using landmarks in giving directions.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B4.1.10.1",
+              "description": "Exhibit knowledge of understanding and use of landmarks in giving directions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.10.1.1",
+                  "description": "Recognise landmarks in your area and use them to give directions.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on the environment with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show learners map of Ghana with the landmarks very visible."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the map with learners telling them what a landmark is and how to recognise the landmarks."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let the learners mention some of the popular landmarks they see on the map."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners recognise landmarks in their locality."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners mention some of the popular landmarks they know ones again."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Use the landmarks to give directions."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Let learners use landmarks on the school compound to give directions to specific places in the school."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Let learners use landmarks to give directions to key places in the locality."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.1.11",
+          "title": "Presentation",
+          "description": "Telling time and sequencing days and months.",
+          "orderIndex": 9,
+          "contentStandards": [
+            {
+              "code": "B4.1.11.1",
+              "description": "Demonstrate knowledge and understanding of the names and sequence of days of the week and months of the year.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.1.11.1.1",
+                  "description": "Say the time by hour, half hour and minutes.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on telling the time with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show a wall clock to learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the various parts of the clock with learners (i.e. numbers, hour hand, minute hand and the second hand)."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the clock to teach the time by hour. Place the hour and minutes hand properly on the numbers and call learners to tell the time by hour."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Use the clock to tell the time by hour, half an hour and in minutes."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners tell time by hour, half hour, and minutes."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Lead learners to know when to write the time with 'am' and 'pm' (am for morning and pm for afternoon till eleven in the night). E.g. The time is 6 o'clock. The time is 7:30am. The time is 7:12pm."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.11.1.2",
+                  "description": "Say the names of the week in sequence.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners say the letters of the alphabet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create a game with the names of the days in a week."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Play the game with learners in the classroom."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners mention the names of the week in sequence and use the names of the days of the week to form simple sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write the names of the days of the week on the board and lead learners to mention them."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners say the names of the days of the week in turns. E.g. Sunday, Monday, Tuesday etc."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.1.11.1.3",
+                  "description": "Say the names of the months in sequence.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create a game with the names of the months of the year."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play the game with learners in the classroom."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to mention the names of the months in sequence."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners form sentences with the names of the months of the year. E.g. January, February, March, April, etc."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.2",
+      "title": "Reading",
+      "description": "Developing reading skills through phonics, vocabulary, comprehension, and fluency.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B4.2.4",
+          "title": "Phonics: Letter Sound Knowledge",
+          "description": "Recognising and blending sounds to form words.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.2.4.1",
+              "description": "Demonstrate knowledge in listening and pronouncing words with identical sounds from a list of words.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.4.1.1",
+                  "description": "Read and recognise sounds at word initial.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners say the letters of the alphabet as a group and then individually."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write a number of words on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to say the words as a group and then individually."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners use the knowledge they have on letters and sounds and sorting to group words with the same initial sounds together in a group."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners show their works to another group."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Through this, help learners read and recognise sounds at word initial."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.4.1.2",
+                  "description": "Read and recognise diagraphs in sentences.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners say the letters of the alphabet as a group and individually."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write a number of sentences on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to read the sentences as a group and individually."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners to recognise the diagraphs in the sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners read the diagraphs in the words that are in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.4.1.3",
+                  "description": "Blend two-syllables to form words.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on syllables with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write two syllable words on the board and help learners to read them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put learners into groups and ask them to form as many words as they can by blending two-syllable words and mention their words to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.4.1.4",
+                  "description": "Recognise and read consonant clusters in sentences.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners say the letters of the alphabet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write words with consonant clusters in them (where applicable) and lead learners to say the words as a group and individually."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use words formed with consonant clusters to form sentences on the board and lead learners to read the sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners read the sentences and as they read, lead them to recognise the consonant clusters in the sentences and write them down."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.5",
+          "title": "Vocabulary (Sight and content vocabulary)",
+          "description": "Recognising and reading about things in the environment.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.2.5.1",
+              "description": "Show an understanding of, recognise and read about things in their environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.5.1.1",
+                  "description": "Read aloud with correct pronunciation and tone.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Sing a song with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read aloud a passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read the passage again while learners read after you."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners read aloud the passage with correct pronunciation and tone (correct them where necessary)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.5.1.2",
+                  "description": "Find meanings of unfamiliar words from context.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read aloud the passage again."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Mention some words and write them on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to find the meaning of the words in context."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners find the meanings of more unfamiliar words in context."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.5.1.3",
+                  "description": "Find meanings of figurative expressions.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage aloud."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the figurative expressions in the passage on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners through discussions to find the meanings of the figurative expressions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners find the meanings of more figurative expressions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.6",
+          "title": "Comprehension",
+          "description": "Answering questions based on texts.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.2.6.1",
+              "description": "Exhibit knowledge of answering questions based on texts presented.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.6.1.1",
+                  "description": "Explain the meanings of unfamiliar words.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a song they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read aloud a passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Read the passage again while learners repeat after you."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners read the passage as a group and individually."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners read a paragraph of the passage in turns."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Ask learners to mention unfamiliar words they see in the passage and write the words on the board."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Discuss the words with learners to get the meanings of the words."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Group learners and let them find the meanings of given unfamiliar words."
+                    },
+                    {
+                      "orderIndex": 9,
+                      "description": "Let learners explain the meanings of unfamiliar words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.6.1.2",
+                  "description": "Explain the meanings of figurative expressions.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read aloud a passage."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the figurative expressions in the passage on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to read the figurative expressions as a group and individually."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners through discussion to find the meanings of the figurative expressions."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners find the meanings of more figurative expressions"
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.6.1.3",
+                  "description": "Answer factual questions.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners read the passage again in turns."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call a learner to ask a question based on the passage read for the other learners to answer."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask questions for learners to answer."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.7",
+          "title": "Silent Reading",
+          "description": "Reading for comprehension.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.2.7.1",
+              "description": "Demonstrate in knowledge on reading for comprehension",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.7.1.1",
+                  "description": "Explain the meanings of unfamiliar words in a text.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Lead learners to sing a song."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Read a passage silently."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask learners to recognise and write unfamiliar words down."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners mention the words to the class."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write the words on the board and group learners to find the meanings of the given words."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "In groups, let the learners explain the meanings of the unfamiliar words in a text among themselves."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.7.1.2",
+                  "description": "Explain the meanings of figurative expressions in a text.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the figurative expressions in the passage on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to read the figurative expressions as a group and individually."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners through discussion to find the meanings of the figurative expressions."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners find the meanings of more figurative expressions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.7.1.3",
+                  "description": "Answer questions on a passage.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners read the passage again in turns."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call a learner to ask questions based on the passage read for the other learners to answer."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Ask questions for learners to answer."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.8",
+          "title": "Fluency",
+          "description": "Reading with minimal mistakes and at an appropriate speed.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B4.2.8.1",
+              "description": "Exhibit knowledge by reading with minimal mistakes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.8.1.1",
+                  "description": "Read short passages observing punctuations.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners short passages to read in silently."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call learners to read the passage in turns (correct learners where necessary)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "As they read, let them observe the punctuations in the passage."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.8.1.2",
+                  "description": "Read about 125 to 150 words per minute.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners a passage to read (the passage should be about 125 to 150 words to be read in a minute.)"
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Group learners and let them play a reading game at 120 words or more per minute."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.2.9",
+          "title": "Summarising",
+          "description": "Understanding main ideas and giving titles to passages.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B4.2.9.1",
+              "description": "Show an understanding of how main ideas are extracted from a text.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.2.9.1.1",
+                  "description": "Select topic sentences in paragraphs.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a traditional occupational song."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners read a number of paragraphs from a book."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to discuss what a topic sentence is."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners to recognise some topic sentences in the passage they have read."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners continue with the reading of the passage and write down the topic sentences in each paragraph read."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners compare their topic sentences in their groups."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners compare their final group works to those of other groups."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Discuss their findings with them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.2.9.1.2",
+                  "description": "Give titles to passages.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read a passage to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the passage with learners and let them come out with suggested titles."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss their suggested titles with them and select one."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Give learners a different printed passage for them to read."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Lead learners to give a title to the passage they have read."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.3",
+      "title": "Writing",
+      "description": "Developing writing skills including penmanship and simple sentences.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B4.3.1",
+          "title": "Penmanship/Handwriting",
+          "description": "Using punctuation correctly and writing simple sentences.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.3.1.1",
+              "description": "Exhibit knowledge of the use of full stops, commas and question marks appropriately in sentences, and write simple sentences boldly and clearly.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.3.1.1.1",
+                  "description": "Recognise that, full stop is used at the end of a complete sentence.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a number of sentences on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use full stops at the end of each sentence you write."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to read the sentences as a group and in turns."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Ask learners to tell you the punctuation marks they see at the end of the sentences and tell them that the full stop is used at the end of a complete sentence."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Write more sentences on the board without full stops and ask learners to use the full stop to punctuate them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.1.1.2",
+                  "description": "Recognise that a comma is used to separate a list of items. It serves as a pause in sentences and speech.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw some items on a cardboard."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call learners to mention the names of the items you have drawn on the board and write the names down horizontally."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use commas to separate the items you have written."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners recognise that a comma is used to separate a list of items in a row."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners also know that the comma serves as a pause in sentences and speech as well (show an example of this in a passage)."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Group learners and assign a leader."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let learners mention names of items for the group leader to write."
+                    },
+                    {
+                      "orderIndex": 8,
+                      "description": "Let the group now separate the items with a comma and show their work to other groups and discuss their findings."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.1.1.3",
+                  "description": "Recognise that a question mark is used at the end of a question.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise command and response with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write some questions on a cardboard."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to read the questions."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use question marks at the end of each of the questions."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let students read the questions again in turns."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners recognise that question marks are used at the end of a question."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Write more questions on the board and call learners to come out to punctuate them using the question mark."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.1.1.4",
+                  "description": "Recognise that quotation marks are used when you want to write or quote the same words a person said or wrote.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Call learners to make some utterances by asking questions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the utterance in quotation marks on the board and discuss with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a passage on the board with all punctuations."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Assist learners to recognise that, quotation marks are used when you want to write the same words a person said or wrote."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.3.1.1.5",
+                  "description": "Write simple sentences.",
+                  "orderIndex": 5,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Put learners into groups and help them to write simple sentences on their own as you monitor."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let each group write one of their sentences on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the sentences they have written with them to see if it is a statement or a question."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write words on the boards and explain the meaning of those words."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Call learners in turns to form simple sentences with the words."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Write sentences on sentence cards."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Use the sentence cards to help learners write simple and meaningful sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.4",
+      "title": "Composition Writing",
+      "description": "Developing various forms of writing skills.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B4.4.1",
+          "title": "Narrative Writing",
+          "description": "Using punctuation marks in narrative writing.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.4.1.1",
+              "description": "Show an understanding in using punctuation marks appropriately in writing sentences.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.1.1.1",
+                  "description": "Demonstrate the use of commas in narrative writing.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on the use of commas with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss what a narrative writing is with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Group learners and ask them to write a short narrative essay."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let the groups read their essays to the class for the class to discuss (the discussion should focus on the parts in the essay that learners think a comma had been used or left out)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.1.1.2",
+                  "description": "Write sentences using full stops effectively.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on the use of the full stop as a punctuation mark with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write a number of sentences on a cardboard."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use full stops at the end of each sentence you write."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Show the cardboard to learners and call them to read the sentences individually."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Help learners recognise that full stop is used at the end of a complete sentence."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Allow learners to construct some sentences in groups."
+                    },
+                    {
+                      "orderIndex": 7,
+                      "description": "Let them show their sentences to the class and discuss the sentences with the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.1.1.3",
+                  "description": "Recognise and use the question marks appropriately in narrative writing.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners a narrative writing that has question marks used in the right way."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners read aloud the narrative writing in turns."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "As they read, let them take note of how question marks have been used."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let them recognise and use the question marks appropriately in narrative writing."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Allow learners to read with the correct intonation."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Write a four sentence paragraph on the board and allow learners to put the question marks at the appropriate positions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.2",
+          "title": "Creative/ Free Writing",
+          "description": "Creating stories based on experiences and scenes.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.4.2.1",
+              "description": "Show an understanding of composing short simple stories",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.2.1.1",
+                  "description": "Write a one paragraph story describing a past event.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a popular traditional song they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Share the class Readers/Reading books to learners and ask them to open to a page where there is a passage made up more than one paragraph."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to read the passage."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use the passage to assist learners to recognise a paragraph."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Narrate a past event to learners and put them into groups to write a one paragraph story describing the event narrated to them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.2.1.2",
+                  "description": "Create a scene and write a short story on it.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Show learners a short video."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In groups, let learners discuss the scenes they saw in the movie."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners write a short story on the scene they saw and read their story to the class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss their stories with them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.3",
+          "title": "Descriptive Writing",
+          "description": "Describing pictures, structures, and objects.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.4.3.1",
+              "description": "Exhibit the knowledge in writing of descriptive essays using controlled composition.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.3.1.1",
+                  "description": "Describe pictures using controlled composition.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention some landmarks in the locality."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show learners a number of pictures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners pick any of the displayed pictures and describe it."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Using the controlled composition approach, let learners describe a picture."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.3.1.2",
+                  "description": "Give a description of a building or a structure using controlled composition.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention some traditional occupations they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the points you will use to describe a building or structure on the board and lead learners to read them."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the building you live in to learners using the points you have written on the board."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners also give a description of buildings or a structure using the points on the board."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.3.1.3",
+                  "description": "Describe objects within the environment on their own.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention some things in the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show a couple of objects to learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use some words to describe the objects."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Encourage learners to describe objects within the environment on their own."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.4",
+          "title": "Persuasive Writing",
+          "description": "Writing persuasive essays on various topics.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.4.4.1",
+              "description": "Exhibit knowledge and understanding of writing persuasive essays using controlled composition.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.4.1.1",
+                  "description": "Write a persuasive essay on cleanliness using controlled composition.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention some actions that destroy the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss cleanliness with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow the learners to talk with each other about cleanliness."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners write a persuasive essay on cleanliness using controlled composition."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.4.1.2",
+                  "description": "Compose a persuasive essay based on a picture description.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention some actions that destroy the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Show learners some pictures."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners describe the picture."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Lead learners to compose a persuasive essay based on a picture description."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.4.1.3",
+                  "description": "Write a persuasive essay on responsibility.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention the names of their parents and friends."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners tell you what they think are the responsibilities of their parents (you can touch on the responsibilities of other people as well)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a model persuasive essay with learners on the board."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners write a persuasive essay on responsibility."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.5",
+          "title": "Argumentative Writing",
+          "description": "Understanding and writing argumentative essays.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B4.4.5.1",
+              "description": "Show an understanding of recognising and writing argumentative essays.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.5.1.1",
+                  "description": "Understand the process in writing good argumentative essays.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Raise an issue and ask learners to tell you what they think about it."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss what an argumentative writing is with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the process of writing a good argumentative essay."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Group learners and let them write an argumentative essay on a given topic."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners read their essays to the class and discuss the essays with learners."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.5.1.2",
+                  "description": "Write simple argumentative essays.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a model argumentative essay with learners on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Help learners to write simple argumentative essays in groups."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners exchange their works."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let group leaders read the essay on behalf of the group."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss their essays with them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.5.1.3",
+                  "description": "Write a simple argumentative essay on a given topic.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write a model argumentative essay with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Help learners to write a simple argumentative essay on a given topic."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Allow learners to write argumentative essay on a given topic in groups."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.6",
+          "title": "Informative/Academic Writing",
+          "description": "Writing about personal experiences and editing.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B4.4.6.1",
+              "description": "Show an understanding of writing events of the day and editing it.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.6.1.1",
+                  "description": "Write about personal experiences of the day.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Narrate an experience you have had in life to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners also narrate an experience they have had in life before."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners narrate an experience they have had in the day."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Help learners to write personal experience of the day."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.6.1.2",
+                  "description": "Write picture events.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners mention some things in the classroom."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners cut out pictures from magazines."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let them create a picture book."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "With their own picture book, help learners to write picture events."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.6.1.3",
+                  "description": "Edit your writing",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Give learners a topic."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners write their own passage on the topic."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners do peer editing of their own writings."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.7",
+          "title": "Literary Writing",
+          "description": "Writing poems, prose, and plays.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B4.4.7.1",
+              "description": "Demonstrate knowledge of writing poems, prose and plays.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.7.1.1",
+                  "description": "Comprehend the process in writing poems, prose, and plays.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a song they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss with learners some features of plays, prose and poems."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Through discussion, encourage learners to comprehend the process in writing poems, prose and plays."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.7.1.2",
+                  "description": "Compose short poems using controlled composition.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners explore a rhyme they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use a controlled composition to write a short poem on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners explore the poem with gestures."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups let learners compose short poems using controlled composition."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.7.1.3",
+                  "description": "Create short plays and stories using controlled composition.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a familiar traditional song they know."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Use a controlled composition to create a short story or play with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put them in pairs and let them create short plays and stories using controlled composition."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.4.8",
+          "title": "Letter Writing",
+          "description": "Writing informal letters.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B4.4.8.1",
+              "description": "Exhibit knowledge of writing good informal letters.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.4.8.1.1",
+                  "description": "Discuss the process in writing good informal letters.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners say the letters of the alphabet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss with learners what an informal letter is."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss with learners the process of writing a good informal letter."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let them comprehend the process in writing good informal letters."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Discuss features of informal letters."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.8.1.2",
+                  "description": "Write informal letters using controlled composition.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write an informal letter on the board and lead learners to discuss it."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners read the letter as a group and then individually."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Using the letter on the board as a guide let learners write an informal letter."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.4.8.1.3",
+                  "description": "Write good informal letters",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners say the letters of the alphabet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Give learners a topic and let them write an informal letter on the topic in groups."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let the groups present their essays to the class."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners write an informal letter on their own."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.5",
+      "title": "Writing Conventions/ Usage",
+      "description": "Understanding and applying grammar rules in written language.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B4.5.1",
+          "title": "Integrating Grammar in Written Language (Capitalization)",
+          "description": "Using capital letters appropriately.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.5.1.1",
+              "description": "Exhibit knowledge of using capital letters appropriately",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.1.1.1",
+                  "description": "Begin sentences with capital letters.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners write their names on a paper and show it to the class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create a game about using a capital letter to begin a sentence."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Play the game with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Write the sentences on the board and let learners read the sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Encourage learners to begin sentences with capital letters."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.1.1.2",
+                  "description": "Use capital letters after full stops.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create a game about using a capital letter after a full stop."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play the game with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners use capital letters after full stops."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.1.1.3",
+                  "description": "Demonstrate an understanding of the use of capital letters after colons.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create a game about using a capital letter after a colon."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Play the game with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to understand the use of capital letters after a colon."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Encourage learners to use capital letters to begin a sentence after a colon."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.5.2",
+          "title": "Integrating Grammar in Written Language (Punctuation)",
+          "description": "Using punctuation marks effectively.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.5.2.1",
+              "description": "Demonstrate an understanding on the use of punctuation marks appropriately in writing sentences.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.2.1.1",
+                  "description": "Demonstrate the use of commas.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use commas in sentences on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners demonstrate the use of commas by writing sentences in groups."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners show their work to the class and discuss it with them."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.2.1.2",
+                  "description": "Write sentences using full stops appropriately.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write sentences on cardboards and show it to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners read the sentences as a group."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Call learners to put the full stop at the right positions in the sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners write sentences using full stops effectively."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.2.1.3",
+                  "description": "Recognise and use the question marks appropriately in writing.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write questions on the board using question marks appropriately."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Encourage learners to recognize and use the question marks appropriately in writing."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write a piece on the board and call learners to put in the correct punctuations."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.5.3",
+          "title": "Integrating Grammar in Written Language (Use of action words)",
+          "description": "Using action words in past and present tenses.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.5.3.1",
+              "description": "Demonstrate knowledge on recognition and use of action words",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.3.1.1",
+                  "description": "Write past tense action words.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise the lesson on commands with learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write sentences using past action words."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to recognise the present tense action words in the sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners write past tense action words on their own."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.3.1.2",
+                  "description": "Recognise past tense action words in short sentences.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use past tense action words to write short sentences on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Call learners to read the sentences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to recognise past tense action words in the short sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Allow learners to narrate what they did yesterday."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners recognise the past tense action words in the narration."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.3.1.3",
+                  "description": "Use past tense action words in short sentences.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "With the learners' contribution use past tense action words to write short sentences on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners read the sentences on the board."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to recognise the past tense action words in the sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners use past tense action words in short sentences on their own and read aloud for other learners to recognise the past tense action word."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners use the past tense action words to form sentences."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.5.4",
+          "title": "Integrating Grammar in Written Language (Use of qualifying words)",
+          "description": "Using adjectives and adverbs appropriately.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B4.5.4.1",
+              "description": "Demonstrate knowledge on the use of adjectives and adverbs.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.4.1.1",
+                  "description": "Recognise the positive comparative words and superlative words of regular adjectives.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a familiar song."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In pairs, let learners compare their heights, sizes, nature, etc."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to recognise the words that are used to express comparative and superlative forms."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.4.1.2",
+                  "description": "Differentiate between comparative and superlative words/adjectives.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In pairs, let learners differentiate between the comparative and superlative words/adjectives. E.g. Better, best more beautiful, most beautiful"
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.4.1.3",
+                  "description": "Use comparative and superlative words/adjectives in sentences.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "In groups let learners use comparative and superlative words/adjectives in sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Assist learners to recognise comparative and superlative words/adjectives in sentences."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners use these words to form sentences: more beautiful, most beautiful, e.g. Kofi is a better keeper but Ama is the best keeper."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.4.1.4",
+                  "description": "Demonstrate the use of comparative and superlative adverbs /words.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners demonstrate the use of comparative and superlative words individually in class. E.g. better, best more beautiful, most beautiful."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.5.5",
+          "title": "Integrating Grammar in Written Language (Use of postpositions)",
+          "description": "Using postpositions in sentences.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B4.5.5.1",
+              "description": "Demonstrate knowledge in the use of postpositions.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.5.1.1",
+                  "description": "Explore the use of other postpositions such as below and under in sentences.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners explore a poem."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Illustrate by putting an object above, below, etc. for learners to discuss where the object is."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use postpositions to write phrases and sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Guide learners to read the phrases and sentences as a group."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Guide learners to explore the use of other postpositions such as below and under in sentences."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.5.1.2",
+                  "description": "Recognise and use other postpositions in sentences.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use postpositions to write phrases and sentences on the board."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners read the sentences as a group and in pairs."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners recognise postpositions in sentences."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners form sentences using the postpositions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.5.1.3",
+                  "description": "Demonstrate the use of postpositions such as below and under in context.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write phrases and sentences leaving out the postpositions."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners fill them with the correct postpositions."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to demonstrate the use of postpositions such as below and under in context."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners form sentences using the postpositions discussed."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.5.6",
+          "title": "Integrating Grammar in Written Language (Use of simple and compound sentences)",
+          "description": "Forming compound sentences.",
+          "orderIndex": 6,
+          "contentStandards": [
+            {
+              "code": "B4.5.6.1",
+              "description": "Exhibit knowledge of forming compound sentences in writing.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.6.1.1",
+                  "description": "Form compound sentences from simple sentences.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners form simple sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let them read the sentences as a group."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Use simple sentences to form compound sentences on the board."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "In groups, let learners form compound sentences from simple sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners present their sentences to the class."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.6.1.2",
+                  "description": "Exhibit knowledge of different types of conjunctions in writing.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners form simple sentences and read them to the class."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss conjunctions with learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write some conjunctions on the board and lead learners to say them."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use different types of conjunctions to form sentences."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let learners form sentences using the conjunctions."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners understand different types of conjunctions in writing."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.6.1.3",
+                  "description": "Form compound sentences with conjunctions.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use different types of conjunctions to form sentences."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "In pairs, let learners form compound sentences with conjunctions and read their sentences to the class."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.5.7",
+          "title": "Integrating Grammar in Written Language (spelling)",
+          "description": "Recognising and spelling words correctly.",
+          "orderIndex": 7,
+          "contentStandards": [
+            {
+              "code": "B4.5.7.1",
+              "description": "Exhibit knowledge of recognising and spelling words correctly",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.7.1.1",
+                  "description": "Write seven and eight letter words correctly.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners say the letters of the alphabet."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Introduce learners to vocabulary words in a passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to write seven and eight letter words correctly."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.7.1.2",
+                  "description": "Fill in missing letters from words.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Write some words on the board and lead learners to mention the words."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners mention and spell the words as a group."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Call learners to mention the words individually."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Introduce learners to words that have missing letters."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Let students to fill in missing letters from words."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.7.1.3",
+                  "description": "Fill in missing words from a short passage.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners narrate a short story they have heard before."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Share the class Readers or Reading books to the learners and lead them to read a passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Write the first paragraph of the passage on the board taking out some words."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Let learners fill in missing the words from short passage."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.5.7.1.3",
+                  "description": "Write dictated short passages.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners sing a familiar work song."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write some words on the board and lead learners to pronounce the words."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Let learners pronounce the words individually."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Introduce learners to a short passage and lead learners to read the passage."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Dictate the first four sentences of the passage to learners to write."
+                    },
+                    {
+                      "orderIndex": 6,
+                      "description": "Let learners exchange their works and discuss their works with them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.5.8",
+          "title": "Integrating Grammar in Written Language(Conjunctions)",
+          "description": "Using conjunctions in writing.",
+          "orderIndex": 8,
+          "contentStandards": [
+            {
+              "code": "B4.5.8.1",
+              "description": "Apply the knowledge of conjunctions in writing",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.5.8.1.1",
+                  "description": "Identify and use simple conjunctions - and, but, or, nor - to link: similar ideas, contrasting ideas, show choices/express alternatives",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Introduce the conjunctions one at a time in context."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Elicit examples of sentences with conjunctions from learners."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Put on cards simple sentences. e.g. i. Esi is tall. Ama is short. ii. Esi is tall but Ama is short."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Use combination drill for learners to practise the use of conjunctions. e.g. i. Learner A: I bought a pen... ii. Learner B: I bought a pen and a notebook. iii. Learner C: I will eat fufu...... iv. Learner D: I will eat fufu or kenkey."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B4.6",
+      "title": "Extensive Reading/Children Literature/Library",
+      "description": "Reading for pleasure and understanding.",
+      "orderIndex": 7,
+      "subStrands": [
+        {
+          "code": "B4.6.1",
+          "title": "Building the Love and Culture of Reading in Learners",
+          "description": "Reading long stories correctly.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B4.6.1.1",
+              "description": "Exhibit knowledge of reading long stories from sources other than the class Readers, with correct intonation.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.6.1.1.1",
+                  "description": "Read long stories aloud correctly.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Do a model reading of a long story."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Allow learners to read aloud long stories correctly in groups and then individually."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.6.2",
+          "title": "Read Aloud with Children",
+          "description": "Reading long passages with correct tone.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B4.6.2.1",
+              "description": "Exhibit knowledge of reading long stories with correct tone.",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B.4.6.2.1.1",
+                  "description": "Read long passages correctly.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Revise letters of the alphabet, using the alphabet song."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Do a model reading of a long passage."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Help learners to read long passages correctly."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B4.6.3",
+          "title": "Reading Texts, Poems, Narratives and Short Stories",
+          "description": "Reading diverse materials with understanding.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B4.6.3.1",
+              "description": "Demonstrate knowledge on reading materials other than the reader provided in class",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B4.6.3.1.1",
+                  "description": "Read passages/stories from other materials with correct tone.",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read short passages to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners read short passages from other materials with correct tone."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Lead learners to discuss what they read."
+                    }
+                  ]
+                },
+                {
+                  "code": "B4.6.3.1.2",
+                  "description": "Answer question on the passage/stories read.",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Read short passages to learners."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners to read short passages on their own and answer questions on the passages read."
+                    }
+                  ]
+                },
+                {
+                  "code": "B.4.6.3.1.3",
+                  "description": "Explore the meaning of unfamiliar words from context or dictionary.",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Let learners read a text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let them mention and find the meaning of unfamiliar words from context or dictionary."
+                    }
+                  ]
+                },
+                {
+                  "code": "B.4.6.3.1.4",
+                  "description": "Summarise the passage read in a few words.",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Allow learners to read a text."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Let learners answer about questions based on the passage read."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Discuss the process of summarizing with learners."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Allow them to summarize the passage read in few words."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

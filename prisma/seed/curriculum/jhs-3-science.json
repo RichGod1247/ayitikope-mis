@@ -1,0 +1,1373 @@
+{
+  "part": "1/1",
+  "phase": "Junior High School",
+  "level": "Basic 9",
+  "subject": "Science",
+  "name": "JHS 3 Science",
+  "slug": "jhs-3-science",
+  "orderIndex": 1,
+  "description": "The JHS 3 Science curriculum consolidates knowledge in diversity of matter, cycles, systems, forces and energy and humans and the environment. It covers advanced topics such as chemical compounds, atomic bonding, specialized cells, the nitrogen cycle, crop and animal production, body systems, energy conservation and climate change.",
+  "strands": [
+    {
+      "code": "B9.1",
+      "title": "DIVERSITY OF MATTER",
+      "description": "Understanding chemical compounds, atomic bonding and specialized cells.",
+      "orderIndex": 1,
+      "subStrands": [
+        {
+          "code": "B9.1.1",
+          "title": "MATERIALS",
+          "description": "Binary chemical compounds and atomic bonding.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.1.1.1",
+              "description": "Show an understanding of formation of binary chemical compounds and their uses (Acids, Bases and Salts)",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.1.1.1",
+                  "description": "Identify by name binary chemical compounds and discuss their uses",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and name chemical compounds from a collection of materials commonly found at home, school and the community such as table salt, water, vinegar, fuel, soap, detergents, marble and fertilisers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write the chemical symbols of the elements identified in the chemical compounds."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.2",
+                  "description": "Discuss the formation of binary chemical compounds",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Distinguish among elements, molecules, ions and compounds."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write molecular formula of binary compounds and describe their formation."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare and contrast different binary chemical compounds based on their composition and properties."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Form models to represent chemical compounds such as water, carbon (IV) oxide, iron (II) sulphide and magnesium oxide."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.1.1.3",
+                  "description": "Describe the characteristics of common acids, bases and salts",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify acids, bases and salts by their characteristics."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create a model of a pH Scale and use it to determine the strength of common acids and alkali solutions using indicators."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.1.1.2",
+              "description": "Demonstrate knowledge of atomic bonding in the formation of chemical compounds",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.1.1.2.1",
+                  "description": "Recognise that chemical bond results from the attraction between atoms in a compound",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify types of inter-atomic bonds."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the formation of inter-atomic bonds."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Identify examples of substances that exhibit ionic, covalent and metallic bonding."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.1.2",
+          "title": "LIVING CELLS",
+          "description": "Specialized cells in plants and animals.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.1.2.1",
+              "description": "Demonstrate knowledge of specialist cells of dicotyledonous plants and humans, their formation and functions for the existence of the plants and humans",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.1.2.1.1",
+                  "description": "Discuss the concepts of specialised cells and how they are formed in dicotyledonous plants and humans",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Brainstorm to bring out the meaning of specialised cells."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss how specialised cells are formed in dicotyledonous plants and humans."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.2",
+                  "description": "Examine the functions of specialised cells in dicotyledonous plants such as epidermal, guard cells, cambium, xylem in relation to the existence of the plants",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe specialised dicotyledonous plant cells such as epidermal, guard cells, cambium, xylem from videos and charts and identify them by their names and shapes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Search from books and the internet for information on the functions of the specialised cells of dicotyledonous plants and how they relate to the existence of the plants."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.1.2.1.3",
+                  "description": "Examine the functions of specialised animal cells such as (nerve, blood cells, muscle cells and sperm cells) in relation to the existence of humans",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe specialised animal cells such as nerve cells, blood cells, muscle cells and sperm cells from pictures, videos and charts and identify them by their names and make models to represent their shapes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Search from books, journals and internet for information on specialised cells in exemplar 1 and how they relate to the existence of humans."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.2",
+      "title": "CYCLES",
+      "description": "Nitrogen cycle, life cycle of grasshopper, crop and animal production.",
+      "orderIndex": 2,
+      "subStrands": [
+        {
+          "code": "B9.2.1",
+          "title": "EARTH SCIENCES",
+          "description": "The Nitrogen cycle.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.2.1.1",
+              "description": "Demonstrate an understanding of the Nitrogen cycle as a repeated pattern of change in nature, and how it relates to the environment",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.1.1.1",
+                  "description": "Explain the process of the nitrogen cycle as a repeated pattern in nature",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the nitrogen cycle from the internet, charts, or pictures."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the nitrogen cycle depicting processes such as Nitrogen fixation, Nitrification, Assimilation, Ammonification, and De-nitrification."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the relationship between the nitrogen cycle and the environment."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Explain why the nitrogen cycle is a repeated pattern in nature."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.1.1.2",
+                  "description": "Describe the importance of the nitrogen cycle to the environment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the importance of nitrogen to the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Carry out a project to show how certain plants such as leguminous crops can replenish nitrogen in the soil."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Predict what will happen if the nitrogen cycle is interrupted by actions such as leaching, bush burning, and destruction of leguminous plants."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.2",
+          "title": "LIFE CYCLE OF ORGANISMS",
+          "description": "Life cycle of the grasshopper.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.2.2.1",
+              "description": "Demonstrate an understanding of the life cycle of grasshopper and assess how their activities affect humans",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.2.1.1",
+                  "description": "Describe the life cycle of the grasshopper as a form of incomplete metamorphosis",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Draw the stages of the life cycle of a grasshopper from egg through nymph to adult."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the behaviour of each stage of the life cycle of a grasshopper."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain why the life cycle of the grasshopper is described as incomplete metamorphosis as compared to complete metamorphosis in the housefly and mosquito."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.2.1.2",
+                  "description": "Examine how the activities of the grasshopper affect humans",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Outline the activities of the grasshopper in everyday life (e.g. feeding on grasses and weeds)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Carry out a search for information on activities of the grasshopper that are harmful or beneficial to humans."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Generate activities to promote or reduce the effect of the activities of grasshoppers on humans."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.3",
+          "title": "CROP PRODUCTION",
+          "description": "Differences in crop maturity and uses.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.2.3.1",
+              "description": "Show an understanding of differences in maturities of different crops grown in different soils and different seed beds",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.3.1.1",
+                  "description": "Observe and describe differences in maturation of crops grown in different soils and on different seed beds",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Observe and record the maturity stages of different crops grown in different soils and seed beds."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the differences in maturity stages among the different crops on the different soils and seed beds."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare and contrast the maturity stages of crops and seedlings in the community/school garden with others grown elsewhere."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.2.3.2",
+              "description": "Demonstrate knowledge and understanding of uses of different crops at different maturity stages",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.2.3.2.1",
+                  "description": "Observe and record the uses of different crops at different maturity stages",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss and write the uses of each maturity stage of each crop identified."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Categorise crops by their different maturity stages and uses."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.3.2.2",
+                  "description": "Evaluate the importance of knowledge of the maturity stages of different crops to human beings",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the specific use(s) of each maturity stage of different crops to humans, other crops, animals, and the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain how the knowledge of the maturity stages of different crops helps a farmer in crop selection, time of harvest, and others."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare different stages of maturity of crops identified in the community with those used in other places."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.2.4",
+          "title": "ANIMAL PRODUCTION",
+          "description": "Preparation of animal feed.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.2.4.1",
+              "description": "Demonstrate understanding of the preparation of feed for domestic and commercial animals",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.2.4.1.1",
+                  "description": "List the ingredients and the method of preparation of different feed for different domestic and commercial animals",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate how farmers prepare feed for different domestic and commercial animals with ingredients."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Write down the process of preparing feed for different domestic and commercial animals with the ingredients."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compile a table, matching feed, ingredients and method of preparation."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Formulate and prepare feed for domestic and commercial animals."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.2.4.2",
+              "description": "Demonstrate skills and knowledge of feeding domestic and commercial animals",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.2.4.2.1",
+                  "description": "Describe and select appropriate feed for different domestic and commercial animals",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Compile a list of feed commonly consumed by the different domestic and commercial animals in the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare and contrast the characteristics of different kinds of feed commonly consumed by categories of domestic and commercial animals (ruminants, monogastrics, and poultry)."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Record feed used to feed domestic and commercial animals on farms over a period of time."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify named samples of feed for three categories of domestic and commercial animals (ruminants, monogastrics, and poultry)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.4.2.2",
+                  "description": "Differentiate between different types of feed for different stages of domestic and commercial animals",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Categorise different types of animals according to their stages of growth (young, growing and matured stages)."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "List the types of feed used for the various stages of growth in their domestic and commercial ruminants, monogastrics and poultry."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare and construct the major functions of feed in each growth stage of different animals."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Discuss types of feed used to feed different domestic and commercial animals at different stages of growth."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.2.4.2.3",
+                  "description": "Perform the feeding of domestic and commercial animals",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate how to feed domestic and commercial animals at different stages of growth and production, with appropriate feed in the school farm or a farm in the community."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.3",
+      "title": "SYSTEMS",
+      "description": "Circulatory system, solar system, ecosystem and manure.",
+      "orderIndex": 3,
+      "subStrands": [
+        {
+          "code": "B9.3.1",
+          "title": "THE HUMAN BODY SYSTEM",
+          "description": "Circulatory system and its relationship with the respiratory system.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.3.1.1",
+              "description": "Demonstrate understanding of the blood circulatory system, health problems associated with the system and its relationship with the respiratory system in humans",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.1.1.1",
+                  "description": "Explain the concept of the circulatory system, state the function of each part of the system and the health challenges associated with it",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the blood circulatory system in humans and the composition and functions of blood."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the functions of the parts of the circulatory system."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Draw and label the longitudinal section of a mammalian heart."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Describe the prevention and causes of diseases of the circulatory system."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Describe what blood pressure is and ways of managing it."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.1.1.2",
+                  "description": "Explain the concept of respiration and show how the respiratory and circulatory systems complement each other",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the concept of respiration."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain how deoxygenated blood from circulation is oxygenated through inhalation for respiration to take place."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.2",
+          "title": "THE SOLAR SYSTEM",
+          "description": "Non-planetary bodies.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.3.2.1",
+              "description": "Demonstrate knowledge of other non-planetary bodies such as comets, asteroids, and their relationship with the solar system",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.2.1.1",
+                  "description": "Understand the movement of non-planetary bodies in the solar system",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research for information on the movement of non-planetary bodies in the solar system. E.g. asteroids and comets."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Compare and contrast the movement of the non-planetary bodies in the solar system."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.3",
+          "title": "ECOSYSTEM",
+          "description": "Interdependence of organisms.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.3.3.1",
+              "description": "Recognise the interdependence of organisms in an ecosystem and appreciate their interaction to maintain balance in the system",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.3.1.1",
+                  "description": "Conduct research into the composition of an ecosystem and discuss how the components depend on each other for survival",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe how organisms depend on each other in different ecosystems."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "State the differences between an ecosystem and a habitat."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct a food chain and a food web found in an ecosystem."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Predict and justify your predictions on how interferences such as earthquake, volcanic eruptions, hunting, farming, mining, pollution, pesticides and bush burning will affect the balance in an ecosystem."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.3.4",
+          "title": "FARMING SYSTEMS",
+          "description": "Preparation of manure.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.3.4.1",
+              "description": "Demonstrate knowledge and skills in the preparation of different types of manure from animal and plant waste",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.3.4.1.1",
+                  "description": "List and explain the different plant and animal waste used in preparing different types of manure",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "List some types of manure used by farmers."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify and write down the materials used in preparing manure and their sources."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Categorise manure into those from plant wastes and animal wastes."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Compile a list of plant parts/wastes and animal parts/wastes that are used to prepare manure."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Justify the use of different animal and plant manures under different soil and climatic conditions."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.4.1.2",
+                  "description": "Demonstrate the preparation of different types of manure",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Prepare manure from the different plant and animal wastes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss the preparation of manure using the plants and animal wastes that are available in a community."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.3.4.1.3",
+                  "description": "Prepare different types of manure",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Treat various plant and animal wastes to generate manure (cleaning/ sorting, curing/composting) in the field or school garden."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.4",
+      "title": "FORCES AND ENERGY",
+      "description": "Energy conservation, electricity and forces.",
+      "orderIndex": 4,
+      "subStrands": [
+        {
+          "code": "B9.4.1",
+          "title": "ENERGY",
+          "description": "Energy conservation, calculation and light energy.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.4.1.1",
+              "description": "Show understanding of the concept of conservation of energy and ways of conserving energy",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.1.1.1",
+                  "description": "List the ways to conserve energy",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify and discuss various strategies of conserving energy."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.1.2",
+                  "description": "Explain the importance of energy conservation in daily life",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research information about energy conservation and discuss its importance to life."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.1.2",
+              "description": "Demonstrate understanding in and the capability to do calculations involving energy",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.1.2.1",
+                  "description": "Explain how to calculate energy consumed over a period of time",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Calculate electrical energy consumed by the use of electrical appliances in Kilowatt-hour (kWh)."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.2.2",
+                  "description": "Describe how images are formed in cameras",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create a model of a camera and describe how it works to form an image."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.2.3",
+                  "description": "Describe the formation of shadows",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss the terms umbra and penumbra in relation to the formation of shadows and explain how they are formed."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.1.2.4",
+                  "description": "Demonstrate the formation of an eclipse",
+                  "orderIndex": 4,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Use a model to illustrate how an eclipse is formed."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.1.3",
+              "description": "Evaluate the application of light energy in life",
+              "orderIndex": 3,
+              "indicators": [
+                {
+                  "code": "B9.4.1.3.1",
+                  "description": "Demonstrate that light changes path when it travels from one medium to a different medium",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Carry out a practical activity to show that light bends as it travels from one medium to another."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.2",
+          "title": "ELECTRICITY AND ELECTRONICS",
+          "description": "Electronic circuits and components.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.4.2.1",
+              "description": "Construct electrical circuits and illustrate how electrical energy is transformed into other forms of energy and perform electrical calculations",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.2.1.1",
+                  "description": "Demonstrate transformation of electrical energy to other forms of energy in both series and parallel circuits and perform simple calculations involving the flow of current in circuits",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Predict the impact of changes in electrical circuits with regards to the output of bulbs."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct simple electrical circuits and measure the voltage, current and resistance."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Calculate the potential difference in a circuit using the formula: V = IR."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.2.2",
+              "description": "Demonstrate an understanding of Forward and Reverse Bias and explain the behaviour of LEDs, Diodes, Resistors and Capacitors in electronic circuits",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.2.2.1",
+                  "description": "Describe forward bias and reverse bias and explain the relationship among the components, such as: LEDs, Diodes, Resistors and Capacitors, in an electronic circuit",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain forward bias and reverse bias in an electronic circuit."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Construct different electronic circuits (the forward and reverse bias), and observe what happens to the LED."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Construct different electronic circuits involving resistors and capacitors and observe what happens to the LED and report on their findings."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.3",
+          "title": "CONVERSION AND CONSERVATION OF ENERGY",
+          "description": "Understanding energy conversion and conservation.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.4.3.1",
+              "description": "Show an understanding of conversion and conservation of energy and their application to life",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.3.1.1",
+                  "description": "Describe how energy can be converted from one form to another and show how conservation of energy occurs",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Differentiate between conversion of energy and conservation of energy and show their application to life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.3.1.2",
+                  "description": "Describe how conversion and conservation of energy are applied in life",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Distinguish between energy conversion and conservation using everyday examples."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify opportunities to conserve energy and produce a report of your work."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.4",
+          "title": "FORCE AND MOTION",
+          "description": "Pressure and Newton's Third Law of Motion.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.4.4.1",
+              "description": "Demonstrate understanding of the concept of pressure and explain how pressure acts in everyday life",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.4.1.1",
+                  "description": "Explain the concept of pressure and show how pressure relates to force; perform activities that work on the principle of pressure in the daily lives of humans",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Demonstrate the action of pressure through a number of activities such as using drinking straw, pumping car tyres, filling of balloons, water jets at washing bays, etc."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe the relationship between pressure and force and discuss the application of pressure in everyday life."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.4.4.2",
+              "description": "Demonstrate an understanding of Newton's Third Law of Motion and its application in everyday life",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.4.4.2.1",
+                  "description": "Explain the importance of Newton's Third Law of Motion in life",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "State Newton's Third Law of Motion."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Discuss Newton's Third Law of Motion and show its importance to life."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.4.1.2",
+                  "description": "Demonstrate the application of Newton's Third Law of motion in life",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Predict what happens when a force is exerted on an object and there is a reaction."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Perform an activity to justify your predictions."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.4.5",
+          "title": "AGRICULTURAL TOOLS",
+          "description": "Making simple agricultural tools.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B9.4.5.1",
+              "description": "Demonstrate knowledge and skills in making simple agricultural tools for on-farm activities",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.4.5.1.1",
+                  "description": "Identify materials used in making simple agricultural tools",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe simple agricultural tools assembled from their environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify the materials used to make the tools and show how the parts are connected."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.5.1.2",
+                  "description": "Discuss and write activities involved in making simple agricultural tools",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe the activities and processes involved in making different agricultural tools."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the materials, processes, constraints and precautions involved in manufacturing simple agricultural tools."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.4.5.1.3",
+                  "description": "Manufacture simple agricultural tools",
+                  "orderIndex": 3,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Produce simple farm tools using materials from the environment."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "B9.5",
+      "title": "HUMANS AND THE ENVIRONMENT",
+      "description": "Waste management, health, science, climate change and plant parts.",
+      "orderIndex": 5,
+      "subStrands": [
+        {
+          "code": "B9.5.1",
+          "title": "WASTE MANAGEMENT",
+          "description": "Scientific and innovative waste management.",
+          "orderIndex": 1,
+          "contentStandards": [
+            {
+              "code": "B9.5.1.1",
+              "description": "Demonstrate an understanding of the scientific ways of waste management",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.1.1.1",
+                  "description": "Investigate the scientific methods used in waste management",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify scientific methods such as recycling, composting used in waste management."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Explain the scientific principles underlying the methods used in waste management."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Conduct an audit of waste management methods in schools and assess the effectiveness of each."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.5.1.2",
+              "description": "Demonstrate an understanding of the impact of waste on an environment, innovative waste management technologies for sustainable development and waste management practices in Ghana",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.5.1.2.1",
+                  "description": "Describe innovative ways of waste management for sustainable development",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Explain the impact of waste produced on the environment."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify innovative ways to manage waste for sustainable development."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Describe the types of waste produced within communities in Ghana."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Examine and critique the waste management practices in Ghana identifying positives and negatives and opportunities for improvement."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.5.2",
+          "title": "HUMAN HEALTH",
+          "description": "Non-communicable diseases and fungal infections.",
+          "orderIndex": 2,
+          "contentStandards": [
+            {
+              "code": "B9.5.2.1",
+              "description": "Demonstrate knowledge of common non-communicable diseases of humans, their causes, symptoms, effects and prevention",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.2.1.1",
+                  "description": "Explain the symptoms, effects and prevention of some non-communicable diseases and analyse the risk factors associated with them",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Describe what non-communicable diseases are and determine their common causes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify symptoms, effects and prevention of non-communicable diseases."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Explain the causes, symptoms, effects and prevention of cancer."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify common cancers that affect humans and link them to life style."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.5.2.2",
+              "description": "Demonstrate understanding of the relationship of health and disease, the concept of common diseases in the environment and how to control them",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.5.2.2.1",
+                  "description": "Explain the concepts of health and disease and show their relationship",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Define health as stipulated by World Health Organisation (WHO) and show the relationship between health and disease."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.2.2.2",
+                  "description": "Explain the concept of common diseases in an environment",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Conduct a survey about common diseases and analyse the findings."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify causes, symptoms and prevention of common diseases."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.2.2.3",
+                  "description": "Demonstrate knowledge of selected fungal, diseases of humans, their causes, symptoms, effects and prevention",
+                  "orderIndex": 3,
+                  "indicators": [
+                    {
+                      "code": "B9.5.2.2.1",
+                      "description": "Explain the nature of fungal diseases with special emphasis on Ringworm/candidiasis/fingernail, and toe nail infection, their causes, symptoms, effects on humans and its prevention",
+                      "orderIndex": 1,
+                      "exemplars": [
+                        {
+                          "orderIndex": 1,
+                          "description": "Discuss the nature of fungal diseases."
+                        },
+                        {
+                          "orderIndex": 2,
+                          "description": "Search for information and make presentations on ringworm, candidiasis and fungal eye infection diseases."
+                        },
+                        {
+                          "orderIndex": 3,
+                          "description": "Describe the symptoms, effects and prevention of ringworm, candidiasis and fungal eye infection diseases."
+                        },
+                        {
+                          "orderIndex": 4,
+                          "description": "Describe the role of individuals, community members and government in managing fungal diseases."
+                        },
+                        {
+                          "orderIndex": 5,
+                          "description": "Design and produce a poster to educate community members on fungal diseases."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.5.3",
+          "title": "SCIENCE AND INDUSTRY",
+          "description": "Scientific concepts in industries.",
+          "orderIndex": 3,
+          "contentStandards": [
+            {
+              "code": "B9.5.3.1",
+              "description": "Analyse the scientific concepts, principles and processes applied in industries in and outside their community",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.3.1.1",
+                  "description": "Investigate the scientific concepts, principles and processes involved in industries in their environment",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify products of industries within and outside their community and describe the process of production."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Investigate and outline scientific concepts, principles and processes underlying the production of common everyday industrial products."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.5.3.2",
+              "description": "Demonstrate an understanding of the concept of industry, the science underpinning the processes of production in industries the technologies in indigenous industries and western industries",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.5.3.2.1",
+                  "description": "Explain the concept of industry and distinguish between modern and indigenous industries",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify an industry as individual firms producing the same commodity and give examples."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe how technology affects industry and compare the technologies in indigenous and modern industries."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.3.2.2",
+                  "description": "Examine indigenous industries in their communities and show the scientific processes in the stages of production",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Discuss indigenous industries in their communities and identify the scientific processes, concepts and principles."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Identify indigenous practices at home, school and the community and the science involved."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.5.4",
+          "title": "CLIMATE CHANGE AND GREEN ECONOMY",
+          "description": "Factors influencing climate change.",
+          "orderIndex": 4,
+          "contentStandards": [
+            {
+              "code": "B9.5.4.1",
+              "description": "Demonstrate an understanding of the natural and human factors that influence climate change and a green economy",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.4.1.1",
+                  "description": "Examine various natural and human factors that influence climate change and green economy in their localities",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify the natural factors that influence climate change."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe ways of minimising human activities that influence climate change."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare natural and human factors that influence climate change and green economy."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "code": "B9.5.4.2",
+              "description": "Evaluate the effectiveness of initiatives that address the issue of climate change and green economy in Ghana and the world at large",
+              "orderIndex": 2,
+              "indicators": [
+                {
+                  "code": "B9.5.4.2.1",
+                  "description": "Assess data on climate change and green economy actions/ activities globally including Ghana and other countries",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Research into climate change and green economy actions in Ghana."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Access climate change and green economy actions in other countries."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "Compare and contrast climate change and green economy actions in Ghana and other countries."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "Identify and write the effective initiatives that address climate change and green economy issues."
+                    },
+                    {
+                      "orderIndex": 5,
+                      "description": "Prescribe with reasons best practices to serve as possible solutions to address climate change."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "B9.5.5",
+          "title": "UNDERSTANDING THE ENVIRONMENT",
+          "description": "Uses of plant parts.",
+          "orderIndex": 5,
+          "contentStandards": [
+            {
+              "code": "B9.5.5.1",
+              "description": "Demonstrate knowledge and skills in the use of plant roots, stems, leaves, flowers, and fruits for agricultural and non-agricultural purposes",
+              "orderIndex": 1,
+              "indicators": [
+                {
+                  "code": "B9.5.5.1.1",
+                  "description": "Show and list the uses of different plant parts for agricultural and non-agricultural purposes",
+                  "orderIndex": 1,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Identify plant parts that are used for agricultural and non-agricultural purposes."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Describe how plant parts are used for agricultural and non-agricultural purposes."
+                    },
+                    {
+                      "orderIndex": 3,
+                      "description": "List the uses of plant parts for agricultural purposes."
+                    },
+                    {
+                      "orderIndex": 4,
+                      "description": "List the uses of plant parts for non-agricultural purposes."
+                    }
+                  ]
+                },
+                {
+                  "code": "B9.5.5.1.2",
+                  "description": "Demonstrate the use of different plant parts for agricultural and non-agricultural purposes",
+                  "orderIndex": 2,
+                  "exemplars": [
+                    {
+                      "orderIndex": 1,
+                      "description": "Create agricultural materials from different plant parts."
+                    },
+                    {
+                      "orderIndex": 2,
+                      "description": "Create non-agricultural materials from different plant parts."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
