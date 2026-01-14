@@ -1,31 +1,29 @@
 // src/app/app/dashboard/page.tsx
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../lib/auth";
-import { prisma } from "../../../lib/prisma";
-import { getActiveTenantSlug } from "../../../lib/tenant";
-import OrgSwitcher from "../../../components/OrgSwitcher";
+import { prisma } from "@/lib/prisma";
+import OrgSwitcher from "@/components/OrgSwitcher";
+import { requireServerUserContext } from "@/lib/serverAuth";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
-  const userId = (session as any)?.userId as string | undefined;
+  const ctx = await requireServerUserContext({ redirectTo: "/app/dashboard", requireTenant: false });
 
-  // Get all tenants (schools) this user belongs to
-  const memberships = userId
-    ? await prisma.membership.findMany({
-        where: { userId, status: "ACTIVE" },
-        include: { tenant: true },
-        orderBy: { createdAt: "asc" },
-      })
-    : [];
+  const memberships = await prisma.membership.findMany({
+    where: { userId: ctx.userId, status: "ACTIVE" },
+    include: { tenant: true },
+    orderBy: { createdAt: "asc" },
+  });
 
   const allTenants = memberships.map((m) => ({
     slug: m.tenant.slug,
     name: m.tenant.name,
   }));
 
-  // Determine active tenant: cookie → first membership
-  const activeSlug = await getActiveTenantSlug(userId);
-  const active = allTenants.find((t) => t.slug === activeSlug) || allTenants[0] || null;
+  const activeBySession = ctx.tenantId
+    ? memberships.find((m) => m.tenantId === ctx.tenantId)?.tenant
+    : null;
+
+  const active = activeBySession ?? memberships[0]?.tenant ?? null;
 
   return (
     <main className="p-6 space-y-4">
@@ -41,13 +39,11 @@ export default async function DashboardPage() {
           <p className="text-xs text-gray-500">({active.slug})</p>
         </div>
       ) : (
-        <div className="text-red-600">
-          No school selected or no memberships.
-        </div>
+        <div className="text-red-600">No school selected or no memberships.</div>
       )}
 
       <p className="mt-4">
-        You are signed in as <strong>{session?.user?.email}</strong>.
+        You are signed in as <strong>{ctx.email}</strong>.
       </p>
     </main>
   );

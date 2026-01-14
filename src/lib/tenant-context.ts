@@ -1,25 +1,25 @@
 // src/lib/tenant-context.ts
-import { getServerSession } from "next-auth";
-import { authOptions } from "../lib/auth";
-import { prisma } from "../lib/prisma";
-import { getActiveTenantSlug } from "../lib/tenant";
+import { prisma } from "@/lib/prisma";
+import { getCurrentTenantOrThrow } from "@/lib/tenant";
 
+/**
+ * ✅ Production: session-derived tenant only.
+ * No active-tenant cookies, no slug switching, no userId stored elsewhere.
+ */
 export async function getUserAndTenantOrThrow() {
-  const session = await getServerSession(authOptions);
-  const userId = (session as any)?.userId as string | undefined;
-  if (!userId) throw new Error("Not authenticated");
+  const { user, tenant } = await getCurrentTenantOrThrow();
 
-  const slug = await getActiveTenantSlug(userId);
-  if (!slug) throw new Error("No active tenant");
-
-  const tenant = await prisma.tenant.findUnique({ where: { slug } });
-  if (!tenant) throw new Error("Active tenant not found");
-
-  const membership = await prisma.membership.findFirst({
-    where: { userId, tenantId: tenant.id, status: "ACTIVE" },
-    select: { id: true, roleId: true },
+  // Extra defensive fetch (ensures tenant exists and is accessible)
+  const fullTenant = await prisma.tenant.findUnique({
+    where: { id: tenant.id },
+    select: { id: true, name: true, slug: true, timezone: true, locale: true },
   });
-  if (!membership) throw new Error("No membership for active tenant");
 
-  return { userId, tenant };
+  if (!fullTenant) {
+    const e = new Error("Active tenant not found");
+    (e as any).status = 404;
+    throw e;
+  }
+
+  return { userId: user.id, tenant: fullTenant };
 }

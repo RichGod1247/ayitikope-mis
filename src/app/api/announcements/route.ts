@@ -3,46 +3,61 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
-import { getActiveTenantByCookie } from "../../../lib/tenant";
-import { getCurrentUserOrThrow, requireMembershipOrThrow } from "../../../lib/authz";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUserOrThrow, requireMembershipOrThrow, requireRoleOrThrow } from "@/lib/authz";
+
+const CreateSchema = z.object({
+  title: z.string().trim().min(1, "Title is required.").max(160, "Title too long."),
+  body: z.string().trim().min(1, "Body is required.").max(8000, "Body too long."),
+});
+
+const jsonErr = (status: number, error: string) =>
+  NextResponse.json({ ok: false, error }, { status });
 
 export async function GET() {
-  const { tenant } = await getActiveTenantByCookie();
-  if (!tenant) return NextResponse.json({ ok: true, items: [] });
-  const items = await prisma.announcement.findMany({
-    where: { tenantId: tenant.id },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: { id: true, title: true, body: true, createdAt: true },
-  });
-  return NextResponse.json({ ok: true, items });
+  try {
+    const user = await getCurrentUserOrThrow();
+    if (!user.tenantId) return jsonErr(403, "NO_ACTIVE_TENANT");
+
+    await requireMembershipOrThrow(user.id, user.tenantId);
+
+    const items = await prisma.announcement.findMany({
+      where: { tenantId: user.tenantId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: { id: true, title: true, body: true, createdAt: true },
+    });
+
+    return NextResponse.json({ ok: true, items });
+  } catch (e: any) {
+    const status = e?.status ?? 500;
+    return jsonErr(status, String(e?.message || e));
+  }
 }
 
 export async function POST(req: Request) {
   try {
-    const { tenant } = await getActiveTenantByCookie();
-    if (!tenant) {
-      return NextResponse.json({ ok: false, error: "No active tenant" }, { status: 400 });
-    }
-
     const user = await getCurrentUserOrThrow();
-    await requireMembershipOrThrow(user.id, tenant.id);
+    if (!user.tenantId) return jsonErr(403, "NO_ACTIVE_TENANT");
 
-    const body = await req.json();
-    const title = String(body?.title ?? "").trim();
-    const content = String(body?.body ?? "").trim();
+    const membership = await requireMembershipOrThrow(user.id, user.tenantId);
 
-    if (!title || !content) {
-      return NextResponse.json({ ok: false, error: "Title and body required" }, { status: 400 });
-    }
+    // ✅ Production-grade: only admin/headteacher should post announcements
+    requireRoleOrThrow(membership.role?.name, ["ADMIN", "HEADTEACHER"]);
+
+    const raw = await req.json().catch(() => null);
+    const parsed = CreateSchema.safeParse(raw);
+    if (!parsed.success) return jsonErr(400, parsed.error.issues[0]?.message || "Invalid body.");
+
+    const { title, body } = parsed.data;
 
     const created = await prisma.announcement.create({
       data: {
-        tenantId: tenant.id,
+        tenant: { connect: { id: user.tenantId } },
         title,
-        body: content,
-        createdByUserId: user.id,
+        body,
+        createdBy: { connect: { id: user.id } },
       },
       select: { id: true, title: true, body: true, createdAt: true },
     });
@@ -50,6 +65,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, item: created });
   } catch (e: any) {
     const status = e?.status ?? 500;
-    return NextResponse.json({ ok: false, error: String(e?.message || e) }, { status });
+    return jsonErr(status, String(e?.message || e));
   }
 }

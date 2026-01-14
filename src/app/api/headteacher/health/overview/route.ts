@@ -1,219 +1,215 @@
-// src/app/api/headteacher/health/overview/route.ts
-
-import { NextResponse } from "next/server";
+// src/app/api/fees/notify-arrears/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
+import { requireServerUserContext } from "@/lib/serverAuth";
 
-const TENANT_ID = "cmhhnghn00008vcpgp3fl07fl";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-function getTodayISODate(): string {
-  const now = new Date();
-  const y = now.getUTCFullYear();
-  const m = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(now.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+const DEFAULT_FEES_ARREARS_TEMPLATE = [
+  "Dear Parent/Guardian of {{studentName}},",
+  "",
+  "Our records show that fees of GHS {{amountDue}} for {{className}} ({{term}})",
+  "are still outstanding as of {{dueDate}}.",
+  "",
+  "If you have already paid, kindly disregard this message.",
+  "Otherwise, we encourage you to settle at your earliest convenience.",
+  "",
+  "Thank you,",
+  "{{schoolName}}",
+].join("\n");
+
+type ArrearsItem = {
+  studentId?: string;
+  studentName: string;
+  guardianPhone: string;
+  className?: string;
+  term?: string;
+  amountDue?: string | number;
+  dueDate?: string;
+};
+
+// Brand type derived from BrandName tuple in sms/hubtel.ts
+type Brand = (typeof BrandName)[number];
+
+// For fees reminders we send via the admin brand
+const FEES_BRAND: Brand = "AYITIADMIN";
+
+function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+  return NextResponse.json(payload, {
+    ...init,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
+  });
 }
 
-export async function GET(req: Request) {
+// Simple template renderer for {{placeholders}}
+function renderTemplate(template: string, ctx: Record<string, string>): string {
+  let body = template;
+  for (const [key, value] of Object.entries(ctx)) {
+    const re = new RegExp(`{{\\s*${key}\\s*}}`, "g");
+    body = body.replace(re, value);
+  }
+  return body;
+}
+
+function safeMoney(v: unknown): string {
+  if (typeof v === "number" && Number.isFinite(v)) return v.toFixed(2);
+  if (typeof v === "string" && v.trim()) return v.trim();
+  return "0.00";
+}
+
+async function requireAdminLike(tenantId: string, userId: string) {
+  const membership = await prisma.membership.findFirst({
+    where: { tenantId, userId, status: "ACTIVE" },
+    include: { role: true },
+  });
+  if (!membership) return { ok: false as const, status: 403, error: "Forbidden." };
+  const roleName = String(membership.role?.name ?? "").toUpperCase();
+  const isAdminLike = roleName.includes("ADMIN") || roleName.includes("HEAD");
+  if (!isAdminLike) return { ok: false as const, status: 403, error: "Forbidden." };
+  return { ok: true as const };
+}
+
+export async function POST(req: NextRequest) {
+  // Auth + tenant
+  let ctx: { tenantId: string; userId: string };
   try {
-    const url = new URL(req.url);
-    const dateParam = url.searchParams.get("date") || getTodayISODate();
+    const c = await requireServerUserContext({
+      redirectTo: "/auth/signin",
+      requireTenant: true,
+    });
+    ctx = { tenantId: c.tenantId, userId: c.userId };
+  } catch {
+    return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
 
-    // Normalise to "YYYY-MM-DDT00:00:00.000Z"
-    const dateIso = `${dateParam}T00:00:00.000Z`;
-    const date = new Date(dateIso);
-    if (Number.isNaN(date.getTime())) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid date parameter." },
-        { status: 400 }
-      );
+  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
+  if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, { status: roleOk.status });
+
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return jsonNoStore({ ok: false, error: "Content-Type must be application/json." }, { status: 415 });
+  }
+
+  try {
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return jsonNoStore({ ok: false, error: "Invalid JSON body." }, { status: 400 });
     }
 
-    // 1) Read fever threshold from tenant.settings.health
+    const { tenantId: tenantIdRaw, arrears } = body as { tenantId?: string; arrears?: ArrearsItem[] };
+
+    const tenantId = (tenantIdRaw ?? "").trim() || ctx.tenantId;
+    if (tenantId !== ctx.tenantId) {
+      return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
+    }
+
+    if (!Array.isArray(arrears) || arrears.length === 0) {
+      return jsonNoStore({ ok: false, error: "Payload must include a non-empty 'arrears' array." }, { status: 400 });
+    }
+
+    // Load tenant + template
     const tenant = await prisma.tenant.findUnique({
-      where: { id: TENANT_ID },
-      select: { settings: true, name: true, id: true },
+      where: { id: ctx.tenantId },
+      select: { id: true, name: true, settingsJson: true },
     });
 
-    if (!tenant) {
-      return NextResponse.json(
-        { ok: false, error: "Tenant not found." },
-        { status: 404 }
-      );
-    }
+    const schoolName = (tenant?.name ?? "").trim() || "your ward's school";
 
-    let feverThresholdC = 38.0;
-    const settings = (tenant.settings as any) || {};
-    if (
-      settings.health &&
-      typeof settings.health === "object" &&
-      typeof settings.health.feverThresholdC === "number"
-    ) {
-      feverThresholdC = settings.health.feverThresholdC;
-    }
+    const settings = (tenant?.settingsJson as any) || {};
+    const smsTemplates = (settings.smsTemplates as any) || {};
+    const storedTemplate = smsTemplates.feesArrears;
 
-    // 2) Load student health daily rows for that date
-    const dailyItems = await prisma.studentHealthDaily.findMany({
-      where: {
-        tenantId: TENANT_ID,
-        date,
-      },
-      select: {
-        id: true,
-        studentId: true,
-        classroomId: true,
-        temperatureC: true,
-        symptoms: true,
-        notes: true,
-      },
-      orderBy: { createdAt: "asc" },
-    });
+    const template =
+      typeof storedTemplate === "string" && storedTemplate.trim().length > 0
+        ? storedTemplate
+        : DEFAULT_FEES_ARREARS_TEMPLATE;
 
-    if (dailyItems.length === 0) {
-      return NextResponse.json({
-        ok: true,
-        tenantId: tenant.id,
-        tenantName: tenant.name,
-        date: date.toISOString(),
-        feverThresholdC,
-        totalRecords: 0,
-        feverCount: 0,
-        byClassroom: [],
-        samples: [],
-      });
-    }
+    let successCount = 0;
+    const results: any[] = [];
 
-    const studentIds = Array.from(
-      new Set(dailyItems.map((i) => i.studentId))
-    );
-    const classroomIds = Array.from(
-      new Set(dailyItems.map((i) => i.classroomId))
-    );
-
-    const [students, classrooms] = await Promise.all([
-      prisma.student.findMany({
-        where: { id: { in: studentIds } },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          classroomId: true,
-        },
-      }),
-      prisma.classroom.findMany({
-        where: { id: { in: classroomIds } },
-        select: { id: true, name: true },
-      }),
-    ]);
-
-    const studentMap = new Map<
-      string,
-      { id: string; firstName: string; lastName: string }
-    >();
-    for (const s of students) {
-      studentMap.set(s.id, {
-        id: s.id,
-        firstName: s.firstName,
-        lastName: s.lastName,
-      });
-    }
-
-    const classroomMap = new Map<string, { id: string; name: string }>();
-    for (const c of classrooms) {
-      classroomMap.set(c.id, { id: c.id, name: c.name });
-    }
-
-    // 3) Aggregate
-    let feverCount = 0;
-    const byClassroomMap = new Map<
-      string,
-      {
-        classroomId: string | null;
-        classroomName: string;
-        totalRecords: number;
-        feverCount: number;
-        maxTemp: number | null;
-      }
-    >();
-
-    const samples: {
-      studentName: string;
-      classroomName: string;
-      temperatureC: number | null;
-      symptoms: string | null;
-      notes: string | null;
-      isFever: boolean;
-    }[] = [];
-
-    for (const item of dailyItems) {
-      const student = item.studentId
-        ? studentMap.get(item.studentId)
-        : undefined;
-      const classroom = item.classroomId
-        ? classroomMap.get(item.classroomId)
-        : undefined;
-
-      const classroomName =
-        classroom?.name ?? (item.classroomId ? "Unknown class" : "No class");
-      const classroomKey = classroom?.id ?? item.classroomId ?? "NO_CLASS";
-
-      const temp = item.temperatureC ?? null;
-      const isFever = temp != null && temp >= feverThresholdC;
-      if (isFever) feverCount += 1;
-
-      // Per-class aggregation
-      let agg = byClassroomMap.get(classroomKey);
-      if (!agg) {
-        agg = {
-          classroomId: classroom?.id ?? item.classroomId ?? null,
-          classroomName,
-          totalRecords: 0,
-          feverCount: 0,
-          maxTemp: null,
-        };
-        byClassroomMap.set(classroomKey, agg);
-      }
-      agg.totalRecords += 1;
-      if (isFever) agg.feverCount += 1;
-      if (temp != null) {
-        if (agg.maxTemp == null || temp > agg.maxTemp) {
-          agg.maxTemp = temp;
-        }
+    for (const item of arrears) {
+      const guardianPhone = (item.guardianPhone || "").trim();
+      if (!guardianPhone) {
+        results.push({
+          studentName: item.studentName,
+          guardianPhone,
+          ok: false,
+          error: "No guardian phone; skipped.",
+          to: "",
+        });
+        continue;
       }
 
-      const studentName = student
-        ? `${student.firstName} ${student.lastName}`.trim()
-        : "Unknown learner";
+      const amountStr = safeMoney(item.amountDue);
 
-      samples.push({
-        studentName,
-        classroomName,
-        temperatureC: temp,
-        symptoms: item.symptoms,
-        notes: item.notes,
-        isFever,
-      });
+      const ctxTpl = {
+        studentName: (item.studentName || "your ward").trim(),
+        amountDue: amountStr,
+        className: (item.className || "").trim(),
+        term: (item.term || "").trim(),
+        dueDate: (item.dueDate || "").trim(),
+        schoolName,
+      };
+
+      const smsBody = renderTemplate(template, ctxTpl);
+
+      try {
+        const sendResult = await sendViaHubtel({
+          to: guardianPhone,
+          body: smsBody,
+          brand: FEES_BRAND,
+          meta: {
+            kind: "fees-arrears",
+            tenantId: ctx.tenantId,
+            studentId: item.studentId ?? null,
+            className: item.className ?? null,
+            term: item.term ?? null,
+            amountDue: amountStr,
+          },
+        });
+
+        if (sendResult.ok) successCount++;
+
+        results.push({
+          studentName: item.studentName,
+          guardianPhone,
+          amountDue: amountStr,
+          ok: sendResult.ok,
+          to: (sendResult as any).to ?? guardianPhone,
+          providerResponse: (sendResult as any).providerResponse ?? null,
+        });
+      } catch (err: any) {
+        console.error("[FEES_NOTIFY_ARREARS_ERROR]", err);
+        results.push({
+          studentName: item.studentName,
+          guardianPhone,
+          amountDue: amountStr,
+          ok: false,
+          error: err?.message || "Failed to send SMS",
+          to: "",
+        });
+      }
     }
 
-    const byClassroom = Array.from(byClassroomMap.values()).sort((a, b) =>
-      a.classroomName.localeCompare(b.classroomName)
-    );
-
-    return NextResponse.json({
+    const first = arrears[0] ?? {};
+    return jsonNoStore({
       ok: true,
-      tenantId: tenant.id,
-      tenantName: tenant.name,
-      date: date.toISOString(),
-      feverThresholdC,
-      totalRecords: dailyItems.length,
-      feverCount,
-      byClassroom,
-      samples,
+      total: arrears.length,
+      successCount,
+      brand: FEES_BRAND,
+      className: first.className ?? "",
+      term: first.term ?? "",
+      dueDate: first.dueDate ?? "",
+      results,
     });
   } catch (err) {
-    console.error("[headteacher/health/overview] GET error", err);
-    return NextResponse.json(
-      { ok: false, error: "Failed to load health overview." },
-      { status: 500 }
-    );
+    console.error("[FEES_NOTIFY_ARREARS_FATAL]", err);
+    return jsonNoStore({ ok: false, error: "Internal error while sending fee reminders." }, { status: 500 });
   }
 }

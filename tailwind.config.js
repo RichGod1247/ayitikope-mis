@@ -1,38 +1,38 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/**/*.{js,ts,jsx,tsx,mdx}',
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  theme: { container: {
+  theme: {
+    container: {
       center: true,
       padding: "1rem",
       screens: {
         "2xl": "1200px",
       },
     },
-    extend: {colors: {
-        // Brand palette — tweak any hex later if you prefer
+    extend: {
+      colors: {
         primary: {
-          DEFAULT: "#166534",      // Forest Green (brand)
+          DEFAULT: "#166534",
           foreground: "#FFFFFF",
         },
         secondary: {
-          DEFAULT: "#F59E0B",      // Golden accent
+          DEFAULT: "#F59E0B",
           foreground: "#0B0F19",
         },
         accent: {
-          DEFAULT: "#0EA5E9",      // Sky accent (links, highlights)
+          DEFAULT: "#0EA5E9",
           foreground: "#042132",
         },
 
-        // UI surface colors (light mode)
         background: "#FFFFFF",
         foreground: "#0B0F19",
         muted: "#F2F4F7",
-        border:  "#E5E7EB",
-        card:    "#FFFFFF",
+        border: "#E5E7EB",
+        card: "#FFFFFF",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
@@ -48,4 +48,3 @@ module.exports = {
   },
   plugins: [],
 };
-export default config;

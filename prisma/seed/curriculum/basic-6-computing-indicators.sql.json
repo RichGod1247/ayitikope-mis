@@ -1,0 +1,875 @@
+[
+  {
+    "indicator_id": "cmilb8xks0008vcl4fsxpdj5h",
+    "indicator_code": "B6.1.1.1.1",
+    "indicator_description": "Learn about the Generation of Computers",
+    "indicator_order": 1,
+    "content_standard_code": "B6.1.1.1",
+    "substrand_code": "B6.1.1",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb90jw000cvcl43kto7hqs",
+    "indicator_code": "B6.1.1.1.2",
+    "indicator_description": "Identify components of a Computer System: Hardware, Software and Liveware.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.1.1.1",
+    "substrand_code": "B6.1.1",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb93n7000gvcl43tsatnxr",
+    "indicator_code": "B6.1.1.1.3",
+    "indicator_description": "Identify the left, right mouse button, holding of mouse, performing single, double and triple clicking, dragging object and using the scroll wheel.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.1.1.1",
+    "substrand_code": "B6.1.1",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb98m5000kvcl4dkgvxq3f",
+    "indicator_code": "B6.1.1.1.4",
+    "indicator_description": "Demonstrate proper use of keyboarding technique.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.1.1.1",
+    "substrand_code": "B6.1.1",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb9blj000ovcl4vdfugy02",
+    "indicator_code": "B6.1.1.1.5",
+    "indicator_description": "Summarise the generation of computers (second generation of computers.)",
+    "indicator_order": 5,
+    "content_standard_code": "B6.1.1.1",
+    "substrand_code": "B6.1.1",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb9hx2000wvcl4vogh22bp",
+    "indicator_code": "B6.1.2.1.1",
+    "indicator_description": "Explore the use of the desktop Background, changing the themes colours and User account. (e.g. classic, icons and Taskbar of the background)",
+    "indicator_order": 1,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb9l5p0010vcl4msqpx6gz",
+    "indicator_code": "B6.1.2.1.2",
+    "indicator_description": "Demonstrate the use of the Recycle Bin or Trash Can.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb9o2y0014vcl4c38yhszw",
+    "indicator_code": "B6.1.2.1.3",
+    "indicator_description": "Perform permanent delete or Empty Trash can and restoring files or icons in the recycle bin.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb9reg0018vcl4gi0fqzty",
+    "indicator_code": "B6.1.2.1.4",
+    "indicator_description": "Explore the use of Copy, Paste, Delete tools, the moving of folders by using the Desktop Pop-Up menu.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb9uei001cvcl4ckgbeof1",
+    "indicator_code": "B6.1.2.1.5",
+    "indicator_description": "Illustrate the use of File Explorer window and locations of the computer through the file explorer.",
+    "indicator_order": 5,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilb9xn5001gvcl45jus8amm",
+    "indicator_code": "B6.1.2.1.6",
+    "indicator_description": "Locate the hard drives, and other removable storage icons in the File explorer.",
+    "indicator_order": 6,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilba0sx001kvcl4c56zlu4y",
+    "indicator_code": "B6.1.2.1.7",
+    "indicator_description": "Use the File Explorer Ribbon (Home Ribbon only), that is, the use of the Clipboard and Organise tools of the Home Ribbon of the File Explorer, as well as the Open New Window and Close tools of the File Menu of the File Explorer.",
+    "indicator_order": 7,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilba44e001ovcl4n1iqpg4r",
+    "indicator_code": "B6.1.2.1.8",
+    "indicator_description": "Demonstrate the use of the navigation Pane of the File Explorer to access different locations of the computer from the navigation pane.",
+    "indicator_order": 8,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilba7a6001svcl4ifwm00h0",
+    "indicator_code": "B6.1.2.1.9",
+    "indicator_description": "Demonstrate the use of Frequent Folders Section of the File Explorer to access frequently used locations of the computer.",
+    "indicator_order": 9,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbaaaa001wvcl49knc7i65",
+    "indicator_code": "B6.1.2.1.10",
+    "indicator_description": "Demonstrate the use of Recent Files Section of the File Explorer to access frequently used files of the computer.",
+    "indicator_order": 10,
+    "content_standard_code": "B6.1.2.1",
+    "substrand_code": "B6.1.2",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbagiy0024vcl4g5txri6r",
+    "indicator_code": "B6.1.3.1.1",
+    "indicator_description": "Identify types of data. (Integers, double, characters, float etc.)",
+    "indicator_order": 1,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbajor0028vcl47ohuc0az",
+    "indicator_code": "B6.1.3.1.2",
+    "indicator_description": "Identify more sources of data and information e.g. internet (emailing, Skype, SMS etc.)",
+    "indicator_order": 2,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbamrn002cvcl4e37n1lt1",
+    "indicator_code": "B6.1.3.1.3",
+    "indicator_description": "Demonstrate sending and receiving information from other gadgets e.g. Bluetooth, Infrared, Radio, Fax, Telephones calls, SMS etc.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbapul002gvcl4894p6mfs",
+    "indicator_code": "B6.1.3.1.4",
+    "indicator_description": "Demonstrate basic manipulations on sample data e.g. arranging data in a matrix table, sorting and calculations etc.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbat38002kvcl4horm79o1",
+    "indicator_code": "B6.1.3.1.5",
+    "indicator_description": "Demonstrate how to manage users of the Desktop",
+    "indicator_order": 5,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbawbv002ovcl4ao1vihzh",
+    "indicator_code": "B6.1.3.1.6",
+    "indicator_description": "Demonstrate how to collect data (e.g. listening to radio, reading newspapers, interviews use of questionnaires etc.)",
+    "indicator_order": 6,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbaz95002svcl4bzv4nugl",
+    "indicator_code": "B6.1.3.1.7",
+    "indicator_description": "Demonstrate the use of the tools for collecting data.",
+    "indicator_order": 7,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbb2hq002wvcl4vhremwd0",
+    "indicator_code": "B6.1.3.1.8",
+    "indicator_description": "Demonstrate data interpretation by computing data to gain required information (e.g. Finding sum or grand total using Electronic Spreadsheet).",
+    "indicator_order": 8,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbb5qc0030vcl4jlk3ad9z",
+    "indicator_code": "B6.1.3.1.9",
+    "indicator_description": "Demonstrate data presentation in different forms.",
+    "indicator_order": 9,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbb8w40034vcl4yziyin5b",
+    "indicator_code": "B6.1.3.1.10",
+    "indicator_description": "Demonstrate how to store data.",
+    "indicator_order": 10,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbbc1w0038vcl4uon9jc9a",
+    "indicator_code": "B6.1.3.1.11",
+    "indicator_description": "Manipulate data to gain required output (e.g. Finding sum, mean, grand totals, maximum, minimum, mode, division, multiplication etc.)",
+    "indicator_order": 11,
+    "content_standard_code": "B6.1.3.1",
+    "substrand_code": "B6.1.3",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbbim0003gvcl4uy65cd0m",
+    "indicator_code": "B6.1.4.1.1",
+    "indicator_description": "Define communication.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.1.4.1",
+    "substrand_code": "B6.1.4",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbbloy003kvcl4s2h3aaur",
+    "indicator_code": "B6.1.4.1.2",
+    "indicator_description": "Identify three more technological tools for communication in the community.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.1.4.1",
+    "substrand_code": "B6.1.4",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbboxl003ovcl4tk1rk5ng",
+    "indicator_code": "B6.1.4.1.3",
+    "indicator_description": "Demonstrate communication with others.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.1.4.1",
+    "substrand_code": "B6.1.4",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbbs0i003svcl48dyzwo57",
+    "indicator_code": "B6.1.4.1.4",
+    "indicator_description": "Identify three more importance of technology in communication.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.1.4.1",
+    "substrand_code": "B6.1.4",
+    "strand_code": "B6.1"
+  },
+  {
+    "indicator_id": "cmilbbzwx0042vcl4l7pepfcf",
+    "indicator_code": "B6.2.1.1.1",
+    "indicator_description": "Demonstrate how to use the File menu, the Insert and Design Ribbon from B5.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.2.1.1",
+    "substrand_code": "B6.2.1",
+    "strand_code": "B6.2"
+  },
+  {
+    "indicator_id": "cmilbc3e30046vcl4a0zzt7pm",
+    "indicator_code": "B6.2.1.1.2",
+    "indicator_description": "Demonstrate how to use icons in the Text group in the Insert Ribbon.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.2.1.1",
+    "substrand_code": "B6.2.1",
+    "strand_code": "B6.2"
+  },
+  {
+    "indicator_id": "cmilbc6h0004avcl4xpaz4gzp",
+    "indicator_code": "B6.2.1.1.3",
+    "indicator_description": "Be able to give a 5-side presentation in MS-PowerPoint using tools of the ribbons studied.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.2.1.1",
+    "substrand_code": "B6.2.1",
+    "strand_code": "B6.2"
+  },
+  {
+    "indicator_id": "cmilbcdrp004kvcl4dk1w00xn",
+    "indicator_code": "B6.3.1.1.1",
+    "indicator_description": "Demonstrate how to use the File menu and Insert, Design, and Layout Ribbons from B5.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.3.1.1",
+    "substrand_code": "B6.3.1",
+    "strand_code": "B6.3"
+  },
+  {
+    "indicator_id": "cmilbcgtm004ovcl4e5d4dvv0",
+    "indicator_code": "B6.3.1.1.2",
+    "indicator_description": "Demonstrate how to use icons in the Text group in the Insert Ribbon.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.3.1.1",
+    "substrand_code": "B6.3.1",
+    "strand_code": "B6.3"
+  },
+  {
+    "indicator_id": "cmilbcjvv004svcl4psjv3ebq",
+    "indicator_code": "B6.3.1.1.3",
+    "indicator_description": "Be able to use the attributes of the ribbons studied in a paragraph.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.3.1.1",
+    "substrand_code": "B6.3.1",
+    "strand_code": "B6.3"
+  },
+  {
+    "indicator_id": "cmilbcret0052vcl4obxrf2gv",
+    "indicator_code": "B6.5.1.1.1",
+    "indicator_description": "Describe Databases.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.5.1.1",
+    "substrand_code": "B6.5.1",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbcuhq0056vcl4qmo8g25f",
+    "indicator_code": "B6.5.1.1.2",
+    "indicator_description": "Identify databases and data structures.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.5.1.1",
+    "substrand_code": "B6.5.1",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbcxkn005avcl41tahk5ei",
+    "indicator_code": "B6.5.1.1.3",
+    "indicator_description": "Explain Fundamental Database concepts.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.5.1.1",
+    "substrand_code": "B6.5.1",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbd0kr005evcl4rzq0k62z",
+    "indicator_code": "B6.5.1.1.5",
+    "indicator_description": "Describe the basics of Relational Data model.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.5.1.1",
+    "substrand_code": "B6.5.1",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbd3t1005ivcl4w7fshfik",
+    "indicator_code": "B6.5.1.1.6",
+    "indicator_description": "Identify the basics of logical Database Design.",
+    "indicator_order": 5,
+    "content_standard_code": "B6.5.1.1",
+    "substrand_code": "B6.5.1",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbd6wb005mvcl4qwq5hyqm",
+    "indicator_code": "B6.5.1.1.7",
+    "indicator_description": "Illustrate basics of relational algebra.",
+    "indicator_order": 6,
+    "content_standard_code": "B6.5.1.1",
+    "substrand_code": "B6.5.1",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbd9wf005qvcl4sv7g7cx5",
+    "indicator_code": "B6.5.1.1.8",
+    "indicator_description": "Operate basics SQL: querying and manipulating data.",
+    "indicator_order": 7,
+    "content_standard_code": "B6.5.1.1",
+    "substrand_code": "B6.5.1",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbdchw005uvcl4srql8yjj",
+    "indicator_code": "B6.5.1.1.9",
+    "indicator_description": "Operate basics SQL: querying and manipulating data.",
+    "indicator_order": 8,
+    "content_standard_code": "B6.5.1.1",
+    "substrand_code": "B6.5.1",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbdics0062vcl4g9aehh34",
+    "indicator_code": "B6.5.3.1.1",
+    "indicator_description": "Demonstrate how to use the ribbons under the home ribbons. (i.e. clip board, styles, fonts, paragraph and editing)",
+    "indicator_order": 1,
+    "content_standard_code": "B6.5.3.1",
+    "substrand_code": "B6.5.3",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbdl750066vcl4merj9jm8",
+    "indicator_code": "B6.5.3.1.2",
+    "indicator_description": "Learners to create basic worksheets using Microsoft Excel 2016.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.5.3.1",
+    "substrand_code": "B6.5.3",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbdocy006avcl4iknwa6ij",
+    "indicator_code": "B6.5.3.1.3",
+    "indicator_description": "Perform calculations in an MS-Excel worksheet.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.5.3.1",
+    "substrand_code": "B6.5.3",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbdrip006evcl4m7j86gac",
+    "indicator_code": "B6.5.3.1.4",
+    "indicator_description": "Modify an MS-Excel worksheet.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.5.3.1",
+    "substrand_code": "B6.5.3",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbduis006ivcl4tau6vsvp",
+    "indicator_code": "B6.5.3.1.5",
+    "indicator_description": "Modify the appearance of data within a worksheet.",
+    "indicator_order": 5,
+    "content_standard_code": "B6.5.3.1",
+    "substrand_code": "B6.5.3",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbdxca006mvcl4yugapnzg",
+    "indicator_code": "B6.5.3.1.6",
+    "indicator_description": "Manage Excel workbooks.",
+    "indicator_order": 6,
+    "content_standard_code": "B6.5.3.1",
+    "substrand_code": "B6.5.3",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbdzvm006qvcl4wa4ivj20",
+    "indicator_code": "B6.5.3.1.7",
+    "indicator_description": "Print the content of an MS-Excel worksheet.",
+    "indicator_order": 7,
+    "content_standard_code": "B6.5.3.1",
+    "substrand_code": "B6.5.3",
+    "strand_code": "B6.5"
+  },
+  {
+    "indicator_id": "cmilbe6l00070vcl49uo6pimv",
+    "indicator_code": "B6.6.1.1.1",
+    "indicator_description": "Give examples of facilities the internet offers.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.1.1",
+    "substrand_code": "B6.6.1",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbe92c0074vcl419jaj1kx",
+    "indicator_code": "B6.6.1.1.2",
+    "indicator_description": "Describe the types of information available on the Internet.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.1.1",
+    "substrand_code": "B6.6.1",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbebqr0078vcl4f72877qy",
+    "indicator_code": "B6.6.1.1.3",
+    "indicator_description": "Identify data duplication.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.1.1",
+    "substrand_code": "B6.6.1",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbeen0007cvcl4552codxa",
+    "indicator_code": "B6.6.1.1.4",
+    "indicator_description": "Outline what one needs to connect to the Internet.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.6.1.1",
+    "substrand_code": "B6.6.1",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbioos00cwvcl4tv8a2s86",
+    "indicator_code": "B6.6.10.1.1",
+    "indicator_description": "Explain Internet etiquette and how to deal with it.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.10.1",
+    "substrand_code": "B6.6.10",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbir0p00d0vcl42vkl57t1",
+    "indicator_code": "B6.6.10.1.2",
+    "indicator_description": "Investigate on the responsible use of computers.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.10.1",
+    "substrand_code": "B6.6.10",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbek4j007kvcl41hyhqiln",
+    "indicator_code": "B6.6.2.1.1",
+    "indicator_description": "Identify the address or links window.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.2.1",
+    "substrand_code": "B6.6.2",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilben7c007ovcl45vf7mamx",
+    "indicator_code": "B6.6.2.1.2",
+    "indicator_description": "Recognise the status bar and list its use.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.2.1",
+    "substrand_code": "B6.6.2",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbeq7f007svcl4nr6ya81b",
+    "indicator_code": "B6.6.2.1.3",
+    "indicator_description": "Illustrate using help button.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.2.1",
+    "substrand_code": "B6.6.2",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbesxs007wvcl4hsn69lvv",
+    "indicator_code": "B6.6.2.1.4",
+    "indicator_description": "Recognise internet explorer speed keys.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.6.2.1",
+    "substrand_code": "B6.6.2",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbew1x0080vcl4jsl4nhc5",
+    "indicator_code": "B6.6.2.1.5",
+    "indicator_description": "Recognise Uniform Resource Locators (URLs).",
+    "indicator_order": 5,
+    "content_standard_code": "B6.6.2.1",
+    "substrand_code": "B6.6.2",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbez7p0084vcl485cnjj0u",
+    "indicator_code": "B6.6.2.1.6",
+    "indicator_description": "Demonstrate how to return to a URL.",
+    "indicator_order": 6,
+    "content_standard_code": "B6.6.2.1",
+    "substrand_code": "B6.6.2",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbf27j0088vcl4zqfmslm2",
+    "indicator_code": "B6.6.2.1.7",
+    "indicator_description": "Show how to find items on a page.",
+    "indicator_order": 7,
+    "content_standard_code": "B6.6.2.1",
+    "substrand_code": "B6.6.2",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbfaz3008gvcl4r81aspvt",
+    "indicator_code": "B6.6.3.1.1",
+    "indicator_description": "Recognize resource locators (URLs).",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.3.1",
+    "substrand_code": "B6.6.3",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbfeaz008kvcl4vgvyb41h",
+    "indicator_code": "B6.6.3.1.2",
+    "indicator_description": "Illustrate how to jump directory to URLs.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.3.1",
+    "substrand_code": "B6.6.3",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbfh5e008ovcl4th0tyfkq",
+    "indicator_code": "B6.6.3.1.3",
+    "indicator_description": "Demonstrate how to return to a URL.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.3.1",
+    "substrand_code": "B6.6.3",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbfkjo008svcl4c4zubu3i",
+    "indicator_code": "B6.6.3.1.4",
+    "indicator_description": "Show how to find items on a page.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.6.3.1",
+    "substrand_code": "B6.6.3",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbfngx008wvcl4un903q9r",
+    "indicator_code": "B6.6.3.1.5",
+    "indicator_description": "Illustrate how to print pages.",
+    "indicator_order": 5,
+    "content_standard_code": "B6.6.3.1",
+    "substrand_code": "B6.6.3",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbfte90094vcl4ef6wsp0j",
+    "indicator_code": "B6.6.4.1.1",
+    "indicator_description": "Show how to create a favourite link.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.4.1",
+    "substrand_code": "B6.6.4",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbfwec0098vcl4kevespcs",
+    "indicator_code": "B6.6.4.1.2",
+    "indicator_description": "Demonstrate deleting favourite links.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.4.1",
+    "substrand_code": "B6.6.4",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbfz0s009cvcl4bcgqnixp",
+    "indicator_code": "B6.6.4.1.3",
+    "indicator_description": "Create favourite folder.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.4.1",
+    "substrand_code": "B6.6.4",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbg1l4009gvcl48eyp50ue",
+    "indicator_code": "B6.6.4.1.4",
+    "indicator_description": "Use the links toolbar and Favourite Places.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.6.4.1",
+    "substrand_code": "B6.6.4",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbg76n009ovcl4ghn29v33",
+    "indicator_code": "B6.6.5.1.1",
+    "indicator_description": "Demonstrate the types and uses of form elements.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.5.1",
+    "substrand_code": "B6.6.5",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbgadu009svcl4ilhofls6",
+    "indicator_code": "B6.6.5.1.2",
+    "indicator_description": "Demonstrate the filing of forms offline.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.5.1",
+    "substrand_code": "B6.6.5",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbgdgr009wvcl4o8cba5i1",
+    "indicator_code": "B6.6.5.1.3",
+    "indicator_description": "Demonstrate uploading of files.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.5.1",
+    "substrand_code": "B6.6.5",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbgglq00a0vcl47hputq7g",
+    "indicator_code": "B6.6.5.1.4",
+    "indicator_description": "Illustrate retrieving text, pictures, sounds and programs.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.6.5.1",
+    "substrand_code": "B6.6.5",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbgjvi00a4vcl4x8vijsd8",
+    "indicator_code": "B6.6.5.1.5",
+    "indicator_description": "Discuss more about security on the form submission.",
+    "indicator_order": 5,
+    "content_standard_code": "B6.6.5.1",
+    "substrand_code": "B6.6.5",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbgpw100acvcl4o1hmxq24",
+    "indicator_code": "B6.6.6.1.1",
+    "indicator_description": "Identify reasons for customising a web browser.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.6.1",
+    "substrand_code": "B6.6.6",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbgt1400agvcl43rb8zmpc",
+    "indicator_code": "B6.6.6.1.2",
+    "indicator_description": "Illustrate how to set themes.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.6.1",
+    "substrand_code": "B6.6.6",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbgw6w00akvcl44inrvh3m",
+    "indicator_code": "B6.6.6.1.3",
+    "indicator_description": "Show how to customise the toolbar.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.6.1",
+    "substrand_code": "B6.6.6",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbgzco00aovcl44q5cspyc",
+    "indicator_code": "B6.6.6.1.4",
+    "indicator_description": "Set bookmarks.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.6.6.1",
+    "substrand_code": "B6.6.6",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbh2cr00asvcl4rhmxxxum",
+    "indicator_code": "B6.6.6.1.5",
+    "indicator_description": "Show how to set cookies demonstrate the steps in turning on cookies in a browser.",
+    "indicator_order": 5,
+    "content_standard_code": "B6.6.6.1",
+    "substrand_code": "B6.6.6",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbh8cx00b0vcl40rmt5fsz",
+    "indicator_code": "B6.6.7.1.1",
+    "indicator_description": "Show how to create and access e-mail messages.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.7.1",
+    "substrand_code": "B6.6.7",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbhbll00b4vcl4usbw221g",
+    "indicator_code": "B6.6.7.1.2",
+    "indicator_description": "Illustrate how to reply to and forward received messages.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.7.1",
+    "substrand_code": "B6.6.7",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbhf2a00b8vcl4cfevhyjh",
+    "indicator_code": "B6.6.7.1.3",
+    "indicator_description": "Demonstrate how to delete messages.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.7.1",
+    "substrand_code": "B6.6.7",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbhi7d00bcvcl4ngtomz9s",
+    "indicator_code": "B6.6.7.1.4",
+    "indicator_description": "Illustrate filing of e-mail messages.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.6.7.1",
+    "substrand_code": "B6.6.7",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbhl8400bgvcl4kfoyycha",
+    "indicator_code": "B6.6.7.1.5",
+    "indicator_description": "Create address list.",
+    "indicator_order": 5,
+    "content_standard_code": "B6.6.7.1",
+    "substrand_code": "B6.6.7",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbhohv00bkvcl4fqb3sp53",
+    "indicator_code": "B6.6.7.1.6",
+    "indicator_description": "Demonstrate attaching files to e-mail messages.",
+    "indicator_order": 6,
+    "content_standard_code": "B6.6.7.1",
+    "substrand_code": "B6.6.7",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbhrn000bovcl4tm8u4hyc",
+    "indicator_code": "B6.6.7.1.7",
+    "indicator_description": "Demonstrate some e-mail tips.",
+    "indicator_order": 7,
+    "content_standard_code": "B6.6.7.1",
+    "substrand_code": "B6.6.7",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbhxuc00bwvcl424wtt7jk",
+    "indicator_code": "B6.6.8.1.1",
+    "indicator_description": "Describe other hardware used in IoT Internet of Things.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.8.1",
+    "substrand_code": "B6.6.8",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbi0n900c0vcl4pd91h2y7",
+    "indicator_code": "B6.6.8.1.2",
+    "indicator_description": "Give more examples of internet of things with a consumer part and an industrial/business segment.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.8.1",
+    "substrand_code": "B6.6.8",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbi3nc00c4vcl4kw98c107",
+    "indicator_code": "B6.6.8.1.3",
+    "indicator_description": "Mention at least five more terms and acronyms of loT.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.8.1",
+    "substrand_code": "B6.6.8",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbia2800ccvcl4a3wxj5ug",
+    "indicator_code": "B6.6.9.1.1",
+    "indicator_description": "Demonstrate how to handle private and personal information.",
+    "indicator_order": 1,
+    "content_standard_code": "B6.6.9.1",
+    "substrand_code": "B6.6.9",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbicqg00cgvcl4xnf81nst",
+    "indicator_code": "B6.6.9.1.2",
+    "indicator_description": "Devise various techniques on how to protect oneself from online identity theft.",
+    "indicator_order": 2,
+    "content_standard_code": "B6.6.9.1",
+    "substrand_code": "B6.6.9",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbifvx00ckvcl455zdinb9",
+    "indicator_code": "B6.6.9.1.3",
+    "indicator_description": "Debate a spam and solicited messages.",
+    "indicator_order": 3,
+    "content_standard_code": "B6.6.9.1",
+    "substrand_code": "B6.6.9",
+    "strand_code": "B6.6"
+  },
+  {
+    "indicator_id": "cmilbiith00covcl4bpm6abju",
+    "indicator_code": "B6.6.9.1.4",
+    "indicator_description": "Differentiate between virtual friends and real friends.",
+    "indicator_order": 4,
+    "content_standard_code": "B6.6.9.1",
+    "substrand_code": "B6.6.9",
+    "strand_code": "B6.6"
+  }
+]

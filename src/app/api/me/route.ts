@@ -1,42 +1,28 @@
-import type { NextRequest } from 'next/server'
+// src/app/api/me/route.ts
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-export async function GET(_req: NextRequest) {
-  try {
-    // Load next-auth lazily to avoid build errors if not configured
-    const nextAuth: any = await import('next-auth').catch(() => null)
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  const u = session?.user as any;
 
-    let userId: string | null = null
-    let email: string | null = null
-    let name: string | null = null
-
-    if (nextAuth?.getServerSession) {
-      // Load your auth options (cast to any to avoid TS union issues)
-      const authMod: any = await import('@/lib/auth').catch(() => ({}))
-      const authOptions = authMod?.authOptions
-
-      const session = authOptions
-        ? await nextAuth.getServerSession(authOptions)
-        : null
-
-      if (session?.user) {
-        userId = (session.user as any).id ?? null
-        email = (session.user as any).email ?? null
-        name = (session.user as any).name ?? null
-      }
-    }
-
-    return new Response(JSON.stringify({ ok: true, userId, email, name }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    })
-  } catch (err) {
-    console.error('/api/me error:', err)
-    return new Response(JSON.stringify({ ok: false, userId: null }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    })
+  if (!u?.id || !u?.email) {
+    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
+
+  return NextResponse.json({
+    ok: true,
+    user: {
+      id: String(u.id),
+      email: String(u.email),
+      name: (u.name ?? null) as string | null,
+      staffId: (u.staffId ?? null) as string | null,
+      tenantId: (u.tenantId ?? null) as string | null,
+      roleName: (u.roleName ?? null) as string | null,
+    },
+  });
 }

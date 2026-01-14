@@ -1,41 +1,60 @@
 // src/app/api/attendance/sessions/route.ts
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "../../../../lib/prisma";
-import { getCurrentUserOrThrow } from "../../../../lib/auth";
-import { getCurrentTenantOrThrow } from "../../../../lib/tenant";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUserOrThrow, requireMembershipOrThrow } from "@/lib/authz";
 
-// Normalize any incoming date to 00:00:00 UTC
+const jsonErr = (status: number, error: string) =>
+  NextResponse.json({ ok: false, error }, { status });
+
+function parseISODateOnly(input: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) return null;
+  const d = new Date(`${input}T00:00:00.000Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function toStartOfDayUTC(d: Date) {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
 }
 
-/**
- * GET /api/attendance/sessions?from=YYYY-MM-DD&to=YYYY-MM-DD&classroomId=...
- */
 export async function GET(req: Request) {
   try {
-    const { tenant } = await getCurrentTenantOrThrow();
+    const user = await getCurrentUserOrThrow();
+    if (!user.tenantId) return jsonErr(403, "NO_ACTIVE_TENANT");
+    await requireMembershipOrThrow(user.id, user.tenantId);
+
     const url = new URL(req.url);
+    const fromStr = url.searchParams.get("from")?.trim() || null;
+    const toStr = url.searchParams.get("to")?.trim() || null;
+    const classroomId = url.searchParams.get("classroomId")?.trim() || null;
 
-    const fromStr = url.searchParams.get("from");
-    const toStr = url.searchParams.get("to");
-    const classroomId = url.searchParams.get("classroomId") || undefined;
+    const where: any = { tenantId: user.tenantId };
 
-    const where: any = { tenantId: tenant.id };
-    if (classroomId) where.classroomId = classroomId;
+    if (classroomId) {
+      const room = await prisma.classroom.findFirst({
+        where: { id: classroomId, tenantId: user.tenantId },
+        select: { id: true },
+      });
+      if (!room) return jsonErr(404, "Classroom not found.");
+      where.classroomId = room.id;
+    }
 
     if (fromStr || toStr) {
       const dateFilter: any = {};
       if (fromStr) {
-        const d = toStartOfDayUTC(new Date(fromStr));
-        if (!Number.isNaN(d.getTime())) dateFilter.gte = d;
+        const d = parseISODateOnly(fromStr);
+        if (!d) return jsonErr(400, "Invalid 'from' date. Use YYYY-MM-DD.");
+        dateFilter.gte = d;
       }
       if (toStr) {
-        const d = toStartOfDayUTC(new Date(toStr));
-        if (!Number.isNaN(d.getTime())) dateFilter.lte = d;
+        const d = parseISODateOnly(toStr);
+        if (!d) return jsonErr(400, "Invalid 'to' date. Use YYYY-MM-DD.");
+        dateFilter.lte = d;
       }
-      if (Object.keys(dateFilter).length) where.date = dateFilter;
+      where.date = dateFilter;
     }
 
     const items = await prisma.attendanceSession.findMany({
@@ -43,8 +62,13 @@ export async function GET(req: Request) {
       orderBy: [{ date: "desc" }],
       select: {
         id: true,
-        date: true,
+        tenantId: true,
         classroomId: true,
+        date: true,
+        isClosed: true,
+        closedAt: true,
+        certifiedAt: true,
+        takenByUserId: true,
         createdAt: true,
         updatedAt: true,
         classroom: { select: { id: true, name: true } },
@@ -52,16 +76,13 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json({ ok: true, tenant, count: items.length, items }, { status: 200 });
-  } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err?.message ?? "Unexpected error" }, { status: 500 });
+    return NextResponse.json({ ok: true, count: items.length, items }, { status: 200 });
+  } catch (e: any) {
+    const status = e?.status ?? 500;
+    return jsonErr(status, String(e?.message || e));
   }
 }
 
-/**
- * POST /api/attendance/sessions
- * Body: { classroomId: string, date: string(YYYY-MM-DD or ISO), upsert?: boolean }
- */
 const PostSchema = z.object({
   classroomId: z.string().min(1, "classroomId required"),
   date: z.string().min(1, "date required"),
@@ -70,55 +91,103 @@ const PostSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { tenant } = await getCurrentTenantOrThrow();
     const user = await getCurrentUserOrThrow();
+    if (!user.tenantId) return jsonErr(403, "NO_ACTIVE_TENANT");
+    await requireMembershipOrThrow(user.id, user.tenantId);
 
-    const body = await req.json();
-    const parsed = PostSchema.parse(body);
+    const raw = await req.json().catch(() => null);
+    const parsed = PostSchema.safeParse(raw);
+    if (!parsed.success) return jsonErr(400, parsed.error.issues[0]?.message || "Invalid body.");
 
-    const at = toStartOfDayUTC(new Date(parsed.date));
-    if (Number.isNaN(at.getTime())) {
-      return NextResponse.json({ ok: false, error: "Invalid date" }, { status: 400 });
-    }
+    const dOnly = parseISODateOnly(parsed.data.date);
+    const at = dOnly ? dOnly : toStartOfDayUTC(new Date(parsed.data.date));
+    if (Number.isNaN(at.getTime())) return jsonErr(400, "Invalid date.");
 
-    // Ensure classroom belongs to tenant
     const classroom = await prisma.classroom.findFirst({
-      where: { id: parsed.classroomId, tenantId: tenant.id },
+      where: { id: parsed.data.classroomId, tenantId: user.tenantId },
       select: { id: true },
     });
-    if (!classroom) {
-      return NextResponse.json({ ok: false, error: "Classroom not found for this tenant" }, { status: 404 });
+    if (!classroom) return jsonErr(404, "Classroom not found.");
+
+    const run = async () =>
+      prisma.$transaction(async (tx) => {
+        const existing = await tx.attendanceSession.findFirst({
+          where: { tenantId: user.tenantId!, classroomId: classroom.id, date: at },
+          select: { id: true, takenByUserId: true, certifiedAt: true },
+        });
+
+        if (!existing) {
+          return tx.attendanceSession.create({
+            data: {
+              tenantId: user.tenantId!,
+              classroomId: classroom.id,
+              date: at,
+              takenByUserId: user.id,
+            },
+            select: {
+              id: true,
+              tenantId: true,
+              classroomId: true,
+              date: true,
+              isClosed: true,
+              closedAt: true,
+              certifiedAt: true,
+              takenByUserId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          });
+        }
+
+        if (!parsed.data.upsert) {
+          const e = new Error("Session already exists.");
+          (e as any).status = 409;
+          throw e;
+        }
+
+        if (existing.certifiedAt) {
+          const e = new Error("Session is certified (immutable).");
+          (e as any).status = 409;
+          throw e;
+        }
+
+        if (existing.takenByUserId && existing.takenByUserId !== user.id) {
+          const e = new Error("This session is owned by another user.");
+          (e as any).status = 403;
+          throw e;
+        }
+
+        return tx.attendanceSession.update({
+          where: { id: existing.id },
+          data: { takenByUserId: existing.takenByUserId ?? user.id },
+          select: {
+            id: true,
+            tenantId: true,
+            classroomId: true,
+            date: true,
+            isClosed: true,
+            closedAt: true,
+            certifiedAt: true,
+            takenByUserId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        });
+      });
+
+    try {
+      const result = await run();
+      return NextResponse.json({ ok: true, session: result }, { status: 200 });
+    } catch (e: any) {
+      if (String(e?.code || "") === "P2002") {
+        // Unique race: retry once using the same rules
+        const result = await run();
+        return NextResponse.json({ ok: true, session: result }, { status: 200 });
+      }
+      throw e;
     }
-
-    // Upsert by unique (tenantId, classroomId, date)
-    const session = await prisma.attendanceSession.upsert({
-      where: {
-        tenant_classroom_date_unique: {
-          tenantId: tenant.id,
-          classroomId: classroom.id,
-          date: at,
-        },
-      },
-      create: {
-        tenantId: tenant.id,
-        classroomId: classroom.id,
-        date: at,
-        takenByUserId: user.id ?? null,
-      },
-      update: {
-        takenByUserId: user.id ?? null,
-      },
-      select: {
-        id: true,
-        date: true,
-        classroomId: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    return NextResponse.json({ ok: true, session }, { status: 200 });
-  } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err?.message ?? "Unexpected error" }, { status: 500 });
+  } catch (e: any) {
+    const status = e?.status ?? 500;
+    return jsonErr(status, String(e?.message || e));
   }
 }

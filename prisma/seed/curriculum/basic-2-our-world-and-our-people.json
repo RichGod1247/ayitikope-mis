@@ -472,225 +472,11 @@
                   "exemplars": [
                     {
                       "orderIndex": 1,
-                      "description": "Take learners to a place of worship such as the church, mosque or the shrine to observe the mode of worship or show pictures videos of the various modes of worship."
+                      "description": "Take learners to a place of worship such as the church, mosque or the shrine to observe the mode of worship or show pictures/videos of the various modes of worship."
                     },
                     {
                       "orderIndex": 2,
-                      "description": "Learners role play demonstrate/talk about the importance of worship at home, school, church/mosque/shrine."
-                    }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.1",
-                      "contentStandardCode": "B2.3.1.1",
-                      "indicatorCode": "B2.3.1.1.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "A respectful montage showing children at different places of worship: singing in a church, praying in a mosque, and observing a traditional ceremony. They look reverent and peaceful."
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "code": "B2.3.2",
-          "title": "Festivals",
-          "description": "Understanding festivals and family roles in religion.",
-          "orderIndex": 2,
-          "contentStandards": [
-            {
-              "code": "B2.3.2.1",
-              "description": "Show understanding of festivals celebrated in Ghana",
-              "orderIndex": 1,
-              "indicators": [
-                {
-                  "code": "B2.3.2.1.1",
-                  "description": "Describe activities which take place during the celebration of festivals",
-                  "orderIndex": 1,
-                  "exemplars": [
-                    {
-                      "orderIndex": 1,
-                      "description": "Learners talk about festivals they have witnessed (Islam, Christianity, Traditional)."
-                    },
-                    {
-                      "orderIndex": 2,
-                      "description": "Learners role play activities that take place during the festivals: merry-making, sharing, family re-union, worship, etc."
-                    }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.2",
-                      "contentStandardCode": "B2.3.2.1",
-                      "indicatorCode": "B2.3.2.1.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "A festive scene showing a traditional festival durbar with a chief in a palanquin, drummers, and dancers. People are cheering and celebrating."
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "code": "B2.3.2.2",
-              "description": "Investigate the roles of the family and community in their daily lives",
-              "orderIndex": 2,
-              "indicators": [
-                {
-                  "code": "B2.3.2.2.1",
-                  "description": "Identify things that families do to show their commitment to God",
-                  "orderIndex": 1,
-                  "exemplars": [
-                    {
-                      "orderIndex": 1,
-                      "description": "Learners talk about the religious activities their families perform to show commitment to God: morning devotion, going to church, mosque or the shrine."
-                    },
-                    {
-                      "orderIndex": 2,
-                      "description": "Learners role play what their families do to show commitment to God, e.g. worship, offertory, Sadaqah, Zakat, prayer and fasting."
-                    }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.2",
-                      "contentStandardCode": "B2.3.2.2",
-                      "indicatorCode": "B2.3.2.2.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "A family gathered for morning devotion in their living room, heads bowed in prayer. Another scene showing a family walking together to a place of worship."
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "code": "B2.3.3",
-          "title": "Basic Human Rights",
-          "description": "Understanding the importance of rights.",
-          "orderIndex": 3,
-          "contentStandards": [
-            {
-              "code": "B2.3.3.1",
-              "description": "Demonstrate understanding of human rights as a citizen",
-              "orderIndex": 1,
-              "indicators": [
-                {
-                  "code": "B2.3.3.1.1",
-                  "description": "Explain the importance of respecting the rights of others",
-                  "orderIndex": 1,
-                  "exemplars": [
-                    {
-                      "orderIndex": 1,
-                      "description": "Learners talk about the importance of allowing others to enjoy their rights, e.g. peace, cooperation, teamwork"
-                    },
-                    {
-                      "orderIndex": 2,
-                      "description": "Learners role-play ways of allowing others to enjoy their rights e.g. tolerance, love, respect, etc"
-                    }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.3",
-                      "contentStandardCode": "B2.3.3.1",
-                      "indicatorCode": "B2.3.3.1.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "Two children peacefully sharing a book or toy, demonstrating respect for each other's rights. Another scene shows children waiting their turn in a queue."
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "code": "B2.3.4",
-          "title": "Being a Leader",
-          "description": "Narrating stories of religious leaders.",
-          "orderIndex": 4,
-          "contentStandards": [
-            {
-              "code": "B2.3.4.1",
-              "description": "Narrate the early life stories of the leaders of the three main religions in Ghana",
-              "orderIndex": 1,
-              "indicators": [
-                {
-                  "code": "B2.3.4.1.1",
-                  "description": "Narrate the story of the early life of the religious leaders in the three religions in Ghana",
-                  "orderIndex": 1,
-                  "exemplars": [
-                    {
-                      "orderIndex": 1,
-                      "description": "Learners mention the names of the religious leaders: Jesus Christ, the Holy Prophet Muhammad (S.A.W.), Okomfo Anokye, Toha Zie, etc."
-                    },
-                    {
-                      "orderIndex": 2,
-                      "description": "Learners role play some important aspects of the early life of a religious leader."
-                    },
-                    {
-                      "orderIndex": 3,
-                      "description": "Learners explain how they will apply the moral lessons from the religious leaders in their daily lives."
-                    }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.4",
-                      "contentStandardCode": "B2.3.4.1",
-                      "indicatorCode": "B2.3.4.1.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "A child dressed in simple costume role-playing a young religious leader (like Jesus in the temple or young Muhammad). Other children sit and listen attentively."
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "code": "B2.3",
-      "title": "OUR BELIEFS AND VALUES",
-      "description": "Exploring worship, festivals, human rights, and leadership.",
-      "orderIndex": 3,
-      "subStrands": [
-        {
-          "code": "B2.3.1",
-          "title": "Worship",
-          "description": "Appreciating the importance of religious worship.",
-          "orderIndex": 1,
-          "contentStandards": [
-            {
-              "code": "B2.3.1.1",
-              "description": "Demonstrate understanding of the importance of religious worship",
-              "orderIndex": 1,
-              "indicators": [
-                {
-                  "code": "B2.3.1.1.1",
-                  "description": "Explain the importance of worship",
-                  "orderIndex": 1,
-                  "exemplars": [
-                    {
-                      "orderIndex": 1,
-                      "description": "Take learners to a place of worship such as the church, mosque or the shrine to observe the mode of worship or show pictures videos of the various modes of worship."
-                    },
-                    {
-                      "orderIndex": 2,
-                      "description": "Learners role play demonstrate/talk about the importance of worship at home, school, church/mosque/shrine."
+                      "description": "Learners role play/demonstrate/talk about the importance of worship at home, school, church/mosque/shrine."
                     },
                     {
                       "orderIndex": 3,
@@ -700,18 +486,6 @@
                       "orderIndex": 4,
                       "description": "Learners role play or talk about the importance of religious tolerance, e.g. peaceful coexistence, love, humility, sharing, caring, respect, unity."
                     }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.1",
-                      "contentStandardCode": "B2.3.1.1",
-                      "indicatorCode": "B2.3.1.1.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "A respectful collage showing children observing different modes of worship: quiet prayer in a mosque, singing in a church, and traditional libation. The scenes show reverence and unity."
-                    }
                   ]
                 }
               ]
@@ -736,7 +510,7 @@
                   "exemplars": [
                     {
                       "orderIndex": 1,
-                      "description": "Learners talk about festivals they have witnessed: i. Islam Eid-ul-Fitr, Eid-ul-Adha; ii. Christianity - Easter, Christmas; iii. Traditional - Kundum, Odwira, Damba, Bugum, Yam Festival."
+                      "description": "Learners talk about festivals they have witnessed: Islam (Eid-ul-Fitr, Eid-ul-Adha); Christianity (Easter, Christmas); Traditional (Kundum, Odwira, Damba, Bugum, Yam Festival)."
                     },
                     {
                       "orderIndex": 2,
@@ -749,18 +523,6 @@
                     {
                       "orderIndex": 4,
                       "description": "Learners draw scenes from festivals."
-                    }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.2",
-                      "contentStandardCode": "B2.3.2.1",
-                      "indicatorCode": "B2.3.2.1.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "A vibrant festival scene in a Ghanaian community. People in traditional cloth are drumming and dancing. A family is sharing a meal of fufu. Children look happy and involved."
                     }
                   ]
                 }
@@ -788,18 +550,6 @@
                       "orderIndex": 3,
                       "description": "Learners role play what their families do to show commitment to God, e.g. worship, offertory, Sadaqah, Zakat, prayer and fasting."
                     }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.2",
-                      "contentStandardCode": "B2.3.2.2",
-                      "indicatorCode": "B2.3.2.2.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "A family sitting together for morning devotion. Another scene showing a family giving alms (Sadaqah) to a needy person. The mood is charitable and devout."
-                    }
                   ]
                 }
               ]
@@ -814,33 +564,21 @@
           "contentStandards": [
             {
               "code": "B2.3.3.1",
-              "description": "Demonstrate understanding of the importance of human rights",
+              "description": "Demonstrate understanding of human rights as a citizen",
               "orderIndex": 1,
               "indicators": [
                 {
                   "code": "B2.3.3.1.1",
-                  "description": "Describe ways of claiming one's rights",
+                  "description": "Explain the importance of respecting the rights of others",
                   "orderIndex": 1,
                   "exemplars": [
                     {
                       "orderIndex": 1,
-                      "description": "In small groups, learners talk about how to claim their rights. The individual can claim his/her rights through: joining civic clubs, reporting to Social Welfare, reporting to the law courts, reporting to CHRAJ, reporting to the police, embarking on lawful public demonstrations, using negotiation, reporting to relevant institutions, e.g. FIDA."
+                      "description": "Learners talk about the importance of allowing others to enjoy their rights, e.g. peace, cooperation, teamwork."
                     },
                     {
                       "orderIndex": 2,
-                      "description": "Learners share experiences of cases they have experienced or seen being handled by any of these institutions or agencies."
-                    }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.3",
-                      "contentStandardCode": "B2.3.3.1",
-                      "indicatorCode": "B2.3.3.1.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "A child politely speaking to a teacher or police officer, reporting an issue. A poster in the background shows symbols of justice or child rights (like CHRAJ)."
+                      "description": "Learners role-play ways of allowing others to enjoy their rights e.g. tolerance, love, respect, etc."
                     }
                   ]
                 }
@@ -866,23 +604,15 @@
                   "exemplars": [
                     {
                       "orderIndex": 1,
-                      "description": "Learners talk about the youthful lives of the religious leaders: (i). The Lord Jesus Christ, (ii). The Holy Prophet Muhammad (S.A.W.), (iii). A Traditional Religious Leader."
+                      "description": "Learners mention the names of the religious leaders: Jesus Christ, the Holy Prophet Muhammad (S.A.W.), and a Traditional Religious Leader."
                     },
                     {
                       "orderIndex": 2,
-                      "description": "In groups, learners talk about the occupations of the religious leaders: (i). The Lord Jesus Christ as a Carpenter, (ii). The Holy Prophet Muhammad (S.A.W) as a Businessman, (iii). A Traditional Religious Leader, eg. Egya Ahor as a farmer."
-                    }
-                  ],
-                  "imagePrompts": [
+                      "description": "In groups, learners talk about the occupations of the religious leaders (e.g. Jesus as a carpenter, Muhammad as a businessman, a traditional leader as a farmer)."
+                    },
                     {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.4",
-                      "contentStandardCode": "B2.3.4.1",
-                      "indicatorCode": "B2.3.4.1.1",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "Scenes showing the youth of religious leaders: young Jesus working with wood, young Muhammad trading, and a young traditional leader farming. They look hardworking and focused."
+                      "orderIndex": 3,
+                      "description": "Learners role play some important aspects of the early/youthful life of a religious leader."
                     }
                   ]
                 },
@@ -893,27 +623,15 @@
                   "exemplars": [
                     {
                       "orderIndex": 1,
-                      "description": "Discuss with learners, the moral lessons of the youthful lives of the religious leaders: piety, honesty, sacrifice, patience, hard work, courage, perseverance, etc."
+                      "description": "Discuss the moral lessons of the youthful lives of the religious leaders: piety, honesty, sacrifice, patience, hard work, courage, perseverance, etc."
                     },
                     {
                       "orderIndex": 2,
-                      "description": "Learners talk about how they can apply the moral lessons they learnt from the lives of the religious leaders in their daily lives."
+                      "description": "Learners talk about how they can apply the moral lessons they learnt in their daily lives."
                     },
                     {
                       "orderIndex": 3,
                       "description": "Learners role play the moral lives of the religious leaders."
-                    }
-                  ],
-                  "imagePrompts": [
-                    {
-                      "nodeType": "indicator",
-                      "strandCode": "B2.3",
-                      "subStrandCode": "B2.3.4",
-                      "contentStandardCode": "B2.3.4.1",
-                      "indicatorCode": "B2.3.4.1.2",
-                      "exemplarIndex": null,
-                      "ageBand": "7–8 years",
-                      "prompt": "Children role-playing virtues: one child helping another up (kindness), another returning a lost item (honesty). They are emulating the good examples of leaders."
                     }
                   ]
                 }
@@ -1014,6 +732,24 @@
                       "exemplarIndex": null,
                       "ageBand": "7–8 years",
                       "prompt": "School children standing at attention in their uniforms during assembly, facing the Ghana flag. They are singing the anthem respectfully. The teacher stands by saluting."
+                    }
+                  ]
+                },
+                {
+                  "code": "B2.4.2.1.2",
+                  "description": "Identify people in authority in the school and community",
+                  "orderIndex": 2,
+                  "exemplars": [],
+                  "imagePrompts": [
+                    {
+                      "nodeType": "indicator",
+                      "strandCode": "B2.4",
+                      "subStrandCode": "B2.4.2",
+                      "contentStandardCode": "B2.4.2.1",
+                      "indicatorCode": "B2.4.2.1.2",
+                      "exemplarIndex": null,
+                      "ageBand": "7–8 years",
+                      "prompt": "A school and community scene showing people in authority: a headteacher addressing pupils at assembly, a teacher in class, and a police officer or community leader speaking to children. The children look attentive and respectful."
                     }
                   ]
                 }

@@ -7,14 +7,9 @@ import Link from "next/link";
 /**
  * Teacher · Scheme of Work Overview
  *
- * This page shows a summary of all SchemeOfWork records
- * returned by:
+ * GET /api/schemes?mode=summary
  *
- *   GET /api/schemes?mode=summary
- *
- * It is intentionally read-only for now so that:
- *  - Nothing breaks in your working system.
- *  - You can demo: Curriculum → Scheme of Work overview.
+ * Read-only summary page.
  */
 
 type SchemeOfWorkSummary = {
@@ -41,70 +36,65 @@ const pillBase =
 const btnBase =
   "inline-flex items-center justify-center h-8 px-3 rounded-xl border text-[11px] md:text-xs shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 const btnOutline =
-  btnBase +
-  " bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50";
+  btnBase + " bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50";
 
 export default function TeacherSchemesPage() {
   const [schemes, setSchemes] = useState<SchemeOfWorkSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedSchemeId, setSelectedSchemeId] =
-    useState<string | null>(null);
+  const [selectedSchemeId, setSelectedSchemeId] = useState<string | null>(null);
 
   // ---------------------------
   // Load Scheme of Work summary
   // ---------------------------
   useEffect(() => {
-    let cancelled = false;
+    const ac = new AbortController();
 
     async function load() {
       setLoading(true);
       setError(null);
 
       try {
-        const res = await fetch("/api/schemes?mode=summary");
-        const data =
-          (await res.json().catch(() => ({}))) as SchemesSummaryResponse;
+        const res = await fetch("/api/schemes?mode=summary", {
+          method: "GET",
+          cache: "no-store",
+          signal: ac.signal,
+        });
 
-        if (!res.ok || !data.ok || !data.items) {
-          if (!cancelled) {
-            setSchemes([]);
-            setError(
-              data.error ??
-                "Failed to load schemes of work. Please try again."
-            );
-          }
+        // Auth-aware errors (don’t pretend it’s “network”)
+        if (res.status === 401 || res.status === 403) {
+          setSchemes([]);
+          setSelectedSchemeId(null);
+          setError("Unauthorized. Please sign in again.");
           return;
         }
 
-        if (cancelled) return;
+        const data = (await res.json().catch(() => ({}))) as SchemesSummaryResponse;
+
+        if (!res.ok || !data.ok || !data.items) {
+          setSchemes([]);
+          setSelectedSchemeId(null);
+          setError(data.error ?? "Failed to load schemes of work. Please try again.");
+          return;
+        }
 
         setSchemes(data.items);
-
-        // auto-select the first scheme, if any
-        if (data.items.length > 0) {
-          setSelectedSchemeId(data.items[0].id);
-        }
-      } catch (err) {
+        setSelectedSchemeId(data.items[0]?.id ?? null);
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
         console.error("SCHEMES_SUMMARY_LOAD_ERROR", err);
-        if (!cancelled) {
-          setError(
-            "Network or server error while loading schemes of work."
-          );
-        }
+        setSchemes([]);
+        setSelectedSchemeId(null);
+        setError("Network or server error while loading schemes of work.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     }
 
     void load();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => ac.abort();
   }, []);
 
   const selectedScheme = useMemo(
@@ -117,9 +107,7 @@ export default function TeacherSchemesPage() {
 
     for (const s of schemes) {
       const key = `${s.academicYear}__${s.term}`;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
+      if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(s);
     }
 
@@ -128,9 +116,9 @@ export default function TeacherSchemesPage() {
       return {
         academicYear: year,
         term,
-        items: items.sort((a, b) =>
-          (a.subject || "").localeCompare(b.subject || "")
-        ),
+        items: items
+          .slice()
+          .sort((a, b) => (a.subject || "").localeCompare(b.subject || "")),
       };
     });
   }, [schemes]);
@@ -156,28 +144,21 @@ export default function TeacherSchemesPage() {
             </h1>
             <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
               This screen shows{" "}
-              <span className="font-semibold">
-                real Scheme of Work records
-              </span>{" "}
-              stored in your database. Each row comes from indicators
-              you assign in the Curriculum Explorer (&quot;Add to
-              Scheme of Work&quot; step).
+              <span className="font-semibold">real Scheme of Work records</span>{" "}
+              stored in your database. Each row comes from indicators you assign in the Curriculum
+              Explorer (&quot;Add to Scheme of Work&quot; step).
             </p>
           </div>
 
           <div className="text-[11px] text-zinc-500 max-w-xs md:text-right space-y-1">
             <p>
               Use this page to show your headteacher how{" "}
-              <span className="font-semibold">
-                Curriculum → Scheme of Work → Lesson Notes
-              </span>{" "}
+              <span className="font-semibold">Curriculum → Scheme of Work → Lesson Notes</span>{" "}
               stays in one flow.
             </p>
             <p>
               Then open a specific scheme to see its{" "}
-              <span className="font-semibold">
-                full weekly breakdown
-              </span>{" "}
+              <span className="font-semibold">full weekly breakdown</span>{" "}
               and jump into Lesson Note Studio from each indicator.
             </p>
           </div>
@@ -202,18 +183,14 @@ export default function TeacherSchemesPage() {
                 <div className="text-[11px] text-zinc-500">
                   {loading
                     ? "Loading schemes…"
-                    : `${schemes.length} scheme${
-                        schemes.length === 1 ? "" : "s"
-                      } found`}
+                    : `${schemes.length} scheme${schemes.length === 1 ? "" : "s"} found`}
                 </div>
               </div>
 
-              {schemes.length === 0 && !loading && (
+              {schemes.length === 0 && !loading && !error && (
                 <p className="text-xs text-zinc-500">
-                  No Scheme of Work records found yet. Once you start
-                  assigning indicators from the Curriculum Explorer,
-                  they will appear here, grouped by term and academic
-                  year.
+                  No Scheme of Work records found yet. Once you start assigning indicators from the
+                  Curriculum Explorer, they will appear here, grouped by term and academic year.
                 </p>
               )}
 
@@ -229,8 +206,7 @@ export default function TeacherSchemesPage() {
                           {group.term} · {group.academicYear}
                         </div>
                         <div className="text-[11px] text-zinc-500">
-                          {group.items.length} scheme
-                          {group.items.length === 1 ? "" : "s"}
+                          {group.items.length} scheme{group.items.length === 1 ? "" : "s"}
                         </div>
                       </div>
                     </div>
@@ -239,11 +215,8 @@ export default function TeacherSchemesPage() {
                       {group.items.map((s) => {
                         const isSelected = s.id === selectedSchemeId;
                         const weeksLabel =
-                          s.weekNumbers &&
-                          s.weekNumbers.length > 0
-                            ? `Weeks: ${s.weekNumbers
-                                .sort((a, b) => a - b)
-                                .join(", ")}`
+                          s.weekNumbers && s.weekNumbers.length > 0
+                            ? `Weeks: ${s.weekNumbers.slice().sort((a, b) => a - b).join(", ")}`
                             : "Weeks: —";
 
                         return (
@@ -272,21 +245,16 @@ export default function TeacherSchemesPage() {
                                     <>
                                       {" "}
                                       · Teacher:{" "}
-                                      <span className="font-semibold">
-                                        {s.teacherName}
-                                      </span>
+                                      <span className="font-semibold">{s.teacherName}</span>
                                     </>
                                   )}
                                 </div>
                               </div>
                               <div className="text-right space-y-0.5">
                                 <div className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-800 border border-emerald-200">
-                                  {s.totalItems} indicator
-                                  {s.totalItems === 1 ? "" : "s"}
+                                  {s.totalItems} indicator{s.totalItems === 1 ? "" : "s"}
                                 </div>
-                                <div className="text-[10px] text-zinc-500">
-                                  {weeksLabel}
-                                </div>
+                                <div className="text-[10px] text-zinc-500">{weeksLabel}</div>
                               </div>
                             </div>
                           </button>
@@ -300,11 +268,8 @@ export default function TeacherSchemesPage() {
 
             <div className="border rounded-2xl bg-white px-4 py-3 text-[11px] text-zinc-600">
               <p>
-                As you start adding indicators from the Curriculum
-                Explorer, each combination of{" "}
-                <span className="font-semibold">
-                  subject + class + term + academic year
-                </span>{" "}
+                As you start adding indicators from the Curriculum Explorer, each combination of{" "}
+                <span className="font-semibold">subject + class + term + academic year</span>{" "}
                 will grow into a Scheme of Work here.
               </p>
             </div>
@@ -319,11 +284,8 @@ export default function TeacherSchemesPage() {
 
               {!selectedScheme && (
                 <p className="text-xs text-zinc-500">
-                  Select a Scheme of Work on the left to see its key
-                  details here. Then open the{" "}
-                  <span className="font-semibold">
-                    full week-by-week table
-                  </span>{" "}
+                  Select a Scheme of Work on the left to see its key details here. Then open the{" "}
+                  <span className="font-semibold">full week-by-week table</span>{" "}
                   or jump into Lesson Note Studio from the indicators.
                 </p>
               )}
@@ -339,13 +301,9 @@ export default function TeacherSchemesPage() {
                     </p>
                     <p>
                       Term:{" "}
-                      <span className="font-semibold">
-                        {selectedScheme.term}
-                      </span>{" "}
-                      · Academic year:{" "}
-                      <span className="font-semibold">
-                        {selectedScheme.academicYear}
-                      </span>
+                      <span className="font-semibold">{selectedScheme.term}</span> · Academic
+                      year:{" "}
+                      <span className="font-semibold">{selectedScheme.academicYear}</span>
                     </p>
                     <p>
                       Class:{" "}
@@ -356,22 +314,17 @@ export default function TeacherSchemesPage() {
                     {selectedScheme.teacherName && (
                       <p>
                         Teacher:{" "}
-                        <span className="font-semibold">
-                          {selectedScheme.teacherName}
-                        </span>
+                        <span className="font-semibold">{selectedScheme.teacherName}</span>
                       </p>
                     )}
                     <p>
                       Total indicators:{" "}
-                      <span className="font-semibold">
-                        {selectedScheme.totalItems}
-                      </span>
+                      <span className="font-semibold">{selectedScheme.totalItems}</span>
                     </p>
                     <p>
                       Weeks covered:{" "}
                       <span className="font-semibold">
-                        {selectedScheme.weekNumbers &&
-                        selectedScheme.weekNumbers.length > 0
+                        {selectedScheme.weekNumbers && selectedScheme.weekNumbers.length > 0
                           ? selectedScheme.weekNumbers
                               .slice()
                               .sort((a, b) => a - b)
@@ -385,13 +338,9 @@ export default function TeacherSchemesPage() {
                   <div className="space-y-1.5">
                     <p className="text-[11px] text-zinc-600">
                       Next step: open the{" "}
-                      <span className="font-semibold">
-                        full scheme table
-                      </span>{" "}
+                      <span className="font-semibold">full scheme table</span>{" "}
                       and then click{" "}
-                      <span className="font-semibold">
-                        Open in Studio
-                      </span>{" "}
+                      <span className="font-semibold">Open in Studio</span>{" "}
                       on any indicator.
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -405,9 +354,8 @@ export default function TeacherSchemesPage() {
                   </div>
 
                   <div className="text-[10px] text-zinc-500">
-                    When you demo this, you can say: “These schemes
-                    are generated from NaCCA indicators so every lesson
-                    note and assessment comes from the same national
+                    When you demo this, you can say: “These schemes are generated from NaCCA
+                    indicators so every lesson note and assessment comes from the same national
                     standard.”
                   </div>
                 </div>

@@ -1,144 +1,123 @@
 // src/app/teacher/health/weekly/page.tsx
-'use client'
+"use client";
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from "react";
 
-function mondayOf(date: Date) {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
-  const day = d.getUTCDay() // Sun=0..Sat=6
-  const back = (day + 6) % 7 // go back to Monday
-  d.setUTCDate(d.getUTCDate() - back)
-  return d
+function mondayOfUTC(date: Date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = d.getUTCDay(); // Sun=0..Sat=6
+  const back = (day + 6) % 7; // back to Monday
+  d.setUTCDate(d.getUTCDate() - back);
+  return d;
 }
 function iso(d: Date) {
-  return d.toISOString().slice(0, 10)
+  return d.toISOString().slice(0, 10);
+}
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
 }
 
-type Teacher = { id: string; name?: string | null; email?: string | null }
+type Me = {
+  ok: boolean;
+  userId: string | null;
+  tenantId?: string | null;
+  roleName?: string | null;
+  email?: string | null;
+  name?: string | null;
+};
 
 export default function TeacherWeeklyHealthPage() {
-  // state
-  const [tenantId, setTenantId] = useState('')
-  const [teachers, setTeachers] = useState<Teacher[]>([])
-  const [userId, setUserId] = useState('')
-  const [weekStart, setWeekStart] = useState('')
-  const [stressLevel, setStressLevel] = useState<number>(3)
-  const [workload, setWorkload] = useState<number>(3)
-  const [comments, setComments] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [me, setMe] = useState<Me>({ ok: false, userId: null });
 
-  // init dates (current Monday)
+  const [weekStart, setWeekStart] = useState("");
+  const [stressLevel, setStressLevel] = useState<number>(3);
+  const [workload, setWorkload] = useState<number>(3);
+  const [comments, setComments] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // init dates (current Monday UTC)
   useEffect(() => {
-    const mon = mondayOf(new Date())
-    setWeekStart(iso(mon))
-  }, [])
+    setWeekStart(iso(mondayOfUTC(new Date())));
+  }, []);
 
-  // load default tenant
-  useEffect(() => {
-    const loadTenant = async () => {
-      try {
-        const r = await fetch('/api/test/tenants')
-        const data = await r.json()
-        if (data.tenants?.length) {
-          setTenantId(data.tenants[0].id)
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-    loadTenant()
-  }, [])
-
-  // load teachers for tenant
+  // load current user context (session-derived)
   useEffect(() => {
     const run = async () => {
-      if (!tenantId) return
-      setError(null)
       try {
-        const r = await fetch(`/api/test/teachers?tenantId=${encodeURIComponent(tenantId)}`)
-        if (!r.ok) throw new Error('Failed to load teachers')
-        const data = await r.json()
-        const list: Teacher[] = data?.teachers || []
-        setTeachers(list)
-        if (list.length && !userId) setUserId(list[0].id)
-      } catch (e: any) {
-        setError(e.message || 'Failed to load teachers')
+        const r = await fetch("/api/me", { credentials: "include" });
+        const data = (await r.json()) as Me;
+        setMe(data);
+      } catch {
+        setMe({ ok: false, userId: null });
       }
-    }
-    run()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId])
+    };
+    run();
+  }, []);
 
-  const canSave = useMemo(
-    () => !!tenantId && !!userId && !!weekStart && stressLevel >= 1 && workload >= 1,
-    [tenantId, userId, weekStart, stressLevel, workload]
-  )
+  const canSave = useMemo(() => {
+    return (
+      !!me?.ok &&
+      !!me?.userId &&
+      !!weekStart &&
+      clamp(stressLevel, 1, 5) === stressLevel &&
+      clamp(workload, 1, 5) === workload &&
+      !saving
+    );
+  }, [me, weekStart, stressLevel, workload, saving]);
 
   const save = async () => {
-    if (!canSave) return
-    setSaving(true)
-    setNotice(null)
-    setError(null)
+    if (!canSave) return;
+    setSaving(true);
+    setNotice(null);
+    setError(null);
+
     try {
-      // API you already created: /api/health/teacher/weekly/upsert
-      const r = await fetch('/api/health/teacher/weekly/upsert', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          tenantId,
-          userId,
-          weekStart, // optional: server will derive if omitted; sending is fine
-          stressLevel,
-          workload,
-          comments: comments.trim() || null,
-        }),
-      })
-      const data = await r.json()
-      if (!r.ok || !data?.ok) throw new Error(data?.error || 'Save failed')
-      setNotice('Saved 👍 — Headteacher page will now show this week’s entry.')
+      const payload = {
+        weekStart,
+        stressLevel: clamp(stressLevel, 1, 5),
+        workload: clamp(workload, 1, 5),
+        comments: comments.trim().slice(0, 1000) || null,
+        // ✅ DO NOT send tenantId or userId. Server must derive from session.
+      };
+
+      const r = await fetch("/api/health/teacher/weekly/upsert", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await r.json();
+      if (!r.ok || !data?.ok) throw new Error(data?.error || "Save failed");
+
+      setNotice("Saved. Your weekly entry is recorded.");
     } catch (e: any) {
-      setError(e.message || 'Save failed')
+      setError(e?.message || "Save failed");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
+  };
+
+  if (!me?.ok || !me?.userId) {
+    return (
+      <div className="p-6 space-y-3">
+        <h1 className="text-2xl font-semibold">Weekly Health</h1>
+        <p className="text-sm text-neutral-600">Please sign in to continue.</p>
+      </div>
+    );
   }
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-semibold">Weekly Health (Teacher Self-Report)</h1>
+      <h1 className="text-2xl font-semibold">Weekly Health (Self-Report)</h1>
       <p className="text-sm text-neutral-600">
-        Fill this once per week. Headteachers can view aggregated records in their dashboard.
+        Fill this once per week. Only your account can submit your weekly record.
       </p>
 
       <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
         <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm text-neutral-600 mb-1">Tenant</label>
-            <input
-              className="w-full border rounded-lg p-2"
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              placeholder="tenant id"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-neutral-600 mb-1">Teacher</label>
-            <select
-              className="w-full border rounded-lg p-2"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-            >
-              {teachers.map(t => (
-                <option value={t.id} key={t.id}>
-                  {t.name || t.email || t.id}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="block text-sm text-neutral-600 mb-1">Week start (Monday, UTC)</label>
             <input
@@ -148,9 +127,7 @@ export default function TeacherWeeklyHealthPage() {
               onChange={(e) => setWeekStart(e.target.value)}
             />
           </div>
-        </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-neutral-600 mb-1">Stress level (1–5)</label>
             <input
@@ -159,9 +136,10 @@ export default function TeacherWeeklyHealthPage() {
               max={5}
               className="w-full border rounded-lg p-2"
               value={stressLevel}
-              onChange={(e) => setStressLevel(parseInt(e.target.value || '0', 10))}
+              onChange={(e) => setStressLevel(parseInt(e.target.value || "0", 10))}
             />
           </div>
+
           <div>
             <label className="block text-sm text-neutral-600 mb-1">Workload (1–5)</label>
             <input
@@ -170,7 +148,7 @@ export default function TeacherWeeklyHealthPage() {
               max={5}
               className="w-full border rounded-lg p-2"
               value={workload}
-              onChange={(e) => setWorkload(parseInt(e.target.value || '0', 10))}
+              onChange={(e) => setWorkload(parseInt(e.target.value || "0", 10))}
             />
           </div>
         </div>
@@ -181,27 +159,31 @@ export default function TeacherWeeklyHealthPage() {
             className="w-full border rounded-lg p-2 min-h-[100px]"
             value={comments}
             onChange={(e) => setComments(e.target.value)}
-            placeholder="e.g., “Busy exam prep week; requesting help covering Friday club.”"
+            placeholder="e.g., Busy exam prep week; need help covering Friday club."
           />
         </div>
 
         <div className="flex gap-2">
           <button
             onClick={save}
-            disabled={!canSave || saving}
+            disabled={!canSave}
             className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {saving ? 'Saving…' : 'Save Weekly Health'}
+            {saving ? "Saving…" : "Save Weekly Health"}
           </button>
         </div>
 
-        {notice && <div className="p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">{notice}</div>}
-        {error && <div className="p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">{error}</div>}
-      </div>
-
-      <div className="text-sm text-neutral-500">
-        Tip: After saving, open <code>/headteacher/health/teachers</code> and click Refresh to see it.
+        {notice && (
+          <div className="p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">
+            {notice}
+          </div>
+        )}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-50 text-red-700 border border-red-200">
+            {error}
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,9 +1,11 @@
 // src/app/api/admin/health/settings/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
 
-const TENANT_ID = "cmhhnghn00008vcpgp3fl07fl";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type HealthSettings = {
   feverThresholdC: number;
@@ -12,6 +14,17 @@ type HealthSettings = {
   healthCenterName: string;
   healthCenterPhone: string;
 };
+
+function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+  return NextResponse.json(payload, {
+    ...init,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
 
 function getDefaultHealthSettings(): HealthSettings {
   return {
@@ -23,54 +36,89 @@ function getDefaultHealthSettings(): HealthSettings {
   };
 }
 
+function clampString(v: unknown, max = 120): string {
+  if (typeof v !== "string") return "";
+  const s = v.trim();
+  return s.length > max ? s.slice(0, max) : s;
+}
+
+function asBoolean(v: unknown, fallback: boolean) {
+  return typeof v === "boolean" ? v : fallback;
+}
+
+function parseFeverThreshold(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return null;
+  // sane human range
+  if (n <= 30 || n >= 45) return null;
+  return Math.round(n * 10) / 10;
+}
+
+async function requireAdminLike(tenantId: string, userId: string) {
+  const membership = await prisma.membership.findFirst({
+    where: { tenantId, userId, status: "ACTIVE" },
+    include: { role: true },
+  });
+
+  if (!membership) return { ok: false as const, status: 403, error: "Forbidden." };
+
+  const roleName = String(membership.role?.name ?? "").toUpperCase();
+  const isAdminLike = roleName.includes("ADMIN") || roleName.includes("HEAD");
+  if (!isAdminLike) return { ok: false as const, status: 403, error: "Forbidden." };
+
+  return { ok: true as const };
+}
+
+function readHealthFromSettingsJson(settingsJson: any): HealthSettings {
+  const defaults = getDefaultHealthSettings();
+  const health = settingsJson?.health;
+
+  if (!health || typeof health !== "object") return defaults;
+
+  const fever = parseFeverThreshold(health.feverThresholdC) ?? defaults.feverThresholdC;
+
+  return {
+    feverThresholdC: fever,
+    notifyParentsOnFever: asBoolean(health.notifyParentsOnFever, defaults.notifyParentsOnFever),
+    notifyHealthCenterOnFever: asBoolean(
+      health.notifyHealthCenterOnFever,
+      defaults.notifyHealthCenterOnFever
+    ),
+    healthCenterName: clampString(health.healthCenterName, 120),
+    healthCenterPhone: clampString(health.healthCenterPhone, 40),
+  };
+}
+
 export async function GET() {
+  // Auth + tenant
+  let ctx: { tenantId: string; userId: string };
+  try {
+    const c = await requireServerUserContext({
+      redirectTo: "/auth/signin",
+      requireTenant: true,
+    });
+    ctx = { tenantId: c.tenantId, userId: c.userId };
+  } catch {
+    return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
+  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
+  if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, { status: roleOk.status });
+
   try {
     const tenant = await prisma.tenant.findUnique({
-      where: { id: TENANT_ID },
-      select: { id: true, name: true, settings: true },
+      where: { id: ctx.tenantId },
+      select: { id: true, name: true, settingsJson: true },
     });
 
     if (!tenant) {
-      return NextResponse.json(
-        { ok: false, error: "Tenant not found" },
-        { status: 404 }
-      );
+      return jsonNoStore({ ok: false, error: "Tenant not found" }, { status: 404 });
     }
 
-    let healthSettings: HealthSettings;
-    const rawSettings = (tenant.settings as any) || {};
+    const settingsJson = (tenant.settingsJson as any) || {};
+    const healthSettings = readHealthFromSettingsJson(settingsJson);
 
-    if (rawSettings.health && typeof rawSettings.health === "object") {
-      const hs = rawSettings.health;
-      const defaults = getDefaultHealthSettings();
-
-      healthSettings = {
-        feverThresholdC:
-          typeof hs.feverThresholdC === "number"
-            ? hs.feverThresholdC
-            : defaults.feverThresholdC,
-        notifyParentsOnFever:
-          typeof hs.notifyParentsOnFever === "boolean"
-            ? hs.notifyParentsOnFever
-            : defaults.notifyParentsOnFever,
-        notifyHealthCenterOnFever:
-          typeof hs.notifyHealthCenterOnFever === "boolean"
-            ? hs.notifyHealthCenterOnFever
-            : defaults.notifyHealthCenterOnFever,
-        healthCenterName:
-          typeof hs.healthCenterName === "string"
-            ? hs.healthCenterName
-            : defaults.healthCenterName,
-        healthCenterPhone:
-          typeof hs.healthCenterPhone === "string"
-            ? hs.healthCenterPhone
-            : defaults.healthCenterPhone,
-      };
-    } else {
-      healthSettings = getDefaultHealthSettings();
-    }
-
-    return NextResponse.json({
+    return jsonNoStore({
       ok: true,
       tenantId: tenant.id,
       tenantName: tenant.name,
@@ -78,104 +126,87 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[admin/health/settings] GET error", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Failed to load health settings.",
-      },
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "Failed to load health settings." }, { status: 500 });
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Auth + tenant
+  let ctx: { tenantId: string; userId: string };
+  try {
+    const c = await requireServerUserContext({
+      redirectTo: "/auth/signin",
+      requireTenant: true,
+    });
+    ctx = { tenantId: c.tenantId, userId: c.userId };
+  } catch {
+    return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
+  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
+  if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, { status: roleOk.status });
+
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return jsonNoStore({ ok: false, error: "Content-Type must be application/json." }, { status: 415 });
+  }
+
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
-      return NextResponse.json(
-        { ok: false, error: "Invalid payload" },
-        { status: 400 }
-      );
+      return jsonNoStore({ ok: false, error: "Invalid payload" }, { status: 400 });
     }
 
     const incoming = (body.healthSettings ?? body) as Partial<HealthSettings>;
     const defaults = getDefaultHealthSettings();
 
-    const feverThresholdRaw = incoming.feverThresholdC;
-    const feverThreshold =
-      typeof feverThresholdRaw === "number"
-        ? feverThresholdRaw
-        : Number(feverThresholdRaw);
-
-    if (
-      !Number.isFinite(feverThreshold) ||
-      feverThreshold <= 30 ||
-      feverThreshold >= 45
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Invalid feverThresholdC; please choose between 30 and 45 °C.",
-        },
+    const fever = parseFeverThreshold(incoming.feverThresholdC);
+    if (fever == null) {
+      return jsonNoStore(
+        { ok: false, error: "Invalid feverThresholdC; please choose between 30 and 45 °C." },
         { status: 400 }
       );
     }
 
     const healthSettings: HealthSettings = {
-      feverThresholdC: feverThreshold,
-      notifyParentsOnFever:
-        typeof incoming.notifyParentsOnFever === "boolean"
-          ? incoming.notifyParentsOnFever
-          : defaults.notifyParentsOnFever,
-      notifyHealthCenterOnFever:
-        typeof incoming.notifyHealthCenterOnFever === "boolean"
-          ? incoming.notifyHealthCenterOnFever
-          : defaults.notifyHealthCenterOnFever,
-      healthCenterName:
-        typeof incoming.healthCenterName === "string"
-          ? incoming.healthCenterName.trim()
-          : defaults.healthCenterName,
-      healthCenterPhone:
-        typeof incoming.healthCenterPhone === "string"
-          ? incoming.healthCenterPhone.trim()
-          : defaults.healthCenterPhone,
+      feverThresholdC: fever,
+      notifyParentsOnFever: asBoolean(incoming.notifyParentsOnFever, defaults.notifyParentsOnFever),
+      notifyHealthCenterOnFever: asBoolean(
+        incoming.notifyHealthCenterOnFever,
+        defaults.notifyHealthCenterOnFever
+      ),
+      healthCenterName: clampString(incoming.healthCenterName, 120),
+      healthCenterPhone: clampString(incoming.healthCenterPhone, 40),
     };
 
     const tenant = await prisma.tenant.findUnique({
-      where: { id: TENANT_ID },
-      select: { id: true, settings: true },
+      where: { id: ctx.tenantId },
+      select: { id: true, settingsJson: true },
     });
 
     if (!tenant) {
-      return NextResponse.json(
-        { ok: false, error: "Tenant not found" },
-        { status: 404 }
-      );
+      return jsonNoStore({ ok: false, error: "Tenant not found" }, { status: 404 });
     }
 
-    const existingSettings = (tenant.settings as any) || {};
+    const existingSettings = (tenant.settingsJson as any) || {};
     const newSettings = {
       ...existingSettings,
       health: healthSettings,
     };
 
     const updated = await prisma.tenant.update({
-      where: { id: TENANT_ID },
-      data: { settings: newSettings as any },
+      where: { id: ctx.tenantId },
+      data: { settingsJson: newSettings as any },
       select: { id: true },
     });
 
-    return NextResponse.json({
+    return jsonNoStore({
       ok: true,
       tenantId: updated.id,
       healthSettings,
     });
   } catch (err) {
     console.error("[admin/health/settings] POST error", err);
-    return NextResponse.json(
-      { ok: false, error: "Failed to save health settings." },
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "Failed to save health settings." }, { status: 500 });
   }
 }

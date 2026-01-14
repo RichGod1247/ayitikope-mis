@@ -1,28 +1,10 @@
 // src/app/api/curriculum/units/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getCurriculumHierarchyForSubject,
-  type CurriculumHierarchyRequest,
-} from "@/lib/curriculumEngine";
+import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
 
-/**
- * This route exposes "CurriculumUnit"-like slices for the
- * Teacher Lesson Note Studio (Step 2 – NaCCA curriculum slice).
- *
- * It now uses the NEW curriculum engine instead of any old
- * CurriculumUnit table, so that:
- *   - The generator route and the "Load NaCCA units" button
- *     both see the SAME source of truth.
- *
- * Query params accepted:
- *   - subject      (required unless subjectSlug is provided)
- *   - subjectSlug  (optional, preferred when present)
- *   - phase        (optional – currently for debugging / future use)
- *   - level        (optional – currently for debugging / future use)
- *   - term         (optional – only used for labelling)
- *   - weekNumber   (optional – only used for labelling)
- */
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type CurriculumUnitLike = {
   id: string;
@@ -38,125 +20,189 @@ type CurriculumUnitLike = {
   indicatorCode: string | null;
 };
 
+function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+  return NextResponse.json(payload, {
+    ...init,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
+function nonEmpty(v: string | null): string | null {
+  const t = (v ?? "").trim();
+  return t.length ? t : null;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function parsePositiveInt(v: string | null): number | null {
+  if (!v) return null;
+  const n = Number.parseInt(v, 10);
+  if (Number.isNaN(n) || n <= 0) return null;
+  return n;
+}
+
+/**
+ * GET /api/curriculum/units?subjectSlug=...&level=...&phase=...&term=...&weekNumber=...&take=500&cursor=...
+ *
+ * Secure rules:
+ * - Requires authenticated user in a tenant.
+ * - subjectSlug must resolve to either:
+ *    (A) global subject (isGlobal=true) OR
+ *    (B) tenant subject (tenantId=ctx.tenantId)
+ * - Never leaks other tenant's subject hierarchy.
+ *
+ * Behavior:
+ * - Returns a flattened list of indicators (unit-like rows) for the selected subject.
+ * - If weekNumber provided, every returned row uses that weekNumber (labeling only).
+ * - Otherwise, weekNumber is a synthetic sequence (1..N) within the returned page.
+ */
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const searchParams = url.searchParams;
-
-  const subject = (searchParams.get("subject") ?? "").trim();
-  const subjectSlug = (searchParams.get("subjectSlug") ?? "").trim();
-  const phase = (searchParams.get("phase") ?? "").trim();
-  const level = (searchParams.get("level") ?? "").trim();
-  const term = (searchParams.get("term") ?? "").trim();
-  const weekRaw = (searchParams.get("weekNumber") ?? "").trim();
-
-  let weekNumber: number | null = null;
-  if (weekRaw !== "") {
-    const parsed = Number.parseInt(weekRaw, 10);
-    weekNumber = Number.isNaN(parsed) ? null : parsed;
+  let ctx: { userId: string; tenantId: string };
+  try {
+    const c = await requireServerUserContext({ requireTenant: true });
+    ctx = { userId: c.userId, tenantId: c.tenantId };
+  } catch {
+    return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
-  if (!subject && !subjectSlug) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "subject or subjectSlug is required to load NaCCA curriculum units.",
-      },
+  const { searchParams } = new URL(req.url);
+
+  const subjectSlug = nonEmpty(searchParams.get("subjectSlug"));
+  const subjectName = nonEmpty(searchParams.get("subject"));
+  const phase = nonEmpty(searchParams.get("phase"));
+  const level = nonEmpty(searchParams.get("level"));
+  const term = nonEmpty(searchParams.get("term"));
+  const weekNumberParam = parsePositiveInt(nonEmpty(searchParams.get("weekNumber")));
+
+  if (!subjectSlug && !subjectName) {
+    return jsonNoStore(
+      { ok: false, error: "subjectSlug or subject is required to load curriculum units." },
       { status: 400 }
     );
   }
 
-  // -------------------------------
-  // Use curriculum engine (same as generator route)
-  // -------------------------------
-  const engineReq: CurriculumHierarchyRequest = {};
+  const take = clamp(Number(searchParams.get("take") ?? 500) || 500, 1, 1000);
+  const cursor = nonEmpty(searchParams.get("cursor")) ?? undefined;
 
-  if (subjectSlug) {
-    // When we have a slug (e.g. "jhs-1-computing"),
-    // we treat it as the single source of truth.
-    engineReq.subjectSlug = subjectSlug;
-    // NOTE: We intentionally do NOT force phase/level filters here,
-    // to avoid rejecting valid curricula if labels differ slightly.
-  } else {
-    // Fallback: we try with subject + optional phase/level
-    if (subject) engineReq.subject = subject;
-    if (phase) engineReq.phase = phase;
-    if (level) engineReq.level = level;
-  }
+  // 1) Resolve subject (tenant-safe)
+  const subject = await prisma.curriculumSubject.findFirst({
+    where: {
+      isActive: true,
+      OR: [{ isGlobal: true }, { tenantId: ctx.tenantId }],
+      ...(subjectSlug ? { slug: subjectSlug } : {}),
+      ...(subjectName
+        ? {
+            name: {
+              equals: subjectName,
+              mode: "insensitive",
+            },
+          }
+        : {}),
+      ...(phase ? { phase } : {}),
+      ...(level ? { level } : {}),
+    },
+    orderBy: [{ isGlobal: "asc" }, { orderIndex: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, phase: true, level: true, slug: true },
+  });
 
-  let curriculum;
-  try {
-    curriculum = await getCurriculumHierarchyForSubject(engineReq);
-  } catch (err) {
-    console.error("CURRICULUM_UNITS_ENGINE_ERROR (engine call)", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Could not load curriculum for this subject. Please check that the curriculum has been seeded correctly.",
-      },
-      { status: 500 }
-    );
-  }
-
-  if (!curriculum) {
-    return NextResponse.json(
-      {
-        ok: true,
-        items: [],
-      },
+  if (!subject) {
+    return jsonNoStore(
+      { ok: true, items: [], nextCursor: null }, // treat as empty instead of throwing
       { status: 200 }
     );
   }
 
-  // -------------------------------
-  // Flatten the tree into units
-  // -------------------------------
-  const items: CurriculumUnitLike[] = [];
-  let seq = 0;
+  // 2) Load indicators under subject, page-able and deterministic
+  try {
+    const indicators = await prisma.curriculumIndicator.findMany({
+      where: {
+        contentStandard: {
+          subStrand: {
+            strand: {
+              subjectId: subject.id,
+            },
+          },
+        },
+      },
+      orderBy: [{ code: "asc" }, { id: "asc" }],
+      take: take + 1,
+      ...(cursor
+        ? {
+            cursor: { id: cursor },
+            skip: 1,
+          }
+        : {}),
+      select: {
+        id: true,
+        code: true,
+        description: true,
+        contentStandard: {
+          select: {
+            code: true,
+            description: true,
+            subStrand: {
+              select: {
+                code: true,
+                title: true,
+                strand: {
+                  select: { code: true, title: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
 
-  for (const strand of curriculum.strands ?? []) {
-    for (const sub of strand.subStrands ?? []) {
-      for (const cs of sub.contentStandards ?? []) {
-        for (const ind of cs.indicators ?? []) {
-          // If weekNumber isn't specified, we give each indicator a
-          // "synthetic" week number based on sequence (1-based).
-          const syntheticWeek = seq + 1;
-          const unitWeek =
-            weekNumber && weekNumber > 0 ? weekNumber : syntheticWeek;
+    const hasMore = indicators.length > take;
+    const sliced = hasMore ? indicators.slice(0, take) : indicators;
 
-          items.push({
-            id: ind.id, // Unique enough for the Studio use-case
-            phase: curriculum.phase ?? (phase || null),
-            level: curriculum.level ?? (level || null),
-            subject: curriculum.name ?? subject,
-            term: term || null,
-            weekNumber: unitWeek,
+    let seq = 0;
+    const items: CurriculumUnitLike[] = sliced.map((i) => {
+      seq++;
+      const syntheticWeek = seq;
+      const unitWeek = weekNumberParam ?? syntheticWeek;
 
-            strand:
-              strand.title ??
-              strand.code ??
-              "Strand title not set",
-            substrand:
-              sub.title ??
-              sub.code ??
-              null,
-            contentStandard: cs.description ?? null,
-            indicator: ind.description ?? null,
-            indicatorCode: ind.code ?? null,
-          });
+      const strandTitle =
+        i.contentStandard.subStrand.strand.title ??
+        i.contentStandard.subStrand.strand.code ??
+        "Strand";
 
-          seq++;
-        }
-      }
-    }
+      const subTitle =
+        i.contentStandard.subStrand.title ??
+        i.contentStandard.subStrand.code ??
+        null;
+
+      return {
+        id: i.id,
+        phase: subject.phase ?? phase ?? null,
+        level: subject.level ?? level ?? null,
+        subject: subject.name,
+        term: term ?? null,
+        weekNumber: unitWeek,
+
+        strand: strandTitle,
+        substrand: subTitle,
+        contentStandard: i.contentStandard.description ?? null,
+        indicator: i.description ?? null,
+        indicatorCode: i.code ?? null,
+      };
+    });
+
+    const nextCursor = hasMore ? sliced[sliced.length - 1]?.id ?? null : null;
+
+    return jsonNoStore({ ok: true, items, nextCursor }, { status: 200 });
+  } catch (err) {
+    console.error("CURRICULUM_UNITS_ERROR", err);
+    return jsonNoStore(
+      { ok: false, error: "Failed to load curriculum units for this subject." },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(
-    {
-      ok: true,
-      items,
-    },
-    { status: 200 }
-  );
 }

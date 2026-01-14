@@ -1,166 +1,222 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  // Use DATABASE_URL for normal runtime.
-  // Keep DIRECT_URL for prisma db pull / maintenance if you want.
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  directUrl         = env("DIRECT_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
-/**
- * =======================
- * Core Identity
- * =======================
- */
+/// *
+///  * =======================
+///  * Core Identity
+///  * =======================
 model User {
-  id           String  @id @default(cuid())
-  email        String  @unique
+  id           String   @id @default(cuid())
+  email        String   @unique
   passwordHash String?
   name         String?
-  locale       String? @default("en")
-  timezone     String? @default("Africa/Accra")
+  locale       String?  @default("en")
+  timezone     String?  @default("Africa/Accra")
   image        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  smsOptIn     Boolean  @default(true)
 
-  // NEW
-  smsOptIn Boolean @default(false)
+  /// ⚠️ LEGACY (do not use for auth going forward).
+  /// Staff IDs must be tenant-scoped and live on Membership.staffId(+Norm).
+  staffId String?
 
-  memberships          Membership[]
-  auditLogs            AuditLog[]
-  invitesSent          Invite[]              @relation("UserInvites")
-  announcementsCreated Announcement[]        @relation("AnnouncementCreatedBy")
-  teacherHealthWeekly  TeacherHealthWeekly[]
-  accounts             Account[]
-  sessions             Session[]
+  firstName String?
+  lastName  String?
 
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  AttendanceSession AttendanceSession[]
+  // Password lockout
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime? @db.Timestamptz(6)
 
-  // 🔽 back-relations for lesson notes
-  lessonNotesAsTeacher     LessonNote[] @relation("LessonNoteTeacher")
-  lessonNotesAsHeadteacher LessonNote[] @relation("LessonNoteHeadteacher")
+  // OTP lockout (separate from password lockout)
+  failedOtpCount Int       @default(0)
+  otpLockedUntil DateTime? @db.Timestamptz(6)
 
-  // 🔽 curriculum trust: who last verified a subject
-  curriculumSubjectsVerified CurriculumSubject[] @relation("CurriculumSubjectLastVerifiedBy")
+  // 2FA
+  twoFactorEnabled             Boolean   @default(false)
+  twoFactorSecretCiphertext    String?
+  twoFactorSecretKeyCiphertext String?
+  twoFactorSecretIv            String?
+  twoFactorSecretTag           String?
+  twoFactorSetupAt             DateTime? @db.Timestamptz(6)
 
-  // 🔽 schemes of work created by this teacher
-  schemesOfWork SchemeOfWork[] @relation("SchemeOfWorkTeacher")
+  // Tenant selection (critical when a user belongs to multiple schools)
+  lastActiveTenantId String?
+  lastActiveTenant   Tenant? @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onDelete: SetNull)
+
+  accounts                 Account[]
+  announcementsCreated     Announcement[]        @relation("AnnouncementCreatedBy")
+  Assessment               Assessment[]
+  assessmentItemsCreated   AssessmentItem[]
+  AttendanceSession        AttendanceSession[]
+  auditLogs                AuditLog[]
+  invitesSent              Invite[]              @relation("UserInvites")
+  lessonNotesAsHeadteacher LessonNote[]          @relation("LessonNoteHeadteacher")
+  lessonNotesAsTeacher     LessonNote[]          @relation("LessonNoteTeacher")
+  memberships              Membership[]
+  sessions                 Session[]
+  teacherHealthWeekly      TeacherHealthWeekly[]
+
+  // ✅ MULTI-TENANT: user can have multiple teacher profiles (one per tenant)
+  teacherProfiles TeacherProfile[] @relation("UserTeacherProfiles")
+
+  // ✅ Scheme of work relations (named; no duplicates)
+  schemesAuthored SchemeOfWork[] @relation("SchemeTeacher")
+  schemesReviewed SchemeOfWork[] @relation("SchemeReviewedBy")
+
+  @@index([twoFactorEnabled])
+  @@index([lastActiveTenantId])
 }
 
 model Tenant {
-  id       String  @id @default(cuid())
-  name     String
-  slug     String  @unique
-  timezone String? @default("Africa/Accra")
-  locale   String? @default("en")
-
-  // Legacy invoice model (already existed)
-  feesInvoices FeesInvoice[]
-
-  settings Json?
-
-  // Relations
-  memberships         Membership[]
-  roles               Role[]
-  invites             Invite[]
-  auditLogs           AuditLog[]
-  announcements       Announcement[]        @relation("TenantAnnouncements")
-  classrooms          Classroom[]
-  students            Student[]
-  AttendanceSession   AttendanceSession[]
-  teacherHealthWeekly TeacherHealthWeekly[]
-
-  // 🔽 all lesson notes belonging to this tenant/school
-  lessonNotes LessonNote[]
-
-  // 🔽 assessment items under this tenant (for gradebook)
-  assessmentItems AssessmentItem[]
-
-  // 🔽 national / tenant-scoped curriculum units
-  curriculumUnits CurriculumUnit[]
-
-  // 🔽 curriculum subjects (when tenant creates custom/local curricula)
-  curriculumSubjects CurriculumSubject[]
-
-  // 🔽 schemes of work under this tenant
-  schemesOfWork SchemeOfWork[]
-
-  // NEW fee/billing relations (Phase 1)
-  feeStructures FeeStructure[] @relation("TenantFeeStructures")
-  feeInvoices   FeeInvoice[]   @relation("TenantFeeInvoices")
-  feePayments   FeePayment[]   @relation("TenantFeePayments")
-
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  timezone  String?  @default("Africa/Accra")
+  locale    String?  @default("en")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // ✅ keep your existing DB column named "settings"
+  // but avoid naming conflict with the relation.
+  settingsJson Json @default("{}") @map("settings")
+
+  announcements       Announcement[]         @relation("TenantAnnouncements")
+  Assessment          Assessment[]
+  assessmentItems     AssessmentItem[]
+  AttendanceSession   AttendanceSession[]
+  auditLogs           AuditLog[]
+  curriculumUnits     CurriculumUnit[]
+  feeInvoices         FeeInvoice[]           @relation("TenantFeeInvoices")
+  feePayments         FeePayment[]           @relation("TenantFeePayments")
+  feeStructures       FeeStructure[]         @relation("TenantFeeStructures")
+  feesInvoices        FeesInvoice[]
+  invites             Invite[]
+  lessonNotes         LessonNote[]
+  memberships         Membership[]
+  roles               Role[]
+  students            Student[]
+  StudentHealthDaily  StudentHealthDaily[]
+  teacherHealthWeekly TeacherHealthWeekly[]
+  teacherProfiles     TeacherProfile[]       @relation("TenantTeacherProfiles")
+  onboardingCodes     TenantOnboardingCode[]
+
+  // ✅ 1–1 strongly typed settings row
+  tenantSettings TenantSettings?
+
+  // ✅ REQUIRED opposite relations for Prisma symmetry
+  lastActiveUsers User[]         @relation("UserLastActiveTenant")
+  classrooms      Classroom[]
+  schemes         SchemeOfWork[] @relation("TenantSchemes")
+}
+
+/// *
+///  * =======================
+///  * Tenant Onboarding Codes
+///  * =======================
+///  * Used for teacher signup when a school gives a rotating code.
+///  * Store only a hash of the code (never raw).
+model TenantOnboardingCode {
+  id        String   @id @default(cuid())
+  tenantId  String
+  codeHash  String
+  active    Boolean  @default(true)
+  rotatedAt DateTime @default(now()) @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  expiresAt DateTime @db.Timestamptz(6)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, active])
+  @@index([tenantId])
+}
+
+model TenantSettings {
+  tenantId            String  @id
+  currentTerm         String?
+  currentAcademicYear String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_settings")
 }
 
 model Membership {
-  id       String @id @default(cuid())
-  userId   String
-  tenantId String
-  roleId   String
-  status   String @default("ACTIVE") // ACTIVE | PENDING | SUSPENDED
-
-  user   User   @relation(fields: [userId], references: [id])
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  role   Role   @relation(fields: [roleId], references: [id])
-
+  id        String   @id @default(cuid())
+  userId    String
+  tenantId  String
+  roleId    String
+  status    String   @default("ACTIVE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// ✅ Tenant-scoped staff identity (BANK-GRADE)
+  /// staffId = human format ("AYI-0142")
+  /// staffIdNorm = normalized for lookup (uppercase alnum only)
+  staffId     String?
+  staffIdNorm String?
+
+  role   Role   @relation(fields: [roleId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
   @@unique([userId, tenantId], name: "userId_tenantId")
+  /// ✅ Core guarantee: No two people in the same tenant can share a staff ID.
+  @@unique([tenantId, staffIdNorm], name: "membership_tenant_staffIdNorm_unique")
+  @@index([tenantId, status])
+  @@index([userId, status])
 }
 
-/**
- * =======================
- * RBAC
- * =======================
- */
+/// *
+///  * =======================
+///  * RBAC
+///  * =======================
 model Role {
-  id          String  @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
   description String?
   tenantId    String?
-  tenant      Tenant? @relation(fields: [tenantId], references: [id])
-
-  memberships Membership[]
-  rolePerms   RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   invites     Invite[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  memberships Membership[]
+  tenant      Tenant?          @relation(fields: [tenantId], references: [id])
+  rolePerms   RolePermission[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
 }
 
 model Permission {
-  id          String  @id @default(cuid())
-  name        String  @unique
+  id          String           @id @default(cuid())
+  name        String           @unique
   description String?
-
-  rolePerms RolePermission[]
+  rolePerms   RolePermission[]
 }
 
 model RolePermission {
   roleId       String
   permissionId String
-
-  role       Role       @relation(fields: [roleId], references: [id])
-  permission Permission @relation(fields: [permissionId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
 
   @@id([roleId, permissionId])
 }
 
-/**
- * =======================
- * Invites
- * =======================
- */
+/// *
+///  * =======================
+///  * Invites
+///  * =======================
 model Invite {
   id         String    @id @default(cuid())
   tenantId   String
@@ -170,21 +226,18 @@ model Invite {
   expiresAt  DateTime
   acceptedAt DateTime?
   invitedBy  String
-
-  tenant  Tenant @relation(fields: [tenantId], references: [id])
-  role    Role   @relation(fields: [roleId], references: [id])
-  inviter User   @relation("UserInvites", fields: [invitedBy], references: [id])
-
-  createdAt DateTime @default(now())
+  createdAt  DateTime  @default(now())
+  inviter    User      @relation("UserInvites", fields: [invitedBy], references: [id])
+  role       Role      @relation(fields: [roleId], references: [id])
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
 }
 
-/**
- * =======================
- * Audit
- * =======================
- */
+/// *
+///  * =======================
+///  * Audit
+///  * =======================
 model AuditLog {
-  id         String  @id @default(cuid())
+  id         String   @id @default(cuid())
   tenantId   String?
   userId     String?
   action     String
@@ -193,37 +246,33 @@ model AuditLog {
   ip         String?
   userAgent  String?
   metadata   Json?
-
-  tenant Tenant? @relation(fields: [tenantId], references: [id])
-  user   User?   @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
 
   @@index([tenantId])
   @@index([userId])
   @@index([action])
 }
 
-/**
- * =======================
- * NextAuth Adapter
- * =======================
- */
+/// *
+///  * =======================
+///  * NextAuth Adapter
+///  * =======================
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -233,8 +282,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -245,565 +293,447 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-/**
- * =======================
- * Tenant content
- * =======================
- */
+/// *
+///  * =======================
+///  * Tenant content
+///  * =======================
 model Announcement {
-  id String @id @default(cuid())
-
-  tenantId String
-  tenant   Tenant @relation("TenantAnnouncements", fields: [tenantId], references: [id], onDelete: Cascade)
-
-  title String @db.VarChar(160)
-  body  String
-
+  id              String   @id @default(cuid())
+  tenantId        String
+  title           String   @db.VarChar(160)
+  body            String
   createdByUserId String?
-  createdBy       User?   @relation("AnnouncementCreatedBy", fields: [createdByUserId], references: [id])
-
-  createdAt DateTime @default(now())
+  createdAt       DateTime @default(now())
+  createdBy       User?    @relation("AnnouncementCreatedBy", fields: [createdByUserId], references: [id])
+  tenant          Tenant   @relation("TenantAnnouncements", fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
 }
 
-/**
- * =======================
- * Classrooms & Students
- * =======================
- */
+/// *
+///  * =======================
+///  * Classrooms & Students
+///  * =======================
 model Classroom {
-  id        String   @id @default(cuid())
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
   tenantId  String
   name      String
   grade     String?
   arm       String?
+  capacity  Int?
   note      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  tenant            Tenant              @relation(fields: [tenantId], references: [id])
-  students          Student[]
-  AttendanceSession AttendanceSession[]
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // 🔽 lesson notes linked to this classroom
-  lessonNotes LessonNote[]
+  Assessment         Assessment[]
+  assessmentItems    AssessmentItem[]
+  AttendanceSession  AttendanceSession[]
+  lessonNotes        LessonNote[]
+  students           Student[]
+  StudentHealthDaily StudentHealthDaily[]
 
-  // 🔽 assessment items linked to this classroom
-  assessmentItems AssessmentItem[]
+  // ✅ Opposite of SchemeOfWork.classroom
+  schemes SchemeOfWork[] @relation("ClassroomSchemes")
 
-  // 🔽 schemes of work linked to this classroom
-  schemesOfWork SchemeOfWork[]
-
+  @@unique([tenantId, name, arm], name: "Classroom_tenant_name_arm_unique")
+  @@index([tenantId])
+  @@index([tenantId, grade])
   @@index([tenantId, name])
 }
 
 model Student {
-  id            String    @id @default(cuid())
-  tenantId      String
-  classroomId   String?
-  firstName     String
-  lastName      String
-  sex           String?
-  dob           DateTime?
-  guardianName  String?
-  guardianPhone String?
-  note          String?
+  id               String    @id @default(cuid())
+  tenantId         String
+  gender           String?
+  dateOfBirth      DateTime? @db.Date
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  classroomId      String?
+  firstName        String?
+  lastName         String?
+  sex              String?
+  dob              DateTime? @db.Timestamptz(6)
+  guardianName     String?
+  guardianPhone    String?
+  note             String?
+  guardianSmsOptIn Boolean   @default(true)
+  healthConsentAt  DateTime? @db.Timestamptz(6)
 
-  // NEW: consent flags
-  guardianSmsOptIn Boolean   @default(false)
-  healthConsentAt  DateTime?
-
-  tenant    Tenant     @relation(fields: [tenantId], references: [id])
-  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
-
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  AttendanceMark AttendanceMark[]
-
-  // NEW: fees (modern fee invoices)
-  feeInvoices FeeInvoice[] @relation("StudentFeeInvoices")
-
-  // 🔽 scores under assessment items
-  assessmentScores AssessmentScore[]
+  assessmentScores   AssessmentScore[]
+  AttendanceMark     AttendanceMark[]
+  feeInvoices        FeeInvoice[]         @relation("StudentFeeInvoices")
+  classroom          Classroom?           @relation(fields: [classroomId], references: [id], onUpdate: NoAction)
+  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  StudentHealthDaily StudentHealthDaily[]
 
   @@index([tenantId])
   @@index([classroomId])
 }
 
-/**
- * =======================
- * Attendance
- * =======================
- */
+/// *
+///  * =======================
+///  * Attendance
+///  * =======================
 model AttendanceSession {
-  id            String   @id @default(cuid())
-  tenantId      String
-  classroomId   String
-  date          DateTime
-  takenByUserId String?
+  id                String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  tenantId          String
+  classroomId       String
+  date              DateTime  @db.Timestamptz(6)
+  takenByUserId     String?
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  isClosed          Boolean   @default(false)
+  closedAt          DateTime? @db.Timestamptz(6)
+  certifiedByUserId String?
+  certifiedAt       DateTime? @db.Timestamptz(6)
+  certifiedNote     String?
 
-  // Soft lock
-  isClosed    Boolean   @default(false)
-  closedAt    DateTime?
-  // Certification
-  certifiedAt DateTime?
-
-  tenant    Tenant           @relation(fields: [tenantId], references: [id])
-  classroom Classroom        @relation(fields: [classroomId], references: [id])
-  takenBy   User?            @relation(fields: [takenByUserId], references: [id])
   marks     AttendanceMark[]
+  classroom Classroom        @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "AttendanceSession_classroom_fkey")
+  takenBy   User?            @relation(fields: [takenByUserId], references: [id], onUpdate: NoAction, map: "AttendanceSession_takenBy_fkey")
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onUpdate: NoAction, map: "AttendanceSession_tenant_fkey")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([tenantId, classroomId, date], name: "tenant_classroom_date_unique")
-  @@index([tenantId])
-  @@index([classroomId])
+  @@unique([tenantId, classroomId, date], map: "AttendanceSession_tenant_classroom_date_unique")
   @@index([date])
-  @@index([isClosed])
-  @@index([certifiedAt])
-}
-
-enum AttendanceStatus {
-  PRESENT
-  ABSENT
-  LATE
-  EXCUSED
+  @@index([classroomId], map: "AttendanceSession_classroom_idx")
+  @@index([tenantId], map: "AttendanceSession_tenant_idx")
+  @@index([tenantId, classroomId, date, isClosed, certifiedAt], map: "attendance_certified_idx")
+  @@index([tenantId, classroomId, date, isClosed], map: "attendance_isClosed_idx")
 }
 
 model AttendanceMark {
-  id        String           @id @default(cuid())
+  id        String           @id @default(dbgenerated("(gen_random_uuid())::text"))
   sessionId String
   studentId String
   status    AttendanceStatus
   note      String?
+  createdAt DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
 
-  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  student Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "AttendanceMark_session_fkey")
+  student Student           @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "AttendanceMark_student_fkey")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([sessionId, studentId], name: "session_student_unique")
-  @@index([studentId])
+  // Keep only ONE
+  @@unique([sessionId, studentId], map: "AttendanceMark_sessionId_studentId_unique")
+  @@index([studentId], map: "AttendanceMark_student_idx")
 }
 
-/**
- * =======================
- * Student Daily Health
- * =======================
- */
+/// *
+///  * =======================
+///  * Student Daily Health
+///  * =======================
 model StudentHealthDaily {
-  id             String    @id @default(cuid())
+  id             String    @id @default(dbgenerated("gen_random_uuid()"))
   tenantId       String
   classroomId    String
   studentId      String
-  date           DateTime
-  temperatureC   Float?
+  date           DateTime  @db.Date
+  temperatureC   Decimal?  @db.Decimal(4, 1)
   symptoms       String?
   notes          String?
-  sentToParentAt DateTime?
+  sentToParentAt DateTime? @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  Classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "StudentHealthDaily_classroom_fkey")
+  Student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "StudentHealthDaily_student_fkey")
+  Tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "StudentHealthDaily_tenant_fkey")
 
-  @@unique([studentId, date], name: "StudentHealthDaily_unique_student_date")
-  @@index([tenantId])
-  @@index([classroomId])
-  @@index([date])
+  @@unique([studentId, date], name: "StudentHealthDaily_unique_student_date", map: "StudentHealthDaily_unique_student_date")
+  @@index([classroomId, date], map: "StudentHealthDaily_classroom_date_idx")
+  @@index([tenantId, date], map: "StudentHealthDaily_tenant_date_idx")
 }
 
-/**
- * =======================
- * Teacher Weekly Health
- * =======================
- */
+/// *
+///  * =======================
+///  * Teacher Weekly Health
+///  * =======================
 model TeacherHealthWeekly {
-  id          String   @id @default(cuid())
+  id          String   @id @default(dbgenerated("gen_random_uuid()"))
   tenantId    String
   userId      String
-  weekStart   DateTime // Monday (UTC)
+  weekStart   DateTime @db.Date
   stressLevel Int
   workload    Int
   comments    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "TeacherHealthWeekly_tenant_fkey")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "TeacherHealthWeekly_user_fkey")
 
-  @@unique([userId, weekStart], name: "TeacherHealthWeekly_unique_user_week")
-  @@index([tenantId, weekStart], name: "idx_thw_tenant_week")
-  @@index([userId, weekStart], name: "idx_thw_user_week")
+  // ✅ MUST include tenantId (user can belong to multiple tenants)
+  @@unique([tenantId, userId, weekStart], name: "TeacherHealthWeekly_unique_tenant_user_week", map: "TeacherHealthWeekly_unique_tenant_user_week")
+  @@index([tenantId, weekStart], map: "idx_thw_tenant_week")
+  @@index([userId, weekStart], map: "idx_thw_user_week")
 }
 
-/**
- * =======================
- * SMS Auditing
- * =======================
- */
+/// *
+///  * =======================
+///  * SMS Auditing
+///  * =======================
 model SMSSendAudit {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId  String
   toPhone   String
-  createdAt DateTime @default(now())
+  template  String?
+  payload   Json?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
 
-  @@index([tenantId, createdAt])
+  @@index([tenantId, createdAt], map: "idx_smsaudit_tenant_created")
 }
 
 model NotificationContact {
-  id            String   @id @default(cuid())
+  id            String   @id @default(dbgenerated("gen_random_uuid()"))
   name          String
   phone         String   @unique
   isInitialTest Boolean  @default(false)
   isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
 }
 
 model SmsLog {
-  id        BigInt   @id @default(autoincrement())
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-
-  to       String
-  from     String?
-  body     String
-  brand    String?
-  tenantId String?
-  actorId  String?
-
+  id                        BigInt   @id @default(autoincrement())
+  createdAt                 DateTime @default(now()) @db.Timestamptz(6)
+  to                        String
+  from                      String?
+  body                      String
+  brand                     String?
+  tenantId                  String?
+  actorId                   String?
   providerMessageId         String?
   providerStatus            Int?
   providerStatusDescription String?
-  providerRaw               Json?   @db.JsonB
+  providerRaw               Json?
 
   @@map("SmsLog")
 }
 
-/**
- * =======================
- * Legacy FeesInvoice (existing)
- * =======================
- */
+/// *
+///  * =======================
+///  * Legacy FeesInvoice (existing)
+///  * =======================
 model FeesInvoice {
-  id       Int    @id @default(autoincrement())
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  studentId     String? @db.Text
-  studentName   String
-  guardianPhone String
-  className     String?
-  term          String?
-
-  amountDue Decimal   @db.Decimal(10, 2)
-  dueDate   DateTime? @db.Date
-
+  id             Int       @id @default(autoincrement())
+  tenantId       String
+  studentId      String?
+  studentName    String
+  guardianPhone  String
+  className      String?
+  term           String?
+  amountDue      Decimal   @db.Decimal(10, 2)
+  dueDate        DateTime? @db.Date
   isPaid         Boolean   @default(false)
-  lastReminderAt DateTime?
-  createdAt      DateTime  @default(now())
+  lastReminderAt DateTime? @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([tenantId])
   @@map("FeesInvoice")
 }
 
-// -------------------------------------
-// FEES & BILLING CORE MODELS (Phase 1)
-// -------------------------------------
-
 /// High-level definition of a fee item (e.g. "Term 1 PTA Levy", "Feeding Fee")
 model FeeStructure {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
   tenantId      String
-  name          String // e.g. "Term 1 School Fees"
-  description   String? // optional more detail
-  term          String // e.g. "1st Term"
-  academicYear  String // e.g. "2025/2026"
-  amountPesewas Int // store money as integer (pesewas)
-  isActive      Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant Tenant @relation("TenantFeeStructures", fields: [tenantId], references: [id])
+  name          String
+  description   String?
+  term          String
+  academicYear  String
+  amountPesewas Int
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation("TenantFeeStructures", fields: [tenantId], references: [id])
 }
 
 /// A bill for one learner for a given term/year
 model FeeInvoice {
-  id                 String  @id @default(cuid())
+  id                 String       @id @default(cuid())
   tenantId           String
   studentId          String
-  term               String // "1st Term"
-  academicYear       String // "2025/2026"
-  totalBilledPesewas Int // total billed in pesewas
-  totalWaivedPesewas Int     @default(0)
+  term               String
+  academicYear       String
+  totalBilledPesewas Int
+  totalWaivedPesewas Int          @default(0)
   note               String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant   Tenant       @relation("TenantFeeInvoices", fields: [tenantId], references: [id])
-  student  Student      @relation("StudentFeeInvoices", fields: [studentId], references: [id])
-  payments FeePayment[] @relation("InvoiceFeePayments")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  student            Student      @relation("StudentFeeInvoices", fields: [studentId], references: [id])
+  tenant             Tenant       @relation("TenantFeeInvoices", fields: [tenantId], references: [id])
+  payments           FeePayment[] @relation("InvoiceFeePayments")
 }
 
 /// A payment made against a fee invoice
 model FeePayment {
-  id            String  @id @default(cuid())
+  id            String     @id @default(cuid())
   tenantId      String
   invoiceId     String
-  amountPesewas Int // amount paid in pesewas
-  method        String // "cash", "paystack", "hubtel", etc.
-  reference     String? // transaction ref, receipt no, etc.
-  channel       String? // "office", "online", etc.
-
-  paidAt    DateTime @default(now())
-  createdAt DateTime @default(now())
-
-  tenant  Tenant     @relation("TenantFeePayments", fields: [tenantId], references: [id])
-  invoice FeeInvoice @relation("InvoiceFeePayments", fields: [invoiceId], references: [id])
+  amountPesewas Int
+  method        String
+  reference     String?
+  channel       String?
+  paidAt        DateTime   @default(now())
+  createdAt     DateTime   @default(now())
+  invoice       FeeInvoice @relation("InvoiceFeePayments", fields: [invoiceId], references: [id])
+  tenant        Tenant     @relation("TenantFeePayments", fields: [tenantId], references: [id])
 }
 
-// -------------------------------------
-// LESSON NOTES (NaCCA-aligned)
-// -------------------------------------
-
 model LessonNote {
-  id String @id @default(cuid())
-
-  tenantId          String
-  teacherUserId     String
-  headteacherUserId String?
-  classroomId       String?
-
-  // Where this lesson sits in the curriculum
-  phase String? // "KG", "PRIMARY", "JHS"
-  level String? // "KG1", "B2", "JHS1"
-
-  // Link to a specific curriculum unit (optional but powerful)
-  curriculumUnitId String?
-  curriculumUnit   CurriculumUnit? @relation(fields: [curriculumUnitId], references: [id], onDelete: SetNull)
-
-  // When & where this lesson lives
-  subject      String
-  term         String // e.g. "1st Term"
-  academicYear String // e.g. "2025/2026"
-  weekNumber   Int?
-  lessonDate   DateTime? // optional: the actual day
-
-  // NaCCA structure
-  strand          String // instead of "topic"
-  substrand       String? // instead of "subtopic"
-  contentStandard String?
-  indicator       String?
-  lessonTitle     String?
-
-  // Core lesson details (plain text for now)
+  id                        String    @id @default(cuid())
+  tenantId                  String
+  teacherUserId             String
+  headteacherUserId         String?
+  classroomId               String?
+  weekNumber                Int
+  term                      String
+  academicYear              String
+  subject                   String
+  strand                    String
+  substrand                 String
+  lessonDate                DateTime? @db.Timestamptz(6)
+  contentStandard           String?
+  indicator                 String?
+  lessonTitle               String?
   objectives                String?
   priorKnowledge            String?
-  teachingLearningResources String?
   introduction              String?
   lessonDevelopment         String?
   conclusion                String?
   assessment                String?
   homework                  String?
+  coreCompetencies          String?
+  teachingLearningResources String?
   differentiationNotes      String?
   reflectionNotes           String?
+  status                    String    @default("DRAFT")
+  headteacherComment        String?
+  submittedAt               DateTime? @db.Timestamptz(6)
+  reviewedAt                DateTime? @db.Timestamptz(6)
+  approvedAt                DateTime? @db.Timestamptz(6)
+  rejectedAt                DateTime? @db.Timestamptz(6)
+  aiPlanJson                Json?
+  aiPlanVersion             Int       @default(1)
+  createdAt                 DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt                 DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  phase                     String?
+  level                     String?
+  curriculumUnitId          String?
 
-  // Status & review
-  status             String  @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | REJECTED
-  headteacherComment String?
+  classroom      Classroom?      @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "LessonNote_classroom_fkey")
+  curriculumUnit CurriculumUnit? @relation(fields: [curriculumUnitId], references: [id], onUpdate: NoAction)
+  headteacher    User?           @relation("LessonNoteHeadteacher", fields: [headteacherUserId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "LessonNote_headteacher_fkey")
+  teacher        User            @relation("LessonNoteTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "LessonNote_teacher_fkey")
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "LessonNote_tenant_fkey")
 
-  submittedAt DateTime?
-  reviewedAt  DateTime?
-  approvedAt  DateTime?
-  rejectedAt  DateTime?
-
-  // AI agent support
-  aiPlanJson    Json?
-  aiPlanVersion Int   @default(1)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  teacher     User       @relation("LessonNoteTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
-  headteacher User?      @relation("LessonNoteHeadteacher", fields: [headteacherUserId], references: [id])
-  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
-
-  @@index([tenantId])
-  @@index([teacherUserId])
-  @@index([headteacherUserId])
-  @@index([classroomId])
-  @@index([term, academicYear])
+  @@index([classroomId], map: "LessonNote_classroom_idx")
+  @@index([status])
+  @@index([teacherUserId], map: "LessonNote_teacher_idx")
+  @@index([tenantId], map: "LessonNote_tenant_idx")
+  @@index([term, academicYear, weekNumber], map: "LessonNote_term_year_week_idx")
 }
 
-// -------------------------------------
-// NATIONAL CURRICULUM UNITS (NaCCA)
-// -------------------------------------
-//
-// One row ≈ one curriculum "unit":
-//   Level + Subject + Term + Week
-//   + Strand + Sub-strand
-//   + Content Standard + Indicator
-//
 model CurriculumUnit {
-  id String @id @default(cuid())
-
-  // e.g. link to tenant (optional for now)
-  tenantId String?
-  tenant   Tenant? @relation(fields: [tenantId], references: [id])
-
-  // e.g. "KG", "PRIMARY", "JHS"
-  phase String
-
-  // e.g. "KG1", "KG2", "B1", "JHS1"
-  level String
-
-  // e.g. "Mathematics", "English Language"
-  subject String
-
-  // e.g. "1st Term"
-  term String
-
-  // e.g. 1, 2, 3... (week number)
-  weekNumber Int
-
-  // From curriculum: Strand / Sub-strand / Content Standard / Indicator
-  strandCode String?
-  strand     String
-
-  substrandCode String?
-  substrand     String
-
+  id                  String       @id @default(dbgenerated("gen_random_uuid()"))
+  phase               String
+  level               String
+  subject             String
+  term                String
+  weekNumber          Int?
+  strandCode          String?
+  strand              String
+  substrandCode       String?
+  substrand           String?
   contentStandardCode String?
-  contentStandard     String
+  contentStandard     String?
+  indicatorCode       String?
+  indicator           String?
+  notes               String?
+  createdAt           DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime     @default(now()) @updatedAt @db.Timestamptz(6)
+  tenantId            String?
+  tenant              Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  lessonNotes         LessonNote[]
 
-  indicatorCode String?
-  indicator     String
-
-  notes String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // back-relation: all lesson notes that reference this curriculum unit
-  lessonNotes LessonNote[]
-
-  // Helpful indexes for fast lookups
   @@index([phase, level, subject])
-  @@index([subject, term, weekNumber])
-  @@index([strandCode, substrandCode])
+  @@index([strand])
+  @@index([subject, term])
 }
-
-// -------------------------------------
-// HIERARCHICAL NATIONAL CURRICULUM
-// (Subject -> Strand -> Sub-strand ->
-//  Content Standard -> Indicator -> Exemplar -> Media)
-// -------------------------------------
 
 model CurriculumSubject {
-  id String @id @default(cuid())
-
-  // OPTIONAL tenant: for custom/local curricula.
-  // All NaCCA national subjects will have tenantId = NULL and isGlobal = true.
-  tenantId String?
-  tenant   Tenant? @relation(fields: [tenantId], references: [id])
-
-  phase       String? // e.g. "KG", "PRIMARY", "JHS"
-  level       String? // e.g. "KG1", "KG2", "Basic 7"
-  name        String  // e.g. "Our World and Our People"
-  slug        String  @unique
-  description String?
-  orderIndex  Int     @default(0)
-
-  // 🔍 Metadata for trust, provenance, and scalability
-  // e.g. "NaCCA Common Core Programme" / "NaCCA KG Curriculum"
-  curriculumFramework String  @default("NaCCA Common Core Programme")
-  frameworkVersion    String? // e.g. "2019", "2021"
-  countryCode         String  @default("GH") // ISO country code, "GH" for Ghana
-
-  // Optional official code from the framework (if any)
-  officialSubjectCode String?
-
-  // Source document information (for traceability)
-  sourceDocumentUrl   String? // link to NaCCA PDF or repo
-  sourceDocumentTitle String?
-  sourceDocumentYear  Int?
-
-  // Global vs tenant-specific
-  isGlobal Boolean @default(true)  // true = national/global curriculum
-  isActive Boolean @default(true)  // soft-disable subjects if needed
-
-  // Trust & verification
+  id                   String             @id @default(cuid())
+  phase                String?
+  level                String?
+  name                 String
+  slug                 String             @unique
+  description          String?
+  orderIndex           Int                @default(0)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  tenantId             String?
+  curriculumFramework  String             @default("NaCCA Common Core Programme")
+  frameworkVersion     String?
+  countryCode          String             @default("GH")
+  officialSubjectCode  String?
+  sourceDocumentUrl    String?
+  sourceDocumentTitle  String?
+  sourceDocumentYear   Int?
+  isGlobal             Boolean            @default(true)
+  isActive             Boolean            @default(true)
   lastVerifiedAt       DateTime?
   lastVerifiedByUserId String?
-  lastVerifiedBy       User? @relation("CurriculumSubjectLastVerifiedBy", fields: [lastVerifiedByUserId], references: [id])
-
-  strands CurriculumStrand[]
-  media   CurriculumMedia[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  media                CurriculumMedia[]
+  strands              CurriculumStrand[]
 
   @@index([tenantId])
   @@index([phase, level, name])
-  @@index([countryCode, curriculumFramework])
   @@index([isActive])
+  @@index([countryCode, curriculumFramework], map: "CurriculumSubject_country_framework_idx")
 }
 
 model CurriculumStrand {
-  id        String            @id @default(cuid())
-  subjectId String
-  subject   CurriculumSubject @relation(fields: [subjectId], references: [id])
-
-  code        String? // e.g. "K1.1"
-  title       String // e.g. "All about me"
+  id          String                @id @default(cuid())
+  subjectId   String
+  code        String?
+  title       String
   description String?
-  orderIndex  Int     @default(0)
-
-  subStrands CurriculumSubStrand[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  orderIndex  Int                   @default(0)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  subject     CurriculumSubject     @relation(fields: [subjectId], references: [id])
+  subStrands  CurriculumSubStrand[]
 
   @@index([subjectId])
-  @@index([code])
 }
 
 model CurriculumSubStrand {
-  id       String           @id @default(cuid())
-  strandId String
-  strand   CurriculumStrand @relation(fields: [strandId], references: [id])
-
-  code        String? // e.g. "K1.1.1"
-  title       String
-  description String?
-  orderIndex  Int     @default(0)
-
+  id               String                      @id @default(cuid())
+  strandId         String
+  code             String?
+  title            String
+  description      String?
+  orderIndex       Int                         @default(0)
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
   contentStandards CurriculumContentStandard[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  strand           CurriculumStrand            @relation(fields: [strandId], references: [id])
 
   @@index([strandId])
-  @@index([code])
 }
 
 model CurriculumContentStandard {
-  id          String              @id @default(cuid())
+  id          String                @id @default(cuid())
   subStrandId String
-  subStrand   CurriculumSubStrand @relation(fields: [subStrandId], references: [id])
-
-  code        String // e.g. "K1.1.1.1"
+  code        String
   description String
-  orderIndex  Int    @default(0)
-
-  indicators CurriculumIndicator[]
-  media      CurriculumMedia[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  orderIndex  Int                   @default(0)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  subStrand   CurriculumSubStrand   @relation(fields: [subStrandId], references: [id])
+  indicators  CurriculumIndicator[]
+  media       CurriculumMedia[]
 
   @@index([subStrandId])
   @@index([code])
@@ -812,112 +742,77 @@ model CurriculumContentStandard {
 model CurriculumIndicator {
   id                String                    @id @default(cuid())
   contentStandardId String
+  code              String
+  description       String
+  orderIndex        Int                       @default(0)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @default(now())
+  exemplars         CurriculumExemplar[]
   contentStandard   CurriculumContentStandard @relation(fields: [contentStandardId], references: [id])
-
-  code        String // e.g. "K1.1.1.1.1"
-  description String
-  orderIndex  Int    @default(0)
-
-  exemplars CurriculumExemplar[]
-  media     CurriculumMedia[]
-
-  // 🔽 all Scheme of Work items pointing at this indicator
-  schemeItems SchemeOfWorkItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  media             CurriculumMedia[]
 
   @@index([contentStandardId])
   @@index([code])
-
-  // If you ever want to *enforce* that each code is unique per content standard
-  // (i.e. no two indicators with the same code under one content standard),
-  // you can later safely add:
-  //
-  // @@unique([contentStandardId, code], name: "CurriculumIndicator_contentStandard_code_unique")
 }
 
 model CurriculumExemplar {
-  id          String              @id @default(cuid())
-  indicatorId String
-  indicator   CurriculumIndicator @relation(fields: [indicatorId], references: [id])
-
+  id              String              @id @default(cuid())
+  indicatorId     String
   title           String?
-  description     String // full exemplar text
+  description     String
   assessmentNotes String?
-  orderIndex      Int     @default(0)
-
-  media CurriculumMedia[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  orderIndex      Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  indicator       CurriculumIndicator @relation(fields: [indicatorId], references: [id])
+  media           CurriculumMedia[]
 
   @@index([indicatorId])
 }
 
 model CurriculumMedia {
-  id String @id @default(cuid())
-
-  subjectId String?
-  subject   CurriculumSubject? @relation(fields: [subjectId], references: [id])
-
-  contentStandardId String?
-  contentStandard   CurriculumContentStandard? @relation(fields: [contentStandardId], references: [id])
-
-  indicatorId String?
-  indicator   CurriculumIndicator? @relation(fields: [indicatorId], references: [id])
-
-  exemplarId String?
-  exemplar   CurriculumExemplar? @relation(fields: [exemplarId], references: [id])
-
+  id                  String                     @id @default(cuid())
+  subjectId           String?
+  contentStandardId   String?
+  indicatorId         String?
+  exemplarId          String?
   pageNumberInPdf     Int
   figureLabel         String?
   imagePath           String
   altText             String
   detailedDescription String
   tags                String?
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @default(now()) @updatedAt
+  contentStandard     CurriculumContentStandard? @relation(fields: [contentStandardId], references: [id])
+  exemplar            CurriculumExemplar?        @relation(fields: [exemplarId], references: [id])
+  indicator           CurriculumIndicator?       @relation(fields: [indicatorId], references: [id])
+  subject             CurriculumSubject?         @relation(fields: [subjectId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  @@unique([indicatorId, imagePath], name: "CurriculumMedia_indicator_image_unique", map: "CurriculumMedia_indicator_image_unique")
   @@index([subjectId])
   @@index([contentStandardId])
   @@index([indicatorId])
   @@index([exemplarId])
-
-  // ✅ NEW: stop exact duplicate media rows for the same indicator + file path
-  @@unique([indicatorId, imagePath], name: "CurriculumMedia_indicator_image_unique")
 }
 
-// -------------------------------------
-// IMAGE PROMPTS FOR CURRICULUM NODES
-// -------------------------------------
-
 model ImagePrompt {
-  id      String @id @default(cuid())
-  phase   String // e.g. "KG"
-  level   String // e.g. "KG1"
-  subject String // e.g. "Our World and Our People"
-
-  strandCode          String // NOT NULL
+  id                  String   @id @default(cuid())
+  phase               String
+  level               String
+  subject             String
+  strandCode          String?
   subStrandCode       String?
   contentStandardCode String?
   indicatorCode       String?
   exemplarIndex       Int?
+  nodeType            String
+  ageBand             String?
+  prompt              String
+  createdAt           DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  // "strand" | "subStrand" | "contentStandard" | "indicator" | "exemplar"
-  nodeType String
-
-  ageBand String // NOT NULL in SQL
-  prompt  String // full text prompt
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // 🔒 one prompt per node (per subject)
-  @@unique([subject, strandCode, subStrandCode, contentStandardCode, indicatorCode, exemplarIndex, nodeType])
-
-  // Helpful indexes
+  @@unique([subject, strandCode, subStrandCode, contentStandardCode, indicatorCode, exemplarIndex, nodeType], map: "imagePrompt_unique_node")
   @@index([subject])
   @@index([strandCode])
   @@index([subStrandCode])
@@ -927,129 +822,184 @@ model ImagePrompt {
   @@index([phase, level, subject])
 }
 
-// -------------------------------------
-// SCHEME OF WORK (NaCCA-aligned)
-// -------------------------------------
-//
-// One SchemeOfWork ≈ one term's plan for a subject/class.
-// One SchemeOfWorkItem ≈ one weekly entry linked to a curriculum indicator.
-//
-
 model SchemeOfWork {
-  id String @id @default(cuid())
-
+  id            String @id @default(cuid())
   tenantId      String
   teacherUserId String
-  classroomId   String?
 
-  // Where this scheme lives in the curriculum
-  phase       String? // e.g. "KG", "PRIMARY", "JHS"
-  level       String? // e.g. "KG1", "B6", "JHS1"
-  subject     String  // human name, e.g. "Mathematics"
-  subjectSlug String? // link back to CurriculumSubject.slug
+  // ✅ Subject-aware scheme
+  subject     String
+  subjectSlug String?
 
-  term         String // e.g. "1st Term"
-  academicYear String // e.g. "2025/2026"
+  // ✅ Level/class token (e.g., "B4", "JHS1", "KG2")
+  level String
 
-  // Optional human-readable title, e.g. "B6 Maths – 1st Term 2025/2026"
+  // Optional link to a specific classroom (if you use Classroom records)
+  classroomId String?
+
+  term         String
+  academicYear String
+
+  status             SchemeStatus @default(DRAFT)
+  submittedAt        DateTime?    @db.Timestamptz(6)
+  reviewedAt         DateTime?    @db.Timestamptz(6)
+  approvedAt         DateTime?    @db.Timestamptz(6)
+  returnedAt         DateTime?    @db.Timestamptz(6)
+  headteacherComment String?
+
+  reviewedByUserId String?
+
   title String?
+  notes String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  teacher   User       @relation("SchemeOfWorkTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
-  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   items SchemeOfWorkItem[]
 
-  @@index([tenantId])
-  @@index([teacherUserId])
-  @@index([classroomId])
-  @@index([term, academicYear])
+  teacher   User       @relation("SchemeTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  reviewer  User?      @relation("SchemeReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  tenant    Tenant     @relation("TenantSchemes", fields: [tenantId], references: [id], onDelete: Cascade)
+  classroom Classroom? @relation("ClassroomSchemes", fields: [classroomId], references: [id], onDelete: SetNull)
+
+  // ✅ One scheme per teacher per subject per level per term/year
+  @@unique([tenantId, teacherUserId, subject, level, term, academicYear], map: "scheme_unique_teacher_subject_level_term_year")
+  @@index([tenantId, teacherUserId, term, academicYear], map: "scheme_tenant_teacher_term_year_idx")
+  @@index([tenantId, status], map: "scheme_tenant_status_idx")
+  @@index([tenantId, subject, level], map: "scheme_tenant_subject_level_idx")
 }
 
 model SchemeOfWorkItem {
-  id String @id @default(cuid())
-
+  id             String @id @default(cuid())
   schemeOfWorkId String
 
-  // Timetabling
   weekNumber Int
-  // (optional if you ever want day-level granularity later)
-  dayNumber  Int?
 
-  // Direct link to the hierarchical curriculum indicator
-  curriculumIndicatorId String?
-  indicator             CurriculumIndicator? @relation(fields: [curriculumIndicatorId], references: [id])
+  indicatorId          String?
+  indicatorCode        String?
+  indicatorDescription String?
 
-  // Cached curriculum text for fast printing & robustness
-  indicatorCode              String?
-  indicatorDescription       String
-  strandTitle                String
-  subStrandTitle             String
+  strandTitle                String?
+  subStrandTitle             String?
   contentStandardCode        String?
   contentStandardDescription String?
 
-  notes String?
+  dayNumber Int?
+  notes     String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  scheme SchemeOfWork @relation(fields: [schemeOfWorkId], references: [id], onDelete: Cascade)
+  scheme SchemeOfWork @relation(fields: [schemeOfWorkId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([schemeOfWorkId])
-  @@index([weekNumber])
-  @@index([indicatorCode])
+  @@index([schemeOfWorkId, weekNumber], map: "SchemeOfWorkItem_scheme_week_idx")
 }
 
-// -------------------------------------
-// ASSESSMENT & GRADEBOOK
-// -------------------------------------
-//
-// One AssessmentItem ≈ one CA / quiz / project definition for a class.
-// AssessmentScore links a learner to that item with a mark.
-//
 model AssessmentItem {
-  id String @id @default(cuid())
+  id              String            @id @default(cuid())
+  tenantId        String
+  classroomId     String
+  subject         String
+  term            String
+  academicYear    String
+  title           String
+  description     String?
+  type            String
+  maxScore        Int
+  weighting       Float?
+  date            DateTime?         @db.Timestamptz(6)
+  createdAt       DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime          @default(now()) @updatedAt @db.Timestamptz(6)
+  createdByUserId String?
+  classroom       Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdByUser   User?             @relation(fields: [createdByUserId], references: [id])
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  scores          AssessmentScore[]
 
-  tenantId    String
-  classroomId String
-
-  subject      String
-  term         String // e.g. "1st Term"
-  academicYear String // e.g. "2025/2026"
-
-  title       String // e.g. "Class Test 1"
-  description String?
-  type        String // e.g. "CLASS_TEST", "HOMEWORK", "PROJECT"
-  maxScore    Int
-  weighting   Float? // optional weighting %
-
-  date DateTime? // when the assessment was done
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  classroom Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  scores    AssessmentScore[]
+  @@index([tenantId, createdByUserId])
 }
 
 model AssessmentScore {
-  id String @id @default(cuid())
-
+  id        String         @id @default(cuid())
   itemId    String
   studentId String
+  score     Float
+  comment   String?
+  createdAt DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime       @default(now()) @db.Timestamptz(6)
+  item      AssessmentItem @relation(fields: [itemId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student   Student        @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  score   Float
-  comment String?
+  @@unique([itemId, studentId], name: "assessment_student_unique", map: "assessment_student_unique")
+}
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+model TeacherProfile {
+  id               String       @id @default(cuid())
+  tenantId         String
+  userId           String
+  phone            String
+  phase            TeacherPhase
+  classLevel       String?
+  jhsAssignments   Json?
+  additionalDuties String[]     @default([])
+  createdAt        DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime     @default(now()) @updatedAt @db.Timestamptz(6)
 
-  item    AssessmentItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  student Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation("TenantTeacherProfiles", fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserTeacherProfiles", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([itemId, studentId], name: "assessment_student_unique")
+  // ✅ Bank-grade multi-tenant identity: one teacher profile per user per tenant
+  @@unique([tenantId, userId], name: "teacherProfile_tenant_user_unique")
+  @@index([tenantId])
+  @@index([phase])
+  @@index([classLevel])
+}
+
+model Assessment {
+  id              String    @id @default(cuid())
+  tenantId        String
+  classroomId     String
+  subject         String
+  title           String
+  description     String?
+  term            String
+  academicYear    String
+  date            DateTime? @db.Timestamptz(6)
+  maxScore        Int
+  weight          Int?
+  createdByUserId String?
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @db.Timestamptz(6)
+  Classroom       Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  User            User?     @relation(fields: [createdByUserId], references: [id])
+  Tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, classroomId, term, academicYear], map: "idx_assessment_tenant_class_term_year")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum TeacherPhase {
+  KG
+  PRIMARY
+  JHS
+}
+
+enum LessonNoteStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum SchemeStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  RETURNED
 }

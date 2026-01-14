@@ -1,76 +1,172 @@
 // src/app/api/curriculum/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
-import { getCurriculumHierarchyForSubject } from "@/lib/curriculumEngine";
+import { prisma } from "@/lib/prisma";
+import { getServerUserContextOrNull } from "@/lib/serverAuth";
 
-/**
- * Curriculum Engine API
- *
- * GET /api/curriculum?phase=KG&level=KG1&subjectSlug=kg1-our-world-and-our-people
- * or
- * GET /api/curriculum?phase=KG&level=KG1&subject=Our%20World%20and%20Our%20People
- *
- * Returns a single curriculum subject hierarchy:
- *  - Subject
- *    - Strands
- *      - Sub-strands
- *        - Content standards
- *          - Indicators
- *            - Exemplars
- */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+  return NextResponse.json(payload, {
+    ...init,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
+function asTrimmed(v: string | null) {
+  const s = (v ?? "").trim();
+  return s.length ? s : null;
+}
+
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
+  // ✅ API routes must not redirect. Ever.
+  const ctx = await getServerUserContextOrNull({ requireTenant: true });
+  if (!ctx) return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
 
-  const phase = url.searchParams.get("phase") || undefined;
-  const level = url.searchParams.get("level") || undefined;
-  const subject = url.searchParams.get("subject") || undefined;
-  const subjectSlug = url.searchParams.get("subjectSlug") || undefined;
+  const { searchParams } = new URL(req.url);
 
-  if (!subject && !subjectSlug) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Missing subject or subjectSlug. Provide at least one of: ?subject=... or ?subjectSlug=....",
-      },
+  const phase = asTrimmed(searchParams.get("phase"));
+  const level = asTrimmed(searchParams.get("level"));
+  const subjectSlug = asTrimmed(searchParams.get("subjectSlug"));
+  const subjectName = asTrimmed(searchParams.get("subject"));
+
+  if (!subjectSlug && !subjectName) {
+    return jsonNoStore(
+      { ok: false, error: "Missing subjectSlug or subject." },
       { status: 400 }
     );
   }
 
   try {
-    const tree = await getCurriculumHierarchyForSubject({
-      phase,
-      level,
-      subject,
-      subjectSlug,
+    const subject = await prisma.curriculumSubject.findFirst({
+      where: {
+        isActive: true,
+        ...(phase ? { phase } : {}),
+        ...(level ? { level } : {}),
+        ...(subjectSlug ? { slug: subjectSlug } : { name: subjectName! }),
+        OR: [{ isGlobal: true }, { tenantId: ctx.tenantId }],
+      },
+      select: {
+        id: true,
+        phase: true,
+        level: true,
+        name: true,
+        slug: true,
+        description: true,
+        orderIndex: true,
+
+        curriculumFramework: true,
+        frameworkVersion: true,
+        countryCode: true,
+        sourceDocumentTitle: true,
+        sourceDocumentYear: true,
+        sourceDocumentUrl: true,
+        lastVerifiedAt: true,
+
+        media: {
+          select: {
+            id: true,
+            pageNumberInPdf: true,
+            figureLabel: true,
+            imagePath: true,
+            altText: true,
+            detailedDescription: true,
+            tags: true,
+          },
+          orderBy: [{ pageNumberInPdf: "asc" }, { id: "asc" }],
+        },
+
+        strands: {
+          orderBy: [{ orderIndex: "asc" }, { code: "asc" }, { id: "asc" }],
+          select: {
+            id: true,
+            code: true,
+            title: true,
+            description: true,
+            orderIndex: true,
+            subStrands: {
+              orderBy: [{ orderIndex: "asc" }, { code: "asc" }, { id: "asc" }],
+              select: {
+                id: true,
+                code: true,
+                title: true,
+                description: true,
+                orderIndex: true,
+                contentStandards: {
+                  orderBy: [{ orderIndex: "asc" }, { code: "asc" }, { id: "asc" }],
+                  select: {
+                    id: true,
+                    code: true,
+                    description: true,
+                    orderIndex: true,
+                    media: {
+                      select: {
+                        id: true,
+                        pageNumberInPdf: true,
+                        figureLabel: true,
+                        imagePath: true,
+                        altText: true,
+                        detailedDescription: true,
+                        tags: true,
+                      },
+                      orderBy: [{ pageNumberInPdf: "asc" }, { id: "asc" }],
+                    },
+                    indicators: {
+                      orderBy: [{ orderIndex: "asc" }, { code: "asc" }, { id: "asc" }],
+                      select: {
+                        id: true,
+                        code: true,
+                        description: true,
+                        orderIndex: true,
+                        media: {
+                          select: {
+                            id: true,
+                            pageNumberInPdf: true,
+                            figureLabel: true,
+                            imagePath: true,
+                            altText: true,
+                            detailedDescription: true,
+                            tags: true,
+                          },
+                          orderBy: [{ pageNumberInPdf: "asc" }, { id: "asc" }],
+                        },
+                        exemplars: {
+                          orderBy: [{ orderIndex: "asc" }, { id: "asc" }],
+                          select: {
+                            id: true,
+                            title: true,
+                            description: true,
+                            assessmentNotes: true,
+                            orderIndex: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
-    if (!tree) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Curriculum subject not found for the given phase/level/subject. Please confirm that the seed data covers this combination.",
-        },
+    if (!subject) {
+      return jsonNoStore(
+        { ok: false, error: "Curriculum subject not found for the selected filters." },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(
-      {
-        ok: true,
-        item: tree,
-      },
-      { status: 200 }
-    );
+    return jsonNoStore({ ok: true, item: subject }, { status: 200 });
   } catch (err) {
-    console.error("CURRICULUM_ENGINE_API_ERROR", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Unexpected error while loading curriculum hierarchy. Please try again or contact the system administrator.",
-      },
+    console.error("[CURRICULUM_GET_ERROR]", err);
+    return jsonNoStore(
+      { ok: false, error: "Unexpected error while loading curriculum hierarchy. Please try again or contact the system administrator." },
       { status: 500 }
     );
   }

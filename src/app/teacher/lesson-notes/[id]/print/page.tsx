@@ -1,11 +1,10 @@
 // src/app/teacher/lesson-notes/[id]/print/page.tsx
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { requireServerUserContext } from "@/lib/serverAuth";
+import { notFound, redirect } from "next/navigation";
 import HeadteacherReviewPanel from "./HeadteacherReviewPanel";
 
-type PageProps = {
-  params: Promise<{ id: string }>;
-};
+export const dynamic = "force-dynamic";
 
 function formatDate(value: Date | string | null | undefined) {
   if (!value) return "";
@@ -18,21 +17,32 @@ function formatDate(value: Date | string | null | undefined) {
   });
 }
 
-function normalizeLabel(
-  value: string | null | undefined
-): string | null {
+function normalizeLabel(value: string | null | undefined): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
 }
 
-export default async function LessonNotePrintPage({
-  params,
-}: PageProps) {
-  const { id } = await params;
+export default async function Page({ params }: { params: { id: string } }) {
+  const ctx = await requireServerUserContext({
+    redirectTo: `/teacher/lesson-notes/${encodeURIComponent(params.id)}/print`,
+    requireTenant: true,
+  });
 
-  const note = await prisma.lessonNote.findUnique({
-    where: { id },
+  // ✅ ACTIVE membership gate
+  const membership = await prisma.membership.findFirst({
+    where: { userId: ctx.userId, tenantId: ctx.tenantId, status: "ACTIVE" },
+    select: { id: true },
+  });
+  if (!membership) redirect("/app/dashboard");
+
+  // ✅ Tenant isolation + allow teacher OR assigned headteacher
+  const note = await prisma.lessonNote.findFirst({
+    where: {
+      id: params.id,
+      tenantId: ctx.tenantId,
+      OR: [{ teacherUserId: ctx.userId }, { headteacherUserId: ctx.userId }],
+    },
     include: {
       tenant: true,
       teacher: true,
@@ -41,77 +51,45 @@ export default async function LessonNotePrintPage({
     },
   });
 
-  if (!note) {
-    notFound();
-  }
+  if (!note) return notFound();
 
   // Curriculum fields – prefer explicit lessonNote fields, fall back to CurriculumUnit
-  const subject =
-    note.subject ?? note.curriculumUnit?.subject ?? "";
-  const strand =
-    note.strand ?? note.curriculumUnit?.strand ?? "";
-  const substrand =
-    note.substrand ?? note.curriculumUnit?.substrand ?? "";
+  const subject = note.subject ?? note.curriculumUnit?.subject ?? "";
+  const strand = note.strand ?? note.curriculumUnit?.strand ?? "";
+  const substrand = note.substrand ?? note.curriculumUnit?.substrand ?? "";
   const contentStandard =
     note.contentStandard ?? note.curriculumUnit?.contentStandard ?? "";
-  const indicator =
-    note.indicator ?? note.curriculumUnit?.indicator ?? "";
+  const indicator = note.indicator ?? note.curriculumUnit?.indicator ?? "";
 
   const strandCode = note.curriculumUnit?.strandCode ?? null;
   const indicatorCode = note.curriculumUnit?.indicatorCode ?? null;
-  const contentStandardCode =
-    note.curriculumUnit?.contentStandardCode ?? null;
+  const contentStandardCode = note.curriculumUnit?.contentStandardCode ?? null;
 
-  // LESSON TITLE:
-  // 1) Explicit lessonNote.lessonTitle (if teacher/AI set it)
-  // 2) Curriculum indicator
-  // 3) Curriculum substrand/topic
-  // 4) Fallback underline
+  // LESSON TITLE fallback logic (keep your production-grade behavior)
   let lessonTitle: string;
   if (note.lessonTitle && note.lessonTitle.trim().length > 0) {
     lessonTitle = note.lessonTitle;
-  } else if (
-    note.curriculumUnit?.indicator &&
-    note.curriculumUnit.indicator.trim().length > 0
-  ) {
+  } else if (note.curriculumUnit?.indicator?.trim()) {
     lessonTitle = note.curriculumUnit.indicator;
-  } else if (
-    note.curriculumUnit?.substrand &&
-    note.curriculumUnit.substrand.trim().length > 0
-  ) {
+  } else if (note.curriculumUnit?.substrand?.trim()) {
     lessonTitle = note.curriculumUnit.substrand;
-  } else if (substrand && substrand.trim().length > 0) {
+  } else if (substrand?.trim()) {
     lessonTitle = substrand;
   } else {
-    lessonTitle =
-      "______________________________________________";
+    lessonTitle = "______________________________________________";
   }
 
-  const schoolName =
-    note.tenant?.name ?? "__________________________";
-  const teacherName =
-    note.teacher?.name ?? "__________________________";
+  const schoolName = note.tenant?.name ?? "__________________________";
+  const teacherName = note.teacher?.name ?? "__________________________";
   const teacherEmail = note.teacher?.email ?? "";
 
-  // CLASS:
-  // 1) Classroom name (if set)
-  // 2) Phase – Level (e.g. "KG – KG1")
-  // 3) Level
-  // 4) Phase
-  // 5) Fallback underline
   const classroomName = normalizeLabel(note.classroom?.name);
-  const phaseLabel = normalizeLabel(
-    note.phase ?? note.curriculumUnit?.phase
-  );
-  const levelLabel = normalizeLabel(
-    note.level ?? note.curriculumUnit?.level
-  );
+  const phaseLabel = normalizeLabel(note.phase ?? note.curriculumUnit?.phase);
+  const levelLabel = normalizeLabel(note.level ?? note.curriculumUnit?.level);
 
   const classLabel =
     classroomName ??
-    (phaseLabel && levelLabel
-      ? `${phaseLabel} – ${levelLabel}`
-      : null) ??
+    (phaseLabel && levelLabel ? `${phaseLabel} – ${levelLabel}` : null) ??
     levelLabel ??
     phaseLabel ??
     "________________";
@@ -120,19 +98,13 @@ export default async function LessonNotePrintPage({
   const academicYearLabel = note.academicYear ?? "";
 
   const weekNumberLabel =
-    typeof note.weekNumber === "number"
-      ? note.weekNumber.toString()
-      : "____";
+    typeof note.weekNumber === "number" ? note.weekNumber.toString() : "____";
 
-  // For now we assume a single 40-minute lesson; this can later be driven from the note data.
   const durationLabel = "40 minutes";
 
-  // WEEK ENDING:
-  // Prefer explicit lessonDate; if missing, fall back to createdAt so it's never blank.
   const weekEndingSource = note.lessonDate ?? note.createdAt;
   const weekEndingLabel = formatDate(weekEndingSource);
 
-  // Simple generic core competencies for now (later we can store per-lesson)
   const coreCompetencies =
     "Critical Thinking and Problem Solving; Communication and Collaboration; Creativity and Innovation";
 
@@ -179,7 +151,6 @@ export default async function LessonNotePrintPage({
   const createdAtLabel = formatDate(note.createdAt);
   const updatedAtLabel = formatDate(note.updatedAt);
 
-  // NEW: Headteacher review fields
   const headteacherComment = note.headteacherComment ?? "";
   const approvedAtLabel = formatDate(note.approvedAt);
   const isApproved = note.status === "APPROVED";
@@ -196,26 +167,19 @@ export default async function LessonNotePrintPage({
             {schoolName}{" "}
             {classLabel ? (
               <span className="font-normal">
-                &nbsp;| Class:{" "}
-                <span className="font-semibold">{classLabel}</span>
+                &nbsp;| Class: <span className="font-semibold">{classLabel}</span>
               </span>
             ) : null}
           </p>
           <p className="text-[11px]">
-            Teacher:{" "}
-            <span className="font-semibold">{teacherName}</span>{" "}
+            Teacher: <span className="font-semibold">{teacherName}</span>{" "}
             {teacherEmail && <span>({teacherEmail})</span>}
           </p>
           {(termLabel || academicYearLabel) && (
             <p className="text-[11px]">
-              Term:{" "}
-              <span className="font-semibold">
-                {termLabel || "________"}
-              </span>{" "}
-              | Academic Year:{" "}
-              <span className="font-semibold">
-                {academicYearLabel || "________/________"}
-              </span>
+              Term: <span className="font-semibold">{termLabel || "________"}</span> | Academic
+              Year:{" "}
+              <span className="font-semibold">{academicYearLabel || "________/________"}</span>
             </p>
           )}
           <p className="text-[10px] text-zinc-600">
@@ -223,136 +187,80 @@ export default async function LessonNotePrintPage({
           </p>
         </header>
 
-        {/* MAIN INFO TABLE – modelled on your NaCCA template */}
+        {/* MAIN INFO TABLE */}
         <table className="w-full border border-black border-collapse text-[11px] mb-4">
           <tbody>
-            {/* Row 1: SUBJECT, WEEK, DURATION, CLASS, WEEK ENDING */}
             <tr>
-              <td className="border border-black font-semibold px-1 py-1 w-[14%]">
-                SUBJECT
-              </td>
+              <td className="border border-black font-semibold px-1 py-1 w-[14%]">SUBJECT</td>
               <td className="border border-black px-1 py-1 w-[21%]">
                 {subject || "____________________"}
               </td>
-              <td className="border border-black font-semibold px-1 py-1 w-[10%]">
-                WEEK
-              </td>
+              <td className="border border-black font-semibold px-1 py-1 w-[10%]">WEEK</td>
               <td className="border border-black px-1 py-1 w-[8%] text-center">
                 {weekNumberLabel}
               </td>
-              <td className="border border-black font-semibold px-1 py-1 w-[15%]">
-                DURATION
-              </td>
+              <td className="border border-black font-semibold px-1 py-1 w-[15%]">DURATION</td>
               <td className="border border-black px-1 py-1 w-[10%] text-center">
                 {durationLabel}
               </td>
-              <td className="border border-black font-semibold px-1 py-1 w-[12%]">
-                CLASS
-              </td>
+              <td className="border border-black font-semibold px-1 py-1 w-[12%]">CLASS</td>
               <td className="border border-black px-1 py-1 w-[10%] text-center">
                 {classLabel}
               </td>
-              <td className="border border-black font-semibold px-1 py-1 w-[12%]">
-                WEEK ENDING
-              </td>
+              <td className="border border-black font-semibold px-1 py-1 w-[12%]">WEEK ENDING</td>
               <td className="border border-black px-1 py-1 w-[12%] text-center">
                 {weekEndingLabel || "____________"}
               </td>
             </tr>
 
-            {/* STRAND */}
             <tr>
-              <td className="border border-black font-semibold px-1 py-1">
-                STRAND
-              </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
+              <td className="border border-black font-semibold px-1 py-1">STRAND</td>
+              <td className="border border-black px-1 py-1" colSpan={9}>
                 {strandCode
-                  ? `${strandCode} – ${
-                      strand ||
-                      "______________________________________________"
-                    }`
-                  : strand ||
-                    "______________________________________________"}
+                  ? `${strandCode} – ${strand || "______________________________________________"}`
+                  : strand || "______________________________________________"}
               </td>
             </tr>
 
-            {/* SUB-STRAND */}
             <tr>
-              <td className="border border-black font-semibold px-1 py-1">
-                SUB-STRAND
-              </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
-                {substrand ||
-                  "______________________________________________"}
+              <td className="border border-black font-semibold px-1 py-1">SUB-STRAND</td>
+              <td className="border border-black px-1 py-1" colSpan={9}>
+                {substrand || "______________________________________________"}
               </td>
             </tr>
 
-            {/* CONTENT STANDARD */}
             <tr>
-              <td className="border border-black font-semibold px-1 py-1">
-                CONTENT
-              </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
+              <td className="border border-black font-semibold px-1 py-1">CONTENT</td>
+              <td className="border border-black px-1 py-1" colSpan={9}>
                 {contentStandardCode
                   ? `${contentStandardCode} – ${
-                      contentStandard ||
-                      "______________________________________________"
+                      contentStandard || "______________________________________________"
                     }`
-                  : contentStandard ||
-                    "______________________________________________"}
+                  : contentStandard || "______________________________________________"}
               </td>
             </tr>
 
-            {/* INDICATOR */}
             <tr>
-              <td className="border border-black font-semibold px-1 py-1">
-                INDICATOR
-              </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
+              <td className="border border-black font-semibold px-1 py-1">INDICATOR</td>
+              <td className="border border-black px-1 py-1" colSpan={9}>
                 {indicatorCode
-                  ? `${indicatorCode} – ${
-                      indicator ||
-                      "______________________________________________"
-                    }`
-                  : indicator ||
-                    "______________________________________________"}
+                  ? `${indicatorCode} – ${indicator || "______________________________________________"}`
+                  : indicator || "______________________________________________"}
               </td>
             </tr>
 
-            {/* LESSON TITLE / TOPIC */}
             <tr>
-              <td className="border border-black font-semibold px-1 py-1">
-                LESSON TITLE
-              </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
+              <td className="border border-black font-semibold px-1 py-1">LESSON TITLE</td>
+              <td className="border border-black px-1 py-1" colSpan={9}>
                 {lessonTitle}
               </td>
             </tr>
 
-            {/* PERFORMANCE INDICATOR(S) */}
             <tr>
               <td className="border border-black font-semibold px-1 py-1 align-top">
                 PERFORMANCE INDICATOR(S)
               </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
+              <td className="border border-black px-1 py-1" colSpan={9}>
                 Learners can{" "}
                 {indicator
                   ? indicator.toLowerCase()
@@ -360,72 +268,47 @@ export default async function LessonNotePrintPage({
               </td>
             </tr>
 
-            {/* CORE COMPETENCIES */}
             <tr>
               <td className="border border-black font-semibold px-1 py-1 align-top">
                 CORE COMPETENCIES
               </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
+              <td className="border border-black px-1 py-1" colSpan={9}>
                 {coreCompetencies}
               </td>
             </tr>
 
-            {/* TEACHING & LEARNING RESOURCES */}
             <tr>
               <td className="border border-black font-semibold px-1 py-1 align-top">
                 TEACHING &amp; LEARNING RESOURCES
               </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
+              <td className="border border-black px-1 py-1" colSpan={9}>
                 {teachingResources}
               </td>
             </tr>
 
-            {/* KEYWORDS */}
             <tr>
-              <td className="border border-black font-semibold px-1 py-1 align-top">
-                KEYWORDS
-              </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
-                Counting, numeration, numbers, concrete materials, group
-                work.
+              <td className="border border-black font-semibold px-1 py-1 align-top">KEYWORDS</td>
+              <td className="border border-black px-1 py-1" colSpan={9}>
+                Counting, numeration, numbers, concrete materials, group work.
               </td>
             </tr>
 
-            {/* REFERENCES */}
             <tr>
-              <td className="border border-black font-semibold px-1 py-1 align-top">
-                REFERENCES
-              </td>
-              <td
-                className="border border-black px-1 py-1"
-                colSpan={9}
-              >
-                Official NaCCA Curriculum &amp; Teacher Resource Pack;
-                EduLife OS Teacher Lesson Design Studio printout.
+              <td className="border border-black font-semibold px-1 py-1 align-top">REFERENCES</td>
+              <td className="border border-black px-1 py-1" colSpan={9}>
+                Official NaCCA Curriculum &amp; Teacher Resource Pack; EduLife OS Teacher Lesson Design
+                Studio printout.
               </td>
             </tr>
           </tbody>
         </table>
 
-        {/* LESSON BODY – DAY / PHASES table, following your pattern */}
+        {/* LESSON BODY */}
         <table className="w-full border border-black border-collapse text-[11px] mb-4">
           <thead>
             <tr>
-              <th className="border border-black px-1 py-1 w-[10%]">
-                DAY
-              </th>
-              <th className="border border-black px-1 py-1 w-[30%]">
-                PHASE 1: STARTER
-              </th>
+              <th className="border border-black px-1 py-1 w-[10%]">DAY</th>
+              <th className="border border-black px-1 py-1 w-[30%]">PHASE 1: STARTER</th>
               <th className="border border-black px-1 py-1 w-[35%]">
                 PHASE 2: NEW LEARNING &amp; ASSESSMENT
               </th>
@@ -440,23 +323,15 @@ export default async function LessonNotePrintPage({
                 {weekNumberLabel ? "Monday" : "Day"}
               </td>
               <td className="border border-black px-1 py-1 whitespace-pre-line">
-                <p className="font-semibold underline mb-1">
-                  LESSON OBJECTIVES
-                </p>
+                <p className="font-semibold underline mb-1">LESSON OBJECTIVES</p>
                 <p className="mb-2">{lessonObjectives}</p>
-                <p className="font-semibold underline mb-1">
-                  PRIOR KNOWLEDGE
-                </p>
+                <p className="font-semibold underline mb-1">PRIOR KNOWLEDGE</p>
                 <p className="mb-2">{priorKnowledgeText}</p>
-                <p className="font-semibold underline mb-1">
-                  INTRODUCTION (STARTER)
-                </p>
+                <p className="font-semibold underline mb-1">INTRODUCTION (STARTER)</p>
                 <p>{introductionText}</p>
               </td>
               <td className="border border-black px-1 py-1 whitespace-pre-line">
-                <p className="font-semibold underline mb-1">
-                  KEY LEARNING POINTS
-                </p>
+                <p className="font-semibold underline mb-1">KEY LEARNING POINTS</p>
                 <p className="mb-2">
                   {contentStandard ||
                     "Highlight the main ideas and skills learners must acquire in this lesson."}
@@ -467,80 +342,54 @@ export default async function LessonNotePrintPage({
                 <p>{developmentText}</p>
               </td>
               <td className="border border-black px-1 py-1 whitespace-pre-line">
-                <p className="font-semibold underline mb-1">
-                  CONCLUSION
-                </p>
+                <p className="font-semibold underline mb-1">CONCLUSION</p>
                 <p className="mb-2">{conclusionText}</p>
-                <p className="font-semibold underline mb-1">
-                  REFLECTION
-                </p>
+                <p className="font-semibold underline mb-1">REFLECTION</p>
                 <p>{reflectionText}</p>
               </td>
             </tr>
           </tbody>
         </table>
 
-        {/* ASSESSMENT & HOMEWORK BLOCK */}
+        {/* ASSESSMENT & HOMEWORK */}
         <section className="border border-black text-[11px] mb-4">
-          <div className="border-b border-black px-2 py-1 font-semibold">
-            ASSESSMENT / EVALUATION
-          </div>
-          <div className="px-2 py-1 whitespace-pre-line">
-            {assessmentText}
-          </div>
-          <div className="border-t border-black px-2 py-1 font-semibold">
-            HOMEWORK / ASSIGNMENT
-          </div>
-          <div className="px-2 py-1 whitespace-pre-line">
-            {homeworkText}
-          </div>
+          <div className="border-b border-black px-2 py-1 font-semibold">ASSESSMENT / EVALUATION</div>
+          <div className="px-2 py-1 whitespace-pre-line">{assessmentText}</div>
+          <div className="border-t border-black px-2 py-1 font-semibold">HOMEWORK / ASSIGNMENT</div>
+          <div className="px-2 py-1 whitespace-pre-line">{homeworkText}</div>
         </section>
 
-        {/* DIFFERENTIATION & TEACHER'S REMARKS */}
+        {/* DIFFERENTIATION */}
         <section className="border border-black text-[11px] mb-4">
           <div className="border-b border-black px-2 py-1 font-semibold">
             DIFFERENTIATION / SUPPORT FOR LEARNERS
           </div>
-          <div className="px-2 py-1 whitespace-pre-line">
-            {differentiationText}
-          </div>
-          <div className="border-t border-black px-2 py-1 font-semibold">
-            TEACHER&apos;S REMARKS
-          </div>
+          <div className="px-2 py-1 whitespace-pre-line">{differentiationText}</div>
+          <div className="border-t border-black px-2 py-1 font-semibold">TEACHER&apos;S REMARKS</div>
           <div className="px-2 py-1 text-[10px] text-zinc-700 flex flex-col gap-1">
             <div>
-              Date prepared:{" "}
-              <span className="font-semibold">
-                {createdAtLabel || "____________"}
-              </span>
+              Date prepared: <span className="font-semibold">{createdAtLabel || "____________"}</span>
             </div>
             <div>
-              Last updated:{" "}
-              <span className="font-semibold">
-                {updatedAtLabel || "____________"}
-              </span>
+              Last updated: <span className="font-semibold">{updatedAtLabel || "____________"}</span>
             </div>
             <div className="mt-2">
-              Signature: ____________________________ &nbsp;&nbsp;
-              Date: __________________
+              Signature: ____________________________ &nbsp;&nbsp; Date: __________________
             </div>
           </div>
         </section>
 
-        {/* NEW: HEADTEACHER REVIEW & SIGNATURE BLOCK */}
+        {/* HEADTEACHER REVIEW */}
         <section className="border border-black text-[11px] mb-4">
           <div className="border-b border-black px-2 py-1 font-semibold">
             HEADTEACHER&apos;S REVIEW / APPROVAL
           </div>
           <div className="px-2 py-1 whitespace-pre-line min-h-[48px]">
-            {headteacherComment ||
-              "______________________________________________"}
+            {headteacherComment || "______________________________________________"}
           </div>
           <div className="border-t border-black px-2 py-2 flex flex-row justify-between items-center gap-4">
             <div className="flex-1 flex flex-col gap-1">
-              <span className="text-[10px] text-zinc-700">
-                Headteacher&apos;s Signature:
-              </span>
+              <span className="text-[10px] text-zinc-700">Headteacher&apos;s Signature:</span>
               <div className="h-10 flex items-center">
                 {isApproved ? (
                   <img
@@ -555,24 +404,17 @@ export default async function LessonNotePrintPage({
             </div>
             <div className="flex flex-col items-end gap-1">
               <span className="text-[10px] text-zinc-700">Date:</span>
-              <div>
-                {isApproved && approvedAtLabel
-                  ? approvedAtLabel
-                  : "________________"}
-              </div>
+              <div>{isApproved && approvedAtLabel ? approvedAtLabel : "________________"}</div>
             </div>
           </div>
         </section>
 
-        {/* Print hint – users can still use browser print */}
         <p className="text-[10px] text-zinc-500 text-center mt-2 print:hidden">
-          Tip: Use your browser&apos;s{" "}
-          <span className="font-semibold">Print</span>{" "}
-          command (Ctrl+P) to export this official NaCCA-style lesson note
-          as PDF for submission.
+          Tip: Use your browser&apos;s <span className="font-semibold">Print</span> command (Ctrl+P) to
+          export as PDF.
         </p>
 
-        {/* Headteacher review controls (only visible in headteacher mode, hidden on print) */}
+        {/* Review controls (hidden on print inside the component) */}
         <HeadteacherReviewPanel
           noteId={note.id}
           tenantId={note.tenantId}

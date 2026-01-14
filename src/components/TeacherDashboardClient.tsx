@@ -2,513 +2,600 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-type Teacher = {
-  teacher_id: string;
-  first_name: string | null;
-  last_name: string | null;
-} | null;
-
-type Homeroom = {
-  class_code: string;
-  class_name: string | null;
-  level: "KG" | "Primary" | "JHS" | null;
-} | null;
-
-type AssignmentChip = {
-  assignment_id: string;
-  class_code: string;
-  subject: string;
-  academic_year: string | null;
-  term: string | null;
-  todayCount?: number;
-  latestISO?: string | null;
-  classSize?: number | null;
+type Snapshot = {
+  teacher: { displayName: string; staffId: string | null };
+  today: {
+    label: string;
+    attendance: {
+      sessionsTotal: number;
+      sessionsClosed: number;
+      marksTotal: number;
+      present: number;
+      absent: number;
+      late: number;
+      excused: number;
+      presentRate: number;
+      closureRate: number;
+    };
+    health: {
+      healthTotal: number;
+      feverCount: number;
+      sentToParentCount: number;
+    };
+  };
+  lessonNotes: {
+    term: string;
+    academicYear: string;
+    availableWeeks: number[];
+    selectedWeek: number | null;
+    statusCounts: Record<string, number>;
+    latest:
+      | {
+          status: string;
+          updatedAt: string | Date;
+          submittedAt: string | Date | null;
+          reviewedAt: string | Date | null;
+          approvedAt: string | Date | null;
+          rejectedAt: string | Date | null;
+          headteacherComment: string | null;
+        }
+      | null;
+    latestAnnouncement: { title: string; createdAt: string | Date } | null;
+  };
+  assessments: {
+    term: string;
+    academicYear: string;
+    itemCount: number;
+    scoreCount: number;
+    avgPct: number;
+    bands: { below40: number; between40_54: number; between55_69: number; above70: number };
+    topSubjects: { subject: string; count: number }[];
+    scopeLabel: string;
+  };
 };
 
-type RecentEntry = {
-  record_id: string;
-  class_code: string;
-  subject: string;
-  created_at: string | null;
-  student_id: string | null;
-  score: number | null;
-  assessment_type: string | null;
-};
+function fmtPct(v: number) {
+  if (!Number.isFinite(v)) return "0%";
+  return `${Math.round(v)}%`;
+}
 
-type Chip = {
-  key: string;
-  label: string; // usually class_code or class_name
-  href: string; // where to record assessment
-  kind: "HR" | "SJ"; // homeroom vs subject
-  sub?: string; // subject or level label
-  term?: string | null;
-  year?: string | null;
-  count?: number; // today count
-  classSize?: number | null;
-  latestISO?: string | null;
-};
+function clampPct(v: number) {
+  return Math.max(0, Math.min(100, v));
+}
+
+function Bar({
+  value,
+  label,
+}: {
+  value: number;
+  label: string;
+}) {
+  const w = clampPct(value);
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[11px] text-slate-600">
+        <span>{label}</span>
+        <span className="font-medium text-slate-800">{fmtPct(w)}</span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-slate-100">
+        <div
+          className="h-2 rounded-full bg-sky-600 transition-[width] duration-300"
+          style={{ width: `${w}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatPill({ label, value }: { label: string; value: string | number }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] text-slate-700 shadow-sm">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-semibold text-slate-900">{value}</span>
+    </span>
+  );
+}
 
 export default function TeacherDashboardClient({
-  teacher,
-  homeroom,
-  assignments,
-  todayMeta,
-  classCounts,
-  latestMap,
-  recentToday,
-  alerts,
-  // NEW: optional portal-style context
+  snapshot,
   tenantId,
   teacherUserId,
-  defaultTerm = "1st Term",
-  defaultAcademicYear = "2025/2026",
+  defaultTerm,
+  defaultAcademicYear,
   demoClassroomId,
 }: {
-  teacher: Teacher;
-  homeroom: Homeroom;
-  assignments: AssignmentChip[];
-  todayMeta: { date: string; total: number; homeroomCount: number };
-  classCounts: Record<string, number>;
-  latestMap: Record<string, string | null>;
-  recentToday: RecentEntry[];
-  alerts: string[];
-  tenantId?: string;
-  teacherUserId?: string;
-  defaultTerm?: string;
-  defaultAcademicYear?: string;
+  snapshot: Snapshot;
+  tenantId: string;
+  teacherUserId: string;
+  defaultTerm: string;
+  defaultAcademicYear: string;
   demoClassroomId?: string;
 }) {
-  const displayName =
-    [teacher?.first_name, teacher?.last_name].filter(Boolean).join(" ").trim() ||
-    "—";
-
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const id = setInterval(() => location.reload(), 30000);
-    return () => clearInterval(id);
-  }, [autoRefresh]);
-
-  // ==============================
-  // URLs aligned with TeacherPortal
-  // ==============================
+  const router = useRouter();
+  const sp = useSearchParams();
 
   const hasPortalContext = Boolean(tenantId && teacherUserId);
 
-  const lessonNotesWorkspaceUrl = hasPortalContext
-    ? `/teacher/lesson-notes?tenantId=${encodeURIComponent(
-        tenantId!
-      )}&teacherUserId=${encodeURIComponent(teacherUserId!)}`
+  const attendanceUrl = hasPortalContext
+    ? `/teacher/attendance?tenantId=${encodeURIComponent(tenantId)}&teacherUserId=${encodeURIComponent(
+        teacherUserId
+      )}`
+    : "/teacher/attendance";
+
+  const lessonNotesUrl = hasPortalContext
+    ? `/teacher/lesson-notes?tenantId=${encodeURIComponent(tenantId)}&teacherUserId=${encodeURIComponent(
+        teacherUserId
+      )}`
     : "/teacher/lesson-notes";
 
   const termDashboardUrl = hasPortalContext
     ? `/teacher/assessment/term-dashboard?tenantId=${encodeURIComponent(
-        tenantId!
-      )}&teacherUserId=${encodeURIComponent(teacherUserId!)}${
-        demoClassroomId
-          ? `&classroomId=${encodeURIComponent(demoClassroomId)}`
-          : ""
-      }&term=${encodeURIComponent(defaultTerm)}&academicYear=${encodeURIComponent(
-        defaultAcademicYear
-      )}`
-    : "/teacher/assessment";
+        tenantId
+      )}&teacherUserId=${encodeURIComponent(teacherUserId)}${
+        demoClassroomId ? `&classroomId=${encodeURIComponent(demoClassroomId)}` : ""
+      }&term=${encodeURIComponent(defaultTerm)}&academicYear=${encodeURIComponent(defaultAcademicYear)}`
+    : "/teacher/assessment/term-dashboard";
 
-  const attendanceUrl = hasPortalContext
-    ? `/teacher/attendance?tenantId=${encodeURIComponent(
-        tenantId!
-      )}&teacherUserId=${encodeURIComponent(teacherUserId!)}`
-    : "/teacher/attendance";
+  const curriculumExplorerUrl = "/teacher/curriculum";
+  const wellbeingUrl = "/teacher/health";
+  const communicationSupportUrl = "/teacher/airtime"; // create later (we won’t reveal internal billing logic)
 
-  // Build homeroom chip (0 or 1)
-  const homeroomChips: Chip[] =
-    homeroom != null
-      ? [
-          {
-            key: `homeroom-${homeroom.class_code}`,
-            label: homeroom.class_name || homeroom.class_code,
-            sub: homeroom.level || undefined,
-            href: `/teacher/assessments/new?class_code=${encodeURIComponent(
-              homeroom.class_code
-            )}`,
-            term: null,
-            year: null,
-            kind: "HR",
-            count: todayMeta.homeroomCount || 0,
-            classSize:
-              typeof classCounts[homeroom.class_code] === "number"
-                ? classCounts[homeroom.class_code]
-                : null,
-            latestISO: null,
-          },
-        ]
-      : [];
+  const tiles = useMemo(
+    () => [
+      {
+        title: "Lesson Notes Studio",
+        desc: "Plan, generate, refine and submit NaCCA-aligned lesson notes with calm confidence.",
+        href: lessonNotesUrl,
+        badge: "Daily teaching",
+        tone: "emerald",
+      },
+      {
+        title: "Assessments & Reports",
+        desc: "Record, track and understand learner performance across the term—without spreadsheet chaos.",
+        href: termDashboardUrl,
+        badge: "Term progress",
+        tone: "indigo",
+      },
+      {
+        title: "Attendance & Daily Work",
+        desc: "Capture today’s register quickly and keep class records clean, consistent and trusted.",
+        href: attendanceUrl,
+        badge: "Today",
+        tone: "sky",
+      },
+      {
+        title: "Curriculum Explorer",
+        desc: "Browse strands, sub-strands, indicators and exemplars—ready for schemes and lesson notes.",
+        href: curriculumExplorerUrl,
+        badge: "NaCCA (KG–JHS)",
+        tone: "zinc",
+      },
+      {
+        title: "Wellbeing & Health",
+        desc: "Monitor daily health records and keep the class safe, supported and learning-ready.",
+        href: wellbeingUrl,
+        badge: "Care",
+        tone: "amber",
+      },
+      {
+        title: "Communication Support",
+        desc: "Stay connected and supported with essential communication resources for the work ahead.",
+        href: communicationSupportUrl,
+        badge: "Support",
+        tone: "violet",
+      },
+    ],
+    [lessonNotesUrl, termDashboardUrl, attendanceUrl]
+  );
 
-  // Subject assignment chips
-  const assignmentChips: Chip[] = (assignments ?? []).map((a) => {
-    const key = `${a.class_code}__${a.subject}`;
-    return {
-      key: a.assignment_id,
-      label: a.class_code,
-      sub: a.subject || undefined,
-      href: `/teacher/assessments/new?class_code=${encodeURIComponent(
-        a.class_code
-      )}&subject=${encodeURIComponent(a.subject ?? "")}`,
-      term: a.term ?? null,
-      year: a.academic_year ?? null,
-      kind: "SJ",
-      count: a.todayCount || 0,
-      classSize: a.classSize ?? null,
-      latestISO: latestMap[key] ?? a.latestISO ?? null,
-    };
-  });
+  const lessonWeeks = snapshot.lessonNotes.availableWeeks ?? [];
+  const selectedWeek = snapshot.lessonNotes.selectedWeek;
 
-  const chips: Chip[] = [...homeroomChips, ...assignmentChips];
+  function setQuery(next: Record<string, string>) {
+    const p = new URLSearchParams(sp?.toString() || "");
+    for (const [k, v] of Object.entries(next)) p.set(k, v);
+    router.push(`/teacher/dashboard?${p.toString()}`);
+  }
+
+  const ln = snapshot.lessonNotes.latest;
+  const lnCounts = snapshot.lessonNotes.statusCounts || {};
+
+  const totalLessonNotesInWeek = Object.values(lnCounts).reduce((a, b) => a + (b || 0), 0);
+
+  const bandTotal =
+    snapshot.assessments.bands.below40 +
+    snapshot.assessments.bands.between40_54 +
+    snapshot.assessments.bands.between55_69 +
+    snapshot.assessments.bands.above70;
 
   return (
-    <div className="grid gap-6">
-      {/* Header */}
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-blue-900">
-              Teacher Dashboard
-            </h1>
-            <p className="mt-1 text-gray-700">
-              Signed in as: <span className="font-semibold">{displayName}</span>
-            </p>
-            {!!teacher?.teacher_id && (
-              <p className="text-xs text-gray-500 mt-1">
-                ID: <span className="font-mono">{teacher.teacher_id}</span>
-              </p>
-            )}
-            {hasPortalContext && (
-              <p className="text-[11px] text-gray-500 mt-1">
-                Tenant:{" "}
-                <span className="font-mono">
-                  {tenantId!.slice(0, 8)}…
-                </span>{" "}
-                · Term: {defaultTerm} · Year: {defaultAcademicYear}
-              </p>
-            )}
-          </div>
+    <div className="min-h-[calc(100vh-65px)] bg-gradient-to-b from-sky-50/60 via-white to-sky-50/40 px-4 py-6 md:px-8 md:py-8">
+      {/* local keyframes without tailwind config */}
+      <style>{`
+        @keyframes edulifeWiggle {
+          0% { transform: translateY(0) rotate(0deg); }
+          35% { transform: translateY(-2px) rotate(-0.4deg); }
+          70% { transform: translateY(-1px) rotate(0.4deg); }
+          100% { transform: translateY(0) rotate(0deg); }
+        }
+      `}</style>
 
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
-              <button
-                className="rounded-lg border bg-white px-3 py-1.5 text-xs hover:bg-gray-50"
-                onClick={() => location.reload()}
-                type="button"
-              >
-                Refresh now
-              </button>
-              <label className="inline-flex items-center gap-2 text-xs text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={autoRefresh}
-                  onChange={(e) => setAutoRefresh(e.target.checked)}
-                />
-                Auto refresh (30s)
-              </label>
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        {/* Header */}
+        <section className="rounded-3xl border border-sky-100/80 bg-white/90 p-6 shadow-sm backdrop-blur-md md:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-sky-500">
+                EduLife OS · Teacher Dashboard
+              </p>
+              <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-sky-950 md:text-3xl">
+                Welcome back, {snapshot.teacher.displayName}.
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-slate-700 md:text-base">
+                Here’s your calm command center — a quick glance at today, then a clear path into what matters most.
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <StatPill label="Today" value={snapshot.today.label} />
+                <StatPill label="Term" value={snapshot.lessonNotes.term} />
+                <StatPill label="Year" value={snapshot.lessonNotes.academicYear} />
+                {snapshot.teacher.staffId ? <StatPill label="Staff ID" value={snapshot.teacher.staffId} /> : null}
+              </div>
             </div>
-            {hasPortalContext && (
+
+            <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
               <Link
                 href="/teacher-portal"
-                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] text-sky-800 hover:bg-sky-100"
+                className="inline-flex items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-800 hover:bg-sky-100"
               >
-                Open calm Teacher Portal
+                Open Teacher Portal
               </Link>
-            )}
+              <button
+                type="button"
+                onClick={() => location.reload()}
+                className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-800 hover:bg-zinc-50"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Alerts */}
-      {alerts.length > 0 && (
-        <section className="rounded-2xl border bg-amber-50 p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-amber-900">Alerts</h2>
-          <ul className="mt-2 list-disc pl-5 text-sm text-amber-900">
-            {alerts.map((a, i) => (
-              <li key={i}>{a}</li>
-            ))}
-          </ul>
         </section>
-      )}
 
-      {/* Today summary */}
-      <section className="rounded-2xl border bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm">
-            <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-600" />
-            Today ({todayMeta.date}):{" "}
-            <strong className="ml-1">{todayMeta.total}</strong> assessment
-            {todayMeta.total === 1 ? "" : "s"}
-          </span>
-          {homeroom && homeroomChips.length > 0 ? (
-            <span className="inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm">
-              Homeroom:{" "}
-              <strong className="ml-1">{todayMeta.homeroomCount}</strong>
-              {typeof homeroomChips[0].classSize === "number" ? (
-                <span className="ml-1 text-gray-500">
-                  / {homeroomChips[0].classSize}
-                </span>
+        {/* At-a-glance cards */}
+        <section className="grid gap-4 md:grid-cols-3">
+          {/* Attendance + Health */}
+          <div className="rounded-3xl border border-sky-100 bg-white/90 p-5 shadow-sm backdrop-blur-md md:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold text-sky-700">Today</p>
+                <h2 className="text-base font-bold text-slate-900 md:text-lg">
+                  Attendance & Health
+                </h2>
+                <p className="mt-1 text-xs text-slate-600">
+                  A quick pulse-check for the day.
+                </p>
+              </div>
+              <Link
+                href={attendanceUrl}
+                className="rounded-xl border border-sky-700 bg-sky-700 px-3 py-2 text-[11px] font-semibold text-white hover:bg-sky-800"
+              >
+                Open
+              </Link>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              <div className="flex flex-wrap gap-2">
+                <StatPill label="Sessions" value={snapshot.today.attendance.sessionsTotal} />
+                <StatPill label="Closed" value={snapshot.today.attendance.sessionsClosed} />
+                <StatPill label="Marked" value={snapshot.today.attendance.marksTotal} />
+              </div>
+
+              <Bar value={snapshot.today.attendance.presentRate} label="Present rate" />
+              <Bar value={snapshot.today.attendance.closureRate} label="Session closure" />
+
+              <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+                  <div className="text-slate-500">PRESENT</div>
+                  <div className="font-bold text-slate-900">{snapshot.today.attendance.present}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+                  <div className="text-slate-500">ABSENT</div>
+                  <div className="font-bold text-slate-900">{snapshot.today.attendance.absent}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+                  <div className="text-slate-500">LATE</div>
+                  <div className="font-bold text-slate-900">{snapshot.today.attendance.late}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2">
+                  <div className="text-slate-500">HEALTH</div>
+                  <div className="font-bold text-slate-900">{snapshot.today.health.healthTotal}</div>
+                </div>
+              </div>
+
+              <p className="mt-2 text-[11px] text-slate-600">
+                Health alerts:{" "}
+                <span className="font-semibold text-slate-900">{snapshot.today.health.feverCount}</span>{" "}
+                · Parent updates sent:{" "}
+                <span className="font-semibold text-slate-900">{snapshot.today.health.sentToParentCount}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Lesson notes */}
+          <div className="rounded-3xl border border-emerald-100 bg-white/90 p-5 shadow-sm backdrop-blur-md md:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold text-emerald-700">This week</p>
+                <h2 className="text-base font-bold text-slate-900 md:text-lg">
+                  Lesson Notes Status
+                </h2>
+                <p className="mt-1 text-xs text-slate-600">
+                  Keep your week clean and stress-free.
+                </p>
+              </div>
+              <Link
+                href={lessonNotesUrl}
+                className="rounded-xl border border-emerald-700 bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-800"
+              >
+                Open
+              </Link>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatPill label="Term" value={snapshot.lessonNotes.term} />
+                <StatPill label="Year" value={snapshot.lessonNotes.academicYear} />
+
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] text-emerald-900">
+                  <span className="text-emerald-700">Week</span>
+                  <select
+                    className="bg-transparent font-semibold outline-none"
+                    value={selectedWeek ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value ? Number(e.target.value) : "";
+                      if (typeof v === "number" && Number.isFinite(v)) {
+                        setQuery({ week: String(v), term: defaultTerm, academicYear: defaultAcademicYear });
+                      }
+                    }}
+                  >
+                    {lessonWeeks.length === 0 ? (
+                      <option value="">—</option>
+                    ) : (
+                      lessonWeeks.map((w) => (
+                        <option key={w} value={w}>
+                          {w}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-3 py-2">
+                  <div className="text-[11px] text-emerald-700">Items</div>
+                  <div className="text-xl font-extrabold text-emerald-950">
+                    {totalLessonNotesInWeek}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-3 py-2">
+                  <div className="text-[11px] text-emerald-700">Latest</div>
+                  <div className="text-sm font-bold text-emerald-950">
+                    {ln?.status ?? "—"}
+                  </div>
+                  <div className="text-[10px] text-emerald-800/80">
+                    {ln?.updatedAt ? new Date(ln.updatedAt).toLocaleString("en-GB") : ""}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                {Object.keys(lnCounts).length === 0 ? (
+                  <span className="text-slate-600">No lesson notes found for this week.</span>
+                ) : (
+                  Object.entries(lnCounts).map(([k, v]) => (
+                    <span
+                      key={k}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/70 px-3 py-1 text-emerald-900"
+                    >
+                      <span className="text-emerald-700">{k}</span>
+                      <span className="font-semibold">{v}</span>
+                    </span>
+                  ))
+                )}
+              </div>
+
+              {ln?.headteacherComment ? (
+                <div className="rounded-2xl border border-emerald-100 bg-white px-3 py-2">
+                  <div className="text-[11px] font-semibold text-emerald-800">
+                    Headteacher note
+                  </div>
+                  <p className="mt-1 text-xs text-slate-700 line-clamp-3">
+                    {ln.headteacherComment}
+                  </p>
+                </div>
               ) : null}
-            </span>
-          ) : null}
-        </div>
-      </section>
 
-      {/* Classes & assignments */}
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
-            My classes & assignments
-          </h2>
-        </div>
-
-        {chips.length === 0 ? (
-          <p className="mt-3 text-sm text-gray-600">
-            No classes or assignments yet.
-          </p>
-        ) : (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {chips.map((c) => (
-              <Link
-                key={c.key}
-                href={c.href}
-                className="group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm bg-white hover:bg-blue-50"
-                title="Record assessment"
-              >
-                <span
-                  className={
-                    "inline-flex h-6 w-6 items-center justify-center rounded-full text-white text-[11px] font-semibold " +
-                    (c.kind === "HR" ? "bg-blue-600" : "bg-sky-600")
-                  }
-                >
-                  {c.kind}
-                </span>
-
-                <span className="font-medium">{c.label}</span>
-                {c.sub ? <span className="text-gray-500">• {c.sub}</span> : null}
-
-                {c.term ? (
-                  <span className="ml-1 rounded border px-1.5 py-0.5 text-[10px] text-gray-700 bg-gray-50">
-                    {c.term}
+              {snapshot.lessonNotes.latestAnnouncement ? (
+                <p className="text-[11px] text-slate-600">
+                  Latest school update:{" "}
+                  <span className="font-semibold text-slate-900">
+                    {snapshot.lessonNotes.latestAnnouncement.title}
                   </span>
-                ) : null}
-                {c.year ? (
-                  <span className="ml-1 rounded border px-1.5 py-0.5 text-[10px] text-gray-700 bg-gray-50">
-                    {c.year}
-                  </span>
-                ) : null}
-
-                <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-700">
-                  {typeof c.count === "number" ? c.count : 0}
-                  {typeof c.classSize === "number" ? ` / ${c.classSize}` : ""}
-                </span>
-
-                {c.latestISO ? (
-                  <span className="ml-1 text-[10px] text-gray-500">
-                    latest: {c.latestISO}
-                  </span>
-                ) : null}
-
-                <span className="ml-1 text-blue-700 group-hover:underline">
-                  Record
-                </span>
-              </Link>
-            ))}
+                </p>
+              ) : null}
+            </div>
           </div>
-        )}
-      </section>
 
-      {/* Homeroom detail */}
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">Homeroom Class</h2>
-        {homeroom ? (
-          <div className="mt-3 grid gap-1 text-sm">
-            <div>
-              <span className="text-gray-500">Level:</span>{" "}
-              <span className="font-medium">{homeroom.level || "-"}</span>
-            </div>
-            <div>
-              <span className="text-gray-500">Class:</span>{" "}
-              <span className="font-medium">
-                {homeroom.class_name || homeroom.class_code}
-              </span>
-            </div>
-            <div className="mt-3">
+          {/* Assessments */}
+          <div className="rounded-3xl border border-indigo-100 bg-white/90 p-5 shadow-sm backdrop-blur-md md:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold text-indigo-700">This term</p>
+                <h2 className="text-base font-bold text-slate-900 md:text-lg">
+                  Assessments Overview
+                </h2>
+                <p className="mt-1 text-xs text-slate-600">
+                  {snapshot.assessments.scopeLabel}
+                </p>
+              </div>
               <Link
-                href={`/teacher/assessments/new?class_code=${encodeURIComponent(
-                  homeroom.class_code
-                )}`}
-                className="inline-flex items-center rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                href={termDashboardUrl}
+                className="rounded-xl border border-indigo-700 bg-indigo-700 px-3 py-2 text-[11px] font-semibold text-white hover:bg-indigo-800"
               >
-                Record Assessment for Homeroom
+                Open
               </Link>
             </div>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-gray-600">
-            No homeroom class assigned. (JHS subject teachers may not have one.)
-          </p>
-        )}
-      </section>
 
-      {/* Assignments table */}
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Subject Teaching Assignments
-          </h2>
-          <span className="inline-flex items-center rounded-md border bg-white px-3 py-1 text-xs">
-            Total: <strong className="ml-1">{assignments.length}</strong>
-          </span>
-        </div>
+            <div className="mt-4 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <StatPill label="Assessments" value={snapshot.assessments.itemCount} />
+                <StatPill label="Scores" value={snapshot.assessments.scoreCount} />
+                <StatPill label="Avg" value={fmtPct(snapshot.assessments.avgPct)} />
+              </div>
 
-        {assignments.length ? (
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-[880px] w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:text-left [&>th]:font-semibold text-gray-700">
-                  <th>Class</th>
-                  <th>Subject</th>
-                  <th>Academic Year</th>
-                  <th>Term</th>
-                  <th>Today / Size</th>
-                  <th>Latest</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {assignments.map((a) => {
-                  const key = `${a.class_code}__${a.subject}`;
-                  const latest = latestMap[key] ?? a.latestISO ?? null;
-                  return (
-                    <tr key={a.assignment_id} className="[&>td]:px-3 [&>td]:py-2">
-                      <td className="font-medium">{a.class_code}</td>
-                      <td>{a.subject}</td>
-                      <td>{a.academic_year || "-"}</td>
-                      <td>{a.term || "-"}</td>
-                      <td>
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-700">
-                          {typeof a.todayCount === "number" ? a.todayCount : 0}
-                          {typeof a.classSize === "number" ? ` / ${a.classSize}` : ""}
-                        </span>
-                      </td>
-                      <td className="text-xs text-gray-600">{latest || "—"}</td>
-                      <td>
-                        <Link
-                          href={`/teacher/assessments/new?class_code=${encodeURIComponent(
-                            a.class_code
-                          )}&subject=${encodeURIComponent(a.subject)}`}
-                          className="text-blue-700 hover:underline"
-                        >
-                          Record Assessment
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-gray-600">
-            No subject assignments yet.
-          </p>
-        )}
-      </section>
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-3">
+                <div className="mb-2 flex items-center justify-between text-[11px] text-indigo-900">
+                  <span className="font-semibold">Performance bands</span>
+                  <span className="text-indigo-800/80">{bandTotal ? `${bandTotal} scores` : "—"}</span>
+                </div>
 
-      {/* Recent entries (today) */}
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
-            My recent entries (today)
-          </h2>
-        <div className="text-xs text-gray-500">{recentToday.length} shown</div>
-        </div>
+                <div className="grid grid-cols-4 gap-2 text-[11px]">
+                  <div className="rounded-xl bg-white/80 px-2 py-2 text-center">
+                    <div className="text-slate-500">&lt;40</div>
+                    <div className="font-extrabold text-slate-900">{snapshot.assessments.bands.below40}</div>
+                  </div>
+                  <div className="rounded-xl bg-white/80 px-2 py-2 text-center">
+                    <div className="text-slate-500">40–54</div>
+                    <div className="font-extrabold text-slate-900">{snapshot.assessments.bands.between40_54}</div>
+                  </div>
+                  <div className="rounded-xl bg-white/80 px-2 py-2 text-center">
+                    <div className="text-slate-500">55–69</div>
+                    <div className="font-extrabold text-slate-900">{snapshot.assessments.bands.between55_69}</div>
+                  </div>
+                  <div className="rounded-xl bg-white/80 px-2 py-2 text-center">
+                    <div className="text-slate-500">70+</div>
+                    <div className="font-extrabold text-slate-900">{snapshot.assessments.bands.above70}</div>
+                  </div>
+                </div>
+              </div>
 
-        {recentToday.length ? (
-          <div className="mt-3 overflow-x-auto">
-            <table className="min-w-[760px] w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:text-left [&>th]:font-semibold text-gray-700">
-                  <th>Time</th>
-                  <th>Class</th>
-                  <th>Subject</th>
-                  <th>Type</th>
-                  <th>Student</th>
-                  <th>Score</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {recentToday.map((r) => (
-                  <tr key={r.record_id} className="[&>td]:px-3 [&>td]:py-2">
-                    <td className="text-xs text-gray-600">{r.created_at || "—"}</td>
-                    <td>{r.class_code || "—"}</td>
-                    <td>{r.subject || "—"}</td>
-                    <td>{r.assessment_type || "—"}</td>
-                    <td className="font-mono text-xs">{r.student_id || "—"}</td>
-                    <td>{typeof r.score === "number" ? r.score : "—"}</td>
-                    <td>
-                      <Link
-                        href={`/admin/assessments?class=${encodeURIComponent(
-                          r.class_code
-                        )}&subject=${encodeURIComponent(r.subject)}`}
-                        className="text-blue-700 hover:underline"
+              {snapshot.assessments.topSubjects.length ? (
+                <div className="rounded-2xl border border-indigo-100 bg-white px-3 py-2">
+                  <div className="text-[11px] font-semibold text-indigo-800">Top subjects (by assessment count)</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {snapshot.assessments.topSubjects.map((s) => (
+                      <span
+                        key={s.subject}
+                        className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] text-indigo-900"
                       >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        <span className="text-indigo-700">{s.subject}</span>
+                        <span className="font-semibold">{s.count}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-600">
+                  No assessments recorded for this term yet.
+                </p>
+              )}
+            </div>
           </div>
-        ) : (
-          <p className="mt-3 text-sm text-gray-600">No entries recorded today.</p>
-        )}
-      </section>
+        </section>
 
-      {/* Quick links – now aligned with portal URLs */}
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">Quick Links</h2>
-        <div className="mt-3 flex flex-wrap gap-3 text-sm">
-          <Link
-            href={attendanceUrl}
-            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
-          >
-            📅 Take today&apos;s attendance
-          </Link>
-          <Link
-            href={lessonNotesWorkspaceUrl}
-            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
-          >
-            ✏️ Open Lesson Notes workspace
-          </Link>
-          <Link
-            href={termDashboardUrl}
-            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
-          >
-            📊 View my class term dashboard
-          </Link>
-          <Link
-            href="/teacher-portal"
-            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
-          >
-            Calm Teacher Portal (full daily flow)
-          </Link>
-          <Link
-            href="/admin/assessments"
-            className="rounded-lg border bg-white px-4 py-2 hover:bg-gray-50"
-          >
-            Admin Assessments (view)
-          </Link>
-        </div>
-      </section>
+        {/* What's waiting inside */}
+        <section className="rounded-3xl border border-sky-100 bg-white/90 p-5 shadow-sm backdrop-blur-md md:p-6">
+          <div className="mb-4 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900 md:text-lg">
+                What’s waiting inside
+              </h2>
+              <p className="text-[11px] text-slate-600 md:text-xs">
+                Pick your next move — each tile takes you straight into the workflow.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={lessonNotesUrl}
+                className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100"
+              >
+                Continue Lesson Notes
+              </Link>
+              <Link
+                href={attendanceUrl}
+                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-medium text-sky-800 hover:bg-sky-100"
+              >
+                Take Attendance
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {tiles.map((t) => {
+              const tone =
+                t.tone === "emerald"
+                  ? "border-emerald-100 bg-emerald-50/60 hover:border-emerald-300 hover:bg-emerald-50"
+                  : t.tone === "indigo"
+                  ? "border-indigo-100 bg-indigo-50/60 hover:border-indigo-300 hover:bg-indigo-50"
+                  : t.tone === "sky"
+                  ? "border-sky-100 bg-sky-50/60 hover:border-sky-300 hover:bg-sky-50"
+                  : t.tone === "amber"
+                  ? "border-amber-100 bg-amber-50/70 hover:border-amber-300 hover:bg-amber-50"
+                  : t.tone === "violet"
+                  ? "border-violet-100 bg-violet-50/70 hover:border-violet-300 hover:bg-violet-50"
+                  : "border-zinc-200 bg-zinc-50/70 hover:border-zinc-300 hover:bg-white";
+
+              return (
+                <Link
+                  key={t.title}
+                  href={t.href}
+                  className={`group relative flex flex-col justify-between rounded-2xl border p-4 text-left shadow-[0_1px_4px_rgba(15,23,42,0.06)] transition hover:shadow-md ${tone}`}
+                  style={{ willChange: "transform" }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLAnchorElement).style.animation =
+                      "edulifeWiggle 520ms ease-in-out";
+                  }}
+                  onAnimationEnd={(e) => {
+                    (e.currentTarget as HTMLAnchorElement).style.animation = "";
+                  }}
+                >
+                  <div>
+                    <div className="mb-2 inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                      {t.badge}
+                    </div>
+                    <h3 className="text-sm font-semibold text-slate-950 md:text-base">
+                      {t.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-700 md:text-sm">
+                      {t.desc}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between text-[11px] text-slate-700">
+                    <span className="opacity-80">Open now</span>
+                    <span className="font-medium text-slate-900 group-hover:underline">
+                      Go →
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Quiet note about correctness */}
+        <section className="rounded-3xl border border-slate-100 bg-white/80 p-4 text-[11px] text-slate-600 shadow-sm md:text-xs">
+          <p>
+            Important: Assessments are currently shown as a <span className="font-semibold">term snapshot (schoolwide)</span>{" "}
+            because <span className="font-mono">AssessmentItem</span> does not yet store who created it. If you want truly
+            teacher-specific analytics, we’ll add <span className="font-mono">createdByUserId</span> in the next migration.
+          </p>
+        </section>
+      </div>
     </div>
   );
 }

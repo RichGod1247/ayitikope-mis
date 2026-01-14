@@ -1,7 +1,7 @@
 // src/app/app/classrooms/page.tsx
-import { cookies } from "next/headers";
-import { prisma } from "../../../lib/prisma"; // from /app/classrooms to /lib
+import { prisma } from "@/lib/prisma";
 import ClientBits from "./ClientBits";
+import { requireServerUserContext } from "@/lib/serverAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,23 +12,19 @@ export type ClassroomItem = {
   arm: string | null;
   note: string | null;
   createdAt: string;
+  updatedAt: string;
 };
 
 async function getData() {
-  const cookieStore = await cookies();
-  const slug = cookieStore.get("x-tenant")?.value || "ayitikope-basic";
+  const ctx = await requireServerUserContext({ redirectTo: "/app/dashboard", requireTenant: true });
 
   const tenant = await prisma.tenant.findUnique({
-    where: { slug },
+    where: { id: ctx.tenantId },
     select: { id: true, name: true, slug: true },
   });
 
   if (!tenant) {
-    return {
-      items: [] as ClassroomItem[],
-      tenantName: null as string | null,
-      tenantSlug: slug,
-    };
+    return { items: [] as ClassroomItem[], tenantName: null as string | null, tenantSlug: "" };
   }
 
   const rows = await prisma.classroom.findMany({
@@ -41,6 +37,7 @@ async function getData() {
       arm: true,
       note: true,
       createdAt: true,
+      updatedAt: true,
     },
     take: 500,
   });
@@ -52,6 +49,7 @@ async function getData() {
     arm: r.arm,
     note: r.note,
     createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
   }));
 
   return { items, tenantName: tenant.name, tenantSlug: tenant.slug };
@@ -67,9 +65,10 @@ export default async function ClassroomsPage() {
         <p className="text-sm text-gray-500">
           {tenantName ? `Tenant: ${tenantName}` : "No active tenant detected"}
         </p>
+        {tenantSlug ? <p className="text-xs text-gray-400">({tenantSlug})</p> : null}
       </div>
 
-      <ClientBits items={items} tenantSlug={tenantSlug} />
+      <ClientBits items={items} />
     </div>
   );
 }

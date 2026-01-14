@@ -1,16 +1,23 @@
 // src/app/api/headteacher/lesson-notes/review/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getHeadteacherApiContext } from "@/lib/headteacherAuth";
+
+export const dynamic = "force-dynamic";
 
 type LessonNoteStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 type ReviewBody = {
-  tenantId?: string;
-  headteacherUserId?: string | null;
   lessonNoteId?: string;
   action?: "APPROVE" | "REJECT";
   comment?: string | null;
+
+  // optimistic concurrency guard (client sends note.updatedAt)
+  ifMatchUpdatedAt?: string | null;
+
+  // legacy fields (ignored completely)
+  tenantId?: string;
+  headteacherUserId?: string | null;
 };
 
 type ReviewResponse =
@@ -27,146 +34,190 @@ type ReviewResponse =
         updatedAt: string;
       };
     }
-  | {
-      ok: false;
-      error: string;
-    };
+  | { ok: false; error: string };
 
-// We intentionally do NOT use NextResponse<ReviewResponse> as a generic here,
-// to avoid TypeScript complaining if the JSON shape changes slightly.
-export async function POST(req: NextRequest) {
+function jsonNoStore(payload: any, init?: { status?: number; headers?: HeadersInit }) {
+  return NextResponse.json(payload, {
+    status: init?.status ?? 200,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
+function isLikelyId(id: string) {
+  return /^[a-zA-Z0-9_-]{5,80}$/.test(id);
+}
+
+function cleanComment(v: unknown, max = 2000): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (!t) return null;
+  return t.length > max ? t.slice(0, max) : t;
+}
+
+function parseIfMatchUpdatedAt(v: unknown): Date | null {
+  if (typeof v !== "string") return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function toIso(v: any): string | null {
+  if (!v) return null;
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === "string") return v;
+  return null;
+}
+
+function getRequestIp(req: NextRequest): string | null {
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
+
+  const xf = req.headers.get("x-forwarded-for");
+  if (xf) return xf.split(",")[0]?.trim() ?? null;
+
+  const xr = req.headers.get("x-real-ip");
+  if (xr) return xr.trim();
+
+  return null;
+}
+
+async function writeAudit(params: {
+  tenantId: string;
+  userId: string;
+  action: string;
+  resource: string;
+  resourceId: string;
+  metadata?: Record<string, any>;
+  ip?: string | null;
+  userAgent?: string | null;
+}) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        tenantId: params.tenantId,
+        userId: params.userId,
+        action: params.action,
+        resource: params.resource,
+        resourceId: params.resourceId,
+        ip: params.ip ?? null,
+        userAgent: params.userAgent ?? null,
+        metadata: params.metadata ?? {},
+      },
+    });
+  } catch {
+    // Audit must never break the primary action.
+  }
+}
+
+export async function GET() {
+  return jsonNoStore({ ok: false, error: "Method not allowed. Use POST." } satisfies ReviewResponse, { status: 405 });
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse<ReviewResponse>> {
+  const ctx = await getHeadteacherApiContext();
+  if (!ctx) {
+    return jsonNoStore({ ok: false, error: "Unauthorized." } satisfies ReviewResponse, { status: 401 });
+  }
+
   let body: ReviewBody;
-
   try {
     body = (await req.json()) as ReviewBody;
   } catch {
-    return NextResponse.json<ReviewResponse>(
-      {
-        ok: false,
-        error: "Invalid JSON body.",
-      },
-      { status: 400 }
-    );
+    return jsonNoStore({ ok: false, error: "Invalid JSON body." } satisfies ReviewResponse, { status: 400 });
   }
 
-  const tenantId = (body.tenantId ?? "").trim();
-  const lessonNoteId = (body.lessonNoteId ?? "").trim();
+  const lessonNoteId = typeof body.lessonNoteId === "string" ? body.lessonNoteId.trim() : "";
   const action = body.action;
-  const rawHeadteacherUserId = (body.headteacherUserId ?? "").trim();
-  const comment =
-    typeof body.comment === "string" && body.comment.trim().length > 0
-      ? body.comment.trim()
-      : null;
+  const comment = cleanComment(body.comment);
+  const ifMatch = parseIfMatchUpdatedAt(body.ifMatchUpdatedAt);
 
-  if (!tenantId) {
-    return NextResponse.json<ReviewResponse>(
-      {
-        ok: false,
-        error: "tenantId is required.",
-      },
-      { status: 400 }
-    );
+  if (!lessonNoteId || !isLikelyId(lessonNoteId)) {
+    return jsonNoStore({ ok: false, error: "Missing or invalid lessonNoteId." } satisfies ReviewResponse, { status: 400 });
   }
-
-  if (!lessonNoteId) {
-    return NextResponse.json<ReviewResponse>(
-      {
-        ok: false,
-        error: "lessonNoteId is required.",
-      },
-      { status: 400 }
-    );
-  }
-
   if (action !== "APPROVE" && action !== "REJECT") {
-    return NextResponse.json<ReviewResponse>(
-      {
-        ok: false,
-        error: 'action must be either "APPROVE" or "REJECT".',
-      },
+    return jsonNoStore({ ok: false, error: 'action must be either "APPROVE" or "REJECT".' } satisfies ReviewResponse, {
+      status: 400,
+    });
+  }
+  if (action === "REJECT" && !comment) {
+    return jsonNoStore(
+      { ok: false, error: "A comment is required when returning a lesson note to the teacher." } satisfies ReviewResponse,
       { status: 400 }
     );
   }
 
-  // Make sure the note actually exists and belongs to this tenant
-  const existing = await prisma.lessonNote.findFirst({
-    where: {
-      id: lessonNoteId,
-      tenantId,
-    },
-    select: {
-      id: true,
-      status: true,
-      headteacherUserId: true,
-    },
-  });
-
-  if (!existing) {
-    return NextResponse.json<ReviewResponse>(
-      {
-        ok: false,
-        error: "Lesson note not found for this tenant.",
-      },
-      { status: 404 }
-    );
-  }
-
-  // Decide new status + timestamps
   const now = new Date();
-  let newStatus: LessonNoteStatus;
-  let approvedAt: Date | null = null;
-  let rejectedAt: Date | null = null;
-
-  if (action === "APPROVE") {
-    newStatus = "APPROVED";
-    approvedAt = now;
-  } else {
-    newStatus = "REJECTED";
-    rejectedAt = now;
-  }
-
-  /**
-   * KEY FIX:
-   * Foreign key violation was happening because we were trying to set
-   * headteacherUserId to a demo ID ("HEADTEACHER_DEMO_ID") that does not
-   * exist in the User table.
-   *
-   * For now:
-   * - If the ID looks like the demo placeholder, we simply DO NOT update
-   *   the headteacherUserId field (we leave it as-is in the DB).
-   * - When you wire real authentication, you will pass a real user ID here
-   *   and this code will happily store it.
-   */
-  let headteacherUserIdForUpdate: string | null | undefined = undefined;
-
-  if (
-    rawHeadteacherUserId &&
-    !rawHeadteacherUserId.startsWith("HEADTEACHER_DEMO")
-  ) {
-    headteacherUserIdForUpdate = rawHeadteacherUserId;
-  } else {
-    // Do not touch the existing FK field; avoid P2003.
-    headteacherUserIdForUpdate = undefined;
-  }
+  const nextStatus: LessonNoteStatus = action === "APPROVE" ? "APPROVED" : "REJECTED";
 
   try {
-    const data: any = {
-      status: newStatus,
-      headteacherComment: comment,
-      reviewedAt: now,
-      approvedAt,
-      rejectedAt,
-      updatedAt: now,
-    };
+    const current = await prisma.lessonNote.findFirst({
+      where: { id: lessonNoteId, tenantId: ctx.tenantId },
+      select: {
+        id: true,
+        teacherUserId: true,
+        status: true,
+        updatedAt: true,
+      },
+    });
 
-    // Only include headteacherUserId if we have a "real" ID
-    if (headteacherUserIdForUpdate !== undefined) {
-      data.headteacherUserId = headteacherUserIdForUpdate;
+    if (!current) {
+      return jsonNoStore({ ok: false, error: "Lesson note not found." } satisfies ReviewResponse, { status: 404 });
     }
 
-    const updated = await prisma.lessonNote.update({
-      where: { id: lessonNoteId },
-      data,
+    // Prevent self-review (hard stop)
+    if (current.teacherUserId === ctx.userId) {
+      return jsonNoStore({ ok: false, error: "Forbidden." } satisfies ReviewResponse, { status: 403 });
+    }
+
+    // Strict state machine (bank-grade): only SUBMITTED can be reviewed
+    if ((current.status as LessonNoteStatus) !== "SUBMITTED") {
+      return jsonNoStore(
+        { ok: false, error: "Only submitted lesson notes can be reviewed." } satisfies ReviewResponse,
+        { status: 400 }
+      );
+    }
+
+    // Concurrency guard
+    if (ifMatch && current.updatedAt.getTime() !== ifMatch.getTime()) {
+      return jsonNoStore(
+        { ok: false, error: "This lesson note changed while you were reviewing it. Refresh and try again." } satisfies ReviewResponse,
+        { status: 409 }
+      );
+    }
+
+    const updateWhere: any = {
+      id: lessonNoteId,
+      tenantId: ctx.tenantId,
+      status: "SUBMITTED",
+    };
+
+    if (ifMatch) updateWhere.updatedAt = ifMatch;
+
+    const write = await prisma.lessonNote.updateMany({
+      where: updateWhere,
+      data: {
+        status: nextStatus,
+        headteacherComment: comment ?? null,
+        headteacherUserId: ctx.userId,
+        reviewedAt: now,
+        approvedAt: action === "APPROVE" ? now : null,
+        rejectedAt: action === "REJECT" ? now : null,
+        updatedAt: now,
+      },
+    });
+
+    if (write.count !== 1) {
+      return jsonNoStore(
+        { ok: false, error: "Could not save review. Refresh and try again." } satisfies ReviewResponse,
+        { status: 409 }
+      );
+    }
+
+    const updated = await prisma.lessonNote.findFirst({
+      where: { id: lessonNoteId, tenantId: ctx.tenantId },
       select: {
         id: true,
         status: true,
@@ -179,33 +230,41 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json<ReviewResponse>({
+    if (!updated) {
+      return jsonNoStore({ ok: false, error: "Lesson note not found." } satisfies ReviewResponse, { status: 404 });
+    }
+
+    await writeAudit({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      action: action === "APPROVE" ? "LESSON_NOTE_APPROVED" : "LESSON_NOTE_RETURNED",
+      resource: "LessonNote",
+      resourceId: updated.id,
+      ip: getRequestIp(req),
+      userAgent: req.headers.get("user-agent"),
+      metadata: {
+        fromStatus: "SUBMITTED",
+        toStatus: updated.status,
+      },
+    });
+
+    return jsonNoStore({
       ok: true,
       item: {
         id: updated.id,
         status: updated.status as LessonNoteStatus,
         headteacherComment: updated.headteacherComment,
         headteacherUserId: updated.headteacherUserId,
-        reviewedAt: updated.reviewedAt
-          ? updated.reviewedAt.toISOString()
-          : null,
-        approvedAt: updated.approvedAt
-          ? updated.approvedAt.toISOString()
-          : null,
-        rejectedAt: updated.rejectedAt
-          ? updated.rejectedAt.toISOString()
-          : null,
+        reviewedAt: toIso(updated.reviewedAt),
+        approvedAt: toIso(updated.approvedAt),
+        rejectedAt: toIso(updated.rejectedAt),
         updatedAt: updated.updatedAt.toISOString(),
       },
-    });
+    } satisfies ReviewResponse);
   } catch (err) {
     console.error("HEADTEACHER_LESSON_NOTE_REVIEW_ERROR", err);
-    return NextResponse.json<ReviewResponse>(
-      {
-        ok: false,
-        error:
-          "Could not update lesson note status. Please try again or contact the system administrator.",
-      },
+    return jsonNoStore(
+      { ok: false, error: "Could not update lesson note status. Please try again." } satisfies ReviewResponse,
       { status: 500 }
     );
   }

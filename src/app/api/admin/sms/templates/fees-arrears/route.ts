@@ -1,6 +1,10 @@
 // src/app/api/admin/sms/templates/fees-arrears/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const DEFAULT_FEES_ARREARS_TEMPLATE = [
   "Dear Parent/Guardian of {{studentName}},",
@@ -15,67 +19,60 @@ const DEFAULT_FEES_ARREARS_TEMPLATE = [
   "{{schoolName}}",
 ].join("\n");
 
-// Helper: try to find tenant whether `id` is String or Int
-async function findTenantFlexible(tenantId: string) {
-  // First try as-is (works if Prisma id is String)
-  try {
-    const t = await prisma.tenant.findUnique({
-      where: { id: tenantId as any },
-      select: { id: true, name: true, settings: true },
-    });
-    if (t) return t;
-  } catch (e) {
-    console.warn("[FEES_TEMPLATE_TENANT_STRING_ID_FAIL]", e);
-  }
-
-  // If tenantId looks numeric, try Int form as well
-  const asNumber = Number(tenantId);
-  if (!Number.isNaN(asNumber)) {
-    try {
-      const t = await prisma.tenant.findUnique({
-        where: { id: asNumber as any },
-        select: { id: true, name: true, settings: true },
-      });
-      if (t) return t;
-    } catch (e) {
-      console.warn("[FEES_TEMPLATE_TENANT_INT_ID_FAIL]", e);
-    }
-  }
-
-  return null;
+function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+  return NextResponse.json(payload, {
+    ...init,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
+  });
 }
 
-export async function GET(req: Request) {
+async function requireAdminLike(tenantId: string, userId: string) {
+  const membership = await prisma.membership.findFirst({
+    where: { tenantId, userId, status: "ACTIVE" },
+    include: { role: true },
+  });
+  if (!membership) return { ok: false as const, status: 403, error: "Forbidden." };
+  const roleName = String(membership.role?.name ?? "").toUpperCase();
+  const isAdminLike = roleName.includes("ADMIN") || roleName.includes("HEAD");
+  if (!isAdminLike) return { ok: false as const, status: 403, error: "Forbidden." };
+  return { ok: true as const };
+}
+
+export async function GET(req: NextRequest) {
+  // Auth + tenant
+  let ctx: { tenantId: string; userId: string };
   try {
-    const url = new URL(req.url);
-    const tenantId = url.searchParams.get("tenantId");
+    const c = await requireServerUserContext({ redirectTo: "/auth/signin", requireTenant: true });
+    ctx = { tenantId: c.tenantId, userId: c.userId };
+  } catch {
+    return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
 
-    if (!tenantId) {
-      return NextResponse.json(
-        { ok: false, error: "tenantId is required." },
-        { status: 400 }
-      );
-    }
+  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
+  if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, { status: roleOk.status });
 
-    const tenant = await findTenantFlexible(tenantId);
+  // Optional tenantId param (must match)
+  const url = new URL(req.url);
+  const tenantIdParam = (url.searchParams.get("tenantId") ?? "").trim();
+  if (tenantIdParam && tenantIdParam !== ctx.tenantId) {
+    return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
+  }
 
-    // If we somehow can't find the tenant, still return a safe default template
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: ctx.tenantId },
+      select: { id: true, name: true, settingsJson: true },
+    });
+
     if (!tenant) {
-      console.warn(
-        "[FEES_TEMPLATE_GET_WARNING] Tenant not found for tenantId:",
-        tenantId
-      );
-      return NextResponse.json({
-        ok: true,
-        tenantId,
-        tenantName: "Unknown school",
-        template: DEFAULT_FEES_ARREARS_TEMPLATE,
-        isDefault: true,
-        note: "Tenant not found; using default template only.",
-      });
+      return jsonNoStore({ ok: false, error: "Tenant not found." }, { status: 404 });
     }
 
-    const settings = (tenant.settings as any) || {};
+    const settings = (tenant.settingsJson as any) || {};
     const smsTemplates = (settings.smsTemplates as any) || {};
     const fromSettings = smsTemplates.feesArrears;
 
@@ -84,87 +81,85 @@ export async function GET(req: Request) {
         ? fromSettings
         : DEFAULT_FEES_ARREARS_TEMPLATE;
 
-    return NextResponse.json({
+    return jsonNoStore({
       ok: true,
-      tenantId,
-      tenantName: tenant.name,
+      tenantId: tenant.id,
+      tenantName: tenant.name ?? "School",
       template,
       isDefault: template === DEFAULT_FEES_ARREARS_TEMPLATE,
     });
   } catch (err) {
     console.error("[FEES_TEMPLATE_GET_ERROR]", err);
-    // IMPORTANT: still return a safe default so the UI doesn’t flash an error
-    return NextResponse.json(
+    // still safe default for UI stability
+    return jsonNoStore(
       {
         ok: true,
-        tenantId: null,
-        tenantName: "Unknown school",
+        tenantId: ctx.tenantId,
+        tenantName: "School",
         template: DEFAULT_FEES_ARREARS_TEMPLATE,
         isDefault: true,
-        note:
-          "An internal error occurred; using default template. Check server logs for details.",
+        note: "Internal error; using default template. Check server logs.",
       },
       { status: 200 }
     );
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Auth + tenant
+  let ctx: { tenantId: string; userId: string };
+  try {
+    const c = await requireServerUserContext({ redirectTo: "/auth/signin", requireTenant: true });
+    ctx = { tenantId: c.tenantId, userId: c.userId };
+  } catch {
+    return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
+  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
+  if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, { status: roleOk.status });
+
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return jsonNoStore({ ok: false, error: "Content-Type must be application/json." }, { status: 415 });
+  }
+
   try {
     const body = await req.json().catch(() => null);
-
     if (!body || typeof body !== "object") {
-      return NextResponse.json(
-        { ok: false, error: "Invalid JSON body." },
-        { status: 400 }
-      );
+      return jsonNoStore({ ok: false, error: "Invalid JSON body." }, { status: 400 });
     }
 
-    const { tenantId, template } = body as {
-      tenantId?: string;
-      template?: string;
-    };
+    const { tenantId: tenantIdRaw, template } = body as { tenantId?: string; template?: string };
 
-    if (!tenantId) {
-      return NextResponse.json(
-        { ok: false, error: "tenantId is required." },
-        { status: 400 }
-      );
+    const tenantId = (tenantIdRaw ?? "").trim() || ctx.tenantId;
+    if (tenantId !== ctx.tenantId) {
+      return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
     }
 
     if (typeof template !== "string" || !template.trim()) {
-      return NextResponse.json(
-        { ok: false, error: "Template text cannot be empty." },
-        { status: 400 }
-      );
+      return jsonNoStore({ ok: false, error: "Template text cannot be empty." }, { status: 400 });
     }
 
     if (template.length > 1200) {
-      return NextResponse.json(
+      return jsonNoStore(
         {
           ok: false,
-          error:
-            "Template is too long. Please keep it under 1200 characters for SMS compatibility.",
+          error: "Template is too long. Keep it under 1200 characters for SMS compatibility.",
         },
         { status: 400 }
       );
     }
 
-    // Try to fetch tenant in a flexible way
-    const tenant = await findTenantFlexible(tenantId);
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: ctx.tenantId },
+      select: { id: true, settingsJson: true },
+    });
 
     if (!tenant) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Tenant not found. Cannot save template. Please verify the tenantId.",
-        },
-        { status: 404 }
-      );
+      return jsonNoStore({ ok: false, error: "Tenant not found." }, { status: 404 });
     }
 
-    const existing = (tenant.settings as any) || {};
+    const existing = (tenant.settingsJson as any) || {};
     const existingSmsTemplates = (existing.smsTemplates as any) || {};
 
     const nextSettings = {
@@ -175,24 +170,19 @@ export async function POST(req: Request) {
       },
     };
 
-    // IMPORTANT: use the actual DB id from `tenant`, not the raw string tenantId
-    const whereId = (tenant as any).id;
-
     await prisma.tenant.update({
-      where: { id: whereId as any },
-      data: { settings: nextSettings },
+      where: { id: ctx.tenantId },
+      data: { settingsJson: nextSettings as any },
+      select: { id: true },
     });
 
-    return NextResponse.json({
+    return jsonNoStore({
       ok: true,
-      tenantId,
+      tenantId: ctx.tenantId,
       template: template.trim(),
     });
   } catch (err) {
     console.error("[FEES_TEMPLATE_SAVE_ERROR]", err);
-    return NextResponse.json(
-      { ok: false, error: "Failed to save fees arrears template." },
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "Failed to save fees arrears template." }, { status: 500 });
   }
 }

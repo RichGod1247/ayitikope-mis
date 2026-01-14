@@ -1,138 +1,117 @@
 // src/app/api/attendance/marks/upsert/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
+import { Prisma } from "@prisma/client";
 
-/**
- * POST /api/attendance/marks/upsert
- * Body:
- * {
- *   // Option A: provide sessionId directly
- *   sessionId?: string,
- *
- *   // Option B: or let the API resolve/create the session
- *   tenantId?: string,
- *   classroomId?: string,
- *   date?: string,          // YYYY-MM-DD (midnight UTC will be used)
- *
- *   items: Array<{
- *     studentId: string,
- *     status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED',
- *     note?: string
- *   }>
- * }
- *
- * Behavior:
- * - If sessionId not provided, resolves by (tenantId, classroomId, date).
- *   If none exists, it auto-creates an OPEN session for that date/class.
- * - Refuses to write if the session is CLOSED.
- * - Upserts one AttendanceMark per (sessionId, studentId).
- */
-export async function POST(req: NextRequest) {
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function jsonError(status: number, error: string) {
+  return NextResponse.json(
+    { ok: false, error },
+    {
+      status,
+      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    }
+  );
+}
+
+const STATUS = ["PRESENT", "ABSENT", "LATE", "EXCUSED"] as const;
+type AttendanceStatus = (typeof STATUS)[number];
+
+function isAttendanceStatus(x: unknown): x is AttendanceStatus {
+  return typeof x === "string" && (STATUS as readonly string[]).includes(x);
+}
+
+type UpsertItem = {
+  studentId: string;
+  status: AttendanceStatus;
+  note?: string | null;
+};
+
+type Body = {
+  sessionId?: string;
+  items?: UpsertItem[];
+};
+
+export async function POST(req: Request) {
+  let safe: { userId: string; tenantId: string };
   try {
-    const body = await req.json().catch(() => ({}))
-
-    let sessionId: string | undefined = typeof body?.sessionId === 'string' ? body.sessionId.trim() : undefined
-    const tenantId: string | undefined = typeof body?.tenantId === 'string' ? body.tenantId.trim() : undefined
-    const classroomId: string | undefined = typeof body?.classroomId === 'string' ? body.classroomId.trim() : undefined
-    const dateStr: string | undefined =
-      typeof body?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date) ? body.date : undefined
-
-    const items: Array<{ studentId: string; status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'; note?: string }> =
-      Array.isArray(body?.items) ? body.items : []
-
-    if (!items.length) {
-      return new Response(JSON.stringify({ error: 'No items to upsert' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    // Resolve/create session if not provided
-    let session: {
-      id: string
-      isClosed: boolean
-    } | null = null
-
-    if (!sessionId) {
-      if (!tenantId || !classroomId || !dateStr) {
-        return new Response(JSON.stringify({ error: 'sessionId is required OR (tenantId, classroomId, date)' }), {
-          status: 400, headers: { 'content-type': 'application/json' },
-        })
-      }
-      const dateISO = new Date(`${dateStr}T00:00:00.000Z`)
-
-      // Try to find an existing session for that day/class
-      session = await prisma.attendanceSession.findFirst({
-        where: { tenantId, classroomId, date: dateISO },
-        select: { id: true, isClosed: true },
-      })
-
-      // Auto-create an OPEN session if none exists
-      if (!session) {
-        session = await prisma.attendanceSession.create({
-          data: {
-            tenantId,
-            classroomId,
-            date: dateISO,
-            isClosed: false,
-          },
-          select: { id: true, isClosed: true },
-        })
-      }
-
-      sessionId = session.id
-    } else {
-      // Load session state if sessionId was provided
-      session = await prisma.attendanceSession.findUnique({
-        where: { id: sessionId },
-        select: { id: true, isClosed: true },
-      })
-      if (!session) {
-        return new Response(JSON.stringify({ error: 'Session not found' }), {
-          status: 404, headers: { 'content-type': 'application/json' },
-        })
-      }
-    }
-
-    // Gate writes if closed
-    if (session.isClosed) {
-      return new Response(JSON.stringify({ error: 'Session is closed. Reopen the session to edit marks.' }), {
-        status: 409, headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    // Upsert each mark using the named compound unique key from Prisma:
-    // @@unique([sessionId, studentId], name: "session_student_unique")
-    let upserted = 0
-    for (const it of items) {
-      const studentId = String(it?.studentId || '').trim()
-      const status = String(it?.status || '').toUpperCase()
-      if (!studentId) continue
-      if (!['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'].includes(status)) continue
-
-      await prisma.attendanceMark.upsert({
-        where: { session_student_unique: { sessionId, studentId } },
-        update: {
-          status: status as any,
-          note: typeof it.note === 'string' ? it.note : undefined,
-        },
-        create: {
-          sessionId,
-          studentId,
-          status: status as any,
-          note: typeof it.note === 'string' ? it.note : undefined,
-        },
-        select: { id: true },
-      })
-      upserted++
-    }
-
-    return new Response(JSON.stringify({ ok: true, sessionId, upserted }), {
-      status: 200, headers: { 'content-type': 'application/json' },
-    })
-  } catch (err: any) {
-    console.error('attendance/marks/upsert error:', err)
-    return new Response(JSON.stringify({ error: 'Internal error saving marks' }), {
-      status: 500, headers: { 'content-type': 'application/json' },
-    })
+    safe = await requireServerUserContext({ requireTenant: true });
+  } catch {
+    return jsonError(401, "Unauthorized");
   }
+
+  const body = (await req.json().catch(() => null)) as Body | null;
+  const sessionId = body?.sessionId?.trim();
+  const items = body?.items;
+
+  if (!sessionId) return jsonError(400, "Missing sessionId.");
+  if (!Array.isArray(items) || items.length === 0) return jsonError(400, "Missing items.");
+
+  for (const it of items) {
+    if (!it || typeof it.studentId !== "string" || !it.studentId.trim()) {
+      return jsonError(400, "Each item must include a valid studentId.");
+    }
+    if (!isAttendanceStatus(it.status)) {
+      return jsonError(400, `Invalid status for student ${it.studentId}.`);
+    }
+    if (it.note != null && typeof it.note !== "string") {
+      return jsonError(400, `Invalid note for student ${it.studentId}.`);
+    }
+  }
+
+  const session = await prisma.attendanceSession.findFirst({
+    where: { id: sessionId, tenantId: safe.tenantId },
+    select: { id: true, classroomId: true, isClosed: true, certifiedAt: true },
+  });
+
+  if (!session) return jsonError(404, "Session not found.");
+  if (session.certifiedAt) return jsonError(409, "Session is certified and cannot be edited.");
+  if (session.isClosed) return jsonError(409, "Session is closed. Reopen it before editing.");
+
+  const studentIds = items.map((i) => i.studentId);
+  const validCount = await prisma.student.count({
+    where: { tenantId: safe.tenantId, classroomId: session.classroomId, id: { in: studentIds } },
+  });
+  if (validCount !== studentIds.length) {
+    return jsonError(400, "One or more learners do not belong to this class.");
+  }
+
+  // ✅ Production-grade: do NOT rely on compound-unique WhereUniqueInput names.
+  // Fetch existing rows then update/create by id (stable across Prisma naming differences).
+  const existing = await prisma.attendanceMark.findMany({
+    where: { sessionId: session.id, studentId: { in: studentIds } },
+    select: { id: true, studentId: true },
+  });
+  const existingByStudent = new Map(existing.map((m) => [m.studentId, m.id]));
+
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    for (const it of items) {
+      const note = it.note?.trim() ? it.note.trim() : null;
+      const existingId = existingByStudent.get(it.studentId);
+
+      if (existingId) {
+        await tx.attendanceMark.update({
+          where: { id: existingId },
+          data: { status: it.status as any, note },
+        });
+      } else {
+        await tx.attendanceMark.create({
+          data: {
+            sessionId: session.id,
+            studentId: it.studentId,
+            status: it.status as any,
+            note,
+          },
+        });
+      }
+    }
+  });
+
+  return NextResponse.json(
+    { ok: true, count: items.length },
+    { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
+  );
 }

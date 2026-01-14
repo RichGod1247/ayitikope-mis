@@ -1,3 +1,4 @@
+// src/app/app/students/page.tsx
 import { prisma } from "../../../lib/prisma";
 import StudentsClient from "./StudentsClient";
 
@@ -13,8 +14,8 @@ async function getTenant() {
 
 type StudentRow = {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName: string | null; // ✅ schema-aligned
+  lastName: string | null;  // ✅ schema-aligned
   sex: string | null;
   dob: Date | null;
   guardianName: string | null;
@@ -50,18 +51,24 @@ export default async function StudentsPage() {
     },
   });
 
-  const items = rows.map((s: StudentRow) => ({
-    id: s.id,
-    firstName: s.firstName,
-    lastName: s.lastName,
-    sex: s.sex ?? null,
-    dob: s.dob ? s.dob.toISOString() : null,
-    guardianName: s.guardianName ?? null,
-    guardianPhone: s.guardianPhone ?? null,
-    classroomId: s.classroomId ?? null,
-    createdAt: s.createdAt.toISOString(),
-    updatedAt: s.updatedAt.toISOString(),
-  }));
+  // UI-normalized payload (never ship null names to client UI)
+  const items = rows.map((s) => {
+    const first = (s.firstName ?? "").trim();
+    const last = (s.lastName ?? "").trim();
+
+    return {
+      id: s.id,
+      firstName: first,
+      lastName: last,
+      sex: s.sex ?? null,
+      dob: s.dob ? s.dob.toISOString() : null,
+      guardianName: s.guardianName ?? null,
+      guardianPhone: s.guardianPhone ?? null,
+      classroomId: s.classroomId ?? null,
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+    };
+  });
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

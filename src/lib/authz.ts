@@ -1,28 +1,46 @@
 // src/lib/authz.ts
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
-import { prisma } from "./prisma";
+function errWithStatus(message: string, status: number) {
+  const e = new Error(message);
+  (e as any).status = status;
+  return e;
+}
 
 /**
- * Ensures that the given userId has a membership in the given tenant.
- * Throws an error if no membership is found.
- *
- * Use this when you already know the user and tenant id and just want
- * to guard access to tenant-specific resources.
+ * ✅ API-safe (NO redirects). Use this in route handlers.
  */
-export async function requireMembershipOrThrow(
-  userId: string,
-  tenantId: string
-) {
+export async function getCurrentUserOrThrow() {
+  const session = await getServerSession(authOptions);
+  const u = session?.user as any;
+
+  if (!u?.id) throw errWithStatus("Unauthorized", 401);
+
+  return {
+    id: String(u.id),
+    email: u.email ? String(u.email) : null,
+    name: u.name ? String(u.name) : null,
+    staffId: u.staffId ? String(u.staffId) : null,
+    tenantId: u.tenantId ? String(u.tenantId) : null,
+    roleName: u.roleName ? String(u.roleName) : null,
+  };
+}
+
+export async function requireMembershipOrThrow(userId: string, tenantId: string) {
   const membership = await prisma.membership.findUnique({
     where: { userId_tenantId: { userId, tenantId } },
     include: { role: true },
   });
 
-  if (!membership) {
-    const e = new Error("No membership for active tenant");
-    (e as any).status = 401;
-    throw e;
+  if (!membership || membership.status !== "ACTIVE") {
+    throw errWithStatus("Forbidden", 403);
   }
 
   return membership;
+}
+
+export function requireRoleOrThrow(roleName: string | null | undefined, allowed: string[]) {
+  if (!roleName || !allowed.includes(roleName)) throw errWithStatus("Forbidden", 403);
 }

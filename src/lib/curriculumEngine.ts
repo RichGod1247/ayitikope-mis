@@ -1,25 +1,58 @@
 // src/lib/curriculumEngine.ts
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export type CurriculumHierarchyRequest = {
-  phase?: string; // e.g. "KG", "PRIMARY", "JHS"
-  level?: string; // e.g. "KG1", "B1", "JHS1"
-  subject?: string; // e.g. "Our World and Our People"
-  subjectSlug?: string; // e.g. "kg1-our-world-and-our-people"
+  phase?: string;
+  level?: string;
+  subject?: string; // matches CurriculumSubject.name
+  subjectSlug?: string; // matches CurriculumSubject.slug
 };
 
-export async function getCurriculumHierarchyForSubject(
-  params: CurriculumHierarchyRequest
-) {
+const includeHierarchy = {
+  media: { orderBy: [{ pageNumberInPdf: "asc" }, { createdAt: "asc" }] },
+  strands: {
+    orderBy: [{ orderIndex: "asc" }],
+    include: {
+      subStrands: {
+        orderBy: [{ orderIndex: "asc" }],
+        include: {
+          contentStandards: {
+            orderBy: [{ orderIndex: "asc" }],
+            include: {
+              media: { orderBy: [{ pageNumberInPdf: "asc" }, { createdAt: "asc" }] },
+              indicators: {
+                orderBy: [{ orderIndex: "asc" }],
+                include: {
+                  media: { orderBy: [{ pageNumberInPdf: "asc" }, { createdAt: "asc" }] },
+                  exemplars: {
+                    orderBy: [{ orderIndex: "asc" }],
+                    include: {
+                      media: { orderBy: [{ pageNumberInPdf: "asc" }, { createdAt: "asc" }] },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.CurriculumSubjectInclude;
+
+type SubjectWithHierarchy = Prisma.CurriculumSubjectGetPayload<{
+  include: typeof includeHierarchy;
+}>;
+
+export async function getCurriculumHierarchyForSubject(params: CurriculumHierarchyRequest) {
   const { phase, level, subject, subjectSlug } = params;
 
-  // Basic guard: we need at least subject name or slug
   if (!subject && !subjectSlug) {
     throw new Error("subject or subjectSlug is required");
   }
 
-  // 1. Find the CurriculumSubject row with full hierarchy + trust metadata
-  const curriculumSubject = await prisma.curriculumSubject.findFirst({
+  const curriculumSubject = (await prisma.curriculumSubject.findFirst({
     where: {
       AND: [
         phase ? { phase } : {},
@@ -28,48 +61,20 @@ export async function getCurriculumHierarchyForSubject(
         subjectSlug ? { slug: subjectSlug } : {},
       ],
     },
-    include: {
-      // Hierarchy
-      strands: {
-        orderBy: { orderIndex: "asc" },
-        include: {
-          subStrands: {
-            orderBy: { orderIndex: "asc" },
-            include: {
-              contentStandards: {
-                orderBy: { orderIndex: "asc" },
-                include: {
-                  indicators: {
-                    orderBy: { orderIndex: "asc" },
-                    include: {
-                      exemplars: {
-                        orderBy: { orderIndex: "asc" },
-                      },
-                      media: true,
-                    },
-                  },
-                  media: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      // Subject-level media (figures that belong to the whole subject)
-      media: true,
-      // For "verified by" trust info
-      lastVerifiedBy: true,
-    },
-  });
+    include: includeHierarchy,
+  })) as SubjectWithHierarchy | null;
 
-  if (!curriculumSubject) {
-    return null;
-  }
+  if (!curriculumSubject) return null;
 
-  // 2. Shape the data a bit for the frontend / AI consumers
-  //    (so they don’t need to know Prisma’s internal structure)
+  const verifiedBy =
+    curriculumSubject.lastVerifiedByUserId
+      ? await prisma.user.findUnique({
+          where: { id: curriculumSubject.lastVerifiedByUserId },
+          select: { id: true, name: true, email: true },
+        })
+      : null;
+
   return {
-    // Core identity
     id: curriculumSubject.id,
     phase: curriculumSubject.phase,
     level: curriculumSubject.level,
@@ -78,7 +83,6 @@ export async function getCurriculumHierarchyForSubject(
     description: curriculumSubject.description,
     orderIndex: curriculumSubject.orderIndex,
 
-    // Trust & provenance metadata (used in the right-hand "trust" panel)
     curriculumFramework: curriculumSubject.curriculumFramework,
     frameworkVersion: curriculumSubject.frameworkVersion,
     countryCode: curriculumSubject.countryCode,
@@ -86,18 +90,12 @@ export async function getCurriculumHierarchyForSubject(
     sourceDocumentYear: curriculumSubject.sourceDocumentYear,
     sourceDocumentUrl: curriculumSubject.sourceDocumentUrl,
     lastVerifiedAt: curriculumSubject.lastVerifiedAt,
-    lastVerifiedBy: curriculumSubject.lastVerifiedBy
-      ? {
-          id: curriculumSubject.lastVerifiedBy.id,
-          name: curriculumSubject.lastVerifiedBy.name,
-          email: curriculumSubject.lastVerifiedBy.email,
-        }
+    lastVerifiedBy: verifiedBy
+      ? { id: verifiedBy.id, name: verifiedBy.name, email: verifiedBy.email }
       : null,
 
-    // Subject-level media (figures, diagrams, etc.)
     media: curriculumSubject.media,
 
-    // Hierarchy: strands → sub-strands → content standards → indicators → exemplars
     strands: curriculumSubject.strands.map((strand) => ({
       id: strand.id,
       code: strand.code,
@@ -128,7 +126,7 @@ export async function getCurriculumHierarchyForSubject(
               description: ex.description,
               assessmentNotes: ex.assessmentNotes,
               orderIndex: ex.orderIndex,
-              // exemplar-level media can be wired later if needed
+              media: ex.media,
             })),
           })),
         })),
