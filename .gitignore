@@ -108,3 +108,6 @@ supabase/.temp/
 supabase/.branches/
 supabase/.cache/
 supabase/.config/
+# Local backups (do not commit)
+working_version_backup.zip
+
