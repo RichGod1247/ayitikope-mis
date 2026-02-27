@@ -1,12 +1,18 @@
-// src/app/api/teachers/assessment/student-term-report/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
   return NextResponse.json(payload, {
     ...init,
-    headers: { "Cache-Control": "no-store", ...(init?.headers ?? {}) },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
   });
 }
 
@@ -25,8 +31,16 @@ function gesFromPct(pct: number | null) {
   return { grade: 9, remark: "Lowest / Fail" };
 }
 
+/**
+ * GET /api/teachers/assessments/student-term-report?studentId=...&term=...&academicYear=...
+ */
 export async function GET(req: NextRequest) {
-  const ctx = await requireServerUserContext({ requireTenant: true });
+  const gate = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["SUPERADMIN", "SCHOOL_ADMIN", "HEADTEACHER", "TEACHER"],
+  });
+  if (!gate.ok) return gate.res;
+  const ctx = gate.ctx;
 
   const { searchParams } = new URL(req.url);
   const studentId = (searchParams.get("studentId") ?? "").trim();
@@ -34,10 +48,7 @@ export async function GET(req: NextRequest) {
   const academicYear = (searchParams.get("academicYear") ?? "").trim();
 
   if (!studentId || !term || !academicYear) {
-    return jsonNoStore(
-      { ok: false, error: "studentId, term and academicYear are required." },
-      { status: 400 }
-    );
+    return jsonNoStore({ ok: false, error: "studentId, term and academicYear are required." }, { status: 400 });
   }
 
   const student = await prisma.student.findFirst({
@@ -58,35 +69,23 @@ export async function GET(req: NextRequest) {
   }
 
   const items = await prisma.assessmentItem.findMany({
-    where: {
-      tenantId: ctx.tenantId,
-      classroomId: student.classroomId,
-      term,
-      academicYear,
-    },
+    where: { tenantId: ctx.tenantId, classroomId: student.classroomId, term, academicYear },
     select: {
       id: true,
       subject: true,
       maxScore: true,
-      scores: {
-        where: { studentId },
-        select: { score: true },
-      },
+      scores: { where: { studentId }, select: { score: true } },
     },
   });
 
-  // subject -> totals
-  const map = new Map<
-    string,
-    { subject: string; totalScore: number; totalMax: number; itemCount: number }
-  >();
+  const map = new Map<string, { subject: string; totalScore: number; totalMax: number; itemCount: number }>();
 
   for (const it of items) {
-    const key = it.subject;
+    const key = (it.subject ?? "").trim() || "Unknown";
     const cur = map.get(key) ?? { subject: key, totalScore: 0, totalMax: 0, itemCount: 0 };
     cur.itemCount += 1;
-    cur.totalMax += it.maxScore;
-    const score = it.scores?.[0]?.score ?? 0; // missing treated as 0 (explicit, auditable)
+    cur.totalMax += Number(it.maxScore) || 0;
+    const score = Number(it.scores?.[0]?.score ?? 0) || 0;
     cur.totalScore += score;
     map.set(key, cur);
   }
@@ -108,11 +107,7 @@ export async function GET(req: NextRequest) {
     });
 
   const overall = subjects.reduce(
-    (acc, s) => {
-      acc.totalScore += s.totalScore;
-      acc.totalMax += s.maxScore;
-      return acc;
-    },
+    (acc, s) => ({ totalScore: acc.totalScore + s.totalScore, totalMax: acc.totalMax + s.maxScore }),
     { totalScore: 0, totalMax: 0 }
   );
 
@@ -124,11 +119,7 @@ export async function GET(req: NextRequest) {
   return jsonNoStore(
     {
       ok: true,
-      context: {
-        studentId,
-        term,
-        academicYear,
-      },
+      context: { studentId, term, academicYear },
       student: {
         id: student.id,
         firstName: student.firstName,
@@ -138,12 +129,7 @@ export async function GET(req: NextRequest) {
         guardianPhone: student.guardianPhone,
       },
       classroom: student.classroom
-        ? {
-            id: student.classroom.id,
-            name: student.classroom.name,
-            grade: student.classroom.grade,
-            arm: student.classroom.arm,
-          }
+        ? { id: student.classroom.id, name: student.classroom.name, grade: student.classroom.grade, arm: student.classroom.arm }
         : null,
       subjects,
       termSummary: {

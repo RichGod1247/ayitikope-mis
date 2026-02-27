@@ -1,10 +1,9 @@
 // src/app/headteacher/health/page.tsx
-
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 import { HeadteacherHealthClient } from "@/components/HeadteacherHealthClient";
 
 export const metadata: Metadata = {
@@ -14,37 +13,42 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const HEAD_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN"]);
 
 export default async function HeadteacherHealthPage() {
-  // 1) Auth – ensure headteacher is signed in
   const session = await getServerSession(authOptions);
   const user = session?.user as any;
   const userId: string | undefined = user?.id;
 
   if (!userId) {
     redirect(
-      `/api/auth/signin?callbackUrl=/headteacher/health`
+      `/api/auth/signin?callbackUrl=${encodeURIComponent("/headteacher/health")}`
     );
   }
 
-  // 2) Tenant – find which school this headteacher belongs to
   const membership = await prisma.membership.findFirst({
-    where: { userId },
-    include: {
-      tenant: true,
+    where: { userId, status: "ACTIVE" },
+    select: {
+      tenantId: true,
+      role: { select: { name: true } },
+      tenant: { select: { name: true, status: true } },
     },
   });
 
-  if (!membership?.tenantId) {
-    redirect("/");
-  }
+  if (!membership?.tenantId) redirect("/app");
+  if (membership.tenant?.status && membership.tenant.status !== "ACTIVE")
+    redirect("/pending");
+
+  const roleName = (membership.role?.name ?? "").trim();
+  if (!HEAD_ROLES.has(roleName)) redirect("/app");
 
   const tenantName = membership.tenant?.name ?? "Your school";
 
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8 space-y-6">
-        {/* Header */}
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-800">
@@ -55,14 +59,9 @@ export default async function HeadteacherHealthPage() {
             </h1>
             <p className="mt-1 max-w-2xl text-xs text-slate-600 sm:text-sm">
               Quick pulse of{" "}
-              <span className="font-semibold">
-                student daily health
-              </span>{" "}
-              and{" "}
-              <span className="font-semibold">
-                teacher weekly wellbeing
-              </span>{" "}
-              so you can spot patterns early and respond with wisdom.
+              <span className="font-semibold">student daily health</span> and{" "}
+              <span className="font-semibold">teacher weekly wellbeing</span> so
+              you can spot patterns early and respond with wisdom.
             </p>
           </div>
           <div className="text-xs text-right text-slate-500 space-y-1">
@@ -73,10 +72,7 @@ export default async function HeadteacherHealthPage() {
               </span>
             </p>
             <p className="text-[11px]">
-              School:{" "}
-              <span className="font-semibold">
-                {tenantName}
-              </span>
+              School: <span className="font-semibold">{tenantName}</span>
             </p>
           </div>
         </header>

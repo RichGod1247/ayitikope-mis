@@ -1,72 +1,92 @@
 // src/app/api/admin/attendance/absentees/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { assertNoTenantOverride } from "@/lib/tenantGuard";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function jsonNoStore(payload: any, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+function normalizeRoleName(role: unknown) {
+  return String(role ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Z_]/g, "");
+}
+
+function roleEffective(role: unknown) {
+  const r = normalizeRoleName(role);
+  if (r === "ADMIN") return "SCHOOL_ADMIN";
+  if (r === "HEADMASTER") return "HEADTEACHER";
+  return r;
+}
+
+function isAdminLike(role: unknown) {
+  const r = roleEffective(role);
+  return r === "SCHOOL_ADMIN" || r === "HEADTEACHER" || r.includes("OWNER") || r.includes("SUPER");
+}
+
+async function requireAdminLike(tenantId: string, userId: string) {
+  const m = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId, tenantId } },
+    select: { status: true, role: { select: { name: true } } },
+  });
+
+  if (!m || m.status !== "ACTIVE") return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  if (!isAdminLike(m.role?.name ?? "")) return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  return { ok: true as const };
+}
+
+function parseDayUtc(dateParam: string) {
+  // YYYY-MM-DD
+  const d = new Date(`${dateParam}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  const end = new Date(d);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return { start: d, endExclusive: end };
+}
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiUserContext(req, { requireTenant: true });
+  if (!auth.ok) return auth.res;
+
+  const roleOk = await requireAdminLike(auth.ctx.tenantId, auth.ctx.userId);
+  if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, roleOk.status);
+
   const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get("tenantId");
-  const dateParam = searchParams.get("date"); // YYYY-MM-DD
 
-  if (!tenantId) {
-    return NextResponse.json(
-      { ok: false, error: "tenantId is required." },
-      { status: 400 }
-    );
-  }
+  // Back-compat: tenantId may be passed by legacy UI, must match session tenant
+  const guard = assertNoTenantOverride(searchParams.get("tenantId"), auth.ctx.tenantId);
+  if (!guard.ok) return jsonNoStore({ ok: false, error: guard.error }, guard.status);
 
-  if (!dateParam) {
-    return NextResponse.json(
-      { ok: false, error: "date (YYYY-MM-DD) is required." },
-      { status: 400 }
-    );
-  }
+  const dateParam = (searchParams.get("date") ?? "").trim(); // YYYY-MM-DD
+  if (!dateParam) return jsonNoStore({ ok: false, error: "date (YYYY-MM-DD) is required." }, 400);
 
-  let date: Date;
-  try {
-    date = new Date(`${dateParam}T00:00:00.000Z`);
-    if (Number.isNaN(date.getTime())) {
-      throw new Error("Invalid date");
-    }
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: "Invalid date format. Use YYYY-MM-DD." },
-      { status: 400 }
-    );
-  }
+  const day = parseDayUtc(dateParam);
+  if (!day) return jsonNoStore({ ok: false, error: "Invalid date format. Use YYYY-MM-DD." }, 400);
 
   try {
-    // Use `as any` so we don't fight Prisma types while we align to your real schema
-    const client = prisma as any;
-
-    // Assumptions based on your existing schema usage:
-    // - client.attendanceSession exists
-    // - AttendanceSession has: tenantId, date, classroom, marks
-    // - AttendanceSession.marks: AttendanceMark[]
-    // - AttendanceMark has: id, status, note, createdAt, studentId, student
-    // - AttendanceMark.status is enum with "ABSENT"
-    // - AttendanceSession.classroom has: name, grade, arm
-    const sessions = await client.attendanceSession.findMany({
+    const sessions = await prisma.attendanceSession.findMany({
       where: {
-        tenantId,
-        date,
+        tenantId: auth.ctx.tenantId,
+        date: { gte: day.start, lt: day.endExclusive },
       },
       select: {
         id: true,
         date: true,
-        classroom: {
-          select: {
-            name: true,
-            grade: true,
-            arm: true,
-          },
-        },
+        classroom: { select: { name: true, grade: true, arm: true } },
         marks: {
-          where: {
-            status: "ABSENT",
-          },
+          where: { status: "ABSENT" },
           select: {
             id: true,
-            status: true,
             note: true,
             createdAt: true,
             student: {
@@ -82,9 +102,8 @@ export async function GET(req: NextRequest) {
           },
         },
       },
-      orderBy: {
-        date: "asc",
-      },
+      orderBy: { date: "asc" },
+      take: 2000,
     });
 
     type AbsenteeItem = {
@@ -96,59 +115,53 @@ export async function GET(req: NextRequest) {
       guardianPhone?: string | null;
       note?: string | null;
       date: string;
+      sessionId: string;
     };
 
     const items: AbsenteeItem[] = [];
 
-    for (const session of sessions) {
-      // Build class label safely without mixing ?? and ||
-      let classLabel = session.classroom?.name as string | undefined;
+    for (const session of sessions as any[]) {
+      const grade = (session.classroom?.grade as string | undefined) ?? "";
+      const arm = (session.classroom?.arm as string | undefined) ?? "";
+      const name = (session.classroom?.name as string | undefined) ?? "";
+      const classLabel = (name && name.trim())
+        ? name.trim()
+        : ([grade, arm].filter(Boolean).join(" ").trim() || "Unknown class");
 
-      if (!classLabel || !classLabel.trim()) {
-        const grade = (session.classroom?.grade as string | undefined) ?? "";
-        const arm = (session.classroom?.arm as string | undefined) ?? "";
-        const combined = [grade, arm].filter(Boolean).join(" ").trim();
-        classLabel = combined || "Unknown class";
-      }
+      const sessionDateIso =
+        session.date instanceof Date ? session.date.toISOString() : new Date(day.start).toISOString();
 
-      for (const m of session.marks) {
+      for (const m of session.marks as any[]) {
         const s = m.student;
+        const studentId = String(s?.id ?? "").trim();
+        if (!studentId) continue;
+
         const studentName =
-          [s?.firstName, s?.lastName].filter(Boolean).join(" ").trim() ||
-          "Unnamed learner";
+          [s?.firstName, s?.lastName].filter(Boolean).join(" ").trim() || "Unnamed learner";
 
         items.push({
-          markId: m.id,
-          studentId: s?.id ?? "",
+          markId: String(m.id),
+          studentId,
           studentName,
           classLabel,
           guardianName: s?.guardianName ?? null,
           guardianPhone: s?.guardianPhone ?? null,
           note: m.note ?? null,
-          date:
-            (session.date &&
-              (session.date as unknown as Date).toISOString()) ||
-            date.toISOString(),
+          date: sessionDateIso,
+          sessionId: String(session.id),
         });
       }
     }
 
-    return NextResponse.json({
-      ok: true,
-      items,
-      count: items.length,
-      date: dateParam,
-    });
+    return jsonNoStore(
+      { ok: true, items, count: items.length, date: dateParam, tenantId: auth.ctx.tenantId },
+      200
+    );
   } catch (err: any) {
     console.error("[ADMIN_ABSENTEES_ERROR]", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          err?.message ||
-          "Failed to load absentee follow-up list. Please try again or contact the administrator.",
-      },
-      { status: 500 }
+    return jsonNoStore(
+      { ok: false, error: err?.message || "Failed to load absentees. Please try again." },
+      500
     );
   }
 }

@@ -1,18 +1,18 @@
 // src/app/admin-portal/page.tsx
-"use client";
+import { redirect } from "next/navigation";
+import { requireServerUserContext } from "@/lib/serverAuth";
 
-import AdminPortalClient from "@/components/AdminPortalClient";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-export default function AdminPortalPage() {
-  // Demo values for now.
-  // Later this will be driven by the authenticated admin + tenant.
-  const demoTenantId = "cmhhnghn00008vcpgp3fl07fl";
-  const demoAdminUserId = "demo-admin-user-id";
+export default async function AdminPortalPage() {
+  // Unified gateway: if not signed in, requireServerUserContext will redirect to /auth/signin
+  // We intentionally use /app so your role-aware routing decides the correct dashboard.
+  await requireServerUserContext({
+    redirectTo: "/app",
+    requireTenant: true,
+  });
 
-  return (
-    <AdminPortalClient
-      tenantId={demoTenantId}
-      adminUserId={demoAdminUserId}
-    />
-  );
+  // Signed in → let your role router send them where they belong.
+  redirect("/app");
 }

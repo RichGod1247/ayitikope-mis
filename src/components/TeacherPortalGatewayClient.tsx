@@ -1,44 +1,22 @@
+// src/components/TeacherPortalGatewayClient.tsx
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useMemo } from "react";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
 type Props = {
-  nextUrl: string; // where to go after sign-in
+  nextUrl: string; // kept for compatibility, but we no longer sign in here
 };
 
-type Mode = "signin" | "signup";
-
 export default function TeacherPortalGatewayClient({ nextUrl }: Props) {
-  const router = useRouter();
-
   const next = useMemo(() => {
-    return nextUrl && nextUrl.startsWith("/") ? nextUrl : "/teacher/dashboard";
+    return nextUrl && nextUrl.startsWith("/") ? nextUrl : "/app";
   }, [nextUrl]);
-
-  const [mode, setMode] = useState<Mode>("signin");
-
-  // Sign in
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [loadingIn, setLoadingIn] = useState(false);
-
-  // Sign up
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [staffId, setStaffId] = useState("");
-  const [onboardingCode, setOnboardingCode] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [loadingUp, setLoadingUp] = useState(false);
-
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
 
   const tiles = [
     {
@@ -89,98 +67,13 @@ export default function TeacherPortalGatewayClient({ nextUrl }: Props) {
     {
       title: "Communication Support",
       subtitle: "Stay connected with ease",
-      desc: "Get built-in support that helps you stay reachable and consistent with parent communication.",
+      desc: "Built-in support to help you stay reachable and consistent with parent communication.",
       pill: "Support",
       cls: "from-amber-50 to-white border-amber-200",
       pillCls: "bg-amber-100 text-amber-950",
       icon: "📶",
     },
   ];
-
-  async function handleSignIn() {
-    setError(null);
-    setOk(null);
-
-    const id = identifier.trim();
-    if (!id || !password) {
-      setError("Enter your Staff ID/Email and password.");
-      return;
-    }
-
-    setLoadingIn(true);
-    try {
-      const res = await signIn("credentials", {
-        redirect: false,
-        identifier: id,
-        password,
-        callbackUrl: next,
-      });
-
-      if (!res || res.error) {
-        setError(res?.error || "Sign in failed. Check your details and try again.");
-        return;
-      }
-
-      setOk("Welcome back. Taking you to your dashboard…");
-      router.push(res.url || next);
-      router.refresh();
-    } finally {
-      setLoadingIn(false);
-    }
-  }
-
-  async function handleSignUp() {
-    setError(null);
-    setOk(null);
-
-    if (!fullName.trim() || !email.trim() || !signupPassword) {
-      setError("Enter your name, email, and password.");
-      return;
-    }
-
-    setLoadingUp(true);
-    try {
-      const res = await fetch("/api/auth/teacher-signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: fullName.trim(),
-          email: email.trim(),
-          staffId: staffId.trim() || null,
-          onboardingCode: onboardingCode.trim() || null,
-          password: signupPassword,
-        }),
-      });
-
-      const data = (await res.json().catch(() => ({}))) as any;
-
-      if (!res.ok || data?.ok === false) {
-        setError(data?.error || "Could not create account. Please try again.");
-        return;
-      }
-
-      setOk("Account created. Signing you in…");
-
-      const res2 = await signIn("credentials", {
-        redirect: false,
-        identifier: staffId.trim() || email.trim(),
-        password: signupPassword,
-        callbackUrl: next,
-      });
-
-      if (!res2 || res2.error) {
-        setOk(null);
-        setError(res2?.error || "Account created. Please sign in.");
-        setMode("signin");
-        return;
-      }
-
-      router.push(res2.url || next);
-      router.refresh();
-    } finally {
-      setLoadingUp(false);
-    }
-  }
 
   return (
     <div className="min-h-[calc(100vh-65px)] bg-gradient-to-b from-sky-50/70 via-white to-sky-50/40">
@@ -203,26 +96,25 @@ export default function TeacherPortalGatewayClient({ nextUrl }: Props) {
                     EduLife OS · Teacher Gateway
                   </div>
                   <h1 className="mt-1 text-2xl md:text-3xl font-extrabold tracking-tight text-sky-950">
-                    Welcome, Teacher. 🌿
+                    Teacher Workspace Preview 🌿
                   </h1>
                 </div>
               </div>
 
               <p className="mt-3 text-sm md:text-base text-slate-700 leading-relaxed">
-                You’re not just “logging in”. You’re stepping into a calm workspace built to
-                help you teach with clarity, move faster without stress, and keep every record
-                tidy — the kind of system that makes a great teacher feel supported.
+                This page no longer signs you in. EduLife OS uses a single secure gateway for
+                everyone (Admin, Teacher, Headteacher). Use the Sign In button to continue.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2 text-[11px] md:text-xs">
                 <span className="inline-flex items-center rounded-full bg-sky-50 text-sky-900 border border-sky-100 px-3 py-1 font-medium">
-                  Secure access
+                  Unified Sign-in
                 </span>
                 <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-900 border border-emerald-100 px-3 py-1 font-medium">
                   Lesson notes ready-to-print
                 </span>
                 <span className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-900 border border-indigo-100 px-3 py-1 font-medium">
-                  Assessments & dashboards
+                  Attendance + Health
                 </span>
               </div>
             </div>
@@ -230,10 +122,10 @@ export default function TeacherPortalGatewayClient({ nextUrl }: Props) {
             <div className="rounded-3xl border border-zinc-200 bg-white/85 shadow-sm backdrop-blur px-5 py-5 md:px-7 md:py-6">
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="text-base md:text-lg font-semibold text-slate-900">
-                  What’s waiting inside
+                  What’s inside
                 </h2>
                 <div className="text-[11px] md:text-xs text-slate-500">
-                  Sign in to unlock your full teacher workspace
+                  Sign in to access your dashboard
                 </div>
               </div>
 
@@ -252,9 +144,7 @@ export default function TeacherPortalGatewayClient({ nextUrl }: Props) {
                           <span className="text-lg">{t.icon}</span>
                           {t.title}
                         </div>
-                        <div className="mt-1 text-xs text-slate-600">
-                          {t.subtitle}
-                        </div>
+                        <div className="mt-1 text-xs text-slate-600">{t.subtitle}</div>
                       </div>
 
                       <span
@@ -276,209 +166,45 @@ export default function TeacherPortalGatewayClient({ nextUrl }: Props) {
             </div>
           </section>
 
-          {/* RIGHT: Bank-grade auth card */}
+          {/* RIGHT: Simple CTA card (no auth form) */}
           <section>
             <div className="rounded-[28px] border border-zinc-200 bg-white shadow-sm overflow-hidden">
               <div className="p-6 border-b border-zinc-200 bg-gradient-to-b from-zinc-50 to-white">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src="/logo.png"
-                      alt="EduLife OS"
-                      width={40}
-                      height={40}
-                      className="rounded-2xl"
-                      priority
-                    />
-                    <div>
-                      <div className="text-lg font-extrabold text-zinc-900">
-                        {mode === "signin" ? "Sign in" : "Create account"}
-                      </div>
-                      <div className="text-sm text-zinc-600">
-                        {mode === "signin"
-                          ? "Access your teacher dashboard securely."
-                          : "Get started in minutes — then head straight to your dashboard."}
-                      </div>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/logo.png"
+                    alt="EduLife OS"
+                    width={40}
+                    height={40}
+                    className="rounded-2xl"
+                    priority
+                  />
+                  <div>
+                    <div className="text-lg font-extrabold text-zinc-900">Continue</div>
+                    <div className="text-sm text-zinc-600">
+                      Use the unified secure sign-in gateway.
                     </div>
-                  </div>
-
-                  <div className="flex rounded-2xl border border-zinc-200 bg-white p-1 shadow-sm">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setOk(null);
-                        setMode("signin");
-                      }}
-                      className={cx(
-                        "h-9 px-3 rounded-xl text-xs font-semibold transition",
-                        mode === "signin"
-                          ? "bg-black text-white"
-                          : "text-zinc-700 hover:bg-zinc-50"
-                      )}
-                    >
-                      Sign in
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setError(null);
-                        setOk(null);
-                        setMode("signup");
-                      }}
-                      className={cx(
-                        "h-9 px-3 rounded-xl text-xs font-semibold transition",
-                        mode === "signup"
-                          ? "bg-black text-white"
-                          : "text-zinc-700 hover:bg-zinc-50"
-                      )}
-                    >
-                      Sign up
-                    </button>
                   </div>
                 </div>
-
-                {(error || ok) && (
-                  <div
-                    className={cx(
-                      "mt-4 rounded-2xl px-3 py-2 text-xs border",
-                      error
-                        ? "border-red-200 bg-red-50 text-red-800"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    )}
-                  >
-                    {error ?? ok}
-                  </div>
-                )}
               </div>
 
-              <div className="p-6">
-                {mode === "signin" ? (
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-700">
-                        Staff ID or Email
-                      </label>
-                      <input
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        placeholder="e.g. TCH-024 or teacher@school.com"
-                        autoComplete="username"
-                        className="w-full h-12 rounded-2xl border border-zinc-300 bg-white px-4 text-sm outline-none shadow-sm focus:border-black focus:ring-1 focus:ring-black"
-                      />
-                    </div>
+              <div className="p-6 space-y-3">
+                <Link
+                  href="/auth/signin"
+                  className="block w-full text-center h-12 leading-[48px] rounded-2xl bg-black text-white text-sm font-semibold shadow-sm hover:bg-zinc-800"
+                >
+                  Sign in → Unified Gateway
+                </Link>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-700">
-                        Password
-                      </label>
-                      <input
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        type="password"
-                        autoComplete="current-password"
-                        className="w-full h-12 rounded-2xl border border-zinc-300 bg-white px-4 text-sm outline-none shadow-sm focus:border-black focus:ring-1 focus:ring-black"
-                      />
-                    </div>
+                <Link
+                  href={`/auth/signup?redirectTo=${encodeURIComponent(next)}`}
+                  className="block w-full text-center h-12 leading-[48px] rounded-2xl border border-zinc-300 bg-white text-zinc-900 text-sm font-semibold shadow-sm hover:bg-zinc-50"
+                >
+                  Create account
+                </Link>
 
-                    <button
-                      type="button"
-                      onClick={handleSignIn}
-                      disabled={loadingIn}
-                      className="w-full h-12 rounded-2xl bg-black text-white text-sm font-semibold shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {loadingIn ? "Signing in…" : "Continue → Teacher Dashboard"}
-                    </button>
-
-                    <div className="text-[11px] text-zinc-500">
-                      After sign-in you’ll go to:{" "}
-                      <span className="font-semibold text-zinc-700">{next}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-700">
-                        Full name
-                      </label>
-                      <input
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="e.g. Ama Mensah"
-                        autoComplete="name"
-                        className="w-full h-12 rounded-2xl border border-zinc-300 bg-white px-4 text-sm outline-none shadow-sm focus:border-black focus:ring-1 focus:ring-black"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-700">
-                        Email
-                      </label>
-                      <input
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="teacher@school.com"
-                        autoComplete="email"
-                        className="w-full h-12 rounded-2xl border border-zinc-300 bg-white px-4 text-sm outline-none shadow-sm focus:border-black focus:ring-1 focus:ring-black"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-zinc-700">
-                          Staff ID (optional)
-                        </label>
-                        <input
-                          value={staffId}
-                          onChange={(e) => setStaffId(e.target.value)}
-                          placeholder="e.g. TCH-024"
-                          className="w-full h-12 rounded-2xl border border-zinc-300 bg-white px-4 text-sm outline-none shadow-sm focus:border-black focus:ring-1 focus:ring-black"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-zinc-700">
-                          Onboarding code (if required)
-                        </label>
-                        <input
-                          value={onboardingCode}
-                          onChange={(e) => setOnboardingCode(e.target.value)}
-                          placeholder="Provided by admin"
-                          className="w-full h-12 rounded-2xl border border-zinc-300 bg-white px-4 text-sm outline-none shadow-sm focus:border-black focus:ring-1 focus:ring-black"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-700">
-                        Password
-                      </label>
-                      <input
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        placeholder="Create a strong password"
-                        type="password"
-                        autoComplete="new-password"
-                        className="w-full h-12 rounded-2xl border border-zinc-300 bg-white px-4 text-sm outline-none shadow-sm focus:border-black focus:ring-1 focus:ring-black"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleSignUp}
-                      disabled={loadingUp}
-                      className="w-full h-12 rounded-2xl bg-black text-white text-sm font-semibold shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {loadingUp ? "Creating account…" : "Create account → Dashboard"}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="px-6 pb-6">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-[11px] text-zinc-600">
-                  Your account is protected. You’ll access teacher menus only after successful sign-in.
+                  Your account routes to the correct dashboard based on role (Teacher/Admin/Headteacher).
                 </div>
               </div>
             </div>

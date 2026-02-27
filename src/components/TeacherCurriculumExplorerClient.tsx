@@ -92,12 +92,14 @@ type SubjectsResponse = {
   ok: boolean;
   items?: CurriculumSubjectSummary[];
   error?: string;
+  message?: string;
 };
 
 type CurriculumResponse = {
   ok: boolean;
   item?: CurriculumHierarchy;
   error?: string;
+  message?: string;
 };
 
 type SchemeSummary = {
@@ -107,14 +109,20 @@ type SchemeSummary = {
   term: string;
   academicYear: string;
   classroomId: string | null;
-  itemCount: number;
+
+  // API may use either name; we support both.
+  itemCount?: number;
+  totalItems?: number;
 };
 
 type SchemesListResponse = {
   ok: boolean;
   items?: SchemeSummary[];
   error?: string;
+  message?: string;
 };
+
+type Notice = { tone: "ok" | "error" | "info"; text: string };
 
 const pillBase =
   "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
@@ -128,6 +136,27 @@ const inputBase =
   "w-full rounded-xl border border-zinc-300 bg-white px-2 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black";
 const selectBase =
   "w-full rounded-xl border border-zinc-300 bg-white px-2 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black";
+
+function normalizeTermClient(raw: unknown): "" | "1st Term" | "2nd Term" | "3rd Term" {
+  const v = String(raw ?? "").trim().toLowerCase();
+  if (!v) return "";
+  if (v === "1st term" || v === "term 1" || v === "term1" || v === "1" || v === "first term") return "1st Term";
+  if (v === "2nd term" || v === "term 2" || v === "term2" || v === "2" || v === "second term") return "2nd Term";
+  if (v === "3rd term" || v === "term 3" || v === "term3" || v === "3" || v === "third term") return "3rd Term";
+  if (v === "1st") return "1st Term";
+  if (v === "2nd") return "2nd Term";
+  if (v === "3rd") return "3rd Term";
+  return "";
+}
+
+function normalizeAcademicYearClient(raw: unknown): string {
+  const v = String(raw ?? "").trim();
+  if (!v) return "";
+  const dash = v.match(/^(\d{4})-(\d{4})$/);
+  if (dash) return `${dash[1]}/${dash[2]}`;
+  if (/^\d{4}\/\d{4}$/.test(v)) return v;
+  return v; // keep typed
+}
 
 function handleAuthFailure() {
   const here =
@@ -156,6 +185,28 @@ function safeClientInternalPath(raw: string | null | undefined, fallback: string
   }
 }
 
+async function readJsonSafe(res: Response): Promise<any> {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function pickErrorMessage(res: Response, data: any, fallback: string) {
+  const msg =
+    (data && (data.error || data.message)) ||
+    (res.status === 403 ? "Forbidden. You don’t have permission to do that." : "") ||
+    fallback;
+  return String(msg);
+}
+
+function getSchemeCount(s: SchemeSummary): number {
+  const n = (s.itemCount ?? s.totalItems ?? 0) as any;
+  const v = Number(n);
+  return Number.isFinite(v) ? v : 0;
+}
+
 export default function TeacherCurriculumExplorerClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -173,7 +224,7 @@ export default function TeacherCurriculumExplorerClient() {
   const [schemeTerm, setSchemeTerm] = useState<string>("");
   const [schemeAcademicYear, setSchemeAcademicYear] = useState<string>("");
   const [schemeWeekNumber, setSchemeWeekNumber] = useState<string>("1");
-  const [schemeMsg, setSchemeMsg] = useState<string | null>(null);
+  const [schemeNotice, setSchemeNotice] = useState<Notice | null>(null);
 
   // Summary (across all subjects) to decide if "Return" should unlock
   const [schemeSummary, setSchemeSummary] = useState<SchemeSummary[]>([]);
@@ -223,15 +274,22 @@ export default function TeacherCurriculumExplorerClient() {
     return safeClientInternalPath(urlReturn, fallback);
   }, [urlReturn, schemeTerm, schemeAcademicYear]);
 
-  // Sync scheme term/year from URL when in scheme mode
+  // Sync scheme term/year from URL when in scheme mode (NORMALIZE)
   useEffect(() => {
     if (!schemeMode) return;
-    if (urlTerm) setSchemeTerm(urlTerm);
-    if (urlAcademicYear) setSchemeAcademicYear(urlAcademicYear);
+
+    if (urlTerm) {
+      const t = normalizeTermClient(urlTerm);
+      setSchemeTerm(t || urlTerm);
+    }
+    if (urlAcademicYear) {
+      const y = normalizeAcademicYearClient(urlAcademicYear);
+      setSchemeAcademicYear(y);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schemeMode, urlTerm, urlAcademicYear]);
 
-  // Load tenant current term/year as fallback (only if missing)
+  // Load tenant current term/year as fallback (only if missing) (NORMALIZE)
   useEffect(() => {
     if (!schemeMode) return;
 
@@ -242,20 +300,29 @@ export default function TeacherCurriculumExplorerClient() {
         const res = await fetch("/api/settings/current-term-year", {
           method: "GET",
           headers: { "Cache-Control": "no-store" },
+          credentials: "include",
         });
-        const data = (await res.json().catch(() => ({}))) as {
+        if (res.status === 401) return handleAuthFailure();
+
+        const data = (await readJsonSafe(res)) as {
           ok?: boolean;
           term?: string | null;
           academicYear?: string | null;
         };
 
-        if (!res.ok || !data.ok) return;
+        if (!res.ok || !data?.ok) return;
         if (cancelled) return;
 
-        if (!schemeTerm && data.term) setSchemeTerm(String(data.term));
-        if (!schemeAcademicYear && data.academicYear) setSchemeAcademicYear(String(data.academicYear));
+        if (!schemeTerm && data.term) {
+          const t = normalizeTermClient(data.term);
+          if (t) setSchemeTerm(t);
+          else setSchemeTerm(String(data.term));
+        }
+        if (!schemeAcademicYear && data.academicYear) {
+          setSchemeAcademicYear(normalizeAcademicYearClient(data.academicYear));
+        }
       } catch {
-        // ignore (scheme mode still usable manually)
+        // ignore
       }
     }
 
@@ -277,15 +344,23 @@ export default function TeacherCurriculumExplorerClient() {
       setSubjectsError(null);
 
       try {
-        const res = await fetch("/api/curriculum/subjects");
-        if (res.status === 401 || res.status === 403) return handleAuthFailure();
+        const res = await fetch("/api/curriculum/subjects", { credentials: "include" });
+        if (res.status === 401) return handleAuthFailure();
 
-        const data = (await res.json().catch(() => ({}))) as SubjectsResponse;
+        const data = (await readJsonSafe(res)) as SubjectsResponse;
 
-        if (!res.ok || !data.ok || !data.items) {
+        if (res.status === 403) {
           if (!cancelled) {
             setSubjects([]);
-            setSubjectsError(data.error ?? "Failed to load curriculum subjects. Please try again.");
+            setSubjectsError(pickErrorMessage(res, data, "Forbidden."));
+          }
+          return;
+        }
+
+        if (!res.ok || !data?.ok || !data.items) {
+          if (!cancelled) {
+            setSubjects([]);
+            setSubjectsError(data?.error ?? "Failed to load curriculum subjects. Please try again.");
           }
           return;
         }
@@ -376,15 +451,23 @@ export default function TeacherCurriculumExplorerClient() {
         if (selectedSubject.slug) params.set("subjectSlug", selectedSubject.slug);
         else params.set("subject", selectedSubject.name);
 
-        const res = await fetch(`/api/curriculum?${params.toString()}`);
-        if (res.status === 401 || res.status === 403) return handleAuthFailure();
+        const res = await fetch(`/api/curriculum?${params.toString()}`, { credentials: "include" });
+        if (res.status === 401) return handleAuthFailure();
 
-        const data = (await res.json().catch(() => ({}))) as CurriculumResponse;
+        const data = (await readJsonSafe(res)) as CurriculumResponse;
 
-        if (!res.ok || !data.ok || !data.item) {
+        if (res.status === 403) {
           if (!cancelled) {
             setCurriculum(null);
-            setCurriculumError(data.error ?? "Failed to load curriculum hierarchy. Please try again.");
+            setCurriculumError(pickErrorMessage(res, data, "Forbidden."));
+          }
+          return;
+        }
+
+        if (!res.ok || !data?.ok || !data.item) {
+          if (!cancelled) {
+            setCurriculum(null);
+            setCurriculumError(data?.error ?? "Failed to load curriculum hierarchy. Please try again.");
           }
           return;
         }
@@ -492,15 +575,25 @@ export default function TeacherCurriculumExplorerClient() {
       const res = await fetch(`/api/schemes?mode=summary`, {
         method: "GET",
         headers: { "Cache-Control": "no-store" },
+        credentials: "include",
       });
-      if (res.status === 401 || res.status === 403) return handleAuthFailure();
 
-      const data = (await res.json().catch(() => ({}))) as SchemesListResponse;
-      if (!res.ok || !data.ok || !Array.isArray(data.items)) {
+      if (res.status === 401) return handleAuthFailure();
+
+      const data = (await readJsonSafe(res)) as SchemesListResponse;
+
+      if (res.status === 403) {
         setSchemeSummary([]);
-        setSchemeSummaryError(data.error ?? "Failed to load schemes summary.");
+        setSchemeSummaryError(pickErrorMessage(res, data, "Forbidden."));
         return;
       }
+
+      if (!res.ok || !data?.ok || !Array.isArray(data.items)) {
+        setSchemeSummary([]);
+        setSchemeSummaryError(data?.error ?? "Failed to load schemes summary.");
+        return;
+      }
+
       setSchemeSummary(data.items);
     } catch (err) {
       console.error("Error loading scheme summary", err);
@@ -519,9 +612,11 @@ export default function TeacherCurriculumExplorerClient() {
 
     try {
       const params = new URLSearchParams();
+
+      // ✅ slug-first (stable), name fallback
+      if (curriculum.slug) params.set("subjectSlug", curriculum.slug);
       params.set("subject", curriculum.name);
 
-      // In scheme-mode we MUST scope by term/year (the gate is term/year)
       if (schemeMode) {
         if (schemeTerm) params.set("term", schemeTerm);
         if (schemeAcademicYear) params.set("academicYear", schemeAcademicYear);
@@ -530,14 +625,22 @@ export default function TeacherCurriculumExplorerClient() {
       const res = await fetch(`/api/schemes?${params.toString()}`, {
         method: "GET",
         headers: { "Cache-Control": "no-store" },
+        credentials: "include",
       });
-      if (res.status === 401 || res.status === 403) return handleAuthFailure();
 
-      const data = (await res.json().catch(() => ({}))) as SchemesListResponse;
+      if (res.status === 401) return handleAuthFailure();
 
-      if (!res.ok || !data.ok || !Array.isArray(data.items)) {
+      const data = (await readJsonSafe(res)) as SchemesListResponse;
+
+      if (res.status === 403) {
         setSchemes([]);
-        setSchemesError(data.error ?? "Failed to load schemes of work for this subject.");
+        setSchemesError(pickErrorMessage(res, data, "Forbidden."));
+        return;
+      }
+
+      if (!res.ok || !data?.ok || !Array.isArray(data.items)) {
+        setSchemes([]);
+        setSchemesError(data?.error ?? "Failed to load schemes of work for this subject.");
         return;
       }
 
@@ -552,7 +655,6 @@ export default function TeacherCurriculumExplorerClient() {
     }
   }
 
-  // Auto-load summary + subject schemes when in schemeMode and curriculum is loaded
   useEffect(() => {
     if (!schemeMode) return;
     void loadSchemeSummary();
@@ -566,30 +668,31 @@ export default function TeacherCurriculumExplorerClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schemeMode, curriculum, schemeTerm, schemeAcademicYear]);
 
-  // Return unlock condition (any scheme for this term/year has >= 1 item)
   const canReturnToLessonNotes = useMemo(() => {
     if (!schemeMode) return false;
     if (!schemeTerm || !schemeAcademicYear) return false;
-    return schemeSummary.some((s) => s.term === schemeTerm && s.academicYear === schemeAcademicYear && s.itemCount > 0);
+    return schemeSummary.some(
+      (s) => s.term === schemeTerm && s.academicYear === schemeAcademicYear && getSchemeCount(s) > 0
+    );
   }, [schemeMode, schemeTerm, schemeAcademicYear, schemeSummary]);
 
   async function handleAddSelectedIndicatorToScheme() {
-    setSchemeMsg(null);
+    setSchemeNotice(null);
     setAddToSchemeMessage(null);
 
     if (!curriculum || !selectedIndicator) {
-      setSchemeMsg("Select an indicator first.");
+      setSchemeNotice({ tone: "error", text: "Select an indicator first." });
       return;
     }
 
     if (!schemeTerm || !schemeAcademicYear) {
-      setSchemeMsg("Set term and academic year first.");
+      setSchemeNotice({ tone: "error", text: "Set term and academic year first." });
       return;
     }
 
     const week = Number.parseInt(schemeWeekNumber, 10);
     if (!Number.isFinite(week) || week <= 0) {
-      setSchemeMsg("Enter a valid week number (1, 2, 3…).");
+      setSchemeNotice({ tone: "error", text: "Enter a valid week number (1, 2, 3…)." });
       return;
     }
 
@@ -599,7 +702,6 @@ export default function TeacherCurriculumExplorerClient() {
     const csCode = contentStandardForSelectedIndicator?.code ?? null;
     const indicatorDescription = selectedIndicator.description ?? "";
 
-    // if there is an existing scheme (for this subject+term+year), reuse it
     const schemeId = schemes.length > 0 ? (selectedSchemeIdForAdd || schemes[0].id) : undefined;
 
     setAddToSchemeSaving(true);
@@ -608,15 +710,21 @@ export default function TeacherCurriculumExplorerClient() {
       const res = await fetch("/api/schemes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           classroomId: null,
+
+          // ✅ future-proof: send both name and slug at top-level
           subject: curriculum.name,
+          subjectSlug: curriculum.slug ?? null,
+
           term: schemeTerm,
           academicYear: schemeAcademicYear,
           title: `${curriculum.name} – ${schemeTerm} (${schemeAcademicYear})`,
           notes: null,
           weekNumber: week,
           schemeId,
+
           indicatorSlice: {
             indicatorId: selectedIndicator.id,
             indicatorCode: selectedIndicator.code,
@@ -634,24 +742,35 @@ export default function TeacherCurriculumExplorerClient() {
         }),
       });
 
-      if (res.status === 401 || res.status === 403) return handleAuthFailure();
-      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) return handleAuthFailure();
 
-      if (!res.ok || !data.ok) {
-        const msg = data.error ?? "Failed to add indicator to scheme.";
-        setSchemeMsg(msg);
+      const data = await readJsonSafe(res);
+
+      if (res.status === 403) {
+        const msg = pickErrorMessage(
+          res,
+          data,
+          "Forbidden. This usually means your teacher profile isn’t assigned to this subject/level."
+        );
+        setSchemeNotice({ tone: "error", text: msg });
         setAddToSchemeMessage(msg);
         return;
       }
 
-      setSchemeMsg("Saved. Indicator added to scheme.");
+      if (!res.ok || !data?.ok) {
+        const msg = pickErrorMessage(res, data, "Failed to add indicator to scheme.");
+        setSchemeNotice({ tone: "error", text: msg });
+        setAddToSchemeMessage(msg);
+        return;
+      }
+
+      setSchemeNotice({ tone: "ok", text: "Saved. Indicator added to scheme." });
       setAddToSchemeMessage("Saved. Indicator added to scheme.");
 
-      // refresh lists so return button can unlock
       await Promise.all([loadSchemesForSubject(), loadSchemeSummary()]);
     } catch (err) {
       console.error("Error adding to scheme", err);
-      setSchemeMsg("Network or server error while adding to scheme.");
+      setSchemeNotice({ tone: "error", text: "Network or server error while adding to scheme." });
       setAddToSchemeMessage("Network or server error while adding to scheme.");
     } finally {
       setAddToSchemeSaving(false);
@@ -662,9 +781,14 @@ export default function TeacherCurriculumExplorerClient() {
     if (!schemeMode) return;
 
     const p = new URLSearchParams(searchParams.toString());
-    if (schemeTerm) p.set("term", schemeTerm);
+
+    const t = normalizeTermClient(schemeTerm) || schemeTerm;
+    const y = normalizeAcademicYearClient(schemeAcademicYear);
+
+    if (t) p.set("term", t);
     else p.delete("term");
-    if (schemeAcademicYear) p.set("academicYear", schemeAcademicYear);
+
+    if (y) p.set("academicYear", y);
     else p.delete("academicYear");
 
     router.replace(`/teacher/curriculum?${p.toString()}`);
@@ -941,7 +1065,6 @@ export default function TeacherCurriculumExplorerClient() {
 
           {/* RIGHT */}
           <aside className="space-y-4">
-            {/* Scheme Builder Panel (only in scheme mode) */}
             {schemeMode && (
               <div className="border rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-sky-50 border-emerald-100 p-4 md:p-5 space-y-3">
                 <div className="flex items-start justify-between gap-2">
@@ -967,7 +1090,11 @@ export default function TeacherCurriculumExplorerClient() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-medium text-zinc-700 mb-1">Term</label>
-                    <select className={selectBase} value={schemeTerm} onChange={(e) => setSchemeTerm(e.target.value)}>
+                    <select
+                      className={selectBase}
+                      value={schemeTerm}
+                      onChange={(e) => setSchemeTerm(normalizeTermClient(e.target.value) || e.target.value)}
+                    >
                       <option value="">— Select term —</option>
                       <option value="1st Term">1st Term</option>
                       <option value="2nd Term">2nd Term</option>
@@ -980,7 +1107,7 @@ export default function TeacherCurriculumExplorerClient() {
                     <input
                       className={inputBase}
                       value={schemeAcademicYear}
-                      onChange={(e) => setSchemeAcademicYear(e.target.value)}
+                      onChange={(e) => setSchemeAcademicYear(normalizeAcademicYearClient(e.target.value))}
                       placeholder="2025/2026"
                     />
                   </div>
@@ -1032,7 +1159,7 @@ export default function TeacherCurriculumExplorerClient() {
                         >
                           {schemes.map((s) => (
                             <option key={s.id} value={s.id}>
-                              {(s.title ?? s.subject) + ` · items: ${s.itemCount}`}
+                              {(s.title ?? s.subject) + ` · items: ${getSchemeCount(s)}`}
                             </option>
                           ))}
                         </select>
@@ -1055,24 +1182,36 @@ export default function TeacherCurriculumExplorerClient() {
                   </div>
                 )}
 
-                {schemeMsg && (
-                  <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
-                    {schemeMsg}
+                {schemeNotice && (
+                  <p
+                    className={[
+                      "text-[11px] rounded-xl px-3 py-1.5 border",
+                      schemeNotice.tone === "ok"
+                        ? "text-emerald-800 bg-emerald-50 border-emerald-200"
+                        : schemeNotice.tone === "info"
+                          ? "text-sky-800 bg-sky-50 border-sky-200"
+                          : "text-red-800 bg-red-50 border-red-200",
+                    ].join(" ")}
+                  >
+                    {schemeNotice.text}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Indicator details (existing) */}
             <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold text-zinc-900">3 · Focus indicator &amp; details</h2>
                 {selectedIndicator && !schemeMode && (
-                  <button type="button" className={btnPrimary + " text-[11px] h-8"} onClick={async () => {
-                    setAddToSchemeMessage(null);
-                    if (!schemes.length && !schemesLoading) await loadSchemesForSubject();
-                    setAddToSchemeOpen(true);
-                  }}>
+                  <button
+                    type="button"
+                    className={btnPrimary + " text-[11px] h-8"}
+                    onClick={async () => {
+                      setAddToSchemeMessage(null);
+                      if (!schemes.length && !schemesLoading) await loadSchemesForSubject();
+                      setAddToSchemeOpen(true);
+                    }}
+                  >
                     Add to Scheme of Work
                   </button>
                 )}
@@ -1167,7 +1306,6 @@ export default function TeacherCurriculumExplorerClient() {
               )}
             </div>
 
-            {/* Trust & Source */}
             <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-2 text-xs text-zinc-600">
               <h3 className="text-xs font-semibold text-zinc-800">Curriculum Trust &amp; Source</h3>
 
@@ -1232,7 +1370,6 @@ export default function TeacherCurriculumExplorerClient() {
         </section>
       </div>
 
-      {/* Keep your old modal for non-scheme mode only */}
       {addToSchemeOpen && !schemeMode && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-4 md:p-5 space-y-3">
@@ -1270,7 +1407,8 @@ export default function TeacherCurriculumExplorerClient() {
                       ))}
                     </select>
                     <p className="text-[11px] text-zinc-500">
-                      For scheme-first flow, use Lesson Notes → scheme mode instead (it enforces term/year).
+                      Best practice: use <span className="font-semibold">Lesson Notes → Prepare scheme of work</span> (scheme mode)
+                      so term/year/week are enforced.
                     </p>
                   </>
                 ) : (

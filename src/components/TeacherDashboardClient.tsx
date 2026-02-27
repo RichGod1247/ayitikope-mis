@@ -1,4 +1,3 @@
-// src/components/TeacherDashboardClient.tsx
 "use client";
 
 import Link from "next/link";
@@ -66,13 +65,7 @@ function clampPct(v: number) {
   return Math.max(0, Math.min(100, v));
 }
 
-function Bar({
-  value,
-  label,
-}: {
-  value: number;
-  label: string;
-}) {
+function Bar({ value, label }: { value: number; label: string }) {
   const w = clampPct(value);
   return (
     <div className="space-y-1">
@@ -81,10 +74,7 @@ function Bar({
         <span className="font-medium text-slate-800">{fmtPct(w)}</span>
       </div>
       <div className="h-2 w-full rounded-full bg-slate-100">
-        <div
-          className="h-2 rounded-full bg-sky-600 transition-[width] duration-300"
-          style={{ width: `${w}%` }}
-        />
+        <div className="h-2 rounded-full bg-sky-600 transition-[width] duration-300" style={{ width: `${w}%` }} />
       </div>
     </div>
   );
@@ -101,47 +91,42 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
 
 export default function TeacherDashboardClient({
   snapshot,
-  tenantId,
-  teacherUserId,
   defaultTerm,
   defaultAcademicYear,
   demoClassroomId,
+
+  // legacy props (ignored) — backward-compat only
+  tenantId,
+  teacherUserId,
 }: {
   snapshot: Snapshot;
-  tenantId: string;
-  teacherUserId: string;
+
   defaultTerm: string;
   defaultAcademicYear: string;
   demoClassroomId?: string;
+
+  tenantId?: string;
+  teacherUserId?: string;
 }) {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const hasPortalContext = Boolean(tenantId && teacherUserId);
+  // ✅ Clean routes: tenant context comes from session
+  const attendanceUrl = "/teacher/attendance";
+  const lessonNotesUrl = "/teacher/lesson-notes";
 
-  const attendanceUrl = hasPortalContext
-    ? `/teacher/attendance?tenantId=${encodeURIComponent(tenantId)}&teacherUserId=${encodeURIComponent(
-        teacherUserId
-      )}`
-    : "/teacher/attendance";
-
-  const lessonNotesUrl = hasPortalContext
-    ? `/teacher/lesson-notes?tenantId=${encodeURIComponent(tenantId)}&teacherUserId=${encodeURIComponent(
-        teacherUserId
-      )}`
-    : "/teacher/lesson-notes";
-
-  const termDashboardUrl = hasPortalContext
-    ? `/teacher/assessment/term-dashboard?tenantId=${encodeURIComponent(
-        tenantId
-      )}&teacherUserId=${encodeURIComponent(teacherUserId)}${
-        demoClassroomId ? `&classroomId=${encodeURIComponent(demoClassroomId)}` : ""
-      }&term=${encodeURIComponent(defaultTerm)}&academicYear=${encodeURIComponent(defaultAcademicYear)}`
-    : "/teacher/assessment/term-dashboard";
+  const termDashboardUrl = useMemo(() => {
+    const p = new URLSearchParams();
+    if (demoClassroomId) p.set("classroomId", demoClassroomId);
+    if (defaultTerm) p.set("term", defaultTerm);
+    if (defaultAcademicYear) p.set("academicYear", defaultAcademicYear);
+    const qs = p.toString();
+    return `/teacher/assessment/term-dashboard${qs ? `?${qs}` : ""}`;
+  }, [demoClassroomId, defaultTerm, defaultAcademicYear]);
 
   const curriculumExplorerUrl = "/teacher/curriculum";
   const wellbeingUrl = "/teacher/health";
-  const communicationSupportUrl = "/teacher/airtime"; // create later (we won’t reveal internal billing logic)
+  const communicationSupportUrl = "/teacher/airtime";
 
   const tiles = useMemo(
     () => [
@@ -188,7 +173,7 @@ export default function TeacherDashboardClient({
         tone: "violet",
       },
     ],
-    [lessonNotesUrl, termDashboardUrl, attendanceUrl]
+    [lessonNotesUrl, termDashboardUrl, attendanceUrl, curriculumExplorerUrl, wellbeingUrl, communicationSupportUrl]
   );
 
   const lessonWeeks = snapshot.lessonNotes.availableWeeks ?? [];
@@ -213,7 +198,6 @@ export default function TeacherDashboardClient({
 
   return (
     <div className="min-h-[calc(100vh-65px)] bg-gradient-to-b from-sky-50/60 via-white to-sky-50/40 px-4 py-6 md:px-8 md:py-8">
-      {/* local keyframes without tailwind config */}
       <style>{`
         @keyframes edulifeWiggle {
           0% { transform: translateY(0) rotate(0deg); }
@@ -224,18 +208,15 @@ export default function TeacherDashboardClient({
       `}</style>
 
       <div className="mx-auto w-full max-w-6xl space-y-6">
-        {/* Header */}
         <section className="rounded-3xl border border-sky-100/80 bg-white/90 p-6 shadow-sm backdrop-blur-md md:p-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-sky-500">
-                EduLife OS · Teacher Dashboard
-              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-sky-500">EduLife OS · Teacher Dashboard</p>
               <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-sky-950 md:text-3xl">
                 Welcome back, {snapshot.teacher.displayName}.
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-700 md:text-base">
-                Here’s your calm command center — a quick glance at today, then a clear path into what matters most.
+                Your calm command center — quick glance at today, then straight into what matters.
               </p>
 
               <div className="mt-3 flex flex-wrap gap-2">
@@ -264,19 +245,13 @@ export default function TeacherDashboardClient({
           </div>
         </section>
 
-        {/* At-a-glance cards */}
         <section className="grid gap-4 md:grid-cols-3">
-          {/* Attendance + Health */}
           <div className="rounded-3xl border border-sky-100 bg-white/90 p-5 shadow-sm backdrop-blur-md md:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold text-sky-700">Today</p>
-                <h2 className="text-base font-bold text-slate-900 md:text-lg">
-                  Attendance & Health
-                </h2>
-                <p className="mt-1 text-xs text-slate-600">
-                  A quick pulse-check for the day.
-                </p>
+                <h2 className="text-base font-bold text-slate-900 md:text-lg">Attendance & Health</h2>
+                <p className="mt-1 text-xs text-slate-600">A quick pulse-check for the day.</p>
               </div>
               <Link
                 href={attendanceUrl}
@@ -316,25 +291,19 @@ export default function TeacherDashboardClient({
               </div>
 
               <p className="mt-2 text-[11px] text-slate-600">
-                Health alerts:{" "}
-                <span className="font-semibold text-slate-900">{snapshot.today.health.feverCount}</span>{" "}
+                Health alerts: <span className="font-semibold text-slate-900">{snapshot.today.health.feverCount}</span>{" "}
                 · Parent updates sent:{" "}
                 <span className="font-semibold text-slate-900">{snapshot.today.health.sentToParentCount}</span>
               </p>
             </div>
           </div>
 
-          {/* Lesson notes */}
           <div className="rounded-3xl border border-emerald-100 bg-white/90 p-5 shadow-sm backdrop-blur-md md:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold text-emerald-700">This week</p>
-                <h2 className="text-base font-bold text-slate-900 md:text-lg">
-                  Lesson Notes Status
-                </h2>
-                <p className="mt-1 text-xs text-slate-600">
-                  Keep your week clean and stress-free.
-                </p>
+                <h2 className="text-base font-bold text-slate-900 md:text-lg">Lesson Notes Status</h2>
+                <p className="mt-1 text-xs text-slate-600">Keep your week clean and stress-free.</p>
               </div>
               <Link
                 href={lessonNotesUrl}
@@ -377,15 +346,11 @@ export default function TeacherDashboardClient({
               <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-3 py-2">
                   <div className="text-[11px] text-emerald-700">Items</div>
-                  <div className="text-xl font-extrabold text-emerald-950">
-                    {totalLessonNotesInWeek}
-                  </div>
+                  <div className="text-xl font-extrabold text-emerald-950">{totalLessonNotesInWeek}</div>
                 </div>
                 <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-3 py-2">
                   <div className="text-[11px] text-emerald-700">Latest</div>
-                  <div className="text-sm font-bold text-emerald-950">
-                    {ln?.status ?? "—"}
-                  </div>
+                  <div className="text-sm font-bold text-emerald-950">{ln?.status ?? "—"}</div>
                   <div className="text-[10px] text-emerald-800/80">
                     {ln?.updatedAt ? new Date(ln.updatedAt).toLocaleString("en-GB") : ""}
                   </div>
@@ -410,37 +375,26 @@ export default function TeacherDashboardClient({
 
               {ln?.headteacherComment ? (
                 <div className="rounded-2xl border border-emerald-100 bg-white px-3 py-2">
-                  <div className="text-[11px] font-semibold text-emerald-800">
-                    Headteacher note
-                  </div>
-                  <p className="mt-1 text-xs text-slate-700 line-clamp-3">
-                    {ln.headteacherComment}
-                  </p>
+                  <div className="text-[11px] font-semibold text-emerald-800">Headteacher note</div>
+                  <p className="mt-1 text-xs text-slate-700 line-clamp-3">{ln.headteacherComment}</p>
                 </div>
               ) : null}
 
               {snapshot.lessonNotes.latestAnnouncement ? (
                 <p className="text-[11px] text-slate-600">
                   Latest school update:{" "}
-                  <span className="font-semibold text-slate-900">
-                    {snapshot.lessonNotes.latestAnnouncement.title}
-                  </span>
+                  <span className="font-semibold text-slate-900">{snapshot.lessonNotes.latestAnnouncement.title}</span>
                 </p>
               ) : null}
             </div>
           </div>
 
-          {/* Assessments */}
           <div className="rounded-3xl border border-indigo-100 bg-white/90 p-5 shadow-sm backdrop-blur-md md:p-6">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold text-indigo-700">This term</p>
-                <h2 className="text-base font-bold text-slate-900 md:text-lg">
-                  Assessments Overview
-                </h2>
-                <p className="mt-1 text-xs text-slate-600">
-                  {snapshot.assessments.scopeLabel}
-                </p>
+                <h2 className="text-base font-bold text-slate-900 md:text-lg">Assessments Overview</h2>
+                <p className="mt-1 text-xs text-slate-600">{snapshot.assessments.scopeLabel}</p>
               </div>
               <Link
                 href={termDashboardUrl}
@@ -499,24 +453,17 @@ export default function TeacherDashboardClient({
                   </div>
                 </div>
               ) : (
-                <p className="text-[11px] text-slate-600">
-                  No assessments recorded for this term yet.
-                </p>
+                <p className="text-[11px] text-slate-600">No assessments recorded for this term yet.</p>
               )}
             </div>
           </div>
         </section>
 
-        {/* What's waiting inside */}
         <section className="rounded-3xl border border-sky-100 bg-white/90 p-5 shadow-sm backdrop-blur-md md:p-6">
           <div className="mb-4 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-900 md:text-lg">
-                What’s waiting inside
-              </h2>
-              <p className="text-[11px] text-slate-600 md:text-xs">
-                Pick your next move — each tile takes you straight into the workflow.
-              </p>
+              <h2 className="text-base font-semibold text-slate-900 md:text-lg">What’s waiting inside</h2>
+              <p className="text-[11px] text-slate-600 md:text-xs">Each tile jumps straight into the workflow.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Link
@@ -556,8 +503,7 @@ export default function TeacherDashboardClient({
                   className={`group relative flex flex-col justify-between rounded-2xl border p-4 text-left shadow-[0_1px_4px_rgba(15,23,42,0.06)] transition hover:shadow-md ${tone}`}
                   style={{ willChange: "transform" }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLAnchorElement).style.animation =
-                      "edulifeWiggle 520ms ease-in-out";
+                    (e.currentTarget as HTMLAnchorElement).style.animation = "edulifeWiggle 520ms ease-in-out";
                   }}
                   onAnimationEnd={(e) => {
                     (e.currentTarget as HTMLAnchorElement).style.animation = "";
@@ -567,19 +513,13 @@ export default function TeacherDashboardClient({
                     <div className="mb-2 inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-slate-700">
                       {t.badge}
                     </div>
-                    <h3 className="text-sm font-semibold text-slate-950 md:text-base">
-                      {t.title}
-                    </h3>
-                    <p className="mt-1 text-xs text-slate-700 md:text-sm">
-                      {t.desc}
-                    </p>
+                    <h3 className="text-sm font-semibold text-slate-950 md:text-base">{t.title}</h3>
+                    <p className="mt-1 text-xs text-slate-700 md:text-sm">{t.desc}</p>
                   </div>
 
                   <div className="mt-3 flex items-center justify-between text-[11px] text-slate-700">
                     <span className="opacity-80">Open now</span>
-                    <span className="font-medium text-slate-900 group-hover:underline">
-                      Go →
-                    </span>
+                    <span className="font-medium text-slate-900 group-hover:underline">Go →</span>
                   </div>
                 </Link>
               );
@@ -587,12 +527,11 @@ export default function TeacherDashboardClient({
           </div>
         </section>
 
-        {/* Quiet note about correctness */}
         <section className="rounded-3xl border border-slate-100 bg-white/80 p-4 text-[11px] text-slate-600 shadow-sm md:text-xs">
           <p>
             Important: Assessments are currently shown as a <span className="font-semibold">term snapshot (schoolwide)</span>{" "}
-            because <span className="font-mono">AssessmentItem</span> does not yet store who created it. If you want truly
-            teacher-specific analytics, we’ll add <span className="font-mono">createdByUserId</span> in the next migration.
+            because <span className="font-mono">AssessmentItem</span> does not yet store who created it. To make analytics
+            teacher-specific, add <span className="font-mono">createdByUserId</span> in the next migration.
           </p>
         </section>
       </div>

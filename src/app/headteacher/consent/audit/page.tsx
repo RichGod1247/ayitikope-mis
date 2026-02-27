@@ -1,93 +1,86 @@
-'use client';
+// src/app/headteacher/consent/audit/page.tsx
+'use client'
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react'
 
-type Tenant = { id: string; name: string; slug: string };
+type Tenant = { id: string; name: string; slug: string }
+
 type AuditItem = {
-  id?: string;
-  createdAt?: string;
-  tenantId?: string;
-  channel?: string;        // e.g., "SMS"
-  action?: string;         // e.g., "OUTBOUND_SMS_SEND"
-  to?: string;             // some APIs might use 'to'
-  toPhone?: string;        // others might use 'toPhone'
-  smsBody?: string;        // body fields may vary
-  body?: string;
-  message?: string;
-  preview?: string;
-  purpose?: string;        // e.g., "CONSENT_CAMPAIGN"
-  meta?: any;              // whatever else your API returns
-};
-
-function cx(...classes: (string | false | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
+  id?: string
+  createdAt?: string
+  tenantId?: string
+  channel?: string
+  action?: string
+  to?: string
+  toPhone?: string
+  smsBody?: string
+  body?: string
+  message?: string
+  preview?: string
+  purpose?: string
+  meta?: any
 }
 
-/** Small panel that shows last 20 campaign SMS sends */
+function cx(...classes: (string | false | undefined)[]) {
+  return classes.filter(Boolean).join(' ')
+}
+
+async function fetchTenantsMine(): Promise<Tenant[]> {
+  const res = await fetch('/api/tenants/mine', { cache: 'no-store' })
+  const data = await res.json().catch(() => ({}))
+  const list = Array.isArray(data?.tenants) ? (data.tenants as Tenant[]) : []
+  return list
+}
+
 function CampaignSendsPanel({ tenantId }: { tenantId: string }) {
-  const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<AuditItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false)
+  const [items, setItems] = useState<AuditItem[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   async function load() {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
+    if (!tenantId) return
+    setLoading(true)
+    setError(null)
     try {
-      // Pull enough items to filter client-side if necessary
-      const res = await fetch(
-        `/api/consent/audit/list?tenantId=${encodeURIComponent(tenantId)}&limit=50`,
-        { cache: 'no-store' }
-      );
-      if (!res.ok) throw new Error('Failed to load audit list');
-      const data = await res.json();
-      const raw: AuditItem[] = Array.isArray(data?.items) ? data.items : [];
+      const res = await fetch(`/api/consent/audit/list?tenantId=${encodeURIComponent(tenantId)}&limit=50`, {
+        cache: 'no-store',
+      })
+      if (!res.ok) throw new Error('Failed to load audit list')
+      const data = await res.json().catch(() => ({}))
+      const raw: AuditItem[] = Array.isArray(data?.items) ? data.items : []
 
-      // Prefer explicit campaign purpose when available
       const withPurpose = raw.filter(
-        (r) =>
-          r?.purpose === 'CONSENT_CAMPAIGN' ||
-          r?.meta?.purpose === 'CONSENT_CAMPAIGN'
-      );
+        (r) => r?.purpose === 'CONSENT_CAMPAIGN' || r?.meta?.purpose === 'CONSENT_CAMPAIGN'
+      )
 
       const picked = (withPurpose.length ? withPurpose : raw)
-        .filter(
-          (r) =>
-            ((r?.channel || '').toUpperCase() === 'SMS') ||
-            (r?.action === 'OUTBOUND_SMS_SEND')
-        )
-        .slice(0, 20);
+        .filter((r) => ((r?.channel || '').toUpperCase() === 'SMS') || r?.action === 'OUTBOUND_SMS_SEND')
+        .slice(0, 20)
 
-      setItems(picked);
+      setItems(picked)
     } catch (e: any) {
-      setError(e?.message || 'Failed to load');
+      setError(e?.message || 'Failed to load')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    load();
+    load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  }, [tenantId])
 
   return (
     <div className="rounded-2xl border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Last 20 Campaign Sends</h2>
-        <button
-          className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
-          onClick={load}
-          disabled={loading}
-        >
+        <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50" onClick={load} disabled={loading}>
           {loading ? 'Loading…' : 'Refresh'}
         </button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
       )}
 
       <div className="overflow-x-auto">
@@ -102,22 +95,21 @@ function CampaignSendsPanel({ tenantId }: { tenantId: string }) {
           </thead>
           <tbody>
             {items.map((r, idx) => {
-              const when = r.createdAt ? new Date(r.createdAt).toLocaleString() : '—';
-              const to = r.to || r.toPhone || '—';
-              const ch = (r.channel || r.action || '—').toString().toUpperCase();
-              const preview =
-                r.smsBody || r.body || r.message || r.preview || '(no body)';
+              const when = r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'
+              const to = r.to || r.toPhone || '—'
+              const ch = (r.channel || r.action || '—').toString().toUpperCase()
+              const preview = r.smsBody || r.body || r.message || r.preview || '(no body)'
               return (
                 <tr key={r.id || idx} className="border-b">
                   <td className="p-2">{when}</td>
                   <td className="p-2">{to}</td>
                   <td className="p-2">{ch}</td>
-                  <td className="p-2 wrap-break-word">
+                  <td className="p-2 break-words">
                     {String(preview).slice(0, 140)}
                     {String(preview).length > 140 ? '…' : ''}
                   </td>
                 </tr>
-              );
+              )
             })}
             {!loading && items.length === 0 && (
               <tr>
@@ -130,57 +122,49 @@ function CampaignSendsPanel({ tenantId }: { tenantId: string }) {
         </table>
       </div>
     </div>
-  );
+  )
 }
 
-/** Generic audit table (kept simple & resilient to schema differences) */
 function AllAuditTable({ tenantId }: { tenantId: string }) {
-  const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<AuditItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false)
+  const [items, setItems] = useState<AuditItem[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   async function load() {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
+    if (!tenantId) return
+    setLoading(true)
+    setError(null)
     try {
-      const res = await fetch(
-        `/api/consent/audit/list?tenantId=${encodeURIComponent(tenantId)}&limit=100`,
-        { cache: 'no-store' }
-      );
-      if (!res.ok) throw new Error('Failed to load audit list');
-      const data = await res.json();
-      const raw: AuditItem[] = Array.isArray(data?.items) ? data.items : [];
-      setItems(raw);
+      const res = await fetch(`/api/consent/audit/list?tenantId=${encodeURIComponent(tenantId)}&limit=100`, {
+        cache: 'no-store',
+      })
+      if (!res.ok) throw new Error('Failed to load audit list')
+      const data = await res.json().catch(() => ({}))
+      const raw: AuditItem[] = Array.isArray(data?.items) ? data.items : []
+      setItems(raw)
     } catch (e: any) {
-      setError(e?.message || 'Failed to load');
+      setError(e?.message || 'Failed to load')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    load();
+    load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  }, [tenantId])
 
   return (
     <div className="rounded-2xl border p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">Audit Log (latest 100)</h2>
-        <button
-          className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
-          onClick={load}
-          disabled={loading}
-        >
+        <button className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50" onClick={load} disabled={loading}>
           {loading ? 'Loading…' : 'Refresh'}
         </button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
       )}
 
       <div className="overflow-x-auto">
@@ -196,24 +180,23 @@ function AllAuditTable({ tenantId }: { tenantId: string }) {
           </thead>
           <tbody>
             {items.map((r, idx) => {
-              const when = r.createdAt ? new Date(r.createdAt).toLocaleString() : '—';
-              const ch = (r.channel || r.action || '—').toString();
-              const to = r.to || r.toPhone || '—';
-              const preview =
-                r.smsBody || r.body || r.message || r.preview || '(no body)';
-              const purpose = r.purpose || r.meta?.purpose || '—';
+              const when = r.createdAt ? new Date(r.createdAt).toLocaleString() : '—'
+              const ch = (r.channel || r.action || '—').toString()
+              const to = r.to || r.toPhone || '—'
+              const preview = r.smsBody || r.body || r.message || r.preview || '(no body)'
+              const purpose = r.purpose || r.meta?.purpose || '—'
               return (
                 <tr key={r.id || idx} className="border-b">
                   <td className="p-2">{when}</td>
                   <td className="p-2">{ch}</td>
                   <td className="p-2">{to}</td>
-                  <td className="p-2 wrap-break-word">
+                  <td className="p-2 break-words">
                     {String(preview).slice(0, 160)}
                     {String(preview).length > 160 ? '…' : ''}
                   </td>
                   <td className="p-2">{purpose}</td>
                 </tr>
-              );
+              )
             })}
             {!loading && items.length === 0 && (
               <tr>
@@ -226,45 +209,39 @@ function AllAuditTable({ tenantId }: { tenantId: string }) {
         </table>
       </div>
     </div>
-  );
+  )
 }
 
 export default function AuditPage() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState<string>('');
+  const [tenants, setTenants] = useState<Tenant[]>([])
+  const [tenantId, setTenantId] = useState<string>('')
 
-  // Load tenants
   useEffect(() => {
-    (async () => {
+    ;(async () => {
       try {
-        const res = await fetch('/api/test/tenants', { cache: 'no-store' });
-        const data = await res.json();
-        const list = (data?.tenants ?? []) as Tenant[];
-        setTenants(list);
-        if (!tenantId && list.length > 0) {
-          setTenantId(list[0].id);
-        }
+        const list = await fetchTenantsMine()
+        setTenants(list)
+        if (!tenantId && list.length > 0) setTenantId(list[0].id)
       } catch {
         // silent
       }
-    })();
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [])
 
-  const currentTenant = useMemo(
-    () => tenants.find((t) => t.id === tenantId),
-    [tenants, tenantId]
-  );
+  const currentTenant = useMemo(() => tenants.find((t) => t.id === tenantId), [tenants, tenantId])
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header / toolbar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Consent Audit</h1>
-          <p className="text-sm text-gray-500">
-            Review of consent actions, SMS outreach, and related activity.
-          </p>
+          <p className="text-sm text-gray-500">Review of consent actions, SMS outreach, and related activity.</p>
+          {currentTenant && (
+            <p className="text-xs text-gray-400 mt-1">
+              Tenant: <span className="font-medium">{currentTenant.name}</span>
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -284,11 +261,8 @@ export default function AuditPage() {
         </div>
       </div>
 
-      {/* Campaign sends panel */}
       {tenantId && <CampaignSendsPanel tenantId={tenantId} />}
-
-      {/* Full audit table */}
       {tenantId && <AllAuditTable tenantId={tenantId} />}
     </div>
-  );
+  )
 }

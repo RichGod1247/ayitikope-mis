@@ -1,12 +1,18 @@
-// src/app/api/teachers/assessment/term-summary/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
   return NextResponse.json(payload, {
     ...init,
-    headers: { "Cache-Control": "no-store", ...(init?.headers ?? {}) },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
   });
 }
 
@@ -25,8 +31,18 @@ function gesFromPct(pct: number | null) {
   return { grade: 9, remark: "Lowest / Fail" };
 }
 
+/**
+ * GET /api/teachers/assessments/term-summary?classroomId=...&term=...&academicYear=...
+ *
+ * Computes subject-level average % across ALL learners (and overall avg across subjects).
+ */
 export async function GET(req: NextRequest) {
-  const ctx = await requireServerUserContext({ requireTenant: true });
+  const gate = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["SUPERADMIN", "SCHOOL_ADMIN", "HEADTEACHER", "TEACHER"],
+  });
+  if (!gate.ok) return gate.res;
+  const ctx = gate.ctx;
 
   const { searchParams } = new URL(req.url);
   const classroomId = (searchParams.get("classroomId") ?? "").trim();
@@ -34,72 +50,57 @@ export async function GET(req: NextRequest) {
   const academicYear = (searchParams.get("academicYear") ?? "").trim();
 
   if (!classroomId || !term || !academicYear) {
-    return jsonNoStore(
-      { ok: false, error: "classroomId, term and academicYear are required." },
-      { status: 400 }
-    );
+    return jsonNoStore({ ok: false, error: "classroomId, term and academicYear are required." }, { status: 400 });
   }
 
   const classroom = await prisma.classroom.findFirst({
     where: { id: classroomId, tenantId: ctx.tenantId },
     select: { id: true, name: true, grade: true, arm: true },
   });
-
-  if (!classroom) {
-    return jsonNoStore({ ok: false, error: "Classroom not found." }, { status: 404 });
-  }
+  if (!classroom) return jsonNoStore({ ok: false, error: "Classroom not found." }, { status: 404 });
 
   const students = await prisma.student.findMany({
     where: { tenantId: ctx.tenantId, classroomId },
     select: { id: true },
   });
-
   const studentIds = students.map((s) => s.id);
 
   const items = await prisma.assessmentItem.findMany({
     where: { tenantId: ctx.tenantId, classroomId, term, academicYear },
     select: { id: true, subject: true, maxScore: true },
   });
-
   const itemIds = items.map((i) => i.id);
 
-  const scores = itemIds.length
-    ? await prisma.assessmentScore.findMany({
-        where: {
-          itemId: { in: itemIds },
-          ...(studentIds.length ? { studentId: { in: studentIds } } : {}),
-        },
-        select: { itemId: true, studentId: true, score: true },
-      })
-    : [];
+  const scores =
+    itemIds.length > 0
+      ? await prisma.assessmentScore.findMany({
+          where: {
+            itemId: { in: itemIds },
+            ...(studentIds.length ? { studentId: { in: studentIds } } : {}),
+          },
+          select: { itemId: true, studentId: true, score: true },
+        })
+      : [];
 
-  const itemById = new Map(items.map((i) => [i.id, i]));
-  const scoreMap = new Map<string, number>(); // `${studentId}__${itemId}` -> score
+  const scoreMap = new Map<string, number>();
+  for (const s of scores) scoreMap.set(`${s.studentId}__${s.itemId}`, Number(s.score) || 0);
 
-  for (const s of scores) {
-    scoreMap.set(`${s.studentId}__${s.itemId}`, s.score);
-  }
-
-  // subject -> per-student pct sum
-  const subjectAgg = new Map<
-    string,
-    { subject: string; itemCount: number; sumPct: number; denom: number }
-  >();
+  const subjectAgg = new Map<string, { subject: string; itemCount: number; sumPct: number; denom: number }>();
 
   for (const it of items) {
-    const sub = it.subject;
-    const agg = subjectAgg.get(sub) ?? { subject: sub, itemCount: 0, sumPct: 0, denom: 0 };
+    const subject = (it.subject ?? "").trim() || "Unknown";
+    const agg = subjectAgg.get(subject) ?? { subject, itemCount: 0, sumPct: 0, denom: 0 };
     agg.itemCount += 1;
 
-    // average across all learners in class (missing scores count as 0)
     for (const st of studentIds) {
       const sc = scoreMap.get(`${st}__${it.id}`) ?? 0;
-      const pct = it.maxScore > 0 ? (sc / it.maxScore) * 100 : 0;
+      const max = Number(it.maxScore) || 0;
+      const pct = max > 0 ? (sc / max) * 100 : 0;
       agg.sumPct += pct;
       agg.denom += 1;
     }
 
-    subjectAgg.set(sub, agg);
+    subjectAgg.set(subject, agg);
   }
 
   const subjects = Array.from(subjectAgg.values())

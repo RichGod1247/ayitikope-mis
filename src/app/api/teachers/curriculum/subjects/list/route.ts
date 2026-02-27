@@ -25,12 +25,20 @@ export async function GET(_req: NextRequest) {
   let ctx: { userId: string; tenantId: string };
   try {
     const c = await requireServerUserContext({
-      redirectTo: "/teacher/curriculum",
       requireTenant: true,
     });
     ctx = { userId: c.userId, tenantId: c.tenantId };
   } catch {
     return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
+  // ✅ Membership gate (ACTIVE only)
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+    select: { status: true },
+  });
+  if (!membership || membership.status !== "ACTIVE") {
+    return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
   try {

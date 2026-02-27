@@ -1,7 +1,7 @@
 // src/app/student/attendance/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type AttendanceSummary = {
@@ -31,7 +31,21 @@ function formatPercent(v: number | null | undefined): string {
   return `${v.toFixed(1)}%`;
 }
 
-export default function StudentAttendancePage() {
+function StudentAttendanceSkeleton() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-emerald-50">
+      <div className="mx-auto max-w-5xl px-4 py-6 md:py-8 space-y-6">
+        <div className="h-7 w-56 rounded bg-slate-200 animate-pulse" />
+        <div className="h-28 rounded-2xl bg-white/90 border border-zinc-200 shadow-sm animate-pulse" />
+        <div className="h-44 rounded-2xl bg-white/90 border border-zinc-200 shadow-sm animate-pulse" />
+        <div className="h-64 rounded-2xl bg-emerald-50/80 border border-emerald-200 shadow-sm animate-pulse" />
+        <div className="h-56 rounded-2xl bg-indigo-50/80 border border-indigo-200 shadow-sm animate-pulse" />
+      </div>
+    </main>
+  );
+}
+
+function StudentAttendanceInner() {
   const searchParams = useSearchParams();
   const initialTenantId = searchParams.get("tenantId") || "";
 
@@ -74,10 +88,7 @@ export default function StudentAttendancePage() {
     setExplanation(null);
 
     try {
-      const url = new URL(
-        "/api/parent/attendance/summary",
-        window.location.origin
-      );
+      const url = new URL("/api/parent/attendance/summary", window.location.origin);
       url.searchParams.set("studentId", studentId.trim());
       url.searchParams.set("term", term.trim());
       url.searchParams.set("academicYear", academicYear.trim());
@@ -106,10 +117,8 @@ export default function StudentAttendancePage() {
         academicYear: json.academicYear || academicYear,
         studentId: json.studentId || studentId.trim(),
       });
-    } catch (err) {
-      setSummaryError(
-        "Network or server error while loading attendance. Please try again."
-      );
+    } catch {
+      setSummaryError("Network or server error while loading attendance. Please try again.");
       setSummary(null);
       setSummaryMeta(null);
     } finally {
@@ -129,14 +138,12 @@ export default function StudentAttendancePage() {
 
     // Case 1: no sessions yet
     if (!s.totalSessions || s.totalSessions === 0) {
-      lines.push(
-        `For **${termLabel}**, there are no recorded attendance sessions yet in EduLife OS.`
-      );
+      lines.push(`For ${termLabel}, there are no recorded attendance sessions yet in EduLife OS.`);
       lines.push(
         `That usually means teachers have not started using the digital register for this term, or they are still setting things up.`
       );
       lines.push(
-        `Your job for now is simple: keep coming to school **every day and on time**, so that when the digital register goes live, your record already matches your real behaviour.`
+        `Your job for now is simple: keep coming to school every day and on time, so that when the digital register goes live, your record already matches your real behaviour.`
       );
       lines.push("");
       lines.push(
@@ -157,91 +164,60 @@ export default function StudentAttendancePage() {
         ? (s.daysPresent / s.totalSessions) * 100
         : null;
 
-    const present = s.daysPresent;
     const absent = s.daysAbsent;
     const late = s.daysLate;
     const excused = s.daysExcused ?? 0;
 
-    // Overall sentence
     if (rate != null) {
       lines.push(
-        `For **${termLabel}**, your attendance rate is about **${rate.toFixed(
-          1
-        )}%**, based on **${s.totalSessions}** recorded school days.`
+        `For ${termLabel}, your attendance rate is about ${rate.toFixed(1)}%, based on ${s.totalSessions} recorded school days.`
       );
     } else {
       lines.push(
-        `For **${termLabel}**, you have **${present}** present day(s) out of **${s.totalSessions}** recorded school days.`
+        `For ${termLabel}, you have ${s.daysPresent} present day(s) out of ${s.totalSessions} recorded school days.`
       );
     }
 
-    // Quality band
     if (rate != null) {
       if (rate >= 95) {
-        lines.push(
-          `This is **excellent** attendance. Keep protecting it — it is one of the strongest hidden factors behind good grades.`
-        );
+        lines.push(`This is excellent attendance. Protect it — it helps your results more than most students think.`);
       } else if (rate >= 90) {
-        lines.push(
-          `This is **very good** attendance. With a little more effort, you can push it closer to 95–100%.`
-        );
+        lines.push(`This is very good attendance. Push it closer to 95–100% if you can.`);
       } else if (rate >= 80) {
-        lines.push(
-          `This is **okay but not ideal**. Try to lift it above 90% so you don’t miss important explanations, quizzes and revision.`
-        );
+        lines.push(`This is okay but not ideal. Try to lift it above 90% so you don’t miss key lessons and quizzes.`);
       } else {
-        lines.push(
-          `This attendance rate is **dangerously low**. It will be very hard to keep up with classwork and CA if this continues.`
-        );
+        lines.push(`This attendance rate is dangerously low. It will be hard to keep up if it continues.`);
       }
     }
 
-    // Presence / absence details
     if (absent > 0) {
-      lines.push(
-        `You were marked **absent** about **${absent}** day(s). Each absence is a full day of lost explanations, examples and discussions.`
-      );
+      lines.push(`You were marked absent about ${absent} day(s). Each absence creates learning gaps.`);
     } else {
-      lines.push(
-        `You have almost **no absence** recorded so far — that is a strong foundation.`
-      );
+      lines.push(`You have almost no absence recorded so far — strong foundation.`);
     }
 
     if (late > 0) {
-      lines.push(
-        `You were marked **late** about **${late}** time(s). Even when you arrive, coming late often makes you miss opening activities and key instructions.`
-      );
+      lines.push(`You were marked late about ${late} time(s). Being late often means missing opening instructions.`);
     } else {
-      lines.push(
-        `You have **very few or no late marks**, which is great for starting each day calmly and focused.`
-      );
+      lines.push(`You have very few or no late marks. Great for starting each day focused.`);
     }
 
     if (excused > 0) {
       lines.push(
-        `About **${excused}** absence(s) were excused (for example, sickness or important family reasons). Even when the reason is genuine, it still creates learning gaps, so try to catch up quickly after each excused day.`
+        `About ${excused} absence(s) were excused. Even when reasons are genuine, catch up quickly after each missed day.`
       );
     }
 
     lines.push("");
-    lines.push(`Simple next steps you can try from this week:`);
-
-    const suggestions: string[] = [];
-
-    suggestions.push(
-      `- **Night before:** pack your bag, polish your shoes and set your uniform out so that the morning is faster.`
+    lines.push(`Simple next steps you can try this week:`);
+    lines.push(
+      [
+        `- Night before: pack your bag, set your uniform out.`,
+        `- Morning: leave home 10–15 minutes earlier than usual.`,
+        `- If absences/lateness repeat, show this page to your parent and discuss what’s causing it.`,
+        `- Link to results: strong attendance is the “root” that supports strong grades.`,
+      ].join("\n")
     );
-    suggestions.push(
-      `- **Morning habit:** aim to leave home **10–15 minutes** earlier than usual, so small delays don’t make you late.`
-    );
-    suggestions.push(
-      `- **Talk about patterns:** if you see many absences or late marks in the record, show this page to your parent/guardian and discuss what is causing them.`
-    );
-    suggestions.push(
-      `- **Link to results:** remember that good attendance is like the “root” of a tree. Strong roots (attendance) usually bring stronger branches (results).`
-    );
-
-    lines.push(suggestions.map((s) => `- ${s}`).join("\n"));
 
     setExplanation(lines.join("\n"));
   }
@@ -252,17 +228,12 @@ export default function StudentAttendancePage() {
         {/* Header */}
         <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}
-            >
+            <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>
               EduLife OS · Student · Attendance
             </span>
             {tenantId && (
               <span className="text-[11px] text-zinc-500">
-                Tenant demo:{" "}
-                <span className="font-mono text-[10px]">
-                  {tenantId}
-                </span>
+                Tenant demo: <span className="font-mono text-[10px]">{tenantId}</span>
               </span>
             )}
           </div>
@@ -277,12 +248,10 @@ export default function StudentAttendancePage() {
                 <span className="font-semibold">
                   how often you were present, absent or late
                 </span>{" "}
-                this term — so you can fix problems early, not at the end of
-                the year.
+                this term — so you can fix problems early, not at the end of the year.
               </p>
               <p className="text-[11px] md:text-xs text-zinc-500 max-w-xl">
-                This page is built to help you and your parents talk honestly
-                about school attendance, not to shame you.
+                This page is built to help you and your parents talk honestly about attendance, not to shame you.
               </p>
             </div>
 
@@ -306,11 +275,8 @@ export default function StudentAttendancePage() {
         {/* Filters */}
         <section className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-4 md:px-5 md:py-5 shadow-sm space-y-4">
           <div className="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_repeat(2,minmax(0,0.8fr))]">
-            {/* Student ID */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-zinc-700">
-                Student ID
-              </label>
+              <label className="text-[11px] font-medium text-zinc-700">Student ID</label>
               <input
                 type="text"
                 value={studentId}
@@ -318,16 +284,11 @@ export default function StudentAttendancePage() {
                 placeholder="e.g. STU-0001"
                 className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
-              <p className="text-[10px] text-zinc-500">
-                Use any valid student ID from your demo data.
-              </p>
+              <p className="text-[10px] text-zinc-500">Use any valid student ID from your demo data.</p>
             </div>
 
-            {/* Term */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-zinc-700">
-                Term
-              </label>
+              <label className="text-[11px] font-medium text-zinc-700">Term</label>
               <select
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
@@ -339,11 +300,8 @@ export default function StudentAttendancePage() {
               </select>
             </div>
 
-            {/* Academic year */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-zinc-700">
-                Academic year
-              </label>
+              <label className="text-[11px] font-medium text-zinc-700">Academic year</label>
               <input
                 type="text"
                 value={academicYear}
@@ -361,10 +319,9 @@ export default function StudentAttendancePage() {
               disabled={!canLoadSummary || loadingSummary}
               className="inline-flex items-center justify-center rounded-xl bg-sky-900 px-4 py-2 text-xs md:text-sm font-medium text-white shadow-sm hover:bg-sky-950 disabled:opacity-50"
             >
-              {loadingSummary
-                ? "Loading my attendance…"
-                : "Load my attendance summary"}
+              {loadingSummary ? "Loading my attendance…" : "Load my attendance summary"}
             </button>
+
             <button
               type="button"
               onClick={() => {
@@ -389,7 +346,6 @@ export default function StudentAttendancePage() {
 
         {/* Summary + explainer */}
         <section className="space-y-4">
-          {/* Summary card */}
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 md:px-5 md:py-5 shadow-sm space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -399,9 +355,7 @@ export default function StudentAttendancePage() {
                 <p className="text-[11px] md:text-xs text-emerald-900/90">
                   Shows how many days were{" "}
                   <span className="font-semibold">present, absent, late</span>{" "}
-                  or{" "}
-                  <span className="font-semibold">excused</span> — and your
-                  overall attendance rate.
+                  or <span className="font-semibold">excused</span> — and your attendance rate.
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full bg-emerald-900 text-white text-[10px] font-medium px-3 py-1">
@@ -411,50 +365,24 @@ export default function StudentAttendancePage() {
 
             {!summary && !summaryError && !loadingSummary && (
               <p className="text-[11px] text-emerald-900/90">
-                Once you fill in your ID, term and year and press{" "}
-                <span className="font-semibold">
-                  “Load my attendance summary”
-                </span>
-                , your data will appear here.
+                Load your attendance and it will appear here.
               </p>
             )}
 
             {summary && summaryMeta && (
               <div className="space-y-3">
                 <div className="text-[11px] text-emerald-900/90">
-                  Term:{" "}
-                  <span className="font-semibold">{summaryMeta.term}</span> ·
-                  Year:{" "}
-                  <span className="font-semibold">
-                    {summaryMeta.academicYear}
-                  </span>
+                  Term: <span className="font-semibold">{summaryMeta.term}</span> · Year:{" "}
+                  <span className="font-semibold">{summaryMeta.academicYear}</span>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[11px] md:text-xs">
-                  <Kpi
-                    label="Sessions recorded"
-                    value={summary.totalSessions.toString()}
-                  />
-                  <Kpi
-                    label="Days present"
-                    value={summary.daysPresent.toString()}
-                  />
-                  <Kpi
-                    label="Days absent"
-                    value={summary.daysAbsent.toString()}
-                  />
-                  <Kpi
-                    label="Attendance rate"
-                    value={formatPercent(summary.attendanceRate)}
-                  />
-                  <Kpi
-                    label="Late marks"
-                    value={summary.daysLate.toString()}
-                  />
-                  <Kpi
-                    label="Excused days"
-                    value={summary.daysExcused?.toString() ?? "0"}
-                  />
+                  <Kpi label="Sessions recorded" value={summary.totalSessions.toString()} />
+                  <Kpi label="Days present" value={summary.daysPresent.toString()} />
+                  <Kpi label="Days absent" value={summary.daysAbsent.toString()} />
+                  <Kpi label="Attendance rate" value={formatPercent(summary.attendanceRate)} />
+                  <Kpi label="Late marks" value={summary.daysLate.toString()} />
+                  <Kpi label="Excused days" value={(summary.daysExcused ?? 0).toString()} />
                 </div>
 
                 <p className="text-[11px] text-emerald-900/90 whitespace-pre-line">
@@ -465,7 +393,6 @@ export default function StudentAttendancePage() {
             )}
           </div>
 
-          {/* Explainer card */}
           <div className="rounded-2xl border border-indigo-200 bg-indigo-50/80 px-4 py-4 md:px-5 md:py-5 shadow-sm space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -473,11 +400,7 @@ export default function StudentAttendancePage() {
                   Attendance explainer (student-friendly)
                 </h2>
                 <p className="text-[11px] md:text-xs text-indigo-900/90">
-                  Turns your numbers into a{" "}
-                  <span className="font-semibold">
-                    short story and action plan
-                  </span>{" "}
-                  you can share with your parents or teacher.
+                  Turns your numbers into a short story + action plan you can share.
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full bg-indigo-900 text-white text-[10px] font-medium px-3 py-1">
@@ -502,20 +425,14 @@ export default function StudentAttendancePage() {
 
             {!explanation && !summary && (
               <p className="text-[11px] text-indigo-900/90">
-                First load your attendance, then you can ask the explainer to
-                turn it into a simple plan for you and your parents.
+                First load your attendance, then ask the explainer to turn it into a simple plan.
               </p>
             )}
           </div>
         </section>
 
         <p className="text-[11px] text-zinc-500 max-w-3xl">
-          Over time, this page will connect to{" "}
-          <span className="font-semibold">
-            live device-based attendance records
-          </span>{" "}
-          (your smart clock-in project), so every learner can see how their
-          daily choices build up across the term.
+          Later, this page will connect to live device-based attendance records, so every learner can see how daily choices build up across the term.
         </p>
       </div>
     </main>
@@ -526,9 +443,15 @@ function Kpi({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-white border border-emerald-100 px-3 py-2">
       <div className="text-[10px] text-emerald-800/80">{label}</div>
-      <div className="mt-1 text-lg font-semibold text-emerald-900">
-        {value}
-      </div>
+      <div className="mt-1 text-lg font-semibold text-emerald-900">{value}</div>
     </div>
+  );
+}
+
+export default function StudentAttendancePage() {
+  return (
+    <Suspense fallback={<StudentAttendanceSkeleton />}>
+      <StudentAttendanceInner />
+    </Suspense>
   );
 }

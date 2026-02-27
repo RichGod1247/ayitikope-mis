@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { z } from "zod";
 import type { AttendanceStatus } from "@prisma/client";
+import { StudentStatus } from "@prisma/client";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 
 export const runtime = "nodejs";
@@ -12,18 +13,14 @@ export const dynamic = "force-dynamic";
 const QuerySchema = z
   .object({
     sessionId: z.string().min(1, "Missing sessionId."),
-    // tenantId may be sent by legacy clients; never trust it
-    tenantId: z.string().optional(),
+    tenantId: z.string().optional(), // legacy
   })
   .strict();
 
 function jsonErr(status: number, error: string) {
   return NextResponse.json(
     { ok: false, error },
-    {
-      status,
-      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-    }
+    { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
   );
 }
 
@@ -38,7 +35,6 @@ function dateAtUtcMidnight(dateISO: string): Date {
   return d;
 }
 
-// Prisma Decimal-safe to number
 function toNumber(v: any): number | null {
   if (v == null) return null;
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
@@ -50,30 +46,6 @@ function toNumber(v: any): number | null {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
-
-type StudentDTO = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  guardianName: string | null;
-  guardianPhone: string | null;
-  guardianSmsOptIn: boolean;
-  healthConsentAt: string | null;
-};
-
-type MarkDTO = {
-  studentId: string;
-  status: AttendanceStatus;
-  note: string | null;
-};
-
-type HealthDTO = {
-  studentId: string;
-  temperatureC: number | null;
-  symptoms: string | null;
-  notes: string | null;
-  sentToParentAt: string | null;
-};
 
 export async function GET(req: Request) {
   let safe: { userId: string; tenantId: string };
@@ -88,42 +60,31 @@ export async function GET(req: Request) {
     sessionId: url.searchParams.get("sessionId") ?? "",
     tenantId: url.searchParams.get("tenantId") ?? undefined,
   };
+
   const parsed = QuerySchema.safeParse(raw);
-  if (!parsed.success) {
-    const msg = parsed.error.issues[0]?.message || "Invalid query.";
-    return jsonErr(400, msg);
-  }
+  if (!parsed.success) return jsonErr(400, parsed.error.issues[0]?.message || "Invalid query.");
 
   if (parsed.data.tenantId && parsed.data.tenantId !== safe.tenantId) {
     return jsonErr(403, "Forbidden (tenant mismatch).");
   }
 
-  const membership = await prisma.membership.findFirst({
-    where: { tenantId: safe.tenantId, userId: safe.userId, status: "ACTIVE" },
-    select: { id: true },
-  });
-  if (!membership) return jsonErr(403, "Forbidden.");
-
-  const sessionId = parsed.data.sessionId;
-
   const session = await prisma.attendanceSession.findFirst({
-    where: { id: sessionId, tenantId: safe.tenantId },
+    where: { id: parsed.data.sessionId, tenantId: safe.tenantId },
     select: {
       id: true,
       tenantId: true,
       classroomId: true,
       date: true,
-      takenByUserId: true,
       isClosed: true,
       closedAt: true,
       certifiedAt: true,
-      classroom: { select: { name: true } },
+      takenByUserId: true,
+      classroom: { select: { id: true, name: true, grade: true, arm: true } },
     },
   });
 
   if (!session) return jsonErr(404, "Attendance session not found.");
 
-  // ✅ classroom access gate (teacher assignment / admin role handled inside helper)
   try {
     await assertCanAccessClassroom({ ...safe, classroomId: session.classroomId });
   } catch (e: any) {
@@ -138,13 +99,9 @@ export async function GET(req: Request) {
     return jsonErr(500, "Invalid session date stored.");
   }
 
-  const canEdit =
-    !session.certifiedAt &&
-    (!session.takenByUserId || session.takenByUserId === safe.userId);
-
   const [students, marks, health] = await prisma.$transaction([
     prisma.student.findMany({
-      where: { tenantId: safe.tenantId, classroomId: session.classroomId },
+      where: { tenantId: safe.tenantId, classroomId: session.classroomId, status: StudentStatus.ACTIVE },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
       select: {
         id: true,
@@ -161,44 +118,37 @@ export async function GET(req: Request) {
       select: { studentId: true, status: true, note: true },
     }),
     prisma.studentHealthDaily.findMany({
-      where: {
-        tenantId: safe.tenantId,
-        classroomId: session.classroomId,
-        date: dayKey,
-      },
-      select: {
-        studentId: true,
-        temperatureC: true,
-        symptoms: true,
-        notes: true,
-        sentToParentAt: true,
-      },
+      where: { tenantId: safe.tenantId, classroomId: session.classroomId, date: dayKey },
+      select: { studentId: true, temperatureC: true, symptoms: true, notes: true, sentToParentAt: true },
     }),
   ]);
 
-  const studentsDTO: StudentDTO[] = students.map((s) => ({
-    id: s.id,
-    firstName: s.firstName ?? "",
-    lastName: s.lastName ?? "",
-    guardianName: s.guardianName ?? null,
-    guardianPhone: s.guardianPhone ?? null,
-    guardianSmsOptIn: !!s.guardianSmsOptIn,
-    healthConsentAt: s.healthConsentAt ? s.healthConsentAt.toISOString() : null,
-  }));
+  const marksByStudent = new Map(
+    marks.map((m) => [m.studentId, { status: m.status as AttendanceStatus, note: m.note ?? null }])
+  );
 
-  const marksDTO: MarkDTO[] = marks.map((m) => ({
-    studentId: m.studentId,
-    status: m.status,
-    note: m.note ?? null,
-  }));
+  const healthByStudent = new Map(
+    health.map((h) => [
+      h.studentId,
+      {
+        temperatureC: toNumber(h.temperatureC),
+        symptoms: h.symptoms ?? null,
+        notes: h.notes ?? null,
+        sentToParentAt: h.sentToParentAt ? h.sentToParentAt.toISOString() : null,
+      },
+    ])
+  );
 
-  const healthDTO: HealthDTO[] = health.map((h) => ({
-    studentId: h.studentId,
-    temperatureC: toNumber(h.temperatureC),
-    symptoms: h.symptoms ?? null,
-    notes: h.notes ?? null,
-    sentToParentAt: h.sentToParentAt ? h.sentToParentAt.toISOString() : null,
-  }));
+  const classroom = session.classroom
+    ? { id: session.classroom.id, name: session.classroom.name, grade: session.classroom.grade, arm: session.classroom.arm }
+    : null;
+
+  const classLabel = [
+    session.classroom?.name ?? "Class",
+    session.classroom?.grade ? `${session.classroom.grade}${session.classroom.arm ? ` ${session.classroom.arm}` : ""}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return NextResponse.json(
     {
@@ -207,17 +157,36 @@ export async function GET(req: Request) {
         id: session.id,
         tenantId: session.tenantId,
         classroomId: session.classroomId,
-        classroomName: session.classroom?.name ?? "",
+        date: dateISO,
         dateISO,
-        takenByUserId: session.takenByUserId ?? null,
         isClosed: session.isClosed,
         closedAt: session.closedAt ? session.closedAt.toISOString() : null,
         certifiedAt: session.certifiedAt ? session.certifiedAt.toISOString() : null,
-        canEdit,
+        takenByUserId: session.takenByUserId ?? null,
       },
-      students: studentsDTO,
-      marks: marksDTO,
-      health: healthDTO,
+      classroom,
+      classLabel,
+      students: students.map((s) => {
+        const m = marksByStudent.get(s.id) ?? { status: "PRESENT" as AttendanceStatus, note: null };
+        const h = healthByStudent.get(s.id) ?? { temperatureC: null, symptoms: null, notes: null, sentToParentAt: null };
+
+        return {
+          id: s.id,
+          firstName: s.firstName ?? "",
+          lastName: s.lastName ?? "",
+          guardianName: s.guardianName ?? null,
+          guardianPhone: s.guardianPhone ?? null,
+          guardianSmsOptIn: !!s.guardianSmsOptIn,
+          healthConsentAt: s.healthConsentAt ? s.healthConsentAt.toISOString() : null,
+          attendance: { status: m.status, note: m.note },
+          health: {
+            temperatureC: h.temperatureC,
+            symptoms: h.symptoms,
+            notes: h.notes,
+            sentToParentAt: h.sentToParentAt,
+          },
+        };
+      }),
     },
     { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
   );

@@ -1,118 +1,103 @@
 // src/app/api/admin/fees/invoices/generate/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { assertNoTenantOverride } from "@/lib/tenantGuard";
 
-export async function POST(req: Request) {
-  let body: any = null;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function jsonNoStore(payload: any, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+type Body = {
+  tenantId?: string; // back-compat only
+  classroomId?: string;
+  feeStructureId?: string;
+};
+
+export async function POST(req: NextRequest) {
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
+
+  const tenantId = auth.ctx.tenantId;
+
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return jsonNoStore({ ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" }, 415);
+  }
+
+  let body: Body;
   try {
-    body = await req.json();
+    body = (await req.json()) as Body;
   } catch {
-    return NextResponse.json(
-      { ok: false, error: "Invalid JSON body." },
-      { status: 400 }
-    );
+    return jsonNoStore({ ok: false, error: "INVALID_JSON" }, 400);
   }
 
-  const tenantId = body?.tenantId as string | undefined;
-  const classroomId = body?.classroomId as string | undefined;
-  const feeStructureId = body?.feeStructureId as string | undefined;
+  const guard = assertNoTenantOverride(body?.tenantId ?? null, tenantId);
+  if (!guard.ok) return jsonNoStore({ ok: false, error: guard.error }, guard.status);
 
-  if (!tenantId || !classroomId || !feeStructureId) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "tenantId, classroomId and feeStructureId are required to generate invoices.",
-      },
-      { status: 400 }
-    );
+  const classroomId = String(body?.classroomId ?? "").trim();
+  const feeStructureId = String(body?.feeStructureId ?? "").trim();
+  if (!classroomId || !feeStructureId) {
+    return jsonNoStore({ ok: false, error: "classroomId and feeStructureId are required." }, 400);
   }
 
   try {
-    // Cast to any so TS doesn't complain about newly added models
-    const client = prisma as any;
-
-    // 1. Load the fee structure (term, year, amount)
-    const structure = await client.feeStructure.findFirst({
-      where: {
-        id: feeStructureId,
-        tenantId,
-      },
+    const structure = await prisma.feeStructure.findFirst({
+      where: { id: feeStructureId, tenantId },
+      select: { id: true, name: true, term: true, academicYear: true, amountPesewas: true },
     });
 
-    if (!structure) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Fee structure not found for this tenant. Please refresh and try again.",
-        },
-        { status: 404 }
+    if (!structure) return jsonNoStore({ ok: false, error: "FEE_STRUCTURE_NOT_FOUND" }, 404);
+
+    const term = String(structure.term ?? "").trim();
+    const academicYear = String(structure.academicYear ?? "").trim();
+    const amountPesewas = Math.max(0, Number(structure.amountPesewas ?? 0));
+
+    if (!term || !academicYear) {
+      return jsonNoStore({ ok: false, error: "FEE_STRUCTURE_MISSING_TERM_OR_YEAR" }, 409);
+    }
+
+    const students = await prisma.student.findMany({
+      where: { tenantId, classroomId },
+      select: { id: true },
+      take: 6000,
+    });
+
+    if (students.length === 0) {
+      return jsonNoStore(
+        { ok: true, createdCount: 0, existingCount: 0, totalLearners: 0, message: "No learners in this classroom." },
+        200
       );
     }
 
-    const term: string = structure.term;
-    const academicYear: string = structure.academicYear;
-    const amountPesewas: number = structure.amountPesewas ?? 0;
+    const data = students.map((s) => ({
+      tenantId,
+      studentId: s.id,
+      term,
+      academicYear,
+      totalBilledPesewas: amountPesewas,
+      totalWaivedPesewas: 0,
+      note: structure.name ?? null,
+    }));
 
-    // 2. Load all students in this class
-    const students = await client.student.findMany({
-      where: {
-        tenantId,
-        classroomId,
-      },
-      orderBy: {
-        lastName: "asc",
-      },
+    const created = await prisma.feeInvoice.createMany({
+      data,
+      skipDuplicates: true, // @@unique([tenantId, studentId, term, academicYear])
     });
 
-    if (!students.length) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "No students found in this classroom. Please enroll learners first.",
-        },
-        { status: 200 }
-      );
-    }
+    const createdCount = created?.count ?? 0;
+    const existingCount = Math.max(0, students.length - createdCount);
 
-    // 3. For each student, create invoice if none exists for this term/year
-    let createdCount = 0;
-    let existingCount = 0;
-
-    for (const s of students) {
-      const existing = await client.feeInvoice.findFirst({
-        where: {
-          tenantId,
-          studentId: s.id,
-          term,
-          academicYear,
-        },
-      });
-
-      if (existing) {
-        existingCount += 1;
-        continue;
-      }
-
-      await client.feeInvoice.create({
-        data: {
-          tenantId,
-          studentId: s.id,
-          term,
-          academicYear,
-          totalBilledPesewas: amountPesewas,
-          totalWaivedPesewas: 0,
-          note: structure.name, // keep a hint of which structure
-        },
-      });
-
-      createdCount += 1;
-    }
-
-    // 🔥 IMPORTANT: shape matches what the invoices page expects
-    return NextResponse.json(
+    return jsonNoStore(
       {
         ok: true,
         structureId: structure.id,
@@ -120,21 +105,14 @@ export async function POST(req: Request) {
         term,
         academicYear,
         amountPesewas,
+        totalLearners: students.length,
         createdCount,
         existingCount,
-        totalLearners: students.length,
       },
-      { status: 200 }
+      200
     );
   } catch (err) {
     console.error("[ADMIN_FEE_INVOICES_GENERATE_ERROR]", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Failed to generate fee invoices. Please try again or contact the system administrator.",
-      },
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "FAILED_TO_GENERATE_INVOICES" }, 500);
   }
 }

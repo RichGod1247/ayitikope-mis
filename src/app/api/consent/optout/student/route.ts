@@ -1,88 +1,150 @@
-import type { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
+// src/app/api/consent/optout/student/route.ts
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const tenantId = typeof body?.tenantId === 'string' ? body.tenantId.trim() : '';
-    const studentId = typeof body?.studentId === 'string' ? body.studentId.trim() : '';
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
 
-    if (!tenantId || !studentId) {
-      return new Response(JSON.stringify({ ok: false, error: 'tenantId and studentId are required' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' },
+function cleanId(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function normRole(v: unknown) {
+  return String(v ?? "").trim().toUpperCase().replace(/\s+/g, "_");
+}
+
+function getIp(req: Request) {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]?.trim() || null;
+  return req.headers.get("x-real-ip") || null;
+}
+
+function getUa(req: Request) {
+  return req.headers.get("user-agent") || null;
+}
+
+type Body = {
+  tenantId?: string; // legacy/back-compat only
+  studentId?: string;
+};
+
+export async function POST(req: Request) {
+  // ✅ API auth: NEVER redirects
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["SCHOOL_ADMIN", "HEADTEACHER", "TEACHER", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
+
+  const ctx = auth.ctx;
+  const roleName = normRole(ctx.roleName);
+
+  const body = (await req.json().catch(() => ({}))) as Body;
+
+  const tenantIdFromClient = cleanId(body?.tenantId);
+  const studentId = cleanId(body?.studentId);
+
+  if (tenantIdFromClient && tenantIdFromClient !== ctx.tenantId) {
+    return json(403, { ok: false, error: "FORBIDDEN_TENANT_MISMATCH" });
+  }
+  if (!studentId) return json(400, { ok: false, error: "studentId is required" });
+  if (studentId.length > 128) return json(400, { ok: false, error: "Invalid studentId" });
+
+  const tenantId = ctx.tenantId;
+
+  const student = await prisma.student.findFirst({
+    where: { id: studentId, tenantId },
+    select: {
+      id: true,
+      tenantId: true,
+      classroomId: true,
+      firstName: true,
+      lastName: true,
+      guardianSmsOptIn: true,
+      healthConsentAt: true,
+    },
+  });
+
+  if (!student) return json(404, { ok: false, error: "Student not found" });
+
+  // If TEACHER, must have access to the student's classroom
+  if (roleName === "TEACHER") {
+    const classroomId = cleanId(student.classroomId);
+    if (!classroomId) return json(403, { ok: false, error: "FORBIDDEN_NO_CLASSROOM" });
+
+    try {
+      await assertCanAccessClassroom({ userId: ctx.userId, tenantId, classroomId });
+    } catch (e: any) {
+      return json(Number(e?.status) || 403, {
+        ok: false,
+        error: String(e?.message || "FORBIDDEN"),
       });
     }
+  }
 
-    // Verify the student belongs to the tenant
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: { id: true, tenantId: true, guardianSmsOptIn: true, firstName: true, lastName: true, healthConsentAt: true },
-    });
-
-    if (!student || student.tenantId !== tenantId) {
-      return new Response(JSON.stringify({ ok: false, error: 'Student not found' }), {
-        status: 404,
-        headers: { 'content-type': 'application/json' },
-      });
-    }
-
-    // Idempotent: if already opted-out, log and return ok
-    if (student.guardianSmsOptIn === false) {
-      try {
-        await prisma.auditLog.create({
-          data: {
-            tenantId,
-            action: 'CONSENT_STUDENT_OPTOUT',
-            resource: 'STUDENT',
-            resourceId: studentId,
-            metadata: { note: 'idempotent' } as any,
-          },
-        });
-      } catch {}
-      return new Response(JSON.stringify({ ok: true, student }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
-    }
-
-    const updated = await prisma.student.update({
-      where: { id: studentId },
-      data: { guardianSmsOptIn: false },
-      select: {
-        id: true,
-        tenantId: true,
-        firstName: true,
-        lastName: true,
-        guardianSmsOptIn: true,
-        healthConsentAt: true,
-      },
-    });
-
-    // Best-effort audit (don’t fail request on audit error)
+  // Idempotent
+  if (student.guardianSmsOptIn === false) {
     try {
       await prisma.auditLog.create({
         data: {
           tenantId,
-          action: 'CONSENT_STUDENT_OPTOUT',
-          resource: 'STUDENT',
+          userId: ctx.userId,
+          action: "CONSENT_STUDENT_OPTOUT",
+          resource: "STUDENT",
           resourceId: studentId,
-          metadata: { after: { guardianSmsOptIn: false } } as any,
+          ip: getIp(req),
+          userAgent: getUa(req),
+          metadata: { note: "idempotent", actorRole: roleName } as any,
         },
       });
     } catch {}
-
-    return new Response(JSON.stringify({ ok: true, student: updated }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    });
-  } catch (err: any) {
-    console.error('consent/optout/student error:', err);
-    return new Response(JSON.stringify({ ok: false, error: 'Failed to opt-out' }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-    });
+    return json(200, { ok: true, student });
   }
+
+  const updated = await prisma.student.update({
+    where: { id: studentId },
+    data: { guardianSmsOptIn: false },
+    select: {
+      id: true,
+      tenantId: true,
+      classroomId: true,
+      firstName: true,
+      lastName: true,
+      guardianSmsOptIn: true,
+      healthConsentAt: true,
+    },
+  });
+
+  try {
+    await prisma.auditLog.create({
+      data: {
+        tenantId,
+        userId: ctx.userId,
+        action: "CONSENT_STUDENT_OPTOUT",
+        resource: "STUDENT",
+        resourceId: studentId,
+        ip: getIp(req),
+        userAgent: getUa(req),
+        metadata: {
+          before: { guardianSmsOptIn: student.guardianSmsOptIn },
+          after: { guardianSmsOptIn: updated.guardianSmsOptIn },
+          actorRole: roleName,
+        } as any,
+      },
+    });
+  } catch {}
+
+  return json(200, { ok: true, student: updated });
 }

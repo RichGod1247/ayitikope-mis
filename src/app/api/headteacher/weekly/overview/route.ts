@@ -1,50 +1,103 @@
 // src/app/api/headteacher/weekly/overview/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function jsonNoStore(body: any, status = 200) {
+  return new NextResponse(JSON.stringify(body), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+function isNextRedirectError(err: any) {
+  return typeof err?.digest === "string" && err.digest.startsWith("NEXT_REDIRECT");
+}
 
 function toISODateOnly(input?: string | null): string | null {
-  if (!input) return null
-  const d = new Date(input)
-  if (isNaN(d.getTime())) return null
-  return d.toISOString().slice(0, 10)
+  if (!input) return null;
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function normRole(name: any) {
+  return String(name ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/-+/g, "_");
+}
+
+function looksLikeHeadOrAdmin(roleName: string) {
+  if (!roleName) return false;
+  if (roleName.includes("ADMIN")) return true;
+  if (roleName.includes("HEAD")) return true;
+  if (roleName === "HT") return true;
+  if (roleName === "HEADTEACHER") return true;
+  if (roleName === "SCHOOL_ADMIN") return true;
+  return false;
+}
+
+async function requireHeadOrAdmin(tenantId: string, userId: string) {
+  const m = await prisma.membership.findFirst({
+    where: { tenantId, userId, status: "ACTIVE" },
+    select: { role: { select: { name: true } } },
+  });
+  if (!m) return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  const roleName = normRole(m.role?.name);
+  return looksLikeHeadOrAdmin(roleName)
+    ? ({ ok: true as const } as const)
+    : ({ ok: false as const, status: 403, error: "FORBIDDEN" } as const);
 }
 
 /**
- * GET /api/headteacher/weekly/overview?tenantId=...&start=YYYY-MM-DD&end=YYYY-MM-DD
- * Returns per-class Mon–Fri aggregates:
- *  - totalStudents (current roster)
- *  - sessions{ open, closed, certified }
- *  - presentSum (sum of PRESENT marks over the week)
- *  - presentPct = round( presentSum / (totalStudents * sessionsCount) * 100 ) if sessionsCount>0 else 0
- *
- * Notes:
- * - Uses raw SQL for cross-version stability.
- * - Assumes roster is current; if you later add historical rosters, adjust totals join by date.
+ * GET /api/headteacher/weekly/overview?start=YYYY-MM-DD&end=YYYY-MM-DD
+ * Tenant derived from session (NOT query params).
+ * Head/Admin only.
  */
 export async function GET(req: NextRequest) {
+  // ✅ keep this line style (you requested)
+  let ctx: any;
   try {
-    const { searchParams } = new URL(req.url)
-    const tenantId = String(searchParams.get('tenantId') || '').trim()
-    const start = toISODateOnly(searchParams.get('start'))
-    const end = toISODateOnly(searchParams.get('end'))
+    const r: any = await requireServerUserContext({ requireTenant: true } as any);
+    ctx = r?.ctx ?? r;
+  } catch (err: any) {
+    if (isNextRedirectError(err)) return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
+    return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
+  }
 
-    if (!tenantId || !start || !end) {
-      return new Response(JSON.stringify({ error: 'tenantId, start, end are required' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
-    }
+  try {
+    const { searchParams } = new URL(req.url);
+    const start = toISODateOnly(searchParams.get("start"));
+    const end = toISODateOnly(searchParams.get("end"));
+    if (!start || !end) return jsonNoStore({ ok: false, error: "start and end are required" }, 400);
+
+    const tenantId = String(ctx.tenantId ?? ctx.activeTenantId ?? "").trim();
+    const userId = String(ctx.userId ?? ctx.user?.id ?? "").trim();
+    if (!tenantId || !userId) return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
+
+    const roleOk = await requireHeadOrAdmin(tenantId, userId);
+    if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, roleOk.status);
 
     const rows = await prisma.$queryRaw<
       Array<{
-        classroomId: string
-        grade: string | null
-        arm: string | null
-        totalStudents: number
-        sessions: number
-        openCount: number
-        closedCount: number
-        certifiedCount: number
-        presentSum: number
+        classroomId: string;
+        grade: string | null;
+        arm: string | null;
+        totalStudents: number;
+        sessions: number;
+        openCount: number;
+        closedCount: number;
+        certifiedCount: number;
+        presentSum: number;
       }>
     >`
       WITH base AS (
@@ -64,7 +117,9 @@ export async function GET(req: NextRequest) {
           c."arm",
           COUNT(st."id")::int AS "totalStudents"
         FROM "edulife_os"."Classroom" c
-        LEFT JOIN "edulife_os"."Student" st ON st."classroomId" = c."id"
+        LEFT JOIN "edulife_os"."Student" st
+          ON st."classroomId" = c."id"
+         AND st."tenantId" = ${tenantId}
         WHERE c."tenantId" = ${tenantId}
         GROUP BY c."id", c."grade", c."arm"
       ),
@@ -83,7 +138,8 @@ export async function GET(req: NextRequest) {
           b."classroomId",
           COUNT(CASE WHEN m."status" = 'PRESENT' THEN 1 END)::int AS "presentSum"
         FROM base b
-        LEFT JOIN "edulife_os"."AttendanceMark" m ON m."sessionId" = b."sessionId"
+        LEFT JOIN "edulife_os"."AttendanceMark" m
+          ON m."sessionId" = b."sessionId"
         GROUP BY b."classroomId"
       )
       SELECT
@@ -100,12 +156,12 @@ export async function GET(req: NextRequest) {
       LEFT JOIN session_counts sc ON sc."classroomId" = pc."classroomId"
       LEFT JOIN present_counts pr ON pr."classroomId" = pc."classroomId"
       ORDER BY pc."grade" NULLS LAST, pc."arm" NULLS LAST
-    `
+    `;
 
-    const items = rows.map(r => {
-      const label = r.grade ? (r.arm ? `${r.grade}${r.arm}` : r.grade) : (r.arm ?? '')
-      const denom = r.totalStudents * r.sessions
-      const presentPct = denom > 0 ? Math.round((r.presentSum / denom) * 100) : 0
+    const items = rows.map((r) => {
+      const label = r.grade ? (r.arm ? `${r.grade}${r.arm}` : r.grade) : (r.arm ?? "");
+      const denom = r.totalStudents * r.sessions;
+      const presentPct = denom > 0 ? Math.round((r.presentSum / denom) * 100) : 0;
       return {
         classroomId: r.classroomId,
         label,
@@ -116,11 +172,10 @@ export async function GET(req: NextRequest) {
         certifiedCount: r.certifiedCount,
         presentSum: r.presentSum,
         presentPct,
-      }
-    })
+      };
+    });
 
-    // sort worst -> best by presentPct, then by label
-    items.sort((a, b) => (a.presentPct - b.presentPct) || a.label.localeCompare(b.label))
+    items.sort((a, b) => (a.presentPct - b.presentPct) || a.label.localeCompare(b.label));
 
     const summary = {
       classes: items.length,
@@ -128,19 +183,12 @@ export async function GET(req: NextRequest) {
       open: items.reduce((n, x) => n + x.openCount, 0),
       closed: items.reduce((n, x) => n + x.closedCount, 0),
       certified: items.reduce((n, x) => n + x.certifiedCount, 0),
-      avgPresentPct: items.length
-        ? Math.round(items.reduce((n, x) => n + x.presentPct, 0) / items.length)
-        : 0,
-    }
+      avgPresentPct: items.length ? Math.round(items.reduce((n, x) => n + x.presentPct, 0) / items.length) : 0,
+    };
 
-    return new Response(JSON.stringify({ tenantId, start, end, items, summary }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    })
+    return jsonNoStore({ ok: true, start, end, items, summary }, 200);
   } catch (err) {
-    console.error('weekly/overview error:', err)
-    return new Response(JSON.stringify({ error: 'Failed to load weekly overview' }), {
-      status: 500, headers: { 'content-type': 'application/json' },
-    })
+    console.error("weekly/overview error:", err);
+    return jsonNoStore({ ok: false, error: "FAILED_TO_LOAD_WEEKLY_OVERVIEW" }, 500);
   }
 }

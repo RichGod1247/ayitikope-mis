@@ -13,26 +13,36 @@ export type HeadteacherContext = {
 
 function normalizeKey(input: unknown): string {
   if (typeof input !== "string") return "";
-  // Uppercase + strip non-alphanumerics to avoid fragile matching:
-  // "Head Teacher" -> "HEADTEACHER", "SUPER_ADMIN" -> "SUPERADMIN"
+  // Uppercase + strip non-alphanumerics:
+  // "Head Teacher" -> "HEADTEACHER", "SCHOOL_ADMIN" -> "SCHOOLADMIN"
   return input.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-// Roles that are allowed to review lesson notes (normalized)
+// Roles allowed into the headteacher portal (normalized).
+// Backward compatible: SCHOOL_ADMIN -> SCHOOLADMIN
 const ALLOWED_ROLE_KEYS = new Set([
   "HEADTEACHER",
+  "HEADMASTER",
   "ADMIN",
   "SUPERADMIN",
+  "SCHOOLADMIN",
 ]);
 
 // Optional permission-based authorization (normalized).
-// If you later seed permissions, this automatically works without code changes.
+// If you later seed permissions, this automatically works.
 const ALLOWED_PERMISSION_KEYS = new Set([
+  // Lesson notes review
   "LESSONNOTEREVIEW",
   "LESSONNOTESREVIEW",
   "LESSONNOTEAPPROVE",
   "LESSONNOTESAPPROVE",
   "HEADTEACHERLESSONNOTES",
+
+  // Attendance oversight
+  "ATTENDANCEREVIEW",
+  "ATTENDANCEOVERSIGHT",
+  "ATTENDANCECERTIFY",
+  "HEADTEACHERATTENDANCE",
 ]);
 
 async function loadMembershipWithRole(userId: string, tenantId: string) {
@@ -88,7 +98,9 @@ export async function requireHeadteacherContext(params: {
   const roleKey = normalizeKey(roleName);
 
   const permissions =
-    membership.role.rolePerms?.map((rp) => normalizeKey(rp.permission?.name))?.filter(Boolean) ?? [];
+    membership.role.rolePerms
+      ?.map((rp) => normalizeKey(rp.permission?.name))
+      ?.filter(Boolean) ?? [];
 
   if (!isAuthorized(roleKey, permissions)) {
     throw new Error("FORBIDDEN_ROLE");
@@ -110,7 +122,8 @@ export async function requireHeadteacherContext(params: {
 export async function getHeadteacherApiContext(): Promise<HeadteacherContext | null> {
   try {
     const safe = await requireServerUserContext({
-      redirectTo: "/headteacher/lesson-notes",
+      // used only if requireServerUserContext needs a callbackUrl
+      redirectTo: "/headteacher/dashboard",
       requireTenant: true,
     });
 
@@ -121,7 +134,9 @@ export async function getHeadteacherApiContext(): Promise<HeadteacherContext | n
     const roleKey = normalizeKey(roleName);
 
     const permissions =
-      membership.role.rolePerms?.map((rp) => normalizeKey(rp.permission?.name))?.filter(Boolean) ?? [];
+      membership.role.rolePerms
+        ?.map((rp) => normalizeKey(rp.permission?.name))
+        ?.filter(Boolean) ?? [];
 
     if (!isAuthorized(roleKey, permissions)) return null;
 

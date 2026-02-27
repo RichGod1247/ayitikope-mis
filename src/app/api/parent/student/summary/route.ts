@@ -1,90 +1,70 @@
 // src/app/api/parent/student/summary/route.ts
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireParentSession } from "@/lib/parentSession";
+import { StudentStatus } from "@prisma/client";
 
-export async function GET(req: Request) {
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+function noStoreJson(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+function cedis(pesewas: number) {
+  return Number(((pesewas ?? 0) / 100).toFixed(2));
+}
+
+export async function GET(req: NextRequest) {
+  const auth = requireParentSession(req);
+  if (!auth.ok) return auth.res;
+
+  const { tenantId, guardianPhoneE164, guardianSuffix9 } = auth.session;
+
+  const url = new URL(req.url);
+  const studentId = String(url.searchParams.get("studentId") ?? "").trim();
+  if (!studentId) return noStoreJson(400, { ok: false, error: "studentId is required." });
+
+  // 1) Student + ownership
+  const student = await prisma.student.findFirst({
+    where: { id: studentId, tenantId, status: StudentStatus.ACTIVE },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      sex: true,
+      guardianName: true,
+      guardianPhone: true,
+      guardianPhoneNorm: true,
+      guardianSmsOptIn: true,
+      note: true,
+      createdAt: true,
+    },
+  });
+
+  if (!student) return noStoreJson(404, { ok: false, error: "STUDENT_NOT_FOUND" });
+
+  const owned =
+    (guardianPhoneE164 && student.guardianPhoneNorm === guardianPhoneE164) ||
+    (guardianSuffix9 &&
+      (student.guardianPhoneNorm?.endsWith(guardianSuffix9) ||
+        student.guardianPhone?.endsWith(guardianSuffix9))) ||
+    false;
+
+  if (!owned) return noStoreJson(403, { ok: false, error: "FORBIDDEN_GUARDIAN_MISMATCH" });
+
+  // 2) Fees (best-effort, stable for MVP)
+  const client: any = prisma as any;
+
+  let invoices: any[] = [];
   try {
-    const url = new URL(req.url);
-    const studentId = url.searchParams.get("studentId");
-
-    if (!studentId) {
-      return NextResponse.json(
-        { ok: false, error: "studentId is required" },
-        { status: 400 }
-      );
-    }
-
-    // 1) Ensure user is signed in (later: proper parent <-> student link)
-    const session = await getServerSession(authOptions);
-    const user = session?.user as any;
-    const userId: string | undefined = user?.id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Not signed in" },
-        { status: 401 }
-      );
-    }
-
-    // 2) Find tenant via membership
-    const membership = await prisma.membership.findFirst({
-      where: { userId },
-    });
-
-    if (!membership?.tenantId) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "No tenant membership found for this user",
-        },
-        { status: 401 }
-      );
-    }
-
-    const tenantId = membership.tenantId;
-
-    // 3) Load the student (for this tenant) – keep it simple & safe
-    const student = await prisma.student.findFirst({
-      where: {
-        id: studentId,
-        tenantId,
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        sex: true,
-        guardianName: true,
-        guardianPhone: true,
-        guardianSmsOptIn: true,
-        note: true,
-        createdAt: true,
-      },
-    });
-
-    if (!student) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "Learner not found for this school. Please check the link or contact the office.",
-        },
-        { status: 404 }
-      );
-    }
-
-    // 4) Fees: invoices + payments for this learner
-    const invoices = await prisma.feeInvoice.findMany({
-      where: {
-        tenantId,
-        studentId,
-      },
+    invoices = await client.feeInvoice.findMany({
+      where: { tenantId, studentId: student.id },
+      orderBy: { createdAt: "desc" },
+      take: 25,
       select: {
         id: true,
         term: true,
@@ -94,155 +74,117 @@ export async function GET(req: Request) {
         totalWaivedPesewas: true,
         createdAt: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
     });
+  } catch (e) {
+    console.error("[PARENT_STUDENT_SUMMARY_FEES_INVOICE_QUERY_ERROR]", e);
+    invoices = [];
+  }
 
-    let totalBilledPesewas = 0;
-    const invoiceIds = invoices.map((inv) => inv.id);
+  const invoiceIds = invoices.map((x) => x.id);
 
-    const payments = await prisma.feePayment.findMany({
-      where: {
-        tenantId,
-        invoiceId: {
-          in: invoiceIds,
-        },
-      },
-      select: {
-        invoiceId: true,
-        amountPesewas: true,
-      },
-    });
-
-    const paidByInvoice = new Map<string, number>();
-    for (const p of payments) {
-      const prev = paidByInvoice.get(p.invoiceId) ?? 0;
-      paidByInvoice.set(
-        p.invoiceId,
-        prev + (p.amountPesewas ?? 0)
-      );
+  let payments: any[] = [];
+  if (invoiceIds.length) {
+    try {
+      payments = await client.feePayment.findMany({
+        where: { tenantId, invoiceId: { in: invoiceIds } },
+        select: { invoiceId: true, amountPesewas: true },
+      });
+    } catch (e) {
+      console.error("[PARENT_STUDENT_SUMMARY_FEES_PAYMENT_QUERY_ERROR]", e);
+      payments = [];
     }
+  }
 
-    const invoiceSummaries = invoices.map((inv) => {
-      const billedPesewas =
-        (inv.totalBilledPesewas ?? 0) -
-        (inv.totalWaivedPesewas ?? 0);
-      const paidPesewas = paidByInvoice.get(inv.id) ?? 0;
-      const outstandingPesewas = Math.max(
-        billedPesewas - paidPesewas,
-        0
-      );
+  const paidByInvoice = new Map<string, number>();
+  for (const p of payments) {
+    const k = String(p.invoiceId);
+    const prev = paidByInvoice.get(k) ?? 0;
+    paidByInvoice.set(k, prev + (p.amountPesewas ?? 0));
+  }
 
-      totalBilledPesewas += billedPesewas;
+  const invoicesUi = invoices.map((inv) => {
+    const billed = (inv.totalBilledPesewas ?? 0) - (inv.totalWaivedPesewas ?? 0);
+    const paid = paidByInvoice.get(String(inv.id)) ?? 0;
+    const outstanding = Math.max(0, billed - paid);
 
-      return {
-        id: inv.id,
-        term: inv.term,
-        academicYear: inv.academicYear,
-        note: inv.note,
-        billed: billedPesewas / 100,
-        paid: paidPesewas / 100,
-        outstanding: outstandingPesewas / 100,
-        createdAt: inv.createdAt.toISOString(),
-      };
-    });
-
-    const totalPaidPesewas = payments.reduce(
-      (sum, p) => sum + (p.amountPesewas ?? 0),
-      0
-    );
-    const totalOutstandingPesewas = Math.max(
-      totalBilledPesewas - totalPaidPesewas,
-      0
-    );
-
-    const feesSummary = {
-      invoiceCount: invoices.length,
-      totalBilled: totalBilledPesewas / 100,
-      totalPaid: totalPaidPesewas / 100,
-      totalOutstanding: totalOutstandingPesewas / 100,
-      invoices: invoiceSummaries,
+    return {
+      id: String(inv.id),
+      term: String(inv.term ?? ""),
+      academicYear: String(inv.academicYear ?? ""),
+      note: inv.note ?? null,
+      billed: cedis(billed),
+      paid: cedis(paid),
+      outstanding: cedis(outstanding),
+      createdAt: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : String(inv.createdAt ?? ""),
     };
+  });
 
-    // 5) Attendance: marks for this learner
-    // NOTE: AttendanceMark currently doesn't expose tenantId,
-    // so we simply filter by studentId (DB is effectively single-tenant).
-    const marks = await prisma.attendanceMark.findMany({
-      where: {
-        studentId,
-      },
-      select: {
-        status: true,
-      },
+  const totalBilledPesewas = invoices.reduce(
+    (sum, inv) => sum + ((inv.totalBilledPesewas ?? 0) - (inv.totalWaivedPesewas ?? 0)),
+    0
+  );
+  const totalPaidPesewas = payments.reduce((sum, p) => sum + (p.amountPesewas ?? 0), 0);
+  const totalOutstandingPesewas = Math.max(0, totalBilledPesewas - totalPaidPesewas);
+
+  // 3) Attendance (last 60 marks summary)
+  let present = 0;
+  let absent = 0;
+  let late = 0;
+  let other = 0;
+  let totalMarks = 0;
+
+  try {
+    const marks = await client.attendanceMark.findMany({
+      where: { studentId: student.id, session: { tenantId } },
+      select: { status: true },
+      take: 60,
     });
 
-    let present = 0;
-    let absent = 0;
-    let late = 0;
-    let other = 0;
+    totalMarks = marks.length;
 
     for (const m of marks) {
-      const raw = (m.status ?? "").toString().toLowerCase();
-
-      if (raw === "present") {
-        present += 1;
-      } else if (raw === "absent") {
-        absent += 1;
-      } else if (raw === "late") {
-        late += 1;
-      } else {
-        other += 1;
-      }
+      const s = String(m.status);
+      if (s === "PRESENT") present++;
+      else if (s === "ABSENT") absent++;
+      else if (s === "LATE") late++;
+      else other++;
     }
+  } catch (e) {
+    // soft-fail: attendance models may not exist yet on some tenants
+    console.error("[PARENT_STUDENT_SUMMARY_ATTENDANCE_QUERY_ERROR]", e);
+  }
 
-    const totalMarks = marks.length;
-    const denom = present + absent;
-    const attendanceRate = denom > 0 ? present / denom : null;
+  const attendanceRate =
+    totalMarks > 0 ? Number((present / totalMarks).toFixed(4)) : null; // 0..1 for your UI (it multiplies by 100)
 
-    const attendanceSummary = {
+  return noStoreJson(200, {
+    ok: true,
+    tenantId,
+    student: {
+      id: student.id,
+      firstName: student.firstName ?? "",
+      lastName: student.lastName ?? "",
+      sex: student.sex ?? "",
+      guardianName: student.guardianName ?? "",
+      guardianPhone: student.guardianPhone ?? "",
+      guardianSmsOptIn: !!student.guardianSmsOptIn,
+      note: student.note ?? "",
+      createdAt: student.createdAt.toISOString(),
+    },
+    fees: {
+      invoiceCount: invoicesUi.length,
+      totalBilled: cedis(totalBilledPesewas),
+      totalPaid: cedis(totalPaidPesewas),
+      totalOutstanding: cedis(totalOutstandingPesewas),
+      invoices: invoicesUi,
+    },
+    attendance: {
       present,
       absent,
       late,
       other,
       totalMarks,
       attendanceRate,
-    };
-
-    // 6) Final response
-    return NextResponse.json(
-      {
-        ok: true,
-        tenantId,
-        student: {
-          id: student.id,
-          firstName: student.firstName ?? "",
-          lastName: student.lastName ?? "",
-          sex: student.sex ?? "",
-          guardianName: student.guardianName ?? "",
-          guardianPhone: student.guardianPhone ?? "",
-          guardianSmsOptIn: !!student.guardianSmsOptIn,
-          note: student.note ?? "",
-          createdAt: student.createdAt.toISOString(),
-        },
-        fees: feesSummary,
-        attendance: attendanceSummary,
-      },
-      { status: 200 }
-    );
-  } catch (err: any) {
-    console.error(
-      "Error in /api/parent/student/summary",
-      err
-    );
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          err?.message ||
-          "Unexpected error while loading learner summary for parent view.",
-      },
-      { status: 500 }
-    );
-  }
+    },
+  });
 }

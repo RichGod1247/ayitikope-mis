@@ -1,20 +1,16 @@
 // src/app/api/parent/results/explain/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-type GesInfo = {
-  grade?: number;
-  label?: string;
-  band?: string;
-};
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-type SubjectPayload = {
-  subject?: string;
-  percentage?: number | null;
-  ges?: GesInfo | null;
-};
-
+type GesInfo = { grade?: number; label?: string; band?: string };
+type SubjectPayload = { subject?: string; percentage?: number | null; ges?: GesInfo | null };
 type BodyShape = {
-  tenantId?: string;
+  tenantId?: string; // ignored (session scoped)
   studentName?: string;
   className?: string;
   term?: string;
@@ -28,12 +24,40 @@ function clampPercent(v: number | null | undefined): number | null {
   return Math.max(0, Math.min(100, v));
 }
 
+const ADMINISH = new Set(["ADMIN", "SCHOOL_ADMIN", "HEADTEACHER"]);
+
+async function getSafeTenantCtx() {
+  const session = await getServerSession(authOptions);
+  const u = session?.user as any;
+
+  const userId = typeof u?.id === "string" ? u.id : "";
+  const tenantId = typeof u?.tenantId === "string" ? u.tenantId : "";
+
+  if (!session || !userId) return { ok: false as const, status: 401, error: "UNAUTHORIZED" };
+  if (!tenantId) return { ok: false as const, status: 403, error: "NO_ACTIVE_TENANT" };
+
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId, tenantId } },
+    select: { status: true, role: { select: { name: true } } },
+  });
+
+  if (!membership || membership.status !== "ACTIVE") {
+    return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  }
+
+  return {
+    ok: true as const,
+    userId,
+    tenantId,
+    roleName: String(membership.role?.name ?? "").trim(),
+  };
+}
+
 function gesTextFromSubject(s: SubjectPayload): string | null {
-  const p = clampPercent(s.percentage);
+  const p = clampPercent(s.percentage ?? null);
   const ges = s.ges || {};
   if (p == null) return null;
 
-  // Prefer provided GES info if any
   if (ges.grade != null || ges.label || ges.band) {
     const parts: string[] = [];
     if (ges.grade != null) parts.push(`Grade ${ges.grade}`);
@@ -42,7 +66,6 @@ function gesTextFromSubject(s: SubjectPayload): string | null {
     return parts.join(" – ");
   }
 
-  // Fallback: basic interpretation from percentage
   if (p >= 80) return "Excellent (GES-style high performance)";
   if (p >= 70) return "Very good";
   if (p >= 60) return "Good";
@@ -53,16 +76,29 @@ function gesTextFromSubject(s: SubjectPayload): string | null {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => null)) as BodyShape | null;
-    if (!body || typeof body !== "object") {
+    const ctx = await getSafeTenantCtx();
+    if (!ctx.ok) {
       return NextResponse.json(
-        { ok: false, error: "Invalid JSON body." },
-        { status: 400 }
+        { ok: false, error: ctx.error },
+        { status: ctx.status, headers: { "cache-control": "no-store" } }
       );
     }
 
+    const isParent = ctx.roleName === "PARENT";
+    const isAdminish = ADMINISH.has(ctx.roleName);
+    if (!isParent && !isAdminish) {
+      return NextResponse.json(
+        { ok: false, error: "FORBIDDEN" },
+        { status: 403, headers: { "cache-control": "no-store" } }
+      );
+    }
+
+    const body = (await req.json().catch(() => null)) as BodyShape | null;
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
+    }
+
     const {
-      tenantId,
       studentName,
       className,
       term = "1st Term",
@@ -74,258 +110,100 @@ export async function POST(req: NextRequest) {
     const periodLabel = `${term}, ${academicYear}`;
 
     if (!Array.isArray(rawSubjects)) {
-      return NextResponse.json(
-        { ok: false, error: "subjects must be an array." },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "subjects must be an array." }, { status: 400 });
     }
 
-    // Filter to subjects that actually have a percentage
     const subjects = rawSubjects
       .map((s) => ({
-        subject: (s.subject ?? "").trim(),
+        subject: String(s.subject ?? "").trim(),
         percentage: clampPercent(s.percentage ?? null),
         ges: s.ges ?? null,
       }))
       .filter((s) => s.subject && s.percentage != null);
 
-    const childName = (studentName || "your child").trim();
-    const classLabel = (className || "their class").trim();
+    const childName = String(studentName || "your child").trim();
+    const classLabel = String(className || "their class").trim();
 
     if (subjects.length === 0) {
       const summary =
         `For **${periodLabel}**, there are not enough continuous assessment scores recorded yet for ${childName}.\n\n` +
-        `This simply means teachers have not finished entering marks into EduLife OS, not that your child is doing poorly. ` +
-        `Once more scores are captured, you will see a full subject-by-subject picture here.`;
+        `This simply means teachers have not finished entering marks into EduLife OS, not that your child is doing poorly.`;
 
       const suggestions =
-        `**How you can support while marks are still being entered**\n` +
-        `- Keep encouraging ${childName} to attend school regularly and on time.\n` +
-        `- Ask politely if teachers are still entering marks into the new system — this keeps everyone aligned without blame.\n` +
-        `- Use this waiting period to build good routines at home (homework time, reading time, and adequate sleep).`;
+        `**What to do now**\n` +
+        `- Encourage regular attendance and punctuality.\n` +
+        `- Ask politely if marks are still being entered.\n` +
+        `- Maintain home routines (homework time, reading time, adequate sleep).`;
 
       return NextResponse.json(
-        { ok: true, summary, suggestions, meta: { tenantId: tenantId ?? null } },
-        { status: 200 }
+        { ok: true, summary, suggestions, meta: { tenantId: ctx.tenantId } },
+        { status: 200, headers: { "cache-control": "no-store" } }
       );
     }
 
-    // Overall percentage: use provided or derive simple average
-    const subjectPercents = subjects
-      .map((s) => s.percentage!)
-      .filter((p) => p != null);
+    const subjectPercents = subjects.map((s) => s.percentage!).filter((p) => p != null);
     const derivedOverall =
-      subjectPercents.length > 0
-        ? subjectPercents.reduce((a, b) => a + b, 0) / subjectPercents.length
-        : null;
+      subjectPercents.length > 0 ? subjectPercents.reduce((a, b) => a + b, 0) / subjectPercents.length : null;
 
-    const overall = clampPercent(
-      overallPercentage != null ? overallPercentage : derivedOverall
-    );
+    const overall = clampPercent(overallPercentage != null ? overallPercentage : derivedOverall);
 
-    // Buckets
     const high = subjects.filter((s) => (s.percentage ?? 0) >= 75);
-    const mid = subjects.filter(
-      (s) => (s.percentage ?? 0) >= 50 && (s.percentage ?? 0) < 75
-    );
+    const mid = subjects.filter((s) => (s.percentage ?? 0) >= 50 && (s.percentage ?? 0) < 75);
     const low = subjects.filter((s) => (s.percentage ?? 0) < 50);
 
-    // Best and weakest
-    const sorted = [...subjects].sort(
-      (a, b) => (b.percentage ?? 0) - (a.percentage ?? 0)
-    );
+    const sorted = [...subjects].sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0));
     const best = sorted[0];
     const worst = sorted[sorted.length - 1];
 
-    // Short helper for listing subject names
     const listNames = (arr: typeof subjects, limit = 3): string => {
       const names = arr.map((s) => s.subject);
       if (names.length === 0) return "";
       if (names.length <= limit) return names.join(", ");
-      const head = names.slice(0, limit).join(", ");
-      const remaining = names.length - limit;
-      return `${head} and ${remaining} more`;
+      return `${names.slice(0, limit).join(", ")} and ${names.length - limit} more`;
     };
 
-    // Overall tone line
     let overallLine: string;
-    if (overall == null) {
-      overallLine =
-        `For **${periodLabel}**, ${childName} has a number of recorded scores, ` +
-        `but there is not yet enough information to compute a clear overall percentage.`;
-    } else if (overall >= 80) {
-      overallLine =
-        `For **${periodLabel}**, ${childName} is performing at a **very strong level**, ` +
-        `with an overall continuous assessment score of about **${overall.toFixed(
-          1
-        )}%**.`;
-    } else if (overall >= 70) {
-      overallLine =
-        `For **${periodLabel}**, ${childName} is doing **well overall**, ` +
-        `with an estimated continuous assessment score of around **${overall.toFixed(
-          1
-        )}%**.`;
-    } else if (overall >= 55) {
-      overallLine =
-        `For **${periodLabel}**, ${childName} is **holding steady**, ` +
-        `with an overall continuous assessment score of about **${overall.toFixed(
-          1
-        )}%**. There is room to strengthen a few areas.`;
-    } else if (overall >= 45) {
-      overallLine =
-        `For **${periodLabel}**, ${childName}'s overall continuous assessment is around **${overall.toFixed(
-          1
-        )}%**, ` +
-        `which signals that they are **struggling in some subjects** but can improve with focused support.`;
-    } else {
-      overallLine =
-        `For **${periodLabel}**, ${childName}'s overall continuous assessment is about **${overall?.toFixed(
-          1
-        )}%**, ` +
-        `indicating that they are facing **significant difficulty** in several subjects. This is not a verdict on their future, but a call for calm, organised support.`;
-    }
+    if (overall == null) overallLine = `For **${periodLabel}**, there is not yet enough data to compute a clear overall percentage.`;
+    else if (overall >= 80) overallLine = `For **${periodLabel}**, ${childName} is performing at a **very strong level** (~**${overall.toFixed(1)}%**).`;
+    else if (overall >= 70) overallLine = `For **${periodLabel}**, ${childName} is doing **well overall** (~**${overall.toFixed(1)}%**).`;
+    else if (overall >= 55) overallLine = `For **${periodLabel}**, ${childName} is **holding steady** (~**${overall.toFixed(1)}%**) with room to strengthen a few areas.`;
+    else if (overall >= 45) overallLine = `For **${periodLabel}**, ${childName} is around **${overall.toFixed(1)}%**, showing struggle in some subjects but improvement is realistic with focused support.`;
+    else overallLine = `For **${periodLabel}**, ${childName} is around **${overall.toFixed(1)}%**, meaning several subjects need calm, organised support — not panic.`;
 
-    const lines: string[] = [];
-    lines.push(overallLine);
+    const lines: string[] = [overallLine];
 
     if (best) {
       const bestGes = gesTextFromSubject(best);
-      lines.push(
-        `- The strongest subject at the moment is **${best.subject}**, with about **${best.percentage!.toFixed(
-          1
-        )}%**${bestGes ? ` (${bestGes})` : ""}.`
-      );
+      lines.push(`- Strongest subject: **${best.subject}** (~**${best.percentage!.toFixed(1)}%**${bestGes ? `, ${bestGes}` : ""}).`);
     }
-
     if (worst && worst !== best) {
       const worstGes = gesTextFromSubject(worst);
-      lines.push(
-        `- The subject needing the most attention is **${worst.subject}**, with about **${worst.percentage!.toFixed(
-          1
-        )}%**${worstGes ? ` (${worstGes})` : ""}.`
-      );
+      lines.push(`- Needs most attention: **${worst.subject}** (~**${worst.percentage!.toFixed(1)}%**${worstGes ? `, ${worstGes}` : ""}).`);
     }
+    if (high.length) lines.push(`- Strong areas: **${listNames(high)}**.`);
+    if (mid.length) lines.push(`- Steady areas: **${listNames(mid)}** (these can become strengths).`);
+    if (low.length) lines.push(`- Struggling areas: **${listNames(low)}** (focus here calmly).`);
+    lines.push("", `This is a snapshot for **${classLabel}** in **${periodLabel}** — patterns can improve term by term.`);
 
-    if (high.length > 0) {
-      lines.push(
-        `- ${childName} is especially strong in **${listNames(
-          high
-        )}**. These are subjects you can praise and use as confidence-builders.`
-      );
-    }
-
-    if (mid.length > 0) {
-      lines.push(
-        `- There are also some **steady subjects** (neither very high nor very low) such as **${listNames(
-          mid
-        )}**. With a bit more practice, these can easily move into the stronger range.`
-      );
-    }
-
-    if (low.length > 0) {
-      lines.push(
-        `- A few subjects are clearly **struggling areas** right now, including **${listNames(
-          low
-        )}**. These are not reasons to panic, but they do need focused support from both home and school.`
-      );
-    }
-
-    lines.push(
-      ``,
-      `Taken together, this pattern gives you a calm picture of where ${childName} is shining, where they are stable, and where they need extra help in **${classLabel}** for **${periodLabel}**.`
-    );
-
-    const summary = lines.join("\n");
-
-    // ------------- Suggestions (practical plan) -------------
-    const suggestionLines: string[] = [];
-    suggestionLines.push(
-      `**How you can support ${childName} at home, based on this pattern**`
-    );
-
-    // Strengths
-    if (high.length > 0) {
-      suggestionLines.push(
-        `1. **Celebrate and protect strengths**`,
-        `   - Praise ${childName} specifically for strong performance in **${listNames(
-          high
-        )}**.`,
-        `   - Ask them to explain one topic from a strong subject to you; teaching builds confidence and deepens understanding.`,
-        `   - Avoid comparing them to other children. Compare their progress with **their own past performance**.`
-      );
-    } else {
-      suggestionLines.push(
-        `1. **Notice any small wins**`,
-        `   - Even if there are no very high scores yet, celebrate small improvements (for example, moving from 40% to 50%).`,
-        `   - Let ${childName} know you see their efforts, not just their marks.`
-      );
-    }
-
-    // Mid bucket
-    if (mid.length > 0) {
-      suggestionLines.push(
-        ``,
-        `2. **Turn “okay” subjects into strengths**`,
-        `   - Focus on subjects like **${listNames(
-          mid
-        )}**, where ${childName} is already doing fairly well.`,
-        `   - Help them build a simple weekly routine: for example, 2–3 short revision sessions of 20–30 minutes focusing on these subjects.`,
-        `   - Encourage them to ask questions in class and to use class exercises as practice, not punishment.`
-      );
-    }
-
-    // Low bucket
-    if (low.length > 0) {
-      suggestionLines.push(
-        ``,
-        `3. **Support the struggling areas calmly**`,
-        `   - For subjects such as **${listNames(
-          low
-        )}**, avoid harsh words. Instead, ask: “Which parts feel confusing to you?”`,
-        `   - If possible, agree with the class teacher on 1–2 key topics to focus on first, instead of trying to fix everything at once.`,
-        `   - Consider pairing ${childName} with a friend who is strong in one of these subjects for short study times.`,
-        `   - Watch for signs of stress or fear around these subjects and reassure ${childName} that improvement is a process, not a one-day event.`
-      );
-    }
-
-    // General habits
-    suggestionLines.push(
-      ``,
-      `4. **Build healthy routines around school work**`,
-      `   - Set a regular time and quiet place for homework and revision, even if it is just **30 minutes per day**.`,
-      `   - Protect sleep time; tired children struggle to focus, no matter how much they “try”.`,
-      `   - Limit distracting screen time on school days, especially close to bedtime.`,
-      ``,
-      `5. **Stay in gentle partnership with the school**`,
-      `   - Share any concerns with teachers early, using this summary as a starting point instead of an argument.`,
-      `   - Ask the teacher: “What is one small thing we can do at home to support ${childName} in this subject?”`,
-      `   - Remember: these results are **a snapshot**, not a final judgment. With steady support from home and school, the picture can improve term by term.`
-    );
-
-    const suggestions = suggestionLines.join("\n");
+    const suggestions = [
+      `**Practical plan at home (simple and effective)**`,
+      `1) Protect sleep + punctuality (tired children underperform).`,
+      `2) Do 20–30 minutes revision, 4 days/week (short + consistent beats long + rare).`,
+      low.length
+        ? `3) Start with ONE struggling subject (${low[0].subject}) for 2 weeks, then add the next.`
+        : `3) Strengthen one “steady” subject into a “strong” one.`,
+      `4) Talk to the teacher: “What 2 topics should we focus on first?”`,
+    ].join("\n");
 
     return NextResponse.json(
-      {
-        ok: true,
-        summary,
-        suggestions,
-        meta: {
-          tenantId: tenantId ?? null,
-          overall,
-          subjectCount: subjects.length,
-        },
-      },
-      { status: 200 }
+      { ok: true, summary: lines.join("\n"), suggestions, meta: { tenantId: ctx.tenantId, overall, subjectCount: subjects.length } },
+      { status: 200, headers: { "cache-control": "no-store" } }
     );
   } catch (err) {
     console.error("[PARENT_RESULTS_EXPLAIN_ERROR]", err);
     return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Failed to generate a calm explanation for these results. Please try again or contact the school.",
-      },
-      { status: 500 }
+      { ok: false, error: "Failed to generate results explanation." },
+      { status: 500, headers: { "cache-control": "no-store" } }
     );
   }
 }

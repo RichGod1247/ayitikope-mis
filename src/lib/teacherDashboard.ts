@@ -35,17 +35,25 @@ export async function getTeacherDashboardSnapshot(args: {
 
   try {
     // ---------------------------
-    // Teacher identity (display)
+    // Teacher identity (display) — ✅ tenant-scoped staffId from Membership
     // ---------------------------
-    const teacherUser = await prisma.user.findUnique({
-      where: { id: teacherUserId },
-      select: { firstName: true, lastName: true, name: true, staffId: true },
-    });
+    const [teacherUser, membership] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: teacherUserId },
+        select: { firstName: true, lastName: true, name: true, staffId: true },
+      }),
+      prisma.membership.findUnique({
+        where: { userId_tenantId: { userId: teacherUserId, tenantId } },
+        select: { staffId: true },
+      }),
+    ]);
+
+    const staffId = membership?.staffId ?? teacherUser?.staffId ?? null;
 
     const displayName =
       [teacherUser?.firstName, teacherUser?.lastName].filter(Boolean).join(" ").trim() ||
       teacherUser?.name ||
-      teacherUser?.staffId ||
+      staffId ||
       "Teacher";
 
     // ---------------------------
@@ -226,7 +234,7 @@ export async function getTeacherDashboardSnapshot(args: {
     }).format(new Date());
 
     return {
-      teacher: { displayName, staffId: teacherUser?.staffId ?? null },
+      teacher: { displayName, staffId },
       today: {
         label: todayLabel,
         attendance: {

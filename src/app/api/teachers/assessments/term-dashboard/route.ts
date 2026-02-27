@@ -1,12 +1,18 @@
-// src/app/api/teachers/assessment/term-dashboard/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
   return NextResponse.json(payload, {
     ...init,
-    headers: { "Cache-Control": "no-store", ...(init?.headers ?? {}) },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
   });
 }
 
@@ -25,8 +31,18 @@ function gesFromPct(pct: number | null) {
   return { grade: 9, remark: "Lowest / Fail" };
 }
 
+/**
+ * GET /api/teachers/assessments/term-dashboard?classroomId=...&term=...&academicYear=...
+ *
+ * Learner rows + classAverage (average across all learners/items).
+ */
 export async function GET(req: NextRequest) {
-  const ctx = await requireServerUserContext({ requireTenant: true });
+  const gate = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["SUPERADMIN", "SCHOOL_ADMIN", "HEADTEACHER", "TEACHER"],
+  });
+  if (!gate.ok) return gate.res;
+  const ctx = gate.ctx;
 
   const { searchParams } = new URL(req.url);
   const classroomId = (searchParams.get("classroomId") ?? "").trim();
@@ -34,20 +50,14 @@ export async function GET(req: NextRequest) {
   const academicYear = (searchParams.get("academicYear") ?? "").trim();
 
   if (!classroomId || !term || !academicYear) {
-    return jsonNoStore(
-      { ok: false, error: "classroomId, term and academicYear are required." },
-      { status: 400 }
-    );
+    return jsonNoStore({ ok: false, error: "classroomId, term and academicYear are required." }, { status: 400 });
   }
 
   const classroom = await prisma.classroom.findFirst({
     where: { id: classroomId, tenantId: ctx.tenantId },
     select: { id: true, name: true, grade: true, arm: true },
   });
-
-  if (!classroom) {
-    return jsonNoStore({ ok: false, error: "Classroom not found." }, { status: 404 });
-  }
+  if (!classroom) return jsonNoStore({ ok: false, error: "Classroom not found." }, { status: 404 });
 
   const learners = await prisma.student.findMany({
     where: { tenantId: ctx.tenantId, classroomId },
@@ -61,23 +71,23 @@ export async function GET(req: NextRequest) {
   });
 
   const itemIds = items.map((i) => i.id);
-  const totalMaxAll = items.reduce((sum, i) => sum + i.maxScore, 0);
+  const totalMaxAll = items.reduce((sum, i) => sum + (Number(i.maxScore) || 0), 0);
 
-  const scores = itemIds.length
-    ? await prisma.assessmentScore.findMany({
-        where: { itemId: { in: itemIds } },
-        select: { itemId: true, studentId: true, score: true },
-      })
-    : [];
+  const scores =
+    itemIds.length > 0
+      ? await prisma.assessmentScore.findMany({
+          where: { itemId: { in: itemIds } },
+          select: { itemId: true, studentId: true, score: true },
+        })
+      : [];
 
-  const scoreMap = new Map<string, number>(); // `${studentId}__${itemId}` -> score
-  for (const s of scores) scoreMap.set(`${s.studentId}__${s.itemId}`, s.score);
+  const scoreMap = new Map<string, number>();
+  for (const s of scores) scoreMap.set(`${s.studentId}__${s.itemId}`, Number(s.score) || 0);
 
   const rows = learners.map((l) => {
     let totalScore = 0;
-    for (const it of items) {
-      totalScore += scoreMap.get(`${l.id}__${it.id}`) ?? 0;
-    }
+    for (const it of items) totalScore += scoreMap.get(`${l.id}__${it.id}`) ?? 0;
+
     const pct = totalMaxAll > 0 ? (totalScore / totalMaxAll) * 100 : null;
     const ges = gesFromPct(pct);
 
@@ -94,8 +104,9 @@ export async function GET(req: NextRequest) {
     };
   });
 
+  // class average across all learners/items
   const classTotalScore = rows.reduce((sum, r) => sum + r.totalScore, 0);
-  const classTotalMax = rows.reduce((sum, r) => sum + r.totalMax, 0);
+  const classTotalMax = totalMaxAll * rows.length; // intentional: max across ALL learners
   const classPct = classTotalMax > 0 ? (classTotalScore / classTotalMax) * 100 : null;
   const classGes = gesFromPct(classPct);
 

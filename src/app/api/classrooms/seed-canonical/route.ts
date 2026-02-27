@@ -1,111 +1,178 @@
 // src/app/api/classrooms/seed-canonical/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { GRADES, ARMS, labelOf } from '@/lib/canonical-classes'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { effectiveRole } from "@/lib/roleRouting";
+import { normalizeArmNorm, normalizeNameNorm } from "@/lib/normalize";
+import { z } from "zod";
+import { ClassroomStatus } from "@prisma/client";
 
-/**
- * POST /api/classrooms/seed-canonical
- * Body: { tenantId: string, mode: 'single' | 'multi' }
- *
- * - SINGLE: ensures one class per grade (no arm). Creates missing only.
- * - MULTI : ensures arms A..D per grade. Creates missing only.
- * - Never blindly deletes to avoid FK violations.
- * - Also normalizes the "name" field to canonical label for any touched rows.
- */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+const BodySchema = z
+  .object({
+    mode: z.enum(["single", "multi"]),
+  })
+  .strict();
+
+function isAdminLike(roleName: unknown) {
+  const r = effectiveRole(roleName);
+  return r === "SUPERADMIN" || r === "SCHOOL_ADMIN" || r === "HEADTEACHER";
+}
+
+// Canonical Ghana structure (as your UI says: KG1 → JHS3)
+const CANONICAL_BASE = [
+  { name: "KG 1", grade: "KG1" },
+  { name: "KG 2", grade: "KG2" },
+
+  { name: "B1", grade: "B1" },
+  { name: "B2", grade: "B2" },
+  { name: "B3", grade: "B3" },
+  { name: "B4", grade: "B4" },
+  { name: "B5", grade: "B5" },
+  { name: "B6", grade: "B6" },
+
+  { name: "JHS 1", grade: "JHS1" },
+  { name: "JHS 2", grade: "JHS2" },
+  { name: "JHS 3", grade: "JHS3" },
+] as const;
+
+const MULTI_ARMS = ["A", "B", "C", "D"] as const;
+
+function buildTokenFromValues(name: string, arm: string | null) {
+  const nameNorm = normalizeNameNorm(name, 32);
+  const armNorm = normalizeArmNorm(arm ?? "", 8);
+  return `${nameNorm}${armNorm}`;
+}
+
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}))
-    const tenantId = String(body?.tenantId || '').trim()
-    const mode = String(body?.mode || 'single').toLowerCase()
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["SCHOOL_ADMIN", "HEADTEACHER", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
 
-    if (!tenantId) {
-      return new Response(JSON.stringify({ error: 'tenantId required' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
-    }
-    if (!['single','multi'].includes(mode)) {
-      return new Response(JSON.stringify({ error: 'mode must be single|multi' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
-    }
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId: auth.ctx.userId, tenantId: auth.ctx.tenantId } },
+    select: { status: true, role: { select: { name: true } } },
+  });
 
-    const existing = await prisma.classroom.findMany({
-      where: { tenantId },
-      select: { id: true, grade: true, arm: true, name: true },
-    })
-
-    // Build lookup by composite key grade|arm (arm may be '')
-    const key = (g: string, a?: string | null) => `${g.toUpperCase()}|${(a || '').toUpperCase()}`
-    const idx = new Map<string, { id: string, grade: string, arm: string | null, name: string | null }>()
-    for (const c of existing) {
-      if (!c.grade) continue
-      idx.set(key(c.grade, c.arm), { id: c.id, grade: c.grade, arm: c.arm, name: c.name })
-    }
-
-    const toCreate: Array<{ grade: string; arm?: string | null; name: string }> = []
-    const toNormalize: Array<{ id: string; name: string }> = []
-
-    if (mode === 'single') {
-      for (const g of GRADES) {
-        const k = key(g, null)
-        const found = idx.get(k)
-        if (found) {
-          const wantName = labelOf(g, null)
-          if ((found.name || '').trim() !== wantName) {
-            toNormalize.push({ id: found.id, name: wantName })
-          }
-        } else {
-          // If an arm exists for this grade, do NOT delete it; we still create a no-arm canonical row.
-          toCreate.push({ grade: g, arm: null, name: labelOf(g, null) })
-        }
-      }
-    } else {
-      for (const g of GRADES) {
-        for (const a of ARMS) {
-          const k = key(g, a)
-          const found = idx.get(k)
-          if (found) {
-            const wantName = labelOf(g, a)
-            if ((found.name || '').trim() !== wantName) {
-              toNormalize.push({ id: found.id, name: wantName })
-            }
-          } else {
-            toCreate.push({ grade: g, arm: a, name: labelOf(g, a) })
-          }
-        }
-      }
-    }
-
-    // Apply changes (safe & incremental)
-    for (const row of toCreate) {
-      await prisma.classroom.create({
-        data: {
-          tenantId,
-          grade: row.grade,
-          arm: row.arm ?? null,
-          name: row.name,
-        },
-        select: { id: true },
-      })
-    }
-    for (const row of toNormalize) {
-      await prisma.classroom.update({
-        where: { id: row.id },
-        data: { name: row.name },
-        select: { id: true },
-      })
-    }
-
-    return new Response(JSON.stringify({
-      ok: true,
-      created: toCreate.length,
-      normalized: toNormalize.length,
-      mode,
-    }), { status: 200, headers: { 'content-type': 'application/json' } })
-  } catch (err) {
-    console.error('seed-canonical error:', err)
-    return new Response(JSON.stringify({ error: 'Failed to seed classrooms' }), {
-      status: 500, headers: { 'content-type': 'application/json' },
-    })
+  if (!membership || membership.status !== "ACTIVE" || !isAdminLike(membership.role?.name ?? auth.ctx.roleName)) {
+    return json(403, { ok: false, error: "FORBIDDEN" });
   }
+
+  const parsed = BodySchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return json(400, { ok: false, error: parsed.error.issues[0]?.message || "Invalid body" });
+  }
+
+  const mode = parsed.data.mode;
+
+  // 1) Build desired list (token-based so we avoid duplicates like "B1A" vs "B1"+"A")
+  const desired: Array<{
+    token: string;
+    name: string;
+    grade: string | null;
+    arm: string | null;
+    nameNorm: string;
+    armNorm: string;
+  }> = [];
+
+  for (const base of CANONICAL_BASE) {
+    if (mode === "single") {
+      const nameNorm = normalizeNameNorm(base.name, 32);
+      const armNorm = normalizeArmNorm("", 8);
+      desired.push({
+        token: `${nameNorm}${armNorm}`,
+        name: base.name,
+        grade: base.grade,
+        arm: null,
+        nameNorm,
+        armNorm,
+      });
+    } else {
+      for (const arm of MULTI_ARMS) {
+        const nameNorm = normalizeNameNorm(base.name, 32);
+        const armNorm = normalizeArmNorm(arm, 8);
+        desired.push({
+          token: `${nameNorm}${armNorm}`,
+          name: base.name,
+          grade: base.grade,
+          arm,
+          nameNorm,
+          armNorm,
+        });
+      }
+    }
+  }
+
+  // 2) Fetch existing once and build a token set (fallback to normalizing actual name/arm if norms are empty)
+  const existing = await prisma.classroom.findMany({
+    where: { tenantId: auth.ctx.tenantId },
+    select: { id: true, name: true, arm: true, nameNorm: true, armNorm: true, status: true },
+    take: 5000,
+  });
+
+  const existingTokens = new Set<string>();
+  for (const c of existing) {
+    const nameNorm = (c.nameNorm || "").trim() || normalizeNameNorm(c.name ?? "", 32);
+    const armNorm = (c.armNorm || "").trim() || normalizeArmNorm(c.arm ?? "", 8);
+    existingTokens.add(`${nameNorm}${armNorm}`);
+  }
+
+  const missing = desired.filter((d) => !existingTokens.has(d.token));
+
+  // 3) Create missing (idempotent) + audit
+  const created = await prisma.$transaction(async (tx) => {
+    const res = await tx.classroom.createMany({
+      data: missing.map((d) => ({
+        tenantId: auth.ctx.tenantId,
+        name: d.name,
+        grade: d.grade,
+        arm: d.arm,
+        nameNorm: d.nameNorm,
+        armNorm: d.armNorm,
+        status: ClassroomStatus.ACTIVE,
+        note: `Canonical seed (${mode})`,
+      })),
+      // protects us from race conditions
+      skipDuplicates: true,
+    });
+
+    try {
+      await tx.auditLog.create({
+        data: {
+          tenantId: auth.ctx.tenantId,
+          userId: auth.ctx.userId,
+          action: "CLASSROOM_SEED_CANONICAL",
+          resource: "Classroom",
+          resourceId: null,
+          metadata: {
+            mode,
+            total: desired.length,
+            attempted: missing.length,
+            created: res.count,
+          } as any,
+        },
+      });
+    } catch {}
+
+    return res.count;
+  });
+
+  return json(200, {
+    ok: true,
+    mode,
+    created,
+    skipped: desired.length - created,
+    total: desired.length,
+  });
 }

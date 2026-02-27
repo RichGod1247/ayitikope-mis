@@ -4,14 +4,19 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
-import { getIpFromHeaders, getUserAgentFromHeaders, rateLimitCheck, rateLimitRecord } from "@/lib/rateLimit";
+import {
+  getIpFromHeaders,
+  getUserAgentFromHeaders,
+  rateLimitCheck,
+  rateLimitRecord,
+} from "@/lib/rateLimit";
 import type { Prisma } from "@prisma/client";
 import { verifyTotpWithEnvelope } from "@/lib/totp";
 
 type TeacherScope = {
   phase: string | null;
   classLevel: string | null;
-  jhsAssignments: any;
+  jhsAssignments: Prisma.JsonValue | null;
 };
 
 type SafeUser = {
@@ -22,7 +27,23 @@ type SafeUser = {
   tenantId?: string | null;
   roleName?: string | null;
   teacherScope?: TeacherScope | null;
+
+  // ✅ Exposed for /api/me
+  phone?: string | null;
+  phoneNumber?: string | null;
 };
+
+type NextAuthUserLike = {
+  id: string;
+  email: string;
+  name: string | null;
+  staffId?: string | null;
+  tenantId?: string | null;
+  roleName?: string | null;
+  teacherScope?: TeacherScope | null;
+  phone?: string | null;
+  phoneNumber?: string | null;
+} & Record<string, unknown>;
 
 function cleanStr(v: unknown) {
   return String(v ?? "").trim();
@@ -48,6 +69,7 @@ function tenantConnect(tenantId: string | null | undefined) {
 function userConnect(userId: string | null | undefined) {
   return userId ? { connect: { id: userId } } : undefined;
 }
+
 async function safeAudit(data: Prisma.AuditLogCreateInput) {
   try {
     await prisma.auditLog.create({ data });
@@ -56,57 +78,199 @@ async function safeAudit(data: Prisma.AuditLogCreateInput) {
   }
 }
 
+/**
+ * ✅ Load phone for session/JWT from your actual schema:
+ * TeacherProfile has `phone` and is tenant-scoped.
+ *
+ * Rules:
+ * - Prefer TeacherProfile for the active tenantId
+ * - If tenantId not provided or no row found, optionally fall back to any teacherProfile for the user
+ * - Fail-closed -> nulls (no guessing)
+ */
+async function loadUserPhoneForSession(args: {
+  userId: string;
+  tenantId?: string | null;
+}): Promise<{ phone: string | null; phoneNumber: string | null }> {
+  const userId = cleanStr(args.userId);
+  const tenantId = cleanStr(args.tenantId ?? "");
+
+  if (!userId) return { phone: null, phoneNumber: null };
+
+  try {
+    if (tenantId) {
+      const tp = await prisma.teacherProfile.findFirst({
+        where: { userId, tenantId },
+        select: { phone: true },
+      });
+      const p = cleanStr(tp?.phone ?? "");
+      if (p) return { phone: p, phoneNumber: p };
+    }
+
+    // Fallback: any teacher profile for the user (if they exist but tenant-scoped row missing)
+    const anyTp = await prisma.teacherProfile.findFirst({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      select: { phone: true },
+    });
+    const p2 = cleanStr(anyTp?.phone ?? "");
+    if (p2) return { phone: p2, phoneNumber: p2 };
+  } catch {
+    // table/row missing etc. -> fail closed
+  }
+
+  return { phone: null, phoneNumber: null };
+}
+
+/**
+ * Accept tenant identifier in ANY of these forms:
+ * - tenant id (cuid)
+ * - schoolCode (SCH-XXXXXX)
+ * - slug (ayitikope-basic)
+ * - emisCode (optional)
+ */
 async function resolveTenantIdOrNull(raw: string | null | undefined) {
   const v = cleanStr(raw);
   if (!v) return null;
 
-  // Try id first (cuid-ish)
-  const byId = await prisma.tenant.findFirst({
-    where: { id: v },
-    select: { id: true },
-  });
-  if (byId?.id) return byId.id;
+  try {
+    const t = await prisma.tenant.findFirst({
+      where: {
+        OR: [
+          { id: v },
+          { schoolCode: { equals: v, mode: "insensitive" } },
+          { slug: { equals: v, mode: "insensitive" } },
+          { emisCode: { equals: v, mode: "insensitive" } },
+        ],
+      },
+      select: { id: true },
+    });
 
-  // Then slug (case-insensitive)
-  const bySlug = await prisma.tenant.findFirst({
-    where: { slug: { equals: v, mode: "insensitive" } },
-    select: { id: true },
-  });
-  return bySlug?.id ?? null;
+    return t?.id ?? null;
+  } catch {
+    // Fail-closed: treat as unavailable backend (do not guess)
+    throw new Error("AUTH_BACKEND_UNAVAILABLE");
+  }
 }
 
-async function pickMembershipForUser(userId: string, tenantIdHint: string | null) {
-  if (tenantIdHint) {
+type PickedMembership = {
+  tenantId: string;
+  staffId: string | null;
+  role: { name: string | null } | null;
+};
+
+async function pickMembershipForUserStrict(
+  userId: string,
+  preferredTenantId: string | null
+): Promise<PickedMembership | null> {
+  // 1) Preferred tenant, if valid and ACTIVE
+  if (preferredTenantId) {
     const m = await prisma.membership.findFirst({
-      where: { userId, tenantId: tenantIdHint, status: "ACTIVE" },
+      where: { userId, tenantId: preferredTenantId, status: "ACTIVE" },
       select: { tenantId: true, staffId: true, role: { select: { name: true } } },
     });
-    return m ?? null;
+    if (m) return m as PickedMembership;
   }
 
-  // If no tenant specified, ONLY allow auto-pick when exactly one active membership exists.
+  // 2) Fallback: ONLY when exactly one ACTIVE membership exists.
   const ms = await prisma.membership.findMany({
     where: { userId, status: "ACTIVE" },
     select: { tenantId: true, staffId: true, role: { select: { name: true } } },
-    take: 3,
+    take: 2,
   });
 
-  if (ms.length === 1) return ms[0];
+  if (ms.length === 1) return ms[0] as PickedMembership;
   if (ms.length === 0) return null;
 
   // Bank-grade: do not guess tenant when multiple exist.
   throw new Error("TENANT_REQUIRED");
 }
 
+type StaffIdGlobalPick =
+  | null
+  | {
+      tenantId: string;
+      staffId: string | null;
+      role: { name: string | null } | null;
+      user: {
+        id: string;
+        email: string;
+        name: string | null;
+        passwordHash: string | null;
+        failedLoginCount: number | null;
+        lockedUntil: Date | null;
+        failedOtpCount: number | null;
+        otpLockedUntil: Date | null;
+
+        twoFactorEnabled: boolean;
+        twoFactorSetupAt: Date | null;
+        twoFactorSecretCiphertext: string | null;
+        twoFactorSecretKeyCiphertext: string | null;
+        twoFactorSecretIv: string | null;
+        twoFactorSecretTag: string | null;
+
+        lastActiveTenantId: string | null;
+      };
+    };
+
+async function pickByStaffIdGlobally(args: {
+  staffIdNorm: string;
+  staffIdRaw: string;
+}): Promise<StaffIdGlobalPick> {
+  const { staffIdNorm, staffIdRaw } = args;
+
+  const hits = await prisma.membership.findMany({
+    where: {
+      status: "ACTIVE",
+      OR: [
+        { staffIdNorm },
+        { staffId: { equals: staffIdRaw, mode: "insensitive" } },
+      ],
+    },
+    select: {
+      tenantId: true,
+      staffId: true,
+      role: { select: { name: true } },
+      user: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          passwordHash: true,
+          failedLoginCount: true,
+          lockedUntil: true,
+          failedOtpCount: true,
+          otpLockedUntil: true,
+
+          twoFactorEnabled: true,
+          twoFactorSetupAt: true,
+          twoFactorSecretCiphertext: true,
+          twoFactorSecretKeyCiphertext: true,
+          twoFactorSecretIv: true,
+          twoFactorSecretTag: true,
+
+          lastActiveTenantId: true,
+        },
+      },
+    },
+    take: 2,
+  });
+
+  if (hits.length === 1) return hits[0] as any;
+  if (hits.length === 0) return null;
+
+  throw new Error("TENANT_REQUIRED");
+}
+
 // ---------------- Tunables ----------------
-const LOGIN_WINDOW_SECONDS = Number(process.env.AUTH_LOGIN_WINDOW_SECONDS || 15 * 60); // 15m
+const LOGIN_WINDOW_SECONDS = Number(process.env.AUTH_LOGIN_WINDOW_SECONDS || 15 * 60);
 const LOGIN_FAIL_LIMIT_PER_IP = Number(process.env.AUTH_LOGIN_FAIL_LIMIT_PER_IP || 25);
-const LOGIN_FAIL_LIMIT_PER_IDENTIFIER = Number(process.env.AUTH_LOGIN_FAIL_LIMIT_PER_IDENTIFIER || 10);
+const LOGIN_FAIL_LIMIT_PER_IDENTIFIER = Number(
+  process.env.AUTH_LOGIN_FAIL_LIMIT_PER_IDENTIFIER || 10
+);
 
 const LOCKOUT_FAIL_THRESHOLD = Number(process.env.AUTH_LOCKOUT_FAIL_THRESHOLD || 8);
 const LOCKOUT_MINUTES = Number(process.env.AUTH_LOCKOUT_MINUTES || 10);
 
-// OTP lockout (separate)
 const OTP_FAIL_THRESHOLD = Number(process.env.AUTH_OTP_FAIL_THRESHOLD || 6);
 const OTP_LOCKOUT_MINUTES = Number(process.env.AUTH_OTP_LOCKOUT_MINUTES || 10);
 
@@ -122,28 +286,40 @@ export const authOptions: NextAuthOptions = {
         identifier: { label: "Email or Staff ID", type: "text" },
         password: { label: "Password", type: "password" },
         otp: { label: "OTP (optional)", type: "text" },
-
-        // ✅ NEW: required for staffId login, and for users with multiple tenants.
         tenant: { label: "School Code / Tenant", type: "text" },
       },
 
       async authorize(credentials, req) {
-        const headers = req?.headers ? new Headers(req.headers as any) : new Headers();
+        const headers = new Headers((req as { headers?: HeadersInit } | undefined)?.headers ?? {});
         const ip = getIpFromHeaders(headers);
         const userAgent = getUserAgentFromHeaders(headers);
 
-        const identifier = cleanStr((credentials as any)?.identifier);
-        const password = cleanStr((credentials as any)?.password);
-        const otp = cleanStr((credentials as any)?.otp);
-        const tenantRaw = cleanStr((credentials as any)?.tenant);
+        const c = (credentials ?? {}) as Partial<{
+          identifier: string;
+          password: string;
+          otp: string;
+          tenant: string;
+        }>;
+
+        const identifier = cleanStr(c.identifier);
+        const password = cleanStr(c.password);
+        const otp = cleanStr(c.otp);
+        const tenantRaw = cleanStr(c.tenant);
 
         if (!identifier || !password) return null;
 
-        const tenantIdHint = await resolveTenantIdOrNull(tenantRaw);
+        const emailLogin = isEmailLike(identifier);
 
-        // Rate-limit keys become tenant-aware to avoid cross-tenant DoS
+        const tenantIdHint = await resolveTenantIdOrNull(tenantRaw);
+        const tenantInputProvided = !!tenantRaw;
+        const tenantInputInvalid = tenantInputProvided && !tenantIdHint;
+
+        const identifierKey = emailLogin
+          ? cleanEmail(identifier)
+          : normalizeStaffIdNorm(identifier) || identifier.toUpperCase();
+
         const ipKey = ip ? `ip:${ip}` : null;
-        const idKey = `id:${tenantIdHint ?? "noTenant"}:${identifier.toUpperCase()}`;
+        const idKey = `id:${tenantIdHint ?? "noTenant"}:${identifierKey}`;
 
         if (ipKey) {
           const ipLimit = await rateLimitCheck({
@@ -163,11 +339,53 @@ export const authOptions: NextAuthOptions = {
         });
         if (!idLimit.ok) throw new Error(`RATE_LIMIT:${idLimit.retryAfterSeconds}`);
 
+        async function recordFail(
+          reason: string,
+          userId?: string | null,
+          extra?: Record<string, unknown>
+        ) {
+          const meta = {
+            reason,
+            identifier,
+            tenantId: tenantIdHint ?? null,
+            tenantRaw: tenantRaw || null,
+            ...(extra ?? {}),
+          } as Prisma.InputJsonValue;
+
+          if (ipKey) {
+            await rateLimitRecord({
+              action: "AUTH_LOGIN_FAIL",
+              key: ipKey,
+              ip,
+              userAgent,
+              userId: userId ?? undefined,
+              metadata: meta,
+            });
+          }
+          await rateLimitRecord({
+            action: "AUTH_LOGIN_FAIL",
+            key: idKey,
+            ip,
+            userAgent,
+            userId: userId ?? undefined,
+            metadata: meta,
+          });
+
+          await safeAudit({
+            tenant: tenantConnect(tenantIdHint ?? null),
+            user: userId ? userConnect(userId) : undefined,
+            action: "LOGIN_FAIL",
+            resource: "User",
+            resourceId: userId ?? identifier,
+            ip,
+            userAgent,
+            metadata: meta,
+          });
+        }
+
         // ---------------------------
         // 1) Resolve user + membership
         // ---------------------------
-        const emailLogin = isEmailLike(identifier);
-
         let user: {
           id: string;
           email: string;
@@ -188,12 +406,11 @@ export const authOptions: NextAuthOptions = {
           lastActiveTenantId: string | null;
         } | null = null;
 
-        let membership: { tenantId: string; staffId: string | null; role?: { name: string | null } | null } | null =
-          null;
+        let membership: PickedMembership | null = null;
 
         if (emailLogin) {
           user = await prisma.user.findFirst({
-            where: { email: cleanEmail(identifier) },
+            where: { email: { equals: cleanEmail(identifier), mode: "insensitive" } },
             select: {
               id: true,
               email: true,
@@ -216,132 +433,170 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user?.id || !user.passwordHash) {
-            if (ipKey) {
-              await rateLimitRecord({
-                action: "AUTH_LOGIN_FAIL",
-                key: ipKey,
-                ip,
-                userAgent,
-                metadata: { reason: "NO_USER_OR_NO_PASSWORD_HASH", identifier } as Prisma.InputJsonValue,
-              });
-            }
-            await rateLimitRecord({
-              action: "AUTH_LOGIN_FAIL",
-              key: idKey,
-              ip,
-              userAgent,
-              metadata: { reason: "NO_USER_OR_NO_PASSWORD_HASH", identifier } as Prisma.InputJsonValue,
-            });
-
-            await safeAudit({
-              action: "LOGIN_FAIL",
-              resource: "User",
-              resourceId: identifier,
-              ip,
-              userAgent,
-              metadata: { reason: "NO_USER_OR_NO_PASSWORD_HASH" } as Prisma.InputJsonValue,
-            });
-
+            await recordFail("NO_USER_OR_NO_PASSWORD_HASH");
             return null;
           }
 
-          // If tenant not supplied, try lastActiveTenantId before forcing TENANT_REQUIRED
-          const preferredTenant = tenantIdHint ?? user.lastActiveTenantId ?? null;
+          if (tenantInputInvalid) {
+            try {
+              const m = await pickMembershipForUserStrict(user.id, null);
+              if (!m) {
+                await recordFail("INVALID_TENANT_NO_MEMBERSHIP", user.id);
+                throw new Error("INVALID_TENANT");
+              }
+              membership = m;
 
-          try {
-            membership = await pickMembershipForUser(user.id, preferredTenant);
-          } catch (e: any) {
-            if (String(e?.message || "") === "TENANT_REQUIRED") throw new Error("TENANT_REQUIRED");
-            throw e;
+              await safeAudit({
+                user: userConnect(user.id),
+                tenant: tenantConnect(m.tenantId),
+                action: "LOGIN_TENANT_INPUT_INVALID_BYPASSED",
+                resource: "Tenant",
+                resourceId: tenantRaw,
+                ip,
+                userAgent,
+                metadata: {
+                  reason: "INVALID_TENANT_BYPASSED_SINGLE_MEMBERSHIP",
+                  tenantRaw,
+                  chosenTenantId: m.tenantId,
+                } as Prisma.InputJsonValue,
+              });
+            } catch (e: any) {
+              const msg = e?.message || "";
+              if (msg === "TENANT_REQUIRED") {
+                await recordFail("INVALID_TENANT_MULTI_MEMBERSHIP", user.id);
+                throw new Error("INVALID_TENANT");
+              }
+              throw e;
+            }
+          } else {
+            try {
+              membership = await pickMembershipForUserStrict(user.id, tenantIdHint ?? null);
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : "";
+              if (msg === "TENANT_REQUIRED") {
+                await recordFail("TENANT_REQUIRED", user.id);
+                throw new Error("TENANT_REQUIRED");
+              }
+              throw e;
+            }
+          }
+
+          if (!membership?.tenantId) {
+            await recordFail("NO_ACTIVE_MEMBERSHIP", user.id);
+            return null;
           }
         } else {
-          // staffId login MUST be tenant-aware
-          if (!tenantIdHint) throw new Error("TENANT_REQUIRED");
-
-          const staffIdNorm = normalizeStaffIdNorm(identifier);
+          // Staff ID login
+          const staffIdRaw = cleanStr(identifier);
+          const staffIdNorm = normalizeStaffIdNorm(staffIdRaw);
           if (!staffIdNorm) return null;
 
-          const m = await prisma.membership.findFirst({
-            where: { tenantId: tenantIdHint, status: "ACTIVE", staffIdNorm },
-            select: {
-              tenantId: true,
-              staffId: true,
-              role: { select: { name: true } },
-              user: {
-                select: {
-                  id: true,
-                  email: true,
-                  name: true,
-                  passwordHash: true,
-                  failedLoginCount: true,
-                  lockedUntil: true,
-                  failedOtpCount: true,
-                  otpLockedUntil: true,
+          if (tenantIdHint) {
+            const m = await prisma.membership.findFirst({
+              where: {
+                tenantId: tenantIdHint,
+                status: "ACTIVE",
+                OR: [{ staffIdNorm }, { staffId: { equals: staffIdRaw, mode: "insensitive" } }],
+              },
+              select: {
+                tenantId: true,
+                staffId: true,
+                role: { select: { name: true } },
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    passwordHash: true,
+                    failedLoginCount: true,
+                    lockedUntil: true,
+                    failedOtpCount: true,
+                    otpLockedUntil: true,
 
-                  twoFactorEnabled: true,
-                  twoFactorSetupAt: true,
-                  twoFactorSecretCiphertext: true,
-                  twoFactorSecretKeyCiphertext: true,
-                  twoFactorSecretIv: true,
-                  twoFactorSecretTag: true,
+                    twoFactorEnabled: true,
+                    twoFactorSetupAt: true,
+                    twoFactorSecretCiphertext: true,
+                    twoFactorSecretKeyCiphertext: true,
+                    twoFactorSecretIv: true,
+                    twoFactorSecretTag: true,
 
-                  lastActiveTenantId: true,
+                    lastActiveTenantId: true,
+                  },
                 },
               },
-            },
-          });
+            });
 
-          if (!m?.user?.id || !m.user.passwordHash) {
-            if (ipKey) {
-              await rateLimitRecord({
-                action: "AUTH_LOGIN_FAIL",
-                key: ipKey,
-                ip,
-                userAgent,
-                metadata: { reason: "NO_MEMBERSHIP_OR_NO_PASSWORD_HASH", identifier, tenantId: tenantIdHint } as Prisma.InputJsonValue,
+            if (!m?.user?.id || !m.user.passwordHash) {
+              await recordFail("NO_MEMBERSHIP_OR_NO_PASSWORD_HASH", null, {
+                staffIdNorm,
+                staffIdRaw,
               });
+              return null;
             }
-            await rateLimitRecord({
-              action: "AUTH_LOGIN_FAIL",
-              key: idKey,
-              ip,
-              userAgent,
-              metadata: { reason: "NO_MEMBERSHIP_OR_NO_PASSWORD_HASH", identifier, tenantId: tenantIdHint } as Prisma.InputJsonValue,
-            });
 
-            await safeAudit({
-              action: "LOGIN_FAIL",
-              resource: "Membership",
-              resourceId: identifier,
-              ip,
-              userAgent,
-              metadata: { reason: "NO_MEMBERSHIP_OR_NO_PASSWORD_HASH", tenantId: tenantIdHint } as Prisma.InputJsonValue,
-            });
+            membership = { tenantId: m.tenantId, staffId: m.staffId ?? null, role: m.role ?? null };
+            user = { ...m.user };
+          } else {
+            try {
+              const picked = await pickByStaffIdGlobally({ staffIdNorm, staffIdRaw });
 
-            return null;
+              if (!picked?.user?.id || !picked.user.passwordHash) {
+                await recordFail("NO_MEMBERSHIP_OR_NO_PASSWORD_HASH", null, {
+                  staffIdNorm,
+                  staffIdRaw,
+                });
+                return null;
+              }
+
+              membership = {
+                tenantId: picked.tenantId,
+                staffId: picked.staffId ?? null,
+                role: picked.role ?? null,
+              };
+              user = { ...picked.user };
+
+              if (tenantInputInvalid) {
+                await safeAudit({
+                  user: userConnect(user.id),
+                  tenant: tenantConnect(membership.tenantId),
+                  action: "LOGIN_TENANT_INPUT_INVALID_BYPASSED",
+                  resource: "Tenant",
+                  resourceId: tenantRaw,
+                  ip,
+                  userAgent,
+                  metadata: {
+                    reason: "INVALID_TENANT_BYPASSED_UNAMBIGUOUS_STAFFID",
+                    tenantRaw,
+                    chosenTenantId: membership.tenantId,
+                    staffIdNorm,
+                  } as Prisma.InputJsonValue,
+                });
+              }
+            } catch (e: any) {
+              const msg = e?.message || "";
+
+              if (tenantInputInvalid) {
+                await recordFail("INVALID_TENANT_STAFFID_UNRESOLVED", null, {
+                  staffIdNorm,
+                  staffIdRaw,
+                });
+                throw new Error("INVALID_TENANT");
+              }
+
+              if (msg === "TENANT_REQUIRED") {
+                await recordFail("TENANT_REQUIRED_FOR_STAFFID", null, {
+                  staffIdNorm,
+                  staffIdRaw,
+                });
+                throw new Error("TENANT_REQUIRED");
+              }
+
+              throw e;
+            }
           }
-
-          membership = { tenantId: m.tenantId, staffId: m.staffId ?? null, role: m.role ?? null };
-          user = {
-            id: m.user.id,
-            email: m.user.email,
-            name: m.user.name,
-            passwordHash: m.user.passwordHash,
-            failedLoginCount: m.user.failedLoginCount,
-            lockedUntil: m.user.lockedUntil,
-            failedOtpCount: m.user.failedOtpCount,
-            otpLockedUntil: m.user.otpLockedUntil,
-            twoFactorEnabled: m.user.twoFactorEnabled,
-            twoFactorSetupAt: m.user.twoFactorSetupAt,
-            twoFactorSecretCiphertext: m.user.twoFactorSecretCiphertext,
-            twoFactorSecretKeyCiphertext: m.user.twoFactorSecretKeyCiphertext,
-            twoFactorSecretIv: m.user.twoFactorSecretIv,
-            twoFactorSecretTag: m.user.twoFactorSecretTag,
-            lastActiveTenantId: m.user.lastActiveTenantId,
-          };
         }
 
-        if (!user?.id || !user.passwordHash) return null;
+        if (!user?.id || !user.passwordHash || !membership?.tenantId) return null;
 
         // ---------------------------
         // 2) Lockouts (password + OTP)
@@ -370,46 +625,20 @@ export const authOptions: NextAuthOptions = {
         const okPassword = await verifyPassword(password, user.passwordHash);
 
         if (!okPassword) {
-          if (ipKey) {
-            await rateLimitRecord({
-              action: "AUTH_LOGIN_FAIL",
-              key: ipKey,
-              ip,
-              userAgent,
-              userId: user.id,
-              metadata: { reason: "BAD_PASSWORD", identifier, userId: user.id } as Prisma.InputJsonValue,
-            });
-          }
-          await rateLimitRecord({
-            action: "AUTH_LOGIN_FAIL",
-            key: idKey,
-            ip,
-            userAgent,
-            userId: user.id,
-            metadata: { reason: "BAD_PASSWORD", identifier, userId: user.id } as Prisma.InputJsonValue,
-          });
-
           const nextCount = (user.failedLoginCount ?? 0) + 1;
           const shouldLock = nextCount >= LOCKOUT_FAIL_THRESHOLD;
-          const lockedUntil = shouldLock ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null;
+          const lockedUntil = shouldLock
+            ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+            : null;
 
           await prisma.user.update({
             where: { id: user.id },
             data: { failedLoginCount: nextCount, lockedUntil: shouldLock ? lockedUntil : null },
           });
 
-          await safeAudit({
-            user: userConnect(user.id),
-            action: shouldLock ? "LOGIN_LOCKED" : "LOGIN_FAIL",
-            resource: "User",
-            resourceId: user.id,
-            ip,
-            userAgent,
-            metadata: {
-              reason: "BAD_PASSWORD",
-              failedLoginCount: nextCount,
-              lockedUntil: lockedUntil ? lockedUntil.toISOString() : null,
-            } as Prisma.InputJsonValue,
+          await recordFail(shouldLock ? "BAD_PASSWORD_LOCKED" : "BAD_PASSWORD", user.id, {
+            failedLoginCount: nextCount,
+            lockedUntil: lockedUntil ? lockedUntil.toISOString() : null,
           });
 
           if (shouldLock && lockedUntil) throw new Error(`ACCOUNT_LOCKED:${secondsLeft(lockedUntil)}`);
@@ -465,7 +694,9 @@ export const authOptions: NextAuthOptions = {
           if (!okOtp) {
             const nextOtp = (user.failedOtpCount ?? 0) + 1;
             const otpShouldLock = nextOtp >= OTP_FAIL_THRESHOLD;
-            const otpLockedUntil = otpShouldLock ? new Date(Date.now() + OTP_LOCKOUT_MINUTES * 60 * 1000) : null;
+            const otpLockedUntil = otpShouldLock
+              ? new Date(Date.now() + OTP_LOCKOUT_MINUTES * 60 * 1000)
+              : null;
 
             await prisma.user.update({
               where: { id: user.id },
@@ -479,18 +710,25 @@ export const authOptions: NextAuthOptions = {
               resourceId: user.id,
               ip,
               userAgent,
-              metadata: { reason: "BAD_OTP", failedOtpCount: nextOtp } as Prisma.InputJsonValue,
+              metadata: {
+                reason: "BAD_OTP",
+                failedOtpCount: nextOtp,
+                otpLockedUntil: otpLockedUntil ? otpLockedUntil.toISOString() : null,
+              } as Prisma.InputJsonValue,
             });
 
-            if (otpShouldLock && otpLockedUntil) throw new Error(`OTP_LOCKED:${secondsLeft(otpLockedUntil)}`);
+            if (otpShouldLock && otpLockedUntil) {
+              throw new Error(`OTP_LOCKED:${secondsLeft(otpLockedUntil)}`);
+            }
             throw new Error("OTP_INVALID");
           }
         }
 
         // ---------------------------
-        // 5) Reset counters + set lastActiveTenantId
+        // 5) Reset counters + set lastActiveTenant
         // ---------------------------
-        const resetData: any = {};
+        const resetData: Prisma.UserUpdateInput = {};
+
         if ((user.failedLoginCount ?? 0) !== 0 || user.lockedUntil) {
           resetData.failedLoginCount = 0;
           resetData.lockedUntil = null;
@@ -500,14 +738,15 @@ export const authOptions: NextAuthOptions = {
           resetData.otpLockedUntil = null;
         }
         if (membership?.tenantId) {
-          resetData.lastActiveTenantId = membership.tenantId;
+          resetData.lastActiveTenant = { connect: { id: membership.tenantId } };
         }
+
         if (Object.keys(resetData).length) {
           await prisma.user.update({ where: { id: user.id }, data: resetData });
         }
 
         // ---------------------------
-        // 6) Attach teacher scope (3b)
+        // 6) Attach teacher scope
         // ---------------------------
         let teacherScope: TeacherScope | null = null;
         if (membership?.tenantId) {
@@ -518,9 +757,17 @@ export const authOptions: NextAuthOptions = {
           teacherScope = {
             phase: tp?.phase ?? null,
             classLevel: tp?.classLevel ?? null,
-            jhsAssignments: (tp?.jhsAssignments as any) ?? null,
+            jhsAssignments: (tp?.jhsAssignments ?? null) as Prisma.JsonValue | null,
           };
         }
+
+        // ---------------------------
+        // 7) ✅ Load phone (tenant-scoped TeacherProfile.phone)
+        // ---------------------------
+        const phoneBundle = await loadUserPhoneForSession({
+          userId: user.id,
+          tenantId: membership?.tenantId ?? null,
+        });
 
         const safe: SafeUser = {
           id: user.id,
@@ -530,6 +777,8 @@ export const authOptions: NextAuthOptions = {
           tenantId: membership?.tenantId ?? null,
           roleName: membership?.role?.name ?? null,
           teacherScope,
+          phone: phoneBundle.phone,
+          phoneNumber: phoneBundle.phoneNumber,
         };
 
         await safeAudit({
@@ -546,30 +795,115 @@ export const authOptions: NextAuthOptions = {
           } as Prisma.InputJsonValue,
         });
 
-        return safe as any;
+        return safe as NextAuthUserLike;
       },
     }),
   ],
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      const t = token as Record<string, unknown>;
+
       if (user) {
-        token.uid = (user as any).id;
-        token.email = (user as any).email;
-        token.name = (user as any).name ?? null;
-        token.staffId = (user as any).staffId ?? null; // now tenant-scoped
-        token.tenantId = (user as any).tenantId ?? null;
-        token.roleName = (user as any).roleName ?? null;
-        token.teacherScope = (user as any).teacherScope ?? null;
+        const u = user as unknown as SafeUser;
+        t.uid = u.id;
+        t.email = u.email;
+        t.name = u.name ?? null;
+        t.staffId = u.staffId ?? null;
+        t.tenantId = u.tenantId ?? null;
+        t.roleName = u.roleName ?? null;
+        t.teacherScope = u.teacherScope ?? null;
+
+        // ✅ NEW
+        t.phone = u.phone ?? null;
+        t.phoneNumber = u.phoneNumber ?? null;
+
+        return token;
       }
+
+      if (trigger === "update") {
+        const uid = typeof t.uid === "string" ? t.uid : null;
+        const desiredTenantIdRaw =
+          session && (session as any).tenantId ? String((session as any).tenantId) : null;
+
+        if (uid && desiredTenantIdRaw) {
+          const m = await prisma.membership.findUnique({
+            where: { userId_tenantId: { userId: uid, tenantId: desiredTenantIdRaw } },
+            select: {
+              status: true,
+              staffId: true,
+              role: { select: { name: true } },
+            },
+          });
+
+          if (m && m.status === "ACTIVE") {
+            t.tenantId = desiredTenantIdRaw;
+            t.staffId = m.staffId ?? null;
+            t.roleName = m.role?.name ?? null;
+
+            const tp = await prisma.teacherProfile.findFirst({
+              where: { tenantId: desiredTenantIdRaw, userId: uid },
+              select: { phase: true, classLevel: true, jhsAssignments: true },
+            });
+
+            t.teacherScope = {
+              phase: tp?.phase ?? null,
+              classLevel: tp?.classLevel ?? null,
+              jhsAssignments: (tp?.jhsAssignments ?? null) as Prisma.JsonValue | null,
+            };
+
+            // ✅ Refresh phone on tenant switch
+            try {
+              const phoneBundle = await loadUserPhoneForSession({
+                userId: uid,
+                tenantId: desiredTenantIdRaw,
+              });
+              t.phone = phoneBundle.phone ?? null;
+              t.phoneNumber = phoneBundle.phoneNumber ?? null;
+            } catch {
+              // ignore
+            }
+
+            try {
+              await prisma.user.update({
+                where: { id: uid },
+                data: { lastActiveTenant: { connect: { id: desiredTenantIdRaw } } },
+              });
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+
       return token;
     },
+
     async session({ session, token }) {
-      (session.user as any).id = token.uid as string;
-      (session.user as any).staffId = (token.staffId as string) ?? null;
-      (session.user as any).tenantId = (token.tenantId as string) ?? null;
-      (session.user as any).roleName = (token.roleName as string) ?? null;
-      (session.user as any).teacherScope = (token as any).teacherScope ?? null;
+      const t = token as Record<string, unknown>;
+      const su = session.user as typeof session.user & {
+        id?: string;
+        staffId?: string | null;
+        tenantId?: string | null;
+        roleName?: string | null;
+        teacherScope?: TeacherScope | null;
+
+        // ✅ NEW
+        phone?: string | null;
+        phoneNumber?: string | null;
+      };
+
+      if (typeof t.uid === "string") su.id = t.uid;
+
+      su.staffId = typeof t.staffId === "string" ? t.staffId : null;
+      su.tenantId = typeof t.tenantId === "string" ? t.tenantId : null;
+      su.roleName = typeof t.roleName === "string" ? t.roleName : null;
+      su.teacherScope = (t.teacherScope as TeacherScope) ?? null;
+
+      // ✅ NEW
+      su.phone = typeof t.phone === "string" ? t.phone : null;
+      su.phoneNumber = typeof t.phoneNumber === "string" ? t.phoneNumber : null;
+
       return session;
     },
   },

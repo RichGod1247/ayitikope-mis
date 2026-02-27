@@ -1,176 +1,145 @@
 // src/app/api/student/attendance/summary/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { AttendanceStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  requireTenantContext,
+  assertTenantParamMatches,
+  toHttpError,
+} from "@/lib/server/tenantScope";
+import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 
-/**
- * GET /api/student/attendance/summary?studentId=...&term=...&academicYear=...
- *
- * JSON rules:
- *  - Always returns JSON: { ok: boolean, ... }
- *  - 400 when studentId missing
- *  - 404 when student not found
- *  - 200 + ok:true on success (even if all zeros)
- *
- * NOTE (v1):
- *  - For now, we aggregate **all** attendance marks for this learner.
- *    The term/academicYear parameters are accepted and passed back
- *    but not yet used to filter by date — that will be layered in once
- *    we have a proper academic calendar table.
- */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store",
+  "X-Content-Type-Options": "nosniff",
+} as const;
 
-export async function GET(req: NextRequest) {
+function jsonErr(status: number, error: string) {
+  return NextResponse.json({ ok: false, error }, { status, headers: NO_STORE_HEADERS });
+}
+
+function parseISO(iso: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) throw new Error("Invalid date. Use YYYY-MM-DD.");
+  const d = new Date(`${iso}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid date.");
+  return d;
+}
+
+function toISO(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
+    const ctx = await requireTenantContext();
+    const url = new URL(req.url);
 
-    const studentId = (searchParams.get("studentId") || "").trim();
-    const term = (searchParams.get("term") || "1st Term").trim();
-    const academicYear = (
-      searchParams.get("academicYear") || "2025/2026"
-    ).trim();
+    // Backward compat tenantId (optional)
+    const suppliedTenantId = (url.searchParams.get("tenantId") || "").trim() || null;
+    assertTenantParamMatches(ctx.tenantId, suppliedTenantId);
 
-    if (!studentId) {
-      return NextResponse.json(
-        { ok: false, error: "studentId is required." },
-        { status: 400 }
-      );
+    // Required (to avoid guessing your auth/student linkage)
+    const studentId = (url.searchParams.get("studentId") || "").trim();
+    if (!studentId) return jsonErr(400, "studentId is required.");
+
+    // Optional scoping: if you pass classroomId we enforce teacher access
+    const classroomId = (url.searchParams.get("classroomId") || "").trim() || null;
+
+    // Optional date range (defaults to last 30 days)
+    const toISOParam = (url.searchParams.get("to") || "").trim();
+    const fromISOParam = (url.searchParams.get("from") || "").trim();
+
+    const today = new Date();
+    const toDate = toISOParam ? parseISO(toISOParam) : parseISO(toISO(today));
+    const fromDate = fromISOParam
+      ? parseISO(fromISOParam)
+      : new Date(toDate.getTime() - 29 * 24 * 60 * 60 * 1000);
+
+    if (fromDate.getTime() > toDate.getTime()) return jsonErr(400, "`from` must be <= `to`.");
+
+    // If classroomId provided, require access (keeps this safe for teacher/HT dashboards)
+    if (classroomId) {
+      await assertCanAccessClassroom({
+        tenantId: ctx.tenantId,
+        userId: (ctx as any).userId,
+        classroomId,
+      });
     }
 
-    const client = prisma as any;
-
-    // 1) Load the student so we know tenant + class
-    const student = await client.student.findUnique({
-      where: { id: studentId },
-      select: {
-        id: true,
-        tenantId: true,
-        firstName: true,
-        lastName: true,
-        classroom: {
-          select: {
-            id: true,
-            name: true,
-            grade: true,
-            arm: true,
-          },
-        },
-      },
-    });
-
-    if (!student) {
-      return NextResponse.json(
-        { ok: false, error: "Student not found." },
-        { status: 404 }
-      );
-    }
-
-    const tenantId = student.tenantId as string;
-
-    // 2) Load all attendance marks for this learner
-    //    (later we can add date filtering by term/year)
-    const marks = await client.attendanceMark.findMany({
+    // Pull marks with session relation included (fixes "mark.session does not exist")
+    const marks = await prisma.attendanceMark.findMany({
       where: {
-        tenantId,
-        studentId: student.id,
+        studentId,
+        session: {
+          tenantId: ctx.tenantId,
+          ...(classroomId ? { classroomId } : {}),
+          date: { gte: fromDate, lte: toDate },
+        },
       },
       select: {
         id: true,
         status: true,
+        note: true,
+        sessionId: true,
         createdAt: true,
+        updatedAt: true,
         session: {
+          // ✅ No "type" here (fixes your select error)
           select: {
             id: true,
             date: true,
-            type: true,
+            classroomId: true,
+            isClosed: true,
+            certifiedAt: true,
           },
         },
       },
-      orderBy: {
-        session: {
-          date: "asc",
-        },
-      },
+      orderBy: { session: { date: "asc" } },
+      take: 2000,
     });
 
-    const totalMarks = marks.length;
-
+    // Aggregate counts
     let present = 0;
     let absent = 0;
     let late = 0;
     let excused = 0;
 
-    for (const m of marks) {
-      const status = m.status as AttendanceStatus | null;
+    const items = marks.map((m) => {
+      if (m.status === AttendanceStatus.PRESENT) present += 1;
+      else if (m.status === AttendanceStatus.ABSENT) absent += 1;
+      else if (m.status === AttendanceStatus.LATE) late += 1;
+      else if (m.status === AttendanceStatus.EXCUSED) excused += 1;
 
-      if (status === "PRESENT") present += 1;
-      else if (status === "ABSENT") absent += 1;
-      else if (status === "LATE") late += 1;
-      else if (status === "EXCUSED") excused += 1;
-    }
-
-    const presentEffective = present + late; // treat late as attended
-    const presentPercent =
-      totalMarks > 0 ? (presentEffective / totalMarks) * 100 : 0;
-
-    // Build a small "recent history" list (up to last 12 entries)
-    const recent = [...marks]
-      .slice(-12)
-      .map((m) => ({
-        id: m.id as string,
-        date: m.session?.date
-          ? new Date(m.session.date).toISOString().slice(0, 10)
-          : null,
-        type: m.session?.type ?? null,
-        status: m.status as string | null,
-      }));
-
-    const classroomLabel = student.classroom
-      ? [
-          student.classroom.grade,
-          student.classroom.name || student.classroom.arm,
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : null;
+      return {
+        markId: m.id,
+        status: m.status,
+        note: m.note,
+        sessionId: m.sessionId,
+        dateISO: toISO(m.session.date),
+        classroomId: m.session.classroomId,
+        session: {
+          isClosed: m.session.isClosed,
+          certifiedAt: m.session.certifiedAt,
+        },
+      };
+    });
 
     return NextResponse.json(
       {
         ok: true,
-        student: {
-          id: student.id,
-          name: [student.firstName, student.lastName]
-            .filter(Boolean)
-            .join(" "),
-          classroom: classroomLabel,
-        },
-        term,
-        academicYear,
-        stats: {
-          totalMarks,
-          present,
-          absent,
-          late,
-          excused,
-          presentPercent: Number(presentPercent.toFixed(1)),
-        },
-        recent,
-        note:
-          totalMarks === 0
-            ? "No attendance marks have been recorded yet for this learner in EduLife OS."
-            : "This summary is based on all attendance marks recorded for this learner in EduLife OS. Term- and year-specific filtering will be layered in once the academic calendar is fully configured.",
+        range: { from: toISO(fromDate), to: toISO(toDate) },
+        studentId,
+        classroomId,
+        totals: { present, absent, late, excused, marks: marks.length },
+        items,
       },
-      { status: 200 }
+      { headers: NO_STORE_HEADERS }
     );
-  } catch (err) {
-    console.error("[STUDENT_ATTENDANCE_SUMMARY_ERROR]", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Failed to load attendance summary for this learner. Please try again or contact the school office.",
-      },
-      { status: 500 }
-    );
+  } catch (e) {
+    const { status, msg } = toHttpError(e);
+    return NextResponse.json({ ok: false, error: msg }, { status, headers: NO_STORE_HEADERS });
   }
 }

@@ -10,7 +10,14 @@ type Mode = "FULL" | "QUICK";
 
 type AiLessonFields = {
   lessonTitle?: string;
-  objectives?: string;
+
+  // Dedicated fields (print page / UI can render these separately)
+  performanceIndicator?: string; // plain sentence, no "Learners can..."
+  coreCompetencies?: string; // bullet list string
+  keywords?: string; // bullet list string
+
+  // Existing lesson note fields
+  objectives?: string; // MUST start with Learning Outcomes only
   teachingLearningResources?: string;
   introduction?: string;
   lessonDevelopment?: string;
@@ -22,14 +29,20 @@ type AiLessonFields = {
 };
 
 type LessonNoteForCoach = {
+  id: string;
   subject: string;
+  phase: string | null;
+  level: string | null;
+
+  term: string;
+  academicYear: string;
+  weekNumber: number | null;
+
   strand: string;
   substrand: string | null;
   contentStandard: string | null;
   indicator: string | null;
   lessonTitle: string | null;
-  phase: string | null;
-  level: string | null;
 
   objectives: string | null;
   priorKnowledge: string | null;
@@ -42,17 +55,44 @@ type LessonNoteForCoach = {
   differentiationNotes: string | null;
   reflectionNotes: string | null;
 
-  academicYear: string;
-  term: string;
-  weekNumber: number | null;
+  curriculumUnitId: string | null;
+  schemeOfWorkItemId: string | null;
+};
 
-  curriculumUnit: {
-    strandCode: string | null;
-    substrandCode: string | null;
-    contentStandardCode: string | null;
-    indicatorCode: string | null;
-    weekNumber: number | null;
+type Grounding = {
+  strandCode?: string | null;
+  strandTitle?: string | null;
+
+  subStrandCode?: string | null;
+  subStrandTitle?: string | null;
+
+  contentStandardCode?: string | null;
+  contentStandardDesc?: string | null;
+
+  indicatorCode?: string | null;
+  indicatorDesc?: string | null;
+
+  unitWeekNumber?: number | null;
+  unitNotes?: string | null;
+
+  schemeItem?: {
+    weekNumber?: number | null;
+    dayNumber?: number | null;
+    notes?: string | null;
+    indicatorId?: string | null;
+    indicatorCode?: string | null;
+    indicatorDescription?: string | null;
+    strandTitle?: string | null;
+    subStrandTitle?: string | null;
+    contentStandardCode?: string | null;
+    contentStandardDescription?: string | null;
   } | null;
+
+  exemplars: Array<{
+    title?: string | null;
+    description: string;
+    assessmentNotes?: string | null;
+  }>;
 };
 
 function jsonNoStore(payload: any, init?: { status?: number; headers?: HeadersInit }) {
@@ -81,6 +121,789 @@ function isPlausibleId(id: string) {
   return /^[a-zA-Z0-9_-]+$/.test(id);
 }
 
+function clean(s: unknown) {
+  return String(s ?? "").trim();
+}
+
+function safeLower(s: unknown) {
+  return typeof s === "string" ? s.toLowerCase().trim() : "";
+}
+
+function titleCase(s: string) {
+  const x = clean(s);
+  if (!x) return "";
+  return x
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => (w.length <= 2 ? w : w[0]!.toUpperCase() + w.slice(1)))
+    .join(" ")
+    .replace(/\b(i|ii|iii|iv|v|vi)\b/gi, (m) => m.toUpperCase());
+}
+
+function bullet(lines: string[]) {
+  return lines
+    .map((x) => clean(x))
+    .filter(Boolean)
+    .map((x) => `• ${x}`)
+    .join("\n");
+}
+
+function firstMeaningfulLine(text: string) {
+  const s = clean(text);
+  if (!s) return "";
+  const parts = s
+    .split(/\n|[.!?]/)
+    .map((x) => clean(x))
+    .filter(Boolean);
+  return parts[0] ?? s;
+}
+
+function trimToMax(s: unknown, maxChars: number) {
+  const x = clean(s);
+  if (x.length <= maxChars) return x;
+  return x.slice(0, maxChars - 1).trimEnd() + "…";
+}
+
+/** -------- stable seeded variability (non-repetitive across different notes) -------- */
+function hash32(input: string) {
+  // FNV-1a 32-bit
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+function makeRng(seed: number) {
+  // xorshift32
+  let x = seed || 123456789;
+  return () => {
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    return ((x >>> 0) / 0xffffffff) || 0.5;
+  };
+}
+
+function pick<T>(rng: () => number, arr: T[]): T {
+  return arr[Math.floor(rng() * arr.length)]!;
+}
+
+function learnerLabel(level: string | null) {
+  const lv = safeLower(level);
+  if (lv.includes("jhs")) return { band: "JHS", minutes: 40 };
+  if (lv.includes("kg")) return { band: "KG", minutes: 30 };
+  if (
+    lv.includes("basic 4") ||
+    lv.includes("basic 5") ||
+    lv.includes("basic 6") ||
+    lv.includes("b4") ||
+    lv.includes("b5") ||
+    lv.includes("b6")
+  ) {
+    return { band: "Upper Primary", minutes: 35 };
+  }
+  return { band: "Primary", minutes: 35 };
+}
+
+function subjectStyle(subjectRaw: string) {
+  const s = safeLower(subjectRaw);
+
+  if (s.includes("math")) {
+    return {
+      kind: "MATH" as const,
+      referencesLabel: "Mathematics Curriculum",
+      coreMaterials: [
+        "Chalk/marker + board",
+        "Exercise books",
+        "Counters (bottle tops/beans)",
+        "Number line/strip (paper)",
+        "Place-value/base-ten materials (or improvised bundles/strips)",
+        "GH₵ note cut-outs (optional)",
+      ],
+      visuals: ["place-value chart", "base-ten blocks sketch", "number line"],
+      localContexts: ["market prices (GH₵)", "bus/trotro fares", "measuring cups/spoons", "farm produce counts"],
+    };
+  }
+
+  if (s.includes("comput") || s.includes("ict")) {
+    return {
+      kind: "COMPUTING" as const,
+      referencesLabel: "Computing Curriculum",
+      coreMaterials: ["Chalk/marker + board", "Computer/phone (if available)", "Printed screenshots (teacher-made)", "Exercise books"],
+      visuals: ["simple diagram", "menu/screenshot printout", "flowchart on board"],
+      localContexts: ["school ICT lab", "phone menu/apps", "mobile network issues", "home device sharing"],
+    };
+  }
+
+  if (s.includes("social")) {
+    return {
+      kind: "SOCIAL" as const,
+      referencesLabel: "Social Studies Curriculum",
+      coreMaterials: ["Chalk/marker + board", "Local map sketch (teacher)", "Pictures/video/charts (phone if available)", "Exercise books"],
+      visuals: ["community pictures", "simple chart", "role-play prompt cards"],
+      localContexts: ["community landmarks", "market/day-to-day life", "family roles", "district/circuit examples"],
+    };
+  }
+
+  if (s.includes("english")) {
+    return {
+      kind: "ENGLISH" as const,
+      referencesLabel: "English Language Curriculum",
+      coreMaterials: ["Chalk/marker + board", "Word/sentence cards (paper)", "Short reading text (teacher-made)", "Exercise books", "Pictures (book/phone) for prompts"],
+      visuals: ["picture prompt", "short passage on board", "word cards"],
+      localContexts: ["school announcements", "market conversations", "home routines", "local stories"],
+    };
+  }
+
+  return {
+    kind: "GENERAL" as const,
+    referencesLabel: "Curriculum",
+    coreMaterials: ["Chalk/marker + board", "Exercise books or slates", "Locally available objects (safe to handle)"],
+    visuals: ["simple drawing on board", "real object demo"],
+    localContexts: ["home", "market", "school", "community"],
+  };
+}
+
+/**
+ * Fetch curriculum grounding safely.
+ * - Prefer SchemeOfWorkItem.indicatorId (strongest link to seeded exemplars)
+ * - Else use indicatorCode + contentStandardCode
+ * - Else fall back to flattened CurriculumUnit fields
+ */
+async function fetchGrounding(args: {
+  tenantId: string;
+  userId: string;
+  note: LessonNoteForCoach;
+  mode: Mode;
+}): Promise<Grounding> {
+  const { tenantId, userId, note, mode } = args;
+
+  const maxExemplars = mode === "QUICK" ? 2 : 4;
+
+  const out: Grounding = {
+    exemplars: [],
+    schemeItem: null,
+  };
+
+  // 1) Flattened CurriculumUnit (optional but useful)
+  if (note.curriculumUnitId && isPlausibleId(note.curriculumUnitId) && typeof (prisma as any)?.curriculumUnit?.findFirst === "function") {
+    const unit = await (prisma as any).curriculumUnit.findFirst({
+      where: { id: note.curriculumUnitId, OR: [{ tenantId }, { tenantId: null }] },
+      select: {
+        strandCode: true,
+        strand: true,
+        substrandCode: true,
+        substrand: true,
+        contentStandardCode: true,
+        contentStandard: true,
+        indicatorCode: true,
+        indicator: true,
+        weekNumber: true,
+        notes: true,
+      },
+    });
+
+    if (unit) {
+      out.strandCode = unit.strandCode ?? null;
+      out.strandTitle = unit.strand ?? null;
+      out.subStrandCode = unit.substrandCode ?? null;
+      out.subStrandTitle = unit.substrand ?? null;
+      out.contentStandardCode = unit.contentStandardCode ?? null;
+      out.contentStandardDesc = unit.contentStandard ?? null;
+      out.indicatorCode = unit.indicatorCode ?? null;
+      out.indicatorDesc = unit.indicator ?? null;
+      out.unitWeekNumber = unit.weekNumber ?? null;
+      out.unitNotes = unit.notes ?? null;
+    }
+  }
+
+  // 2) SchemeOfWorkItem (stronger "teacher planned" signal + might carry indicatorId)
+  if (note.schemeOfWorkItemId && isPlausibleId(note.schemeOfWorkItemId) && typeof (prisma as any)?.schemeOfWorkItem?.findFirst === "function") {
+    const sItem = await (prisma as any).schemeOfWorkItem.findFirst({
+      where: {
+        id: note.schemeOfWorkItemId,
+        scheme: { tenantId, teacherUserId: userId },
+      },
+      select: {
+        weekNumber: true,
+        dayNumber: true,
+        notes: true,
+        indicatorId: true,
+        indicatorCode: true,
+        indicatorDescription: true,
+        strandTitle: true,
+        subStrandTitle: true,
+        contentStandardCode: true,
+        contentStandardDescription: true,
+      },
+    });
+
+    if (sItem) {
+      out.schemeItem = {
+        weekNumber: sItem.weekNumber ?? null,
+        dayNumber: sItem.dayNumber ?? null,
+        notes: sItem.notes ?? null,
+        indicatorId: sItem.indicatorId ?? null,
+        indicatorCode: sItem.indicatorCode ?? null,
+        indicatorDescription: sItem.indicatorDescription ?? null,
+        strandTitle: sItem.strandTitle ?? null,
+        subStrandTitle: sItem.subStrandTitle ?? null,
+        contentStandardCode: sItem.contentStandardCode ?? null,
+        contentStandardDescription: sItem.contentStandardDescription ?? null,
+      };
+
+      // scheme values override weaker unit strings if present
+      out.strandTitle = out.strandTitle ?? sItem.strandTitle ?? null;
+      out.subStrandTitle = out.subStrandTitle ?? sItem.subStrandTitle ?? null;
+      out.contentStandardCode = out.contentStandardCode ?? sItem.contentStandardCode ?? null;
+      out.contentStandardDesc = out.contentStandardDesc ?? sItem.contentStandardDescription ?? null;
+      out.indicatorCode = out.indicatorCode ?? sItem.indicatorCode ?? null;
+      out.indicatorDesc = out.indicatorDesc ?? sItem.indicatorDescription ?? null;
+    }
+  }
+
+  // 3) Seeded Indicator → Exemplars (best grounding)
+  const indicatorId = clean(out.schemeItem?.indicatorId);
+  const indicatorCode = clean(out.indicatorCode);
+
+  const hasIndicatorModel = typeof (prisma as any)?.curriculumIndicator?.findFirst === "function";
+  const hasContentStandardModel = typeof (prisma as any)?.curriculumContentStandard?.findFirst === "function";
+
+  if (hasIndicatorModel) {
+    let indicatorRow: any = null;
+
+    if (indicatorId && isPlausibleId(indicatorId)) {
+      indicatorRow = await (prisma as any).curriculumIndicator.findFirst({
+        where: { id: indicatorId },
+        select: {
+          code: true,
+          description: true,
+          exemplars: {
+            orderBy: { orderIndex: "asc" },
+            take: maxExemplars,
+            select: { title: true, description: true, assessmentNotes: true },
+          },
+          contentStandard: {
+            select: {
+              code: true,
+              description: true,
+              subStrand: {
+                select: {
+                  code: true,
+                  title: true,
+                  strand: { select: { code: true, title: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+    } else if (indicatorCode) {
+      const csCode = clean(out.contentStandardCode);
+
+      if (csCode && hasContentStandardModel) {
+        const cs = await (prisma as any).curriculumContentStandard.findFirst({
+          where: { code: csCode },
+          select: { id: true },
+        });
+
+        if (cs?.id) {
+          indicatorRow = await (prisma as any).curriculumIndicator.findFirst({
+            where: { code: indicatorCode, contentStandardId: cs.id },
+            select: {
+              code: true,
+              description: true,
+              exemplars: {
+                orderBy: { orderIndex: "asc" },
+                take: maxExemplars,
+                select: { title: true, description: true, assessmentNotes: true },
+              },
+              contentStandard: {
+                select: {
+                  code: true,
+                  description: true,
+                  subStrand: {
+                    select: {
+                      code: true,
+                      title: true,
+                      strand: { select: { code: true, title: true } },
+                    },
+                  },
+                },
+              },
+            },
+          });
+        }
+      }
+
+      if (!indicatorRow) {
+        indicatorRow = await (prisma as any).curriculumIndicator.findFirst({
+          where: { code: indicatorCode },
+          select: {
+            code: true,
+            description: true,
+            exemplars: {
+              orderBy: { orderIndex: "asc" },
+              take: maxExemplars,
+              select: { title: true, description: true, assessmentNotes: true },
+            },
+            contentStandard: {
+              select: {
+                code: true,
+                description: true,
+                subStrand: {
+                  select: {
+                    code: true,
+                    title: true,
+                    strand: { select: { code: true, title: true } },
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+
+    if (indicatorRow) {
+      out.indicatorCode = out.indicatorCode ?? indicatorRow.code ?? null;
+      out.indicatorDesc = out.indicatorDesc ?? indicatorRow.description ?? null;
+
+      const cs = indicatorRow.contentStandard;
+      if (cs) {
+        out.contentStandardCode = out.contentStandardCode ?? cs.code ?? null;
+        out.contentStandardDesc = out.contentStandardDesc ?? cs.description ?? null;
+
+        const ss = cs.subStrand;
+        if (ss) {
+          out.subStrandCode = out.subStrandCode ?? ss.code ?? null;
+          out.subStrandTitle = out.subStrandTitle ?? ss.title ?? null;
+
+          const st = ss.strand;
+          if (st) {
+            out.strandCode = out.strandCode ?? st.code ?? null;
+            out.strandTitle = out.strandTitle ?? st.title ?? null;
+          }
+        }
+      }
+
+      out.exemplars = Array.isArray(indicatorRow.exemplars)
+        ? indicatorRow.exemplars
+            .map((x: any) => ({
+              title: x.title ?? null,
+              description: clean(x.description),
+              assessmentNotes: x.assessmentNotes ?? null,
+            }))
+            .filter((x: any) => !!x.description)
+        : [];
+    }
+  }
+
+  return out;
+}
+
+/** ---------- V4 helpers (template-like Ghana lesson-plan output) ---------- */
+
+const STOPWORDS = new Set([
+  "the","and","or","of","to","a","an","in","on","for","with","as","at","by","from","into","that","this","these","those",
+  "is","are","be","being","been","was","were","will","can","should","may","might","must","do","does","did","done",
+  "use","using","show","exhibit","demonstrate","understanding","understand","explain","identify","describe","discuss",
+  "learners","students","pupils","teacher","lesson","topic","today","their","they","them","we","our","your"
+]);
+
+function extractKeywords(parts: string[], max = 6) {
+  const bag: string[] = [];
+  for (const p of parts) {
+    const t = clean(p).replace(/[“”"’']/g, "").toLowerCase();
+    if (!t) continue;
+    const words = t.split(/[^a-z0-9-]+/g).filter(Boolean);
+    for (const w of words) {
+      if (w.length < 4) continue;
+      if (STOPWORDS.has(w)) continue;
+      bag.push(w);
+    }
+  }
+  const counts = new Map<string, number>();
+  for (const w of bag) counts.set(w, (counts.get(w) ?? 0) + 1);
+
+  const sorted = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([w]) => w);
+
+  const out: string[] = [];
+  for (const w of sorted) {
+    if (out.length >= max) break;
+    const pretty = w.includes("-")
+      ? w.split("-").map((x) => (x ? x[0]!.toUpperCase() + x.slice(1) : "")).join("-")
+      : w[0]!.toUpperCase() + w.slice(1);
+    out.push(pretty);
+  }
+  return out;
+}
+
+// ✅ Imperative, measurable, NO "Learners can..." in the returned text
+function makePerformanceIndicator(args: {
+  topic: string;
+  indDesc: string;
+  exemplars: Grounding["exemplars"];
+  rng: () => number;
+}) {
+  const { topic, indDesc, exemplars, rng } = args;
+
+  const e0 = exemplars[0]?.description ? firstMeaningfulLine(exemplars[0]!.description) : "";
+  const e1 = exemplars[1]?.description ? firstMeaningfulLine(exemplars[1]!.description) : "";
+  const candidates = [e0, e1, indDesc].map((x) => clean(x)).filter(Boolean);
+
+  const base = candidates[0] || `Explain ${topic} and give examples`;
+
+  const stripped = base
+    .replace(/^[•\-\s]+/g, "")
+    .replace(/^(By the end of the lesson, )?(learners|students|pupils)\s+(should be able to|can)\s+/i, "")
+    .replace(/\b(Exhibit|Demonstrate|Show)\b/i, "Explain and show")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const compact = trimToMax(stripped, 110);
+
+  if (!/^(Explain|Identify|Describe|Discuss|Solve|Demonstrate|Compare|Write|Read|Create|Perform|Examine)\b/i.test(compact)) {
+    return pick(rng, [
+      `Explain ${topic} in your own words and give 2 examples.`,
+      `Identify key ideas in ${topic} and apply them to real-life examples.`,
+    ]);
+  }
+
+  return compact.endsWith(".") ? compact : `${compact}.`;
+}
+
+function buildWorldClassCoachV4(note: LessonNoteForCoach, grounding: Grounding, mode: Mode) {
+  const seed = hash32(`${note.id}:${note.subject}:${note.term}:${note.academicYear}:${mode}:V4`);
+  const rng = makeRng(seed);
+
+  const lvl = learnerLabel(note.level);
+  const style = subjectStyle(note.subject);
+
+  const strand = clean(grounding.strandTitle || note.strand);
+  const substrand = clean(grounding.subStrandTitle || note.substrand);
+  const csDesc = clean(grounding.contentStandardDesc || note.contentStandard);
+  const indDesc = clean(grounding.indicatorDesc || note.indicator);
+
+  const topic =
+    titleCase(clean(note.lessonTitle)) ||
+    titleCase(substrand) ||
+    titleCase(indDesc) ||
+    titleCase(csDesc) ||
+    titleCase(strand) ||
+    titleCase(note.subject) ||
+    "Lesson";
+
+  const localContext = pick(rng, style.localContexts);
+  const duration = lvl.minutes;
+
+  const keywordsArr = extractKeywords(
+    [
+      topic,
+      strand,
+      substrand,
+      csDesc,
+      indDesc,
+      ...grounding.exemplars.map((e) => firstMeaningfulLine(e.description)),
+    ],
+    mode === "QUICK" ? 4 : 6
+  );
+  const keywords = keywordsArr.length ? bullet(keywordsArr) : "• —";
+
+  const performanceIndicator = makePerformanceIndicator({
+    topic,
+    indDesc,
+    exemplars: grounding.exemplars,
+    rng,
+  });
+
+  const coreCompetenciesArr = (() => {
+    if (style.kind === "ENGLISH") {
+      return [
+        "Communication and Collaboration",
+        "Creativity and Innovation",
+        "Critical Thinking and Problem-Solving",
+        "Personal Development and Leadership",
+      ];
+    }
+    if (style.kind === "MATH") {
+      return [
+        "Critical Thinking and Problem-Solving",
+        "Creativity and Innovation",
+        "Communication and Collaboration",
+      ];
+    }
+    return [
+      "Communication and Collaboration",
+      "Critical Thinking and Problem-Solving",
+      "Personal Development and Leadership",
+    ];
+  })();
+  const coreCompetencies = bullet(coreCompetenciesArr);
+
+  const references = (() => {
+    const base = style.referencesLabel;
+    const pgHint = pick(rng, ["Pg. ____", "Pg. __", "Pg. ___"]);
+    return `${base} ${pgHint}`;
+  })();
+
+  // ✅ Objectives MUST be ONLY learning outcomes (no headers, no date/week, no keywords, no competencies)
+  const objectives = [
+    "Learning Outcomes (By the end of the lesson, learners can):",
+    bullet([
+      indDesc
+        ? `Demonstrate the indicator skill: ${trimToMax(indDesc, 140)}.`
+        : `Explain the key idea of the lesson and give relevant examples.`,
+      grounding.exemplars[0]?.description
+        ? `Complete a guided task similar to the exemplar and explain their answers.`
+        : `Use one real-life example from ${localContext} to show understanding.`,
+      "Work respectfully in pairs/groups (take turns, listen, share materials).",
+      "Answer an exit ticket to show understanding before dismissal.",
+    ]),
+  ].join("\n");
+
+  const teachingLearningResources = [
+    "Teaching & Learning Resources:",
+    bullet(style.coreMaterials),
+    "",
+    "Suggested visuals (image-aware):",
+    bullet(
+      [
+        `If you have EduLife/topic images or textbook pictures, display 1–2 and ask: “What do you notice?”`,
+        ...style.visuals.map((v) => `Use a ${v} (or draw a quick version on the board).`),
+        style.kind === "SOCIAL" ? "Pictures/video/charts (phone if available) to make examples real." : "",
+      ].filter(Boolean)
+    ),
+    "",
+    "Teacher note:",
+    pick(rng, [
+      "Keep pace tight: model once, then learners do the work. You coach and correct quickly.",
+      "If materials are limited, demonstrate once, then rotate groups to share items fairly.",
+    ]),
+  ].join("\n");
+
+  const priorKnowledgeLine = clean(note.priorKnowledge)
+    ? `Prior knowledge (2–3 mins): ${trimToMax(note.priorKnowledge, 180)}`
+    : "Prior knowledge (2–3 mins): Quick recap questions from the previous lesson (2–3 short questions).";
+
+  const introduction = [
+    `Starter focus: connect the topic to ${localContext}.`,
+    pick(rng, [
+      `Hook (2 mins): Ask learners to give 2 examples connected to ${topic}.`,
+      `Hook (2 mins): Show a picture/quick sketch and ask: “What do you see? What does it mean?”`,
+      `Hook (2 mins): Think–Pair–Share: “What do you already know about ${topic}?”`,
+    ]),
+    priorKnowledgeLine,
+    indDesc
+      ? `Purpose (30s): “Today we will learn to ${safeLower(indDesc).startsWith("exhibit") ? "show" : "do"} ${trimToMax(indDesc, 100)}.”`
+      : `Purpose (30s): “Today we will learn about ${topic}.”`,
+  ].join("\n");
+
+  const exemplarSteps = grounding.exemplars.length
+    ? grounding.exemplars
+        .slice(0, mode === "QUICK" ? 2 : 3)
+        .map((e, i) => `Task ${i + 1}: ${trimToMax(firstMeaningfulLine(e.description), 170)}`)
+    : [];
+
+  const t1 = Math.max(5, Math.round(duration * 0.2));
+  const t2 = Math.max(20, Math.round(duration * 0.65));
+  const t3 = Math.max(5, duration - (t1 + t2));
+
+  const phase1 = [
+    `PHASE 1: STARTER (${t1} mins)`,
+    bullet([
+      "Recap quickly using 2–3 questions (no long speeches).",
+      "Share the performance indicator so learners know the target.",
+      `Connect to real life: one example from ${localContext}.`,
+    ]),
+  ].join("\n");
+
+  const phase2 = [
+    `PHASE 2: NEW LEARNING (${t2} mins)`,
+    bullet([
+      "Teacher modelling: demonstrate 1 clear example aligned to the indicator.",
+      style.kind === "SOCIAL"
+        ? "Guide learners to explain the key concept(s) in their own words; then give examples from home/school/community."
+        : style.kind === "ENGLISH"
+        ? "Use a short text/picture prompt; guide learners through the skill step-by-step, then practice."
+        : style.kind === "MATH"
+        ? "Model one worked example; then learners solve 2 similar ones in pairs using counters/strips if needed."
+        : "Model one example; learners practise in pairs while you coach.",
+      ...exemplarSteps,
+      "Group/pair work: circulate, correct misconceptions immediately, praise effort.",
+      "Mini-check: cold-call 2 learners to explain the ‘why’ in one sentence.",
+      "",
+      "Assessment (during activity):",
+      bullet([
+        style.kind === "SOCIAL"
+          ? `Write 2 examples that show ${topic}, then explain one in one sentence.`
+          : style.kind === "MATH"
+          ? "Solve 1 short problem and show steps (or a drawing/model)."
+          : style.kind === "ENGLISH"
+          ? "Respond to a short prompt using the correct skill (e.g., identify, infer, summarise)."
+          : "Complete 1 short task that proves understanding.",
+      ]),
+    ]),
+  ].join("\n");
+
+  const phase3 = [
+    `PHASE 3: REFLECTION (${t3} mins)`,
+    bullet([
+      "Use peer discussion + effective questioning: “What did we learn? What was difficult?”",
+      "Take 2 learner answers; correct gently.",
+      `Ask: “How will this help you in ${localContext}?”`,
+      "Summarise the key idea in one sentence.",
+    ]),
+  ].join("\n");
+
+  const lessonDevelopment = [
+    `TERM: ${clean(note.term) || "—"}   ACADEMIC YEAR: ${clean(note.academicYear) || "—"}`,
+    "",
+    phase1,
+    "",
+    phase2,
+    "",
+    phase3,
+  ].join("\n");
+
+  const assessmentItems: string[] = [];
+  if (style.kind === "SOCIAL") {
+    assessmentItems.push(`1. Explain ${topic} in your own words (1–2 sentences).`);
+    assessmentItems.push(`2. Give TWO agencies/agents of socialisation and state one role of each.`);
+    assessmentItems.push(`3. Exit ticket: Give 2 correct examples + 1 sentence explanation.`);
+  } else if (style.kind === "MATH") {
+    assessmentItems.push("1. Solve 1–2 short questions aligned to the indicator (show steps or model).");
+    assessmentItems.push("2. Create ONE similar question for your friend and swap to solve.");
+    assessmentItems.push("3. Exit ticket: 1 question in 2 minutes.");
+  } else if (style.kind === "ENGLISH") {
+    assessmentItems.push("1. Do a short response task aligned to the indicator (2–3 minutes).");
+    assessmentItems.push("2. Write 4–6 lines using the target skill (teacher checks for accuracy).");
+    assessmentItems.push("3. Exit ticket: 1 short prompt/question.");
+  } else {
+    assessmentItems.push("1. Complete a short task aligned to the indicator/topic.");
+    assessmentItems.push("2. Exit ticket: one question to prove understanding.");
+  }
+
+  const assessment = [
+    "Assessment (Formative):",
+    ...assessmentItems.map((x) => `• ${x}`),
+    "",
+    "Success Criteria:",
+    bullet([
+      "Learner gives correct examples (not random/rote words).",
+      "Learner can explain the answer in simple steps/words.",
+      "Learner improves after feedback (can correct a mistake).",
+    ]),
+  ].join("\n");
+
+  const conclusion = [
+    "Conclusion:",
+    bullet([
+      `Recap: “Today we learned about ${topic}.”`,
+      "Let 2 learners share one correct example each; correct gently if needed.",
+      `Link to life: where will you notice/use this in ${localContext}?`,
+    ]),
+  ].join("\n");
+
+  const homework = pick(rng, [
+    `Homework: Ask a parent/guardian one question about ${topic}. Bring one sentence answer next lesson.`,
+    `Homework: Find one example related to ${topic} from ${localContext}. Write 2–3 lines (or draw) and be ready to share.`,
+  ]);
+
+  const differentiationNotes = [
+    "Differentiation:",
+    "",
+    "Support (struggling learners):",
+    bullet([
+      "Break the task into smaller steps; model again with one simple example.",
+      "Work beside them for 2 minutes, then let them try again (don’t do it for them).",
+      style.kind === "MATH" ? "Use counters/strips to make the idea concrete before writing." : "Use concrete examples first before abstract explanations.",
+    ]),
+    "",
+    "Extension (fast learners):",
+    bullet([
+      "Add one “why” question: explain the reason, not just the answer.",
+      "Create a new example from daily life and justify it.",
+      "Teach a partner using clear steps (teacher supervises).",
+    ]),
+  ].join("\n");
+
+  const reflectionNotes = [
+    "Reflection notes (after class):",
+    bullet([
+      "What worked best today, and why?",
+      "What mistake showed up most? (be specific)",
+      "What will I change next time (materials, grouping, pacing, explanation)?",
+      "Evidence: which exit ticket answers prove mastery vs partial understanding?",
+    ]),
+  ].join("\n");
+
+  const suggestion = (() => {
+    const indCode = clean(grounding.indicatorCode);
+    const csCode = clean(grounding.contentStandardCode);
+    const ssCode = clean(grounding.subStrandCode);
+    const stCode = clean(grounding.strandCode);
+
+    const anchor = [
+      "Curriculum anchor:",
+      bullet([
+        `Subject: ${clean(note.subject) || "—"}`,
+        `Strand: ${stCode ? `${stCode} – ` : ""}${strand || "—"}`,
+        `Sub-strand: ${ssCode ? `${ssCode} – ` : ""}${substrand || "—"}`,
+        `Content standard: ${csCode ? `${csCode} – ` : ""}${csDesc || "—"}`,
+        `Indicator: ${indCode ? `${indCode} – ` : ""}${indDesc || "—"}`,
+      ]),
+    ].join("\n");
+
+    if (mode === "QUICK") {
+      return [
+        "Quick support generated in Ghana weekly-lesson-plan style.",
+        `Topic: ${topic}`,
+        "Use the PHASE structure; adjust examples for your class.",
+        "",
+        anchor,
+      ].join("\n");
+    }
+
+    return [
+      "Teacher-ready support generated in Ghana weekly-lesson-plan style (PHASE 1/2/3, with performance indicator, keywords, and assessment).",
+      "",
+      anchor,
+      grounding.exemplars.length
+        ? `\nExemplar grounding used:\n${bullet(
+            grounding.exemplars.map((e) => `${e.title ? `${e.title}: ` : ""}${trimToMax(firstMeaningfulLine(e.description), 160)}`)
+          )}`
+        : "\nNo exemplars found for this indicator yet — seed exemplars to make outputs even more realistic.",
+      "",
+      `Reference: ${references}`,
+    ].join("\n");
+  })();
+
+  const fields: AiLessonFields = {
+    lessonTitle: topic,
+
+    performanceIndicator,
+    coreCompetencies,
+    keywords,
+
+    objectives,
+    teachingLearningResources,
+    introduction,
+    lessonDevelopment,
+    conclusion,
+    assessment,
+    homework,
+    differentiationNotes,
+    reflectionNotes,
+  };
+
+  return { fields, suggestion };
+}
+
 export async function GET() {
   return jsonNoStore({ ok: false, error: "Method not allowed. Use POST." }, { status: 405, headers: { Allow: "POST" } });
 }
@@ -92,9 +915,6 @@ export async function DELETE() {
 }
 
 export async function POST(req: NextRequest) {
-  // -----------------------------
-  // Auth (server identity)
-  // -----------------------------
   let ctx: { userId: string; tenantId: string };
   try {
     const c = await requireServerUserContext({
@@ -106,15 +926,11 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
-  // Content-Type guard
   const ct = req.headers.get("content-type") || "";
   if (!ct.toLowerCase().includes("application/json")) {
     return jsonNoStore({ ok: false, error: "Content-Type must be application/json." }, { status: 415 });
   }
 
-  // -----------------------------
-  // Parse body
-  // -----------------------------
   let body: any;
   try {
     body = await req.json();
@@ -130,32 +946,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // -----------------------------
-    // Load note (tenant + owner enforced)
-    // -----------------------------
     const note = await prisma.lessonNote.findFirst({
-      where: {
-        id: lessonNoteId,
-        tenantId: ctx.tenantId,
-        teacherUserId: ctx.userId,
-      },
+      where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
       select: {
         id: true,
-        tenantId: true,
-        teacherUserId: true,
-
         subject: true,
+        phase: true,
+        level: true,
+        term: true,
+        academicYear: true,
+        weekNumber: true,
+
         strand: true,
         substrand: true,
         contentStandard: true,
         indicator: true,
         lessonTitle: true,
-        phase: true,
-        level: true,
-
-        term: true,
-        academicYear: true,
-        weekNumber: true,
 
         objectives: true,
         priorKnowledge: true,
@@ -169,61 +975,29 @@ export async function POST(req: NextRequest) {
         reflectionNotes: true,
 
         curriculumUnitId: true,
+        schemeOfWorkItemId: true,
       },
     });
 
     if (!note) {
-      // 404 prevents leaking cross-tenant existence
       return jsonNoStore({ ok: false, error: "Lesson note not found." }, { status: 404 });
     }
 
-    // -----------------------------
-    // Safely load CurriculumUnit (tenant OR global)
-    // Avoid relation-join leakage by scoping explicitly.
-    // -----------------------------
-    let curriculumUnit: LessonNoteForCoach["curriculumUnit"] = null;
-
-    const unitId = (note as any).curriculumUnitId as string | null;
-
-    if (unitId && isPlausibleId(unitId)) {
-      // schema-evolution safe: only run if model exists
-      const client = prisma as any;
-      if (typeof client?.curriculumUnit?.findFirst === "function") {
-        const unit = await client.curriculumUnit.findFirst({
-          where: {
-            id: unitId,
-            OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-          },
-          select: {
-            strandCode: true,
-            substrandCode: true,
-            contentStandardCode: true,
-            indicatorCode: true,
-            weekNumber: true,
-          },
-        });
-
-        curriculumUnit = unit
-          ? {
-              strandCode: unit.strandCode ?? null,
-              substrandCode: unit.substrandCode ?? null,
-              contentStandardCode: unit.contentStandardCode ?? null,
-              indicatorCode: unit.indicatorCode ?? null,
-              weekNumber: unit.weekNumber ?? null,
-            }
-          : null;
-      }
-    }
-
     const coachInput: LessonNoteForCoach = {
+      id: note.id,
       subject: String(note.subject ?? ""),
+      phase: note.phase ?? null,
+      level: note.level ?? null,
+
+      term: String(note.term ?? ""),
+      academicYear: String(note.academicYear ?? ""),
+      weekNumber: typeof note.weekNumber === "number" ? note.weekNumber : null,
+
       strand: String(note.strand ?? ""),
       substrand: note.substrand ?? null,
       contentStandard: note.contentStandard ?? null,
       indicator: note.indicator ?? null,
       lessonTitle: note.lessonTitle ?? null,
-      phase: note.phase ?? null,
-      level: note.level ?? null,
 
       objectives: note.objectives ?? null,
       priorKnowledge: note.priorKnowledge ?? null,
@@ -236,23 +1010,18 @@ export async function POST(req: NextRequest) {
       differentiationNotes: note.differentiationNotes ?? null,
       reflectionNotes: note.reflectionNotes ?? null,
 
-      academicYear: String(note.academicYear ?? ""),
-      term: String(note.term ?? ""),
-      weekNumber: note.weekNumber ?? null,
-
-      curriculumUnit,
+      curriculumUnitId: (note as any).curriculumUnitId ?? null,
+      schemeOfWorkItemId: (note as any).schemeOfWorkItemId ?? null,
     };
 
-    let result: { fields: AiLessonFields; suggestion: string };
-    try {
-      result = buildRuleBasedCoach(coachInput, mode);
-    } catch (e) {
-      console.error("[AI_SUPPORT_COACH_BUILD_ERROR]", e);
-      return jsonNoStore(
-        { ok: false, error: "The AI Co-Tutor could not generate support at the moment. Please try again." },
-        { status: 500 }
-      );
-    }
+    const grounding = await fetchGrounding({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      note: coachInput,
+      mode,
+    });
+
+    const result = buildWorldClassCoachV4(coachInput, grounding, mode);
 
     return jsonNoStore(
       {
@@ -262,424 +1031,16 @@ export async function POST(req: NextRequest) {
         meta: {
           mode,
           groundedOnLessonNoteId: lessonNoteId,
-          curriculumUnitId: unitId ?? null,
+          curriculumUnitId: coachInput.curriculumUnitId ?? null,
+          schemeOfWorkItemId: coachInput.schemeOfWorkItemId ?? null,
+          exemplarCount: grounding.exemplars.length,
+          engine: "RULE_BASED_COTUTOR_V4_TEMPLATE_GROUNDED",
         },
       },
       { status: 200 }
     );
   } catch (err) {
     console.error("[TEACHER_LESSON_NOTE_AI_SUPPORT_ERROR]", err);
-    return jsonNoStore(
-      { ok: false, error: "The AI Co-Tutor could not generate support at the moment. Please try again." },
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "The AI Co-Tutor could not generate support at the moment. Please try again." }, { status: 500 });
   }
-}
-
-/**
- * RULE-BASED CO-TUTOR (NO EXTERNAL API YET)
- * Shape remains: { fields, suggestion } so frontend does not change.
- */
-function buildRuleBasedCoach(rawNote: LessonNoteForCoach, mode: Mode): { fields: AiLessonFields; suggestion: string } {
-  const subject = (rawNote.subject || "").trim();
-  const subjectLower = subject.toLowerCase();
-
-  const isMath = subjectLower.includes("math") || subjectLower.includes("numeracy");
-  const isLiteracy =
-    subjectLower.includes("literacy") || subjectLower.includes("english") || subjectLower.includes("language");
-  const isOurWorld =
-    subjectLower.includes("our world") || subjectLower.includes("owop") || subjectLower.includes("people") || subjectLower.includes("world");
-  const isCreativeArts = subjectLower.includes("creative") || subjectLower.includes("arts") || subjectLower.includes("art");
-  const isRme = subjectLower.includes("religious") || subjectLower.includes("moral") || subjectLower.includes("rme");
-  const isScience = subjectLower.includes("science");
-  const isPe = subjectLower.includes("physical") || subjectLower.includes("education") || subjectLower.includes("p.e");
-
-  const phase = rawNote.phase ?? "KG / Basic";
-  const level = rawNote.level ?? "class";
-
-  const levelLower = level.toLowerCase();
-  const isKg = levelLower.includes("kg");
-  const isJhs = levelLower.includes("jhs") || levelLower.includes("junior");
-  const isUpperPrimary =
-    levelLower.includes("basic 4") || levelLower.includes("basic 5") || levelLower.includes("basic 6") ||
-    levelLower.includes("b4") || levelLower.includes("b5") || levelLower.includes("b6");
-
-  const learnerNoun = isJhs ? "students" : "learners";
-  const classNoun = isKg ? "KG" : isJhs ? "JHS" : "basic school";
-
-  const termLabel = rawNote.term || "";
-  const weekNumber = rawNote.weekNumber ?? rawNote.curriculumUnit?.weekNumber ?? null;
-  const weekLabel = weekNumber != null ? `Week ${weekNumber}` : "this week";
-
-  const curriculum = rawNote.curriculumUnit;
-  const strandCode = (curriculum?.strandCode ?? "").trim();
-  const substrandCode = (curriculum?.substrandCode ?? "").trim();
-  const contentStandardCode = (curriculum?.contentStandardCode ?? "").trim();
-  const indicatorCode = (curriculum?.indicatorCode ?? "").trim();
-
-  const topicBase =
-    rawNote.lessonTitle || rawNote.substrand || rawNote.indicator || rawNote.strand || rawNote.subject || "this lesson";
-  const topic = topicBase.trim();
-
-  const indicatorText = (rawNote.indicator ?? "").trim();
-  const contentStandardText = (rawNote.contentStandard ?? "").trim();
-  const strandText = rawNote.strand;
-  const substrandText = rawNote.substrand ?? "";
-
-  const prior = (rawNote.priorKnowledge ?? "").trim();
-  const existingObjectives = (rawNote.objectives ?? "").trim();
-  const existingTlm = (rawNote.teachingLearningResources ?? "").trim();
-  const existingIntro = (rawNote.introduction ?? "").trim();
-  const existingDev = (rawNote.lessonDevelopment ?? "").trim();
-  const existingConclusion = (rawNote.conclusion ?? "").trim();
-  const existingAssessment = (rawNote.assessment ?? "").trim();
-  const existingHomework = (rawNote.homework ?? "").trim();
-  const existingDiff = (rawNote.differentiationNotes ?? "").trim();
-  const existingReflection = (rawNote.reflectionNotes ?? "").trim();
-
-  const indicatorFirstWord = indicatorText ? indicatorText.split(/\s+/)[0].toLowerCase() : "";
-  const recognisedVerbs = [
-    "identify","describe","mention","name","count","compare","classify","match","draw","talk","retell","read","write","listen","demonstrate","explain",
-  ];
-  const indicatorVerb = recognisedVerbs.includes(indicatorFirstWord) ? indicatorFirstWord : "";
-
-  function buildObjectives(): string {
-    const lines: string[] = [];
-    lines.push(`By the end of the lesson, ${learnerNoun} will be able to:`);
-
-    if (indicatorText) {
-      lines.push(
-        indicatorCode
-          ? `• Demonstrate the skill in indicator ${indicatorCode}: "${indicatorText}".`
-          : `• Demonstrate the skill in the indicator: "${indicatorText}".`
-      );
-    } else {
-      lines.push(`• Demonstrate understanding of the key idea in "${topic}".`);
-    }
-
-    if (isMath) lines.push("• Use concrete materials to show thinking (counting, grouping, comparing, etc.).");
-    else if (isLiteracy) lines.push("• Use spoken language, actions and simple drawings to express ideas and listen to others.");
-    else if (isOurWorld) lines.push("• Connect learning to real situations at home, school, market and community.");
-    else if (isCreativeArts) lines.push("• Use lines, shapes, colours, movement, music or drama to express the idea creatively.");
-    else if (isRme) lines.push("• Show positive values and behaviours related to the theme (respect, kindness, honesty, etc.).");
-    else if (isScience) lines.push("• Observe and describe simple patterns or changes in the natural world.");
-    else if (isPe) lines.push("• Perform basic body movements safely and confidently during games and activities.");
-    else lines.push("• Actively participate in practical activities related to the topic.");
-
-    if (prior) lines.push("• Build on what they already know from home, school or community experiences.");
-    lines.push("• Work cooperatively with peers, share materials fairly and take turns during activities.");
-
-    if (existingObjectives) {
-      lines.push("");
-      lines.push("Teacher’s additional objective(s):");
-      lines.push(existingObjectives);
-    }
-
-    return lines.join("\n");
-  }
-
-  function buildImageIdeas(): string {
-    const ideas: string[] = [];
-    const shortTopic = topic || "the lesson concept";
-
-    const agePhrase = isKg
-      ? "KG learners (ages 4–6)"
-      : isJhs
-      ? "JHS students (ages 12–15)"
-      : isUpperPrimary
-      ? "upper primary learners (ages 9–12)"
-      : "primary learners (ages 6–9)";
-
-    if (isMath) {
-      ideas.push(`A clean classroom scene in Ghana with ${agePhrase} using bottle tops or stones to represent numbers for "${shortTopic}".`);
-      ideas.push("A simple number line or place-value chart on a classroom wall (no text labels needed).");
-    } else if (isLiteracy) {
-      ideas.push(`A Ghanaian classroom reading circle with ${agePhrase}, teacher holding a big picture book related to "${shortTopic}".`);
-      ideas.push("A learner pointing to a picture card and speaking while peers listen (no text).");
-    } else if (isOurWorld) {
-      ideas.push(`A Ghanaian school/community scene with ${agePhrase} exploring "${shortTopic}" (home, family, safety, environment, community life).`);
-      ideas.push("A simple poster-style illustration showing local community places and people (no labels).");
-    } else if (isCreativeArts) {
-      ideas.push(`Learners creating an artwork or short drama about "${shortTopic}" using recycled/local materials.`);
-      ideas.push("Finished learner artworks displayed on a classroom wall (no writing).");
-    } else if (isRme) {
-      ideas.push(`Learners helping each other or sharing in class to show the value behind "${shortTopic}".`);
-      ideas.push("Teacher guiding a respectful discussion circle about good behaviour (no text).");
-    } else if (isScience) {
-      ideas.push(`Learners observing leaves, seeds, water or soil in small groups linked to "${shortTopic}".`);
-      ideas.push("Close-up of hands holding simple observation materials (no labels).");
-    } else if (isPe) {
-      ideas.push("Learners playing a simple running/jumping game in a safe school compound.");
-      ideas.push("Teacher demonstrating a warm-up stretch while learners copy safely.");
-    } else {
-      ideas.push(`A Ghanaian ${classNoun} classroom scene with ${agePhrase} interacting around "${shortTopic}".`);
-      ideas.push("A simple visual summary scene of the key idea (no text).");
-    }
-
-    return ideas.join("\n- ");
-  }
-
-  function buildTlm(): string {
-    const base: string[] = [];
-
-    if (isMath) {
-      base.push("Bottle tops, stones, sticks, cups, or other counters from the local environment");
-      base.push("Number cards or flashcards");
-      base.push("Simple charts or drawings of the number concept");
-    } else if (isLiteracy) {
-      base.push("Word cards, picture cards and simple story books");
-      base.push("Objects from the community that match the vocabulary");
-      base.push("Songs, rhymes and actions related to the key sounds/words");
-    } else if (isOurWorld) {
-      base.push("Real objects or pictures related to the environment, family, school and community");
-      base.push("Role-play materials (scarves, bags, simple props)");
-      base.push("Songs, rhymes and action games linked to the topic");
-    } else if (isCreativeArts) {
-      base.push("Crayons, paper, old magazines, boxes, bottle tops, leaves");
-      base.push("Simple percussion instruments or improvised instruments");
-      base.push("Space in class/playground for movement or drama");
-    } else if (isRme) {
-      base.push("Pictures/symbols that represent the value or story (sharing, helping, honesty, respect)");
-      base.push("Simple story book or teacher-made story card");
-      base.push("Role play materials for short dramas");
-    } else if (isScience) {
-      base.push("Real objects from nature (leaves, stones, seeds, water, soil)");
-      base.push("Simple charts showing changes or patterns (can be teacher-drawn)");
-      base.push("Clear containers for simple observations");
-    } else if (isPe) {
-      base.push("Safe open space in classroom or outside");
-      base.push("Cones or markers (stones, bottles) for games");
-      base.push("Whistle or clapping pattern to start/stop");
-    } else {
-      base.push("Real objects from the classroom, playground and home");
-      base.push("Locally available materials (bottles, boxes, leaves, sticks, etc.)");
-      base.push("Songs, rhymes and role-play materials");
-    }
-
-    if (existingTlm) {
-      base.push("");
-      base.push("Teacher-specific resources already planned:");
-      base.push(existingTlm);
-    }
-
-    base.push("");
-    base.push("Suggested visuals / image ideas:");
-    base.push(buildImageIdeas());
-
-    return "• " + base.join("\n• ");
-  }
-
-  function buildIntroduction(): string {
-    if (existingIntro) return existingIntro;
-
-    const lines: string[] = [];
-    if (isMath) lines.push("Begin with a short counting/clapping song linked to today’s concept (2–3 minutes).");
-    else if (isLiteracy) lines.push("Begin with a short song/rhyme/call-and-response using key sounds/words from today.");
-    else if (isOurWorld) lines.push("Begin with a short song/game about home, body, family, school or community (as fits the topic).");
-    else if (isCreativeArts) lines.push("Begin with a short movement/rhythm/drawing warm-up related to the theme.");
-    else if (isRme) lines.push("Begin with a short proverb or simple story that illustrates the value/theme.");
-    else if (isScience) lines.push("Begin with a quick observation: show an object and ask learners what they notice.");
-    else if (isPe) lines.push("Begin with a simple warm-up routine to prepare safely for movement.");
-    else lines.push("Begin with a short song/chant/rhyme that links to the topic (2–3 minutes).");
-
-    if (prior) lines.push(`Ask 2–3 quick questions to surface what learners already know about "${topic}" from home/community.`);
-    else lines.push(`Show a real object or picture related to "${topic}" and ask: “What do you see? What is happening?”`);
-
-    lines.push("State the lesson purpose in simple language: “Today we are going to learn about …”");
-    return lines.join("\n");
-  }
-
-  function buildDevelopment(): string {
-    if (existingDev) return existingDev;
-
-    const lines: string[] = [];
-    lines.push("I DO (Teacher models):");
-
-    if (indicatorText) {
-      if (isMath && indicatorVerb === "count") lines.push(`• Using concrete objects, model counting as described in the indicator: "${indicatorText}".`);
-      else if (isLiteracy && (indicatorVerb === "talk" || indicatorVerb === "retell"))
-        lines.push(`• Model a short talk/retell aligned to the indicator: "${indicatorText}" using clear speech and actions.`);
-      else if (isOurWorld)
-        lines.push(`• Use real objects/pictures/role-play to demonstrate the situation in the indicator: "${indicatorText}".`);
-      else lines.push(`• Demonstrate step-by-step how to perform the indicator: "${indicatorText}".`);
-    } else {
-      lines.push(`• Show 2–3 clear examples of the key idea in "${topic}" using objects/pictures.`);
-    }
-
-    lines.push("• Think aloud as you demonstrate so learners can follow your reasoning.");
-    lines.push("");
-    lines.push("WE DO (Guided practice):");
-    lines.push("• Learners practise with you in small groups using similar materials.");
-
-    if (isMath) lines.push("• Move between groups and ask learners to show how they counted/grouped/compared.");
-    else if (isLiteracy) lines.push("• Pairs practise saying words/sentences while you listen and correct gently.");
-    else if (isOurWorld) lines.push("• Groups act out, sort, match or discuss real-life situations related to the topic.");
-    else if (isCreativeArts) lines.push("• Groups create simple artworks/movements/songs/dramas reflecting the concept.");
-    else if (isRme) lines.push("• Groups discuss/act out short situations that show the value in action.");
-    else if (isScience) lines.push("• Learners observe/compare/sort materials as you ask guiding questions.");
-    else if (isPe) lines.push("• Guide learners through the movement/game slowly first, then repeat with confidence.");
-
-    lines.push("• Ask guiding questions, correct gently and praise effort. Let learners explain their thinking.");
-    lines.push("");
-    lines.push("YOU DO (Independent / pair practice):");
-    lines.push("• Learners work in pairs/individually to repeat the skill while you observe and support.");
-    lines.push("• Note which learners are confident and who needs follow-up support (for differentiation).");
-
-    return lines.join("\n");
-  }
-
-  function buildConclusion(): string {
-    if (existingConclusion) return existingConclusion;
-
-    const lines: string[] = [];
-    lines.push("• Invite 2–3 learners to demonstrate or explain what they learnt.");
-
-    if (isMath) lines.push(`• Ask a quick review task: “Show me with your objects …” linked to "${topic}".`);
-    else if (isLiteracy) lines.push(`• Let a few learners say a word/sentence or retell a tiny part linked to "${topic}".`);
-    else if (isOurWorld) lines.push(`• Ask how they can use what they learnt about "${topic}" at home, in school or in the community.`);
-    else if (isCreativeArts) lines.push(`• Display some work or let a group perform briefly, linked to "${topic}".`);
-    else if (isRme) lines.push(`• Ask learners to share one way they will practise the value behind "${topic}" today.`);
-    else if (isScience) lines.push(`• Ask learners to share one observation or discovery about "${topic}".`);
-    else if (isPe) lines.push("• Let learners show one movement they enjoyed and remind them of safety rules.");
-    else lines.push(`• Ask 1–2 key questions that summarise the main idea of "${topic}".`);
-
-    lines.push("• Praise effort and link the learning back to real life.");
-    return lines.join("\n");
-  }
-
-  function buildAssessment(): string {
-    if (existingAssessment) return existingAssessment;
-
-    const stems: string[] = [];
-    stems.push("Use oral + practical checks (and short written/drawing where appropriate):");
-    stems.push("");
-    stems.push("Oral / practical checks:");
-    if (isMath) stems.push("• Ask individuals to show counting/grouping/comparing using objects.");
-    else if (isLiteracy) stems.push("• Ask individuals to say a word/sentence, answer a simple question, or retell part.");
-    else if (isOurWorld) stems.push("• Ask learners to point to/act out/talk about examples from their environment.");
-    else if (isCreativeArts) stems.push("• Ask learners to explain or show their artwork/movement/role-play.");
-    else if (isRme) stems.push("• Ask what they would do in a simple situation that requires the value taught.");
-    else if (isScience) stems.push("• Ask learners to describe or show what they observed.");
-    else if (isPe) stems.push("• Observe safe performance of the movement/game with basic control.");
-    else stems.push("• Ask learners to show or do the skill with real objects.");
-
-    stems.push("• Ask 3–5 simple questions to check if they can explain in their own words.");
-    stems.push("");
-    stems.push("Short written / drawing task (if appropriate):");
-    if (isMath) stems.push("• Draw/circle groups of objects to match numbers, or trace numbers on slates.");
-    else if (isLiteracy) stems.push("• Trace/copy/circle letters or words that match today’s sounds/words.");
-    else stems.push("• Draw a simple picture or circle the correct option on a worksheet/slate.");
-
-    return stems.join("\n");
-  }
-
-  function buildHomework(): string {
-    if (existingHomework) return existingHomework;
-
-    if (isMath) return ["Learners count or group real objects at home (cups, spoons, stones).", "They share one example next lesson."].join("\n");
-    if (isLiteracy) return ["Learners find pictures/objects/words at home related to today’s lesson.", "They report one example next lesson."].join("\n");
-    if (isOurWorld) return [`Learners identify one real example in their home/community linked to "${topic}".`, "They come ready to talk about it next lesson."].join("\n");
-    if (isCreativeArts) return [`Learners identify safe recycled materials at home for a simple artwork linked to "${topic}".`, "They bring one small item (if available) next lesson."].join("\n");
-    if (isRme) return ["Learners practise one positive behaviour at home (helping, sharing, greeting respectfully).", "They share one example next lesson."].join("\n");
-    if (isScience) return [`Learners find one example in their environment linked to "${topic}".`, "They describe it next lesson."].join("\n");
-    if (isPe) return ["Learners practise a simple safe movement at home (stretching, walking, jumping on the spot).", "They show one movement next time."].join("\n");
-
-    return [`Learners identify one example at home/community where "${topic}" is seen or used.`, "They share it next lesson."].join("\n");
-  }
-
-  function buildDifferentiation(): string {
-    if (existingDiff) return existingDiff;
-
-    return [
-      "Support for learners who struggle:",
-      "• Seat them nearer to you or beside a supportive peer.",
-      "• Use simpler examples and more concrete materials.",
-      "• Check on them more frequently and praise small progress.",
-      "",
-      "Extension for fast learners:",
-      "• Give extra challenge tasks related to the same indicator.",
-      "• Ask them to explain/demonstrate the skill to a peer or small group.",
-    ].join("\n");
-  }
-
-  function buildReflection(): string {
-    if (existingReflection) return existingReflection;
-
-    return [
-      "After the lesson, write 2–4 lines answering:",
-      "• What worked well today?",
-      "• Which learners struggled and why?",
-      "• What will you change next time you teach this indicator?",
-    ].join("\n");
-  }
-
-  const lessonTitle =
-    rawNote.lessonTitle ||
-    (indicatorText ? (indicatorCode ? `Indicator ${indicatorCode}: ${indicatorText}` : `${indicatorText}`) : `Lesson on ${topic}`);
-
-  const fields: AiLessonFields = {
-    lessonTitle,
-    objectives: buildObjectives(),
-    teachingLearningResources: buildTlm(),
-    introduction: buildIntroduction(),
-    lessonDevelopment: buildDevelopment(),
-    conclusion: buildConclusion(),
-    assessment: buildAssessment(),
-    homework: buildHomework(),
-    differentiationNotes: buildDifferentiation(),
-    reflectionNotes: buildReflection(),
-  };
-
-  const suggestionLines: string[] = [];
-  const headerContextParts: string[] = [];
-  headerContextParts.push(subject || "Subject");
-  headerContextParts.push(`${phase} – ${level}`);
-  if (termLabel) headerContextParts.push(termLabel);
-  headerContextParts.push(weekLabel);
-  const headerContext = headerContextParts.join(" • ");
-
-  if (mode === "QUICK") {
-    suggestionLines.push(`Quick NaCCA-aligned coaching snapshot for: ${topic} (${headerContext}).`);
-    suggestionLines.push("");
-    suggestionLines.push("Next action:");
-    suggestionLines.push("Apply the suggested fields, then edit the language to match your learners. Save as draft, then submit when ready.");
-  } else {
-    suggestionLines.push(`Full NaCCA-aligned coaching support for: ${topic} (${headerContext}).`);
-    suggestionLines.push("");
-    suggestionLines.push("1) Curriculum slice in view");
-    suggestionLines.push(`• Strand / Sub-strand: ${strandCode ? `${strandCode} – ` : ""}${strandText} / ${substrandCode ? `${substrandCode} – ` : ""}${substrandText || "—"}`);
-    suggestionLines.push(`• Content standard: ${contentStandardCode ? `${contentStandardCode} – ` : ""}${contentStandardText || "Not set yet in the note."}`);
-    suggestionLines.push(`• Indicator${indicatorCode ? ` (${indicatorCode})` : ""}: ${indicatorText || "Not set yet in the note."}`);
-
-    suggestionLines.push("");
-    suggestionLines.push("2) Objectives draft");
-    suggestionLines.push(fields.objectives ?? "");
-
-    suggestionLines.push("");
-    suggestionLines.push("3) Lesson flow (I do – We do – You do)");
-    suggestionLines.push(fields.lessonDevelopment ?? "");
-
-    suggestionLines.push("");
-    suggestionLines.push("4) Assessment ideas");
-    suggestionLines.push(fields.assessment ?? "");
-
-    suggestionLines.push("");
-    suggestionLines.push("5) Homework idea");
-    suggestionLines.push(fields.homework ?? "");
-
-    suggestionLines.push("");
-    suggestionLines.push("6) Differentiation & reflection");
-    suggestionLines.push(fields.differentiationNotes ?? "");
-    suggestionLines.push("");
-    suggestionLines.push(fields.reflectionNotes ?? "");
-
-    suggestionLines.push("");
-    suggestionLines.push("7) Image ideas (copy into your image generator)");
-    suggestionLines.push(buildImageIdeas());
-
-    suggestionLines.push("");
-    suggestionLines.push("Use this as a co-teacher: adjust language to your class, then apply to fields and save or submit for review.");
-  }
-
-  return { fields, suggestion: suggestionLines.join("\n") };
 }

@@ -1,183 +1,263 @@
 // src/app/api/teacher/health/student-daily/route.ts
-
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
 import { z } from "zod";
 
-// -------------------------
-// Helpers
-// -------------------------
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-// Normalize any incoming date (YYYY-MM-DD or ISO) to start-of-day UTC
-function getDayRange(dateStr?: string) {
-  const base = dateStr ? new Date(dateStr) : new Date();
-
-  const start = new Date(
-    Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate())
-  );
-  const end = new Date(start);
-  end.setUTCDate(start.getUTCDate() + 1);
-
-  return { start, end };
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
 }
 
-// -------------------------
-// Zod schemas
-// -------------------------
-
-const EntrySchema = z.object({
-  studentId: z.string().min(1, "studentId is required"),
-  temperatureC: z.number().nullable().optional(),
-  symptoms: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-});
-
-const UpsertSchema = z.object({
-  tenantId: z.string().min(1, "tenantId is required"),
-  classroomId: z.string().min(1, "classroomId is required"),
-  // Optional date; if omitted, we treat it as "today"
-  date: z.string().optional(),
-  entries: z
-    .array(EntrySchema)
-    .min(1, "At least one learner record is required"),
-});
-
-// -------------------------
-// GET: list health records for a class on a given day
-// -------------------------
-// Example:
-//   /api/teacher/health/student-daily?tenantId=...&classroomId=...&date=2025-03-10
-//
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const tenantId = searchParams.get("tenantId");
-    const classroomId = searchParams.get("classroomId");
-    const dateStr = searchParams.get("date") ?? undefined;
-
-    if (!tenantId || !classroomId) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "tenantId and classroomId are required.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const { start, end } = getDayRange(dateStr);
-
-    const items = await prisma.studentHealthDaily.findMany({
-      where: {
-        tenantId,
-        classroomId,
-        date: {
-          gte: start,
-          lt: end,
-        },
-      },
-      orderBy: { date: "asc" },
-    });
-
-    return NextResponse.json({
-      ok: true,
-      filters: { tenantId, classroomId, date: start.toISOString() },
-      count: items.length,
-      items,
-    });
-  } catch (err) {
-    console.error("[TEACHER_STUDENT_HEALTH_DAILY_GET_ERROR]", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Failed to load student daily health records. Please try again or contact the office.",
-      },
-      { status: 500 }
-    );
+function toNumber(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
   }
+  if (typeof v === "object" && v && typeof (v as any).toNumber === "function") {
+    const n = (v as any).toNumber();
+    return typeof n === "number" && Number.isFinite(n) ? n : null;
+  }
+  const n = Number(v as any);
+  return Number.isFinite(n) ? n : null;
 }
 
-// -------------------------
-// POST: bulk upsert daily health records
-// -------------------------
-// Each (studentId + date) is unique. We upsert so teachers can correct entries.
-// -------------------------
-export async function POST(req: NextRequest) {
+function normalizeDateISO(input?: string | null) {
+  const raw = (input ?? "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  return new Date().toISOString().slice(0, 10);
+}
+
+function dateObjFromISO(dateISO: string) {
+  return new Date(`${dateISO}T00:00:00.000Z`);
+}
+
+function classLabel(c: { name: string; grade: string | null; arm: string | null }) {
+  const parts = [c.name];
+  if (c.grade) parts.push(c.arm ? `${c.grade} ${c.arm}` : c.grade);
+  return parts.filter(Boolean).join(" · ");
+}
+
+function clampText(v: unknown, max: number): string | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (!t) return null;
+  return t.length > max ? t.slice(0, max) : t;
+}
+
+async function getFeverThresholdC(tenantId: string) {
+  // Read from Tenant.settingsJson.health.* (matches your admin health settings route)
+  const t = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { settingsJson: true },
+  });
+
+  const h = (t?.settingsJson as any)?.health ?? {};
+  const raw = h.feverThresholdC ?? h.feverThreshold ?? 37.8;
+  const n = typeof raw === "number" ? raw : Number(raw);
+
+  if (!Number.isFinite(n)) return 37.8;
+  if (n <= 30 || n >= 45) return 37.8;
+  return Math.round(n * 10) / 10;
+}
+
+const PostSchema = z
+  .object({
+    studentId: z.string().min(1),
+    dateISO: z.string().optional(),
+    temperatureC: z.number().min(30).max(45).nullable().optional(),
+    symptoms: z.string().max(240).nullable().optional(),
+    notes: z.string().max(500).nullable().optional(),
+    clear: z.boolean().optional(),
+  })
+  .strict();
+
+export async function GET(req: Request) {
+  let safe: { userId: string; tenantId: string };
   try {
-    const json = await req.json();
-    const parsed = UpsertSchema.safeParse(json);
-
-    if (!parsed.success) {
-      console.error(
-        "[TEACHER_STUDENT_HEALTH_DAILY_POST_ZOD_ERROR]",
-        parsed.error.flatten()
-      );
-      const { fieldErrors, formErrors } = parsed.error.flatten();
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Invalid data. Please check the form and try again.",
-          details: { fieldErrors, formErrors },
-        },
-        { status: 400 }
-      );
-    }
-
-    const { tenantId, classroomId, date, entries } = parsed.data;
-    const { start } = getDayRange(date);
-
-    const results = [];
-    for (const entry of entries) {
-      const record = await prisma.studentHealthDaily.upsert({
-        where: {
-          // Uses the named unique constraint in schema:
-          // @@unique([studentId, date], name: "StudentHealthDaily_unique_student_date")
-          StudentHealthDaily_unique_student_date: {
-            studentId: entry.studentId,
-            date: start,
-          },
-        },
-        create: {
-          tenantId,
-          classroomId,
-          studentId: entry.studentId,
-          date: start,
-          temperatureC:
-            typeof entry.temperatureC === "number"
-              ? entry.temperatureC
-              : null,
-          symptoms: entry.symptoms ?? null,
-          notes: entry.notes ?? null,
-        },
-        update: {
-          temperatureC:
-            typeof entry.temperatureC === "number"
-              ? entry.temperatureC
-              : null,
-          symptoms: entry.symptoms ?? null,
-          notes: entry.notes ?? null,
-        },
-      });
-
-      results.push(record);
-    }
-
-    return NextResponse.json({
-      ok: true,
-      date: start.toISOString(),
-      count: results.length,
-      items: results,
-    });
-  } catch (err) {
-    console.error("[TEACHER_STUDENT_HEALTH_DAILY_POST_ERROR]", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          "Failed to save student daily health records. Please try again or contact the office.",
-      },
-      { status: 500 }
-    );
+    safe = await requireServerUserContext({ requireTenant: true });
+  } catch {
+    return json(401, { ok: false, error: "Unauthorized." });
   }
+
+  const url = new URL(req.url);
+  const dateISO = normalizeDateISO(url.searchParams.get("date"));
+  const date = dateObjFromISO(dateISO);
+
+  const membership = await prisma.membership.findFirst({
+    where: { tenantId: safe.tenantId, userId: safe.userId, status: "ACTIVE" },
+    select: { id: true },
+  });
+  if (!membership) return json(403, { ok: false, error: "Forbidden." });
+
+  const tp = await prisma.teacherProfile.findFirst({
+    where: { tenantId: safe.tenantId, userId: safe.userId },
+    select: { primaryClassroomId: true },
+  });
+  if (!tp?.primaryClassroomId) return json(403, { ok: false, error: "No primary class assigned." });
+
+  const classroom = await prisma.classroom.findFirst({
+    where: { id: tp.primaryClassroomId, tenantId: safe.tenantId },
+    select: { id: true, name: true, grade: true, arm: true },
+  });
+  if (!classroom) return json(404, { ok: false, error: "Classroom not found." });
+
+  const [feverThresholdC, students, healthRows] = await Promise.all([
+    getFeverThresholdC(safe.tenantId),
+    prisma.student.findMany({
+      where: { tenantId: safe.tenantId, classroomId: classroom.id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        guardianName: true,
+        guardianPhone: true,
+        guardianSmsOptIn: true,
+        healthConsentAt: true,
+      },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      take: 2000,
+    }),
+    prisma.studentHealthDaily.findMany({
+      where: { tenantId: safe.tenantId, classroomId: classroom.id, date },
+      select: { studentId: true, temperatureC: true, symptoms: true, notes: true, id: true },
+    }),
+  ]);
+
+  const healthByStudent = new Map(healthRows.map((h) => [h.studentId, h]));
+
+  const items = students.map((s) => {
+    const h = healthByStudent.get(s.id);
+    const tempN = toNumber(h?.temperatureC as any);
+    const isFever = typeof tempN === "number" && tempN >= feverThresholdC;
+
+    return {
+      studentId: s.id,
+      name: [s.firstName, s.lastName].filter(Boolean).join(" ").trim() || "Unnamed learner",
+      guardianName: s.guardianName ?? null,
+      guardianPhone: s.guardianPhone ?? null,
+      guardianSmsOptIn: !!s.guardianSmsOptIn,
+      healthConsentAt: s.healthConsentAt ? s.healthConsentAt.toISOString() : null,
+
+      recordId: h?.id ?? null,
+      temperatureC: tempN,
+      symptoms: (h?.symptoms ?? null) as string | null,
+      notes: (h?.notes ?? null) as string | null,
+      isFever,
+    };
+  });
+
+  const feverCount = items.filter((x) => x.isFever).length;
+
+  return json(200, {
+    ok: true,
+    dateISO,
+    classroom: { id: classroom.id, label: classLabel(classroom) },
+    feverThresholdC,
+    feverCount,
+    count: items.length,
+    items,
+  });
+}
+
+export async function POST(req: Request) {
+  let safe: { userId: string; tenantId: string };
+  try {
+    safe = await requireServerUserContext({ requireTenant: true });
+  } catch {
+    return json(401, { ok: false, error: "Unauthorized." });
+  }
+
+  const raw = await req.json().catch(() => null);
+  const parsed = PostSchema.safeParse(raw);
+  if (!parsed.success) {
+    return json(400, { ok: false, error: parsed.error.issues[0]?.message || "Invalid request body." });
+  }
+
+  const dateISO = normalizeDateISO(parsed.data.dateISO ?? null);
+  const date = dateObjFromISO(dateISO);
+  const studentId = parsed.data.studentId.trim();
+
+  const membership = await prisma.membership.findFirst({
+    where: { tenantId: safe.tenantId, userId: safe.userId, status: "ACTIVE" },
+    select: { id: true },
+  });
+  if (!membership) return json(403, { ok: false, error: "Forbidden." });
+
+  const tp = await prisma.teacherProfile.findFirst({
+    where: { tenantId: safe.tenantId, userId: safe.userId },
+    select: { primaryClassroomId: true },
+  });
+  if (!tp?.primaryClassroomId) return json(403, { ok: false, error: "No primary class assigned." });
+
+  const student = await prisma.student.findFirst({
+    where: {
+      id: studentId,
+      tenantId: safe.tenantId,
+      classroomId: tp.primaryClassroomId,
+    },
+    select: { id: true, classroomId: true, healthConsentAt: true },
+  });
+  if (!student) return json(404, { ok: false, error: "Student not found in your primary class." });
+
+  // ✅ enforce consent (align with attendance health upsert)
+  if (!student.healthConsentAt) {
+    return json(409, { ok: false, error: "Health consent has not been granted for this student." });
+  }
+
+  if (parsed.data.clear) {
+    await prisma.studentHealthDaily.deleteMany({
+      where: { tenantId: safe.tenantId, studentId: student.id, date },
+    });
+    return json(200, { ok: true, cleared: true, studentId: student.id, dateISO });
+  }
+
+  const temperatureC = typeof parsed.data.temperatureC === "number" ? parsed.data.temperatureC : null;
+  const symptoms = clampText(parsed.data.symptoms, 240);
+  const notes = clampText(parsed.data.notes, 500);
+
+  const updated = await prisma.studentHealthDaily.upsert({
+    where: {
+      StudentHealthDaily_unique_student_date: { studentId: student.id, date },
+    },
+    create: {
+      tenantId: safe.tenantId,
+      classroomId: student.classroomId!, // safe due to query above
+      studentId: student.id,
+      date,
+      temperatureC: temperatureC == null ? null : temperatureC,
+      symptoms,
+      notes,
+    },
+    update: {
+      classroomId: student.classroomId!,
+      temperatureC: temperatureC == null ? null : temperatureC,
+      symptoms,
+      notes,
+    },
+    select: { id: true, studentId: true, date: true, temperatureC: true, symptoms: true, notes: true },
+  });
+
+  const feverThresholdC = await getFeverThresholdC(safe.tenantId);
+  const tempN = toNumber(updated.temperatureC as any);
+  const isFever = typeof tempN === "number" && tempN >= feverThresholdC;
+
+  return json(200, {
+    ok: true,
+    studentId: updated.studentId,
+    dateISO,
+    temperatureC: tempN,
+    symptoms: updated.symptoms ?? null,
+    notes: updated.notes ?? null,
+    feverThresholdC,
+    isFever,
+  });
 }

@@ -41,6 +41,8 @@ const LESSON_NOTE_SELECT = {
 
   phase: true,
   level: true,
+
+  schemeOfWorkItemId: true,
   curriculumUnitId: true,
 
   subject: true,
@@ -94,13 +96,19 @@ export async function DELETE() {
 export async function GET(_req: NextRequest, context: { params: Params } | { params: Promise<Params> }) {
   let ctx: { userId: string; tenantId: string };
   try {
-    const c = await requireServerUserContext({
-      redirectTo: "/teacher/lesson-notes",
-      requireTenant: true,
-    });
+    const c = await requireServerUserContext({ requireTenant: true });
     ctx = { userId: c.userId, tenantId: c.tenantId };
   } catch {
     return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
+  // ✅ Membership gate (ACTIVE only)
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+    select: { status: true },
+  });
+  if (!membership || membership.status !== "ACTIVE") {
+    return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
   const { id: rawId } = await Promise.resolve((context as any).params as Params);
@@ -130,15 +138,13 @@ export async function GET(_req: NextRequest, context: { params: Params } | { par
           rejectedAt: toIso(item.rejectedAt),
           createdAt: toIso(item.createdAt),
           updatedAt: toIso(item.updatedAt),
+          status: String(item.status ?? "DRAFT").toUpperCase(),
         },
       },
       { status: 200 }
     );
   } catch (err) {
     console.error("[TEACHER_LESSON_NOTE_ITEM_ERROR]", err);
-    return jsonNoStore(
-      { ok: false, error: "Server error while loading this lesson note. Please try again." },
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "Server error while loading this lesson note." }, { status: 500 });
   }
 }

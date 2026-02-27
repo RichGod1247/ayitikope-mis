@@ -1,57 +1,113 @@
-// src/app/api/rbac/grant/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { PERMS } from '@/lib/rbac'
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { PERMS } from "@/lib/rbac";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type Body = {
-  tenantId: string
-  roleName: string // e.g. "ADMIN" or "Head Teacher"
-  perms: string[]  // e.g. ["CONSENT_VIEW","CONSENT_EDIT","CONSENT_EXPORT"]
+  roleName?: string;
+  perms?: string[];
+};
+
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 
-export async function POST(req: NextRequest) {
+function normRoleName(v: unknown) {
+  return String(v ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+}
+
+function knownPermSet(): Set<string> {
+  const vals = Array.isArray(PERMS) ? PERMS : Object.values(PERMS as any);
+  return new Set(vals.map((x) => String(x)));
+}
+
+export async function POST(req: Request) {
+  // 🔒 MVP: only SUPERADMIN can mutate RBAC (inside the active tenant session)
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
+
+  const ctx = auth.ctx;
+
+  const body = (await req.json().catch(() => ({}))) as Partial<Body>;
+
+  const roleName = normRoleName(body.roleName);
+  const permsRaw = Array.isArray(body.perms) ? body.perms : [];
+  const perms = Array.from(new Set(permsRaw.map((p) => String(p ?? "").trim()).filter(Boolean)));
+
+  if (!roleName || perms.length === 0) {
+    return json(400, { ok: false, error: "roleName and perms[] are required" });
+  }
+
+  const known = knownPermSet();
+  const unknown = perms.filter((p) => !known.has(p));
+  if (unknown.length) {
+    return json(400, { ok: false, error: "UNKNOWN_PERMS", unknown });
+  }
+
   try {
-    const body = (await req.json().catch(() => ({}))) as Partial<Body>
-    const tenantId = body.tenantId?.trim()
-    const roleName = body.roleName?.trim()
-    const perms = Array.isArray(body.perms) ? body.perms : []
-
-    if (!tenantId || !roleName || perms.length === 0) {
-      return new Response(JSON.stringify({ error: 'tenantId, roleName, perms[] required' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    // Ensure role exists for this tenant (global roles are allowed too; tie it to tenant for simplicity)
-    const role = await prisma.role.upsert({
-      where: { tenantId_name: { tenantId, name: roleName } },
-      update: {},
-      create: { tenantId, name: roleName, description: `Role ${roleName} for tenant ${tenantId}` },
-      select: { id: true },
-    })
-
-    // Make sure each Permission row exists, then upsert RolePermission
-    for (const name of perms) {
-      const p = await prisma.permission.upsert({
-        where: { name },
+    const out = await prisma.$transaction(async (tx) => {
+      // ✅ TENANT-SCOPED ROLE
+      const role = await tx.role.upsert({
+        where: { tenantId_name: { tenantId: ctx.tenantId, name: roleName } },
         update: {},
-        create: { name, description: `Permission: ${name}` },
-        select: { id: true },
-      })
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role.id, permissionId: p.id } },
-        update: {},
-        create: { roleId: role.id, permissionId: p.id },
-      })
-    }
+        create: {
+          tenantId: ctx.tenantId,
+          name: roleName,
+          description: `Role ${roleName} for tenant ${ctx.tenantId}`,
+        },
+        select: { id: true, name: true },
+      });
 
-    return new Response(JSON.stringify({ ok: true, tenantId, roleName, granted: perms }), {
-      status: 200, headers: { 'content-type': 'application/json' },
-    })
+      for (const name of perms) {
+        const perm = await tx.permission.upsert({
+          where: { name },
+          update: {},
+          create: { name, description: `Permission: ${name}` },
+          select: { id: true, name: true },
+        });
+
+        await tx.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: role.id, permissionId: perm.id } },
+          update: {},
+          create: { roleId: role.id, permissionId: perm.id },
+        });
+      }
+
+      // Best-effort audit
+      try {
+        await tx.auditLog.create({
+          data: {
+            tenantId: ctx.tenantId,
+            userId: ctx.userId,
+            action: "RBAC_GRANT_PERMS",
+            resource: "ROLE",
+            resourceId: role.id,
+            metadata: { roleName: role.name, granted: perms } as any,
+          },
+        });
+      } catch {}
+
+      return { roleName: role.name, granted: perms };
+    });
+
+    return json(200, { ok: true, tenantId: ctx.tenantId, roleName: out.roleName, granted: out.granted });
   } catch (e: any) {
-    console.error('rbac/grant error:', e)
-    return new Response(JSON.stringify({ error: 'grant failed' }), {
-      status: 500, headers: { 'content-type': 'application/json' },
-    })
+    console.error("rbac/grant error:", e);
+    return json(500, { ok: false, error: "grant failed" });
   }
 }

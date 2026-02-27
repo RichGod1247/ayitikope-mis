@@ -1,86 +1,106 @@
-// src/app/api/admin/notification-contacts/[id]/route.ts
-
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
+import { assertNoTenantOverride } from "@/lib/tenantGuard";
 
-type PatchBody = {
-  name?: string;
-  phone?: string;
-  isActive?: boolean;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type NotificationContactDTO = {
+  id: string;
+  name: string;
+  phone: string;
+  isActive: boolean;
+  createdAt: string | null;
+  createdAtDisplay: string;
 };
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+function formatDateAccra(d: Date): string {
   try {
-    const id = params.id;
+    return new Intl.DateTimeFormat("en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Africa/Accra",
+    }).format(d);
+  } catch {
+    return d.toISOString();
+  }
+}
 
-    if (!id) {
-      return NextResponse.json(
-        { ok: false, error: "Missing contact ID in URL." },
-        { status: 400 }
-      );
-    }
+function normalizeRoleName(role: unknown) {
+  return String(role ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Z_]/g, "");
+}
 
-    const body = (await request.json().catch(() => ({}))) as PatchBody;
-    const data: PatchBody = {};
+function effectiveRole(role: unknown) {
+  const r = normalizeRoleName(role);
+  if (r === "ADMIN") return "SCHOOL_ADMIN";
+  if (r === "HEADMASTER") return "HEADTEACHER";
+  return r;
+}
 
-    if (typeof body.name === "string") {
-      data.name = body.name.trim();
-    }
+function isAdminLike(role: unknown) {
+  const r = effectiveRole(role);
+  return r === "SCHOOL_ADMIN" || r === "HEADTEACHER" || r.includes("OWNER") || r.includes("SUPER");
+}
 
-    if (typeof body.phone === "string") {
-      data.phone = body.phone.trim();
-    }
+async function requireAdmin() {
+  try {
+    const ctx = await requireServerUserContext({ requireTenant: true });
 
-    if (typeof body.isActive === "boolean") {
-      data.isActive = body.isActive;
-    }
-
-    if (
-      typeof data.name === "undefined" &&
-      typeof data.phone === "undefined" &&
-      typeof data.isActive === "undefined"
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "No updatable fields provided (name, phone, or isActive).",
-        },
-        { status: 400 }
-      );
-    }
-
-    const updated = await prisma.notificationContact.update({
-      where: { id }, // id is a string, which matches your Prisma model
-      data,
+    const m = await prisma.membership.findUnique({
+      where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+      select: { status: true, role: { select: { name: true } } },
     });
 
-    return NextResponse.json(
-      {
-        ok: true,
-        contact: {
-          id: String(updated.id),
-          name: updated.name,
-          phone: updated.phone,
-          isActive: updated.isActive,
-          createdAt: updated.createdAt?.toISOString() ?? null,
-        },
-      },
-      { status: 200 }
-    );
-  } catch (err: any) {
-    console.error("[NOTIF_CONTACT_UPDATE_ERROR]", err);
+    if (!m || m.status !== "ACTIVE" || !isAdminLike(m.role?.name ?? "")) {
+      return { ok: false as const, res: json(403, { ok: false, error: "FORBIDDEN" }) };
+    }
 
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          err?.message ??
-          "Failed to update notification contact. Check server logs.",
-      },
-      { status: 500 }
-    );
+    return { ok: true as const, ctx };
+  } catch {
+    return { ok: false as const, res: json(401, { ok: false, error: "UNAUTHORIZED" }) };
+  }
+}
+
+// Keeps your current behavior: returns LIST (even though this sits under [id])
+export async function GET(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.res;
+
+  const { searchParams } = new URL(req.url);
+  const guard = assertNoTenantOverride(searchParams.get("tenantId"), gate.ctx.tenantId);
+  if (!guard.ok) return json(guard.status, { ok: false, error: guard.error });
+
+  try {
+    const contacts = await prisma.notificationContact.findMany({
+      where: { tenantId: gate.ctx.tenantId },
+      orderBy: { id: "asc" },
+      take: 2000,
+    });
+
+    const plain: NotificationContactDTO[] = contacts.map((c: any) => ({
+      id: String(c.id),
+      name: String(c.name ?? ""),
+      phone: String(c.phone ?? ""),
+      isActive: !!c.isActive,
+      createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : null,
+      createdAtDisplay: c.createdAt ? formatDateAccra(new Date(c.createdAt)) : "—",
+    }));
+
+    return json(200, { ok: true, contacts: plain });
+  } catch (err) {
+    console.error("GET /api/admin/notification-contacts error:", err);
+    return json(503, { ok: false, error: "Database is not reachable right now." });
   }
 }

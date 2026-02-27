@@ -1,14 +1,13 @@
-// src/app/teacher/attendance/[sessionId]/page.tsx
 import { requireServerUserContext } from "@/lib/serverAuth";
 import AttendanceSessionClient from "@/components/attendance/AttendanceSessionClient";
 
 type PageProps = {
-  params: { sessionId: string };
-  searchParams?: { className?: string; date?: string; brand?: string };
+  params: Promise<{ sessionId: string }>;
+  searchParams?: Promise<{ className?: string; date?: string; brand?: string }>;
 };
 
 function isoToday(): string {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  return new Date().toISOString().slice(0, 10);
 }
 
 function safeTrim(v: unknown): string | null {
@@ -23,17 +22,18 @@ function safeISODate(v: unknown): string | null {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
 }
 
-export default async function AttendanceSessionPage({ params, searchParams }: PageProps) {
-  const sessionId = params.sessionId;
+export default async function AttendanceSessionPage(props: PageProps) {
+  const { sessionId } = await props.params;
+  const sp = props.searchParams ? await props.searchParams : {};
 
   const safe = await requireServerUserContext({
     redirectTo: `/teacher/attendance/${encodeURIComponent(sessionId)}`,
     requireTenant: true,
   });
 
-  const initialClassName = safeTrim(searchParams?.className) ?? "Class";
-  const initialDate = safeISODate(searchParams?.date) ?? isoToday();
-  const initialBrand = safeTrim(searchParams?.brand) ?? "EDULIFE";
+  const initialClassName = safeTrim(sp.className) ?? "Class";
+  const initialDate = safeISODate(sp.date) ?? isoToday();
+  const initialBrand = safeTrim(sp.brand) ?? "EDULIFE";
 
   return (
     <AttendanceSessionClient

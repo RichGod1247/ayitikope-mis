@@ -1,10 +1,11 @@
 // src/app/auth/signin/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
-import { signIn } from "next-auth/react";
-import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState, type FormEvent } from "react";
+import { buildAppCallbackUrl, safeInternalPath } from "@/lib/roleRouting";
 
 function minutesFromSeconds(secs: number) {
   const s = Number.isFinite(secs) ? secs : 60;
@@ -15,48 +16,72 @@ function hasOtpValue(v: string) {
   return v.replace(/\s+/g, "").trim().length > 0;
 }
 
-// Bank-grade: block open-redirects, allow only internal paths.
-// Also supports NextAuth's callbackUrl which may be absolute.
-function safeInternalRedirect(raw: string | null | undefined) {
-  const fallback = "/teacher/dashboard";
-  const v = String(raw ?? "").trim();
-  if (!v) return fallback;
+function mapError(raw: string | null): string | null {
+  const e = String(raw ?? "").trim();
+  if (!e) return null;
 
-  // Block protocol-relative and backslash tricks
-  if (v.startsWith("//") || v.startsWith("\\") || v.startsWith("\\\\")) return fallback;
+  // Server-auth redirect errors
+  if (e === "NO_ACTIVE_TENANT") return "Select your school (School Code) to continue.";
+  if (e === "FORBIDDEN") return "You don’t have access to this school workspace.";
+  if (e === "UNAUTHORIZED") return "Please sign in to continue.";
 
-  // Safe internal path must be a normal single-slash route
-  if (v.startsWith("/")) return v;
+  // NextAuth generic
+  if (e === "CredentialsSignin") return "Invalid Staff ID/email or password.";
 
-  try {
-    const u = new URL(v);
-    const path = `${u.pathname}${u.search}${u.hash}`.trim();
-    if (!path.startsWith("/") || path.startsWith("//")) return fallback;
-    return path || fallback;
-  } catch {
-    return fallback;
-  }
+  return null;
 }
 
-export default function SignInPage() {
+function SignInSkeleton() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white">
+      <div className="mx-auto max-w-md px-4 py-10 space-y-6">
+        <header className="space-y-2 text-center">
+          <p className="text-xs uppercase tracking-[0.18em] text-sky-600">EduLife OS · Sign In</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-sky-950">Welcome back.</h1>
+          <p className="text-sm text-slate-600">Loading…</p>
+        </header>
+
+        <section className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
+          <div className="h-10 rounded-xl bg-slate-100 animate-pulse" />
+          <div className="mt-3 h-10 rounded-xl bg-slate-100 animate-pulse" />
+          <div className="mt-3 h-10 rounded-xl bg-slate-100 animate-pulse" />
+          <div className="mt-3 h-10 rounded-xl bg-slate-100 animate-pulse" />
+          <div className="mt-4 h-10 rounded-xl bg-slate-200 animate-pulse" />
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function SignInInner() {
   const sp = useSearchParams();
   const router = useRouter();
 
-  const redirectTo = safeInternalRedirect(sp.get("redirect") || sp.get("callbackUrl") || "/teacher/dashboard");
+  const rawCb =
+    sp.get("callbackUrl") || sp.get("redirect") || sp.get("redirectTo") || "/app";
 
-  const [tenant, setTenant] = useState(""); // school code / tenant slug / tenantId
+  // Always sanitize
+  const safeCb = safeInternalPath(rawCb, "/app");
+
+  // ✅ Always route through /app gateway unless it's already /app
+  const callbackUrl = safeCb.startsWith("/app") ? safeCb : buildAppCallbackUrl(safeCb);
+
+  const tenantPrefill = (sp.get("tenant") || sp.get("tenantId") || sp.get("school") || "").trim();
+  const initialErr = mapError(sp.get("error"));
+
+  const [tenant, setTenant] = useState(tenantPrefill);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(initialErr);
 
   const canSubmit = useMemo(
     () => identifier.trim().length >= 3 && password.length >= 6 && !loading,
     [identifier, password, loading]
   );
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
     setLoading(true);
@@ -67,7 +92,7 @@ export default function SignInPage() {
       identifier: identifier.trim(),
       password,
       otp: otp.trim() || undefined,
-      callbackUrl: redirectTo,
+      callbackUrl, // ✅ always /app?next=...
     });
 
     setLoading(false);
@@ -78,65 +103,39 @@ export default function SignInPage() {
     }
 
     if (res.error) {
-      if (res.error === "TENANT_REQUIRED") {
-        setErr("Enter your School Code (tenant) to continue. This is required for Staff ID login or multi-school accounts.");
-        return;
-      }
-
-      if (res.error === "OTP_REQUIRED") {
-        setErr("2FA is enabled. Enter your one-time code (OTP) and sign in again.");
-        return;
-      }
-
-      if (res.error === "OTP_INVALID") {
-        setErr("Invalid one-time code (OTP). Try again.");
-        return;
-      }
-
-      if (res.error === "OTP_MISCONFIGURED") {
-        setErr("2FA is misconfigured on this account. Contact the administrator.");
-        return;
-      }
+      if (res.error === "TENANT_REQUIRED") return setErr("Enter your School Code (tenant) to continue.");
+      if (res.error === "INVALID_TENANT") return setErr("School Code not found. Use the current School Code from your administrator.");
+      if (res.error === "OTP_REQUIRED") return setErr("2FA is enabled. Enter your one-time code (OTP) and sign in again.");
+      if (res.error === "OTP_INVALID") return setErr("Invalid one-time code (OTP). Try again.");
+      if (res.error === "OTP_MISCONFIGURED") return setErr("2FA is misconfigured on this account. Contact the administrator.");
 
       if (res.error.startsWith("OTP_LOCKED:")) {
         const secs = Number(res.error.split(":")[1] || "60");
-        const mins = minutesFromSeconds(secs);
-        setErr(`OTP temporarily locked due to too many attempts. Try again in ${mins} minute(s).`);
-        return;
+        return setErr(`OTP temporarily locked. Try again in ${minutesFromSeconds(secs)} minute(s).`);
       }
-
       if (res.error.startsWith("RATE_LIMIT:")) {
         const secs = Number(res.error.split(":")[1] || "60");
-        const mins = minutesFromSeconds(secs);
-        setErr(`Too many attempts. Try again in ${mins} minute(s).`);
-        return;
+        return setErr(`Too many attempts. Try again in ${minutesFromSeconds(secs)} minute(s).`);
       }
-
       if (res.error.startsWith("ACCOUNT_LOCKED:")) {
         const secs = Number(res.error.split(":")[1] || "60");
-        const mins = minutesFromSeconds(secs);
-        setErr(`Account temporarily locked. Try again in ${mins} minute(s).`);
-        return;
+        return setErr(`Account temporarily locked. Try again in ${minutesFromSeconds(secs)} minute(s).`);
       }
 
-      if (hasOtpValue(otp)) {
-        setErr("Sign-in failed. Check your password and one-time code, then try again.");
-        return;
-      }
-
-      setErr("Invalid Staff ID/email or password.");
-      return;
+      if (hasOtpValue(otp)) return setErr("Sign-in failed. Check your password and one-time code, then try again.");
+      return setErr("Invalid Staff ID/email or password.");
     }
 
-    router.replace(res.url ? safeInternalRedirect(res.url) : redirectTo);
+    // Single gateway: /app will route by role + tenant safely.
+    router.replace(callbackUrl || "/app");
   }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white">
       <div className="mx-auto max-w-md px-4 py-10 space-y-6">
         <header className="space-y-2 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-sky-600">EduLife OS · Teacher Portal</p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-sky-950">Welcome back, Teacher.</h1>
+          <p className="text-xs uppercase tracking-[0.18em] text-sky-600">EduLife OS · Sign In</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-sky-950">Welcome back.</h1>
           <p className="text-sm text-slate-600">Sign in to access your workspace.</p>
         </header>
 
@@ -156,7 +155,7 @@ export default function SignInPage() {
                 value={tenant}
                 onChange={(e) => setTenant(e.target.value)}
                 className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-200"
-                placeholder="e.g. ayitikope-jhs (tenant slug) or tenantId"
+                placeholder="e.g. SCH-AC4633 or ayitikope-basic"
                 autoComplete="organization"
               />
             </div>
@@ -169,6 +168,7 @@ export default function SignInPage() {
                 className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-200"
                 placeholder="e.g. AYI-TCH-001 or name@school.com"
                 autoComplete="username"
+                required
               />
             </div>
 
@@ -181,6 +181,7 @@ export default function SignInPage() {
                 placeholder="Your password"
                 type="password"
                 autoComplete="current-password"
+                required
               />
             </div>
 
@@ -209,7 +210,7 @@ export default function SignInPage() {
             <div className="pt-2 text-center text-xs text-slate-600">
               New teacher?{" "}
               <Link
-                href={`/auth/signup?redirect=${encodeURIComponent(redirectTo)}`}
+                href={`/auth/signup?redirectTo=${encodeURIComponent(callbackUrl || "/app")}`}
                 className="font-semibold text-sky-700 hover:underline"
               >
                 Create account
@@ -219,5 +220,13 @@ export default function SignInPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<SignInSkeleton />}>
+      <SignInInner />
+    </Suspense>
   );
 }

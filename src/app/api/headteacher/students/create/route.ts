@@ -1,55 +1,37 @@
 // src/app/api/headteacher/students/create/route.ts
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
 
 export async function POST(req: Request) {
+  let ctx: any;
   try {
-    // 1) Ensure user is signed in
-    const session = await getServerSession(authOptions);
-    const user = session?.user as any;
-    const userId: string | undefined = user?.id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Not signed in" },
-        { status: 401 }
-      );
-    }
-
-    // 2) Find a membership so we know which tenant (school) this user belongs to
-    const membership = await prisma.membership.findFirst({
-      where: { userId },
+    ctx = await requireServerUserContext({
+      requireTenant: true,
+      requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "ADMIN"],
     });
+  } catch (err: any) {
+    if (err instanceof Response) return err;
+    return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
+  }
 
-    if (!membership?.tenantId) {
-      return NextResponse.json(
-        { ok: false, error: "No tenant membership found for this user" },
-        { status: 401 }
-      );
-    }
-
-    const tenantId = membership.tenantId;
-
-    // 3) Parse incoming data
+  try {
+    const tenantId = ctx.tenantId;
     const body = await req.json().catch(() => null);
 
     if (!body) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid JSON body" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
     }
 
     const {
       firstName,
       lastName,
       sex,
+      dob,
+      classroomId,
       guardianName,
       guardianPhone,
       guardianSmsOptIn,
@@ -58,13 +40,14 @@ export async function POST(req: Request) {
       firstName?: string;
       lastName?: string;
       sex?: string;
+      dob?: string; // YYYY-MM-DD
+      classroomId?: string;
       guardianName?: string;
       guardianPhone?: string;
       guardianSmsOptIn?: boolean;
       note?: string;
     };
 
-    // 4) Very basic validation (we can tighten later)
     if (!firstName || !lastName) {
       return NextResponse.json(
         { ok: false, error: "First name and last name are required" },
@@ -72,15 +55,35 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5) Create the student record
-    // We only set fields we know exist and are safe;
-    // Prisma will use defaults / nullability for the rest.
+    let safeClassroomId: string | null = null;
+    if (typeof classroomId === "string" && classroomId.trim()) {
+      const cls = await prisma.classroom.findFirst({
+        where: { id: classroomId.trim(), tenantId },
+        select: { id: true },
+      });
+      if (!cls) {
+        return NextResponse.json(
+          { ok: false, error: "Invalid classroomId for this tenant" },
+          { status: 400 }
+        );
+      }
+      safeClassroomId = cls.id;
+    }
+
+    let parsedDob: Date | null = null;
+    if (typeof dob === "string" && dob.trim()) {
+      const d = new Date(dob.trim());
+      if (!Number.isNaN(d.getTime())) parsedDob = d;
+    }
+
     const created = await prisma.student.create({
       data: {
         tenantId,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         sex: sex?.trim() || "",
+        dob: parsedDob,
+        classroomId: safeClassroomId,
         guardianName: guardianName?.trim() || "",
         guardianPhone: guardianPhone?.trim() || "",
         guardianSmsOptIn: !!guardianSmsOptIn,
@@ -91,6 +94,8 @@ export async function POST(req: Request) {
         firstName: true,
         lastName: true,
         sex: true,
+        dob: true,
+        classroomId: true,
         guardianName: true,
         guardianPhone: true,
         guardianSmsOptIn: true,
@@ -102,15 +107,11 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         ok: true,
+        tenantId,
         student: {
-          id: created.id,
-          firstName: created.firstName ?? "",
-          lastName: created.lastName ?? "",
-          sex: created.sex ?? "",
-          guardianName: created.guardianName ?? "",
-          guardianPhone: created.guardianPhone ?? "",
+          ...created,
+          dob: created.dob ? created.dob.toISOString().slice(0, 10) : "",
           guardianSmsOptIn: !!created.guardianSmsOptIn,
-          note: created.note ?? "",
           createdAt: created.createdAt.toISOString(),
         },
       },
@@ -119,12 +120,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("Error creating student", err);
     return NextResponse.json(
-      {
-        ok: false,
-        error:
-          err?.message ||
-          "Unexpected error while creating learner. Please try again.",
-      },
+      { ok: false, error: err?.message || "Unexpected error while creating learner." },
       { status: 500 }
     );
   }

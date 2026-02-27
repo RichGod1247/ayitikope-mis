@@ -110,7 +110,6 @@ function parseJhsAssignmentRows(j: any): JhsAssignmentRow[] {
 
     if (!subject || classes.length === 0) continue;
 
-    // Keep both raw and normalized matching ability later
     rows.push({
       subject,
       classes: uniqStrings(classes),
@@ -150,6 +149,61 @@ function normalizeAcademicYear(raw: unknown): string | null {
 
   if (/^\d{4}\/\d{4}$/.test(v)) return v;
   return null;
+}
+
+function normalizeSpaces(s: string) {
+  return String(s ?? "").replace(/\s+/g, " ").trim();
+}
+
+function stripLeadingLevelFromSubject(raw: string) {
+  const s = normalizeSpaces(raw);
+  if (!s) return "";
+  // e.g. "JHS 2 Social Studies" -> "Social Studies"
+  return s.replace(/^(JHS\s*[1-3]|JHS[1-3]|Basic\s*\d+|Basic\d+|B\s*\d+|B\d+|KG\s*[12]|KG[12])\s+/i, "").trim();
+}
+
+function subjectOrFilters(rawSubject: string) {
+  const s = normalizeSpaces(rawSubject);
+  const core = stripLeadingLevelFromSubject(s) || s;
+
+  const out: any[] = [];
+  if (s) {
+    out.push({ subject: { equals: s, mode: "insensitive" as const } });
+    out.push({ subject: { endsWith: s, mode: "insensitive" as const } });
+  }
+  if (core && core.toLowerCase() !== s.toLowerCase()) {
+    out.push({ subject: { equals: core, mode: "insensitive" as const } });
+    out.push({ subject: { endsWith: core, mode: "insensitive" as const } });
+  }
+  return out.length ? out : [];
+}
+
+function firstNonEmpty(...vals: Array<string | null | undefined>) {
+  for (const v of vals) {
+    const s = String(v ?? "").trim();
+    if (s) return s;
+  }
+  return "";
+}
+
+function clampTitle(s: string, max = 120) {
+  const t = String(s ?? "").trim();
+  if (!t) return "";
+  return t.length > max ? `${t.slice(0, max - 3)}…` : t;
+}
+
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Placeholder = "Subject — Week N" OR "Subject - Week N"
+function isPlaceholderTitle(title: string | null | undefined, subject: string, weekNumber: number) {
+  const t = normalizeSpaces(title ?? "");
+  if (!t) return true;
+
+  const subj = normalizeSpaces(stripLeadingLevelFromSubject(subject) || subject);
+  const re = new RegExp(`^${escapeRegExp(subj)}\\s*[—-]\\s*Week\\s*${weekNumber}\\s*$`, "i");
+  return re.test(t);
 }
 
 // ✅ NEW: JHS must match subject + class assignment (not just class)
@@ -233,11 +287,20 @@ async function requireSchemePrecondition(opts: {
   teacherUserId: string;
   term: string;
   academicYear: string;
+  subject: string;
+  level: string;
 }) {
-  const { tenantId, teacherUserId, term, academicYear } = opts;
+  const { tenantId, teacherUserId, term, academicYear, subject, level } = opts;
 
   const scheme = await prisma.schemeOfWork.findFirst({
-    where: { tenantId, teacherUserId, term, academicYear },
+    where: {
+      tenantId,
+      teacherUserId,
+      term,
+      academicYear,
+      level: { equals: level, mode: "insensitive" as any },
+      OR: subjectOrFilters(subject),
+    } as any,
     select: { id: true, _count: { select: { items: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -249,7 +312,7 @@ async function requireSchemePrecondition(opts: {
       ok: false as const,
       status: 409,
       error:
-        "Scheme of Work is required for this term/year before generating lesson notes. Add at least one indicator to your scheme first.",
+        "Scheme of Work is required for this subject/class/term/year before generating lesson notes. Add at least one indicator to your scheme first.",
     };
   }
 
@@ -325,12 +388,14 @@ export async function POST(req: NextRequest) {
     if (!access.ok) return jsonNoStore({ ok: false, error: access.error }, { status: access.status });
   }
 
-  // ✅ Server-enforced scheme gate (precondition)
+  // ✅ Server-enforced scheme gate (precondition) — now subject+level scoped
   const schemeOk = await requireSchemePrecondition({
     tenantId: ctx.tenantId,
     teacherUserId: ctx.userId,
     term: termNorm,
     academicYear: academicYearNorm,
+    subject,
+    level,
   });
   if (!schemeOk.ok) return jsonNoStore({ ok: false, error: schemeOk.error }, { status: schemeOk.status });
 
@@ -345,7 +410,16 @@ export async function POST(req: NextRequest) {
       academicYear: academicYearNorm,
       weekNumber,
     },
-    select: { id: true, status: true },
+    select: {
+      id: true,
+      status: true,
+      lessonTitle: true,
+      strand: true,
+      substrand: true,
+      contentStandard: true,
+      indicator: true,
+      schemeOfWorkItemId: true,
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -362,6 +436,59 @@ export async function POST(req: NextRequest) {
         },
         { status: 409 }
       );
+    }
+
+    // ✅ Repair: if title is placeholder (or empty) and we have a scheme item, set it to SUBSTRAND.
+    // Also ensure schemeOfWorkItemId is anchored when possible.
+    try {
+      const weekItem = await prisma.schemeOfWorkItem.findFirst({
+        where: {
+          weekNumber,
+          scheme: { id: schemeOk.schemeId },
+        } as any,
+        select: {
+          id: true,
+          strandTitle: true,
+          subStrandTitle: true,
+          contentStandardCode: true,
+          contentStandardDescription: true,
+          indicatorCode: true,
+          indicatorDescription: true,
+        },
+      });
+
+      if (weekItem) {
+        const strand = normalizeSpaces(weekItem.strandTitle ?? "");
+        const substrand = normalizeSpaces(weekItem.subStrandTitle ?? "");
+        const cs = normalizeSpaces(firstNonEmpty(weekItem.contentStandardDescription, weekItem.contentStandardCode, ""));
+        const ind = normalizeSpaces(firstNonEmpty(weekItem.indicatorDescription, weekItem.indicatorCode, ""));
+
+        const shouldFixTitle = isPlaceholderTitle(existing.lessonTitle, subject, weekNumber);
+        const shouldAnchorScheme = !existing.schemeOfWorkItemId;
+
+        // only fill missing scope fields; do not overwrite if already present
+        const data: any = {};
+        if (shouldAnchorScheme) data.schemeOfWorkItemId = weekItem.id;
+        if (!normalizeSpaces(existing.strand ?? "") && strand) data.strand = strand;
+        if (!normalizeSpaces(existing.substrand ?? "") && substrand) data.substrand = substrand;
+        if (!normalizeSpaces(existing.contentStandard ?? "") && cs) data.contentStandard = cs;
+        if (!normalizeSpaces(existing.indicator ?? "") && ind) data.indicator = ind;
+
+        if (shouldFixTitle) {
+          data.lessonTitle = clampTitle(firstNonEmpty(substrand, ind, `${stripLeadingLevelFromSubject(subject) || subject} — Week ${weekNumber}`)) || null;
+        }
+
+        if (Object.keys(data).length > 0) {
+          await prisma.lessonNote.update({
+            where: { id: existing.id },
+            data,
+            select: { id: true },
+          });
+        }
+      }
+    } catch (e) {
+      // Never fail the request because repair failed; idempotency must remain safe.
+      console.warn("[LESSON_NOTE_REUSE_REPAIR_WARN]", e);
     }
 
     return jsonNoStore(
@@ -381,6 +508,46 @@ export async function POST(req: NextRequest) {
 
   // --- Branch A: NO SLICE (draft only) ---
   if (!isNonEmptyString(indicatorIdRaw)) {
+    // Pull scheme week item (best-effort) so lessonTitle defaults to SUBSTRAND (as you want).
+    const schemeWeekItem = await prisma.schemeOfWork.findFirst({
+      where: {
+        id: schemeOk.schemeId, // ✅ use the already-validated, subject+level-scoped scheme
+      } as any,
+      select: {
+        id: true,
+        items: {
+          where: { weekNumber },
+          take: 1,
+          select: {
+            id: true,
+            weekNumber: true,
+            strandTitle: true,
+            subStrandTitle: true,
+            contentStandardCode: true,
+            contentStandardDescription: true,
+            indicatorCode: true,
+            indicatorDescription: true,
+          },
+        },
+      },
+    });
+
+    const item = schemeWeekItem?.items?.[0] ?? null;
+
+    const strand = normalizeSpaces(item?.strandTitle ?? "");
+    const substrand = normalizeSpaces(item?.subStrandTitle ?? "");
+
+    const contentStandard = normalizeSpaces(firstNonEmpty(item?.contentStandardDescription, item?.contentStandardCode, ""));
+    const indicator = normalizeSpaces(firstNonEmpty(item?.indicatorDescription, item?.indicatorCode, ""));
+
+    const title = clampTitle(
+      firstNonEmpty(
+        substrand,
+        indicator,
+        `${stripLeadingLevelFromSubject(subject) || subject} — Week ${weekNumber}`
+      )
+    );
+
     const aiPlanStub = {
       generator: "draft-no-slice",
       createdAt: new Date().toISOString(),
@@ -390,7 +557,9 @@ export async function POST(req: NextRequest) {
       term: termNorm,
       academicYear: academicYearNorm,
       weekNumber,
-      notes: "Draft created without curriculum slice. Step 2 must link scheme-aligned topic/indicator.",
+      schemeWeekItemId: item?.id ?? null,
+      notes:
+        "Draft created without curriculum slice. Prefilled from scheme (if available). Step 2 must link scheme-aligned NaCCA unit/indicator.",
     };
 
     try {
@@ -405,17 +574,20 @@ export async function POST(req: NextRequest) {
           level,
           curriculumUnitId: null,
 
+          // ✅ important: keep scheme anchor for linking + audits
+          schemeOfWorkItemId: item?.id ?? null,
+
           subject,
           term: termNorm,
           academicYear: academicYearNorm,
           weekNumber,
           lessonDate: lessonDateValue,
 
-          strand: "",
-          substrand: "",
-          contentStandard: "",
-          indicator: "",
-          lessonTitle: `${subject} — Week ${weekNumber}`,
+          strand: strand || "",
+          substrand: substrand || "",
+          contentStandard: contentStandard || "",
+          indicator: indicator || "",
+          lessonTitle: title || null,
 
           objectives: null,
           priorKnowledge: null,
@@ -437,7 +609,7 @@ export async function POST(req: NextRequest) {
 
           aiPlanJson: aiPlanStub,
           aiPlanVersion: 1,
-        },
+        } as any,
         select: { id: true, createdAt: true },
       });
 
@@ -452,10 +624,7 @@ export async function POST(req: NextRequest) {
       );
     } catch (err) {
       console.error("[GENERATE_DRAFT_LESSON_NOTE_NO_SLICE_ERROR]", err);
-      return jsonNoStore(
-        { ok: false, error: "Failed to generate draft lesson note." },
-        { status: 500 }
-      );
+      return jsonNoStore({ ok: false, error: "Failed to generate draft lesson note." }, { status: 500 });
     }
   }
 
@@ -527,19 +696,25 @@ export async function POST(req: NextRequest) {
 
   // NaCCA-aligned fields
   const strandCode = indicator.contentStandard.subStrand.strand.code ?? null;
-  const strandTitle = indicator.contentStandard.subStrand.strand.title ?? "Strand";
+  const strandTitle = indicator.contentStandard.subStrand.strand.title ?? "";
 
   const subStrandCode = indicator.contentStandard.subStrand.code ?? null;
-  const subStrandTitle = indicator.contentStandard.subStrand.title ?? "Sub-strand";
+  const subStrandTitle = indicator.contentStandard.subStrand.title ?? "";
 
   const contentStandardCode = indicator.contentStandard.code ?? null;
   const contentStandardDescription = indicator.contentStandard.description ?? null;
 
   const indicatorCode = indicator.code ?? null;
-  const indicatorDescription = indicator.description ?? "";
+  const indicatorDescription = (indicator.description ?? "").trim();
 
-  const lessonTitle =
-    indicatorDescription.length > 120 ? `${indicatorDescription.slice(0, 117)}…` : indicatorDescription;
+  // ✅ IMPORTANT: lessonTitle should prefer SUBSTRAND, then indicator.
+  const lessonTitle = clampTitle(
+    firstNonEmpty(
+      subStrandTitle,
+      indicatorDescription,
+      `${stripLeadingLevelFromSubject(subject) || subject} — Week ${weekNumber}`
+    )
+  );
 
   // FK-correct curriculumUnitId (must reference CurriculumUnit.id)
   const curriculumUnitId = await (async () => {
@@ -581,10 +756,10 @@ export async function POST(req: NextRequest) {
         weekNumber,
 
         strandCode,
-        strand: strandTitle,
+        strand: strandTitle || "Strand",
 
         substrandCode: subStrandCode,
-        substrand: subStrandTitle,
+        substrand: subStrandTitle || "Sub-strand",
 
         contentStandardCode,
         contentStandard: contentStandardDescription ?? "Content standard",
@@ -631,11 +806,11 @@ export async function POST(req: NextRequest) {
         weekNumber,
         lessonDate: lessonDateValue,
 
-        strand: strandTitle,
-        substrand: subStrandTitle,
+        strand: strandTitle || "",
+        substrand: subStrandTitle || "",
         contentStandard: contentStandardDescription,
         indicator: indicatorDescription,
-        lessonTitle,
+        lessonTitle: lessonTitle || null,
 
         objectives: null,
         priorKnowledge: null,
@@ -657,7 +832,7 @@ export async function POST(req: NextRequest) {
 
         aiPlanJson: aiPlanStub,
         aiPlanVersion: 1,
-      },
+      } as any,
       select: { id: true, createdAt: true },
     });
 
@@ -672,9 +847,6 @@ export async function POST(req: NextRequest) {
     );
   } catch (err) {
     console.error("[GENERATE_LESSON_NOTE_FROM_CURRICULUM_ERROR]", err);
-    return jsonNoStore(
-      { ok: false, error: "Failed to generate lesson note from curriculum indicator." },
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "Failed to generate lesson note from curriculum indicator." }, { status: 500 });
   }
 }

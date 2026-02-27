@@ -1,130 +1,174 @@
 // src/app/api/classrooms/route.ts
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { prisma } from "../../../lib/prisma"; // correct depth from /api/classrooms
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
+import { assertNoTenantOverride } from "@/lib/tenantGuard";
 
-/** Resolve active tenantId from cookie (falls back to ayitikope-basic) */
-async function getActiveTenantId() {
-  const cookieStore = await cookies();
-  const slug = cookieStore.get("x-tenant")?.value || "ayitikope-basic";
-  const tenant = await prisma.tenant.findUnique({
-    where: { slug },
-    select: { id: true },
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
   });
-  return tenant?.id ?? null;
 }
 
-/**
- * GET /api/classrooms
- * List classrooms for the active tenant.
- */
-export async function GET() {
+function normalizeRoleName(role: unknown) {
+  return String(role ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Z_]/g, "");
+}
+
+function effectiveRole(role: unknown) {
+  const r = normalizeRoleName(role);
+  if (r === "ADMIN") return "SCHOOL_ADMIN";
+  if (r === "HEADMASTER") return "HEADTEACHER";
+  return r;
+}
+
+function isAdminLike(role: unknown) {
+  const r = effectiveRole(role);
+  return r === "SCHOOL_ADMIN" || r === "HEADTEACHER" || r.includes("OWNER") || r.includes("SUPER");
+}
+
+async function requireActiveMember(tenantId: string, userId: string) {
+  const m = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId, tenantId } },
+    select: { status: true, role: { select: { name: true } } },
+  });
+  if (!m || m.status !== "ACTIVE") return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  return { ok: true as const, roleName: m.role?.name ?? "" };
+}
+
+function normName(value: string) {
+  // KG 1, KG-1, K.G.1 -> KG1
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 32);
+}
+
+function normArm(value: string) {
+  return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+}
+
+export async function GET(req: NextRequest) {
+  let ctx: { userId: string; tenantId: string };
   try {
-    const tenantId = await getActiveTenantId();
-    if (!tenantId) {
-      return NextResponse.json(
-        { ok: false, error: "Active tenant not found" },
-        { status: 400 }
-      );
-    }
-
-    const items = await prisma.classroom.findMany({
-      where: { tenantId },
-      orderBy: [{ name: "asc" }, { createdAt: "desc" }],
-      select: {
-        id: true,
-        name: true,
-        grade: true,
-        arm: true,
-        note: true,
-        createdAt: true,
-        updatedAt: true,
-        tenantId: true,
-      },
-      take: 200,
-    });
-
-    return NextResponse.json({ ok: true, items }, { status: 200 });
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: err?.message || "Failed to load classrooms" },
-      { status: 500 }
-    );
+    const c = await requireServerUserContext({ requireTenant: true });
+    ctx = { userId: c.userId, tenantId: c.tenantId };
+  } catch {
+    return json(401, { ok: false, error: "UNAUTHORIZED" });
   }
+
+  // Legacy tenantId in query: validate only if present (avoid string|null TS error)
+  const tenantIdParam = req.nextUrl.searchParams.get("tenantId");
+  if (tenantIdParam) {
+    const guard = assertNoTenantOverride(tenantIdParam, ctx.tenantId);
+    if (!guard.ok) return json(guard.status, { ok: false, error: guard.error });
+  }
+
+  const memberOk = await requireActiveMember(ctx.tenantId, ctx.userId);
+  if (!memberOk.ok) return json(memberOk.status, { ok: false, error: memberOk.error });
+
+  const classrooms = await prisma.classroom.findMany({
+    where: { tenantId: ctx.tenantId },
+    orderBy: [{ nameNorm: "asc" }, { armNorm: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      grade: true,
+      arm: true,
+      status: true,
+      capacity: true,
+      note: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return json(200, { ok: true, items: classrooms });
 }
 
-/**
- * POST /api/classrooms
- * Body: { name: string; grade?: string | null; arm?: string | null; note?: string | null }
- * Create a classroom under the active tenant.
- */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  let ctx: { userId: string; tenantId: string };
   try {
-    const tenantId = await getActiveTenantId();
-    if (!tenantId) {
-      return NextResponse.json(
-        { ok: false, error: "Active tenant not found" },
-        { status: 400 }
-      );
-    }
+    const c = await requireServerUserContext({ requireTenant: true });
+    ctx = { userId: c.userId, tenantId: c.tenantId };
+  } catch {
+    return json(401, { ok: false, error: "UNAUTHORIZED" });
+  }
 
-    const body = await req.json().catch(() => ({}));
-    const name: string | undefined =
-      typeof body.name === "string" ? body.name.trim() : undefined;
-    const grade: string | null =
-      body.grade === null
-        ? null
-        : typeof body.grade === "string"
-        ? body.grade.trim() || null
-        : null;
-    const arm: string | null =
-      body.arm === null
-        ? null
-        : typeof body.arm === "string"
-        ? body.arm.trim() || null
-        : null;
-    const note: string | null =
-      body.note === null
-        ? null
-        : typeof body.note === "string"
-        ? body.note.trim() || null
-        : null;
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return json(415, { ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" });
+  }
 
-    if (!name) {
-      return NextResponse.json(
-        { ok: false, error: "Name is required" },
-        { status: 422 }
-      );
-    }
+  const body = (await req.json().catch(() => ({}))) as {
+    tenantId?: string; // legacy
+    name?: string;
+    grade?: string | null;
+    arm?: string | null;
+    capacity?: number | null;
+    note?: string | null;
+  };
 
+  // Legacy tenantId in body: validate only if present
+  if (body.tenantId) {
+    const guard = assertNoTenantOverride(String(body.tenantId).trim(), ctx.tenantId);
+    if (!guard.ok) return json(guard.status, { ok: false, error: guard.error });
+  }
+
+  const memberOk = await requireActiveMember(ctx.tenantId, ctx.userId);
+  if (!memberOk.ok) return json(memberOk.status, { ok: false, error: memberOk.error });
+  if (!isAdminLike(memberOk.roleName)) return json(403, { ok: false, error: "FORBIDDEN" });
+
+  const name = String(body.name ?? "").trim();
+  const grade = body.grade == null ? null : String(body.grade).trim() || null;
+  const arm = body.arm == null ? null : String(body.arm).trim() || null;
+  const capacity = body.capacity == null ? null : Number(body.capacity);
+  const note = body.note == null ? null : String(body.note).trim() || null;
+
+  if (!name) return json(400, { ok: false, error: "NAME_REQUIRED" });
+  if (capacity != null && (!Number.isFinite(capacity) || capacity < 0)) {
+    return json(400, { ok: false, error: "INVALID_CAPACITY" });
+  }
+
+  const nameNorm = normName(name);
+  const armNorm = arm ? normArm(arm) : "";
+
+  try {
     const created = await prisma.classroom.create({
       data: {
+        tenantId: ctx.tenantId,
         name,
         grade,
         arm,
+        nameNorm,
+        armNorm,
+        capacity,
         note,
-        tenantId,
       },
       select: {
         id: true,
         name: true,
         grade: true,
         arm: true,
+        status: true,
+        capacity: true,
         note: true,
         createdAt: true,
         updatedAt: true,
-        tenantId: true,
       },
     });
 
-    return NextResponse.json(
-      { ok: true, message: "Classroom created", item: created },
-      { status: 201 }
-    );
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: err?.message || "Failed to create classroom" },
-      { status: 500 }
-    );
+    return json(201, { ok: true, item: created });
+  } catch (e: any) {
+    // Prisma unique violation
+    if (String(e?.code || "") === "P2002") {
+      return json(409, { ok: false, error: "CLASSROOM_ALREADY_EXISTS" });
+    }
+    console.error("[CLASSROOM_CREATE_ERROR]", e);
+    return json(500, { ok: false, error: "FAILED_TO_CREATE_CLASSROOM" });
   }
 }

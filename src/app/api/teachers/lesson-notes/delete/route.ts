@@ -28,7 +28,10 @@ function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1
 }
 
 export async function GET() {
-  return jsonNoStore({ ok: false, error: "Method not allowed. Use POST." }, { status: 405, headers: { Allow: "POST" } });
+  return jsonNoStore(
+    { ok: false, error: "Method not allowed. Use POST." },
+    { status: 405, headers: { Allow: "POST" } }
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -41,6 +44,15 @@ export async function POST(req: NextRequest) {
     ctx = { userId: c.userId, tenantId: c.tenantId };
   } catch {
     return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  }
+
+  // Membership gate (ACTIVE only)
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+    select: { status: true },
+  });
+  if (!membership || membership.status !== "ACTIVE") {
+    return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
   let body: any = null;
@@ -72,7 +84,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (deleted.count !== 1) {
-      // Either not found, not owned, or not DRAFT -> return 404 to avoid leaking status/ownership
       return jsonNoStore({ ok: false, error: "Lesson note not found." }, { status: 404 });
     }
 

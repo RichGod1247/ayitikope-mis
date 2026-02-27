@@ -1,110 +1,64 @@
 // src/app/api/headteacher/attendance/summary/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getHeadteacherApiContext } from "@/lib/headteacherAuth";
+import {
+  defaultLast7DaysRange,
+  getWeeklyAttendanceStats,
+  toISODateOnly,
+} from "@/lib/headteacherAttendanceWeekly";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+function jsonNoStore(payload: any, init?: { status?: number; headers?: HeadersInit }) {
+  return NextResponse.json(payload, {
+    status: init?.status ?? 200,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const ctx = await getHeadteacherApiContext();
+  if (!ctx) return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const startQ = toISODateOnly(searchParams.get("start"));
+  const endQ = toISODateOnly(searchParams.get("end"));
+  const range = startQ && endQ ? { start: startQ, end: endQ } : defaultLast7DaysRange();
+
   try {
-    // 1) Ensure user is signed in
-    const session = await getServerSession(authOptions);
-    const user = session?.user as any;
-    const userId: string | undefined = user?.id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Not signed in" },
-        { status: 401 }
-      );
-    }
-
-    // 2) Find tenant via membership (for auth / future filtering)
-    const membership = await prisma.membership.findFirst({
-      where: { userId },
+    const stats = await getWeeklyAttendanceStats({
+      tenantId: ctx.tenantId,
+      start: range.start,
+      end: range.end,
     });
 
-    if (!membership?.tenantId) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "No tenant membership found for this user",
-        },
-        { status: 401 }
-      );
-    }
+    const denom = stats.totals.present + stats.totals.absent;
+    const attendanceRate = denom > 0 ? stats.totals.present / denom : null;
 
-    const tenantId = membership.tenantId;
-
-    // 3) Load all attendance marks
-    //
-    // NOTE:
-    //  - Your AttendanceMark model currently does NOT expose `tenantId`,
-    //    so we cannot filter by tenantId at the moment.
-    //  - For now, we summarise ALL AttendanceMark records.
-    //  - Later, once AttendanceMark is linked to tenant via a field
-    //    or relation, we can tighten this filter.
-    const marks = await prisma.attendanceMark.findMany({
-      select: {
-        status: true,
-      },
-    });
-
-    const totalMarks = marks.length;
-
-    let present = 0;
-    let absent = 0;
-    let late = 0;
-    let other = 0;
-
-    for (const m of marks) {
-      const raw = (m.status ?? "").toString().toLowerCase();
-
-      if (raw === "present") {
-        present += 1;
-      } else if (raw === "absent") {
-        absent += 1;
-      } else if (raw === "late") {
-        late += 1;
-      } else {
-        other += 1;
-      }
-    }
-
-    const denom = present + absent;
-    const attendanceRate = denom > 0 ? present / denom : null;
-
-    return NextResponse.json(
+    return jsonNoStore(
       {
         ok: true,
-        tenantId,
-        totalMarks,
+        start: stats.start,
+        end: stats.end,
+        totalMarks: stats.totals.marks,
         byStatus: {
-          present,
-          absent,
-          late,
-          other,
+          present: stats.totals.present,
+          absent: stats.totals.absent,
+          late: stats.totals.late,
+          excused: stats.totals.excused,
         },
         attendanceRate,
+        pctOverall: stats.totals.pctOverall,
       },
       { status: 200 }
     );
-  } catch (err: any) {
-    console.error(
-      "Error in /api/headteacher/attendance/summary",
-      err
-    );
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          err?.message ||
-          "Unexpected error while loading attendance summary.",
-      },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("[HEADTEACHER_ATTENDANCE_SUMMARY_ERROR]", err);
+    return jsonNoStore({ ok: false, error: "Unexpected error while loading attendance summary." }, { status: 500 });
   }
 }

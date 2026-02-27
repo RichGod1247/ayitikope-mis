@@ -20,47 +20,56 @@ const btnBase =
 const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-800`
 const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50`
 
+function todayYYYYMMDD() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function weekRangeMonFri(dStr?: string) {
+  const base = dStr ? new Date(dStr) : new Date()
+  const day = base.getUTCDay()
+  const diffToMon = (day + 6) % 7
+  const monday = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()))
+  monday.setUTCDate(monday.getUTCDate() - diffToMon)
+  const friday = new Date(monday)
+  friday.setUTCDate(friday.getUTCDate() + 4)
+  const toISO = (d: Date) => d.toISOString().slice(0, 10)
+  return { start: toISO(monday), end: toISO(friday) }
+}
+
 export default function HeadteacherWeeklyPage() {
-  const [tenantId, setTenantId] = useState('')
-  const [start, setStart] = useState('') // Mon
-  const [end, setEnd] = useState('')     // Fri
+  const [start, setStart] = useState('')
+  const [end, setEnd] = useState('')
   const [rows, setRows] = useState<Row[]>([])
+  const [summary, setSummary] = useState<any>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [summary, setSummary] = useState<{classes:number;sessions:number;open:number;closed:number;certified:number;avgPresentPct:number}|null>(null)
-
-  function todayYYYYMMDD() { const now = new Date(); return now.toISOString().slice(0, 10) }
-  function weekRangeMonFri(dStr?: string) {
-    const base = dStr && dStr.trim() ? new Date(dStr) : new Date()
-    const day = base.getUTCDay() // 0 Sun .. 6 Sat
-    const diffToMon = (day + 6) % 7
-    const monday = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()))
-    monday.setUTCDate(monday.getUTCDate() - diffToMon)
-    const friday = new Date(monday); friday.setUTCDate(friday.getUTCDate() + 4)
-    const toISO = (d: Date) => d.toISOString().slice(0, 10)
-    return { start: toISO(monday), end: toISO(friday) }
-  }
 
   useEffect(() => {
-    fetch('/api/test/tenants')
-      .then(r => r.json())
-      .then(d => {
-        const t = (d?.tenants && d.tenants[0]) || null
-        if (t?.id) setTenantId(t.id)
-        const { start, end } = weekRangeMonFri()
-        setStart(start); setEnd(end)
-      })
-      .catch(() => {})
+    const { start, end } = weekRangeMonFri()
+    setStart(start)
+    setEnd(end)
   }, [])
 
   async function load() {
-    if (!tenantId || !start || !end) { setMsg('Pick tenant and date range'); return }
-    setLoading(true); setMsg(null)
+    if (!start || !end) return
+    setLoading(true)
+    setMsg(null)
+
     try {
-      const res = await fetch(`/api/headteacher/weekly/overview?tenantId=${encodeURIComponent(tenantId)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`)
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setMsg(data?.error || `Failed to load (${res.status})`); setRows([]); setSummary(null); return }
-      setRows((data.items || []) as Row[])
+      const res = await fetch(
+        `/api/headteacher/weekly/overview?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
+        { cache: 'no-store' }
+      )
+      const data = await res.json()
+
+      if (!res.ok) {
+        setMsg(data?.error || 'Failed to load')
+        setRows([])
+        setSummary(null)
+        return
+      }
+
+      setRows(data.items || [])
       setSummary(data.summary || null)
     } finally {
       setLoading(false)
@@ -68,9 +77,9 @@ export default function HeadteacherWeeklyPage() {
   }
 
   const exportURL = useMemo(() => {
-    if (!tenantId || !start || !end) return ''
-    return `/api/headteacher/export-csv-range?tenantId=${encodeURIComponent(tenantId)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
-  }, [tenantId, start, end])
+    if (!start || !end) return ''
+    return `/api/headteacher/export-csv-range?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+  }, [start, end])
 
   function pctClass(p: number) {
     if (p >= 90) return 'text-emerald-700'
@@ -83,88 +92,70 @@ export default function HeadteacherWeeklyPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">Weekly Overview (Mon–Fri)</h1>
-      <p className="text-sm text-zinc-600">Per-class attendance performance for the school week. Click a class to drill down by day.</p>
 
       <div className="grid md:grid-cols-4 gap-3">
         <div>
           <label className="block text-sm font-medium mb-1">Start (Mon)</label>
-          <div className="flex gap-2">
-            <input className="w-full border rounded-xl p-2 h-10"
-              value={start} onChange={e => setStart(e.target.value)}
-              placeholder={defaultWeek.start} />
-            <button className="h-10 px-3 rounded-xl border shadow-sm hover:bg-zinc-50" onClick={() => setStart(defaultWeek.start)}>This Mon</button>
-          </div>
+          <input className="w-full border rounded-xl p-2 h-10"
+            value={start} onChange={e => setStart(e.target.value)}
+            placeholder={defaultWeek.start} />
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">End (Fri)</label>
-          <div className="flex gap-2">
-            <input className="w-full border rounded-xl p-2 h-10"
-              value={end} onChange={e => setEnd(e.target.value)}
-              placeholder={defaultWeek.end} />
-            <button className="h-10 px-3 rounded-xl border shadow-sm hover:bg-zinc-50" onClick={() => setEnd(defaultWeek.end)}>This Fri</button>
-          </div>
+          <input className="w-full border rounded-xl p-2 h-10"
+            value={end} onChange={e => setEnd(e.target.value)}
+            placeholder={defaultWeek.end} />
         </div>
+
         <div className="flex items-end">
-          <button className={btnPrimary + ' w-full'} onClick={load} disabled={loading || !tenantId || !start || !end}>
+          <button className={`${btnPrimary} w-full`} onClick={load} disabled={loading}>
             {loading ? 'Loading…' : 'Load Week'}
           </button>
         </div>
+
         <div className="flex items-end">
-          <a className={`${btnOutline} w-full ${exportURL ? '' : 'pointer-events-none opacity-50'}`} href={exportURL}>
-            Download CSV (Mon–Fri)
+          <a className={`${btnOutline} w-full ${exportURL ? '' : 'opacity-50 pointer-events-none'}`} href={exportURL}>
+            Download CSV
           </a>
         </div>
       </div>
 
       {summary && (
-        <div className="text-sm text-zinc-700">
-          Classes: <b>{summary.classes}</b> — Sessions: <b>{summary.sessions}</b> — OPEN: <b>{summary.open}</b> — CLOSED: <b>{summary.closed}</b> — CERTIFIED: <b>{summary.certified}</b> — Avg % Present: <b>{summary.avgPresentPct}%</b>
+        <div className="text-sm">
+          Classes: <b>{summary.classes}</b> — Sessions: <b>{summary.sessions}</b> — Certified: <b>{summary.certified}</b>
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full border rounded-xl overflow-hidden">
-          <thead className="bg-zinc-50">
-            <tr className="text-left text-sm text-zinc-600">
-              <th className="p-3 border-b">Class</th>
-              <th className="p-3 border-b">Students</th>
-              <th className="p-3 border-b">Sessions</th>
-              <th className="p-3 border-b">Open</th>
-              <th className="p-3 border-b">Closed</th>
-              <th className="p-3 border-b">Certified</th>
-              <th className="p-3 border-b">Present (sum)</th>
-              <th className="p-3 border-b">% Present</th>
+      <table className="min-w-full border rounded-xl">
+        <thead className="bg-zinc-50 text-sm">
+          <tr>
+            <th className="p-3">Class</th>
+            <th className="p-3">Students</th>
+            <th className="p-3">Sessions</th>
+            <th className="p-3">% Present</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.classroomId} className="text-sm">
+              <td className="p-3 font-semibold">
+                <a href={`/headteacher/weekly/class/${r.classroomId}?start=${start}&end=${end}`} className="underline">
+                  {r.label}
+                </a>
+              </td>
+              <td className="p-3">{r.totalStudents}</td>
+              <td className="p-3">{r.sessions}</td>
+              <td className={`p-3 font-semibold ${pctClass(r.presentPct)}`}>{r.presentPct}%</td>
             </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.classroomId} className="text-sm">
-                <td className="p-3 border-b font-semibold">
-                  <a
-                    className="underline decoration-dotted hover:decoration-solid"
-                    href={`/headteacher/weekly/class/${encodeURIComponent(r.classroomId)}?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`}
-                    title="View daily details"
-                  >
-                    {r.label}
-                  </a>
-                </td>
-                <td className="p-3 border-b">{r.totalStudents}</td>
-                <td className="p-3 border-b">{r.sessions}</td>
-                <td className="p-3 border-b">{r.openCount}</td>
-                <td className="p-3 border-b">{r.closedCount}</td>
-                <td className="p-3 border-b">{r.certifiedCount}</td>
-                <td className="p-3 border-b">{r.presentSum}</td>
-                <td className={`p-3 border-b font-semibold ${pctClass(r.presentPct)}`}>{r.presentPct}%</td>
-              </tr>
-            ))}
-            {!rows.length && (
-              <tr><td className="p-4 text-sm text-zinc-600" colSpan={8}>No data yet — choose dates and Load Week.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          ))}
+          {!rows.length && (
+            <tr><td colSpan={4} className="p-4 text-center text-sm text-zinc-500">No data</td></tr>
+          )}
+        </tbody>
+      </table>
 
-      {msg && <div className="text-sm text-zinc-700">{msg}</div>}
+      {msg && <div className="text-sm">{msg}</div>}
     </div>
   )
 }

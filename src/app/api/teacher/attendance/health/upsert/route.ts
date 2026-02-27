@@ -1,138 +1,229 @@
 // src/app/api/teacher/attendance/health/upsert/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
-import { Prisma } from "@prisma/client";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import { StudentStatus } from "@prisma/client";
+import { effectiveRole } from "@/lib/roleRouting";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonError(status: number, error: string) {
-  return NextResponse.json({ ok: false, error }, { status });
+const RowSchema = z.object({
+  studentId: z.string().min(1),
+  temperatureC: z.union([z.number(), z.string()]).nullable().optional(),
+  symptoms: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+});
+
+const BodySchema = z
+  .object({
+    sessionId: z.string().min(1),
+    rows: z.array(RowSchema).optional(), // legacy
+    items: z.array(RowSchema).optional(), // current client
+    health: z.array(RowSchema).optional(), // legacy
+  })
+  .strict();
+
+function noStoreJson(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
 }
 
-function parseISODateOnly(input: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input)) return null;
-  const d = new Date(`${input}T00:00:00.000Z`);
-  return Number.isNaN(d.getTime()) ? null : d;
+function dateOnlyUTC(d: Date) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
-type HealthItem = {
-  studentId: string;
-  temperatureC?: number | null;
-  symptoms?: string | null;
-  notes?: string | null;
-};
+function parseTemp(v: unknown): number | null {
+  if (v === undefined || v === null) return null;
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.trim()) : NaN;
+  if (!Number.isFinite(n)) return null;
+  if (n < 30 || n > 45) return null;
+  return Math.round(n * 10) / 10;
+}
 
-type Body = {
-  sessionId?: string;
-  items?: HealthItem[];
-};
+function clampText(v: unknown, max: number): string | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (!t) return null;
+  return t.length > max ? t.slice(0, max) : t;
+}
 
-export async function POST(req: Request) {
-  let safe: { userId: string; tenantId: string };
-  try {
-    safe = await requireServerUserContext({ requireTenant: true });
-  } catch {
-    return jsonError(401, "Unauthorized");
+function isIdLike(id: string) {
+  return /^[a-zA-Z0-9_-]{10,100}$/.test(id);
+}
+
+function isAdminLike(roleName: unknown) {
+  const r = effectiveRole(roleName);
+  return r === "SUPERADMIN" || r === "SCHOOL_ADMIN" || r === "HEADTEACHER";
+}
+
+export async function POST(req: NextRequest) {
+  const auth = await requireApiUserContext(req, { requireTenant: true });
+  if (!auth.ok) return auth.res;
+
+  const ctx = { userId: auth.ctx.userId, tenantId: auth.ctx.tenantId };
+
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return noStoreJson(415, { ok: false, error: "Content-Type must be application/json." });
   }
 
-  const body = (await req.json().catch(() => null)) as Body | null;
-  const sessionId = body?.sessionId?.trim();
-  const items = body?.items;
-
-  if (!sessionId) return jsonError(400, "Missing sessionId.");
-  if (!Array.isArray(items) || items.length === 0) return jsonError(400, "Missing items.");
-
-  for (const it of items) {
-    if (!it || typeof it.studentId !== "string" || !it.studentId.trim()) {
-      return jsonError(400, "Each item must include a valid studentId.");
-    }
-    if (it.temperatureC != null && typeof it.temperatureC !== "number") {
-      return jsonError(400, `Invalid temperatureC for student ${it.studentId}.`);
-    }
-    if (it.symptoms != null && typeof it.symptoms !== "string") {
-      return jsonError(400, `Invalid symptoms for student ${it.studentId}.`);
-    }
-    if (it.notes != null && typeof it.notes !== "string") {
-      return jsonError(400, `Invalid notes for student ${it.studentId}.`);
-    }
+  const raw = await req.json().catch(() => null);
+  const parsed = BodySchema.safeParse(raw);
+  if (!parsed.success) {
+    return noStoreJson(400, { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid body." });
   }
+
+  const sessionId = parsed.data.sessionId.trim();
+  if (!isIdLike(sessionId)) return noStoreJson(400, { ok: false, error: "Invalid sessionId." });
+
+  const rows = (parsed.data.items ?? parsed.data.rows ?? parsed.data.health ?? []) as z.infer<typeof RowSchema>[];
 
   const session = await prisma.attendanceSession.findFirst({
-    where: { id: sessionId, tenantId: safe.tenantId },
-    select: { id: true, classroomId: true, date: true },
+    where: { id: sessionId, tenantId: ctx.tenantId },
+    select: {
+      id: true,
+      classroomId: true,
+      date: true,
+      notifiedAt: true,
+      takenByUserId: true,
+      isClosed: true,
+      certifiedAt: true,
+    },
   });
-  if (!session) return jsonError(404, "Session not found.");
 
-  const dateISO = session.date.toISOString().slice(0, 10);
-  const dateObj = parseISODateOnly(dateISO);
-  if (!dateObj) return jsonError(500, "Invalid session date stored.");
+  if (!session) return noStoreJson(404, { ok: false, error: "Attendance session not found." });
 
-  const studentIds = items.map((i) => i.studentId);
-
-  // Typed select ensures healthConsentAt exists and is safe to use.
-  const students = await prisma.student.findMany({
-    where: { tenantId: safe.tenantId, classroomId: session.classroomId, id: { in: studentIds } },
-    select: { id: true, healthConsentAt: true },
-  });
-  if (students.length !== studentIds.length) {
-    return jsonError(400, "One or more learners do not belong to this class.");
+  if (session.certifiedAt) {
+    return noStoreJson(409, { ok: false, error: "Session is certified and cannot be edited." });
+  }
+  if (session.isClosed) {
+    return noStoreJson(409, { ok: false, error: "Session is closed. Reopen it before editing." });
+  }
+  if (session.notifiedAt) {
+    return noStoreJson(409, {
+      ok: false,
+      error: "Health is locked because parents have already been notified for this session.",
+    });
   }
 
-  const consentMap = new Map(students.map((s) => [s.id, s.healthConsentAt]));
-  const blockedStudentIds = students.filter((s) => !s.healthConsentAt).map((s) => s.id);
+  try {
+    await assertCanAccessClassroom({ ...ctx, classroomId: session.classroomId });
+  } catch (e: any) {
+    return noStoreJson(Number(e?.status) || 403, { ok: false, error: String(e?.message || "Forbidden.") });
+  }
 
-  // ✅ Production-grade: avoid upsert compound WhereUniqueInput name dependence.
-  const existing = await prisma.studentHealthDaily.findMany({
+  // Prevent silent takeover for normal teachers (admins/headteachers can still oversee)
+  const membership = await prisma.membership.findFirst({
+    where: { tenantId: ctx.tenantId, userId: ctx.userId, status: "ACTIVE" },
+    select: { role: { select: { name: true } } },
+  });
+  if (!membership) return noStoreJson(403, { ok: false, error: "FORBIDDEN" });
+
+  const adminLike = isAdminLike(membership.role?.name);
+  if (!adminLike && session.takenByUserId && session.takenByUserId !== ctx.userId) {
+    return noStoreJson(403, { ok: false, error: "This session is owned by another user." });
+  }
+
+  const dateOnly = dateOnlyUTC(session.date);
+
+  if (!rows.length) {
+    return noStoreJson(200, { ok: true, count: 0, blockedStudentIds: [] });
+  }
+
+  const incomingIds = Array.from(new Set(rows.map((r) => String(r.studentId ?? "").trim()).filter(Boolean)));
+  if (incomingIds.length === 0) {
+    return noStoreJson(200, { ok: true, count: 0, blockedStudentIds: [] });
+  }
+
+  // ✅ Only ACTIVE students in this class are allowed
+  const students = await prisma.student.findMany({
     where: {
-      tenantId: safe.tenantId,
+      tenantId: ctx.tenantId,
       classroomId: session.classroomId,
-      date: dateObj,
-      studentId: { in: studentIds },
+      status: StudentStatus.ACTIVE,
+      id: { in: incomingIds },
     },
-    select: { id: true, studentId: true },
+    select: { id: true, healthConsentAt: true },
   });
-  const existingByStudent = new Map(existing.map((h) => [h.studentId, h.id]));
 
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    for (const it of items) {
-      const consentAt = consentMap.get(it.studentId) ?? null;
-      const allowHealth = !!consentAt;
+  const allowedSet = new Set(students.map((s) => s.id));
+  const consentSet = new Set(students.filter((s) => !!s.healthConsentAt).map((s) => s.id));
 
-      const temperatureC = allowHealth ? (it.temperatureC ?? null) : null;
-      const symptoms = allowHealth ? (it.symptoms?.trim() || null) : null;
-      const notes = allowHealth ? (it.notes?.trim() || null) : null;
+  const blockedStudentIds: string[] = [];
+  const byStudent = new Map<
+    string,
+    { studentId: string; temperatureC: number | null; symptoms: string | null; notes: string | null }
+  >();
 
-      const existingId = existingByStudent.get(it.studentId);
+  for (const r of rows) {
+    const sid = String(r.studentId ?? "").trim();
+    if (!sid) continue;
 
-      if (existingId) {
-        await tx.studentHealthDaily.update({
-          where: { id: existingId },
-          data: { temperatureC, symptoms, notes },
-        });
-      } else {
-        await tx.studentHealthDaily.create({
-          data: {
-            tenantId: safe.tenantId,
-            classroomId: session.classroomId,
-            studentId: it.studentId,
-            date: dateObj,
-            temperatureC,
-            symptoms,
-            notes,
-          },
-        });
-      }
+    // Ignore invalid / archived / wrong-class silently
+    if (!allowedSet.has(sid)) continue;
+
+    if (!consentSet.has(sid)) {
+      blockedStudentIds.push(sid);
+      continue;
     }
-  });
 
-  return NextResponse.json({
-    ok: true,
-    count: items.length,
-    blockedStudentIds,
-    note:
-      blockedStudentIds.length > 0
-        ? "Some learners have no health consent; health fields were stored as null."
-        : undefined,
-  });
+    byStudent.set(sid, {
+      studentId: sid,
+      temperatureC: parseTemp(r.temperatureC),
+      symptoms: clampText(r.symptoms, 400),
+      notes: clampText(r.notes, 600),
+    });
+  }
+
+  const payloads = Array.from(byStudent.values());
+  if (!payloads.length) {
+    return noStoreJson(200, {
+      ok: true,
+      count: 0,
+      blockedStudentIds: Array.from(new Set(blockedStudentIds)),
+      note: blockedStudentIds.length ? "Health blocked for learners missing consent." : undefined,
+    });
+  }
+
+  const ops = payloads.map((p) =>
+    prisma.studentHealthDaily.upsert({
+      where: { StudentHealthDaily_unique_student_date: { studentId: p.studentId, date: dateOnly } },
+      create: {
+        tenantId: ctx.tenantId,
+        classroomId: session.classroomId,
+        studentId: p.studentId,
+        date: dateOnly,
+        temperatureC: p.temperatureC as any,
+        symptoms: p.symptoms,
+        notes: p.notes,
+      },
+      update: {
+        classroomId: session.classroomId,
+        temperatureC: p.temperatureC as any,
+        symptoms: p.symptoms,
+        notes: p.notes,
+      },
+      select: { id: true },
+    })
+  );
+
+  try {
+    await prisma.$transaction(ops);
+    const uniqueBlocked = Array.from(new Set(blockedStudentIds));
+    return noStoreJson(200, {
+      ok: true,
+      count: payloads.length,
+      blockedStudentIds: uniqueBlocked,
+      note: uniqueBlocked.length ? "Some learners have no consent; their health was not saved." : undefined,
+    });
+  } catch (e: any) {
+    console.error("[ATTENDANCE_HEALTH_UPSERT_ERROR]", e);
+    return noStoreJson(500, { ok: false, error: "Failed to save health records. Please try again." });
+  }
 }

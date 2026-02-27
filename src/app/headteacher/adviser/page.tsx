@@ -33,6 +33,11 @@ type StudentSug = {
   suggestion: string
 }
 
+type Me = {
+  ok: boolean
+  tenantId: string | null
+}
+
 const btnBase =
   'inline-flex items-center justify-center h-10 px-4 rounded-xl border shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-800`
@@ -61,25 +66,37 @@ export default function HeadteacherAdviserPage() {
   }
 
   useEffect(() => {
-    fetch('/api/test/tenants')
-      .then(r => r.json())
-      .then(d => {
-        const t = (d?.tenants && d.tenants[0]) || null
-        if (t?.id) setTenantId(t.id)
-        const { start, end } = weekRangeMonFri()
-        setStart(start); setEnd(end)
-      })
-      .catch(() => {})
+    let alive = true
+    ;(async () => {
+      try {
+        const meRes = await fetch('/api/me', { cache: 'no-store' })
+        const me = (await meRes.json().catch(() => ({}))) as Me
+        const tid = me?.tenantId ? String(me.tenantId) : ''
+        if (alive) {
+          setTenantId(tid)
+          const { start, end } = weekRangeMonFri()
+          setStart(start); setEnd(end)
+          if (!tid) setMsg('No active tenant in session. Log in again or select a school.')
+        }
+      } catch {
+        if (alive) setMsg('Failed to load session (tenant).')
+      }
+    })()
+    return () => { alive = false }
   }, [])
 
   async function load() {
-    if (!tenantId || !start || !end) { setMsg('Pick tenant and date range'); return }
+    if (!tenantId || !start || !end) { setMsg('Pick date range'); return }
     setLoading(true); setMsg(null)
     try {
       const url = `/api/headteacher/adviser/suggestions?tenantId=${encodeURIComponent(tenantId)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
-      const res = await fetch(url)
+      const res = await fetch(url, { cache: 'no-store' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setMsg(data?.error || `Failed to load (${res.status})`); setClassSugs([]); setStudentSugs([]); return }
+      if (!res.ok) {
+        setMsg(data?.error || `Failed to load (${res.status})`)
+        setClassSugs([]); setStudentSugs([])
+        return
+      }
       setClassSugs((data.classSuggestions || []) as ClassSug[])
       setStudentSugs((data.studentSuggestions || []) as StudentSug[])
     } finally {
@@ -146,8 +163,8 @@ export default function HeadteacherAdviserPage() {
                 <div className="space-y-1">
                   <div className="text-base font-semibold">{c.label}</div>
                   <div className="text-sm text-zinc-700">
-                    Sessions: <b>{c.sessions}</b> • Students: <b>{c.students}</b> • Avg % Present: <b className={pctClass(c.avgPctPresent)}>{c.avgPctPresent}%</b> •
-                    {' '}Open: <b>{c.open}</b> • Closed: <b>{c.closed}</b> • Certified: <b>{c.certified}</b>
+                    Sessions: <b>{c.sessions}</b> • Students: <b>{c.students}</b> • Avg % Present: <b className={pctClass(c.avgPctPresent)}>{c.avgPctPresent}%</b> •{' '}
+                    Open: <b>{c.open}</b> • Closed: <b>{c.closed}</b> • Certified: <b>{c.certified}</b>
                   </div>
                   {c.issues.length ? (
                     <div className="text-sm text-red-700">Issues: {c.issues.join(' — ')}</div>

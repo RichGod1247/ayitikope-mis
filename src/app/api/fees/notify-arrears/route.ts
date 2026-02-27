@@ -1,6 +1,8 @@
-// src/app/api/admin/sms/templates/fees-arrears/route.ts
+// src/app/api/fees/notify-arrears/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
 import { requireServerUserContext } from "@/lib/serverAuth";
 
 export const runtime = "nodejs";
@@ -19,6 +21,23 @@ const DEFAULT_FEES_ARREARS_TEMPLATE = [
   "{{schoolName}}",
 ].join("\n");
 
+type Brand = (typeof BrandName)[number];
+const FEES_BRAND: Brand = "AYITIADMIN";
+
+const ItemSchema = z.object({
+  studentId: z.string().min(5).optional(),
+  studentName: z.string().optional(),
+  guardianPhone: z.string().optional(), // legacy; DB is preferred when studentId provided
+  className: z.string().optional(),
+  term: z.string().optional(),
+  amountDue: z.union([z.string(), z.number()]).optional(),
+  dueDate: z.string().optional(),
+});
+
+const BodySchema = z.object({
+  arrears: z.array(ItemSchema).min(1).max(250),
+});
+
 function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
   return NextResponse.json(payload, {
     ...init,
@@ -28,6 +47,37 @@ function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1
       ...(init?.headers ?? {}),
     },
   });
+}
+
+function renderTemplate(template: string, ctx: Record<string, string>): string {
+  let body = template;
+  for (const [key, value] of Object.entries(ctx)) {
+    const re = new RegExp(`{{\\s*${key}\\s*}}`, "g");
+    body = body.replace(re, value);
+  }
+  return body;
+}
+
+function safeMoney(v: unknown): string {
+  if (typeof v === "number" && Number.isFinite(v)) return v.toFixed(2);
+  if (typeof v === "string" && v.trim()) return v.trim();
+  return "0.00";
+}
+
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function normalizePhoneGhana(raw: string): string {
+  const s = clean(raw);
+  if (!s) return "";
+  // Accept: 0XXXXXXXXX (10 digits) -> 233XXXXXXXXX
+  if (/^0\d{9}$/.test(s)) return `233${s.slice(1)}`;
+  // Accept: +233XXXXXXXXX -> 233XXXXXXXXX
+  if (/^\+233\d{9}$/.test(s)) return s.slice(1);
+  // Accept: 233XXXXXXXXX
+  if (/^233\d{9}$/.test(s)) return s;
+  return s; // fallback (don’t over-break)
 }
 
 async function requireAdminLike(tenantId: string, userId: string) {
@@ -42,74 +92,10 @@ async function requireAdminLike(tenantId: string, userId: string) {
   return { ok: true as const };
 }
 
-export async function GET(req: NextRequest) {
-  // Auth + tenant
-  let ctx: { tenantId: string; userId: string };
-  try {
-    const c = await requireServerUserContext({ redirectTo: "/auth/signin", requireTenant: true });
-    ctx = { tenantId: c.tenantId, userId: c.userId };
-  } catch {
-    return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
-  }
-
-  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
-  if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, { status: roleOk.status });
-
-  // Optional tenantId param (must match)
-  const url = new URL(req.url);
-  const tenantIdParam = (url.searchParams.get("tenantId") ?? "").trim();
-  if (tenantIdParam && tenantIdParam !== ctx.tenantId) {
-    return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
-  }
-
-  try {
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: ctx.tenantId },
-      select: { id: true, name: true, settingsJson: true },
-    });
-
-    if (!tenant) {
-      return jsonNoStore({ ok: false, error: "Tenant not found." }, { status: 404 });
-    }
-
-    const settings = (tenant.settingsJson as any) || {};
-    const smsTemplates = (settings.smsTemplates as any) || {};
-    const fromSettings = smsTemplates.feesArrears;
-
-    const template =
-      typeof fromSettings === "string" && fromSettings.trim().length > 0
-        ? fromSettings
-        : DEFAULT_FEES_ARREARS_TEMPLATE;
-
-    return jsonNoStore({
-      ok: true,
-      tenantId: tenant.id,
-      tenantName: tenant.name ?? "School",
-      template,
-      isDefault: template === DEFAULT_FEES_ARREARS_TEMPLATE,
-    });
-  } catch (err) {
-    console.error("[FEES_TEMPLATE_GET_ERROR]", err);
-    // still safe default for UI stability
-    return jsonNoStore(
-      {
-        ok: true,
-        tenantId: ctx.tenantId,
-        tenantName: "School",
-        template: DEFAULT_FEES_ARREARS_TEMPLATE,
-        isDefault: true,
-        note: "Internal error; using default template. Check server logs.",
-      },
-      { status: 200 }
-    );
-  }
-}
-
 export async function POST(req: NextRequest) {
-  // Auth + tenant
   let ctx: { tenantId: string; userId: string };
   try {
-    const c = await requireServerUserContext({ redirectTo: "/auth/signin", requireTenant: true });
+    const c = await requireServerUserContext({ requireTenant: true });
     ctx = { tenantId: c.tenantId, userId: c.userId };
   } catch {
     return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
@@ -123,66 +109,119 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "Content-Type must be application/json." }, { status: 415 });
   }
 
-  try {
-    const body = await req.json().catch(() => null);
-    if (!body || typeof body !== "object") {
-      return jsonNoStore({ ok: false, error: "Invalid JSON body." }, { status: 400 });
-    }
-
-    const { tenantId: tenantIdRaw, template } = body as { tenantId?: string; template?: string };
-
-    const tenantId = (tenantIdRaw ?? "").trim() || ctx.tenantId;
-    if (tenantId !== ctx.tenantId) {
-      return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
-    }
-
-    if (typeof template !== "string" || !template.trim()) {
-      return jsonNoStore({ ok: false, error: "Template text cannot be empty." }, { status: 400 });
-    }
-
-    if (template.length > 1200) {
-      return jsonNoStore(
-        {
-          ok: false,
-          error: "Template is too long. Keep it under 1200 characters for SMS compatibility.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: ctx.tenantId },
-      select: { id: true, settingsJson: true },
-    });
-
-    if (!tenant) {
-      return jsonNoStore({ ok: false, error: "Tenant not found." }, { status: 404 });
-    }
-
-    const existing = (tenant.settingsJson as any) || {};
-    const existingSmsTemplates = (existing.smsTemplates as any) || {};
-
-    const nextSettings = {
-      ...existing,
-      smsTemplates: {
-        ...existingSmsTemplates,
-        feesArrears: template.trim(),
-      },
-    };
-
-    await prisma.tenant.update({
-      where: { id: ctx.tenantId },
-      data: { settingsJson: nextSettings as any },
-      select: { id: true },
-    });
-
-    return jsonNoStore({
-      ok: true,
-      tenantId: ctx.tenantId,
-      template: template.trim(),
-    });
-  } catch (err) {
-    console.error("[FEES_TEMPLATE_SAVE_ERROR]", err);
-    return jsonNoStore({ ok: false, error: "Failed to save fees arrears template." }, { status: 500 });
+  const raw = await req.json().catch(() => null);
+  const parsed = BodySchema.safeParse(raw);
+  if (!parsed.success) {
+    return jsonNoStore({ ok: false, error: parsed.error.issues[0]?.message || "Invalid request body." }, { status: 400 });
   }
+
+  const arrears = parsed.data.arrears;
+  const studentIds = Array.from(
+    new Set(arrears.map((a) => clean(a.studentId)).filter((x) => x.length >= 5))
+  );
+
+  const [tenant, students] = await Promise.all([
+    prisma.tenant.findUnique({
+      where: { id: ctx.tenantId },
+      select: { id: true, name: true, settingsJson: true },
+    }),
+    studentIds.length
+      ? prisma.student.findMany({
+          where: { tenantId: ctx.tenantId, id: { in: studentIds } },
+          select: { id: true, firstName: true, lastName: true, guardianPhone: true, guardianSmsOptIn: true },
+        })
+      : Promise.resolve([] as any[]),
+  ]);
+
+  const schoolName = clean(tenant?.name) || "your ward's school";
+  const settings = (tenant?.settingsJson as any) || {};
+  const storedTemplate = (settings?.smsTemplates as any)?.feesArrears;
+  const template =
+    typeof storedTemplate === "string" && storedTemplate.trim().length > 0 ? storedTemplate : DEFAULT_FEES_ARREARS_TEMPLATE;
+
+  const studentMap = new Map(students.map((s) => [s.id, s]));
+  let successCount = 0;
+
+  const results: any[] = [];
+
+  for (const item of arrears) {
+    const sid = clean(item.studentId);
+
+    // ✅ Prefer verified DB phone + opt-in when studentId present
+    if (sid) {
+      const s = studentMap.get(sid);
+      if (!s) {
+        results.push({ studentId: sid, ok: false, error: "Student not found; skipped." });
+        continue;
+      }
+      if (!s.guardianSmsOptIn) {
+        results.push({ studentId: sid, ok: false, error: "Guardian SMS opt-in is off; skipped." });
+        continue;
+      }
+      const to = normalizePhoneGhana(clean(s.guardianPhone));
+      if (!to) {
+        results.push({ studentId: sid, ok: false, error: "No guardian phone on record; skipped." });
+        continue;
+      }
+
+      const studentName = `${clean(s.firstName)} ${clean(s.lastName)}`.trim() || clean(item.studentName) || "your ward";
+      const amountStr = safeMoney(item.amountDue);
+      const smsBody = renderTemplate(template, {
+        studentName,
+        amountDue: amountStr,
+        className: clean(item.className),
+        term: clean(item.term),
+        dueDate: clean(item.dueDate),
+        schoolName,
+      });
+
+      try {
+        const sendResult = await sendViaHubtel({
+          to,
+          body: smsBody,
+          brand: FEES_BRAND,
+          meta: {
+            kind: "fees-arrears",
+            tenantId: ctx.tenantId,
+            studentId: sid,
+            className: clean(item.className) || null,
+            term: clean(item.term) || null,
+            amountDue: amountStr,
+          },
+        });
+
+        if (sendResult.ok) successCount++;
+
+        results.push({
+          studentId: sid,
+          studentName,
+          to,
+          ok: sendResult.ok,
+          providerResponse: (sendResult as any).providerResponse ?? null,
+        });
+      } catch (err: any) {
+        console.error("[FEES_NOTIFY_ARREARS_ERROR]", err);
+        results.push({ studentId: sid, ok: false, error: err?.message || "Failed to send SMS" });
+      }
+
+      continue;
+    }
+
+    // Legacy/unverified payload (no studentId) -> skip (production-grade safety)
+    results.push({
+      ok: false,
+      error: "Missing studentId; skipped (unverified target).",
+    });
+  }
+
+  return jsonNoStore(
+    {
+      ok: true,
+      total: arrears.length,
+      successCount,
+      brand: FEES_BRAND,
+      results,
+    },
+    { status: 200 }
+  );
 }

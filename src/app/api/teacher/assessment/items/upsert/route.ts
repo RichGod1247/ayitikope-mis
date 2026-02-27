@@ -5,11 +5,6 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * Upsert (create or update) a single assessment item for a class.
- *
- * This is intentionally kept simple and tolerant:
- * - Parses JSON body directly
- * - Coerces numeric fields
- * - Uses `title` / `weighting` to match the current Prisma schema
  */
 export async function POST(req: Request) {
   try {
@@ -28,68 +23,38 @@ export async function POST(req: Request) {
       maxScore,
       weighting,
       date,
-      // teacherUserId is accepted but not persisted yet – we may use it later for auditing
+      curriculumUnitId, // ✅ NEW: accept curriculum unit link
       teacherUserId, // eslint-disable-line @typescript-eslint/no-unused-vars
     } = body ?? {};
 
-    // Basic validation – just enough to avoid crashing Prisma
     if (!tenantId || !classroomId) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Tenant and classroom are required.",
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Tenant and classroom are required." }, { status: 400 });
     }
 
     if (!subject || !term || !academicYear) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Subject, term and academic year are required.",
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Subject, term and academic year are required." }, { status: 400 });
     }
 
     if (!title || typeof title !== "string" || !title.trim()) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Title is required.",
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Title is required." }, { status: 400 });
     }
 
     if (!type || typeof type !== "string") {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Assessment type is required.",
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Assessment type is required." }, { status: 400 });
     }
 
     const maxScoreNumber =
-      typeof maxScore === "number"
-        ? maxScore
-        : maxScore != null
-        ? Number(maxScore)
-        : 0;
+      typeof maxScore === "number" ? maxScore : maxScore != null ? Number(maxScore) : 0;
 
     const weightingNumber =
-      typeof weighting === "number"
-        ? weighting
-        : weighting != null && weighting !== ""
-        ? Number(weighting)
-        : null;
+      typeof weighting === "number" ? weighting : weighting != null && weighting !== "" ? Number(weighting) : null;
 
     const dateValue =
-      date && typeof date === "string" && date.trim().length > 0
-        ? new Date(date)
+      date && typeof date === "string" && date.trim().length > 0 ? new Date(date) : null;
+
+    const curriculumUnitIdValue =
+      typeof curriculumUnitId === "string" && curriculumUnitId.trim().length > 0
+        ? curriculumUnitId.trim()
         : null;
 
     const data: any = {
@@ -101,43 +66,23 @@ export async function POST(req: Request) {
       title: String(title).trim(),
       type: String(type).trim(),
       maxScore: Number.isFinite(maxScoreNumber) ? maxScoreNumber : 0,
-      description:
-        typeof description === "string" && description.trim().length > 0
-          ? description.trim()
-          : null,
-      weighting:
-        weightingNumber != null && Number.isFinite(weightingNumber)
-          ? weightingNumber
-          : null,
+      description: typeof description === "string" && description.trim().length > 0 ? description.trim() : null,
+      weighting: weightingNumber != null && Number.isFinite(weightingNumber) ? weightingNumber : null,
       date: dateValue,
+
+      // ✅ NEW: actually persist the link
+      curriculumUnitId: curriculumUnitIdValue,
     };
 
-    let item;
+    const item = id && typeof id === "string"
+      ? await prisma.assessmentItem.update({ where: { id }, data })
+      : await prisma.assessmentItem.create({ data });
 
-    if (id && typeof id === "string") {
-      // UPDATE existing assessment item
-      item = await prisma.assessmentItem.update({
-        where: { id },
-        data,
-      });
-    } else {
-      // CREATE new assessment item
-      item = await prisma.assessmentItem.create({
-        data,
-      });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      item,
-    });
+    return NextResponse.json({ ok: true, item });
   } catch (err) {
     console.error("[TEACHER_ASSESSMENT_ITEM_UPSERT_ERROR]", err);
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Failed to save assessment item. Please try again or contact the office.",
-      },
+      { ok: false, error: "Failed to save assessment item. Please try again or contact the office." },
       { status: 500 }
     );
   }

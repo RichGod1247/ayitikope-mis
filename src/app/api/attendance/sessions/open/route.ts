@@ -1,7 +1,7 @@
 // src/app/api/teacher/attendance/sessions/open/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
 import { Prisma } from "@prisma/client";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 
@@ -11,50 +11,45 @@ export const dynamic = "force-dynamic";
 function jsonErr(status: number, error: string) {
   return NextResponse.json(
     { ok: false, error },
-    {
-      status,
-      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-    }
+    { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
   );
 }
 
 function parseDateISO(dateISO: string): Date {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-    throw new Error("Invalid dateISO. Use YYYY-MM-DD.");
-  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) throw new Error("Invalid date. Use YYYY-MM-DD.");
   const d = new Date(`${dateISO}T00:00:00.000Z`);
-  if (Number.isNaN(d.getTime())) throw new Error("Invalid dateISO.");
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid date.");
   return d;
 }
 
 type Body = {
   tenantId?: string; // legacy/back-compat only
   classroomId?: string;
-  date?: string; // YYYY-MM-DD (client)
-  dateISO?: string; // YYYY-MM-DD (legacy)
+  date?: string; // YYYY-MM-DD
+  dateISO?: string; // legacy
 };
 
 export async function POST(req: Request) {
-  // ✅ Auth + tenant source of truth
-  let safe: { userId: string; tenantId: string };
-  try {
-    safe = await requireServerUserContext({ requireTenant: true });
-  } catch {
-    return jsonErr(401, "Unauthorized.");
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["TEACHER", "HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
+
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return jsonErr(415, "Content-Type must be application/json.");
   }
 
   const body = (await req.json().catch(() => null)) as Body | null;
 
   const classroomId = String(body?.classroomId || "").trim();
   const dateISO = String(body?.dateISO || body?.date || "").trim();
-  const tenantIdFromClient = body?.tenantId ? String(body.tenantId).trim() : null;
+  const tenantIdFromClient = body?.tenantId ? String(body.tenantId).trim() : "";
 
-  if (!classroomId || !dateISO) {
-    return jsonErr(400, "classroomId and dateISO/date are required.");
-  }
+  if (!classroomId || !dateISO) return jsonErr(400, "classroomId and date are required.");
 
-  // If client sends tenantId, it MUST match authenticated tenant (prevents cross-tenant abuse)
-  if (tenantIdFromClient && tenantIdFromClient !== safe.tenantId) {
+  if (tenantIdFromClient && tenantIdFromClient !== auth.ctx.tenantId) {
     return jsonErr(403, "Forbidden (tenant mismatch).");
   }
 
@@ -65,57 +60,46 @@ export async function POST(req: Request) {
     return jsonErr(400, String(e?.message || "Invalid date."));
   }
 
-  // ✅ Assignment + tenant + existence check
-  try {
-    await assertCanAccessClassroom({ ...safe, classroomId });
-  } catch (e: any) {
-    return jsonErr(Number(e?.status) || 403, String(e?.message || "Forbidden."));
-  }
+  const classroom = await prisma.classroom.findFirst({
+    where: { id: classroomId, tenantId: auth.ctx.tenantId },
+    select: { id: true },
+  });
+  if (!classroom) return jsonErr(404, "Classroom not found.");
 
-  // ✅ Race-safe create/claim logic
+  // Teachers must be assigned; admin/headteacher can oversee
+  // (assertCanAccessClassroom handles your JHS logic if implemented there)
+  await assertCanAccessClassroom({ userId: auth.ctx.userId, tenantId: auth.ctx.tenantId, classroomId });
+
   try {
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const existing = await tx.attendanceSession.findUnique({
-        // ✅ FIX: correct composite unique input name
-        where: { tenantId_classroomId_date: { tenantId: safe.tenantId, classroomId, date } },
+      const existing = await tx.attendanceSession.findFirst({
+        where: { tenantId: auth.ctx.tenantId, classroomId, date },
         select: { id: true, certifiedAt: true, takenByUserId: true },
       });
 
       if (existing?.certifiedAt) {
-        return {
-          ok: false as const,
-          status: 409,
-          error: "Session already certified for this class/date.",
-        };
+        return { ok: false as const, status: 409, error: "Session already certified for this class/date." };
       }
 
       if (!existing) {
         const created = await tx.attendanceSession.create({
-          data: {
-            tenantId: safe.tenantId,
-            classroomId,
-            date,
-            takenByUserId: safe.userId,
-            isClosed: false,
-          },
+          data: { tenantId: auth.ctx.tenantId, classroomId, date, takenByUserId: auth.ctx.userId, isClosed: false },
           select: { id: true },
         });
         return { ok: true as const, sessionId: created.id };
       }
 
-      // Prevent takeover
-      if (existing.takenByUserId && existing.takenByUserId !== safe.userId) {
+      if (existing.takenByUserId && existing.takenByUserId !== auth.ctx.userId) {
         return { ok: false as const, status: 403, error: "This session is owned by another user." };
       }
 
-      // Claim ONLY if unowned or already owned by same user (race-safe)
       const updated = await tx.attendanceSession.updateMany({
         where: {
           id: existing.id,
           certifiedAt: null,
-          OR: [{ takenByUserId: null }, { takenByUserId: safe.userId }],
+          OR: [{ takenByUserId: null }, { takenByUserId: auth.ctx.userId }],
         },
-        data: { takenByUserId: safe.userId },
+        data: { takenByUserId: auth.ctx.userId },
       });
 
       if (updated.count !== 1) {
@@ -126,23 +110,22 @@ export async function POST(req: Request) {
     });
 
     if (!result.ok) return jsonErr(result.status, result.error);
+
     return NextResponse.json(
       { ok: true, sessionId: result.sessionId },
       { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
     );
   } catch (e: any) {
-    // If unique constraint race occurred, re-check and apply the same ownership rules
-    const code = String(e?.code || "");
-    if (code === "P2002") {
-      const existing = await prisma.attendanceSession.findUnique({
-        // ✅ FIX: correct composite unique input name
-        where: { tenantId_classroomId_date: { tenantId: safe.tenantId, classroomId, date } },
+    if (String(e?.code || "") === "P2002") {
+      // Unique conflict: fetch existing
+      const existing = await prisma.attendanceSession.findFirst({
+        where: { tenantId: auth.ctx.tenantId, classroomId, date },
         select: { id: true, certifiedAt: true, takenByUserId: true },
       });
 
       if (!existing) return jsonErr(500, "Failed to open session.");
       if (existing.certifiedAt) return jsonErr(409, "Session already certified for this class/date.");
-      if (existing.takenByUserId && existing.takenByUserId !== safe.userId) {
+      if (existing.takenByUserId && existing.takenByUserId !== auth.ctx.userId) {
         return jsonErr(403, "This session is owned by another user.");
       }
 
@@ -150,9 +133,9 @@ export async function POST(req: Request) {
         where: {
           id: existing.id,
           certifiedAt: null,
-          OR: [{ takenByUserId: null }, { takenByUserId: safe.userId }],
+          OR: [{ takenByUserId: null }, { takenByUserId: auth.ctx.userId }],
         },
-        data: { takenByUserId: safe.userId },
+        data: { takenByUserId: auth.ctx.userId },
       });
 
       return NextResponse.json(
@@ -161,6 +144,7 @@ export async function POST(req: Request) {
       );
     }
 
+    console.error("teacher/attendance/sessions/open error:", e);
     return jsonErr(500, "Failed to open session.");
   }
 }

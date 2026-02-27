@@ -1,7 +1,8 @@
+// src/app/api/attendance/sessions/summary/route.ts
 import { NextResponse } from "next/server";
 import { AttendanceStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 
 export const runtime = "nodejs";
@@ -9,14 +10,11 @@ export const dynamic = "force-dynamic";
 
 type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED";
 
-function jsonErr(status: number, error: string) {
-  return NextResponse.json(
-    { ok: false, error },
-    {
-      status,
-      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-    }
-  );
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
 }
 
 function parseDateISO(dateISO: string): Date {
@@ -34,71 +32,66 @@ function toState(session: { isClosed: boolean; certifiedAt: Date | null } | null
 }
 
 export async function GET(req: Request) {
-  let safe: { userId: string; tenantId: string };
-  try {
-    safe = await requireServerUserContext({ requireTenant: true });
-  } catch {
-    return jsonErr(401, "Unauthorized.");
-  }
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["TEACHER", "HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
 
   const url = new URL(req.url);
   const tenantIdParam = (url.searchParams.get("tenantId") || "").trim();
-  if (tenantIdParam && tenantIdParam !== safe.tenantId) return jsonErr(403, "Forbidden (tenant mismatch).");
+  if (tenantIdParam && tenantIdParam !== auth.ctx.tenantId) {
+    return json(403, { ok: false, error: "Forbidden (tenant mismatch)." });
+  }
 
   const classroomId = (url.searchParams.get("classroomId") || "").trim();
   const dateISO = (url.searchParams.get("dateISO") || url.searchParams.get("date") || "").trim();
-  if (!classroomId || !dateISO) return jsonErr(400, "classroomId and dateISO are required.");
+  if (!classroomId || !dateISO) return json(400, { ok: false, error: "classroomId and dateISO are required." });
 
   let date: Date;
   try {
     date = parseDateISO(dateISO);
   } catch (e: any) {
-    return jsonErr(400, String(e?.message || "Invalid dateISO."));
+    return json(400, { ok: false, error: String(e?.message || "Invalid dateISO.") });
   }
 
-  try {
-    await assertCanAccessClassroom({ ...safe, classroomId });
-  } catch (e: any) {
-    return jsonErr(Number(e?.status) || 403, String(e?.message || "Forbidden."));
-  }
+  await assertCanAccessClassroom({ userId: auth.ctx.userId, tenantId: auth.ctx.tenantId, classroomId });
 
-  const [studentCount, session] = await Promise.all([
-    prisma.student.count({ where: { tenantId: safe.tenantId, classroomId } }),
-    prisma.attendanceSession.findUnique({
-      // ✅ FIX: correct composite unique input name
-      where: { tenantId_classroomId_date: { tenantId: safe.tenantId, classroomId, date } },
-      select: { id: true, isClosed: true, certifiedAt: true },
-    }),
-  ]);
+  const session = await prisma.attendanceSession.findFirst({
+    where: { tenantId: auth.ctx.tenantId, classroomId, date },
+    select: { id: true, isClosed: true, certifiedAt: true },
+  });
 
-  let absent = 0;
-  let late = 0;
-  let excused = 0;
+  const studentCount = await prisma.student.count({ where: { tenantId: auth.ctx.tenantId, classroomId } });
+
+  let absent = 0, late = 0, excused = 0;
 
   if (session) {
-    const [abs, lt, exc] = await Promise.all([
-      prisma.attendanceMark.count({ where: { sessionId: session.id, status: AttendanceStatus.ABSENT } }),
-      prisma.attendanceMark.count({ where: { sessionId: session.id, status: AttendanceStatus.LATE } }),
-      prisma.attendanceMark.count({ where: { sessionId: session.id, status: AttendanceStatus.EXCUSED } }),
-    ]);
-    absent = abs;
-    late = lt;
-    excused = exc;
+    const grouped = await prisma.attendanceMark.groupBy({
+      by: ["status"],
+      where: { sessionId: session.id },
+      _count: { _all: true },
+    });
+
+    for (const g of grouped as any[]) {
+      const st = g.status as AttendanceStatus;
+      const c = Number(g._count?._all ?? 0);
+      if (st === AttendanceStatus.ABSENT) absent = c;
+      if (st === AttendanceStatus.LATE) late = c;
+      if (st === AttendanceStatus.EXCUSED) excused = c;
+    }
   }
 
   const present = Math.max(0, studentCount - absent - late - excused);
 
-  return NextResponse.json(
-    {
-      ok: true,
-      summary: {
-        state: toState(session ? { isClosed: session.isClosed, certifiedAt: session.certifiedAt } : null),
-        sessionId: session?.id ?? null,
-        dateISO,
-        classroomId,
-        totals: { students: studentCount, present, absent, late, excused },
-      },
+  return json(200, {
+    ok: true,
+    summary: {
+      state: toState(session ? { isClosed: session.isClosed, certifiedAt: session.certifiedAt } : null),
+      sessionId: session?.id ?? null,
+      dateISO,
+      classroomId,
+      totals: { students: studentCount, present, absent, late, excused },
     },
-    { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
-  );
+  });
 }

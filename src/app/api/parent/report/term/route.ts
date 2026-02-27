@@ -1,58 +1,112 @@
 // src/app/api/parent/report/term/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+function normalisePhone(phone: string | null | undefined): string {
+  if (!phone) return "";
+  return String(phone).replace(/\D/g, "");
+}
+
+function phoneMatches(a: string, b: string) {
+  const A = normalisePhone(a);
+  const B = normalisePhone(b);
+  if (!A || !B) return false;
+  return A.endsWith(B) || B.endsWith(A);
+}
+
+const ADMINISH = new Set(["ADMIN", "SCHOOL_ADMIN", "HEADTEACHER"]);
+
+async function getSafeTenantCtx() {
+  const session = await getServerSession(authOptions);
+  const u = session?.user as any;
+
+  const userId = typeof u?.id === "string" ? u.id : "";
+  const tenantId = typeof u?.tenantId === "string" ? u.tenantId : "";
+  const userPhone = normalisePhone(u?.phone ?? u?.phoneNumber ?? u?.guardianPhone ?? "");
+
+  if (!session || !userId) {
+    return { ok: false as const, status: 401, error: "UNAUTHORIZED" };
+  }
+  if (!tenantId) {
+    return { ok: false as const, status: 403, error: "NO_ACTIVE_TENANT" };
+  }
+
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId, tenantId } },
+    select: { status: true, role: { select: { name: true } } },
+  });
+
+  if (!membership || membership.status !== "ACTIVE") {
+    return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  }
+
+  return {
+    ok: true as const,
+    userId,
+    tenantId,
+    userPhone,
+    roleName: String(membership.role?.name ?? "").trim(),
+  };
+}
 
 /**
- * Parent Term Report API
+ * Parent Term Report API (session-tenant scoped)
  *
  * GET /api/parent/report/term?tenantId=...&studentId=...&term=...&academicYear=...
  *
- * Returns a BECE-style report shell for a single learner:
- * - student + classroom info
- * - subjects (from assessment scores) – best-effort
- * - fees summary – per learner
- * - health summary – per learner
- * - placeholders for attendance & behaviour
- *
- * All sub-sections are wrapped in try/catch so a failure
- * in one section doesn't crash the whole route.
+ * tenantId param is backward-compat ONLY. Actual tenantId comes from session.
  */
-
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-
-    const tenantId = searchParams.get("tenantId");
-    const studentId = searchParams.get("studentId");
-    const term = searchParams.get("term") ?? "1st Term";
-    const academicYear =
-      searchParams.get("academicYear") ?? "2025/2026";
-
-    // Basic validation
-    if (!tenantId) {
+    const safe = await getSafeTenantCtx();
+    if (!safe.ok) {
       return NextResponse.json(
-        { ok: false, error: "tenantId is required." },
-        { status: 400 }
+        { ok: false, error: safe.error },
+        { status: safe.status, headers: { "cache-control": "no-store" } }
       );
     }
+
+    // 🔒 Role gate (Roadmap #1)
+    const isParent = safe.roleName === "PARENT";
+    const isAdminish = ADMINISH.has(safe.roleName);
+    if (!isParent && !isAdminish) {
+      return NextResponse.json(
+        { ok: false, error: "FORBIDDEN" },
+        { status: 403, headers: { "cache-control": "no-store" } }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+
+    const tenantIdParam = String(searchParams.get("tenantId") || "").trim();
+    if (tenantIdParam && tenantIdParam !== safe.tenantId) {
+      return NextResponse.json(
+        { ok: false, error: "Forbidden (tenant mismatch)." },
+        { status: 403, headers: { "cache-control": "no-store" } }
+      );
+    }
+
+    const studentId = String(searchParams.get("studentId") || "").trim();
+    const term = String(searchParams.get("term") || "1st Term").trim();
+    const academicYear = String(searchParams.get("academicYear") || "2025/2026").trim();
 
     if (!studentId) {
       return NextResponse.json(
         { ok: false, error: "studentId is required." },
-        { status: 400 }
+        { status: 400, headers: { "cache-control": "no-store" } }
       );
     }
 
-    // Use "any" client to avoid TS complaining about Prisma types
     const client = prisma as any;
 
-    // 1) Load student + classroom (this is the only REQUIRED query)
+    // 1) Load student + classroom (required)
     const student = await client.student.findFirst({
-      where: {
-        id: studentId,
-        tenantId,
-      },
+      where: { id: studentId, tenantId: safe.tenantId },
       select: {
         id: true,
         tenantId: true,
@@ -65,25 +119,41 @@ export async function GET(req: NextRequest) {
         guardianPhone: true,
         note: true,
         classroom: {
-          select: {
-            id: true,
-            name: true,
-            grade: true,
-            arm: true,
-          },
+          select: { id: true, name: true, grade: true, arm: true },
         },
       },
     });
 
     if (!student) {
-      // If this fails, front-end will show "Student not found..."
       return NextResponse.json(
-        {
-          ok: false,
-          error: "Student not found for this tenant.",
-        },
-        { status: 404 }
+        { ok: false, error: "Student not found for this tenant." },
+        { status: 404, headers: { "cache-control": "no-store" } }
       );
+    }
+
+    // 1b) Parent authorization: must match student's guardianPhone
+    if (isParent) {
+      if (!safe.userPhone) {
+        return NextResponse.json(
+          { ok: false, error: "PARENT_PHONE_MISSING_IN_SESSION" },
+          { status: 400, headers: { "cache-control": "no-store" } }
+        );
+      }
+
+      const studentGuardian = normalisePhone(student.guardianPhone);
+      if (!studentGuardian) {
+        return NextResponse.json(
+          { ok: false, error: "NO_GUARDIAN_PHONE_ON_STUDENT" },
+          { status: 403, headers: { "cache-control": "no-store" } }
+        );
+      }
+
+      if (!phoneMatches(safe.userPhone, studentGuardian)) {
+        return NextResponse.json(
+          { ok: false, error: "Forbidden (guardian mismatch)." },
+          { status: 403, headers: { "cache-control": "no-store" } }
+        );
+      }
     }
 
     // 2) Subjects from AssessmentScore – best-effort
@@ -92,195 +162,117 @@ export async function GET(req: NextRequest) {
       const scores = await client.assessmentScore.findMany({
         where: {
           studentId: student.id,
-          item: {
-            term,
-            academicYear,
-            tenantId,
-          },
+          item: { term, academicYear, tenantId: safe.tenantId },
         },
         select: {
           score: true,
-          item: {
-            select: {
-              subject: true,
-              type: true,
-              maxScore: true,
-            },
-          },
+          item: { select: { subject: true, type: true, maxScore: true } },
         },
       });
 
-      const bySubject: Record<
-        string,
-        { subject: string; total: number; max: number }
-      > = {};
+      const bySubject: Record<string, { subject: string; total: number; max: number }> = {};
 
       for (const s of scores) {
         const subjectName = s.item?.subject || "Subject";
-        if (!bySubject[subjectName]) {
-          bySubject[subjectName] = {
-            subject: subjectName,
-            total: 0,
-            max: 0,
-          };
-        }
-        const entry = bySubject[subjectName];
-        const scr =
-          typeof s.score === "number" ? s.score : 0;
-        entry.total += scr;
+        if (!bySubject[subjectName]) bySubject[subjectName] = { subject: subjectName, total: 0, max: 0 };
 
-        const max =
-          typeof s.item?.maxScore === "number"
-            ? s.item.maxScore
-            : 0;
-        entry.max += max;
+        bySubject[subjectName].total += typeof s.score === "number" ? s.score : 0;
+        bySubject[subjectName].max += typeof s.item?.maxScore === "number" ? s.item.maxScore : 0;
       }
 
-      subjects = Object.values(bySubject).map((entry) => {
-        const percentage =
-          entry.max > 0
-            ? (entry.total / entry.max) * 100
-            : null;
-
-        return {
-          subject: entry.subject,
-          classScore: null, // can be wired later
-          examScore: null, // can be wired later
-          totalScore: entry.total,
-          maxScore: entry.max,
-          percentage,
-          grade: null, // UI will recompute GES grade from percentage
-          remark: null, // UI will compute remark
-          position: null, // subject position – later
-        };
-      });
+      subjects = Object.values(bySubject).map((entry) => ({
+        subject: entry.subject,
+        classScore: null,
+        examScore: null,
+        totalScore: entry.total,
+        maxScore: entry.max,
+        percentage: entry.max > 0 ? (entry.total / entry.max) * 100 : null,
+        grade: null,
+        remark: null,
+        position: null,
+      }));
     } catch (err) {
-      console.error(
-        "[PARENT_TERM_REPORT_SUBJECTS_ERROR]",
-        err
-      );
+      console.error("[PARENT_TERM_REPORT_SUBJECTS_ERROR]", err);
       subjects = [];
     }
 
-    // 3) Attendance summary – placeholder for now
-    let attendanceSummary: any = null;
-    try {
-      // When we are ready, we will plug in AttendanceMark here.
-      attendanceSummary = null;
-    } catch (err) {
-      console.error(
-        "[PARENT_TERM_REPORT_ATTENDANCE_ERROR]",
-        err
-      );
-      attendanceSummary = null;
-    }
+    // 3) Attendance summary – placeholder
+    const attendanceSummary: any = null;
 
-    // 4) Fees summary – per learner, wrapped in try/catch
+    // 4) Fees summary – robust best-effort (don’t assume relation names always work)
     let feesSummary: any = null;
     try {
-      const feeInvoiceAgg =
-        await client.feeInvoice.aggregate({
-          where: {
-            tenantId,
-            term,
-            academicYear,
-            // We assume FeeInvoice has a studentId field
-            studentId: student.id,
-          },
-          _sum: {
-            totalBilledPesewas: true,
-            totalWaivedPesewas: true,
-          },
+      const invAgg = await client.feeInvoice.aggregate({
+        where: { tenantId: safe.tenantId, term, academicYear, studentId: student.id },
+        _sum: { totalBilledPesewas: true, totalWaivedPesewas: true },
+      });
+
+      let paidSum = 0;
+
+      try {
+        // If FeePayment.invoice relation exists
+        const payAgg = await client.feePayment.aggregate({
+          where: { tenantId: safe.tenantId, invoice: { term, academicYear, studentId: student.id } },
+          _sum: { amountPesewas: true },
         });
-
-      const feePaymentAgg =
-        await client.feePayment.aggregate({
-          where: {
-            tenantId,
-            invoice: {
-              term,
-              academicYear,
-              // We assume FeePayment -> invoice -> studentId exists
-              studentId: student.id,
-            },
-          },
-          _sum: {
-            amountPesewas: true,
-          },
+        paidSum = payAgg._sum.amountPesewas ?? 0;
+      } catch {
+        // Fallback: load invoice IDs then sum payments
+        const invoices = await client.feeInvoice.findMany({
+          where: { tenantId: safe.tenantId, term, academicYear, studentId: student.id },
+          select: { id: true },
         });
+        const ids = invoices.map((x: any) => x.id);
+        if (ids.length) {
+          const pays = await client.feePayment.findMany({
+            where: { tenantId: safe.tenantId, invoiceId: { in: ids } },
+            select: { amountPesewas: true },
+          });
+          paidSum = pays.reduce((s: number, p: any) => s + (p.amountPesewas ?? 0), 0);
+        }
+      }
 
-      const totalBilledPesewas =
-        feeInvoiceAgg._sum.totalBilledPesewas ?? 0;
-      const totalWaivedPesewas =
-        feeInvoiceAgg._sum.totalWaivedPesewas ?? 0;
-      const totalPaidPesewas =
-        feePaymentAgg._sum.amountPesewas ?? 0;
-
-      const outstandingPesewas =
-        totalBilledPesewas -
-        totalWaivedPesewas -
-        totalPaidPesewas;
+      const totalBilledPesewas = invAgg._sum.totalBilledPesewas ?? 0;
+      const totalWaivedPesewas = invAgg._sum.totalWaivedPesewas ?? 0;
+      const totalPaidPesewas = paidSum;
 
       feesSummary = {
         totalBilledPesewas,
         totalWaivedPesewas,
         totalPaidPesewas,
-        outstandingPesewas,
-        lastPaymentDate: null, // can be added later
+        outstandingPesewas: totalBilledPesewas - totalWaivedPesewas - totalPaidPesewas,
+        lastPaymentDate: null,
       };
     } catch (err) {
-      console.error(
-        "[PARENT_TERM_REPORT_FEES_ERROR]",
-        err
-      );
+      console.error("[PARENT_TERM_REPORT_FEES_ERROR]", err);
       feesSummary = null;
     }
 
-    // 5) Health summary – per learner, wrapped in try/catch
+    // 5) Health summary – best-effort
     let healthSummary: any = null;
     try {
-      const screenings =
-        await client.studentHealthDaily.findMany({
-          where: {
-            tenantId,
-            studentId: student.id,
-          },
-          orderBy: {
-            date: "desc",
-          },
-          take: 50,
-        });
-
-      const totalScreenings = screenings.length;
-      const feverCount = screenings.filter(
-        (h: any) => (h.temperatureC ?? 0) >= 37.8
-      ).length;
-      const symptomsCount = screenings.filter(
-        (h: any) =>
-          !!h.symptoms && h.symptoms.trim().length > 0
-      ).length;
-      const lastScreenedAt = screenings[0]?.date ?? null;
+      const screenings = await client.studentHealthDaily.findMany({
+        where: { tenantId: safe.tenantId, studentId: student.id },
+        orderBy: { date: "desc" },
+        take: 50,
+      });
 
       healthSummary = {
-        totalScreenings,
-        feverCount,
-        symptomsCount,
-        lastScreenedAt,
+        totalScreenings: screenings.length,
+        feverCount: screenings.filter((h: any) => (h.temperatureC ?? 0) >= 37.8).length,
+        symptomsCount: screenings.filter((h: any) => !!h.symptoms && String(h.symptoms).trim().length > 0).length,
+        lastScreenedAt: screenings[0]?.date ?? null,
         overallFlag: null,
       };
     } catch (err) {
-      console.error(
-        "[PARENT_TERM_REPORT_HEALTH_ERROR]",
-        err
-      );
+      console.error("[PARENT_TERM_REPORT_HEALTH_ERROR]", err);
       healthSummary = null;
     }
 
-    // 6) Term-wide summary – mostly placeholders, UI will still render nicely
     const termSummary: any = {
       term,
       academicYear,
-      overallPercentage: null, // we can compute later
+      overallPercentage: null,
       overallPosition: null,
       classSize: null,
       promotedTo: null,
@@ -292,32 +284,25 @@ export async function GET(req: NextRequest) {
       subjects,
     };
 
-    const payload = {
-      ok: true,
-      context: {
-        tenantId,
-        studentId,
-        term,
-        academicYear,
+    return NextResponse.json(
+      {
+        ok: true,
+        context: { tenantId: safe.tenantId, studentId, term, academicYear },
+        student,
+        classroom: student.classroom,
+        termSummary,
+        subjects,
+        attendanceSummary,
+        feesSummary,
+        healthSummary,
       },
-      student,
-      classroom: student.classroom,
-      termSummary,
-      subjects,
-      attendanceSummary,
-      feesSummary,
-      healthSummary,
-    };
-
-    return NextResponse.json(payload);
+      { status: 200, headers: { "cache-control": "no-store" } }
+    );
   } catch (err) {
     console.error("[PARENT_TERM_REPORT_ERROR]", err);
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Failed to load parent term report.",
-      },
-      { status: 500 }
+      { ok: false, error: "Failed to load parent term report." },
+      { status: 500, headers: { "cache-control": "no-store" } }
     );
   }
 }

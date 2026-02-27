@@ -1,6 +1,11 @@
 // src/app/api/headteacher/assessment/overview/route.ts
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type HeadteacherOverviewClass = {
   classroomId: string;
@@ -22,167 +27,126 @@ type HeadteacherOverviewResponse = {
   classes: HeadteacherOverviewClass[];
 };
 
+const querySchema = z.object({
+  term: z.string().optional(),
+  academicYear: z.string().optional(),
+  // tenantId intentionally NOT accepted.
+});
+
+function jsonNoStore(payload: any, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+async function requireHeadOrAdmin(tenantId: string, userId: string) {
+  const m = await prisma.membership.findFirst({
+    where: { tenantId, userId, status: "ACTIVE" },
+    include: { role: true },
+  });
+  if (!m) return false;
+  const roleName = String(m.role?.name ?? "").toUpperCase();
+  return roleName.includes("HEAD") || roleName.includes("ADMIN");
+}
+
 /**
- * Headteacher – Whole-school CA overview
+ * Headteacher/Admin – Whole-school CA overview
  *
- * GET /api/headteacher/assessment/overview
- *   ?tenantId=...
- *   &term=...
- *   &academicYear=...
+ * GET /api/headteacher/assessment/overview?term=...&academicYear=...
  *
- * For each classroom, we compute the class average in the
- * SAME WAY as the teacher's term dashboard:
- *
- *   classAverage% = (sum of all scores) / (sum of all max scores) × 100
- *
- * We only use actual recorded scores. If a learner has no
- * recorded score for the term, they simply don't affect the
- * average. This keeps the maths consistent and transparent.
+ * classAverage% = (sum of all scores) / (sum of all max scores) × 100
+ * We only include recorded score rows in both numerator and denominator.
  */
 export async function GET(req: Request) {
+  let safe: any;
   try {
-    const { searchParams } = new URL(req.url);
+    safe = await requireServerUserContext({ requireTenant: true });
+  } catch {
+    return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
+  }
 
-    const tenantId = searchParams.get("tenantId");
-    const term = searchParams.get("term");
-    const academicYear = searchParams.get("academicYear");
+  const { searchParams } = new URL(req.url);
+  const parsed = querySchema.safeParse({
+    term: searchParams.get("term") ?? undefined,
+    academicYear: searchParams.get("academicYear") ?? undefined,
+  });
 
-    if (!tenantId || !term || !academicYear) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "tenantId, term and academicYear are required.",
-        },
-        { status: 400 }
-      );
-    }
+  if (!parsed.success) {
+    return jsonNoStore({ ok: false, error: "Invalid filters", details: parsed.error.flatten() }, 400);
+  }
 
-    // 1) All classrooms in this tenant, with student IDs
+  const term = parsed.data.term ?? "1st Term";
+  const academicYear = parsed.data.academicYear ?? "2025/2026";
+
+  const can = await requireHeadOrAdmin(String(safe.tenantId), String(safe.userId));
+  if (!can) return jsonNoStore({ ok: false, error: "FORBIDDEN" }, 403);
+
+  try {
+    // 1) Classrooms + learner counts (no student IDs)
     const classrooms = await prisma.classroom.findMany({
-      where: { tenantId },
+      where: { tenantId: safe.tenantId },
       orderBy: [{ grade: "asc" }, { name: "asc" }],
-      include: {
-        students: {
-          select: { id: true },
-        },
+      select: {
+        id: true,
+        name: true,
+        grade: true,
+        arm: true,
+        _count: { select: { students: true } },
       },
     });
 
     if (classrooms.length === 0) {
-      const emptyResponse: HeadteacherOverviewResponse = {
+      const empty: HeadteacherOverviewResponse = {
         ok: true,
-        context: { tenantId, term, academicYear },
+        context: { tenantId: safe.tenantId, term, academicYear },
         classes: [],
       };
-      return NextResponse.json(emptyResponse);
+      return jsonNoStore(empty);
     }
 
-    // 2) All assessment items for this tenant + term + year, with scores
+    // 2) Assessment items + score rows (term/year)
     const items = await prisma.assessmentItem.findMany({
-      where: {
-        tenantId,
-        term,
-        academicYear,
-      },
+      where: { tenantId: safe.tenantId, term, academicYear },
       select: {
         id: true,
         classroomId: true,
         maxScore: true,
-        scores: {
-          select: {
-            studentId: true,
-            score: true,
-          },
-        },
+        scores: { select: { score: true } },
       },
     });
 
-    // Group items by classroom, and prepare per-class per-student totals
-    const itemsByClassroom = new Map<
-      string,
-      {
-        id: string;
-        maxScore: number;
-        scores: { studentId: string; score: number | null }[];
-      }[]
-    >();
-
-    const studentTotalsByClassroom = new Map<
-      string,
-      Map<string, { totalScore: number; totalMax: number }>
-    >();
+    const itemsCountByClass = new Map<string, number>();
+    const sumScoreByClass = new Map<string, number>();
+    const sumMaxByClass = new Map<string, number>();
 
     for (const item of items) {
       const classId = item.classroomId;
       if (!classId) continue;
 
-      const maxForItem = item.maxScore ?? 0;
-      if (maxForItem <= 0) continue; // avoid division by 0
+      const maxForItem = Number(item.maxScore ?? 0);
+      if (!Number.isFinite(maxForItem) || maxForItem <= 0) continue;
 
-      // For itemsCount
-      const classItemsArr =
-        itemsByClassroom.get(classId) ?? [];
-      classItemsArr.push({
-        id: item.id,
-        maxScore: maxForItem,
-        scores: item.scores,
-      });
-      itemsByClassroom.set(classId, classItemsArr);
+      itemsCountByClass.set(classId, (itemsCountByClass.get(classId) ?? 0) + 1);
 
-      // For per-student totals used in class average
-      let studentMap = studentTotalsByClassroom.get(classId);
-      if (!studentMap) {
-        studentMap = new Map();
-        studentTotalsByClassroom.set(classId, studentMap);
-      }
-
+      // Each recorded score row contributes: +score, +maxScore
       for (const sc of item.scores) {
-        const scoreVal = sc.score ?? 0;
-
-        const existing =
-          studentMap.get(sc.studentId) ?? {
-            totalScore: 0,
-            totalMax: 0,
-          };
-
-        existing.totalScore += scoreVal;
-        existing.totalMax += maxForItem;
-
-        studentMap.set(sc.studentId, existing);
+        const scoreVal = Number(sc.score ?? 0);
+        sumScoreByClass.set(classId, (sumScoreByClass.get(classId) ?? 0) + (Number.isFinite(scoreVal) ? scoreVal : 0));
+        sumMaxByClass.set(classId, (sumMaxByClass.get(classId) ?? 0) + maxForItem);
       }
     }
 
-    // 3) Build per-class summary
-    const classes: HeadteacherOverviewClass[] = [];
+    const classes: HeadteacherOverviewClass[] = classrooms.map((cls) => {
+      const learnersCount = cls._count.students;
+      const itemsCount = itemsCountByClass.get(cls.id) ?? 0;
 
-    for (const cls of classrooms) {
-      const learnersCount = cls.students.length;
-      const classItems = itemsByClassroom.get(cls.id) ?? [];
-      const studentTotals = studentTotalsByClassroom.get(cls.id);
+      const sumScore = sumScoreByClass.get(cls.id) ?? 0;
+      const sumMax = sumMaxByClass.get(cls.id) ?? 0;
 
-      const itemsCount = classItems.length;
+      const averagePercent = sumMax > 0 ? (sumScore / sumMax) * 100 : null;
 
-      let averagePercent: number | null = null;
-
-      if (studentTotals && studentTotals.size > 0) {
-        let classTotalScore = 0;
-        let classTotalMax = 0;
-
-        for (const totals of studentTotals.values()) {
-          classTotalScore += totals.totalScore;
-          classTotalMax += totals.totalMax;
-        }
-
-        if (classTotalMax > 0) {
-          // EXACT SAME FORMULA STYLE as the teacher term-dashboard:
-          // classPercentage = (sum scores) / (sum max) * 100
-          const pct =
-            (classTotalScore / classTotalMax) * 100;
-          averagePercent = pct;
-        }
-      }
-
-      classes.push({
+      return {
         classroomId: cls.id,
         classroomName: cls.name,
         grade: cls.grade ?? null,
@@ -190,28 +154,18 @@ export async function GET(req: Request) {
         learnersCount,
         itemsCount,
         averagePercent,
-      });
-    }
+      };
+    });
 
     const response: HeadteacherOverviewResponse = {
       ok: true,
-      context: {
-        tenantId,
-        term,
-        academicYear,
-      },
+      context: { tenantId: safe.tenantId, term, academicYear },
       classes,
     };
 
-    return NextResponse.json(response);
+    return jsonNoStore(response);
   } catch (err) {
     console.error("[HeadteacherAssessmentOverview][GET] error", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Unexpected server error.",
-      },
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "Unexpected server error." }, 500);
   }
 }

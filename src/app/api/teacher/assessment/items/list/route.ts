@@ -21,6 +21,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // NOTE: date can be null. Sorting by date asc puts nulls first in Postgres.
+    // We add a secondary sort for stability.
     const items = await prisma.assessmentItem.findMany({
       where: {
         tenantId,
@@ -28,8 +30,26 @@ export async function GET(req: NextRequest) {
         term,
         academicYear,
       },
-      orderBy: {
-        date: "asc",
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+      include: {
+        curriculumUnit: {
+          select: {
+            id: true,
+            phase: true,
+            level: true,
+            subject: true,
+            term: true,
+            weekNumber: true,
+            strandCode: true,
+            strand: true,
+            substrandCode: true,
+            substrand: true,
+            contentStandardCode: true,
+            contentStandard: true,
+            indicatorCode: true,
+            indicator: true,
+          },
+        },
       },
     });
 

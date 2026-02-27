@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getHeadteacherApiContext } from "@/lib/headteacherAuth";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type LessonNoteStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
@@ -11,6 +12,8 @@ type LessonNoteDetail = {
   id: string;
 
   teacherUserId: string;
+  teacherName: string | null;
+
   classroomId: string | null;
 
   phase: string | null;
@@ -52,9 +55,7 @@ type LessonNoteDetail = {
   updatedAt: string;
 };
 
-type ItemResponse =
-  | { ok: true; item: LessonNoteDetail }
-  | { ok: false; error: string };
+type ItemResponse = { ok: true; item: LessonNoteDetail } | { ok: false; error: string };
 
 function jsonNoStore(payload: any, init?: { status?: number; headers?: HeadersInit }) {
   return NextResponse.json(payload, {
@@ -71,6 +72,22 @@ function isLikelyId(id: string) {
   return /^[a-zA-Z0-9_-]{5,80}$/.test(id);
 }
 
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function userDisplayName(u: { name: string | null; firstName: string | null; lastName: string | null; email: string | null } | null) {
+  if (!u) return null;
+  const n = clean(u.name);
+  if (n) return n;
+  const fn = clean(u.firstName);
+  const ln = clean(u.lastName);
+  const full = `${fn} ${ln}`.trim();
+  if (full) return full;
+  const em = clean(u.email);
+  return em || null;
+}
+
 function toIso(v: any): string | null {
   if (!v) return null;
   if (v instanceof Date) return v.toISOString();
@@ -78,20 +95,24 @@ function toIso(v: any): string | null {
   return null;
 }
 
-export async function GET(
-  _req: NextRequest,
-  ctxRoute: { params: Promise<{ id: string }> }
-): Promise<NextResponse<ItemResponse>> {
+export async function GET(_req: NextRequest, ctxRoute: { params: Promise<{ id: string }> }): Promise<NextResponse<ItemResponse>> {
   const ctx = await getHeadteacherApiContext();
-  if (!ctx) {
-    return jsonNoStore({ ok: false, error: "Unauthorized." } satisfies ItemResponse, { status: 401 });
-  }
+  if (!ctx) return jsonNoStore({ ok: false, error: "Unauthorized." } satisfies ItemResponse, { status: 401 });
 
   const { id } = await ctxRoute.params;
-  const noteId = String(id ?? "").trim();
+  const noteId = clean(id);
 
   if (!noteId || !isLikelyId(noteId)) {
     return jsonNoStore({ ok: false, error: "Invalid lesson note id." } satisfies ItemResponse, { status: 400 });
+  }
+
+  // ACTIVE membership gate
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+    select: { status: true },
+  });
+  if (!membership || membership.status !== "ACTIVE") {
+    return jsonNoStore({ ok: false, error: "Forbidden (membership inactive)." } satisfies ItemResponse, { status: 403 });
   }
 
   try {
@@ -139,14 +160,14 @@ export async function GET(
 
         createdAt: true,
         updatedAt: true,
+
+        teacher: { select: { name: true, firstName: true, lastName: true, email: true } },
       },
     });
 
-    if (!note) {
-      return jsonNoStore({ ok: false, error: "Lesson note not found." } satisfies ItemResponse, { status: 404 });
-    }
+    if (!note) return jsonNoStore({ ok: false, error: "Lesson note not found." } satisfies ItemResponse, { status: 404 });
 
-    // Headteacher must not review own note (extra safety)
+    // extra safety: headteacher must not review own note
     if (note.teacherUserId === ctx.userId) {
       return jsonNoStore({ ok: false, error: "Forbidden." } satisfies ItemResponse, { status: 403 });
     }
@@ -155,7 +176,10 @@ export async function GET(
       ok: true,
       item: {
         id: note.id,
+
         teacherUserId: note.teacherUserId,
+        teacherName: userDisplayName(note.teacher) ?? null,
+
         classroomId: note.classroomId,
 
         phase: note.phase,
@@ -199,9 +223,6 @@ export async function GET(
     } satisfies ItemResponse);
   } catch (err) {
     console.error("HEADTEACHER_LESSON_NOTE_ITEM_ERROR", err);
-    return jsonNoStore(
-      { ok: false, error: "Could not load this lesson note. Please try again." } satisfies ItemResponse,
-      { status: 500 }
-    );
+    return jsonNoStore({ ok: false, error: "Could not load this lesson note. Please try again." } satisfies ItemResponse, { status: 500 });
   }
 }

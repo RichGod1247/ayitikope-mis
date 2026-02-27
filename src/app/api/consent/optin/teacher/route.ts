@@ -1,3 +1,4 @@
+//src/app/api/consent/optin/teacher/route.ts
 import type { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 

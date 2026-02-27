@@ -1,20 +1,17 @@
 // src/app/api/attendance/marks/upsert/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
 import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonError(status: number, error: string) {
-  return NextResponse.json(
-    { ok: false, error },
-    {
-      status,
-      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-    }
-  );
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
 }
 
 const STATUS = ["PRESENT", "ABSENT", "LATE", "EXCUSED"] as const;
@@ -33,54 +30,61 @@ type UpsertItem = {
 type Body = {
   sessionId?: string;
   items?: UpsertItem[];
+  tenantId?: string; // legacy (ignored but can be checked elsewhere if you want)
 };
 
 export async function POST(req: Request) {
-  let safe: { userId: string; tenantId: string };
-  try {
-    safe = await requireServerUserContext({ requireTenant: true });
-  } catch {
-    return jsonError(401, "Unauthorized");
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["TEACHER", "HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
+
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return json(415, { ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" });
   }
 
   const body = (await req.json().catch(() => null)) as Body | null;
   const sessionId = body?.sessionId?.trim();
   const items = body?.items;
 
-  if (!sessionId) return jsonError(400, "Missing sessionId.");
-  if (!Array.isArray(items) || items.length === 0) return jsonError(400, "Missing items.");
+  if (!sessionId) return json(400, { ok: false, error: "Missing sessionId." });
+  if (!Array.isArray(items) || items.length === 0) return json(400, { ok: false, error: "Missing items." });
 
   for (const it of items) {
     if (!it || typeof it.studentId !== "string" || !it.studentId.trim()) {
-      return jsonError(400, "Each item must include a valid studentId.");
+      return json(400, { ok: false, error: "Each item must include a valid studentId." });
     }
     if (!isAttendanceStatus(it.status)) {
-      return jsonError(400, `Invalid status for student ${it.studentId}.`);
+      return json(400, { ok: false, error: `Invalid status for student ${it.studentId}.` });
     }
     if (it.note != null && typeof it.note !== "string") {
-      return jsonError(400, `Invalid note for student ${it.studentId}.`);
+      return json(400, { ok: false, error: `Invalid note for student ${it.studentId}.` });
     }
   }
 
   const session = await prisma.attendanceSession.findFirst({
-    where: { id: sessionId, tenantId: safe.tenantId },
+    where: { id: sessionId, tenantId: auth.ctx.tenantId },
     select: { id: true, classroomId: true, isClosed: true, certifiedAt: true },
   });
 
-  if (!session) return jsonError(404, "Session not found.");
-  if (session.certifiedAt) return jsonError(409, "Session is certified and cannot be edited.");
-  if (session.isClosed) return jsonError(409, "Session is closed. Reopen it before editing.");
+  if (!session) return json(404, { ok: false, error: "Session not found." });
+  if (session.certifiedAt) return json(409, { ok: false, error: "Session is certified and cannot be edited." });
+  if (session.isClosed) return json(409, { ok: false, error: "Session is closed. Reopen it before editing." });
 
   const studentIds = items.map((i) => i.studentId);
-  const validCount = await prisma.student.count({
-    where: { tenantId: safe.tenantId, classroomId: session.classroomId, id: { in: studentIds } },
+
+  const valid = await prisma.student.findMany({
+    where: { tenantId: auth.ctx.tenantId, classroomId: session.classroomId, id: { in: studentIds } },
+    select: { id: true },
+    take: studentIds.length,
   });
-  if (validCount !== studentIds.length) {
-    return jsonError(400, "One or more learners do not belong to this class.");
+
+  if (valid.length !== studentIds.length) {
+    return json(400, { ok: false, error: "One or more learners do not belong to this class." });
   }
 
-  // ✅ Production-grade: do NOT rely on compound-unique WhereUniqueInput names.
-  // Fetch existing rows then update/create by id (stable across Prisma naming differences).
   const existing = await prisma.attendanceMark.findMany({
     where: { sessionId: session.id, studentId: { in: studentIds } },
     select: { id: true, studentId: true },
@@ -110,8 +114,5 @@ export async function POST(req: Request) {
     }
   });
 
-  return NextResponse.json(
-    { ok: true, count: items.length },
-    { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
-  );
+  return json(200, { ok: true, count: items.length });
 }

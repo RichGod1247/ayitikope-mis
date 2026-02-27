@@ -9,7 +9,10 @@ type StatusFilter = LessonNoteStatus | "ALL";
 
 type LessonNoteListItem = {
   id: string;
+
   teacherUserId: string | null;
+  teacherName: string | null;
+
   classroomId: string | null;
 
   phase: string | null;
@@ -37,8 +40,7 @@ const btnBase =
   "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-900`;
 const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50`;
-const pillBase =
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
+const pillBase = "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
 
 function statusBadgeClasses(status: LessonNoteStatus) {
   const base = "inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-medium";
@@ -147,7 +149,6 @@ export default function HeadteacherLessonNotesClient() {
     }
   }
 
-  // Initial + filter changes (server-side, debounced teacher filter)
   useEffect(() => {
     resetAndLoad();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -170,15 +171,12 @@ export default function HeadteacherLessonNotesClient() {
         <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>
-                EduLife OS · Headteacher Review
-              </span>
+              <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>EduLife OS · Headteacher Review</span>
               <span className="text-[11px] text-zinc-500">{subtitle}</span>
             </div>
             <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Lesson Notes · Review &amp; Approval</h1>
             <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
-              This inbox is <span className="font-semibold">tenant-scoped and role-guarded</span>. Teachers cannot
-              spoof tenant IDs or headteacher IDs. You review only notes in your school.
+              This inbox is <span className="font-semibold">tenant-scoped and role-guarded</span>. You review only notes in your school.
             </p>
           </div>
 
@@ -193,9 +191,7 @@ export default function HeadteacherLessonNotesClient() {
                     type="button"
                     onClick={() => setStatusFilter(s)}
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] border ${
-                      active
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50"
+                      active ? "bg-black text-white border-black" : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
                     {label}
@@ -207,8 +203,8 @@ export default function HeadteacherLessonNotesClient() {
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                className="rounded-xl border border-zinc-300 bg-white px-2 py-1.5 text-[11px] w-48 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
-                placeholder="Filter by Teacher ID…"
+                className="rounded-xl border border-zinc-300 bg-white px-2 py-1.5 text-[11px] w-56 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                placeholder="Filter by teacher name / email / ID…"
                 value={teacherFilter}
                 onChange={(e) => setTeacherFilter(e.target.value)}
               />
@@ -217,11 +213,7 @@ export default function HeadteacherLessonNotesClient() {
           </div>
         </header>
 
-        {loadError && (
-          <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">
-            {loadError}
-          </div>
-        )}
+        {loadError && <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">{loadError}</div>}
 
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
@@ -246,10 +238,7 @@ export default function HeadteacherLessonNotesClient() {
             {!hasNotes && !loadError && (
               <div className="border border-dashed border-zinc-300 bg-white rounded-2xl px-4 py-5 md:px-5 md:py-6 space-y-3">
                 <h3 className="text-sm font-semibold text-zinc-800">No lesson notes match this filter</h3>
-                <p className="text-xs text-zinc-600 max-w-md">
-                  Switch status or clear the teacher filter. Submitted notes will appear here when teachers hit{" "}
-                  <span className="font-semibold">Submit</span>.
-                </p>
+                <p className="text-xs text-zinc-600 max-w-md">Switch status or clear the teacher filter.</p>
                 <button type="button" className={btnOutline} onClick={resetAndLoad}>
                   Refresh
                 </button>
@@ -264,7 +253,9 @@ export default function HeadteacherLessonNotesClient() {
                   const yearLabel = item.academicYear || "Year —";
                   const weekLabel = item.weekNumber != null ? `Week ${item.weekNumber}` : "Week —";
                   const strandLabel = item.strand || "Strand —";
-                  const teacherLabel = item.teacherUserId ?? "Teacher —";
+
+                  // ✅ Use teacherName first, fallback to ID
+                  const teacherLabel = item.teacherName || item.teacherUserId || "Teacher —";
 
                   return (
                     <button
@@ -282,11 +273,9 @@ export default function HeadteacherLessonNotesClient() {
                             {strandLabel}
                             {item.substrand ? ` • ${item.substrand}` : ""}
                           </div>
+                          <div className="text-[11px] text-zinc-500">{weekLabel} • Updated: {formatDateShort(item.updatedAt)}</div>
                           <div className="text-[11px] text-zinc-500">
-                            {weekLabel} • Updated: {formatDateShort(item.updatedAt)}
-                          </div>
-                          <div className="text-[11px] text-zinc-500">
-                            Teacher ID: <span className="font-mono">{teacherLabel}</span>
+                            Teacher: <span className="font-medium">{teacherLabel}</span>
                           </div>
                           {item.headteacherComment && (
                             <p className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-2 py-1 mt-1">
@@ -308,12 +297,7 @@ export default function HeadteacherLessonNotesClient() {
 
             {nextCursor && (
               <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  className={btnPrimary}
-                  disabled={loadingMore}
-                  onClick={() => void loadPage({ cursor: nextCursor, append: true })}
-                >
+                <button type="button" className={btnPrimary} disabled={loadingMore} onClick={() => void loadPage({ cursor: nextCursor, append: true })}>
                   {loadingMore ? "Loading…" : "Load more"}
                 </button>
               </div>
@@ -322,11 +306,8 @@ export default function HeadteacherLessonNotesClient() {
         )}
 
         <section className="border rounded-2xl bg-white p-3.5 md:p-4 text-[11px] text-zinc-600 space-y-1.5">
-          <h3 className="text-xs font-semibold text-zinc-800">Security model (non-negotiable)</h3>
-          <p>
-            This inbox is tenant-scoped on the server. No querystring tenant IDs. No client-controlled reviewer IDs.
-            Every request must pass session + active membership + role authorization.
-          </p>
+          <h3 className="text-xs font-semibold text-zinc-800">Security model</h3>
+          <p>Tenant-scoped on server. No client-controlled reviewer identity.</p>
         </section>
       </div>
     </main>

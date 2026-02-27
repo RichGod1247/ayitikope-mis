@@ -1,11 +1,10 @@
 // src/app/headteacher/students/page.tsx
-
 import type { Metadata } from "next";
-import { prisma } from "@/lib/prisma";
-import { HeadteacherStudentsClient } from "@/components/HeadteacherStudentsClient";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
+import { HeadteacherStudentsClient } from "@/components/HeadteacherStudentsClient";
 
 export const metadata: Metadata = {
   title: "Students | Headteacher | EduLife OS",
@@ -13,41 +12,55 @@ export const metadata: Metadata = {
     "Headteacher view of all students with quick guardian contact editing.",
 };
 
-// Keep dynamic for always-fresh data
+// Always-fresh data
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const HEAD_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN"]);
+
+function toNum(v: unknown): number {
+  if (typeof v === "bigint") return Number(v);
+  if (typeof v === "number") return v;
+  return 0;
+}
 
 export default async function HeadteacherStudentsPage() {
-  // 1) Get logged-in user from NextAuth using our shared authOptions
+  // 1) Auth
   const session = await getServerSession(authOptions);
-
-  // Our authOptions.session callback attaches `id` to session.user
   const user = session?.user as any;
   const userId: string | undefined = user?.id;
 
   if (!userId) {
-    // Not logged in → send to sign-in, then bring them back here
-    redirect(`/api/auth/signin?callbackUrl=/headteacher/students`);
+    redirect(
+      `/api/auth/signin?callbackUrl=${encodeURIComponent(
+        "/headteacher/students"
+      )}`
+    );
   }
 
-  // 2) Find this user's membership (tenant)
+  // 2) Tenant + role (must be ACTIVE + head role)
   const membership = await prisma.membership.findFirst({
-    where: {
-      userId: userId,
+    where: { userId, status: "ACTIVE" },
+    select: {
+      tenantId: true,
+      status: true,
+      role: { select: { name: true } },
+      tenant: { select: { name: true, status: true } },
     },
   });
 
-  // If they don't belong to any tenant, block access
-  if (!membership?.tenantId) {
-    redirect("/");
-  }
+  if (!membership?.tenantId) redirect("/app");
+  if (membership.tenant?.status && membership.tenant.status !== "ACTIVE")
+    redirect("/pending");
+
+  const roleName = (membership.role?.name ?? "").trim();
+  if (!HEAD_ROLES.has(roleName)) redirect("/app");
 
   const tenantId = membership.tenantId;
 
-  // 3) Load students for THIS tenant – ONLY the fields we know we have
+  // 3) Students
   const students = await prisma.student.findMany({
-    where: {
-      tenantId,
-    },
+    where: { tenantId },
     select: {
       id: true,
       firstName: true,
@@ -59,9 +72,7 @@ export default async function HeadteacherStudentsPage() {
       note: true,
       createdAt: true,
     },
-    orderBy: {
-      firstName: "asc",
-    },
+    orderBy: { firstName: "asc" },
   });
 
   const safeStudents = students.map((s) => ({
@@ -76,22 +87,9 @@ export default async function HeadteacherStudentsPage() {
     createdAt: s.createdAt.toISOString(),
   }));
 
-  // 4) Fees summary for this tenant (ALL invoices, all types)
-  //
-  // Based on your schema:
-  // FeeInvoice:
-  //   - id, tenantId, totalBilledPesewas, totalWaivedPesewas, ...
-  // FeePayment:
-  //   - id, tenantId, invoiceId, amountPesewas, ...
-  //
-  // We'll compute:
-  //   - total billed (pesewas → GH₵)
-  //   - total paid
-  //   - outstanding = billed - paid
+  // 4) Fees summary (all invoices)
   const feeInvoices = await prisma.feeInvoice.findMany({
-    where: {
-      tenantId,
-    },
+    where: { tenantId },
     select: {
       id: true,
       totalBilledPesewas: true,
@@ -104,26 +102,19 @@ export default async function HeadteacherStudentsPage() {
   const feePayments =
     invoiceIds.length > 0
       ? await prisma.feePayment.findMany({
-          where: {
-            tenantId,
-            invoiceId: {
-              in: invoiceIds,
-            },
-          },
-          select: {
-            amountPesewas: true,
-          },
+          where: { tenantId, invoiceId: { in: invoiceIds } },
+          select: { amountPesewas: true },
         })
       : [];
 
   const totalBilledPesewas = feeInvoices.reduce((sum, inv) => {
-    const billed = inv.totalBilledPesewas ?? 0;
-    const waived = inv.totalWaivedPesewas ?? 0;
+    const billed = toNum(inv.totalBilledPesewas);
+    const waived = toNum(inv.totalWaivedPesewas);
     return sum + billed - waived;
   }, 0);
 
   const totalPaidPesewas = feePayments.reduce((sum, pay) => {
-    const amt = pay.amountPesewas ?? 0;
+    const amt = toNum(pay.amountPesewas);
     return sum + amt;
   }, 0);
 
@@ -132,7 +123,6 @@ export default async function HeadteacherStudentsPage() {
     0
   );
 
-  // Convert pesewas → GH₵
   const totalBilled = totalBilledPesewas / 100;
   const totalPaid = totalPaidPesewas / 100;
   const totalOutstanding = totalOutstandingPesewas / 100;
@@ -142,7 +132,6 @@ export default async function HeadteacherStudentsPage() {
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8 space-y-6">
-        {/* Header */}
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-800">
@@ -153,11 +142,8 @@ export default async function HeadteacherStudentsPage() {
             </h1>
             <p className="mt-1 max-w-2xl text-xs text-slate-600 sm:text-sm">
               Quick view of all learners in your school, with{" "}
-              <span className="font-semibold">
-                editable guardian contacts
-              </span>{" "}
-              so that SMS, fees and health alerts always reach the right
-              person.
+              <span className="font-semibold">editable guardian contacts</span>{" "}
+              so that SMS, fees and health alerts always reach the right person.
             </p>
           </div>
           <div className="text-xs text-right text-slate-500 space-y-1">
@@ -171,7 +157,6 @@ export default async function HeadteacherStudentsPage() {
           </div>
         </header>
 
-        {/* Fees summary card (all invoices) */}
         <section className="grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 shadow-sm">
             <div className="flex items-center justify-between gap-2">
@@ -213,23 +198,21 @@ export default async function HeadteacherStudentsPage() {
                 Invoices found:{" "}
                 <span className="font-semibold">{invoiceCount}</span>
               </p>
-              {invoiceCount === 0 && (
+              {invoiceCount === 0 ? (
                 <p className="text-[10px]">
                   No invoices yet. Once you generate fees for a term, the totals
                   will appear here automatically.
                 </p>
-              )}
-              {invoiceCount > 0 && (
+              ) : (
                 <p className="text-[10px]">
-                  These numbers are live. Any new fee invoice or payment in
-                  EduLife OS will update this summary.
+                  These numbers are live. Any new fee invoice or payment will
+                  update this summary.
                 </p>
               )}
             </div>
           </div>
         </section>
 
-        {/* Client-side table/editor */}
         <HeadteacherStudentsClient initialStudents={safeStudents} />
       </div>
     </main>

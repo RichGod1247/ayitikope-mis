@@ -1,23 +1,18 @@
 // src/components/Header.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 
 type MegaLink = { label: string; href: string };
 type MegaCol = { title: string; img?: string; links: MegaLink[] };
-type Menu = {
-  key: string;
-  label: string;
-  href: string;
-  columns: MegaCol[];
-};
+type Menu = { key: string; label: string; href: string; columns: MegaCol[] };
 
 const linkBase =
   "relative underline-anim text-blue-50/95 hover:text-white transition-colors";
 
-// ---------- MENUS ----------
 const MENUS: Menu[] = [
   {
     key: "about",
@@ -82,14 +77,14 @@ const MENUS: Menu[] = [
         title: "Start Here",
         img: "/admissions.png",
         links: [
-  { label: "Admissions Hub", href: "/admissions" },
-  { label: "Apply Online", href: "/admissions/apply" },
-  { label: "How to Apply", href: "/admissions/how-to-apply" },
-  { label: "Key Dates", href: "/admissions/dates" },
-  { label: "Fees & Levies", href: "/admissions/fees" },
-  { label: "Scholarships", href: "/admissions/scholarships" },
-  { label: "FAQ", href: "/admissions/faq" },
-],
+          { label: "Admissions Hub", href: "/admissions" },
+          { label: "Apply Online", href: "/admissions/apply" },
+          { label: "How to Apply", href: "/admissions/how-to-apply" },
+          { label: "Key Dates", href: "/admissions/dates" },
+          { label: "Fees & Levies", href: "/admissions/fees" },
+          { label: "Scholarships", href: "/admissions/scholarships" },
+          { label: "FAQ", href: "/admissions/faq" },
+        ],
       },
       {
         title: "Entry Requirements",
@@ -211,26 +206,26 @@ const MENUS: Menu[] = [
     ],
   },
   {
-  key: "portals",
-  label: "Portals",
-  href: "/portals",
-  columns: [
-    {
-      title: "User Portals",
-      img: "/portal.png",
-      links: [
-        { label: "Teachers’ Portal", href: "/teacher-portal" },
-        { label: "Parents’ Portal",  href: "/parent-portal" },
-        { label: "Students’ Portal", href: "/student-portal" },
-      ],
-    },
-    {
-      title: "Administration",
-      links: [
-        { label: "Headteacher’s Portal", href: "/head-portal" },
-        { label: "SMC/PTA Portal",       href: "/smc-pta-portal" },
-        { label: "Admin Portal",         href: "/admin-portal" },
-      ],
+    key: "portals",
+    label: "Portals",
+    href: "/portals",
+    columns: [
+      {
+        title: "User Portals",
+        img: "/portal.png",
+        links: [
+          { label: "Teachers’ Portal", href: "/teacher-portal" },
+          { label: "Parents’ Portal", href: "/parent-portal" },
+          { label: "Students’ Portal", href: "/student-portal" },
+        ],
+      },
+      {
+        title: "Administration",
+        links: [
+          { label: "Headteacher’s Portal", href: "/head-portal" },
+          { label: "SMC/PTA Portal", href: "/smc-pta-portal" },
+          { label: "Admin Portal", href: "/admin-portal" },
+        ],
       },
       {
         title: "Payments",
@@ -243,12 +238,14 @@ const MENUS: Menu[] = [
   },
 ];
 
-// ---------- Mega UI (square ~4cm images with rounded edges) ----------
+function cx(...xs: Array<string | false | null | undefined>) {
+  return xs.filter(Boolean).join(" ");
+}
+
 function MegaImage({ src, alt }: { src?: string; alt: string }) {
   if (!src) return null;
-  // ~4cm ≈ 152px @ 96dpi
   return (
-    <div className="mb-3 overflow-hidden rounded-2xl border w-[152px] h-[152px] shadow-sm group-hover:shadow-md transition-all">
+    <div className="mb-3 overflow-hidden rounded-2xl border w-[152px] h-[152px] shadow-sm">
       <Image
         src={src}
         alt={alt}
@@ -264,62 +261,185 @@ function MegaColView({ col }: { col: MegaCol }) {
   return (
     <div className="min-w-[220px] group">
       <MegaImage src={col.img} alt={col.title} />
-      <div className="font-semibold text-gray-800">{col.title}</div>
+      <div className="font-semibold text-gray-900">{col.title}</div>
       <ul className="mt-2 space-y-1">
         {col.links.map((l, idx) => (
           <li key={`${col.title}-${l.label}-${l.href}-${idx}`}>
-            <Link
-              href={l.href}
-              className="text-sm text-gray-700 hover:text-blue-700 transition"
-            >
+            <Link href={l.href} className="text-sm text-gray-700 hover:text-blue-700 transition">
               {l.label}
             </Link>
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
 
-function MegaPanel({ menu, onClose }: { menu: Menu; onClose: () => void }) {
-  const count = menu.columns.length;
-
-  const colClass =
-    count >= 3
-      ? "grid-cols-1 sm:grid-cols-3"
-      : count === 2
-      ? "grid-cols-1 sm:grid-cols-2"
-      : "grid-cols-1";
-
-  const widthClass =
-    count >= 3 ? "w-[980px]" : count === 2 ? "w-[820px]" : "w-[560px]";
-
-  return (
-    <div
-      role="menu"
-      aria-label={`${menu.label} panel`}
-      className={`absolute left-1/2 -translate-x-1/2 mt-4 ${widthClass} max-w-[92vw] rounded-lg bg-white p-6 shadow-2xl border z-50`}
-      onMouseLeave={onClose}
-    >
-      <div className={`grid ${colClass} gap-6`}>
-        {menu.columns.map((c) => (
-          <MegaColView key={`${menu.key}-${c.title}`} col={c} />
-        ))}
+      <div className="mt-3">
+        <Link href={col.links[0]?.href ?? "#"} className="text-xs text-blue-700 hover:underline">
+          View more →
+        </Link>
       </div>
     </div>
   );
 }
 
-// ---------- Header ----------
+type PanelPos = { left: number; top: number; width: number };
+
+function MegaPanel({
+  menu,
+  pos,
+  onPointerEnter,
+  onPointerLeave,
+}: {
+  menu: Menu;
+  pos: PanelPos | null;
+  onPointerEnter: () => void;
+  onPointerLeave: () => void;
+}) {
+  if (!pos) return null;
+
+  const count = menu.columns.length;
+  const colClass =
+    count >= 3 ? "grid-cols-1 sm:grid-cols-3" : count === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
+
+  return (
+    <div
+      role="menu"
+      aria-label={`${menu.label} panel`}
+      className="fixed z-[80]"
+      style={{ left: pos.left, top: pos.top, width: pos.width }}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+    >
+      <div className="rounded-2xl bg-white p-6 shadow-2xl border ring-1 ring-black/5">
+        <div className={cx("grid gap-6", colClass)}>
+          {menu.columns.map((c) => (
+            <MegaColView key={`${menu.key}-${c.title}`} col={c} />
+          ))}
+        </div>
+
+        <div className="mt-5 pt-4 border-t flex items-center justify-between">
+          <div className="text-xs text-zinc-500">Browse {menu.label} quickly.</div>
+          <Link href={menu.href} className="text-sm font-semibold text-blue-700 hover:underline">
+            View {menu.label} →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function desiredWidth(menu: Menu) {
+  const count = menu.columns.length;
+  if (count >= 3) return 980;
+  if (count === 2) return 820;
+  return 560;
+}
+
 export default function Header() {
+  const pathname = usePathname();
+
   const [open, setOpen] = useState<string | null>(null);
-  const closeLater = () => setTimeout(() => setOpen(null), 150);
+  const [panelPos, setPanelPos] = useState<PanelPos | null>(null);
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const anchorRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+
+  const closeNow = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+    setOpen(null);
+    setPanelPos(null);
+  };
+
+  const scheduleClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      setOpen(null);
+      setPanelPos(null);
+    }, 320);
+  };
+
+  const cancelClose = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  };
+
+  // Close menus on route change
+  useEffect(() => {
+    closeNow();
+    setMobileOpen(false);
+    setMobileExpanded(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  // ESC closes dropdown + mobile drawer
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        closeNow();
+        setMobileOpen(false);
+        setMobileExpanded(null);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const activeTopLink = useMemo(() => {
+    if (!pathname) return "";
+    if (pathname === "/") return "/";
+    const hit = MENUS.find((m) => pathname.startsWith(m.href));
+    if (hit) return hit.href;
+    if (pathname.startsWith("/contact")) return "/contact";
+    return "";
+  }, [pathname]);
+
+  // Compute + clamp mega panel position (prevents off-screen overflow)
+  useEffect(() => {
+    if (!open) return;
+
+    const menu = MENUS.find((m) => m.key === open);
+    const a = anchorRefs.current[open];
+    if (!menu || !a) return;
+
+    const pad = 12;
+
+    const compute = () => {
+      const rect = a.getBoundingClientRect();
+      const vw = window.innerWidth;
+
+      const baseW = desiredWidth(menu);
+      const w = Math.min(baseW, Math.floor(vw * 0.92));
+
+      const idealLeft = rect.left + rect.width / 2 - w / 2;
+      const left = Math.max(pad, Math.min(idealLeft, vw - w - pad));
+
+      // 8px below the link, like before
+      const top = Math.max(8, rect.bottom + 8);
+
+      setPanelPos({ left, top, width: w });
+    };
+
+    compute();
+
+    // Keep correct if the user resizes/scrolls
+    window.addEventListener("resize", compute);
+    window.addEventListener("scroll", compute, true);
+
+    return () => {
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", compute, true);
+    };
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-50 bg-[#0a55c3] shadow">
       <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 py-2.5">
         {/* Logo + Title */}
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3 min-w-0">
           <Image
             src="/logo.png"
             alt="Ayitikope M/A Basic School"
@@ -328,14 +448,29 @@ export default function Header() {
             className="rounded-sm bg-white/90 p-0.5"
             priority
           />
-          <span className="text-white font-semibold tracking-wide">
+          <span className="text-white font-semibold tracking-wide truncate">
             Ayitikope M/A Basic School
           </span>
         </Link>
 
+        {/* Mobile button */}
+        <div className="md:hidden">
+          <button
+            type="button"
+            aria-label="Open menu"
+            className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white active:scale-[0.99]"
+            onClick={() => setMobileOpen((v) => !v)}
+          >
+            <span className="text-lg leading-none">{mobileOpen ? "✕" : "☰"}</span>
+          </button>
+        </div>
+
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-6" aria-label="Main Navigation">
-          <Link href="/" className={linkBase}>
+          <Link
+            href="/"
+            className={cx(linkBase, activeTopLink === "/" && "text-white font-semibold")}
+          >
             Home
           </Link>
 
@@ -343,27 +478,123 @@ export default function Header() {
             <div
               key={m.key}
               className="relative"
-              onMouseEnter={() => setOpen(m.key)}
-              onMouseLeave={closeLater}
-              onFocus={() => setOpen(m.key)}
+              onPointerEnter={() => {
+                cancelClose();
+                setOpen(m.key);
+              }}
+              onPointerLeave={scheduleClose}
             >
               <Link
                 href={m.href}
-                className={linkBase}
+                ref={(el) => {
+                  anchorRefs.current[m.key] = el;
+                }}
+                className={cx(linkBase, activeTopLink === m.href && "text-white font-semibold")}
                 aria-haspopup="true"
                 aria-expanded={open === m.key}
+                onFocus={() => setOpen(m.key)}
               >
                 {m.label}
               </Link>
-              {open === m.key && <MegaPanel menu={m} onClose={() => setOpen(null)} />}
+
+              {/* Bridge keeps close-delay safe (helps slow mouse movement) */}
+              {open === m.key ? <div className="absolute left-0 right-0 top-full h-3" /> : null}
+
+              {open === m.key ? (
+                <MegaPanel
+                  menu={m}
+                  pos={panelPos}
+                  onPointerEnter={cancelClose}
+                  onPointerLeave={scheduleClose}
+                />
+              ) : null}
             </div>
           ))}
 
-          <Link href="/contact" className={linkBase}>
+          <Link
+            href="/contact"
+            className={cx(linkBase, activeTopLink === "/contact" && "text-white font-semibold")}
+          >
             Contact
           </Link>
         </nav>
       </div>
+
+      {/* Mobile drawer */}
+      {mobileOpen ? (
+        <div className="md:hidden">
+          <button
+            aria-label="Close menu"
+            className="fixed inset-0 z-[70] bg-black/40"
+            onClick={() => setMobileOpen(false)}
+          />
+
+          <div className="fixed z-[80] top-0 right-0 h-full w-[86vw] max-w-sm bg-white shadow-2xl border-l">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="font-semibold text-zinc-900">Menu</div>
+              <button
+                className="rounded-lg border px-3 py-1.5 text-sm"
+                onClick={() => setMobileOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-4 space-y-2 overflow-y-auto h-[calc(100%-64px)]">
+              <Link href="/" className="block rounded-xl border px-4 py-3 text-sm font-medium">
+                Home
+              </Link>
+
+              {MENUS.map((m) => {
+                const expanded = mobileExpanded === m.key;
+                return (
+                  <div key={m.key} className="rounded-2xl border overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-zinc-50"
+                      onClick={() => setMobileExpanded(expanded ? null : m.key)}
+                    >
+                      <span>{m.label}</span>
+                      <span className="text-base">{expanded ? "−" : "+"}</span>
+                    </button>
+
+                    {expanded ? (
+                      <div className="p-3 space-y-3">
+                        <Link href={m.href} className="block text-sm text-blue-700 font-semibold">
+                          View {m.label} →
+                        </Link>
+
+                        {m.columns.map((col) => (
+                          <div key={`${m.key}-${col.title}`} className="border-t pt-3">
+                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+                              {col.title}
+                            </div>
+                            <div className="mt-2 space-y-2">
+                              {col.links.map((l) => (
+                                <Link
+                                  key={`${m.key}-${col.title}-${l.href}`}
+                                  href={l.href}
+                                  className="block text-sm text-zinc-800 hover:text-blue-700"
+                                >
+                                  {l.label}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              <Link href="/contact" className="block rounded-xl border px-4 py-3 text-sm font-medium">
+                Contact
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }

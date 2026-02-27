@@ -1,18 +1,50 @@
 "use client";
 
-import React, { useState } from "react";
-import type { NotificationContactDTO } from "./page";
+import React, { useEffect, useMemo, useState } from "react";
+import type { NotificationContactDTO as Contact } from "./types";
 
-type Contact = NotificationContactDTO;
+type ListResp =
+  | { ok: true; contacts: Contact[] }
+  | { ok: false; error: string };
 
-type Props = {
-  initialContacts: Contact[];
-};
-
-export default function ContactsClient({ initialContacts }: Props) {
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
+export default function ContactsClient() {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function fetchContacts() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/admin/notification-contacts", {
+        cache: "no-store",
+      });
+
+      const json = (await res.json().catch(() => null)) as ListResp | null;
+
+      if (!res.ok || !json || !json.ok) {
+        const msg =
+          (json && !json.ok && json.error) ||
+          "Could not load contacts. Database may be offline.";
+        setContacts([]);
+        setError(msg);
+        return;
+      }
+
+      setContacts(Array.isArray(json.contacts) ? json.contacts : []);
+    } catch (e: any) {
+      setContacts([]);
+      setError(e?.message ?? "Network error while loading contacts.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void fetchContacts();
+  }, []);
 
   async function updateContact(
     id: string,
@@ -20,20 +52,17 @@ export default function ContactsClient({ initialContacts }: Props) {
   ) {
     setSavingId(id);
     setError(null);
+
     try {
       const res = await fetch(`/api/admin/notification-contacts/${id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(
-          `Update failed (${res.status}): ${txt.slice(0, 200)}`
-        );
+        throw new Error(`Update failed (${res.status}): ${txt.slice(0, 200)}`);
       }
 
       const data = (await res.json()) as {
@@ -46,9 +75,7 @@ export default function ContactsClient({ initialContacts }: Props) {
         throw new Error(data.error ?? "Unknown error updating contact.");
       }
 
-      setContacts((prev) =>
-        prev.map((c) => (c.id === id ? data.contact! : c))
-      );
+      setContacts((prev) => prev.map((c) => (c.id === id ? data.contact! : c)));
     } catch (err: any) {
       console.error("Update contact error:", err);
       setError(err?.message ?? "Unknown update error");
@@ -63,10 +90,10 @@ export default function ContactsClient({ initialContacts }: Props) {
 
   function handleEdit(contact: Contact) {
     const newName = window.prompt("Edit name:", contact.name);
-    if (newName === null) return; // cancelled
+    if (newName === null) return;
 
     const newPhone = window.prompt("Edit phone:", contact.phone);
-    if (newPhone === null) return; // cancelled
+    if (newPhone === null) return;
 
     const trimmedName = newName.trim();
     const trimmedPhone = newPhone.trim();
@@ -76,64 +103,63 @@ export default function ContactsClient({ initialContacts }: Props) {
       return;
     }
 
-    updateContact(contact.id, {
-      name: trimmedName,
-      phone: trimmedPhone,
-    });
+    updateContact(contact.id, { name: trimmedName, phone: trimmedPhone });
   }
+
+  const hasContacts = useMemo(() => contacts.length > 0, [contacts]);
 
   return (
     <main className="min-h-screen flex justify-center bg-slate-50 py-8 px-4">
       <div className="w-full max-w-4xl bg-white shadow-md rounded-xl p-6 border border-slate-200">
-        <h1 className="text-2xl font-bold mb-2">
-          EduLife OS – Notification Contacts
-        </h1>
-        <p className="text-sm text-slate-600 mb-4">
-          This list shows all contacts in the{" "}
-          <code>NotificationContact</code> table used by your SMS tools
-          (debug, teacher consent, etc.).
-          <br />
-          <span className="font-semibold">Mode &quot;initial&quot;:</span>{" "}
-          first 5 active contacts.{" "}
-          <span className="font-semibold">Mode &quot;full&quot;:</span>{" "}
-          all active contacts.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold mb-1">
+              EduLife OS – Notification Contacts
+            </h1>
+            <p className="text-sm text-slate-600">
+              Admin tool for contacts used by SMS utilities (debug, consent, alerts).
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={fetchContacts}
+            className="px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-sm"
+          >
+            Refresh
+          </button>
+        </div>
+
+        {loading && (
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            Loading contacts…
+          </div>
+        )}
 
         {error && (
-          <div className="mb-3 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+          <div className="mt-4 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
             <div className="font-semibold mb-1">Error</div>
             <pre className="whitespace-pre-wrap text-xs">{error}</pre>
           </div>
         )}
 
-        {contacts.length === 0 ? (
-          <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-            No notification contacts found. Your seed script may not have run,
-            or the table is empty.
+        {!loading && !hasContacts ? (
+          <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+            No contacts loaded. If the DB is online, check your seed or table.
           </div>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
+        ) : null}
+
+        {!loading && hasContacts ? (
+          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-100">
                 <tr>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">
-                    ID
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">
-                    Name
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">
-                    Phone
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">
-                    Active
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">
-                    Created At
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">
-                    Actions
-                  </th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">ID</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Name</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Phone</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Active</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Created At</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -158,9 +184,7 @@ export default function ContactsClient({ initialContacts }: Props) {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-slate-600 text-xs">
-                      {c.createdAtDisplay}
-                    </td>
+                    <td className="px-3 py-2 text-slate-600 text-xs">{c.createdAtDisplay}</td>
                     <td className="px-3 py-2 text-xs">
                       <div className="flex gap-2">
                         <button
@@ -184,15 +208,7 @@ export default function ContactsClient({ initialContacts }: Props) {
               </tbody>
             </table>
           </div>
-        )}
-
-        <div className="mt-4 text-xs text-slate-500">
-          <p>
-            In future sprints, we can replace the <code>prompt()</code>-style
-            editing with a richer form or modal, and also add the ability to
-            add new contacts directly from this page.
-          </p>
-        </div>
+        ) : null}
       </div>
     </main>
   );

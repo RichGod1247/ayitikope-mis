@@ -1,127 +1,162 @@
 // src/app/api/admin/sms/broadcast/route.ts
-
-import { NextResponse } from "next/server";
-import { getSmsRecipients } from "@/lib/notifications";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
+import {
+  requireTenantContext,
+  assertTenantParamMatches,
+  toHttpError,
+} from "@/lib/server/tenantScope";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type Mode = "initial" | "full";
 
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
 function resolveMode(input?: string): Mode {
-  if (!input) return "initial";
   return input === "full" ? "full" : "initial";
 }
 
 function resolveBrand(input?: string): string {
   if (!input) return "AYITIADMIN";
   const upper = input.toUpperCase();
-  if (BrandName.includes(upper as (typeof BrandName)[number])) {
-    return upper;
-  }
+  if (BrandName.includes(upper as (typeof BrandName)[number])) return upper;
   return "AYITIADMIN";
 }
 
-export async function POST(request: Request) {
+function normalizeRoleName(role: unknown) {
+  return String(role ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Z_]/g, "");
+}
+
+function effectiveRole(role: unknown) {
+  const r = normalizeRoleName(role);
+  if (r === "ADMIN") return "SCHOOL_ADMIN";
+  if (r === "HEADMASTER") return "HEADTEACHER";
+  return r;
+}
+
+function isAdminLike(role: unknown) {
+  const r = effectiveRole(role);
+  return r === "SCHOOL_ADMIN" || r === "HEADTEACHER" || r.includes("OWNER") || r.includes("SUPER");
+}
+
+async function requireAdmin(req: NextRequest) {
   try {
-    const body = (await request.json().catch(() => ({}))) as {
+    const ctx = await requireTenantContext();
+
+    // Membership/role gate (explicit)
+    const m = await prisma.membership.findUnique({
+      where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+      select: { status: true, role: { select: { name: true } } },
+    });
+
+    if (!m || m.status !== "ACTIVE" || !isAdminLike(m.role?.name ?? "")) {
+      return { ok: false as const, res: json(403, { ok: false, error: "FORBIDDEN" }) };
+    }
+
+    // Production hard-lock
+    if (process.env.NODE_ENV === "production") {
+      const key = req.headers.get("x-admin-key") || "";
+      if (!process.env.ADMIN_DASHBOARD_KEY || key !== process.env.ADMIN_DASHBOARD_KEY) {
+        return { ok: false as const, res: json(401, { ok: false, error: "UNAUTHORIZED" }) };
+      }
+    }
+
+    return { ok: true as const, ctx };
+  } catch {
+    return { ok: false as const, res: json(401, { ok: false, error: "UNAUTHORIZED" }) };
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const gate = await requireAdmin(req);
+  if (!gate.ok) return gate.res;
+
+  const ct = req.headers.get("content-type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return json(415, { ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" });
+  }
+
+  try {
+    const body = (await req.json().catch(() => ({}))) as {
       message?: string;
       brand?: string;
       mode?: Mode;
+      tenantId?: string; // legacy/back-compat only
     };
 
-    const message = (body.message ?? "").trim();
-    if (!message) {
-      return NextResponse.json(
-        { ok: false, error: "Message body is required." },
-        { status: 400 }
-      );
-    }
+    // Back-compat only: if tenantId is supplied, it MUST match session tenant.
+    const suppliedTenantId = body?.tenantId ? String(body.tenantId).trim() || null : null;
+    assertTenantParamMatches(gate.ctx.tenantId, suppliedTenantId);
+
+    const message = String(body.message ?? "").trim();
+    if (!message) return json(400, { ok: false, error: "MESSAGE_REQUIRED" });
 
     const mode = resolveMode(body.mode);
     const brand = resolveBrand(body.brand);
 
-    // Get recipients from our notification contacts helper
-    const recipients = await getSmsRecipients(mode);
+    const recipients = await prisma.notificationContact.findMany({
+      where: { tenantId: gate.ctx.tenantId, isActive: true },
+      orderBy: { id: "asc" },
+      take: mode === "initial" ? 3 : 2000, // hard cap
+    });
 
     if (!recipients.length) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "No recipients found. Check notification contacts.",
-        },
-        { status: 400 }
-      );
+      return json(400, { ok: false, error: "NO_RECIPIENTS" });
     }
 
-    const results: {
-      recipient: string;
-      to: string;
-      ok: boolean;
-      error?: string;
-    }[] = [];
-
+    const results: { recipient: string; to: string; ok: boolean; error?: string }[] = [];
     let successCount = 0;
 
-    for (const r of recipients) {
-      const rawPhone = (r as any).phone ?? "";
+    for (const r of recipients as any[]) {
+      const to = String(r.phone ?? "").trim();
+      const recipientName = String(r.name ?? "Unknown");
 
-      if (!rawPhone) {
-        results.push({
-          recipient: r.name,
-          to: "",
-          ok: false,
-          error: "Missing phone on recipient.",
-        });
+      if (!to) {
+        results.push({ recipient: recipientName, to: "", ok: false, error: "MISSING_PHONE" });
         continue;
       }
 
       try {
         const res = await sendViaHubtel({
-          to: rawPhone,
+          to,
           body: message,
           brand,
           meta: {
             purpose: "admin-broadcast",
+            tenantId: gate.ctx.tenantId,
             mode,
-            recipientId: (r as any).id ?? null,
-            recipientName: r.name,
+            recipientId: r.id ?? null,
           },
         });
 
-        results.push({
-          recipient: r.name,
-          to: res.to,
-          ok: true,
-        });
+        results.push({ recipient: recipientName, to: res.to, ok: true });
         successCount += 1;
       } catch (err: any) {
-        console.error("[SMS_BROADCAST_ERROR]", r.name, err);
+        console.error("[SMS_BROADCAST_ERROR]", recipientName, err);
         results.push({
-          recipient: r.name,
-          to: rawPhone,
+          recipient: recipientName,
+          to,
           ok: false,
-          error: err?.message ?? "Unknown SMS send error",
+          error: err?.message ?? "SMS_SEND_FAILED",
         });
       }
     }
 
-    return NextResponse.json({
-      ok: true,
-      mode,
-      brand,
-      count: recipients.length,
-      successCount,
-      results,
-    });
-  } catch (err: any) {
-    console.error("[SMS_BROADCAST_FATAL]", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          err?.message ??
-          "Unexpected error while sending broadcast SMS campaign.",
-      },
-      { status: 500 }
-    );
+    return json(200, { ok: true, mode, brand, count: recipients.length, successCount, results });
+  } catch (e) {
+    const { status, msg } = toHttpError(e);
+    return json(status, { ok: false, error: msg });
   }
 }

@@ -2,7 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
-import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +10,9 @@ const VALID_STATUSES = ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"] as const;
 type LessonNoteStatus = (typeof VALID_STATUSES)[number];
 
 type UpsertBody = {
+  // ✅ Accept both for backward compatibility
   lessonNoteId?: string;
+  id?: string;
 
   phase?: string | null;
   level?: string | null;
@@ -22,6 +23,10 @@ type UpsertBody = {
   lessonDate?: string | null;
 
   curriculumUnitId?: string | null;
+
+  // ✅ Accept both for backward compatibility
+  schemeOfWorkItemId?: string | null;
+  schemeItemId?: string | null;
 
   strand?: string | null;
   substrand?: string | null;
@@ -112,6 +117,13 @@ function safeTrim(v: unknown) {
   return typeof v === "string" ? v.trim() : "";
 }
 
+function nonEmptyOrUndef(v: unknown): string | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "string") return undefined;
+  const t = v.trim();
+  return t ? t : undefined;
+}
+
 function toIso(v: unknown): string | null {
   if (!v) return null;
   if (v instanceof Date) return v.toISOString();
@@ -129,6 +141,7 @@ const LESSON_NOTE_SELECT = {
   phase: true,
   level: true,
   curriculumUnitId: true,
+  schemeOfWorkItemId: true,
 
   subject: true,
   term: true,
@@ -169,13 +182,22 @@ const LESSON_NOTE_SELECT = {
 } as const;
 
 export async function GET() {
-  return jsonNoStore({ ok: false, error: "Method not allowed. Use POST." }, { status: 405, headers: { Allow: "POST" } });
+  return jsonNoStore(
+    { ok: false, error: "Method not allowed. Use POST." },
+    { status: 405, headers: { Allow: "POST" } }
+  );
 }
 export async function PUT() {
-  return jsonNoStore({ ok: false, error: "Method not allowed. Use POST." }, { status: 405, headers: { Allow: "POST" } });
+  return jsonNoStore(
+    { ok: false, error: "Method not allowed. Use POST." },
+    { status: 405, headers: { Allow: "POST" } }
+  );
 }
 export async function DELETE() {
-  return jsonNoStore({ ok: false, error: "Method not allowed. Use POST." }, { status: 405, headers: { Allow: "POST" } });
+  return jsonNoStore(
+    { ok: false, error: "Method not allowed. Use POST." },
+    { status: 405, headers: { Allow: "POST" } }
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -191,9 +213,21 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
+  // Membership gate (consistent, bank-grade)
+  const membership = await prisma.membership.findUnique({
+    where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+    select: { status: true },
+  });
+  if (!membership || membership.status !== "ACTIVE") {
+    return jsonNoStore({ ok: false, error: "Forbidden (membership inactive)." }, { status: 403 });
+  }
+
   const ct = req.headers.get("content-type") || "";
   if (!ct.toLowerCase().includes("application/json")) {
-    return jsonNoStore({ ok: false, error: "Content-Type must be application/json." }, { status: 415 });
+    return jsonNoStore(
+      { ok: false, error: "Content-Type must be application/json." },
+      { status: 415 }
+    );
   }
 
   let body: UpsertBody;
@@ -203,7 +237,14 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const lessonNoteId = typeof body?.lessonNoteId === "string" ? body.lessonNoteId.trim() : "";
+  const lessonNoteIdRaw =
+    typeof body?.lessonNoteId === "string"
+      ? body.lessonNoteId
+      : typeof (body as any)?.id === "string"
+        ? String((body as any).id)
+        : "";
+
+  const lessonNoteId = lessonNoteIdRaw.trim();
   if (!isPlausibleId(lessonNoteId)) {
     return jsonNoStore({ ok: false, error: "Missing or invalid lessonNoteId." }, { status: 400 });
   }
@@ -236,249 +277,283 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const existing = await tx.lessonNote.findFirst({
-        where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-        select: {
-          id: true,
-          status: true,
-          submittedAt: true,
+    const existing = await prisma.lessonNote.findFirst({
+      where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
+      select: {
+        id: true,
+        status: true,
+        submittedAt: true,
 
-          curriculumUnitId: true,
-          indicator: true,
-          objectives: true,
-          lessonDevelopment: true,
-          assessment: true,
-        },
-      });
+        curriculumUnitId: true,
+        schemeOfWorkItemId: true,
 
-      if (!existing) {
-        return { ok: false as const, status: 404, error: "Lesson note not found." };
-      }
-
-      // Lock editing while SUBMITTED or APPROVED
-      const currentStatus = String(existing.status ?? "DRAFT").toUpperCase() as LessonNoteStatus;
-      if (currentStatus === "SUBMITTED") {
-        return {
-          ok: false as const,
-          status: 400,
-          error: "This lesson note has been submitted and cannot be edited until it is returned.",
-        };
-      }
-      if (currentStatus === "APPROVED") {
-        return { ok: false as const, status: 400, error: "Approved lesson notes cannot be edited." };
-      }
-
-      const now = new Date();
-
-      // Context updates
-      const phase = asTrimmedNullableString(body.phase);
-      const level = asTrimmedNullableString(body.level);
-      const subject = asTrimmedNullableString(body.subject);
-      const term = asTrimmedNullableString(body.term);
-      const academicYear = asTrimmedNullableString(body.academicYear);
-      const weekNumber = asWeekNumber(body.weekNumber);
-      const lessonDate = asNullableDate(body.lessonDate);
-
-      const curriculumUnitId = asTrimmedNullableString(body.curriculumUnitId);
-
-      // Lesson fields
-      const lessonTitle = asNullableString(body.lessonTitle);
-      const objectives = asNullableString(body.objectives);
-      const priorKnowledge = asNullableString(body.priorKnowledge);
-      const teachingLearningResources = asNullableString(body.teachingLearningResources);
-      const introduction = asNullableString(body.introduction);
-      const lessonDevelopment = asNullableString(body.lessonDevelopment);
-      const conclusion = asNullableString(body.conclusion);
-      const assessment = asNullableString(body.assessment);
-      const homework = asNullableString(body.homework);
-      const differentiationNotes = asNullableString(body.differentiationNotes);
-      const reflectionNotes = asNullableString(body.reflectionNotes);
-
-      // Decide curriculumUnitId to use for deriving slice (prefer body, else existing)
-      const effectiveUnitId =
-        curriculumUnitId !== undefined ? curriculumUnitId : existing.curriculumUnitId ?? null;
-
-      // Derive NaCCA slice from CurriculumUnit safely (tenant or global only)
-      let derivedSlice:
-        | {
-            phase?: string | null;
-            level?: string | null;
-            subject?: string | null;
-            term?: string | null;
-            weekNumber?: number | null;
-            strand?: string | null;
-            substrand?: string | null;
-            contentStandard?: string | null;
-            indicator?: string | null;
-          }
-        | null = null;
-
-      if (effectiveUnitId) {
-        const unit = await (tx as any).curriculumUnit?.findFirst?.({
-          where: {
-            id: effectiveUnitId,
-            OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-          },
-          select: {
-            phase: true,
-            level: true,
-            subject: true,
-            term: true,
-            weekNumber: true,
-            strand: true,
-            substrand: true,
-            contentStandard: true,
-            indicator: true,
-          },
-        });
-
-        if (!unit) {
-          return { ok: false as const, status: 400, error: "Selected curriculum unit not found." };
-        }
-
-        derivedSlice = {
-          phase: unit.phase ?? null,
-          level: unit.level ?? null,
-          subject: unit.subject ?? null,
-          term: unit.term ?? null,
-          weekNumber: unit.weekNumber ?? null,
-          strand: unit.strand ?? null,
-          substrand: unit.substrand ?? null,
-          contentStandard: unit.contentStandard ?? null,
-          indicator: unit.indicator ?? null,
-        };
-      }
-
-      // Status transition handling
-      let nextStatus: LessonNoteStatus = currentStatus;
-      let submittedAt: Date | null = existing.submittedAt ?? null;
-
-      if (requestedStatus === "DRAFT") {
-        nextStatus = "DRAFT";
-      }
-
-      if (requestedStatus === "SUBMITTED") {
-        // Allow only from DRAFT or REJECTED
-        if (currentStatus !== "DRAFT" && currentStatus !== "REJECTED") {
-          return { ok: false as const, status: 400, error: "Only draft/returned notes can be submitted." };
-        }
-
-        // Server-enforced submit quality
-        const effectiveIndicator = (derivedSlice?.indicator ?? safeTrim(body.indicator) ?? "").trim();
-
-        const effObjectives = objectives !== undefined ? safeTrim(objectives) : safeTrim(existing.objectives);
-        const effDev = lessonDevelopment !== undefined ? safeTrim(lessonDevelopment) : safeTrim(existing.lessonDevelopment);
-        const effAssessment = assessment !== undefined ? safeTrim(assessment) : safeTrim(existing.assessment);
-
-        const unitOk = !!effectiveUnitId && safeTrim(effectiveUnitId).length > 0;
-        const indicatorOk = effectiveIndicator.length > 0;
-
-        if (!unitOk || !indicatorOk || !effObjectives || !effDev || !effAssessment) {
-          return {
-            ok: false as const,
-            status: 400,
-            error:
-              "To submit: select a NaCCA curriculum unit/indicator and fill objectives, lesson development, and assessment.",
-          };
-        }
-
-        nextStatus = "SUBMITTED";
-        submittedAt = submittedAt ?? now;
-      }
-
-      const data: any = {
-        status: nextStatus,
-        submittedAt,
-      };
-
-      // Apply optional fields only when present
-      if (phase !== undefined) data.phase = phase;
-      if (level !== undefined) data.level = level;
-      if (subject !== undefined) data.subject = subject;
-      if (term !== undefined) data.term = term;
-      if (academicYear !== undefined) data.academicYear = academicYear;
-      if (weekNumber !== undefined) data.weekNumber = weekNumber;
-      if (lessonDate !== undefined) data.lessonDate = lessonDate;
-
-      if (curriculumUnitId !== undefined) data.curriculumUnitId = curriculumUnitId;
-
-      // Derived slice overrides spoofable client fields
-      if (derivedSlice) {
-        if (derivedSlice.phase !== undefined) data.phase = derivedSlice.phase;
-        if (derivedSlice.level !== undefined) data.level = derivedSlice.level;
-        if (derivedSlice.subject !== undefined) data.subject = derivedSlice.subject;
-        if (derivedSlice.term !== undefined) data.term = derivedSlice.term;
-        if (derivedSlice.weekNumber !== undefined && data.weekNumber === undefined) data.weekNumber = derivedSlice.weekNumber;
-
-        data.strand = derivedSlice.strand ?? null;
-        data.substrand = derivedSlice.substrand ?? null;
-        data.contentStandard = derivedSlice.contentStandard ?? null;
-        data.indicator = derivedSlice.indicator ?? null;
-      } else {
-        const strand = asNullableString(body.strand);
-        const substrand = asNullableString(body.substrand);
-        const contentStandard = asNullableString(body.contentStandard);
-        const indicator = asNullableString(body.indicator);
-
-        if (strand !== undefined) data.strand = strand;
-        if (substrand !== undefined) data.substrand = substrand;
-        if (contentStandard !== undefined) data.contentStandard = contentStandard;
-        if (indicator !== undefined) data.indicator = indicator;
-      }
-
-      if (lessonTitle !== undefined) data.lessonTitle = lessonTitle;
-      if (objectives !== undefined) data.objectives = objectives;
-      if (priorKnowledge !== undefined) data.priorKnowledge = priorKnowledge;
-      if (teachingLearningResources !== undefined) data.teachingLearningResources = teachingLearningResources;
-      if (introduction !== undefined) data.introduction = introduction;
-      if (lessonDevelopment !== undefined) data.lessonDevelopment = lessonDevelopment;
-      if (conclusion !== undefined) data.conclusion = conclusion;
-      if (assessment !== undefined) data.assessment = assessment;
-      if (homework !== undefined) data.homework = homework;
-      if (differentiationNotes !== undefined) data.differentiationNotes = differentiationNotes;
-      if (reflectionNotes !== undefined) data.reflectionNotes = reflectionNotes;
-
-      // ✅ Race-safe: only update if status unchanged since read
-      const updated = await tx.lessonNote.updateMany({
-        where: {
-          id: lessonNoteId,
-          tenantId: ctx.tenantId,
-          teacherUserId: ctx.userId,
-          status: existing.status,
-        },
-        data,
-      });
-
-      if (updated.count !== 1) {
-        return { ok: false as const, status: 409, error: "Conflict: lesson note changed. Refresh and try again." };
-      }
-
-      const fresh = await tx.lessonNote.findFirst({
-        where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-        select: LESSON_NOTE_SELECT,
-      });
-
-      if (!fresh) return { ok: false as const, status: 500, error: "Failed to load updated lesson note." };
-
-      return { ok: true as const, item: fresh };
+        indicator: true,
+        objectives: true,
+        lessonDevelopment: true,
+        assessment: true,
+      },
     });
 
-    if (!result.ok) return jsonNoStore({ ok: false, error: result.error }, { status: result.status });
+    if (!existing) {
+      return jsonNoStore({ ok: false, error: "Lesson note not found." }, { status: 404 });
+    }
 
-    const item = result.item;
+    const currentStatus = String(existing.status ?? "DRAFT").toUpperCase() as LessonNoteStatus;
+
+    if (currentStatus === "SUBMITTED") {
+      return jsonNoStore(
+        { ok: false, error: "This lesson note has been submitted and cannot be edited until it is returned." },
+        { status: 400 }
+      );
+    }
+    if (currentStatus === "APPROVED") {
+      return jsonNoStore({ ok: false, error: "Approved lesson notes cannot be edited." }, { status: 400 });
+    }
+
+    const now = new Date();
+
+    // Context updates
+    const phase = asTrimmedNullableString(body.phase);
+    const level = asTrimmedNullableString(body.level);
+    const subject = asTrimmedNullableString(body.subject);
+    const term = asTrimmedNullableString(body.term);
+    const academicYear = asTrimmedNullableString(body.academicYear);
+    const weekNumber = asWeekNumber(body.weekNumber);
+    const lessonDate = asNullableDate(body.lessonDate);
+
+    const curriculumUnitId = asTrimmedNullableString(body.curriculumUnitId);
+
+    // ✅ Accept legacy schemeItemId alias
+    const schemeOfWorkItemId = asTrimmedNullableString(
+      body.schemeOfWorkItemId !== undefined ? body.schemeOfWorkItemId : (body as any).schemeItemId
+    );
+
+    // Lesson fields
+    const lessonTitle = asNullableString(body.lessonTitle);
+    const objectives = asNullableString(body.objectives);
+    const priorKnowledge = asNullableString(body.priorKnowledge);
+    const teachingLearningResources = asNullableString(body.teachingLearningResources);
+    const introduction = asNullableString(body.introduction);
+    const lessonDevelopment = asNullableString(body.lessonDevelopment);
+    const conclusion = asNullableString(body.conclusion);
+    const assessment = asNullableString(body.assessment);
+    const homework = asNullableString(body.homework);
+    const differentiationNotes = asNullableString(body.differentiationNotes);
+    const reflectionNotes = asNullableString(body.reflectionNotes);
+
+    // Determine effective linkage (prefer explicit body, else existing)
+    const effectiveSchemeItemId =
+      schemeOfWorkItemId !== undefined ? schemeOfWorkItemId : existing.schemeOfWorkItemId ?? null;
+
+    const effectiveUnitId =
+      curriculumUnitId !== undefined ? curriculumUnitId : existing.curriculumUnitId ?? null;
+
+    // Derive NaCCA slice from either SchemeOfWorkItem or CurriculumUnit (server-trusted)
+    let derived:
+      | {
+          weekNumber?: number | null;
+          strand?: string | null;
+          substrand?: string | null;
+          contentStandard?: string | null;
+          indicator?: string | null;
+        }
+      | null = null;
+
+    // Prefer scheme-backed if present
+    if (effectiveSchemeItemId) {
+      const item = await prisma.schemeOfWorkItem.findFirst({
+        where: {
+          id: effectiveSchemeItemId,
+          scheme: { tenantId: ctx.tenantId, teacherUserId: ctx.userId },
+        } as any,
+        select: {
+          weekNumber: true,
+          strandTitle: true,
+          subStrandTitle: true,
+          contentStandardDescription: true,
+          indicatorDescription: true,
+        },
+      });
+
+      if (!item) {
+        return jsonNoStore({ ok: false, error: "Selected scheme item not found." }, { status: 400 });
+      }
+
+      derived = {
+        weekNumber: item.weekNumber ?? null,
+        strand: item.strandTitle ?? null,
+        substrand: item.subStrandTitle ?? null,
+        contentStandard: item.contentStandardDescription ?? null,
+        indicator: item.indicatorDescription ?? null,
+      };
+    } else if (effectiveUnitId) {
+      const unit = await prisma.curriculumUnit.findFirst({
+        where: {
+          id: effectiveUnitId,
+          OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
+        } as any,
+        select: {
+          weekNumber: true,
+          strand: true,
+          substrand: true,
+          contentStandard: true,
+          indicator: true,
+        },
+      });
+
+      if (!unit) {
+        return jsonNoStore({ ok: false, error: "Selected curriculum unit not found." }, { status: 400 });
+      }
+
+      derived = {
+        weekNumber: unit.weekNumber ?? null,
+        strand: unit.strand ?? null,
+        substrand: unit.substrand ?? null,
+        contentStandard: unit.contentStandard ?? null,
+        indicator: unit.indicator ?? null,
+      };
+    }
+
+    // Status transition handling
+    let nextStatus: LessonNoteStatus = currentStatus;
+    let submittedAt: Date | null = existing.submittedAt ?? null;
+
+    if (requestedStatus === "DRAFT") {
+      nextStatus = "DRAFT";
+    }
+
+    if (requestedStatus === "SUBMITTED") {
+      if (currentStatus !== "DRAFT" && currentStatus !== "REJECTED") {
+        return jsonNoStore({ ok: false, error: "Only draft/returned notes can be submitted." }, { status: 400 });
+      }
+
+      // Server-enforced submit quality
+      const effObjectives =
+        objectives !== undefined ? safeTrim(objectives) : safeTrim(existing.objectives);
+      const effDev =
+        lessonDevelopment !== undefined ? safeTrim(lessonDevelopment) : safeTrim(existing.lessonDevelopment);
+      const effAssessment =
+        assessment !== undefined ? safeTrim(assessment) : safeTrim(existing.assessment);
+
+      const effectiveIndicator =
+        (derived?.indicator ?? null) ??
+        (body.indicator !== undefined ? safeTrim(body.indicator) : safeTrim(existing.indicator));
+
+      const unitOk = !!effectiveSchemeItemId || !!effectiveUnitId;
+      const indicatorOk = safeTrim(effectiveIndicator).length > 0;
+
+      if (!unitOk || !indicatorOk || !effObjectives || !effDev || !effAssessment) {
+        return jsonNoStore(
+          {
+            ok: false,
+            error:
+              "To submit: link a scheme/curriculum unit and ensure indicator, objectives, lesson development, and assessment are filled.",
+          },
+          { status: 400 }
+        );
+      }
+
+      nextStatus = "SUBMITTED";
+      submittedAt = submittedAt ?? now;
+    }
+
+    const data: any = {
+      status: nextStatus,
+      submittedAt,
+    };
+
+    // Apply optional fields only when present
+    if (phase !== undefined) data.phase = phase;
+    if (level !== undefined) data.level = level;
+    if (subject !== undefined) data.subject = subject;
+    if (term !== undefined) data.term = term;
+    if (academicYear !== undefined) data.academicYear = academicYear;
+    if (weekNumber !== undefined) data.weekNumber = weekNumber;
+    if (lessonDate !== undefined) data.lessonDate = lessonDate;
+
+    // Linkage updates (keep mutually exclusive if explicitly set)
+    if (schemeOfWorkItemId !== undefined) {
+      data.schemeOfWorkItemId = schemeOfWorkItemId;
+      if (curriculumUnitId === undefined) data.curriculumUnitId = null;
+    }
+    if (curriculumUnitId !== undefined) {
+      data.curriculumUnitId = curriculumUnitId;
+      if (schemeOfWorkItemId === undefined) data.schemeOfWorkItemId = null;
+    }
+
+    // Derived slice overrides spoofable client fields
+    if (derived) {
+      if (derived.weekNumber != null && data.weekNumber === undefined) {
+        data.weekNumber = derived.weekNumber;
+      }
+
+      const dStrand = nonEmptyOrUndef(derived.strand);
+      const dSub = nonEmptyOrUndef(derived.substrand);
+      if (dStrand) data.strand = dStrand;
+      if (dSub) data.substrand = dSub;
+
+      data.contentStandard = derived.contentStandard ?? null;
+      data.indicator = derived.indicator ?? null;
+    } else {
+      const strand = nonEmptyOrUndef(body.strand);
+      const substrand = nonEmptyOrUndef(body.substrand);
+      const contentStandard = asNullableString(body.contentStandard);
+      const indicator = asNullableString(body.indicator);
+
+      if (strand !== undefined) data.strand = strand;
+      if (substrand !== undefined) data.substrand = substrand;
+      if (contentStandard !== undefined) data.contentStandard = contentStandard;
+      if (indicator !== undefined) data.indicator = indicator;
+    }
+
+    if (lessonTitle !== undefined) data.lessonTitle = lessonTitle;
+    if (objectives !== undefined) data.objectives = objectives;
+    if (priorKnowledge !== undefined) data.priorKnowledge = priorKnowledge;
+    if (teachingLearningResources !== undefined) data.teachingLearningResources = teachingLearningResources;
+    if (introduction !== undefined) data.introduction = introduction;
+    if (lessonDevelopment !== undefined) data.lessonDevelopment = lessonDevelopment;
+    if (conclusion !== undefined) data.conclusion = conclusion;
+    if (assessment !== undefined) data.assessment = assessment;
+    if (homework !== undefined) data.homework = homework;
+    if (differentiationNotes !== undefined) data.differentiationNotes = differentiationNotes;
+    if (reflectionNotes !== undefined) data.reflectionNotes = reflectionNotes;
+
+    // Optimistic concurrency: update only if status unchanged since read
+    const updated = await prisma.lessonNote.updateMany({
+      where: {
+        id: lessonNoteId,
+        tenantId: ctx.tenantId,
+        teacherUserId: ctx.userId,
+        status: existing.status,
+      },
+      data,
+    });
+
+    if (updated.count !== 1) {
+      return jsonNoStore({ ok: false, error: "Conflict: lesson note changed. Refresh and try again." }, { status: 409 });
+    }
+
+    const fresh = await prisma.lessonNote.findFirst({
+      where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
+      select: LESSON_NOTE_SELECT,
+    });
+
+    if (!fresh) {
+      return jsonNoStore({ ok: false, error: "Failed to load updated lesson note." }, { status: 500 });
+    }
+
     return jsonNoStore(
       {
         ok: true,
         item: {
-          ...item,
-          lessonDate: toIso(item.lessonDate),
-          submittedAt: toIso(item.submittedAt),
-          reviewedAt: toIso(item.reviewedAt),
-          approvedAt: toIso(item.approvedAt),
-          rejectedAt: toIso(item.rejectedAt),
-          createdAt: toIso(item.createdAt),
-          updatedAt: toIso(item.updatedAt),
+          ...fresh,
+          lessonDate: toIso(fresh.lessonDate),
+          submittedAt: toIso(fresh.submittedAt),
+          reviewedAt: toIso(fresh.reviewedAt),
+          approvedAt: toIso(fresh.approvedAt),
+          rejectedAt: toIso(fresh.rejectedAt),
+          createdAt: toIso(fresh.createdAt),
+          updatedAt: toIso(fresh.updatedAt),
         },
       },
       { status: 200 }

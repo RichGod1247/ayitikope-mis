@@ -1,76 +1,136 @@
 // src/lib/sms.ts
 import { prisma } from "@/lib/prisma";
-import { sendViaHubtel, type BrandName } from "@/lib/sms/hubtel";
 
-export type SMSProvider = "MOCK" | "HUBTEL";
-
-export type SendParams = {
+type SendSmsArgs = {
   tenantId: string;
-  to: string;     // digits only, e.g. 23324xxxxxxx
-  body: string;
-  brand?: BrandName | string; // optional override
-  actorId?: string;
-  meta?: Record<string, any>;
+  actorId?: string | null;
+  to: string;
+  message: string;
+  from?: string | null;
+  template?: string | null;
+  payload?: any;
 };
 
-function getProvider(): SMSProvider {
-  const p = (process.env.SMS_PROVIDER ?? "MOCK").toUpperCase();
-  return p === "HUBTEL" ? "HUBTEL" : "MOCK";
+function normalizeGhanaPhone(raw: string): string | null {
+  const s = String(raw ?? "").trim().replace(/\s+/g, "");
+  if (!s) return null;
+
+  // Already international
+  if (s.startsWith("+")) return s;
+
+  // 233XXXXXXXXX or 233XXXXXXXX
+  if (s.startsWith("233") && s.length >= 12) return `+${s}`;
+
+  // 0XXXXXXXXX (10 digits)
+  if (s.startsWith("0") && s.length === 10) return `+233${s.slice(1)}`;
+
+  // fallback: return as-is (better than dropping)
+  return s;
 }
 
-/**
- * Production-grade rule:
- * - No hacks like tenantId.endsWith('fl')
- * - Resolve brand by tenant.slug (until you add tenant.settings.smsBrand)
- */
-async function resolveBrandForTenant(tenantId: string): Promise<BrandName> {
-  const t = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { slug: true },
-  });
+export async function sendSms(args: SendSmsArgs) {
+  const to = normalizeGhanaPhone(args.to);
+  const from = (args.from ?? process.env.HUBTEL_SENDER_ID ?? "EduLife OS").trim();
+  const body = String(args.message ?? "").trim();
 
-  const slug = (t?.slug ?? "").toLowerCase();
+  const baseLog = {
+    to: to ?? String(args.to ?? ""),
+    from,
+    body,
+    brand: "hubtel",
+    tenantId: args.tenantId,
+    actorId: args.actorId ?? null,
+  };
 
-  if (slug.includes("jhs")) return "AYITIKOPJHS";
-  if (slug.includes("prim")) return "AYITIKPRIM";
-  return "AYITIADMIN";
-}
-
-async function sendViaMock(params: SendParams) {
-  // In production, MOCK is unacceptable.
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("SMS_PROVIDER_MOCK_NOT_ALLOWED_IN_PRODUCTION");
-  }
-
-  // Optional audit (keep if your schema has it)
-  await prisma.sMSSendAudit.create({
-    data: {
-      tenantId: params.tenantId,
-      toPhone: params.to,
-    },
-  });
-
-  console.log("[SMS_MOCK]", {
-    tenantId: params.tenantId,
-    to: params.to,
-    body: params.body,
-  });
-}
-
-export async function sendSMS(params: SendParams) {
-  const provider = getProvider();
-
-  if (provider === "HUBTEL") {
-    const brand = params.brand ?? (await resolveBrandForTenant(params.tenantId));
-    return sendViaHubtel({
-      to: params.to,
-      body: params.body,
-      brand,
-      tenantId: params.tenantId,
-      actorId: params.actorId,
-      meta: params.meta,
+  // Missing essentials
+  if (!to || !body) {
+    await prisma.smsLog.create({
+      data: {
+        ...baseLog,
+        providerStatusDescription: "SKIPPED: invalid phone or empty message",
+      },
     });
+    return { ok: false, error: "Invalid phone or empty message" };
   }
 
-  return sendViaMock(params);
+  const clientId = process.env.HUBTEL_CLIENT_ID;
+  const clientSecret = process.env.HUBTEL_CLIENT_SECRET;
+
+  // If you already use Basic Auth in your own Hubtel plumbing, set these instead.
+  const basicUser = process.env.HUBTEL_BASIC_USER;
+  const basicPass = process.env.HUBTEL_BASIC_PASS;
+
+  if ((!clientId || !clientSecret) && (!basicUser || !basicPass)) {
+    await prisma.smsLog.create({
+      data: {
+        ...baseLog,
+        providerStatusDescription: "SKIPPED: missing Hubtel credentials",
+      },
+    });
+    return { ok: false, error: "Missing Hubtel credentials" };
+  }
+
+  try {
+    const url = new URL("https://api.hubtel.com/v1/messages/send");
+    // Query-param auth style (common in Hubtel examples)
+    if (clientId && clientSecret) {
+      url.searchParams.set("ClientId", clientId);
+      url.searchParams.set("ClientSecret", clientSecret);
+    }
+    url.searchParams.set("From", from);
+    url.searchParams.set("To", to);
+    url.searchParams.set("Content", body);
+
+    const headers: Record<string, string> = {};
+    // Optional Basic Auth path (if you use it)
+    if (basicUser && basicPass) {
+      const token = Buffer.from(`${basicUser}:${basicPass}`).toString("base64");
+      headers["Authorization"] = `Basic ${token}`;
+    }
+
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
+
+    const text = await res.text();
+    let json: any = null;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      // some providers return plain text
+    }
+
+    await prisma.smsLog.create({
+      data: {
+        ...baseLog,
+        providerStatus: res.status,
+        providerStatusDescription: res.ok ? "SENT" : "FAILED",
+        providerRaw: json ?? { raw: text },
+      },
+    });
+
+    // Optional audit row (template/payload)
+    if (args.template || args.payload) {
+      await prisma.sMSSendAudit.create({
+        data: {
+          tenantId: args.tenantId,
+          toPhone: to,
+          template: args.template ?? null,
+          payload: args.payload ?? null,
+        },
+      });
+    }
+
+    return { ok: res.ok, status: res.status, raw: json ?? text };
+  } catch (e: any) {
+    await prisma.smsLog.create({
+      data: {
+        ...baseLog,
+        providerStatusDescription: `ERROR: ${e?.message ?? "unknown"}`,
+      },
+    });
+    return { ok: false, error: e?.message ?? "unknown" };
+  }
 }

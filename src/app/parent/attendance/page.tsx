@@ -1,7 +1,7 @@
 // src/app/parent/attendance/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type Child = {
@@ -52,7 +52,23 @@ function formatPercent(v: number | null | undefined): string {
   return `${v.toFixed(1)}%`;
 }
 
-export default function ParentAttendancePage() {
+function ParentAttendanceSkeleton() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-emerald-50">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8 space-y-6">
+        <div className="h-7 w-56 rounded bg-slate-200 animate-pulse" />
+        <div className="h-24 rounded-2xl bg-white/90 border border-zinc-200 shadow-sm animate-pulse" />
+        <div className="h-44 rounded-2xl bg-white/90 border border-zinc-200 shadow-sm animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)] gap-4 md:gap-5">
+          <div className="h-80 rounded-2xl bg-white/90 border border-zinc-200 shadow-sm animate-pulse" />
+          <div className="h-80 rounded-2xl bg-emerald-50/80 border border-emerald-200 shadow-sm animate-pulse" />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function ParentAttendanceInner() {
   const searchParams = useSearchParams();
   const initialTenantId = searchParams.get("tenantId") || "";
 
@@ -88,7 +104,9 @@ export default function ParentAttendancePage() {
   const canLoadSummary = useMemo(
     () =>
       Boolean(
-        selectedStudentId && term.trim().length > 0 && academicYear.trim().length > 0
+        selectedStudentId &&
+          term.trim().length > 0 &&
+          academicYear.trim().length > 0
       ),
     [selectedStudentId, term, academicYear]
   );
@@ -105,15 +123,13 @@ export default function ParentAttendancePage() {
     setSummaryError("");
 
     try {
-      const url = new URL(
-        "/api/parent/children",
-        window.location.origin
-      );
+      const url = new URL("/api/parent/children", window.location.origin);
       url.searchParams.set("guardianPhone", guardianPhone.trim());
 
       const res = await fetch(url.toString(), {
         cache: "no-store",
       });
+
       const json = (await res.json().catch(() => ({}))) as ChildrenResponse;
 
       if (!res.ok || !json.ok) {
@@ -127,11 +143,12 @@ export default function ParentAttendancePage() {
 
       const list = Array.isArray(json.students) ? json.students : [];
       setChildren(list);
+
       if (list.length === 1) {
         setSelectedStudentId(list[0].id);
         // We do NOT auto-load summary yet – parent can press the button.
       }
-    } catch (err) {
+    } catch {
       setChildrenError(
         "Network or server error while looking up learners. Please try again."
       );
@@ -161,21 +178,19 @@ export default function ParentAttendancePage() {
       const res = await fetch(url.toString(), {
         cache: "no-store",
       });
+
       const json = (await res.json().catch(() => ({}))) as AttendanceResponse;
 
       if (!res.ok || !json.ok) {
         setSummaryError(
-          json.error ||
-            "Could not load attendance summary for this learner."
+          json.error || "Could not load attendance summary for this learner."
         );
         setSummary(null);
         return;
       }
 
       if (!json.summary) {
-        setSummaryError(
-          "No attendance summary was returned for this learner."
-        );
+        setSummaryError("No attendance summary was returned for this learner.");
         setSummary(null);
         return;
       }
@@ -186,7 +201,7 @@ export default function ParentAttendancePage() {
         academicYear: json.academicYear || academicYear,
         studentId: json.studentId || selectedStudentId,
       });
-    } catch (err) {
+    } catch {
       setSummaryError(
         "Network or server error while loading attendance summary. Please try again."
       );
@@ -203,17 +218,12 @@ export default function ParentAttendancePage() {
         {/* Header */}
         <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}
-            >
+            <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>
               EduLife OS · Parent · Attendance
             </span>
             {tenantId && (
               <span className="text-[11px] text-zinc-500">
-                Tenant demo:{" "}
-                <span className="font-mono text-[10px]">
-                  {tenantId}
-                </span>
+                Tenant demo: <span className="font-mono text-[10px]">{tenantId}</span>
               </span>
             )}
           </div>
@@ -225,17 +235,13 @@ export default function ParentAttendancePage() {
               </h1>
               <p className="text-sm md:text-base text-zinc-600 max-w-xl">
                 This page gives a{" "}
-                <span className="font-semibold">
-                  simple view of attendance
-                </span>{" "}
+                <span className="font-semibold">simple view of attendance</span>{" "}
                 for each child linked to your phone number in a chosen{" "}
                 <span className="font-semibold">term and year</span>.
               </p>
               <p className="text-[11px] md:text-xs text-zinc-500 max-w-xl">
                 As the full attendance engine grows, this will show{" "}
-                <span className="font-semibold">
-                  present, absent and late patterns
-                </span>{" "}
+                <span className="font-semibold">present, absent and late patterns</span>{" "}
                 so you can talk calmly with your child and the teacher.
               </p>
             </div>
@@ -252,10 +258,7 @@ export default function ParentAttendancePage() {
                 <li>2. Press “Find learners” to see all children.</li>
                 <li>
                   3. Select one child and press{" "}
-                  <span className="font-semibold">
-                    “Load attendance summary”
-                  </span>
-                  .
+                  <span className="font-semibold">“Load attendance summary”</span>.
                 </li>
               </ul>
             </div>
@@ -265,7 +268,6 @@ export default function ParentAttendancePage() {
         {/* Guardian filters */}
         <section className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-4 md:px-5 md:py-5 shadow-sm space-y-4">
           <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,0.8fr))]">
-            {/* Guardian phone */}
             <div className="flex flex-col gap-1">
               <label className="text-[11px] font-medium text-zinc-700">
                 Guardian / parent phone
@@ -282,11 +284,8 @@ export default function ParentAttendancePage() {
               </p>
             </div>
 
-            {/* Term */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-zinc-700">
-                Term
-              </label>
+              <label className="text-[11px] font-medium text-zinc-700">Term</label>
               <select
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
@@ -298,7 +297,6 @@ export default function ParentAttendancePage() {
               </select>
             </div>
 
-            {/* Academic year */}
             <div className="flex flex-col gap-1">
               <label className="text-[11px] font-medium text-zinc-700">
                 Academic year
@@ -323,6 +321,7 @@ export default function ParentAttendancePage() {
               >
                 {loadingChildren ? "Looking up learners…" : "Find learners"}
               </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -339,13 +338,12 @@ export default function ParentAttendancePage() {
                 Clear
               </button>
             </div>
+
             <div className="text-[11px] text-zinc-500 md:text-right">
               {children && (
                 <p>
                   Learners found:{" "}
-                  <span className="font-semibold">
-                    {children.length}
-                  </span>
+                  <span className="font-semibold">{children.length}</span>
                 </p>
               )}
             </div>
@@ -360,25 +358,27 @@ export default function ParentAttendancePage() {
 
         {/* Children list + summary */}
         <section className="grid grid-cols-1 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)] gap-4 md:gap-5">
-          {/* Children selector */}
           <div className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-4 md:px-5 md:py-5 shadow-sm space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm md:text-base font-semibold text-zinc-900">
                 Choose learner
               </h2>
             </div>
+
             {!children && (
               <p className="text-[11px] text-zinc-500">
                 Once you search using a phone number, each child linked to that
                 number will appear here.
               </p>
             )}
+
             {children && children.length === 0 && (
               <p className="text-[11px] text-zinc-500">
                 No learners were found for this phone number. The school may
                 need to confirm how the number was stored.
               </p>
             )}
+
             {children && children.length > 0 && (
               <div className="space-y-2">
                 {children.map((child) => {
@@ -407,12 +407,14 @@ export default function ParentAttendancePage() {
                           ID: {child.id.slice(0, 6)}…
                         </span>
                       </div>
+
                       <div className="mt-1 text-zinc-600">
                         Class:{" "}
                         <span className="font-medium">
                           {child.classroom?.name ?? "Not set"}
                         </span>
                       </div>
+
                       {child.guardianName && (
                         <div className="mt-0.5 text-zinc-500">
                           Guardian: {child.guardianName}
@@ -425,7 +427,6 @@ export default function ParentAttendancePage() {
             )}
           </div>
 
-          {/* Summary card */}
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 md:px-5 md:py-5 shadow-sm space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -467,10 +468,8 @@ export default function ParentAttendancePage() {
             {!summary && !summaryError && !loadingSummary && (
               <p className="text-[11px] text-emerald-900/90">
                 Once you choose a learner and press{" "}
-                <span className="font-semibold">
-                  “Load attendance summary”
-                </span>
-                , this box will show their attendance for the chosen term and
+                <span className="font-semibold">“Load attendance summary”</span>,
+                this box will show their attendance for the chosen term and
                 academic year.
               </p>
             )}
@@ -478,65 +477,20 @@ export default function ParentAttendancePage() {
             {summary && summaryMeta && (
               <div className="space-y-3">
                 <div className="text-[11px] text-emerald-900/90">
-                  Term:{" "}
-                  <span className="font-semibold">
-                    {summaryMeta.term}
-                  </span>{" "}
+                  Term: <span className="font-semibold">{summaryMeta.term}</span>{" "}
                   · Year:{" "}
-                  <span className="font-semibold">
-                    {summaryMeta.academicYear}
-                  </span>
+                  <span className="font-semibold">{summaryMeta.academicYear}</span>
                 </div>
+
                 <div className="grid grid-cols-2 gap-3 text-[11px] md:text-xs">
-                  <div className="rounded-xl bg-white px-3 py-2 border border-emerald-100">
-                    <div className="text-emerald-800/80">
-                      Total sessions
-                    </div>
-                    <div className="mt-1 text-lg font-semibold text-emerald-900">
-                      {summary.totalSessions}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white px-3 py-2 border border-emerald-100">
-                    <div className="text-emerald-800/80">
-                      Present marks
-                    </div>
-                    <div className="mt-1 text-lg font-semibold text-emerald-900">
-                      {summary.daysPresent}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white px-3 py-2 border border-emerald-100">
-                    <div className="text-emerald-800/80">
-                      Absent marks
-                    </div>
-                    <div className="mt-1 text-lg font-semibold text-emerald-900">
-                      {summary.daysAbsent}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white px-3 py-2 border border-emerald-100">
-                    <div className="text-emerald-800/80">
-                      Late marks
-                    </div>
-                    <div className="mt-1 text-lg font-semibold text-emerald-900">
-                      {summary.daysLate}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white px-3 py-2 border border-emerald-100">
-                    <div className="text-emerald-800/80">
-                      Excused
-                    </div>
-                    <div className="mt-1 text-lg font-semibold text-emerald-900">
-                      {summary.daysExcused}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-white px-3 py-2 border border-emerald-100">
-                    <div className="text-emerald-800/80">
-                      Attendance rate
-                    </div>
-                    <div className="mt-1 text-lg font-semibold text-emerald-900">
-                      {formatPercent(summary.attendanceRate)}
-                    </div>
-                  </div>
+                  <Stat label="Total sessions" value={String(summary.totalSessions)} />
+                  <Stat label="Present marks" value={String(summary.daysPresent)} />
+                  <Stat label="Absent marks" value={String(summary.daysAbsent)} />
+                  <Stat label="Late marks" value={String(summary.daysLate)} />
+                  <Stat label="Excused" value={String(summary.daysExcused)} />
+                  <Stat label="Attendance rate" value={formatPercent(summary.attendanceRate)} />
                 </div>
+
                 <p className="text-[11px] text-emerald-900/90 whitespace-pre-line">
                   {summary.note ||
                     "Attendance note is not available yet for this learner."}
@@ -549,12 +503,27 @@ export default function ParentAttendancePage() {
         <p className="text-[11px] text-zinc-500 max-w-3xl">
           Later, this page will connect directly to the real daily attendance
           engine and offer{" "}
-          <span className="font-semibold">
-            simple parent-friendly explanations
-          </span>{" "}
+          <span className="font-semibold">simple parent-friendly explanations</span>{" "}
           of what the numbers mean for the learner&apos;s future.
         </p>
       </div>
     </main>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-white px-3 py-2 border border-emerald-100">
+      <div className="text-emerald-800/80">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-emerald-900">{value}</div>
+    </div>
+  );
+}
+
+export default function ParentAttendancePage() {
+  return (
+    <Suspense fallback={<ParentAttendanceSkeleton />}>
+      <ParentAttendanceInner />
+    </Suspense>
   );
 }

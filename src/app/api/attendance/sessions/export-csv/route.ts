@@ -1,112 +1,126 @@
 // src/app/api/attendance/sessions/export-csv/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 
-// Helper: ensure YYYY-MM-DD
-function toISODateOnly(input?: string): string | null {
-  if (!input) return null
-  const d = new Date(input)
-  if (isNaN(d.getTime())) return null
-  // Normalize to date-only in ISO (UTC)
-  return d.toISOString().slice(0, 10)
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+function isISODateOnly(s: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s);
+}
+
+function dateOnlyUTCFromISO(dateISO: string) {
+  return new Date(Date.UTC(Number(dateISO.slice(0, 4)), Number(dateISO.slice(5, 7)) - 1, Number(dateISO.slice(8, 10))));
 }
 
 // GET /api/attendance/sessions/export-csv?tenantId=...&classroomId=...&date=YYYY-MM-DD
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const tenantId = String(searchParams.get('tenantId') || '').trim()
-    const classroomId = String(searchParams.get('classroomId') || '').trim()
-    const dateRaw = String(searchParams.get('date') || '').trim()
-    const date = toISODateOnly(dateRaw) ?? new Date().toISOString().slice(0, 10) // default: today
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["TEACHER", "HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
 
-    if (!tenantId || !classroomId) {
-      return new Response('tenantId and classroomId are required', { status: 400 })
-    }
+  const { searchParams } = new URL(req.url);
 
-    // 1) Find the session for that (tenant, class, date)
-    // Using raw query to match date (ignoring time) reliably.
-    const sessionRows = await prisma.$queryRaw<
-      Array<{ id: string; isClosed: boolean | null; certifiedAt: Date | null }>
-    >`
-      SELECT s."id", s."isClosed", s."certifiedAt"
-      FROM "edulife_os"."AttendanceSession" s
-      WHERE s."tenantId" = ${tenantId}
-        AND s."classroomId" = ${classroomId}
-        AND s."date"::date = ${date}::date
-      LIMIT 1
-    `
-    if (!sessionRows.length) {
-      return new Response('Session not found for given tenantId/classroomId/date', { status: 404 })
-    }
-    const session = sessionRows[0]
-
-    // 2) Pull class label & tenant name for header
-    const metaRows = await prisma.$queryRaw<
-      Array<{ tenantName: string; classGrade: string | null; classArm: string | null }>
-    >`
-      SELECT t."name" AS "tenantName", c."grade" AS "classGrade", c."arm" AS "classArm"
-      FROM "edulife_os"."Tenant" t
-      JOIN "edulife_os"."Classroom" c ON c."tenantId" = t."id"
-      WHERE t."id" = ${tenantId} AND c."id" = ${classroomId}
-      LIMIT 1
-    `
-    const tenantName = metaRows[0]?.tenantName ?? ''
-    const classGrade = metaRows[0]?.classGrade ?? ''
-    const classArm = metaRows[0]?.classArm ?? ''
-    const classLabel = classArm ? `${classGrade}${classArm}` : classGrade
-
-    // 3) Students + marks (LEFT JOIN so unmarked show empty)
-    const rows = await prisma.$queryRaw<
-      Array<{ studentId: string; lastName: string; firstName: string; status: string | null; note: string | null }>
-    >`
-      SELECT st."id"            AS "studentId",
-             st."lastName"      AS "lastName",
-             st."firstName"     AS "firstName",
-             m."status"         AS "status",
-             m."note"           AS "note"
-      FROM "edulife_os"."Student" st
-      LEFT JOIN "edulife_os"."AttendanceMark" m
-        ON m."studentId" = st."id" AND m."sessionId" = ${session.id}
-      WHERE st."classroomId" = ${classroomId}
-      ORDER BY st."lastName" ASC, st."firstName" ASC
-    `
-
-    // 4) Build CSV (simple, Excel-friendly)
-    const esc = (v: any) => {
-      const s = (v ?? '').toString()
-      // double quotes doubled for CSV safety
-      const needsQuotes = /[",\n]/.test(s)
-      return needsQuotes ? `"${s.replace(/"/g, '""')}"` : s
-    }
-
-    const headerLines = [
-      `School,${esc(tenantName)}`,
-      `Class,${esc(classLabel)}`,
-      `Date,${esc(date)}`,
-      `Status,${session.isClosed ? (session.certifiedAt ? 'CLOSED & CERTIFIED' : 'CLOSED') : 'OPEN'}`,
-      ``,
-    ]
-
-    const tableHeader = ['StudentID', 'LastName', 'FirstName', 'Status', 'Note'].map(esc).join(',')
-    const tableRows = rows.map(r =>
-      [r.studentId, r.lastName, r.firstName, r.status ?? '', r.note ?? ''].map(esc).join(',')
-    )
-
-    const csv = [...headerLines, tableHeader, ...tableRows].join('\r\n')
-
-    const filename = `attendance_${classLabel || 'class'}_${date}.csv`.replace(/\s+/g, '_')
-
-    return new Response(csv, {
-      status: 200,
-      headers: {
-        'content-type': 'text/csv; charset=utf-8',
-        'content-disposition': `attachment; filename="${filename}"`,
-        'cache-control': 'no-store',
-      },
-    })
-  } catch (err: any) {
-    console.error('export-csv error:', err)
-    return new Response('Failed to export CSV', { status: 500 })
+  const tenantIdParam = String(searchParams.get("tenantId") || "").trim(); // back-compat only
+  if (tenantIdParam && tenantIdParam !== auth.ctx.tenantId) {
+    return json(403, { ok: false, error: "FORBIDDEN_TENANT_MISMATCH" });
   }
+
+  const classroomId = String(searchParams.get("classroomId") || "").trim();
+  const date = String(searchParams.get("date") || "").trim() || new Date().toISOString().slice(0, 10);
+
+  if (!classroomId) return json(400, { ok: false, error: "classroomId is required" });
+  if (!isISODateOnly(date)) return json(400, { ok: false, error: "date must be YYYY-MM-DD" });
+
+  // Verify classroom exists in tenant
+  const classroom = await prisma.classroom.findFirst({
+    where: { id: classroomId, tenantId: auth.ctx.tenantId },
+    select: { id: true, name: true, grade: true, arm: true },
+  });
+  if (!classroom) return json(404, { ok: false, error: "CLASSROOM_NOT_FOUND" });
+
+  // Teacher access gate
+  await assertCanAccessClassroom({ userId: auth.ctx.userId, tenantId: auth.ctx.tenantId, classroomId });
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: auth.ctx.tenantId },
+    select: { name: true },
+  });
+
+  const session = await prisma.attendanceSession.findFirst({
+    where: { tenantId: auth.ctx.tenantId, classroomId, date: dateOnlyUTCFromISO(date) },
+    select: { id: true, isClosed: true, certifiedAt: true },
+  });
+
+  if (!session) return json(404, { ok: false, error: "SESSION_NOT_FOUND" });
+
+  const students = await prisma.student.findMany({
+    where: { tenantId: auth.ctx.tenantId, classroomId },
+    select: { id: true, lastName: true, firstName: true },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  });
+
+  const marks = await prisma.attendanceMark.findMany({
+    where: { sessionId: session.id },
+    select: { studentId: true, status: true, note: true },
+  });
+
+  const markByStudent = new Map<string, { status: string; note: string }>();
+  for (const m of marks as any[]) {
+    markByStudent.set(String(m.studentId), {
+      status: m.status ? String(m.status) : "",
+      note: m.note ? String(m.note) : "",
+    });
+  }
+
+  const tenantName = tenant?.name ?? "";
+  const baseLabel = String(classroom.grade ?? classroom.name ?? "").trim();
+  const arm = String(classroom.arm ?? "").trim();
+  const classLabel = baseLabel ? (arm ? `${baseLabel} ${arm}` : baseLabel) : arm;
+
+  const statusLabel = session.certifiedAt ? "CLOSED & CERTIFIED" : session.isClosed ? "CLOSED" : "OPEN";
+
+  const esc = (v: any) => {
+    const s = (v ?? "").toString();
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const headerLines = [
+    `School,${esc(tenantName)}`,
+    `Class,${esc(classLabel)}`,
+    `Date,${esc(date)}`,
+    `Status,${esc(statusLabel)}`,
+    ``,
+  ];
+
+  const tableHeader = ["StudentID", "LastName", "FirstName", "Status", "Note"].map(esc).join(",");
+
+  const tableRows = students.map((st) => {
+    const mk = markByStudent.get(st.id);
+    return [st.id, st.lastName ?? "", st.firstName ?? "", mk?.status ?? "", mk?.note ?? ""].map(esc).join(",");
+  });
+
+  const csv = [...headerLines, tableHeader, ...tableRows].join("\r\n");
+  const filename = `attendance_${(classLabel || "class").replace(/\s+/g, "_")}_${date}.csv`;
+
+  return new Response(csv, {
+    status: 200,
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="${filename}"`,
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
 }

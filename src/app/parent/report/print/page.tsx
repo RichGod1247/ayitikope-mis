@@ -1,9 +1,12 @@
+// src/app/parent/report/print/page.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-// --- Types (copied/adapted from parent/report/page.tsx) ---
+/* -----------------------------
+ * Types
+ * ----------------------------*/
 
 type SubjectSummary = {
   subject: string;
@@ -102,7 +105,9 @@ type ParentTermReportResponse = {
   healthSummary: HealthSummary;
 };
 
-// --- Helpers (same behaviour as in parent/report/page.tsx) ---
+/* -----------------------------
+ * Helpers
+ * ----------------------------*/
 
 function formatMoneyFromPesewas(value: number | null | undefined): string {
   if (value == null) return "0.00";
@@ -125,7 +130,9 @@ function percentageDisplay(value: number | null | undefined): string {
   return `${value.toFixed(1)}%`;
 }
 
-// --- BECE Report Card (same visual as parent portal) ---
+/* -----------------------------
+ * Report Card UI
+ * ----------------------------*/
 
 function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
   const { student, classroom, termSummary } = report;
@@ -286,14 +293,10 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                   subjects.map((subj, idx) => {
                     const rowBg = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
                     const total =
-                      subj.totalScore != null
-                        ? subj.totalScore
-                        : subj.percentage != null
-                        ? subj.percentage
-                        : null;
+                      subj.totalScore != null ? subj.totalScore : null;
 
                     return (
-                      <tr key={subj.subject} className={rowBg}>
+                      <tr key={`${subj.subject}-${idx}`} className={rowBg}>
                         <td className="border-b border-slate-100 px-2 py-1.5 text-left font-medium text-slate-800">
                           {subj.subject}
                         </td>
@@ -306,9 +309,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                         <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
                           {total != null ? total : "—"}
                           {subj.maxScore != null ? (
-                            <span className="text-[9px] text-slate-400">
-                              {` / ${subj.maxScore}`}
-                            </span>
+                            <span className="text-[9px] text-slate-400">{` / ${subj.maxScore}`}</span>
                           ) : null}
                         </td>
                         <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
@@ -334,18 +335,16 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
 
         {/* RIGHT: Attendance, fees, health, behaviour */}
         <div className="space-y-3">
-          {/* Attendance + Fees + Health */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
               Attendance, Fees &amp; Health Summary
             </h3>
+
             <div className="grid gap-2 text-[11px] lg:grid-cols-1">
               {/* Attendance */}
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">
-                    Attendance
-                  </span>
+                  <span className="font-semibold text-slate-800">Attendance</span>
                 </div>
                 {attendance ? (
                   <div className="grid grid-cols-2 gap-1 text-slate-700">
@@ -382,21 +381,15 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                   <div className="grid grid-cols-2 gap-1 text-slate-700">
                     <div>
                       <span className="font-semibold">Total Billed:</span>{" "}
-                      <span>
-                        GHS {formatMoneyFromPesewas(fees.totalBilledPesewas)}
-                      </span>
+                      <span>GHS {formatMoneyFromPesewas(fees.totalBilledPesewas)}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Total Paid:</span>{" "}
-                      <span>
-                        GHS {formatMoneyFromPesewas(fees.totalPaidPesewas)}
-                      </span>
+                      <span>GHS {formatMoneyFromPesewas(fees.totalPaidPesewas)}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Waived:</span>{" "}
-                      <span>
-                        GHS {formatMoneyFromPesewas(fees.totalWaivedPesewas)}
-                      </span>
+                      <span>GHS {formatMoneyFromPesewas(fees.totalWaivedPesewas)}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Outstanding:</span>{" "}
@@ -470,6 +463,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                     "Teacher’s notes on conduct, attitude to work, and interest in school activities will appear here."}
                 </p>
               </div>
+
               <div className="grid gap-2 md:grid-cols-2">
                 <div className="rounded-md border border-slate-200 bg-white p-2.5">
                   <div className="mb-1 font-semibold text-slate-800">
@@ -483,6 +477,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                     Signature: ______________________
                   </div>
                 </div>
+
                 <div className="rounded-md border border-slate-200 bg-white p-2.5">
                   <div className="mb-1 font-semibold text-slate-800">
                     Headteacher’s Remark
@@ -496,6 +491,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                   </div>
                 </div>
               </div>
+
               <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-slate-800">
@@ -516,10 +512,33 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
   );
 }
 
-// --- Page component ---
+/* -----------------------------
+ * Suspense wrapper + client logic
+ * ----------------------------*/
 
-const ParentReportPrintPage: React.FC = () => {
+function PrintShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-slate-100 py-4 print:bg-white print:py-0">
+      <div className="mx-auto max-w-4xl px-3 pb-4 print:max-w-full print:px-0">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PrintFallback() {
+  return (
+    <PrintShell>
+      <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
+        Loading report for printing…
+      </div>
+    </PrintShell>
+  );
+}
+
+function ParentReportPrintClient() {
   const searchParams = useSearchParams();
+  const qp = searchParams.toString(); // stable dependency
 
   const [report, setReport] = useState<ParentTermReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -527,20 +546,26 @@ const ParentReportPrintPage: React.FC = () => {
 
   // Load report from API using query params
   useEffect(() => {
-    const tenantId = searchParams.get("tenantId") || "";
-    const studentId = searchParams.get("studentId") || "";
-    const term = searchParams.get("term") || "";
-    const academicYear = searchParams.get("academicYear") || "";
+    const sp = new URLSearchParams(qp);
+
+    const tenantId = sp.get("tenantId") || "";
+    const studentId = sp.get("studentId") || "";
+    const term = sp.get("term") || "";
+    const academicYear = sp.get("academicYear") || "";
 
     if (!tenantId || !studentId || !term || !academicYear) {
-      setError("Missing report parameters. Please open this page from the parent portal.");
+      setError(
+        "Missing report parameters. Please open this page from the parent portal."
+      );
       setLoading(false);
+      setReport(null);
       return;
     }
 
     const load = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const params = new URLSearchParams({
           tenantId,
@@ -548,35 +573,21 @@ const ParentReportPrintPage: React.FC = () => {
           term,
           academicYear,
         });
+
         const url = `/api/parent/report/term?${params.toString()}`;
-        const res = await fetch(url);
+        const res = await fetch(url, { cache: "no-store" });
 
-        const text = await res.text();
-        if (!res.ok) {
-          console.error(
-            "[ParentReportPrint] HTTP error:",
-            res.status,
-            text
-          );
+        const json = (await res.json().catch(() => null)) as
+          | ParentTermReportResponse
+          | null;
+
+        if (!res.ok || !json?.ok) {
           setError("Failed to load term report.");
           setReport(null);
           return;
         }
 
-        let data: ParentTermReportResponse | null = null;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          data = null;
-        }
-
-        if (!data?.ok) {
-          setError("Failed to load term report.");
-          setReport(null);
-          return;
-        }
-
-        setReport(data);
+        setReport(json);
       } catch (err) {
         console.error("[ParentReportPrint] error loading report", err);
         setError("Network error loading term report.");
@@ -587,60 +598,63 @@ const ParentReportPrintPage: React.FC = () => {
     };
 
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [qp]);
 
   // Auto-print when report is ready
   useEffect(() => {
     if (!loading && report && typeof window !== "undefined") {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 400);
+      const timer = setTimeout(() => window.print(), 400);
       return () => clearTimeout(timer);
     }
+    return;
   }, [loading, report]);
 
   return (
-    <div className="min-h-screen bg-slate-100 py-4 print:bg-white print:py-0">
-      <div className="mx-auto max-w-4xl px-3 pb-4 print:max-w-full print:px-0">
-        {/* Top bar only visible on screen, not on printed paper */}
-        <div className="mb-3 flex items-center justify-between gap-2 text-xs text-slate-600 print:hidden">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-              EduLife OS • Parent Report
-            </div>
-            <div className="text-[11px] text-slate-600">
-              This view is optimised for A4 printing. Use your browser&apos;s print dialog.
-            </div>
+    <PrintShell>
+      {/* Top bar only visible on screen, not on printed paper */}
+      <div className="mb-3 flex items-center justify-between gap-2 text-xs text-slate-600 print:hidden">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            EduLife OS • Parent Report
           </div>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            disabled={loading || !!error || !report}
-            className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Print now
-          </button>
+          <div className="text-[11px] text-slate-600">
+            This view is optimised for A4 printing. Use your browser&apos;s print
+            dialog.
+          </div>
         </div>
-
-        {loading ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
-            Loading report for printing…
-          </div>
-        ) : error ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-6 text-center text-[11px] text-rose-700">
-            {error}
-          </div>
-        ) : !report ? (
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
-            No report data available to print.
-          </div>
-        ) : (
-          <BeceReportCard report={report} />
-        )}
+        <button
+          type="button"
+          onClick={() => window.print()}
+          disabled={loading || !!error || !report}
+          className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Print now
+        </button>
       </div>
-    </div>
-  );
-};
 
-export default ParentReportPrintPage;
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
+          Loading report for printing…
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-6 text-center text-[11px] text-rose-700">
+          {error}
+        </div>
+      ) : !report ? (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
+          No report data available to print.
+        </div>
+      ) : (
+        <BeceReportCard report={report} />
+      )}
+    </PrintShell>
+  );
+}
+
+export default function ParentReportPrintPage() {
+  return (
+    <Suspense fallback={<PrintFallback />}>
+      <ParentReportPrintClient />
+    </Suspense>
+  );
+}

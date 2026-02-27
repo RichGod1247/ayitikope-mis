@@ -1,8 +1,10 @@
+// src/components/SiteChrome.tsx
 "use client";
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const HIDE_PREFIXES = [
   "/app",
@@ -15,11 +17,11 @@ const HIDE_PREFIXES = [
   "/head-portal",
   "/parent",
   "/parent-portal",
+  "/parents", // include parents area too
   "/student",
   "/student-portal",
   "/smc-pta-portal",
   "/debug",
-  "/attendance-test",
 ];
 
 function shouldHideChrome(pathname: string) {
@@ -27,9 +29,7 @@ function shouldHideChrome(pathname: string) {
   if (pathname.includes("/print")) return true;
 
   // Hide on app/portal routes
-  return HIDE_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(p + "/")
-  );
+  return HIDE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
 export default function SiteChrome({ children }: { children: ReactNode }) {
@@ -43,6 +43,7 @@ export default function SiteChrome({ children }: { children: ReactNode }) {
     <>
       <Header />
       {children}
+      <Footer />
     </>
   );
 }

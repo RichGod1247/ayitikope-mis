@@ -1,103 +1,176 @@
 // src/app/parent/login/page.tsx
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type RequestState = "idle" | "loading" | "success" | "error";
 type VerifyState = "idle" | "loading" | "success" | "error";
 
-const DEFAULT_TENANT_ID = "cmhhnghn00008vcpgp3fl07fl";
-const DEFAULT_GUARDIAN_PHONE = "0240000000";
+type SchoolItem = {
+  id: string; // internal tenantId (never shown)
+  name: string;
+  district: string | null;
+  circuit: string | null;
+  region: string | null;
+  gpsAddress: string | null;
+  schoolCode: string;
+  emisCode: string | null;
+};
 
-const ParentLoginPage: React.FC = () => {
+function safeInternalPath(v: string | null | undefined, fallback: string) {
+  const s = String(v ?? "").trim();
+  if (!s) return fallback;
+  if (!s.startsWith("/")) return fallback;
+  if (s.startsWith("//")) return fallback;
+  if (s.includes("://")) return fallback;
+  return s;
+}
+
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function schoolSubtitle(s: SchoolItem) {
+  const parts = [s.district, s.circuit, s.region].filter(Boolean);
+  return parts.length ? parts.join(" • ") : s.gpsAddress || "";
+}
+
+function fmtCountdown(secs: number) {
+  const s = Math.max(0, Math.trunc(secs));
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+}
+
+export default function ParentLoginPage() {
   const router = useRouter();
+  const sp = useSearchParams();
+  const nextPath = useMemo(() => safeInternalPath(sp.get("next"), "/parent-portal"), [sp]);
 
-  // Step 1: request OTP
-  const [tenantId, setTenantId] = useState<string>(DEFAULT_TENANT_ID);
-  const [guardianPhone, setGuardianPhone] =
-    useState<string>(DEFAULT_GUARDIAN_PHONE);
-  const [requestState, setRequestState] =
-    useState<RequestState>("idle");
-  const [requestError, setRequestError] = useState<string | null>(
-    null
-  );
+  // School search + selection
+  const [schoolQuery, setSchoolQuery] = useState("");
+  const [schools, setSchools] = useState<SchoolItem[]>([]);
+  const [schoolLoading, setSchoolLoading] = useState(false);
+  const [schoolErr, setSchoolErr] = useState<string | null>(null);
+  const [selectedSchool, setSelectedSchool] = useState<SchoolItem | null>(null);
+
+  // OTP
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [requestState, setRequestState] = useState<RequestState>("idle");
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [debugCode, setDebugCode] = useState<string | null>(null);
-
-  // From OTP request
   const [otpToken, setOtpToken] = useState<string | null>(null);
 
-  // Step 2: verify OTP
-  const [code, setCode] = useState<string>("");
-  const [verifyState, setVerifyState] =
-    useState<VerifyState>("idle");
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
+
+  const [code, setCode] = useState("");
+  const [verifyState, setVerifyState] = useState<VerifyState>("idle");
   const [verifyError, setVerifyError] = useState<string | null>(null);
+
+  const debounceRef = useRef<number | null>(null);
+
+  // countdown tick
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const t = window.setInterval(() => {
+      setCooldownSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [cooldownSeconds]);
+
+  useEffect(() => {
+    const q = clean(schoolQuery);
+    setSchoolErr(null);
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    if (q.length < 2) {
+      setSchools([]);
+      setSchoolLoading(false);
+      return;
+    }
+
+    debounceRef.current = window.setTimeout(async () => {
+      try {
+        setSchoolLoading(true);
+        const res = await fetch(`/api/public/schools/search?q=${encodeURIComponent(q)}`, { cache: "no-store" });
+        const json = (await res.json().catch(() => null)) as any;
+
+        if (!res.ok || !json?.ok) {
+          setSchools([]);
+          setSchoolErr(json?.error || `Failed to load schools (HTTP ${res.status}).`);
+          return;
+        }
+
+        setSchools(Array.isArray(json.items) ? (json.items as SchoolItem[]) : []);
+      } catch (e) {
+        console.error("[PARENT_SCHOOL_SEARCH_ERROR]", e);
+        setSchools([]);
+        setSchoolErr("Network error while searching schools. Try again.");
+      } finally {
+        setSchoolLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [schoolQuery]);
 
   async function handleRequestOtp(e: React.FormEvent) {
     e.preventDefault();
+
     setRequestError(null);
     setDebugCode(null);
-    setOtpToken(null);
     setVerifyError(null);
     setVerifyState("idle");
 
-    if (!tenantId.trim() || !guardianPhone.trim()) {
-      setRequestError(
-        "Please enter your school tenant ID and phone number."
-      );
+    const phone = guardianPhone.trim();
+
+    if (!selectedSchool) {
+      setRequestError("Select your school first.");
+      return;
+    }
+    if (!phone) {
+      setRequestError("Enter your phone number.");
+      return;
+    }
+
+    if (cooldownSeconds > 0) {
+      setRequestError(`Please wait ${fmtCountdown(cooldownSeconds)} before requesting again.`);
       return;
     }
 
     try {
       setRequestState("loading");
-      const body = {
-        tenantId: tenantId.trim(),
-        guardianPhone: guardianPhone.trim(),
-      };
 
       const res = await fetch("/api/parent/otp/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        credentials: "include",
+        body: JSON.stringify({ schoolId: selectedSchool.id, guardianPhone: phone }),
       });
 
-      const text = await res.text();
-      let json: any;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        console.error(
-          "[ParentLoginPage] Failed to parse OTP request JSON:",
-          text
-        );
+      const json: any = await res.json().catch(() => ({}));
+
+      if (!res.ok || !json?.ok) {
         setRequestState("error");
-        setRequestError(
-          "Server returned an invalid response. Please try again."
-        );
+        setRequestError(json?.error || `Failed to request OTP (HTTP ${res.status}).`);
         return;
       }
 
-      if (!res.ok || !json.ok) {
-        const msg =
-          (json && json.error) ||
-          `Failed to request OTP. HTTP ${res.status}.`;
-        console.error("[ParentLoginPage] OTP request error:", msg);
-        setRequestState("error");
-        setRequestError(String(msg));
-        return;
-      }
+      // ✅ If server returns a token, update it. If not, keep the old one (prevents token-loss).
+      if (json.token) setOtpToken(String(json.token));
+      setDebugCode(json?.debugCode ? String(json.debugCode) : null);
 
-      // Expected shape:
-      // { ok: true, token: "...", validForMinutes: 10, debugCode?: "123456" }
-      setOtpToken(json.token ?? null);
-      setDebugCode(json.debugCode ?? null);
+      const cd = Number(json.cooldownSecondsRemaining ?? 0);
+      if (Number.isFinite(cd) && cd > 0) setCooldownSeconds(Math.trunc(cd));
+
       setRequestState("success");
     } catch (err) {
-      console.error("[ParentLoginPage] OTP request exception:", err);
+      console.error("[PARENT_LOGIN_REQUEST_OTP_ERROR]", err);
       setRequestState("error");
-      setRequestError(
-        "Something went wrong while requesting your OTP. Please try again."
-      );
+      setRequestError("Network/server error while requesting OTP. Try again.");
     }
   }
 
@@ -105,243 +178,220 @@ const ParentLoginPage: React.FC = () => {
     e.preventDefault();
     setVerifyError(null);
 
-    if (!tenantId.trim() || !guardianPhone.trim()) {
-      setVerifyError(
-        "Tenant ID and phone number are required to verify the OTP."
-      );
+    const tok = String(otpToken ?? "").trim();
+    const c = code.trim();
+
+    if (!tok) {
+      setVerifyError("Request a code first.");
       return;
     }
-
-    if (!otpToken) {
-      setVerifyError(
-        "No OTP token found. Please request a code first."
-      );
-      return;
-    }
-
-    if (!code.trim()) {
-      setVerifyError("Please enter the code you received.");
+    if (!c) {
+      setVerifyError("Enter the 6-digit code.");
       return;
     }
 
     try {
       setVerifyState("loading");
 
-      const body = {
-        guardianPhone: guardianPhone.trim(),
-        code: code.trim(),
-        token: otpToken,
-      };
-
       const res = await fetch("/api/parent/otp/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        credentials: "include",
+        body: JSON.stringify({ token: tok, code: c }),
       });
 
-      const text = await res.text();
-      let json: any;
-      try {
-        json = JSON.parse(text);
-      } catch {
-        console.error(
-          "[ParentLoginPage] Failed to parse OTP verify JSON:",
-          text
-        );
+      const json: any = await res.json().catch(() => ({}));
+
+      if (!res.ok || !json?.ok) {
         setVerifyState("error");
-        setVerifyError(
-          "Server returned an invalid response. Please try again."
-        );
+        setVerifyError(json?.error || `Failed to verify OTP (HTTP ${res.status}).`);
         return;
       }
 
-      if (!res.ok || !json.ok) {
-        const msg =
-          (json && json.error) ||
-          `Failed to verify OTP. HTTP ${res.status}.`;
-        console.error("[ParentLoginPage] OTP verify error:", msg);
-        setVerifyState("error");
-        setVerifyError(String(msg));
-        return;
-      }
-
-      // On success, redirect parent into /parent with prefilled tenant + phone
       setVerifyState("success");
-
-      const params = new URLSearchParams({
-        tenantId: tenantId.trim(),
-        guardianPhone: guardianPhone.trim(),
-      });
-
-      router.push(`/parent?${params.toString()}`);
+      router.replace(nextPath);
     } catch (err) {
-      console.error("[ParentLoginPage] OTP verify exception:", err);
+      console.error("[PARENT_LOGIN_VERIFY_OTP_ERROR]", err);
       setVerifyState("error");
-      setVerifyError(
-        "Something went wrong while verifying your code. Please try again."
-      );
+      setVerifyError("Network/server error while verifying. Try again.");
     }
   }
 
-  const hasRequestedSuccessfully = requestState === "success";
+  const requested = requestState === "success";
+  const sendDisabled = requestState === "loading" || !selectedSchool || cooldownSeconds > 0;
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-md px-4 py-6 sm:py-8">
-        {/* Header */}
-        <header className="mb-6 space-y-2">
-          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
-            Parent login (OTP)
-          </h1>
+      <div className="mx-auto max-w-md px-4 py-6 sm:py-10 space-y-6">
+        <header className="space-y-2">
+          <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-800">
+            EduLife OS · Parent Portal
+          </div>
+          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Parent login</h1>
           <p className="text-sm text-slate-600">
-            Enter your phone number and we&apos;ll send you a one-time
-            code (OTP). Use that code to access your child&apos;s
-            EduLife OS information without a password.
+            Choose your school, enter your phone number, and we&apos;ll send a one-time code.
           </p>
         </header>
 
-        {/* Step 1: Request OTP */}
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm text-xs sm:text-sm">
-          <h2 className="text-sm font-semibold text-slate-900">
-            Step 1 – Request code
-          </h2>
-          <p className="mt-1 text-[11px] text-slate-500">
-            Use the same phone number the school has on record for you.
-          </p>
+        {/* School selection */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+          <h2 className="text-sm font-semibold text-slate-900">Step 1 — Choose your school</h2>
 
-          {requestError && (
+          {selectedSchool ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+              <div className="text-sm font-semibold text-emerald-900">{selectedSchool.name}</div>
+              <div className="text-[11px] text-emerald-800/90">{schoolSubtitle(selectedSchool) || "—"}</div>
+              <button
+                type="button"
+                onClick={() => setSelectedSchool(null)}
+                className="mt-2 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-[11px] font-medium text-emerald-900 hover:bg-emerald-50"
+              >
+                Change school
+              </button>
+            </div>
+          ) : (
+            <>
+              {schoolErr ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
+                  {schoolErr}
+                </div>
+              ) : null}
+
+              <div className="space-y-1">
+                <label className="block text-[11px] font-medium text-slate-700">Search school name</label>
+                <input
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
+                  value={schoolQuery}
+                  onChange={(e) => setSchoolQuery(e.target.value)}
+                  placeholder="e.g. Ayitikope"
+                  autoComplete="off"
+                />
+                <p className="text-[11px] text-slate-500">
+                  Type at least 2 letters. If you can’t find your school, contact the headteacher/ICT lead.
+                </p>
+              </div>
+
+              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200">
+                {schoolLoading ? (
+                  <div className="p-3 text-[11px] text-slate-600">Searching…</div>
+                ) : schools.length === 0 ? (
+                  <div className="p-3 text-[11px] text-slate-600">No schools found yet.</div>
+                ) : (
+                  <ul className="divide-y">
+                    {schools.map((s) => (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSchool(s);
+                            setSchools([]);
+                            setSchoolQuery(s.name);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50"
+                        >
+                          <div className="text-sm font-semibold text-slate-900">{s.name}</div>
+                          <div className="text-[11px] text-slate-500">{schoolSubtitle(s) || "—"}</div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* OTP request */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">Step 2 — Request code</h2>
+
+          {requestError ? (
             <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
               {requestError}
             </div>
-          )}
+          ) : null}
+
+          {requestState === "success" ? (
+            <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-800">
+              Code sent. Enter it below to continue.
+              {cooldownSeconds > 0 ? (
+                <div className="mt-1 text-[10px] text-emerald-700">
+                  You can resend in <span className="font-mono">{fmtCountdown(cooldownSeconds)}</span>.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <form onSubmit={handleRequestOtp} className="mt-3 space-y-3">
             <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-slate-700">
-                Tenant ID
-              </label>
+              <label className="block text-[11px] font-medium text-slate-700">Your phone number</label>
               <input
-                className="w-full rounded border border-slate-300 px-2 py-1 text-xs font-mono"
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-                placeholder="School tenant ID"
-              />
-              <p className="text-[11px] text-slate-500">
-                Demo:{" "}
-                <span className="font-mono">
-                  {DEFAULT_TENANT_ID}
-                </span>
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-slate-700">
-                Your phone number
-              </label>
-              <input
-                className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"
                 value={guardianPhone}
                 onChange={(e) => setGuardianPhone(e.target.value)}
-                placeholder="e.g. 0240000000"
+                placeholder="e.g. 0553690424"
+                autoComplete="tel"
+                inputMode="tel"
               />
-              <p className="text-[11px] text-slate-500">
-                Must match the phone number stored in the school&apos;s
-                records.
-              </p>
+              <p className="text-[11px] text-slate-500">Use the same number stored in the school records.</p>
             </div>
 
             <button
               type="submit"
-              disabled={requestState === "loading"}
-              className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={sendDisabled}
+              className="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
             >
               {requestState === "loading"
-                ? "Requesting code..."
-                : "Send me a code"}
+                ? "Requesting…"
+                : cooldownSeconds > 0
+                ? `Resend in ${fmtCountdown(cooldownSeconds)}`
+                : "Send code"}
             </button>
 
-            {requestState === "success" && (
-              <p className="text-[11px] text-emerald-700">
-                If this phone number is valid, an SMS code has been
-                sent. Enter it below to continue.
-              </p>
-            )}
-
-            {/* Developer / testing helper: show debug code if returned */}
-            {debugCode && (
-              <div className="mt-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
-                <div className="font-semibold">
-                  Developer testing note (will be hidden in production)
-                </div>
-                <div className="mt-1">
-                  Debug code from API:{" "}
-                  <span className="font-mono font-semibold">
-                    {debugCode}
-                  </span>
-                </div>
+            {debugCode ? (
+              <div className="mt-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[11px] text-slate-700">
+                <div className="font-semibold">Local test code (won’t show in production)</div>
+                <div className="mt-1 font-mono text-base tracking-[0.2em]">{debugCode}</div>
               </div>
-            )}
+            ) : null}
           </form>
         </section>
 
-        {/* Step 2: Verify OTP */}
-        <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm text-xs sm:text-sm">
-          <h2 className="text-sm font-semibold text-slate-900">
-            Step 2 – Enter code
-          </h2>
-          <p className="mt-1 text-[11px] text-slate-500">
-            After you receive the SMS, enter the code here. If you
-            didn&apos;t receive it, request a new one above.
-          </p>
+        {/* OTP verify */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">Step 3 — Verify code</h2>
 
-          {verifyError && (
+          {verifyError ? (
             <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
               {verifyError}
             </div>
-          )}
+          ) : null}
 
           <form onSubmit={handleVerifyOtp} className="mt-3 space-y-3">
             <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-slate-700">
-                Code from SMS
-              </label>
+              <label className="block text-[11px] font-medium text-slate-700">6-digit code</label>
               <input
-                className="w-full rounded border border-slate-300 px-2 py-1 text-xs tracking-[0.3em]"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm tracking-[0.3em]"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="e.g. 123456"
+                placeholder="e.g. 333138"
+                inputMode="numeric"
+                autoComplete="one-time-code"
               />
             </div>
 
             <button
               type="submit"
-              disabled={
-                verifyState === "loading" || !hasRequestedSuccessfully
-              }
-              className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={verifyState === "loading" || !requested}
+              className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
             >
-              {verifyState === "loading"
-                ? "Verifying..."
-                : "Verify and continue"}
+              {verifyState === "loading" ? "Verifying…" : "Verify & continue"}
             </button>
 
-            {hasRequestedSuccessfully && !otpToken && (
-              <p className="text-[11px] text-amber-700">
-                No OTP token stored. You may need to request a new code
-                above.
-              </p>
-            )}
-
-            {verifyState === "success" && (
-              <p className="text-[11px] text-emerald-700">
-                Verified! Redirecting to your parent dashboard…
-              </p>
-            )}
+            {verifyState === "success" ? <p className="text-[11px] text-emerald-700">Verified. Redirecting…</p> : null}
           </form>
         </section>
       </div>
     </main>
   );
-};
-
-export default ParentLoginPage;
+}

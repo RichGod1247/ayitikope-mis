@@ -18,6 +18,11 @@ type SchemeOfWorkItemDto = {
 type SchemeOfWorkDetail = {
   id: string;
   subject: string;
+
+  // ✅ these are returned by /api/schemes already — we should use them
+  subjectSlug?: string | null;
+  level?: string | null;
+
   term: string;
   academicYear: string;
   teacherName?: string | null;
@@ -38,15 +43,37 @@ const pillBase =
 const btnBase =
   "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
+function isThenable(v: unknown): v is Promise<any> {
+  return (
+    !!v &&
+    (typeof v === "object" || typeof v === "function") &&
+    typeof (v as any).then === "function"
+  );
+}
+
+// 🔒 Conservative slug validation (client-side only; server remains source of truth)
+function normalizeSubjectSlug(raw: unknown): string | null {
+  const v = String(raw ?? "").trim().toLowerCase();
+  if (!v) return null;
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v)) return null;
+  return v;
+}
+
+// Simple “best effort” phase from level token.
+// (Studio can ignore this if it doesn’t need it; we pass it anyway.)
+function inferPhaseFromLevel(level: string | null | undefined): string | null {
+  const v = String(level ?? "").trim().toUpperCase();
+  if (!v) return null;
+  if (v.startsWith("KG")) return "KG";
+  if (v.startsWith("JHS")) return "JHS";
+  if (v.startsWith("B")) return "PRIMARY";
+  if (v.startsWith("BASIC")) return "PRIMARY";
+  return null;
+}
+
 /**
- * Infer NaCCA curriculum meta (phase, level label, subjectSlug)
- * from a SchemeOfWork.subject like:
- *  - "KG1 Our World and Our People"
- *  - "KG 2 Mathematics"
- *  - "Basic 3 Science"
- *  - "Basic 6 Our World and Our People"
- *  - "JHS 1 Computing"
- *  - "JHS 1 Career Technology"
+ * Fallback only: Infer meta from subject label if old records lack level/slug.
+ * Keep this so the page still works even if older schemes don’t have these fields.
  */
 function inferCurriculumMetaFromSubject(subject: string): {
   phase?: string;
@@ -105,7 +132,6 @@ function inferCurriculumMetaFromSubject(subject: string): {
     };
   }
 
-  // Fallback – just slugify the whole thing
   const coreSlug = slugifyCore(src);
   return coreSlug ? { subjectSlug: coreSlug } : {};
 }
@@ -113,32 +139,72 @@ function inferCurriculumMetaFromSubject(subject: string): {
 export default function SchemeDetailPage({
   params,
 }: {
-  // ✅ SAFE: Next passes params as a plain object. Not a Promise.
-  params: { id: string };
+  params: { id: string } | Promise<{ id: string }>;
 }) {
-  // ✅ SAFE: no React.use, no Promise, no experimental behavior
-  const schemeId = params?.id;
+  const [paramsReady, setParamsReady] = useState(false);
+  const [schemeId, setSchemeId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [scheme, setScheme] = useState<SchemeOfWorkDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 1) Resolve params safely (no render-time Promise work)
   useEffect(() => {
-    if (!schemeId) {
+    let alive = true;
+
+    async function resolve() {
+      try {
+        const raw: any = params as any;
+
+        if (isThenable(raw)) {
+          const p = await raw;
+          const id = String(p?.id ?? "").trim();
+          if (!alive) return;
+          setSchemeId(id || null);
+          setParamsReady(true);
+          return;
+        }
+
+        const id = String(raw?.id ?? "").trim();
+        if (!alive) return;
+        setSchemeId(id || null);
+        setParamsReady(true);
+      } catch {
+        if (!alive) return;
+        setParamsReady(true);
+        setSchemeId(null);
+        setError("Failed to read route params.");
+      }
+    }
+
+    void resolve();
+
+    return () => {
+      alive = false;
+    };
+  }, [params]);
+
+  // 2) Load scheme once schemeId is known
+  useEffect(() => {
+    if (!paramsReady) return;
+
+    const sid = (schemeId ?? "").trim();
+    if (!sid) {
       setLoading(false);
+      setScheme(null);
       setError("Missing scheme id.");
       return;
     }
 
     const ac = new AbortController();
 
-    async function loadScheme() {
+    async function loadScheme(currentSchemeId: string) {
       setLoading(true);
       setError(null);
       setScheme(null);
 
       try {
-        const url = `/api/schemes?id=${encodeURIComponent(schemeId)}`;
+        const url = `/api/schemes?id=${encodeURIComponent(currentSchemeId)}`;
 
         const res = await fetch(url, {
           method: "GET",
@@ -146,7 +212,6 @@ export default function SchemeDetailPage({
           signal: ac.signal,
         });
 
-        // ✅ Better: explicit auth failures
         if (res.status === 401 || res.status === 403) {
           setError("Unauthorized. Please sign in again.");
           return;
@@ -169,31 +234,42 @@ export default function SchemeDetailPage({
       }
     }
 
-    void loadScheme();
+    void loadScheme(sid);
 
     return () => {
       ac.abort();
     };
-  }, [schemeId]);
+  }, [paramsReady, schemeId]);
 
-  // Helper: build Lesson Note Studio deep-link URL
+  // Helper: build Lesson Note Studio deep-link URL (authoritative first, fallback second)
   const buildLessonNoteUrl = (weekNumber: number, item: SchemeOfWorkItemDto) => {
     if (!scheme) return "#";
 
-    const { phase, level, subjectSlug } = inferCurriculumMetaFromSubject(scheme.subject);
+    const subjectSlugFromApi = normalizeSubjectSlug(scheme.subjectSlug);
+    const levelFromApi = String(scheme.level ?? "").trim();
+    const phaseFromApi = inferPhaseFromLevel(levelFromApi) ?? null;
 
-    const params = new URLSearchParams();
+    const fallback = inferCurriculumMetaFromSubject(scheme.subject);
 
-    if (scheme.subject) params.set("subject", scheme.subject);
-    if (scheme.term) params.set("term", scheme.term);
-    if (scheme.academicYear) params.set("academicYear", scheme.academicYear);
-    if (weekNumber) params.set("weekNumber", String(weekNumber));
-    if (item.indicatorCode) params.set("indicatorCode", item.indicatorCode);
-    if (phase) params.set("phase", phase);
-    if (level) params.set("level", level);
-    if (subjectSlug) params.set("subjectSlug", subjectSlug);
+    const qs = new URLSearchParams();
+    qs.set("schemeItemId", item.id);
 
-    return `/teacher/lesson-notes/studio?${params.toString()}`;
+    if (scheme.subject) qs.set("subject", scheme.subject);
+    if (scheme.term) qs.set("term", scheme.term);
+    if (scheme.academicYear) qs.set("academicYear", scheme.academicYear);
+    if (weekNumber) qs.set("weekNumber", String(weekNumber));
+    if (item.indicatorCode) qs.set("indicatorCode", item.indicatorCode);
+
+    // Prefer API truth, fallback only if missing
+    const finalLevel = levelFromApi || fallback.level || "";
+    const finalPhase = phaseFromApi || fallback.phase || "";
+    const finalSlug = subjectSlugFromApi || fallback.subjectSlug || "";
+
+    if (finalPhase) qs.set("phase", finalPhase);
+    if (finalLevel) qs.set("level", finalLevel);
+    if (finalSlug) qs.set("subjectSlug", finalSlug);
+
+    return `/teacher/lesson-notes/studio?${qs.toString()}`;
   };
 
   // Group items by week
@@ -222,7 +298,6 @@ export default function SchemeDetailPage({
   return (
     <main className="min-h-screen bg-zinc-50">
       <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-5">
-        {/* Top header / breadcrumb-ish */}
         <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -272,13 +347,13 @@ export default function SchemeDetailPage({
               type="button"
               onClick={() => window.print()}
               className={`${btnBase} bg-white text-zinc-800 border-zinc-300 hover:bg-zinc-100`}
+              disabled={!scheme}
             >
               Print Scheme of Work
             </button>
           </div>
         </header>
 
-        {/* Loading / error states */}
         {loading && (
           <div className="border border-zinc-200 bg-white rounded-2xl px-4 py-3 text-sm text-zinc-600">
             Loading Scheme of Work…
@@ -297,7 +372,6 @@ export default function SchemeDetailPage({
           </div>
         )}
 
-        {/* Main content: grouped weeks + table */}
         {scheme && (
           <section className="border border-zinc-200 bg-white rounded-2xl p-4 md:p-5 space-y-4">
             <div className="flex items-center justify-between gap-2 border-b border-zinc-200 pb-2">
@@ -331,7 +405,6 @@ export default function SchemeDetailPage({
                     key={group.weekNumber}
                     className="border border-zinc-200 rounded-xl overflow-hidden bg-zinc-50"
                   >
-                    {/* Week header */}
                     <div className="flex items-center justify-between gap-2 bg-zinc-100 px-3 py-2">
                       <div className="text-xs font-semibold text-zinc-800">
                         Week {group.weekNumber}
@@ -341,7 +414,6 @@ export default function SchemeDetailPage({
                       </div>
                     </div>
 
-                    {/* Table */}
                     <div className="overflow-x-auto">
                       <table className="min-w-full border-t border-zinc-200 text-[11px]">
                         <thead className="bg-zinc-100/80">
@@ -413,7 +485,6 @@ export default function SchemeDetailPage({
           </section>
         )}
 
-        {/* Footer note */}
         <section className="border border-dashed border-zinc-200 bg-zinc-50 rounded-2xl px-4 py-3 text-[11px] text-zinc-600">
           <p>
             From here you can now choose a week and{" "}

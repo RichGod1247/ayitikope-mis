@@ -1,7 +1,7 @@
 // src/app/parent/overview/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type FeeSummary = {
@@ -58,7 +58,30 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
+function LoadingShell() {
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-emerald-50">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8 space-y-6">
+        <div className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-4 md:px-5 md:py-5 shadow-sm">
+          <div className="text-sm font-semibold text-zinc-900">Loading…</div>
+          <div className="mt-2 text-[11px] text-zinc-500">
+            Preparing parent overview.
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 export default function ParentOverviewPage() {
+  return (
+    <Suspense fallback={<LoadingShell />}>
+      <ParentOverviewInner />
+    </Suspense>
+  );
+}
+
+function ParentOverviewInner() {
   const searchParams = useSearchParams();
 
   const initialTenantId = searchParams.get("tenantId") || "";
@@ -102,19 +125,13 @@ export default function ParentOverviewPage() {
     setData(null);
 
     try {
-      const url = new URL(
-        "/api/parent/overview",
-        window.location.origin
-      );
+      const url = new URL("/api/parent/overview", window.location.origin);
       url.searchParams.set("tenantId", tenantId.trim());
       url.searchParams.set("guardianPhone", guardianPhone.trim());
       url.searchParams.set("term", term.trim());
       url.searchParams.set("academicYear", academicYear.trim());
 
-      const res = await fetch(url.toString(), {
-        cache: "no-store",
-      });
-
+      const res = await fetch(url.toString(), { cache: "no-store" });
       const json = (await res.json().catch(() => ({}))) as OverviewResponse;
 
       if (!res.ok || !json.ok) {
@@ -126,14 +143,12 @@ export default function ParentOverviewPage() {
         return;
       }
 
-      const students = Array.isArray(json.students)
-        ? json.students
-        : [];
+      const students = Array.isArray(json.students) ? json.students : [];
       setData(students);
       setMetaTerm(json.meta?.term ?? term);
       setMetaYear(json.meta?.academicYear ?? academicYear);
       setUsedPhone(json.guardianPhone ?? guardianPhone.trim());
-    } catch (err) {
+    } catch {
       setError(
         "Network or server error while loading overview. Please try again or contact the school."
       );
@@ -146,26 +161,19 @@ export default function ParentOverviewPage() {
     }
   }
 
-  // On first load, if tenantId is present in URL, we can keep fields ready
-  // but we won't auto-query, because we don't know the phone number yet.
-
   return (
     <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-emerald-50">
       <div className="mx-auto max-w-6xl px-4 py-6 md:py-8 space-y-6">
         {/* Header */}
         <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}
-            >
+            <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>
               EduLife OS · Parent · Term overview
             </span>
             {tenantId && (
               <span className="text-[11px] text-zinc-500">
                 Tenant:{" "}
-                <span className="font-mono text-[10px]">
-                  {tenantId}
-                </span>
+                <span className="font-mono text-[10px]">{tenantId}</span>
               </span>
             )}
           </div>
@@ -177,20 +185,14 @@ export default function ParentOverviewPage() {
               </h1>
               <p className="text-sm md:text-base text-zinc-600 max-w-xl">
                 This page gives a{" "}
-                <span className="font-semibold">
-                  simple summary for each child
-                </span>{" "}
+                <span className="font-semibold">simple summary for each child</span>{" "}
                 linked to your phone number — focusing on{" "}
-                <span className="font-semibold">
-                  fees and basic health screenings
-                </span>{" "}
+                <span className="font-semibold">fees and basic health screenings</span>{" "}
                 for the selected term.
               </p>
               <p className="text-[11px] md:text-xs text-zinc-500 max-w-xl">
                 In the future, this will also show{" "}
-                <span className="font-semibold">
-                  attendance and learning highlights
-                </span>{" "}
+                <span className="font-semibold">attendance and learning highlights</span>{" "}
                 so you can understand your child&apos;s term at a glance.
               </p>
             </div>
@@ -204,9 +206,7 @@ export default function ParentOverviewPage() {
               </p>
               <ul className="text-[11px] md:text-xs text-emerald-900/90 space-y-1.5">
                 <li>1. Type the parent / guardian phone number.</li>
-                <li>
-                  2. Choose the term and academic year you want to check.
-                </li>
+                <li>2. Choose the term and academic year you want to check.</li>
                 <li>
                   3. Press <span className="font-semibold">Load overview</span>{" "}
                   to see all children linked to that phone.
@@ -232,16 +232,13 @@ export default function ParentOverviewPage() {
                 className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
               <p className="text-[10px] text-zinc-500">
-                This should match the phone number captured for the learner in
-                EduLife OS.
+                This should match the phone number captured for the learner in EduLife OS.
               </p>
             </div>
 
             {/* Term */}
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-zinc-700">
-                Term
-              </label>
+              <label className="text-[11px] font-medium text-zinc-700">Term</label>
               <select
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
@@ -301,8 +298,7 @@ export default function ParentOverviewPage() {
                 <p>
                   Showing overview for{" "}
                   <span className="font-semibold">{metaTerm}</span>,{" "}
-                  <span className="font-semibold">{metaYear}</span>{" "}
-                  · Phone:{" "}
+                  <span className="font-semibold">{metaYear}</span> · Phone:{" "}
                   <span className="font-semibold">{usedPhone}</span>
                 </p>
               ) : (
@@ -326,32 +322,26 @@ export default function ParentOverviewPage() {
             </h2>
             {data && (
               <p className="text-[11px] text-zinc-500">
-                Total learners:{" "}
-                <span className="font-semibold">
-                  {data.length}
-                </span>
+                Total learners: <span className="font-semibold">{data.length}</span>
               </p>
             )}
           </div>
 
           {!data && !loading && !error && (
             <p className="text-[11px] text-zinc-500">
-              Once you load the overview, each child linked to this phone will
-              appear here with a simple fees &amp; health snapshot.
+              Once you load the overview, each child linked to this phone will appear here
+              with a simple fees &amp; health snapshot.
             </p>
           )}
 
           {loading && (
-            <p className="text-[11px] text-zinc-500">
-              Loading data from EduLife OS…
-            </p>
+            <p className="text-[11px] text-zinc-500">Loading data from EduLife OS…</p>
           )}
 
           {data && data.length === 0 && !loading && !error && (
             <p className="text-[11px] text-zinc-500">
-              No learners were found for this phone number in the selected term
-              and academic year. The school may need to confirm how the phone
-              was captured.
+              No learners were found for this phone number in the selected term and academic year.
+              The school may need to confirm how the phone was captured.
             </p>
           )}
 
@@ -392,20 +382,15 @@ export default function ParentOverviewPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-[11px]">
                         <div>
-                          <div className="text-amber-800/80">
-                            Billed (after waivers)
-                          </div>
+                          <div className="text-amber-800/80">Billed (after waivers)</div>
                           <div className="font-semibold text-amber-900">
                             {formatCedis(
-                              child.fees.totalBilledPesewas -
-                                child.fees.totalWaivedPesewas
+                              child.fees.totalBilledPesewas - child.fees.totalWaivedPesewas
                             )}
                           </div>
                         </div>
                         <div>
-                          <div className="text-emerald-800/80">
-                            Paid so far
-                          </div>
+                          <div className="text-emerald-800/80">Paid so far</div>
                           <div className="font-semibold text-emerald-900">
                             {formatCedis(child.fees.totalPaidPesewas)}
                           </div>
@@ -415,18 +400,13 @@ export default function ParentOverviewPage() {
                         <span className="text-amber-900/80">
                           Balance:
                           <span className="font-semibold ml-1">
-                            {formatCedis(
-                              Math.max(child.fees.balancePesewas, 0)
-                            )}
+                            {formatCedis(Math.max(child.fees.balancePesewas, 0))}
                           </span>
                         </span>
                         <span className="text-[10px] text-zinc-600">
                           Last payment:{" "}
-                          {child.fees.lastPaymentAmountPesewas != null &&
-                          child.fees.lastPaymentAt
-                            ? `${formatCedis(
-                                child.fees.lastPaymentAmountPesewas
-                              )} on ${formatDate(
+                          {child.fees.lastPaymentAmountPesewas != null && child.fees.lastPaymentAt
+                            ? `${formatCedis(child.fees.lastPaymentAmountPesewas)} on ${formatDate(
                                 child.fees.lastPaymentAt
                               )}`
                             : "None recorded yet"}
@@ -441,8 +421,7 @@ export default function ParentOverviewPage() {
                           Health screening
                         </span>
                         <span className="text-[10px] text-emerald-800">
-                          Last check:{" "}
-                          {formatDate(child.health?.lastDate ?? null)}
+                          Last check: {formatDate(child.health?.lastDate ?? null)}
                         </span>
                       </div>
                       {child.health ? (
@@ -452,7 +431,7 @@ export default function ParentOverviewPage() {
                             {child.health.temperatureC != null ? (
                               <span
                                 className={
-                                  (child.health.temperatureC ?? 0) >= 37.8
+                                  child.health.temperatureC >= 37.8
                                     ? "font-semibold text-rose-700"
                                     : "font-semibold text-emerald-900"
                                 }
@@ -460,9 +439,7 @@ export default function ParentOverviewPage() {
                                 {child.health.temperatureC.toFixed(1)} °C
                               </span>
                             ) : (
-                              <span className="text-zinc-600">
-                                Not recorded
-                              </span>
+                              <span className="text-zinc-600">Not recorded</span>
                             )}
                           </div>
                           <div className="text-[11px] text-emerald-900/90">
@@ -473,16 +450,13 @@ export default function ParentOverviewPage() {
                           </div>
                           <div className="text-[11px] text-emerald-900/90">
                             Notes:{" "}
-                            {child.health.notes?.trim()
-                              ? child.health.notes
-                              : "—"}
+                            {child.health.notes?.trim() ? child.health.notes : "—"}
                           </div>
                         </>
                       ) : (
                         <p className="text-[11px] text-emerald-900/80">
-                          No health screenings recorded yet for this learner in
-                          the system. As the daily temperature project grows,
-                          this box will light up.
+                          No health screenings recorded yet for this learner in the system.
+                          As the daily temperature project grows, this box will light up.
                         </p>
                       )}
                     </div>
@@ -491,8 +465,8 @@ export default function ParentOverviewPage() {
                   <p className="mt-3 text-[10px] text-zinc-500">
                     This card is designed for calm conversations at home:{" "}
                     <span className="font-semibold">
-                      &quot;Here&apos;s what we owe, here&apos;s how your health
-                      is, here&apos;s how we&apos;ll plan together.&quot;
+                      &quot;Here&apos;s what we owe, here&apos;s how your health is,
+                      here&apos;s how we&apos;ll plan together.&quot;
                     </span>
                   </p>
                 </article>
@@ -504,11 +478,9 @@ export default function ParentOverviewPage() {
         {/* Tiny footer note */}
         <p className="text-[11px] text-zinc-500 max-w-3xl">
           In later EduLife OS phases, this overview will also pull in{" "}
-          <span className="font-semibold">
-            attendance and learning highlights
-          </span>{" "}
-          for each child, plus a short AI-written summary in simple language
-          that any parent can understand.
+          <span className="font-semibold">attendance and learning highlights</span>{" "}
+          for each child, plus a short AI-written summary in simple language that any
+          parent can understand.
         </p>
       </div>
     </main>

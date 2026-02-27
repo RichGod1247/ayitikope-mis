@@ -1,64 +1,35 @@
 // src/app/api/headteacher/students/fees-detail/route.ts
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireServerUserContext } from "@/lib/serverAuth";
 
 export async function GET(req: Request) {
+  let ctx: any;
+  try {
+    ctx = await requireServerUserContext({
+      requireTenant: true,
+      requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "ADMIN"],
+    });
+  } catch (err: any) {
+    if (err instanceof Response) return err;
+    return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
+  }
+
   try {
     const url = new URL(req.url);
-    const studentId = url.searchParams.get("studentId");
+    const studentId = url.searchParams.get("studentId")?.trim() || "";
 
     if (!studentId) {
-      return NextResponse.json(
-        { ok: false, error: "studentId is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "studentId is required" }, { status: 400 });
     }
 
-    // 1) Ensure user is signed in
-    const session = await getServerSession(authOptions);
-    const user = session?.user as any;
-    const userId: string | undefined = user?.id;
+    const tenantId = ctx.tenantId;
 
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Not signed in" },
-        { status: 401 }
-      );
-    }
-
-    // 2) Find tenant via membership
-    const membership = await prisma.membership.findFirst({
-      where: { userId },
-    });
-
-    if (!membership?.tenantId) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "No tenant membership found for this user",
-        },
-        { status: 401 }
-      );
-    }
-
-    const tenantId = membership.tenantId;
-
-    // 3) Load invoices for this learner & tenant
-    // Based on your schema:
-    // FeeInvoice:
-    //   - id, tenantId, studentId, term, academicYear,
-    //     totalBilledPesewas, totalWaivedPesewas, note, createdAt
     const invoices = await prisma.feeInvoice.findMany({
-      where: {
-        tenantId,
-        studentId,
-      },
+      where: { tenantId, studentId },
       select: {
         id: true,
         term: true,
@@ -68,59 +39,32 @@ export async function GET(req: Request) {
         totalWaivedPesewas: true,
         createdAt: true,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
 
     if (invoices.length === 0) {
       return NextResponse.json(
-        {
-          ok: true,
-          tenantId,
-          studentId,
-          invoices: [],
-        },
+        { ok: true, tenantId, studentId, invoices: [] },
         { status: 200 }
       );
     }
 
     const invoiceIds = invoices.map((inv) => inv.id);
 
-    // 4) Load payments for these invoices
-    // FeePayment:
-    //   - id, tenantId, invoiceId, amountPesewas, paidAt
     const payments = await prisma.feePayment.findMany({
-      where: {
-        tenantId,
-        invoiceId: {
-          in: invoiceIds,
-        },
-      },
-      select: {
-        invoiceId: true,
-        amountPesewas: true,
-      },
+      where: { tenantId, invoiceId: { in: invoiceIds } },
+      select: { invoiceId: true, amountPesewas: true },
     });
 
     const paidByInvoice = new Map<string, number>();
     for (const p of payments) {
-      const prev = paidByInvoice.get(p.invoiceId) ?? 0;
-      paidByInvoice.set(
-        p.invoiceId,
-        prev + (p.amountPesewas ?? 0)
-      );
+      paidByInvoice.set(p.invoiceId, (paidByInvoice.get(p.invoiceId) ?? 0) + (p.amountPesewas ?? 0));
     }
 
     const result = invoices.map((inv) => {
-      const billedPesewas =
-        (inv.totalBilledPesewas ?? 0) -
-        (inv.totalWaivedPesewas ?? 0);
+      const billedPesewas = (inv.totalBilledPesewas ?? 0) - (inv.totalWaivedPesewas ?? 0);
       const paidPesewas = paidByInvoice.get(inv.id) ?? 0;
-      const outstandingPesewas = Math.max(
-        billedPesewas - paidPesewas,
-        0
-      );
+      const outstandingPesewas = Math.max(billedPesewas - paidPesewas, 0);
 
       return {
         id: inv.id,
@@ -135,26 +79,13 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json(
-      {
-        ok: true,
-        tenantId,
-        studentId,
-        invoices: result,
-      },
+      { ok: true, tenantId, studentId, invoices: result },
       { status: 200 }
     );
   } catch (err: any) {
-    console.error(
-      "Error in /api/headteacher/students/fees-detail",
-      err
-    );
+    console.error("Error in /api/headteacher/students/fees-detail", err);
     return NextResponse.json(
-      {
-        ok: false,
-        error:
-          err?.message ||
-          "Unexpected error while loading learner fee invoices.",
-      },
+      { ok: false, error: err?.message || "Unexpected error while loading learner fee invoices." },
       { status: 500 }
     );
   }

@@ -1,7 +1,7 @@
 // src/app/admin/fees/invoices/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Tenant = {
   id: string;
@@ -44,6 +44,29 @@ type PaymentModalState = {
   balancePesewas: number;
 };
 
+// Match /api/me payload (only fields we use)
+type MeResponse =
+  | {
+      ok: true;
+      tenantId: string;
+      tenant?: { name?: string | null; slug?: string | null } | null;
+      roleName?: string | null;
+      effectiveRole?: string | null;
+    }
+  | { ok: false; error?: string };
+
+// Match /api/admin/setup/load (only fields we use)
+type SetupLoadResponse =
+  | {
+      tenant: any;
+      settings: {
+        currentAcademicYear?: string | null;
+        currentTerm?: string | null;
+        setupComplete?: boolean;
+      };
+    }
+  | { error: string };
+
 const btnBase =
   "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-800`;
@@ -51,19 +74,37 @@ const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-z
 const btnDanger = `${btnBase} bg-red-600 text-white border-red-600 hover:bg-red-700`;
 
 function formatMoneyFromPesewas(p: number) {
-  const cedis = (p || 0) / 100;
-  return `GH₵ ${cedis.toFixed(2)}`;
+  const n = typeof p === "number" && Number.isFinite(p) ? p : 0;
+  return `GH₵ ${(n / 100).toFixed(2)}`;
 }
 
 function formatDateShort(iso?: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
+}
+
+async function safeJson(r: Response) {
+  return (await r.json().catch(() => ({}))) as any;
+}
+
+async function loadSetupDefaults(): Promise<
+  | { ok: true; currentTerm: string; currentAcademicYear: string; setupComplete: boolean }
+  | { ok: false; error: string }
+> {
+  const r = await fetch("/api/admin/setup/load", { cache: "no-store" });
+  const j = (await r.json().catch(() => ({}))) as SetupLoadResponse;
+
+  if (!r.ok) return { ok: false, error: (j as any)?.error || "Failed to load admin setup." };
+
+  const settings = (j as any)?.settings || {};
+  return {
+    ok: true,
+    currentTerm: String(settings.currentTerm ?? "").trim(),
+    currentAcademicYear: String(settings.currentAcademicYear ?? "").trim(),
+    setupComplete: !!settings.setupComplete,
+  };
 }
 
 export default function AdminFeesInvoicesPage() {
@@ -71,31 +112,30 @@ export default function AdminFeesInvoicesPage() {
   const [tenantLoading, setTenantLoading] = useState(false);
   const [tenantError, setTenantError] = useState<string | null>(null);
 
+  const [setupComplete, setSetupComplete] = useState<boolean | null>(null);
+
   const [mode, setMode] = useState<"single" | "multi">("single");
   const [classOptions, setClassOptions] = useState<ClassroomOption[]>([]);
   const [classLoading, setClassLoading] = useState(false);
   const [classError, setClassError] = useState<string | null>(null);
   const [classroomId, setClassroomId] = useState<string>("");
 
-  // Term + academic year
+  // UI defaults (will be overridden by tenant setup if present)
   const [term, setTerm] = useState<string>("1st Term");
   const [academicYear, setAcademicYear] = useState<string>("2025/2026");
 
-  // Fee structures
   const [structures, setStructures] = useState<FeeStructureSummary[]>([]);
   const [structuresLoading, setStructuresLoading] = useState(false);
   const [structuresError, setStructuresError] = useState<string | null>(null);
-  const [selectedStructureId, setSelectedStructureId] =
-    useState<string>("");
+  const [selectedStructureId, setSelectedStructureId] = useState<string>("");
 
-  // Invoices
   const [invoices, setInvoices] = useState<FeeInvoiceRow[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  // Generate + payments
   const [generateLoading, setGenerateLoading] = useState(false);
+
   const [paymentModal, setPaymentModal] = useState<PaymentModalState>({
     open: false,
     invoiceId: null,
@@ -103,6 +143,7 @@ export default function AdminFeesInvoicesPage() {
     classLabel: undefined,
     balancePesewas: 0,
   });
+
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [paymentReference, setPaymentReference] = useState<string>("");
@@ -111,65 +152,114 @@ export default function AdminFeesInvoicesPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // ---------------------------
-  // Bootstrap tenant
+  // Bootstrap tenant from /api/me (bank-grade)
   // ---------------------------
   useEffect(() => {
+    let alive = true;
+
     (async () => {
       setTenantLoading(true);
       setTenantError(null);
       try {
-        const r = await fetch("/api/test/tenants");
-        const j = await r.json().catch(() => ({}));
-        const t = j?.tenants?.[0];
-        if (t?.id) {
-          setTenant({
-            id: t.id,
-            name: t.name || "School",
-            slug: t.slug ?? null,
-          });
-        } else {
-          setTenantError(
-            "No tenant/school configured. Please contact the administrator."
-          );
+        const r = await fetch("/api/me", { cache: "no-store" });
+        const j = (await r.json().catch(() => ({}))) as MeResponse;
+        if (!alive) return;
+
+        if (!r.ok || !j || (j as any).ok !== true) {
+          setTenantError("Failed to load school context. Please sign in again.");
+          return;
         }
+
+        const ok = j as Extract<MeResponse, { ok: true }>;
+        setTenant({
+          id: ok.tenantId,
+          name: ok.tenant?.name || "School",
+          slug: ok.tenant?.slug ?? null,
+        });
       } catch {
-        setTenantError(
-          "Failed to load school context. Please check your connection."
-        );
+        if (!alive) return;
+        setTenantError("Failed to load school context. Please check your connection.");
       } finally {
-        setTenantLoading(false);
+        if (alive) setTenantLoading(false);
       }
     })();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // ---------------------------
-  // Load classrooms
+  // Bootstrap term/year from TenantSettings (/api/admin/setup/load)
   // ---------------------------
-  async function fetchClassOptions(tid: string, m: "single" | "multi") {
+  useEffect(() => {
+    if (!tenant?.id) return;
+
+    let alive = true;
+    (async () => {
+      try {
+        const setup = await loadSetupDefaults();
+        if (!alive) return;
+
+        if (!setup.ok) {
+          // Keep UI defaults; show a soft hint only (don’t block page)
+          setSetupComplete(null);
+          return;
+        }
+
+        setSetupComplete(setup.setupComplete);
+
+        // Only override if configured
+        if (setup.currentTerm) setTerm(setup.currentTerm);
+        if (setup.currentAcademicYear) setAcademicYear(setup.currentAcademicYear);
+      } catch {
+        if (!alive) return;
+        setSetupComplete(null);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [tenant?.id]);
+
+  // ---------------------------
+  // Classrooms (prefer server-derived tenant, fallback to tenantId)
+  // ---------------------------
+  const fetchClassOptions = useCallback(async (tid: string, m: "single" | "multi") => {
     setClassLoading(true);
     setClassError(null);
+
     try {
-      const url = `/api/classrooms/list?tenantId=${encodeURIComponent(
-        tid
-      )}&mode=${m}`;
-      const r = await fetch(url);
-      const j = await r.json().catch(() => ({}));
+      // Prefer: server infers tenant
+      let r = await fetch(`/api/classrooms/list?mode=${encodeURIComponent(m)}`, { cache: "no-store" });
+      let j = await safeJson(r);
+
+      // Fallback: old API expects tenantId
+      if ((!r.ok || !Array.isArray(j?.items)) && tid) {
+        const url = `/api/classrooms/list?tenantId=${encodeURIComponent(tid)}&mode=${encodeURIComponent(m)}`;
+        r = await fetch(url, { cache: "no-store" });
+        j = await safeJson(r);
+      }
+
       let items: ClassroomOption[] = [];
       if (r.ok && Array.isArray(j?.items)) {
         items = j.items.map((x: any) => ({
-          id: x.id as string,
-          label: (x.label as string) || "",
+          id: String(x.id),
+          label: String(x.label || ""),
         }));
       }
+
       setClassOptions(items);
+
       if (!items.length) {
         setClassroomId("");
-        setClassError(
-          "No classrooms found. Use the class seeding tools to create KG–JHS classes."
-        );
+        setClassError("No classrooms found. Use the class seeding tools to create KG–JHS classes.");
       } else {
-        const existing = items.find((c) => c.id === classroomId);
-        setClassroomId(existing ? existing.id : items[0].id);
+        setClassroomId((prev) => {
+          const existing = items.find((c) => c.id === prev);
+          return existing ? existing.id : items[0].id;
+        });
       }
     } catch {
       setClassOptions([]);
@@ -178,104 +268,177 @@ export default function AdminFeesInvoicesPage() {
     } finally {
       setClassLoading(false);
     }
-  }
+  }, []);
 
-  async function seedClasses(modeToSeed: "single" | "multi") {
-    if (!tenant?.id) return;
-    setClassLoading(true);
-    setClassError(null);
-    try {
-      const r = await fetch("/api/classrooms/seed-canonical", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tenantId: tenant.id, mode: modeToSeed }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        setClassError(j?.error || "Failed to seed classrooms.");
-      } else {
-        await fetchClassOptions(tenant.id, mode);
+  const seedClasses = useCallback(
+    async (modeToSeed: "single" | "multi") => {
+      if (!tenant?.id) return;
+
+      setClassLoading(true);
+      setClassError(null);
+
+      try {
+        // Prefer: no tenantId
+        let r = await fetch("/api/classrooms/seed-canonical", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ mode: modeToSeed }),
+        });
+        let j = await safeJson(r);
+
+        // Fallback: old API expects tenantId
+        if (!r.ok) {
+          r = await fetch("/api/classrooms/seed-canonical", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ tenantId: tenant.id, mode: modeToSeed }),
+          });
+          j = await safeJson(r);
+        }
+
+        if (!r.ok) {
+          setClassError(j?.error || "Failed to seed classrooms.");
+        } else {
+          await fetchClassOptions(tenant.id, mode);
+        }
+      } catch {
+        setClassError("Error while seeding classrooms.");
+      } finally {
+        setClassLoading(false);
       }
-    } catch {
-      setClassError("Error while seeding classrooms.");
-    } finally {
-      setClassLoading(false);
-    }
-  }
+    },
+    [tenant?.id, mode, fetchClassOptions]
+  );
 
   useEffect(() => {
-    if (tenant?.id) {
-      fetchClassOptions(tenant.id, mode);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenant?.id, mode]);
+    if (tenant?.id) fetchClassOptions(tenant.id, mode);
+  }, [tenant?.id, mode, fetchClassOptions]);
 
   // ---------------------------
-  // Load fee structures
+  // Fee structures (prefer server-derived tenant, fallback to tenantId)
   // ---------------------------
-  async function loadStructures() {
+  const loadStructures = useCallback(async () => {
     if (!tenant?.id) return;
+
     setStructuresLoading(true);
     setStructuresError(null);
-    try {
-      const params = new URLSearchParams();
-      params.set("tenantId", tenant.id);
-      params.set("term", term);
-      params.set("academicYear", academicYear);
 
-      const r = await fetch(
-        `/api/admin/fees/structures/list?${params.toString()}`
-      );
-      const j = await r.json().catch(() => ({}));
+    try {
+      // Prefer: server infers tenant
+      const params1 = new URLSearchParams();
+      params1.set("term", term);
+      params1.set("academicYear", academicYear);
+
+      let r = await fetch(`/api/admin/fees/structures/list?${params1.toString()}`, { cache: "no-store" });
+      let j = await safeJson(r);
+
+      // Fallback: old API expects tenantId
+      if ((!r.ok || !j?.ok) && tenant.id) {
+        const params2 = new URLSearchParams();
+        params2.set("tenantId", tenant.id);
+        params2.set("term", term);
+        params2.set("academicYear", academicYear);
+
+        r = await fetch(`/api/admin/fees/structures/list?${params2.toString()}`, { cache: "no-store" });
+        j = await safeJson(r);
+      }
 
       if (!r.ok || !j?.ok) {
         setStructures([]);
-        setStructuresError(
-          j?.error ||
-            "Failed to load fee structures for this term/year. Please try again or contact the office."
-        );
+        setSelectedStructureId("");
+        setStructuresError(j?.error || "Failed to load fee structures for this term/year. Please try again.");
         return;
       }
 
-      const items = Array.isArray(j.items)
-        ? (j.items as FeeStructureSummary[])
-        : ([] as FeeStructureSummary[]);
+      const items = Array.isArray(j.items) ? (j.items as FeeStructureSummary[]) : [];
       setStructures(items);
 
       if (!items.length) {
         setSelectedStructureId("");
       } else {
-        const match = items.find((s) => s.term === term && s.academicYear === academicYear);
-        setSelectedStructureId(
-          match ? match.id : items[0]?.id ?? ""
-        );
+        setSelectedStructureId((prev) => {
+          const stillExists = items.find((s) => s.id === prev);
+          return stillExists ? prev : items[0].id;
+        });
       }
     } catch {
       setStructures([]);
-      setStructuresError(
-        "Network or server error while loading fee structures."
-      );
+      setSelectedStructureId("");
+      setStructuresError("Network or server error while loading fee structures.");
     } finally {
       setStructuresLoading(false);
     }
-  }
-
-  useEffect(() => {
-    if (tenant?.id) {
-      loadStructures();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.id, term, academicYear]);
 
+  useEffect(() => {
+    if (tenant?.id) loadStructures();
+  }, [tenant?.id, term, academicYear, loadStructures]);
+
   // ---------------------------
-  // Generate invoices
+  // Invoices list (prefer server-derived tenant, fallback to tenantId)
+  // ---------------------------
+  const loadInvoices = useCallback(async () => {
+    if (!tenant?.id || !term || !academicYear) return;
+
+    setInvoicesLoading(true);
+    setInvoicesError(null);
+    setInfo(null);
+
+    try {
+      // Prefer: server infers tenant
+      const params1 = new URLSearchParams();
+      params1.set("term", term);
+      params1.set("academicYear", academicYear);
+      if (classroomId) params1.set("classroomId", classroomId);
+
+      let r = await fetch(`/api/admin/fees/invoices/list?${params1.toString()}`, { cache: "no-store" });
+      let j = await safeJson(r);
+
+      // Fallback: old API expects tenantId
+      if ((!r.ok || !j?.ok) && tenant.id) {
+        const params2 = new URLSearchParams();
+        params2.set("tenantId", tenant.id);
+        params2.set("term", term);
+        params2.set("academicYear", academicYear);
+        if (classroomId) params2.set("classroomId", classroomId);
+
+        r = await fetch(`/api/admin/fees/invoices/list?${params2.toString()}`, { cache: "no-store" });
+        j = await safeJson(r);
+      }
+
+      if (!r.ok || !j?.ok) {
+        setInvoices([]);
+        setInvoicesError(j?.error || "Failed to load fee invoices. Please try again.");
+        return;
+      }
+
+      const items = Array.isArray(j.items) ? (j.items as FeeInvoiceRow[]) : [];
+      setInvoices(items);
+
+      if (!items.length) {
+        setInfo("No invoices found for this class/term/year yet. Generate invoices above.");
+      }
+    } catch {
+      setInvoices([]);
+      setInvoicesError("Network or server error while loading fee invoices.");
+    } finally {
+      setInvoicesLoading(false);
+    }
+  }, [tenant?.id, term, academicYear, classroomId]);
+
+  // Auto-load invoices when ready (DO NOT require classroomId; list supports all/optional filter)
+  useEffect(() => {
+    if (tenant?.id && term && academicYear) loadInvoices();
+  }, [tenant?.id, classroomId, term, academicYear, loadInvoices]);
+
+  // ---------------------------
+  // Generate invoices (prefer server-derived tenant, fallback to tenantId)
   // ---------------------------
   async function handleGenerateInvoices() {
     if (!tenant?.id || !classroomId || !term || !academicYear) return;
+
     if (!selectedStructureId) {
-      setInfo(
-        "Please choose a fee structure for this term and year before generating invoices."
-      );
+      setInfo("Please choose a fee structure for this term and year before generating invoices.");
       return;
     }
 
@@ -284,97 +447,48 @@ export default function AdminFeesInvoicesPage() {
     setInvoicesError(null);
 
     try {
-      const body = {
-        tenantId: tenant.id,
-        classroomId,
-        term,
-        academicYear,
-        feeStructureId: selectedStructureId,
-      };
+      // NOTE: server ignores term/year here; it derives from FeeStructure (correct).
+      // Keep for back-compat / future UI logic.
+      let body: any = { classroomId, term, academicYear, feeStructureId: selectedStructureId };
 
-      const r = await fetch("/api/admin/fees/invoices/generate", {
+      // Prefer: no tenantId
+      let r = await fetch("/api/admin/fees/invoices/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      const j = await r.json().catch(() => ({}));
+      let j = await safeJson(r);
+
+      // Fallback: old API expects tenantId
+      if ((!r.ok || !j?.ok) && tenant.id) {
+        body = { ...body, tenantId: tenant.id };
+        r = await fetch("/api/admin/fees/invoices/generate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        j = await safeJson(r);
+      }
 
       if (!r.ok || !j?.ok) {
-        setInvoicesError(
-          j?.error ||
-            "Failed to generate fee invoices. Please try again or contact the office."
-        );
+        setInvoicesError(j?.error || "Failed to generate fee invoices. Please try again.");
         return;
       }
 
       setInfo(
-        `Invoices generated using "${j.structureName}" for term ${term}, ${academicYear}. Created: ${j.createdCount ?? 0}, already existed: ${j.existingCount ?? 0}, total learners in class: ${j.totalLearners ?? 0}.`
+        `Invoices generated using "${j.structureName}" for ${term}, ${academicYear}. Created: ${
+          j.createdCount ?? 0
+        }, already existed: ${j.existingCount ?? 0}, learners: ${j.totalLearners ?? 0}.`
       );
 
-      // Refresh invoice list
       await loadInvoices();
     } catch {
-      setInvoicesError(
-        "Network or server error while generating invoices."
-      );
+      setInvoicesError("Network or server error while generating invoices.");
     } finally {
       setGenerateLoading(false);
     }
   }
 
-  // ---------------------------
-  // Load invoices
-  // ---------------------------
-  async function loadInvoices() {
-    if (!tenant?.id || !term || !academicYear) return;
-
-    setInvoicesLoading(true);
-    setInvoicesError(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.set("tenantId", tenant.id);
-      params.set("term", term);
-      params.set("academicYear", academicYear);
-      if (classroomId) params.set("classroomId", classroomId);
-
-      const r = await fetch(
-        `/api/admin/fees/invoices/list?${params.toString()}`
-      );
-      const j = await r.json().catch(() => ({}));
-
-      if (!r.ok || !j?.ok) {
-        setInvoices([]);
-        setInvoicesError(
-          j?.error ||
-            "Failed to load fee invoices. Please try again or contact the office."
-        );
-        return;
-      }
-
-      const items = Array.isArray(j.items)
-        ? (j.items as FeeInvoiceRow[])
-        : ([] as FeeInvoiceRow[]);
-      setInvoices(items);
-
-      if (!items.length) {
-        setInfo(
-          "No invoices found for this class, term, and academic year yet. Try generating invoices above."
-        );
-      }
-    } catch {
-      setInvoices([]);
-      setInvoicesError(
-        "Network or server error while loading fee invoices."
-      );
-    } finally {
-      setInvoicesLoading(false);
-    }
-  }
-
-  // ---------------------------
-  // Payment modal helpers
-  // ---------------------------
   function openPaymentModal(inv: FeeInvoiceRow) {
     setPaymentError(null);
     setPaymentAmount("");
@@ -385,23 +499,21 @@ export default function AdminFeesInvoicesPage() {
       open: true,
       invoiceId: inv.invoiceId,
       studentName: inv.studentName,
-      classLabel: inv.classLabel,
-      balancePesewas: inv.balancePesewas,
+      classLabel: inv.classLabel ?? undefined,
+      balancePesewas: inv.balancePesewas || 0,
     });
   }
 
   function closePaymentModal() {
-    setPaymentModal((prev) => ({
-      ...prev,
-      open: false,
-    }));
+    setPaymentModal((prev) => ({ ...prev, open: false }));
   }
 
   // ---------------------------
-  // Record payment
+  // Record payment (prefer server-derived tenant, fallback to tenantId)
   // ---------------------------
   async function handleSubmitPayment() {
     if (!tenant?.id) return;
+
     if (!paymentModal.invoiceId) {
       setPaymentError("Invoice is required.");
       return;
@@ -421,11 +533,8 @@ export default function AdminFeesInvoicesPage() {
 
     const pesewas = Math.round(numeric * 100);
 
-    // Extra guard: don't allow overpayment in the UI
-    if (pesewas > paymentModal.balancePesewas) {
-      setPaymentError(
-        "Payment amount is larger than the remaining balance. Please adjust."
-      );
+    if (pesewas > (paymentModal.balancePesewas || 0)) {
+      setPaymentError("Payment is larger than the remaining balance. Adjust the amount.");
       return;
     }
 
@@ -433,8 +542,8 @@ export default function AdminFeesInvoicesPage() {
     setPaymentError(null);
 
     try {
-      const body = {
-        tenantId: tenant.id,
+      // Prefer: no tenantId
+      let body: any = {
         invoiceId: paymentModal.invoiceId,
         amountPesewas: pesewas,
         method: paymentMethod || "cash",
@@ -442,105 +551,82 @@ export default function AdminFeesInvoicesPage() {
         channel: paymentChannel || "office",
       };
 
-      const r = await fetch("/api/admin/fees/payments/create", {
+      let r = await fetch("/api/admin/fees/payments/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-      const j = await r.json().catch(() => ({}));
+      let j = await safeJson(r);
+
+      // Fallback: old API expects tenantId
+      if ((!r.ok || !j?.ok) && tenant.id) {
+        body = { ...body, tenantId: tenant.id };
+        r = await fetch("/api/admin/fees/payments/create", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        j = await safeJson(r);
+      }
 
       if (!r.ok || !j?.ok) {
-        setPaymentError(
-          j?.error ||
-            "Failed to record payment. Please try again or contact the office."
-        );
+        setPaymentError(j?.error || "Failed to record payment. Please try again.");
         return;
       }
 
-      // Close modal and refresh invoice list
       closePaymentModal();
       await loadInvoices();
       setInfo("Payment recorded successfully and balances updated.");
     } catch {
-      setPaymentError(
-        "Network or server error while recording payment."
-      );
+      setPaymentError("Network or server error while recording payment.");
     } finally {
       setPaymentLoading(false);
     }
   }
 
-  // ---------------------------
-  // Derived summary
-  // ---------------------------
   const summary = useMemo(() => {
     const totalInvoices = invoices.length;
-    const totalBilled = invoices.reduce(
-      (sum, inv) => sum + (inv.amountBilledPesewas || 0),
-      0
-    );
-    const totalPaid = invoices.reduce(
-      (sum, inv) => sum + (inv.totalPaidPesewas || 0),
-      0
-    );
-    const totalBalance = invoices.reduce(
-      (sum, inv) => sum + (inv.balancePesewas || 0),
-      0
-    );
-
-    return {
-      totalInvoices,
-      totalBilled,
-      totalPaid,
-      totalBalance,
-    };
+    const totalBilled = invoices.reduce((sum, inv) => sum + (inv.amountBilledPesewas || 0), 0);
+    const totalPaid = invoices.reduce((sum, inv) => sum + (inv.totalPaidPesewas || 0), 0);
+    const totalBalance = invoices.reduce((sum, inv) => sum + (inv.balancePesewas || 0), 0);
+    return { totalInvoices, totalBilled, totalPaid, totalBalance };
   }, [invoices]);
 
-  // ---------------------------
-  // UI
-  // ---------------------------
   return (
     <main className="min-h-screen p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold">Fees — Invoices & Payments</h1>
+        <h1 className="text-2xl font-bold">Fees — Invoices &amp; Payments</h1>
         <p className="text-sm text-zinc-600 max-w-3xl">
-          Create and manage{" "}
-          <span className="font-semibold">
-            per-learner fee invoices for each term
-          </span>
-          , track payments, and see clear balances — all designed to be{" "}
-          <span className="font-semibold">calm, fair, and transparent</span>{" "}
-          for families.
+          Create and manage per-learner invoices, track payments, and see clear balances — calm and transparent.
         </p>
+
         {tenant && (
           <p className="text-xs text-zinc-500">
             School: <span className="font-semibold">{tenant.name}</span>
           </p>
         )}
-        {tenantLoading && (
-          <p className="text-xs text-zinc-500">Loading school context…</p>
-        )}
+
+        {tenantLoading && <p className="text-xs text-zinc-500">Loading school context…</p>}
+
         {tenantError && (
-          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-            {tenantError}
+          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{tenantError}</p>
+        )}
+
+        {setupComplete === false && (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            Admin setup is not completed yet. Term/academic year defaults may be wrong. Complete Admin → Setup to lock
+            them properly.
           </p>
         )}
       </header>
 
-      {/* Filters: term/year/class + structure */}
       <section className="border rounded-xl p-4 bg-white space-y-4">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-          {/* Left: term + year */}
           <div className="space-y-2">
-            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
-              Term & Academic Year
-            </div>
+            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Term &amp; Academic Year</div>
             <div className="flex flex-wrap gap-3 text-sm">
               <div>
-                <label className="block text-xs font-medium mb-1">
-                  Term
-                </label>
+                <label className="block text-xs font-medium mb-1">Term</label>
                 <select
                   className="border rounded-xl h-9 px-2 text-sm"
                   value={term}
@@ -552,9 +638,7 @@ export default function AdminFeesInvoicesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">
-                  Academic year
-                </label>
+                <label className="block text-xs font-medium mb-1">Academic year</label>
                 <input
                   type="text"
                   className="border rounded-xl h-9 px-2 text-sm"
@@ -565,44 +649,34 @@ export default function AdminFeesInvoicesPage() {
               </div>
             </div>
             <p className="text-[11px] text-zinc-500 max-w-md">
-              These filters control{" "}
-              <span className="font-semibold">
-                both the fee structures and invoices
-              </span>{" "}
-              shown below.
+              These filters control both the fee structures and invoices shown below.
             </p>
           </div>
 
-          {/* Right: class mode + classroom */}
           <div className="space-y-2 text-sm">
-            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
-              Class selection
-            </div>
+            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Class selection</div>
             <div className="flex items-center gap-2 mb-2">
               <button
-                className={`${btnOutline} h-8 px-3 ${
-                  mode === "single" ? "ring-2 ring-zinc-800" : ""
-                }`}
+                className={`${btnOutline} h-8 px-3 ${mode === "single" ? "ring-2 ring-zinc-800" : ""}`}
                 onClick={() => setMode("single")}
                 disabled={classLoading}
+                type="button"
               >
                 Single-stream
               </button>
               <button
-                className={`${btnOutline} h-8 px-3 ${
-                  mode === "multi" ? "ring-2 ring-zinc-800" : ""
-                }`}
+                className={`${btnOutline} h-8 px-3 ${mode === "multi" ? "ring-2 ring-zinc-800" : ""}`}
                 onClick={() => setMode("multi")}
                 disabled={classLoading}
+                type="button"
               >
                 Multi-stream (A–D)
               </button>
             </div>
+
             <div className="grid md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1">
-                  Classroom
-                </label>
+                <label className="block text-xs font-medium mb-1">Classroom</label>
                 {classLoading ? (
                   <div className="h-9 rounded-xl border bg-zinc-50 animate-pulse" />
                 ) : classOptions.length ? (
@@ -623,15 +697,15 @@ export default function AdminFeesInvoicesPage() {
                   </div>
                 )}
               </div>
+
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
-                  Quick seeding
-                </span>
+                <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Quick seeding</span>
                 <div className="flex flex-wrap gap-2">
                   <button
                     className={btnOutline}
                     onClick={() => seedClasses("single")}
                     disabled={!tenant?.id || classLoading}
+                    type="button"
                   >
                     Seed KG1 → JHS3 (single)
                   </button>
@@ -639,12 +713,14 @@ export default function AdminFeesInvoicesPage() {
                     className={btnOutline}
                     onClick={() => seedClasses("multi")}
                     disabled={!tenant?.id || classLoading}
+                    type="button"
                   >
                     Seed KG1 → JHS3 (A–D)
                   </button>
                 </div>
               </div>
             </div>
+
             {classError && (
               <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mt-1">
                 {classError}
@@ -653,17 +729,12 @@ export default function AdminFeesInvoicesPage() {
           </div>
         </div>
 
-        {/* Fee structure picker */}
         <div className="border-t pt-3 mt-2 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
               Fee structure for this term/year
             </div>
-            <button
-              className={btnOutline}
-              onClick={loadStructures}
-              disabled={structuresLoading || !tenant?.id}
-            >
+            <button className={btnOutline} onClick={loadStructures} disabled={structuresLoading || !tenant?.id} type="button">
               Reload structures
             </button>
           </div>
@@ -675,21 +746,18 @@ export default function AdminFeesInvoicesPage() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            {structuresLoading && (
-              <span className="text-xs text-zinc-500">
-                Loading fee structures…
-              </span>
-            )}
+            {structuresLoading && <span className="text-xs text-zinc-500">Loading fee structures…</span>}
+
             {!structuresLoading && !structures.length && !structuresError && (
               <p className="text-xs text-zinc-600">
                 No fee structures found yet for{" "}
                 <span className="font-semibold">
                   {term}, {academicYear}
                 </span>
-                . You can create them later under a dedicated{" "}
-                <span className="font-semibold">Fees Setup</span> screen.
+                . Create them first under Fees → Structures.
               </p>
             )}
+
             {!!structures.length && (
               <div className="flex flex-wrap gap-2">
                 {structures.map((s) => {
@@ -697,10 +765,9 @@ export default function AdminFeesInvoicesPage() {
                   return (
                     <button
                       key={s.id}
-                      className={`${btnOutline} ${
-                        selected ? "ring-2 ring-zinc-800" : ""
-                      }`}
+                      className={`${btnOutline} ${selected ? "ring-2 ring-zinc-800" : ""}`}
                       onClick={() => setSelectedStructureId(s.id)}
+                      type="button"
                     >
                       <span className="font-semibold">{s.name}</span>
                       <span className="ml-2 text-[11px] text-zinc-600">
@@ -715,68 +782,52 @@ export default function AdminFeesInvoicesPage() {
         </div>
       </section>
 
-      {/* Summary + actions */}
       <section className="border rounded-xl p-4 bg-white space-y-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="space-y-1 text-sm">
-            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
-              Invoice Summary
+            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Invoice Summary</div>
+            <div>
+              Total invoices in view: <span className="font-semibold">{summary.totalInvoices}</span>
             </div>
             <div>
-              Total invoices in view:{" "}
-              <span className="font-semibold">
-                {summary.totalInvoices}
-              </span>
+              Total billed: <span className="font-semibold">{formatMoneyFromPesewas(summary.totalBilled)}</span>
             </div>
             <div>
-              Total billed:{" "}
-              <span className="font-semibold">
-                {formatMoneyFromPesewas(summary.totalBilled)}
-              </span>
-            </div>
-            <div>
-              Total paid:{" "}
-              <span className="font-semibold">
-                {formatMoneyFromPesewas(summary.totalPaid)}
-              </span>
+              Total paid: <span className="font-semibold">{formatMoneyFromPesewas(summary.totalPaid)}</span>
             </div>
             <div>
               Total outstanding:{" "}
-              <span className="font-semibold text-red-700">
-                {formatMoneyFromPesewas(summary.totalBalance)}
-              </span>
+              <span className="font-semibold text-red-700">{formatMoneyFromPesewas(summary.totalBalance)}</span>
             </div>
           </div>
+
           <div className="flex flex-wrap gap-2">
             <button
               className={btnPrimary}
               onClick={handleGenerateInvoices}
-              disabled={
-                generateLoading ||
-                !tenant?.id ||
-                !classroomId ||
-                !term ||
-                !academicYear
-              }
+              disabled={generateLoading || !tenant?.id || !classroomId || !term || !academicYear}
+              type="button"
             >
               {generateLoading ? "Generating…" : "Generate invoices for this class"}
             </button>
+
             <button
               className={btnOutline}
               onClick={loadInvoices}
               disabled={invoicesLoading || !tenant?.id || !term || !academicYear}
+              type="button"
             >
-              {invoicesLoading ? "Loading invoices…" : "Load invoices"}
+              {invoicesLoading ? "Loading…" : "Reload invoices"}
             </button>
+
             <button
               className={btnDanger}
               onClick={() => {
                 setInvoices([]);
                 setInvoicesError(null);
-                setInfo(
-                  "Cleared invoice list in the browser view. You can reload them anytime."
-                );
+                setInfo("Cleared invoice list in the browser view. You can reload anytime.");
               }}
+              type="button"
             >
               Clear view
             </button>
@@ -795,23 +846,13 @@ export default function AdminFeesInvoicesPage() {
         )}
       </section>
 
-      {/* Invoices table */}
       <section className="border rounded-xl p-4 bg-white">
         <div className="flex items-center justify-between gap-2 mb-3">
           <h2 className="text-sm font-semibold">
-            Invoices for{" "}
-            <span className="font-semibold">
-              {term}, {academicYear}
-            </span>{" "}
-            —{" "}
-            {classOptions.find((c) => c.id === classroomId)?.label ||
-              "all classes (filtered by class if selected)"}
+            Invoices for <span className="font-semibold">{term}, {academicYear}</span> —{" "}
+            {classOptions.find((c) => c.id === classroomId)?.label || "selected class"}
           </h2>
-          {invoicesLoading && (
-            <span className="text-xs text-zinc-500">
-              Loading invoices…
-            </span>
-          )}
+          {invoicesLoading && <span className="text-xs text-zinc-500">Loading invoices…</span>}
         </div>
 
         <div className="overflow-x-auto">
@@ -830,16 +871,10 @@ export default function AdminFeesInvoicesPage() {
               </tr>
             </thead>
             <tbody>
-              {invoices.map((inv: FeeInvoiceRow, index: number) => {
+              {invoices.map((inv) => {
                 const fullyPaid = inv.balancePesewas <= 0;
-                const partiallyPaid =
-                  inv.balancePesewas > 0 &&
-                  inv.totalPaidPesewas > 0;
-                const statusLabel = fullyPaid
-                  ? "Paid"
-                  : partiallyPaid
-                  ? "Partially paid"
-                  : "Not paid";
+                const partiallyPaid = inv.balancePesewas > 0 && inv.totalPaidPesewas > 0;
+                const statusLabel = fullyPaid ? "Paid" : partiallyPaid ? "Partially paid" : "Not paid";
 
                 const statusClasses = fullyPaid
                   ? "inline-flex px-2 py-0.5 rounded-full border text-[11px] bg-emerald-50 border-emerald-200 text-emerald-800"
@@ -848,27 +883,16 @@ export default function AdminFeesInvoicesPage() {
                   : "inline-flex px-2 py-0.5 rounded-full border text-[11px] bg-red-50 border-red-200 text-red-800";
 
                 return (
-                  <tr
-                    key={`${inv.invoiceId}-${index}`}
-                    className="border-b last:border-b-0"
-                  >
+                  <tr key={inv.invoiceId} className="border-b last:border-b-0">
                     <td className="px-3 py-2 align-top">
-                      <div className="font-semibold">
-                        {inv.studentName || "Unnamed learner"}
-                      </div>
+                      <div className="font-semibold">{inv.studentName || "Unnamed learner"}</div>
                     </td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-700">
-                      {inv.classLabel || "—"}
-                    </td>
+                    <td className="px-3 py-2 align-top text-xs text-zinc-700">{inv.classLabel || "—"}</td>
                     <td className="px-3 py-2 align-top text-xs text-zinc-700">
                       {inv.term}, {inv.academicYear}
                     </td>
-                    <td className="px-3 py-2 align-top text-right">
-                      {formatMoneyFromPesewas(inv.amountBilledPesewas)}
-                    </td>
-                    <td className="px-3 py-2 align-top text-right">
-                      {formatMoneyFromPesewas(inv.totalPaidPesewas)}
-                    </td>
+                    <td className="px-3 py-2 align-top text-right">{formatMoneyFromPesewas(inv.amountBilledPesewas)}</td>
+                    <td className="px-3 py-2 align-top text-right">{formatMoneyFromPesewas(inv.totalPaidPesewas)}</td>
                     <td className="px-3 py-2 align-top text-right">
                       <span
                         className={
@@ -880,9 +904,7 @@ export default function AdminFeesInvoicesPage() {
                         {formatMoneyFromPesewas(inv.balancePesewas)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-700">
-                      {formatDateShort(inv.lastPaymentAt)}
-                    </td>
+                    <td className="px-3 py-2 align-top text-xs text-zinc-700">{formatDateShort(inv.lastPaymentAt)}</td>
                     <td className="px-3 py-2 align-top">
                       <span className={statusClasses}>{statusLabel}</span>
                     </td>
@@ -891,31 +913,19 @@ export default function AdminFeesInvoicesPage() {
                         className={btnPrimary}
                         onClick={() => openPaymentModal(inv)}
                         disabled={inv.balancePesewas <= 0}
+                        type="button"
                       >
-                        {inv.balancePesewas <= 0
-                          ? "Fully paid"
-                          : "Record payment"}
+                        {inv.balancePesewas <= 0 ? "Fully paid" : "Record payment"}
                       </button>
                     </td>
                   </tr>
                 );
               })}
+
               {!invoices.length && !invoicesLoading && !invoicesError && (
                 <tr>
-                  <td
-                    colSpan={9}
-                    className="px-3 py-4 text-sm text-zinc-600"
-                  >
-                    No invoices loaded yet. Choose a class, term, and year, then
-                    click{" "}
-                    <span className="font-semibold">
-                      Generate invoices
-                    </span>{" "}
-                    or{" "}
-                    <span className="font-semibold">
-                      Load invoices
-                    </span>
-                    .
+                  <td colSpan={9} className="px-3 py-4 text-sm text-zinc-600">
+                    No invoices in view. Generate invoices or adjust filters.
                   </td>
                 </tr>
               )}
@@ -924,49 +934,34 @@ export default function AdminFeesInvoicesPage() {
         </div>
 
         <p className="mt-3 text-[11px] text-zinc-500 max-w-3xl">
-          This screen focuses on{" "}
-          <span className="font-semibold">clarity and fairness</span>. It’s not
-          for shaming families, but for gently tracking what is due, what has
-          been paid, and what support might be needed.
+          This screen is a truthful ledger. Use it for clarity and planning, not pressure.
         </p>
       </section>
 
-      {/* Payment Modal */}
       {paymentModal.open && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">
-                Record payment — {paymentModal.studentName}
-              </h2>
-              <button
-                className={btnOutline}
-                onClick={closePaymentModal}
-                disabled={paymentLoading}
-              >
+              <h2 className="text-sm font-semibold">Record payment — {paymentModal.studentName}</h2>
+              <button className={btnOutline} onClick={closePaymentModal} disabled={paymentLoading} type="button">
                 Close
               </button>
             </div>
+
             {paymentModal.classLabel && (
               <p className="text-xs text-zinc-600">
-                Class:{" "}
-                <span className="font-semibold">
-                  {paymentModal.classLabel}
-                </span>
+                Class: <span className="font-semibold">{paymentModal.classLabel}</span>
               </p>
             )}
+
             <p className="text-xs text-zinc-600">
               Current balance:{" "}
-              <span className="font-semibold text-red-700">
-                {formatMoneyFromPesewas(paymentModal.balancePesewas)}
-              </span>
+              <span className="font-semibold text-red-700">{formatMoneyFromPesewas(paymentModal.balancePesewas)}</span>
             </p>
 
             <div className="grid gap-3 text-sm">
               <div>
-                <label className="block text-xs font-medium mb-1">
-                  Amount (GH₵)
-                </label>
+                <label className="block text-xs font-medium mb-1">Amount (GH₵)</label>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -979,10 +974,9 @@ export default function AdminFeesInvoicesPage() {
                   disabled={paymentLoading}
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-medium mb-1">
-                  Method
-                </label>
+                <label className="block text-xs font-medium mb-1">Method</label>
                 <select
                   className="w-full border rounded-xl h-9 px-2 text-sm"
                   value={paymentMethod}
@@ -996,10 +990,9 @@ export default function AdminFeesInvoicesPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
+
               <div>
-                <label className="block text-xs font-medium mb-1">
-                  Reference / receipt (optional)
-                </label>
+                <label className="block text-xs font-medium mb-1">Reference / receipt (optional)</label>
                 <input
                   type="text"
                   className="w-full border rounded-xl h-9 px-2 text-sm"
@@ -1009,10 +1002,9 @@ export default function AdminFeesInvoicesPage() {
                   placeholder="Receipt no. / transaction ref."
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-medium mb-1">
-                  Channel
-                </label>
+                <label className="block text-xs font-medium mb-1">Channel</label>
                 <select
                   className="w-full border rounded-xl h-9 px-2 text-sm"
                   value={paymentChannel}
@@ -1034,28 +1026,15 @@ export default function AdminFeesInvoicesPage() {
             )}
 
             <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                className={btnOutline}
-                onClick={closePaymentModal}
-                disabled={paymentLoading}
-              >
+              <button className={btnOutline} onClick={closePaymentModal} disabled={paymentLoading} type="button">
                 Cancel
               </button>
-              <button
-                className={btnPrimary}
-                onClick={handleSubmitPayment}
-                disabled={paymentLoading}
-              >
+              <button className={btnPrimary} onClick={handleSubmitPayment} disabled={paymentLoading} type="button">
                 {paymentLoading ? "Recording…" : "Record payment"}
               </button>
             </div>
 
-            <p className="text-[11px] text-zinc-500 mt-1">
-              Payments recorded here update the learner&apos;s balance
-              immediately. Use this as a{" "}
-              <span className="font-semibold">truthful ledger</span>, not as a
-              tool for pressure.
-            </p>
+            <p className="text-[11px] text-zinc-500 mt-1">Payments recorded here update balances immediately.</p>
           </div>
         </div>
       )}

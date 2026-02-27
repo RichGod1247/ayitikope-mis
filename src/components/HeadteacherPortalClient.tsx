@@ -1,4 +1,3 @@
-// src/components/HeadteacherPortalClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -39,9 +38,7 @@ type CsvRow = {
 function startOfWeekMonday(d: Date): { start: string; end: string } {
   const day = d.getUTCDay();
   const diff = (day === 0 ? -6 : 1) - day;
-  const mon = new Date(
-    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-  );
+  const mon = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   mon.setUTCDate(mon.getUTCDate() + diff);
   const fri = new Date(mon);
   fri.setUTCDate(mon.getUTCDate() + 4);
@@ -55,10 +52,7 @@ function formatNumber(n: number) {
   return n.toLocaleString();
 }
 
-export default function HeadteacherPortalClient({
-  tenantId,
-  headUserId,
-}: HeadteacherPortalClientProps) {
+export default function HeadteacherPortalClient({ tenantId, headUserId }: HeadteacherPortalClientProps) {
   const [snapshot, setSnapshot] = useState<WeeklySnapshot>({
     loaded: false,
     error: null,
@@ -75,22 +69,20 @@ export default function HeadteacherPortalClient({
     worstClassPct: null,
   });
 
-  const [weekRange, setWeekRange] = useState<{ start: string; end: string }>(
-    () => startOfWeekMonday(new Date())
+  const [weekRange, setWeekRange] = useState<{ start: string; end: string }>(() =>
+    startOfWeekMonday(new Date())
   );
 
   const term = "1st Term";
   const academicYear = "2025/2026";
 
+  // ✅ Bank-grade: relative URL only (no hardcoded origin)
   const assessmentOverviewUrl = useMemo(() => {
-    const u = new URL(
-      "/headteacher/assessment/overview",
-      "http://localhost:3000"
-    );
-    u.searchParams.set("tenantId", tenantId);
-    u.searchParams.set("term", term);
-    u.searchParams.set("academicYear", academicYear);
-    return u.pathname + u.search;
+    const sp = new URLSearchParams();
+    sp.set("tenantId", tenantId);
+    sp.set("term", term);
+    sp.set("academicYear", academicYear);
+    return `/headteacher/assessment/overview?${sp.toString()}`;
   }, [tenantId, term, academicYear]);
 
   // -----------------------------
@@ -102,10 +94,7 @@ export default function HeadteacherPortalClient({
         const { start, end } = weekRange;
         if (!tenantId || !start || !end) return;
 
-        const u = new URL(
-          "/api/headteacher/attendance/weekly/csv",
-          window.location.origin
-        );
+        const u = new URL("/api/headteacher/attendance/weekly/csv", window.location.origin);
         u.searchParams.set("tenantId", tenantId);
         u.searchParams.set("start", start);
         u.searchParams.set("end", end);
@@ -122,16 +111,7 @@ export default function HeadteacherPortalClient({
         const rows: CsvRow[] = body
           .filter(Boolean)
           .map((line) => {
-            const [
-              label,
-              _enrolled,
-              marks,
-              present,
-              absent,
-              late,
-              excused,
-              pct,
-            ] = line.split(",");
+            const [label, _enrolled, marks, present, absent, late, excused, pct] = line.split(",");
 
             return {
               classLabel: label,
@@ -146,8 +126,7 @@ export default function HeadteacherPortalClient({
           });
 
         if (rows.length === 0) {
-          setSnapshot((prev) => ({
-            ...prev,
+          setSnapshot(() => ({
             loaded: true,
             error: null,
             totalClasses: 0,
@@ -209,12 +188,11 @@ export default function HeadteacherPortalClient({
           worstClassLabel: worst?.classLabel ?? null,
           worstClassPct: worst?.pct ?? null,
         });
-      } catch (err: any) {
+      } catch {
         setSnapshot((prev) => ({
           ...prev,
           loaded: true,
-          error:
-            "Could not load this week’s attendance snapshot. The full weekly report is still available.",
+          error: "Could not load this week’s attendance snapshot. The full weekly report is still available.",
         }));
       }
     }
@@ -241,30 +219,22 @@ export default function HeadteacherPortalClient({
 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div className="space-y-2 max-w-2xl">
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                Head Portal
-              </h1>
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Head Portal</h1>
               <p className="text-xs md:text-sm text-zinc-600">
                 A calm cockpit for{" "}
-                <span className="font-semibold">
-                  attendance, assessment and lesson supervision
-                </span>{" "}
+                <span className="font-semibold">attendance, assessment and lesson supervision</span>{" "}
                 — built so that your decisions are driven by{" "}
-                <span className="font-semibold">
-                  trust, transparency and truthfulness
-                </span>{" "}
+                <span className="font-semibold">trust, transparency and truthfulness</span>{" "}
                 not guesswork.
               </p>
             </div>
 
             <div className="text-[11px] text-zinc-500 md:text-right">
               <p>
-                Tenant / School ID:{" "}
-                <span className="font-mono">{tenantId}</span>
+                Tenant / School ID: <span className="font-mono">{tenantId}</span>
               </p>
               <p>
-                Head user ID:{" "}
-                <span className="font-mono">{headUserId}</span>
+                Head user ID: <span className="font-mono">{headUserId}</span>
               </p>
             </div>
           </div>
@@ -281,16 +251,10 @@ export default function HeadteacherPortalClient({
               <div className="relative space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-sm md:text-base font-semibold text-zinc-900">
-                      School pulse · This week
-                    </h2>
+                    <h2 className="text-sm md:text-base font-semibold text-zinc-900">School pulse · This week</h2>
                     <p className="text-[11px] md:text-xs text-zinc-600 max-w-sm">
-                      At a glance, see how faithfully classes met this week.
-                      Detailed AI explanations live inside the{" "}
-                      <span className="font-semibold">
-                        weekly attendance report
-                      </span>
-                      .
+                      At a glance, see how faithfully classes met this week. Detailed AI explanations live inside the{" "}
+                      <span className="font-semibold">weekly attendance report</span>.
                     </p>
                   </div>
                   <div className="text-right text-[11px] text-zinc-500">
@@ -306,13 +270,9 @@ export default function HeadteacherPortalClient({
                   <div className="rounded-2xl border bg-white/80 px-4 py-3 md:px-5 md:py-4 flex flex-col justify-between">
                     <div className="flex items-center justify-between gap-3">
                       <div className="space-y-1">
-                        <p className="text-[11px] font-medium text-zinc-600">
-                          Whole-school present rate
-                        </p>
+                        <p className="text-[11px] font-medium text-zinc-600">Whole-school present rate</p>
                         <p className="text-2xl md:text-3xl font-semibold tracking-tight">
-                          {snapshot.loaded
-                            ? `${snapshot.pctOverall.toFixed(1)}%`
-                            : "--"}
+                          {snapshot.loaded ? `${snapshot.pctOverall.toFixed(1)}%` : "--"}
                         </p>
                       </div>
 
@@ -320,12 +280,8 @@ export default function HeadteacherPortalClient({
                     </div>
 
                     <p className="mt-2 text-[11px] text-zinc-500 max-w-sm">
-                      Based on all marks taken in this week across all classes
-                      inside EduLife OS. Use it as a{" "}
-                      <span className="font-semibold">
-                        conversation starter
-                      </span>{" "}
-                      with staff — not a punishment stick.
+                      Based on all marks taken in this week across all classes inside EduLife OS. Use it as a{" "}
+                      <span className="font-semibold">conversation starter</span> with staff — not a punishment stick.
                     </p>
                   </div>
 
@@ -333,80 +289,24 @@ export default function HeadteacherPortalClient({
                   <div className="grid grid-cols-2 gap-2">
                     <MiniStat
                       label="Classes in report"
-                      value={
-                        snapshot.loaded
-                          ? formatNumber(snapshot.totalClasses)
-                          : "—"
-                      }
+                      value={snapshot.loaded ? formatNumber(snapshot.totalClasses) : "—"}
                       hint="With at least one attendance mark."
                     />
                     <MiniStat
                       label="Marks taken"
-                      value={
-                        snapshot.loaded
-                          ? formatNumber(snapshot.totalMarks)
-                          : "—"
-                      }
+                      value={snapshot.loaded ? formatNumber(snapshot.totalMarks) : "—"}
                       hint="How many times registers were taken."
                     />
                     <MiniStat
                       label="Present marks"
-                      value={
-                        snapshot.loaded
-                          ? formatNumber(snapshot.totalPresent)
-                          : "—"
-                      }
+                      value={snapshot.loaded ? formatNumber(snapshot.totalPresent) : "—"}
                       hint="Total present across all marks."
                     />
                     <MiniStat
                       label="Absent marks"
-                      value={
-                        snapshot.loaded
-                          ? formatNumber(snapshot.totalAbsent)
-                          : "—"
-                      }
+                      value={snapshot.loaded ? formatNumber(snapshot.totalAbsent) : "—"}
                       hint="Total absent across all marks."
                     />
-                  </div>
-                </div>
-
-                {/* Best / Needs attention */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/80 px-3 py-2">
-                    <div className="font-semibold text-emerald-900">
-                      Strongest attendance
-                    </div>
-                    {snapshot.bestClassLabel ? (
-                      <div className="flex items-baseline justify-between gap-2 text-emerald-900">
-                        <span>{snapshot.bestClassLabel}</span>
-                        <span className="font-mono">
-                          {snapshot.bestClassPct?.toFixed(1)}%
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="text-emerald-900/80 mt-0.5">
-                        Will appear once at least one class has marks this week.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-amber-100 bg-amber-50/80 px-3 py-2">
-                    <div className="font-semibold text-amber-900">
-                      Needs attention
-                    </div>
-                    {snapshot.worstClassLabel ? (
-                      <div className="flex items-baseline justify-between gap-2 text-amber-900">
-                        <span>{snapshot.worstClassLabel}</span>
-                        <span className="font-mono">
-                          {snapshot.worstClassPct?.toFixed(1)}%
-                        </span>
-                      </div>
-                    ) : (
-                      <p className="text-amber-900/80 mt-0.5">
-                        Once data comes in, low-attendance classes will show
-                        here.
-                      </p>
-                    )}
                   </div>
                 </div>
 
@@ -424,8 +324,7 @@ export default function HeadteacherPortalClient({
                     Open weekly attendance pulse
                   </Link>
                   <p className="text-[11px] text-zinc-500">
-                    Full AI explanation lives on that page, including a short
-                    narrative you can share with staff.
+                    Full AI explanation lives on that page, including a short narrative you can share with staff.
                   </p>
                 </div>
               </div>
@@ -434,19 +333,12 @@ export default function HeadteacherPortalClient({
 
           {/* RIGHT: Feature tiles */}
           <div className="space-y-4">
-            {/* Assessment & results */}
             <div className="rounded-3xl border border-zinc-200 bg-white/90 px-4 py-4 md:px-5 md:py-5 shadow-sm">
               <div className="space-y-2">
-                <h2 className="text-sm md:text-base font-semibold text-zinc-900">
-                  Assessment & results overview
-                </h2>
+                <h2 className="text-sm md:text-base font-semibold text-zinc-900">Assessment & results overview</h2>
                 <p className="text-[11px] md:text-xs text-zinc-600">
-                  See how classes are performing by term, subject and teacher.
-                  This connects directly to the{" "}
-                  <span className="font-semibold">
-                    headteacher assessment overview
-                  </span>{" "}
-                  we stabilised earlier.
+                  See how classes are performing by term, subject and teacher. This connects directly to the{" "}
+                  <span className="font-semibold">headteacher assessment overview</span> we stabilised earlier.
                 </p>
               </div>
               <ul className="mt-2 text-[11px] text-zinc-600 space-y-1.5">
@@ -464,19 +356,13 @@ export default function HeadteacherPortalClient({
               </div>
             </div>
 
-            {/* Lesson notes supervision */}
             <div className="rounded-3xl border border-zinc-200 bg-white/90 px-4 py-4 md:px-5 md:py-5 shadow-sm">
               <div className="space-y-2">
-                <h2 className="text-sm md:text-base font-semibold text-zinc-900">
-                  Lesson notes & supervision
-                </h2>
+                <h2 className="text-sm md:text-base font-semibold text-zinc-900">Lesson notes & supervision</h2>
                 <p className="text-[11px] md:text-xs text-zinc-600">
                   Track which teachers have{" "}
-                    <span className="font-semibold">
-                      submitted NaCCA-aligned lesson notes
-                    </span>{" "}
-                  and which notes are waiting for review or have been returned
-                  for improvement.
+                  <span className="font-semibold">submitted NaCCA-aligned lesson notes</span>{" "}
+                  and which notes are waiting for review or have been returned for improvement.
                 </p>
               </div>
               <ul className="mt-2 text-[11px] text-zinc-600 space-y-1.5">
@@ -496,19 +382,12 @@ export default function HeadteacherPortalClient({
               </div>
             </div>
 
-            {/* Communication & fees */}
             <div className="rounded-3xl border border-zinc-200 bg-white/90 px-4 py-4 md:px-5 md:py-5 shadow-sm">
               <div className="space-y-2">
-                <h2 className="text-sm md:text-base font-semibold text-zinc-900">
-                  Communication, fees & SMS nudges
-                </h2>
+                <h2 className="text-sm md:text-base font-semibold text-zinc-900">Communication, fees & SMS nudges</h2>
                 <p className="text-[11px] md:text-xs text-zinc-600">
-                  This is where attendance, assessment and finances eventually
-                  meet:
-                  <span className="font-semibold">
-                    {" "}
-                    gentle SMS nudges, fee reminders and term summaries
-                  </span>{" "}
+                  This is where attendance, assessment and finances eventually meet:
+                  <span className="font-semibold"> gentle SMS nudges, fee reminders and term summaries</span>{" "}
                   that honour parents instead of harassing them.
                 </p>
               </div>
@@ -556,31 +435,17 @@ function ToneBadge({ tone }: { tone: "good" | "ok" | "warn" }) {
   }
   return (
     <span className="inline-flex items-center rounded-full bg-red-100 text-red-900 px-2.5 py-1 text-[10px] font-medium border border-red-200">
-      Needs attention
-    </span>
-  );
+        Needs attention
+      </span>
+    );
 }
 
-function MiniStat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
+function MiniStat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white/80 px-3 py-2">
       <div className="text-[10px] font-medium text-zinc-600">{label}</div>
-      <div className="text-sm font-semibold text-zinc-900 mt-0.5">
-        {value}
-      </div>
-      {hint && (
-        <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug">
-          {hint}
-        </p>
-      )}
+      <div className="text-sm font-semibold text-zinc-900 mt-0.5">{value}</div>
+      {hint && <p className="text-[10px] text-zinc-500 mt-0.5 leading-snug">{hint}</p>}
     </div>
   );
 }

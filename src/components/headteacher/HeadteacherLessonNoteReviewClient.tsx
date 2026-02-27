@@ -1,14 +1,17 @@
 // src/components/headteacher/HeadteacherLessonNoteReviewClient.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type LessonNoteStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED";
 
 type LessonNoteDetail = {
   id: string;
+
   teacherUserId: string;
+  teacherName: string | null;
+
   classroomId: string | null;
 
   phase: string | null;
@@ -50,9 +53,7 @@ type LessonNoteDetail = {
   updatedAt: string;
 };
 
-type ItemResponse =
-  | { ok: true; item: LessonNoteDetail }
-  | { ok: false; error: string };
+type ItemResponse = { ok: true; item: LessonNoteDetail } | { ok: false; error: string };
 
 type ReviewResponse =
   | {
@@ -70,6 +71,14 @@ type ReviewResponse =
     }
   | { ok: false; error: string };
 
+type SignatureResp =
+  | { ok: true; signatureSvg: string | null; signatureHash: string | null; updatedAt: string | null }
+  | { ok: false; error: string };
+
+type SignatureSaveResp =
+  | { ok: true; signatureSvg: string; signatureHash: string; updatedAt: string }
+  | { ok: false; error: string };
+
 const btnBase =
   "inline-flex items-center justify-center rounded-xl border text-xs md:text-sm h-9 px-3 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-800`;
@@ -77,8 +86,6 @@ const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-z
 const btnGhost =
   "inline-flex items-center justify-center text-xs md:text-sm h-9 px-2 rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100";
 
-const inputBase =
-  "w-full rounded-xl border border-zinc-300 px-2 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white";
 const textAreaBase =
   "w-full rounded-xl border border-zinc-300 px-2 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white resize-vertical min-h-24";
 
@@ -119,6 +126,46 @@ function statusLabel(status: LessonNoteStatus) {
   return status;
 }
 
+type Pt = { x: number; y: number };
+type Stroke = Pt[];
+
+function buildSignatureSvg(strokes: Stroke[], w: number, h: number) {
+  const safeW = Math.max(1, Math.floor(w));
+  const safeH = Math.max(1, Math.floor(h));
+
+  const paths: string[] = [];
+  const circles: string[] = [];
+
+  for (const stroke of strokes) {
+    if (!stroke || stroke.length === 0) continue;
+    if (stroke.length === 1) {
+      const p = stroke[0]!;
+      circles.push(`<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="1.2" />`);
+      continue;
+    }
+    const d = stroke
+      .map((p, i) => (i === 0 ? `M ${p.x.toFixed(2)} ${p.y.toFixed(2)}` : `L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`))
+      .join(" ");
+    paths.push(`<path d="${d}" />`);
+  }
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${safeW} ${safeH}" width="${safeW}" height="${safeH}">`,
+    `<rect x="0" y="0" width="${safeW}" height="${safeH}" fill="white" />`,
+    `<g fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`,
+    ...paths,
+    `</g>`,
+    circles.length ? `<g fill="black">${circles.join("")}</g>` : "",
+    `</svg>`,
+  ]
+    .filter(Boolean)
+    .join("");
+}
+
+function svgToDataUrl(svg: string) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: string }) {
   const router = useRouter();
 
@@ -130,9 +177,230 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
 
+  // Saved signature (tenant-scoped)
+  const [sigLoading, setSigLoading] = useState(true);
+  const [sigError, setSigError] = useState<string | null>(null);
+  const [savedSigSvg, setSavedSigSvg] = useState<string | null>(null);
+  const [savedSigUpdatedAt, setSavedSigUpdatedAt] = useState<string | null>(null);
+  const [sigSaving, setSigSaving] = useState(false);
+
+  // Mode: use saved signature OR draw/update
+  const [sigMode, setSigMode] = useState<"USE_SAVED" | "DRAW">("USE_SAVED");
+
+  // Signature pad (only used when DRAW)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+  const strokesRef = useRef<Stroke[]>([]);
+  const currentStrokeRef = useRef<Stroke>([]);
+  const [signatureDirty, setSignatureDirty] = useState(false);
+
+  const canApprove = note?.status === "SUBMITTED";
+  const canReturn = note?.status === "SUBMITTED";
+
   const handleBack = useCallback(() => {
     router.push("/headteacher/lesson-notes");
   }, [router]);
+
+  const printHref = useMemo(() => {
+    const id = note?.id || noteId;
+    return `/teacher/lesson-notes/${encodeURIComponent(id)}/print`;
+  }, [note?.id, noteId]);
+
+  const printEmbedHref = useMemo(() => `${printHref}?embed=1`, [printHref]);
+
+  const clearSignature = useCallback(() => {
+    strokesRef.current = [];
+    currentStrokeRef.current = [];
+    drawingRef.current = false;
+    setSignatureDirty(false);
+
+    const c = canvasRef.current;
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, c.width, c.height);
+  }, []);
+
+  const resizeCanvas = useCallback(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+
+    const parent = c.parentElement;
+    if (!parent) return;
+
+    const rect = parent.getBoundingClientRect();
+    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+
+    const w = Math.max(260, Math.floor(rect.width));
+    const h = 140;
+
+    c.width = w * dpr;
+    c.height = h * dpr;
+    c.style.width = `${w}px`;
+    c.style.height = `${h}px`;
+
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#111111";
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+
+    for (const stroke of strokesRef.current) {
+      if (!stroke.length) continue;
+      ctx.beginPath();
+      ctx.moveTo(stroke[0]!.x, stroke[0]!.y);
+      for (let i = 1; i < stroke.length; i++) ctx.lineTo(stroke[i]!.x, stroke[i]!.y);
+      ctx.stroke();
+    }
+  }, []);
+
+  function canvasPoint(e: PointerEvent, canvas: HTMLCanvasElement): Pt {
+    const r = canvas.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    return { x: Math.max(0, Math.min(r.width, x)), y: Math.max(0, Math.min(r.height, y)) };
+  }
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (!canApprove) return;
+      if (sigMode !== "DRAW") return;
+
+      const c = canvasRef.current;
+      if (!c) return;
+
+      c.setPointerCapture(e.pointerId);
+      drawingRef.current = true;
+      const p = canvasPoint(e.nativeEvent, c);
+      currentStrokeRef.current = [p];
+
+      const ctx = c.getContext("2d");
+      if (!ctx) return;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    },
+    [canApprove, sigMode]
+  );
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (!drawingRef.current) return;
+      const c = canvasRef.current;
+      if (!c) return;
+
+      const p = canvasPoint(e.nativeEvent, c);
+      currentStrokeRef.current.push(p);
+
+      const ctx = c.getContext("2d");
+      if (!ctx) return;
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+
+      if (!signatureDirty) setSignatureDirty(true);
+    },
+    [signatureDirty]
+  );
+
+  const endStroke = useCallback(() => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+
+    const stroke = currentStrokeRef.current;
+    if (stroke.length) strokesRef.current.push(stroke);
+
+    currentStrokeRef.current = [];
+  }, []);
+
+  async function loadSignature() {
+    setSigLoading(true);
+    setSigError(null);
+
+    try {
+      const res = await fetch("/api/headteacher/signature", { method: "GET", headers: { "Cache-Control": "no-store" } });
+      const data = (await res.json().catch(() => ({}))) as SignatureResp;
+
+      if (!res.ok || !data.ok) {
+        setSigError((data as any)?.error ?? "Failed to load signature.");
+        setSavedSigSvg(null);
+        setSavedSigUpdatedAt(null);
+        setSigMode("DRAW");
+        return;
+      }
+
+      setSavedSigSvg(data.signatureSvg ?? null);
+      setSavedSigUpdatedAt(data.updatedAt ?? null);
+
+      // If signature exists, default to using it
+      setSigMode(data.signatureSvg ? "USE_SAVED" : "DRAW");
+    } catch (e) {
+      console.error("HEADTEACHER_SIGNATURE_LOAD_CLIENT_ERROR", e);
+      setSigError("Network error while loading signature.");
+      setSavedSigSvg(null);
+      setSavedSigUpdatedAt(null);
+      setSigMode("DRAW");
+    } finally {
+      setSigLoading(false);
+    }
+  }
+
+  async function saveSignatureFromPad() {
+    if (sigMode !== "DRAW") return;
+
+    if (!signatureDirty || strokesRef.current.length === 0) {
+      setReviewError("Please sign first, then click Save Signature.");
+      return;
+    }
+
+    const c = canvasRef.current;
+    if (!c) {
+      setReviewError("Signature pad not ready. Refresh and try again.");
+      return;
+    }
+
+    const w = c.getBoundingClientRect().width;
+    const h = c.getBoundingClientRect().height;
+    const svg = buildSignatureSvg(strokesRef.current, w, h);
+
+    setSigSaving(true);
+    setSigError(null);
+
+    try {
+      const res = await fetch("/api/headteacher/signature", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        body: JSON.stringify({ signatureSvg: svg }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as SignatureSaveResp;
+
+      if (!res.ok || !data.ok) {
+        setSigError((data as any)?.error ?? "Failed to save signature.");
+        return;
+      }
+
+      setSavedSigSvg(data.signatureSvg);
+      setSavedSigUpdatedAt(data.updatedAt);
+      setSigMode("USE_SAVED");
+
+      // Clean pad after saving
+      clearSignature();
+    } catch (e) {
+      console.error("HEADTEACHER_SIGNATURE_SAVE_CLIENT_ERROR", e);
+      setSigError("Network error while saving signature.");
+    } finally {
+      setSigSaving(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -168,13 +436,25 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
     }
 
     void run();
+    void loadSignature();
+
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
 
-  const canApprove = note?.status === "SUBMITTED";
-  const canReturn = note?.status === "SUBMITTED";
+  useEffect(() => {
+    // pad setup only matters when drawing
+    if (sigMode !== "DRAW") return;
+
+    resizeCanvas();
+    clearSignature();
+
+    const onResize = () => resizeCanvas();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [sigMode, resizeCanvas, clearSignature]);
 
   async function runReview(action: "APPROVE" | "REJECT") {
     if (!note) return;
@@ -188,6 +468,33 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
       return;
     }
 
+    let signatureSvg: string | null = null;
+
+    if (action === "APPROVE") {
+      // Prefer saved signature if available and selected
+      if (savedSigSvg && sigMode === "USE_SAVED") {
+        signatureSvg = null; // server uses stored signature
+      } else {
+        // Draw mode: require strokes
+        if (!signatureDirty || strokesRef.current.length === 0) {
+          setReviewSaving(false);
+          setReviewError("Approval requires a signature. Save a signature once or sign now.");
+          return;
+        }
+
+        const c = canvasRef.current;
+        if (!c) {
+          setReviewSaving(false);
+          setReviewError("Signature pad is not ready. Refresh and try again.");
+          return;
+        }
+
+        const w = c.getBoundingClientRect().width;
+        const h = c.getBoundingClientRect().height;
+        signatureSvg = buildSignatureSvg(strokesRef.current, w, h);
+      }
+    }
+
     try {
       const res = await fetch("/api/headteacher/lesson-notes/review", {
         method: "POST",
@@ -196,7 +503,8 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
           lessonNoteId: note.id,
           action,
           comment: commentDraft,
-          ifMatchUpdatedAt: note.updatedAt, // optimistic concurrency
+          signatureSvg, // may be null -> server uses saved signature
+          ifMatchUpdatedAt: note.updatedAt,
         }),
       });
 
@@ -207,7 +515,6 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
         return;
       }
 
-      // Update local note snapshot
       setNote((prev) =>
         prev
           ? {
@@ -221,6 +528,12 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
             }
           : prev
       );
+
+      // If this was first-time signature via DRAW, server may have saved it — refresh local saved signature
+      if (action === "APPROVE") {
+        await loadSignature();
+        setSigMode((m) => (savedSigSvg ? m : "USE_SAVED"));
+      }
     } catch (err) {
       console.error("HEADTEACHER_REVIEW_CLIENT_ERROR", err);
       setReviewError("Network or server error while saving your review.");
@@ -228,6 +541,8 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
       setReviewSaving(false);
     }
   }
+
+  const showCanvas = sigMode === "DRAW" || !savedSigSvg;
 
   return (
     <main className="min-h-screen bg-zinc-50">
@@ -239,22 +554,19 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
             </button>
             <h1 className="text-xl md:text-2xl font-semibold">Lesson Note Review</h1>
             <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
-              This page is server-gated and tenant-scoped. You cannot spoof tenant IDs or reviewer IDs.
+              Teacher: <span className="font-semibold">{note?.teacherName ?? "—"}</span> · Subject:{" "}
+              <span className="font-semibold">{note?.subject ?? "—"}</span>
             </p>
           </div>
 
           <div className="flex flex-col md:items-end gap-2 text-right">
             {note && <span className={statusBadgeClasses(note.status)}>{statusLabel(note.status)}</span>}
-            {note && (
-              <span className="text-[11px] text-zinc-500">Last updated: {formatDateTimeShort(note.updatedAt)}</span>
-            )}
+            {note && <span className="text-[11px] text-zinc-500">Last updated: {formatDateTimeShort(note.updatedAt)}</span>}
           </div>
         </div>
 
         {loadError && (
-          <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">
-            {loadError}
-          </div>
+          <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">{loadError}</div>
         )}
 
         {loading && (
@@ -267,130 +579,33 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
         )}
 
         {!loading && note && (
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1.1fr)] gap-4 md:gap-5">
-            <section className="space-y-4">
-              <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="text-sm font-semibold">
-                      {note.subject} • <span className="text-zinc-700">{note.strand}</span>
-                    </div>
-                    <div className="text-xs text-zinc-600 space-y-0.5">
-                      {note.substrand && (
-                        <div>
-                          <span className="font-medium">Sub-strand:</span> {note.substrand}
-                        </div>
-                      )}
-                      <div>
-                        <span className="font-medium">Term / Year:</span> {note.term} • {note.academicYear}
-                      </div>
-                      <div>
-                        <span className="font-medium">Week:</span> {note.weekNumber ?? "—"}
-                      </div>
-                      {(note.phase || note.level) && (
-                        <div>
-                          <span className="font-medium">Phase / Level:</span> {note.phase ?? "—"}{" "}
-                          {note.level ? `• ${note.level}` : ""}
-                        </div>
-                      )}
-                      <div>
-                        <span className="font-medium">Teacher ID:</span>{" "}
-                        <span className="font-mono text-[11px]">{note.teacherUserId}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-zinc-600 space-y-2 max-w-xs">
-                    {note.contentStandard && (
-                      <div className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2">
-                        <div className="font-semibold text-[11px] uppercase tracking-wide text-zinc-500 mb-1">
-                          Content standard
-                        </div>
-                        <p>{note.contentStandard}</p>
-                      </div>
-                    )}
-                    {note.indicator && (
-                      <div className="bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2">
-                        <div className="font-semibold text-[11px] uppercase tracking-wide text-zinc-500 mb-1">
-                          Indicator
-                        </div>
-                        <p>{note.indicator}</p>
-                      </div>
-                    )}
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)] gap-4 md:gap-5">
+            {/* LEFT: print preview */}
+            <section className="space-y-3">
+              <div className="border rounded-2xl bg-white p-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-zinc-900 truncate">Print preview</p>
+                  <p className="text-[11px] text-zinc-500 truncate">
+                    This is exactly what education officials will accept (print-ready view).
+                  </p>
                 </div>
+                <a className={btnOutline} href={printHref} target="_blank" rel="noreferrer">
+                  Open
+                </a>
               </div>
 
-              <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-700 mb-1">Lesson title</label>
-                    <input type="text" className={`${inputBase} bg-zinc-50`} value={note.lessonTitle ?? ""} readOnly />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-700 mb-1">Prior knowledge / learner profile</label>
-                    <textarea className={`${textAreaBase} bg-zinc-50`} value={note.priorKnowledge ?? ""} readOnly />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-zinc-700">Objectives (general &amp; specific)</label>
-                  <textarea className={`${textAreaBase} bg-zinc-50`} value={note.objectives ?? ""} readOnly />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-700 mb-1">Teaching &amp; learning resources (TLM)</label>
-                    <textarea className={`${textAreaBase} bg-zinc-50`} value={note.teachingLearningResources ?? ""} readOnly />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-700 mb-1">Introduction (Starter)</label>
-                    <textarea className={`${textAreaBase} bg-zinc-50`} value={note.introduction ?? ""} readOnly />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-zinc-700">Lesson development (I do – We do – You do)</label>
-                  <textarea className={`${textAreaBase} bg-zinc-50`} value={note.lessonDevelopment ?? ""} readOnly />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-700 mb-1">Conclusion / Plenary</label>
-                    <textarea className={`${textAreaBase} bg-zinc-50`} value={note.conclusion ?? ""} readOnly />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-700 mb-1">Assessment / Evaluation</label>
-                    <textarea className={`${textAreaBase} bg-zinc-50`} value={note.assessment ?? ""} readOnly />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-700 mb-1">Homework / Assignment</label>
-                    <textarea className={`${textAreaBase} bg-zinc-50`} value={note.homework ?? ""} readOnly />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-700 mb-1">Differentiation (support &amp; extension)</label>
-                    <textarea className={`${textAreaBase} bg-zinc-50`} value={note.differentiationNotes ?? ""} readOnly />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-zinc-700">Teacher reflection (after the lesson)</label>
-                  <textarea className={`${textAreaBase} bg-zinc-50`} value={note.reflectionNotes ?? ""} readOnly />
-                </div>
+              <div className="border rounded-2xl bg-white overflow-hidden">
+                <iframe title="Lesson note print preview" src={printEmbedHref} className="w-full h-[720px] md:h-[860px]" />
               </div>
             </section>
 
+            {/* RIGHT: review + reusable signature */}
             <aside className="space-y-4">
               <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <h2 className="text-sm font-semibold">Headteacher review</h2>
-                    <p className="text-xs text-zinc-600">Approve or return. Approved becomes locked.</p>
+                    <p className="text-xs text-zinc-600">Approve or return. Approval uses your saved signature.</p>
                   </div>
                   <span className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-zinc-900 text-white text-[11px] font-medium">
                     Visible to teacher
@@ -404,9 +619,133 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
                     value={commentDraft}
                     onChange={(e) => setCommentDraft(e.target.value)}
                     placeholder="Be specific: what to improve, where, and how."
+                    disabled={!canApprove && !canReturn}
                   />
-                  <p className="text-[11px] text-zinc-500">Returning requires a comment (enforced server-side).</p>
+                  <p className="text-[11px] text-zinc-500">Returning requires a comment (server-enforced).</p>
                 </div>
+
+                {/* Saved signature panel */}
+                <div className="border border-zinc-200 rounded-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-semibold text-zinc-900">Your saved signature</p>
+                      <p className="text-[11px] text-zinc-500">
+                        {sigLoading
+                          ? "Loading…"
+                          : savedSigSvg
+                          ? `Last updated: ${formatDateTimeShort(savedSigUpdatedAt)}`
+                          : "No saved signature yet."}
+                      </p>
+                    </div>
+
+                    {savedSigSvg ? (
+                      <button
+                        type="button"
+                        className={btnOutline}
+                        onClick={() => {
+                          setSigMode("DRAW");
+                          setReviewError(null);
+                          setSigError(null);
+                        }}
+                        disabled={!canApprove || reviewSaving || sigSaving}
+                      >
+                        Change
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={btnOutline}
+                        onClick={() => setSigMode("DRAW")}
+                        disabled={!canApprove || reviewSaving || sigSaving}
+                      >
+                        Create
+                      </button>
+                    )}
+                  </div>
+
+                  {sigError && (
+                    <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                      {sigError}
+                    </div>
+                  )}
+
+                  {savedSigSvg ? (
+                    <div className="bg-white border border-zinc-200 rounded-xl p-2">
+                      <img src={svgToDataUrl(savedSigSvg)} alt="Saved signature" className="h-10 object-contain" />
+                      <div className="mt-1 text-[10px] text-zinc-500">
+                        Using: <span className="font-semibold">Saved signature</span>
+                      </div>
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          className={btnOutline}
+                          onClick={() => setSigMode("USE_SAVED")}
+                          disabled={!canApprove || reviewSaving || sigSaving}
+                        >
+                          Use saved
+                        </button>
+                        {sigMode === "DRAW" ? (
+                          <button
+                            type="button"
+                            className={btnOutline}
+                            onClick={() => {
+                              setSigMode("USE_SAVED");
+                              clearSignature();
+                            }}
+                            disabled={!canApprove || reviewSaving || sigSaving}
+                          >
+                            Cancel drawing
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Drawing pad (only when needed) */}
+                {showCanvas && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-semibold text-zinc-800">
+                        {savedSigSvg ? "Update signature (draw new)" : "Create signature (draw once)"}
+                      </h3>
+                      <button
+                        type="button"
+                        className={btnOutline}
+                        onClick={clearSignature}
+                        disabled={!canApprove || reviewSaving || sigSaving}
+                      >
+                        Clear
+                      </button>
+                    </div>
+
+                    <div className="border border-zinc-200 rounded-2xl bg-white p-2">
+                      <canvas
+                        ref={canvasRef}
+                        className={`w-full rounded-xl ${canApprove ? "cursor-crosshair" : "opacity-60"}`}
+                        onPointerDown={onPointerDown}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={endStroke}
+                        onPointerCancel={endStroke}
+                        onPointerLeave={endStroke}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-zinc-500">
+                        Save once, then approvals reuse it automatically.
+                      </p>
+                      <button
+                        type="button"
+                        className={btnPrimary}
+                        onClick={() => void saveSignatureFromPad()}
+                        disabled={!canApprove || reviewSaving || sigSaving}
+                      >
+                        {sigSaving ? "Saving…" : "Save signature"}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {reviewError && (
                   <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
@@ -436,8 +775,7 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
                   </div>
 
                   <p className="text-[11px] text-zinc-500 max-w-xs">
-                    Only <span className="font-semibold">SUBMITTED</span> notes can be reviewed. If a note is returned,
-                    the teacher must revise and resubmit.
+                    Only <span className="font-semibold">SUBMITTED</span> notes can be reviewed.
                   </p>
                 </div>
               </div>

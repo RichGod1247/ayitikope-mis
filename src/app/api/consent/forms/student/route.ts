@@ -1,3 +1,4 @@
+//src/app/api/consent/student/route.ts
 export async function GET() {
   const html = `<!doctype html>
 <html>

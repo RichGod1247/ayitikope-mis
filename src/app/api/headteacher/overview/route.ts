@@ -2,27 +2,22 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const querySchema = z.object({
-  // tenantId may be sent by legacy clients; never trust it (must match safe tenant if present)
-  tenantId: z.string().optional(),
   date: z.string().optional(), // YYYY-MM-DD or ISO
   term: z.string().optional(),
   academicYear: z.string().optional(),
 });
 
-function jsonErr(status: number, error: string) {
-  return NextResponse.json(
-    { ok: false, error },
-    {
-      status,
-      headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-    }
-  );
+function jsonNoStore(payload: any, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
 }
 
 function dateAtUtcMidnight(dateISO: string): Date {
@@ -32,7 +27,6 @@ function dateAtUtcMidnight(dateISO: string): Date {
   return d;
 }
 
-// Decimal-safe to number
 function toNumber(v: any): number | null {
   if (v == null) return null;
   if (typeof v === "number") return Number.isFinite(v) ? v : null;
@@ -45,16 +39,12 @@ function toNumber(v: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-// Small helper to normalise a date string to UTC day start/end
+// Normalise a date string to UTC day [start, end)
 function getDayRange(dateStr?: string) {
   let base: Date;
-  if (!dateStr) {
-    base = new Date();
-  } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    base = dateAtUtcMidnight(dateStr);
-  } else {
-    base = new Date(dateStr);
-  }
+  if (!dateStr) base = new Date();
+  else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) base = dateAtUtcMidnight(dateStr);
+  else base = new Date(dateStr);
 
   const start = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate(), 0, 0, 0, 0));
   const end = new Date(start);
@@ -62,7 +52,7 @@ function getDayRange(dateStr?: string) {
   return { start, end };
 }
 
-// Week start (Monday) in UTC, based on the given day
+// Week start (Monday) in UTC
 function getWeekStart(date: Date) {
   const weekStart = new Date(date);
   const day = weekStart.getUTCDay(); // 0..6, Sunday=0
@@ -72,131 +62,84 @@ function getWeekStart(date: Date) {
   return weekStart;
 }
 
-async function requireHeadOrAdmin(tenantId: string, userId: string) {
-  const m = await prisma.membership.findFirst({
-    where: { tenantId, userId, status: "ACTIVE" },
-    include: { role: true },
-  });
-  if (!m) return false;
-  const roleName = String(m.role?.name ?? "").toUpperCase();
-  return roleName.includes("HEAD") || roleName.includes("ADMIN");
-}
-
 export async function GET(req: Request) {
-  let safe: { userId: string; tenantId: string };
-  try {
-    safe = await requireServerUserContext({ requireTenant: true });
-  } catch {
-    return jsonErr(401, "Unauthorized.");
-  }
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
+  const ctx = auth.ctx;
 
   const { searchParams } = new URL(req.url);
-
   const parsed = querySchema.safeParse({
-    tenantId: searchParams.get("tenantId") ?? undefined,
     date: searchParams.get("date") ?? undefined,
     term: searchParams.get("term") ?? undefined,
     academicYear: searchParams.get("academicYear") ?? undefined,
   });
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { ok: false, error: "Invalid filters", details: parsed.error.flatten() },
-      { status: 400, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
-    );
+    return jsonNoStore({ ok: false, error: "INVALID_FILTERS", details: parsed.error.flatten() }, 400);
   }
 
-  // Defense-in-depth: if tenantId param exists, it must match safe tenant
-  if (parsed.data.tenantId && parsed.data.tenantId !== safe.tenantId) {
-    return jsonErr(403, "Forbidden (tenant mismatch).");
-  }
-
-  const can = await requireHeadOrAdmin(safe.tenantId, safe.userId);
-  if (!can) return jsonErr(403, "Forbidden.");
-
-  const { date: dateStr, term = "1st Term", academicYear = "2025/2026" } = parsed.data;
-
-  const { start: dayStart, end: dayEnd } = getDayRange(dateStr);
+  const { start: dayStart, end: dayEnd } = getDayRange(parsed.data.date);
   const weekStart = getWeekStart(dayStart);
 
+  // Prefer tenant settings if query not provided
+  const settings = await prisma.tenantSettings.findUnique({
+    where: { tenantId: ctx.tenantId },
+    select: { currentTerm: true, currentAcademicYear: true, feverThreshold: true },
+  });
+
+  const term = parsed.data.term ?? settings?.currentTerm ?? "1st Term";
+  const academicYear = parsed.data.academicYear ?? settings?.currentAcademicYear ?? "2025/2026";
+  const feverThreshold = toNumber(settings?.feverThreshold) ?? 37.5;
+
   try {
-    //
-    // 1) Get classrooms for this tenant
-    //
     const classrooms = await prisma.classroom.findMany({
-      where: { tenantId: safe.tenantId },
+      where: { tenantId: ctx.tenantId },
       select: { id: true, name: true, grade: true, arm: true },
       orderBy: { name: "asc" },
     });
 
-    //
-    // 2) All student daily health entries for that date
-    //
     const healthRows = await prisma.studentHealthDaily.findMany({
-      where: {
-        tenantId: safe.tenantId,
-        date: { gte: dayStart, lt: dayEnd },
-      },
-      select: {
-        classroomId: true,
-        studentId: true,
-        temperatureC: true,
-        symptoms: true,
-      },
+      where: { tenantId: ctx.tenantId, date: { gte: dayStart, lt: dayEnd } },
+      select: { classroomId: true, studentId: true, temperatureC: true, symptoms: true },
     });
 
     type HealthAgg = { total: number; highTemp: number; symptomatic: number };
     const healthByClass = new Map<string, HealthAgg>();
 
     for (const row of healthRows) {
-      const classroomId = row.classroomId;
-      const existing = healthByClass.get(classroomId) ?? { total: 0, highTemp: 0, symptomatic: 0 };
-
+      const existing = healthByClass.get(row.classroomId) ?? { total: 0, highTemp: 0, symptomatic: 0 };
       existing.total += 1;
 
       const t = toNumber(row.temperatureC);
-      if (t != null && t >= 37.5) {
-        existing.highTemp += 1;
-      }
+      if (t != null && t >= feverThreshold) existing.highTemp += 1;
 
-      if (row.symptoms && row.symptoms.trim() !== "") {
-        existing.symptomatic += 1;
-      }
+      if (row.symptoms && row.symptoms.trim() !== "") existing.symptomatic += 1;
 
-      healthByClass.set(classroomId, existing);
+      healthByClass.set(row.classroomId, existing);
     }
 
-    //
-    // 3) Assessment items for this term & academic year
-    //
     const assessmentItems = await prisma.assessmentItem.findMany({
-      where: { tenantId: safe.tenantId, term, academicYear },
-      select: { id: true, classroomId: true, date: true, createdAt: true },
-      orderBy: { createdAt: "asc" },
+      where: { tenantId: ctx.tenantId, term, academicYear },
+      select: { classroomId: true, date: true, createdAt: true },
+      orderBy: { createdAt: "asc" as any },
     });
 
     type AssessAgg = { totalItems: number; lastDate: Date | null };
     const assessByClass = new Map<string, AssessAgg>();
 
     for (const item of assessmentItems) {
-      const classroomId = item.classroomId;
-      const existing = assessByClass.get(classroomId) ?? { totalItems: 0, lastDate: null as Date | null };
-
+      const existing = assessByClass.get(item.classroomId) ?? { totalItems: 0, lastDate: null };
       existing.totalItems += 1;
-
       const effectiveDate = item.date ?? item.createdAt;
-      if (!existing.lastDate || effectiveDate > existing.lastDate) {
-        existing.lastDate = effectiveDate;
-      }
-
-      assessByClass.set(classroomId, existing);
+      if (!existing.lastDate || effectiveDate > existing.lastDate) existing.lastDate = effectiveDate;
+      assessByClass.set(item.classroomId, existing);
     }
 
-    //
-    // 4) Teacher weekly wellbeing for this week
-    //
     const wellbeingRows = await prisma.teacherHealthWeekly.findMany({
-      where: { tenantId: safe.tenantId, weekStart },
+      where: { tenantId: ctx.tenantId, weekStart },
       select: {
         id: true,
         userId: true,
@@ -209,12 +152,9 @@ export async function GET(req: Request) {
       orderBy: { stressLevel: "desc" },
     });
 
-    //
-    // 5) Build response payload
-    //
-    const classSummaries = classrooms.map((c) => {
+    const classes = classrooms.map((c) => {
       const health = healthByClass.get(c.id) ?? { total: 0, highTemp: 0, symptomatic: 0 };
-      const assess = assessByClass.get(c.id) ?? { totalItems: 0, lastDate: null as Date | null };
+      const assess = assessByClass.get(c.id) ?? { totalItems: 0, lastDate: null };
 
       return {
         classroomId: c.id,
@@ -225,6 +165,7 @@ export async function GET(req: Request) {
           totalRecords: health.total,
           highTempCount: health.highTemp,
           symptomaticCount: health.symptomatic,
+          feverThreshold,
         },
         assessments: {
           totalItems: assess.totalItems,
@@ -243,28 +184,15 @@ export async function GET(req: Request) {
       comments: r.comments,
     }));
 
-    return NextResponse.json(
-      {
-        ok: true,
-        filters: {
-          tenantId: safe.tenantId,
-          date: dayStart.toISOString(),
-          term,
-          academicYear,
-        },
-        classes: classSummaries,
-        teacherWellbeing,
-      },
-      { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
-    );
+    return jsonNoStore({
+      ok: true,
+      filters: { date: dayStart.toISOString(), term, academicYear },
+      tenantId: ctx.tenantId,
+      classes,
+      teacherWellbeing,
+    });
   } catch (err) {
     console.error("[HEADTEACHER_OVERVIEW_ERROR]", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Failed to load headteacher overview. Please try again or contact the office.",
-      },
-      { status: 500, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
-    );
+    return jsonNoStore({ ok: false, error: "FAILED_TO_LOAD_OVERVIEW" }, 500);
   }
 }

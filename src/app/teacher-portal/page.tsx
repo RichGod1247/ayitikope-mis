@@ -1,21 +1,18 @@
 // src/app/teacher-portal/page.tsx
-import TeacherPortalGatewayClient from "@/components/TeacherPortalGatewayClient";
+import { redirect } from "next/navigation";
+import { requireServerUserContext } from "@/lib/serverAuth";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-export default async function TeacherPortalPage({
-  searchParams,
-}: {
-  searchParams?: { next?: string };
-}) {
-  const next =
-    typeof searchParams?.next === "string" && searchParams.next.startsWith("/")
-      ? searchParams.next
-      : "/teacher/dashboard";
+export default async function TeacherPortalPage() {
+  // If not signed in, your auth layer will redirect to /auth/signin
+  // using redirectTo (role-aware routing still works as you designed).
+  await requireServerUserContext({
+    redirectTo: "/teacher/dashboard",
+    requireTenant: true,
+  });
 
-  return (
-    <main className="min-h-[calc(100vh-65px)]">
-      <TeacherPortalGatewayClient nextUrl={next} />
-    </main>
-  );
+  // If signed in, always land on the real teacher dashboard.
+  redirect("/teacher/dashboard");
 }

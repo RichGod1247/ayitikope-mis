@@ -3,8 +3,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
+import { fetchActiveTenant } from '@/lib/client/activeTenant'
 
-type Item = { date: string; status: 'PRESENT'|'ABSENT'|'LATE'|'EXCUSED'|'NO_MARK'; note: string }
+type Item = { date: string; status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED' | 'NO_MARK'; note: string }
 
 const btnBase =
   'inline-flex items-center justify-center h-10 px-4 rounded-xl border shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
@@ -34,40 +35,53 @@ export default function StudentDetailPage() {
   const [noMark, setNoMark] = useState(0)
   const [pctPresent, setPctPresent] = useState(0)
 
-  function todayYYYYMMDD() { const now = new Date(); return now.toISOString().slice(0, 10) }
+  function todayYYYYMMDD() {
+    const now = new Date()
+    return now.toISOString().slice(0, 10)
+  }
   function weekRangeMonFri(dStr?: string) {
     const base = dStr && dStr.trim() ? new Date(dStr) : new Date()
     const day = base.getUTCDay()
     const diffToMon = (day + 6) % 7
     const monday = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()))
     monday.setUTCDate(monday.getUTCDate() - diffToMon)
-    const friday = new Date(monday); friday.setUTCDate(friday.getUTCDate() + 4)
+    const friday = new Date(monday)
+    friday.setUTCDate(friday.getUTCDate() + 4)
     const toISO = (d: Date) => d.toISOString().slice(0, 10)
     return { start: toISO(monday), end: toISO(friday) }
   }
 
   useEffect(() => {
-    fetch('/api/test/tenants')
-      .then(r => r.json())
-      .then(d => {
-        const t = (d?.tenants && d.tenants[0]) || null
-        if (t?.id) setTenantId(t.id)
-        const { start, end } = weekRangeMonFri(qs.get('date') ?? todayYYYYMMDD())
-        if (!qs.get('start')) setStart(start)
-        if (!qs.get('end')) setEnd(end)
-      })
-      .catch(() => {})
+    ;(async () => {
+      const t = await fetchActiveTenant()
+      if (t?.id) setTenantId(t.id)
+
+      const { start: s, end: e } = weekRangeMonFri(qs.get('date') ?? todayYYYYMMDD())
+      if (!qs.get('start')) setStart(s)
+      if (!qs.get('end')) setEnd(e)
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId])
 
   async function load() {
-    if (!tenantId || !studentId || !start || !end) { setMsg('Missing inputs'); return }
-    setLoading(true); setMsg(null)
+    if (!studentId || !start || !end)
+ {
+      setMsg('Missing inputs')
+      return
+    }
+    setLoading(true)
+    setMsg(null)
     try {
-      const url = `/api/headteacher/student/detail?tenantId=${encodeURIComponent(tenantId)}&studentId=${encodeURIComponent(studentId)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
-      const res = await fetch(url)
+      const url = `/api/headteacher/student/detail?studentId=${encodeURIComponent(
+  studentId
+)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+      const res = await fetch(url, { cache: 'no-store' })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setMsg(data?.error || `Failed to load (${res.status})`); setItems([]); return }
+      if (!res.ok) {
+        setMsg(data?.error || `Failed to load (${res.status})`)
+        setItems([])
+        return
+      }
 
       setFullName(data?.meta?.fullName || '')
       setGuardianName(data?.meta?.guardianName || '')
@@ -79,7 +93,6 @@ export default function StudentDetailPage() {
       setExcused(data?.meta?.excused || 0)
       setNoMark(data?.meta?.noMark || 0)
       setPctPresent(data?.meta?.pctPresent || 0)
-
       setItems((data?.items || []) as Item[])
     } finally {
       setLoading(false)
@@ -88,7 +101,9 @@ export default function StudentDetailPage() {
 
   const exportURL = useMemo(() => {
     if (!tenantId || !start || !end) return ''
-    return `/api/headteacher/export-csv-range?tenantId=${encodeURIComponent(tenantId)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+    return `/api/headteacher/export-csv-range?tenantId=${encodeURIComponent(tenantId)}&start=${encodeURIComponent(
+      start
+    )}&end=${encodeURIComponent(end)}`
   }, [tenantId, start, end])
 
   function badge(status: Item['status']) {
@@ -113,17 +128,19 @@ export default function StudentDetailPage() {
         <div>
           <label className="block text-sm font-medium mb-1">Start (Mon)</label>
           <div className="flex gap-2">
-            <input className="w-full border rounded-xl p-2 h-10"
-              value={start} onChange={e => setStart(e.target.value)} placeholder={defaultWeek.start} />
-            <button className="h-10 px-3 rounded-xl border shadow-sm hover:bg-zinc-50" onClick={() => setStart(defaultWeek.start)}>This Mon</button>
+            <input className="w-full border rounded-xl p-2 h-10" value={start} onChange={(e) => setStart(e.target.value)} placeholder={defaultWeek.start} />
+            <button className="h-10 px-3 rounded-xl border shadow-sm hover:bg-zinc-50" onClick={() => setStart(defaultWeek.start)}>
+              This Mon
+            </button>
           </div>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">End (Fri)</label>
           <div className="flex gap-2">
-            <input className="w-full border rounded-xl p-2 h-10"
-              value={end} onChange={e => setEnd(e.target.value)} placeholder={defaultWeek.end} />
-            <button className="h-10 px-3 rounded-xl border shadow-sm hover:bg-zinc-50" onClick={() => setEnd(defaultWeek.end)}>This Fri</button>
+            <input className="w-full border rounded-xl p-2 h-10" value={end} onChange={(e) => setEnd(e.target.value)} placeholder={defaultWeek.end} />
+            <button className="h-10 px-3 rounded-xl border shadow-sm hover:bg-zinc-50" onClick={() => setEnd(defaultWeek.end)}>
+              This Fri
+            </button>
           </div>
         </div>
         <div className="flex items-end">
@@ -139,12 +156,30 @@ export default function StudentDetailPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
-        <div className="p-3 border rounded-xl"><div className="text-zinc-500">Sessions</div><div className="font-semibold">{sessions}</div></div>
-        <div className="p-3 border rounded-xl"><div className="text-zinc-500">Present</div><div className="font-semibold">{present}</div></div>
-        <div className="p-3 border rounded-xl"><div className="text-zinc-500">Absent</div><div className="font-semibold">{absent}</div></div>
-        <div className="p-3 border rounded-xl"><div className="text-zinc-500">Late</div><div className="font-semibold">{late}</div></div>
-        <div className="p-3 border rounded-xl"><div className="text-zinc-500">Excused</div><div className="font-semibold">{excused}</div></div>
-        <div className="p-3 border rounded-xl"><div className="text-zinc-500">% Present</div><div className="font-semibold">{pctPresent}%</div></div>
+        <div className="p-3 border rounded-xl">
+          <div className="text-zinc-500">Sessions</div>
+          <div className="font-semibold">{sessions}</div>
+        </div>
+        <div className="p-3 border rounded-xl">
+          <div className="text-zinc-500">Present</div>
+          <div className="font-semibold">{present}</div>
+        </div>
+        <div className="p-3 border rounded-xl">
+          <div className="text-zinc-500">Absent</div>
+          <div className="font-semibold">{absent}</div>
+        </div>
+        <div className="p-3 border rounded-xl">
+          <div className="text-zinc-500">Late</div>
+          <div className="font-semibold">{late}</div>
+        </div>
+        <div className="p-3 border rounded-xl">
+          <div className="text-zinc-500">Excused</div>
+          <div className="font-semibold">{excused}</div>
+        </div>
+        <div className="p-3 border rounded-xl">
+          <div className="text-zinc-500">% Present</div>
+          <div className="font-semibold">{pctPresent}%</div>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -157,15 +192,21 @@ export default function StudentDetailPage() {
             </tr>
           </thead>
           <tbody>
-            {items.map(i => (
+            {items.map((i) => (
               <tr key={i.date} className="text-sm">
                 <td className="p-3 border-b">{i.date}</td>
-                <td className="p-3 border-b"><span className={badge(i.status)}>{i.status}</span></td>
+                <td className="p-3 border-b">
+                  <span className={badge(i.status)}>{i.status}</span>
+                </td>
                 <td className="p-3 border-b">{i.note || '—'}</td>
               </tr>
             ))}
             {!items.length && (
-              <tr><td className="p-4 text-sm text-zinc-600" colSpan={3}>No data yet — choose dates and Load Week.</td></tr>
+              <tr>
+                <td className="p-4 text-sm text-zinc-600" colSpan={3}>
+                  No data yet — choose dates and Load Week.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -174,7 +215,9 @@ export default function StudentDetailPage() {
       {msg && <div className="text-sm text-zinc-700">{msg}</div>}
 
       <div className="flex gap-3">
-        <a className={btnOutline} href="/headteacher/weekly">← Back to Weekly Overview</a>
+        <a className={btnOutline} href="/headteacher/weekly">
+          ← Back to Weekly Overview
+        </a>
       </div>
     </div>
   )

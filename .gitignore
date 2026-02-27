@@ -102,3 +102,9 @@ public/curriculum/
 .yarnrc
 .yarnrc.yml
 pnpm-lock.yaml.*.backup
+
+# Supabase CLI local artifacts (do not commit)
+supabase/.temp/
+supabase/.branches/
+supabase/.cache/
+supabase/.config/

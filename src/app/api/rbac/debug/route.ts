@@ -1,58 +1,64 @@
 // src/app/api/rbac/debug/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { PERMS } from '@/lib/rbac'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { effectiveRole } from "@/lib/roleRouting";
+import { PERMS } from "@/lib/rbac";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
+}
+
+function knownPermSet(): Set<string> {
+  const vals = Array.isArray(PERMS) ? PERMS : Object.values(PERMS as any);
+  return new Set(vals.map((x) => String(x)));
+}
 
 export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const tenantId = searchParams.get('tenantId')?.trim()
-    const userId = searchParams.get('userId')?.trim()
+  // 🔒 Debug endpoints must be locked down.
+  const auth = await requireApiUserContext(req, { requireTenant: true, requireRoleNames: ["SUPERADMIN"] });
+  if (!auth.ok) return auth.res;
+  const { ctx } = auth;
 
-    if (!tenantId || !userId) {
-      return new Response(JSON.stringify({ error: 'tenantId and userId are required' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' },
-      })
-    }
+  const { searchParams } = new URL(req.url);
+  const userIdParam = String(searchParams.get("userId") ?? "").trim();
 
-    const membership = await prisma.membership.findFirst({
-      where: { tenantId, userId, status: 'ACTIVE' },
-      include: {
-        role: { include: { rolePerms: { include: { permission: true } } } },
-      },
-    })
+  // Tenant comes ONLY from session (ctx.tenantId). Never accept tenantId param.
+  if (!userIdParam) return json(400, { ok: false, error: "userId is required" });
 
-    if (!membership) {
-      return new Response(JSON.stringify({
-        tenantId, userId,
-        hasActiveMembership: false,
-      }), { status: 200, headers: { 'content-type': 'application/json' }})
-    }
+  const membership = await prisma.membership.findFirst({
+    where: { tenantId: ctx.tenantId, userId: userIdParam, status: "ACTIVE" },
+    include: { role: { include: { rolePerms: { include: { permission: true } } } } },
+  });
 
-    const permNames = new Set(
-      membership.role.rolePerms.map(rp => rp.permission.name)
-    )
-
-    const hasView = permNames.has(PERMS.CONSENT_VIEW)
-    const hasEdit = permNames.has(PERMS.CONSENT_EDIT)
-    const hasExport = permNames.has(PERMS.CONSENT_EXPORT)
-
-    return new Response(JSON.stringify({
-      tenantId, userId,
-      roleName: membership.role.name,
-      hasActiveMembership: true,
-      permissions: Array.from(permNames),
-      checks: {
-        CONSENT_VIEW: hasView,
-        CONSENT_EDIT: hasEdit,
-        CONSENT_EXPORT: hasExport,
-      }
-    }), { status: 200, headers: { 'content-type': 'application/json' }})
-  } catch (e:any) {
-    return new Response(JSON.stringify({ error: e?.message || 'debug failed' }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-    })
+  if (!membership) {
+    return json(200, {
+      ok: true,
+      tenantId: ctx.tenantId,
+      userId: userIdParam,
+      hasActiveMembership: false,
+      permissions: [],
+      checks: {},
+    });
   }
+
+  const permNames = new Set<string>(membership.role.rolePerms.map((rp) => rp.permission.name));
+  const known = knownPermSet();
+
+  return json(200, {
+    ok: true,
+    tenantId: ctx.tenantId,
+    userId: userIdParam,
+    hasActiveMembership: true,
+    roleName: membership.role.name,
+    effectiveRole: effectiveRole(membership.role.name),
+    permissions: Array.from(permNames),
+    checks: Object.fromEntries(Array.from(known).map((p) => [p, permNames.has(p)])),
+  });
 }

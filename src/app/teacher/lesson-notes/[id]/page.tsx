@@ -6,10 +6,9 @@ import LessonNoteEditorClient from "./ui/LessonNoteEditorClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page({ params }: { params: { id: string } }) {
-  const noteId = params?.id;
-  if (!noteId || typeof noteId !== "string") redirect("/teacher/lesson-notes");
-
+export default async function Page({ params }: { params: any }) {
+  const p = await Promise.resolve(params);
+  const noteId = p?.id;
   const ctx = await requireServerUserContext({
     redirectTo: `/teacher/lesson-notes/${encodeURIComponent(noteId)}`,
     requireTenant: true,
