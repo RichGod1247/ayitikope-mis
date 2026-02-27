@@ -1,7 +1,7 @@
 // src/app/parent/login/page.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type RequestState = "idle" | "loading" | "success" | "error";
@@ -43,7 +43,27 @@ function fmtCountdown(secs: number) {
   return `${mm}:${ss}`;
 }
 
-export default function ParentLoginPage() {
+function ParentLoginFallback() {
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-md px-4 py-6 sm:py-10 space-y-6">
+        <header className="space-y-2">
+          <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-800">
+            EduLife OS · Parent Portal
+          </div>
+          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Parent login</h1>
+          <p className="text-sm text-slate-600">Loading…</p>
+        </header>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-sm text-slate-600">Preparing parent login…</div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function ParentLoginContent() {
   const router = useRouter();
   const sp = useSearchParams();
   const nextPath = useMemo(() => safeInternalPath(sp.get("next"), "/parent-portal"), [sp]);
@@ -94,7 +114,7 @@ export default function ParentLoginPage() {
       try {
         setSchoolLoading(true);
         const res = await fetch(`/api/public/schools/search?q=${encodeURIComponent(q)}`, { cache: "no-store" });
-        const json = (await res.json().catch(() => null)) as any;
+        const json: any = await res.json().catch(() => null);
 
         if (!res.ok || !json?.ok) {
           setSchools([]);
@@ -159,7 +179,7 @@ export default function ParentLoginPage() {
         return;
       }
 
-      // ✅ If server returns a token, update it. If not, keep the old one (prevents token-loss).
+      // If server returns a token, update it. If not, keep the old one.
       if (json.token) setOtpToken(String(json.token));
       setDebugCode(json?.debugCode ? String(json.debugCode) : null);
 
@@ -344,8 +364,8 @@ export default function ParentLoginPage() {
               {requestState === "loading"
                 ? "Requesting…"
                 : cooldownSeconds > 0
-                ? `Resend in ${fmtCountdown(cooldownSeconds)}`
-                : "Send code"}
+                  ? `Resend in ${fmtCountdown(cooldownSeconds)}`
+                  : "Send code"}
             </button>
 
             {debugCode ? (
@@ -393,5 +413,13 @@ export default function ParentLoginPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function ParentLoginPage() {
+  return (
+    <Suspense fallback={<ParentLoginFallback />}>
+      <ParentLoginContent />
+    </Suspense>
   );
 }
