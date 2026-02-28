@@ -245,13 +245,13 @@ function cx(...xs: Array<string | false | null | undefined>) {
 function MegaImage({ src, alt }: { src?: string; alt: string }) {
   if (!src) return null;
   return (
-    <div className="mb-3 overflow-hidden rounded-2xl border w-[152px] h-[152px] shadow-sm">
+    <div className="mb-3 overflow-hidden rounded-2xl border w-[128px] h-[128px] shadow-sm">
       <Image
         src={src}
         alt={alt}
-        width={152}
-        height={152}
-        className="w-[152px] h-[152px] object-cover object-center transition-transform duration-300 group-hover:scale-[1.05]"
+        width={128}
+        height={128}
+        className="w-[128px] h-[128px] object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
       />
     </div>
   );
@@ -259,7 +259,7 @@ function MegaImage({ src, alt }: { src?: string; alt: string }) {
 
 function MegaColView({ col }: { col: MegaCol }) {
   return (
-    <div className="min-w-[220px] group">
+    <div className="min-w-[200px] group">
       <MegaImage src={col.img} alt={col.title} />
       <div className="font-semibold text-gray-900">{col.title}</div>
       <ul className="mt-2 space-y-1">
@@ -271,7 +271,6 @@ function MegaColView({ col }: { col: MegaCol }) {
           </li>
         ))}
       </ul>
-
       <div className="mt-3">
         <Link href={col.links[0]?.href ?? "#"} className="text-xs text-blue-700 hover:underline">
           View more →
@@ -282,6 +281,13 @@ function MegaColView({ col }: { col: MegaCol }) {
 }
 
 type PanelPos = { left: number; top: number; width: number };
+
+function desiredWidth(menu: Menu) {
+  const count = menu.columns.length;
+  if (count >= 3) return 860;
+  if (count === 2) return 680;
+  return 500;
+}
 
 function MegaPanel({
   menu,
@@ -309,14 +315,16 @@ function MegaPanel({
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
     >
-      <div className="rounded-2xl bg-white p-6 shadow-2xl border ring-1 ring-black/5">
-        <div className={cx("grid gap-6", colClass)}>
-          {menu.columns.map((c) => (
-            <MegaColView key={`${menu.key}-${c.title}`} col={c} />
-          ))}
+      <div className="rounded-2xl bg-white shadow-2xl border ring-1 ring-black/5 overflow-hidden">
+        <div className="max-h-[min(70vh,560px)] overflow-y-auto p-5">
+          <div className={cx("grid gap-5", colClass)}>
+            {menu.columns.map((c) => (
+              <MegaColView key={`${menu.key}-${c.title}`} col={c} />
+            ))}
+          </div>
         </div>
 
-        <div className="mt-5 pt-4 border-t flex items-center justify-between">
+        <div className="border-t px-5 py-3 flex items-center justify-between bg-white">
           <div className="text-xs text-zinc-500">Browse {menu.label} quickly.</div>
           <Link href={menu.href} className="text-sm font-semibold text-blue-700 hover:underline">
             View {menu.label} →
@@ -325,13 +333,6 @@ function MegaPanel({
       </div>
     </div>
   );
-}
-
-function desiredWidth(menu: Menu) {
-  const count = menu.columns.length;
-  if (count >= 3) return 980;
-  if (count === 2) return 820;
-  return 560;
 }
 
 export default function Header() {
@@ -358,7 +359,7 @@ export default function Header() {
     closeTimer.current = setTimeout(() => {
       setOpen(null);
       setPanelPos(null);
-    }, 320);
+    }, 240);
   };
 
   const cancelClose = () => {
@@ -366,7 +367,6 @@ export default function Header() {
     closeTimer.current = null;
   };
 
-  // Close menus on route change
   useEffect(() => {
     closeNow();
     setMobileOpen(false);
@@ -374,7 +374,6 @@ export default function Header() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // ESC closes dropdown + mobile drawer
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -397,7 +396,6 @@ export default function Header() {
     return "";
   }, [pathname]);
 
-  // Compute + clamp mega panel position (prevents off-screen overflow)
   useEffect(() => {
     if (!open) return;
 
@@ -417,15 +415,12 @@ export default function Header() {
       const idealLeft = rect.left + rect.width / 2 - w / 2;
       const left = Math.max(pad, Math.min(idealLeft, vw - w - pad));
 
-      // 8px below the link, like before
       const top = Math.max(8, rect.bottom + 8);
 
       setPanelPos({ left, top, width: w });
     };
 
     compute();
-
-    // Keep correct if the user resizes/scrolls
     window.addEventListener("resize", compute);
     window.addEventListener("scroll", compute, true);
 
@@ -438,7 +433,6 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-[#0a55c3] shadow">
       <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 py-2.5">
-        {/* Logo + Title */}
         <Link href="/" className="flex items-center gap-3 min-w-0">
           <Image
             src="/logo.png"
@@ -453,11 +447,10 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* Mobile button */}
         <div className="md:hidden">
           <button
             type="button"
-            aria-label="Open menu"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
             className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white active:scale-[0.99]"
             onClick={() => setMobileOpen((v) => !v)}
           >
@@ -465,12 +458,8 @@ export default function Header() {
           </button>
         </div>
 
-        {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-6" aria-label="Main Navigation">
-          <Link
-            href="/"
-            className={cx(linkBase, activeTopLink === "/" && "text-white font-semibold")}
-          >
+          <Link href="/" className={cx(linkBase, activeTopLink === "/" && "text-white font-semibold")}>
             Home
           </Link>
 
@@ -497,7 +486,6 @@ export default function Header() {
                 {m.label}
               </Link>
 
-              {/* Bridge keeps close-delay safe (helps slow mouse movement) */}
               {open === m.key ? <div className="absolute left-0 right-0 top-full h-3" /> : null}
 
               {open === m.key ? (
@@ -520,77 +508,77 @@ export default function Header() {
         </nav>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile “top sheet” (max ~half screen) */}
       {mobileOpen ? (
         <div className="md:hidden">
           <button
-            aria-label="Close menu"
+            aria-label="Close menu backdrop"
             className="fixed inset-0 z-[70] bg-black/40"
             onClick={() => setMobileOpen(false)}
           />
 
-          <div className="fixed z-[80] top-0 right-0 h-full w-[86vw] max-w-sm bg-white shadow-2xl border-l">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="font-semibold text-zinc-900">Menu</div>
-              <button
-                className="rounded-lg border px-3 py-1.5 text-sm"
-                onClick={() => setMobileOpen(false)}
-              >
-                Close
-              </button>
-            </div>
+          <div className="fixed left-0 right-0 top-[56px] z-[80] bg-white border-b shadow-2xl">
+            <div className="max-h-[50vh] overflow-y-auto p-3">
+              <div className="grid gap-2">
+                <Link
+                  href="/"
+                  className="block rounded-xl border px-3 py-2.5 text-sm font-medium"
+                >
+                  Home
+                </Link>
 
-            <div className="p-4 space-y-2 overflow-y-auto h-[calc(100%-64px)]">
-              <Link href="/" className="block rounded-xl border px-4 py-3 text-sm font-medium">
-                Home
-              </Link>
+                {MENUS.map((m) => {
+                  const expanded = mobileExpanded === m.key;
+                  return (
+                    <div key={m.key} className="rounded-2xl border overflow-hidden">
+                      <button
+                        type="button"
+                        className="w-full grid grid-cols-[1fr_auto] items-center gap-2 px-3 py-2.5 text-sm font-medium bg-zinc-50"
+                        onClick={() => setMobileExpanded(expanded ? null : m.key)}
+                      >
+                        <span className="text-left">{m.label}</span>
+                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border bg-white text-base leading-none">
+                          {expanded ? "−" : "+"}
+                        </span>
+                      </button>
 
-              {MENUS.map((m) => {
-                const expanded = mobileExpanded === m.key;
-                return (
-                  <div key={m.key} className="rounded-2xl border overflow-hidden">
-                    <button
-                      type="button"
-                      className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium bg-zinc-50"
-                      onClick={() => setMobileExpanded(expanded ? null : m.key)}
-                    >
-                      <span>{m.label}</span>
-                      <span className="text-base">{expanded ? "−" : "+"}</span>
-                    </button>
+                      {expanded ? (
+                        <div className="px-3 py-3 space-y-3">
+                          <Link href={m.href} className="block text-sm text-blue-700 font-semibold">
+                            View {m.label} →
+                          </Link>
 
-                    {expanded ? (
-                      <div className="p-3 space-y-3">
-                        <Link href={m.href} className="block text-sm text-blue-700 font-semibold">
-                          View {m.label} →
-                        </Link>
-
-                        {m.columns.map((col) => (
-                          <div key={`${m.key}-${col.title}`} className="border-t pt-3">
-                            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
-                              {col.title}
+                          {m.columns.map((col) => (
+                            <div key={`${m.key}-${col.title}`} className="border-t pt-3">
+                              <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+                                {col.title}
+                              </div>
+                              <div className="mt-2 space-y-2">
+                                {col.links.map((l) => (
+                                  <Link
+                                    key={`${m.key}-${col.title}-${l.href}`}
+                                    href={l.href}
+                                    className="block text-sm text-zinc-800 hover:text-blue-700"
+                                  >
+                                    {l.label}
+                                  </Link>
+                                ))}
+                              </div>
                             </div>
-                            <div className="mt-2 space-y-2">
-                              {col.links.map((l) => (
-                                <Link
-                                  key={`${m.key}-${col.title}-${l.href}`}
-                                  href={l.href}
-                                  className="block text-sm text-zinc-800 hover:text-blue-700"
-                                >
-                                  {l.label}
-                                </Link>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
 
-              <Link href="/contact" className="block rounded-xl border px-4 py-3 text-sm font-medium">
-                Contact
-              </Link>
+                <Link
+                  href="/contact"
+                  className="block rounded-xl border px-3 py-2.5 text-sm font-medium"
+                >
+                  Contact
+                </Link>
+              </div>
             </div>
           </div>
         </div>
