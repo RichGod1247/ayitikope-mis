@@ -1,7 +1,7 @@
 // src/app/api/admin/attendance/absentees/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireApiUserContext } from "@/lib/serverAuth";
+import { requireServerUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
 
 export const runtime = "nodejs";
@@ -22,6 +22,9 @@ function normalizeRoleName(role: unknown) {
     .replace(/[^A-Z_]/g, "");
 }
 
+// Legacy compat:
+// - ADMIN behaves as SCHOOL_ADMIN
+// - HEADMASTER behaves as HEADTEACHER
 function roleEffective(role: unknown) {
   const r = normalizeRoleName(role);
   if (r === "ADMIN") return "SCHOOL_ADMIN";
@@ -55,16 +58,22 @@ function parseDayUtc(dateParam: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireApiUserContext(req, { requireTenant: true });
-  if (!auth.ok) return auth.res;
+  // ✅ Cookie-session auth (NextAuth)
+  let ctx: { tenantId: string; userId: string };
+  try {
+    const c = await requireServerUserContext({ requireTenant: true });
+    ctx = { tenantId: c.tenantId, userId: c.userId };
+  } catch {
+    return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
+  }
 
-  const roleOk = await requireAdminLike(auth.ctx.tenantId, auth.ctx.userId);
+  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
   if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, roleOk.status);
 
   const { searchParams } = new URL(req.url);
 
   // Back-compat: tenantId may be passed by legacy UI, must match session tenant
-  const guard = assertNoTenantOverride(searchParams.get("tenantId"), auth.ctx.tenantId);
+  const guard = assertNoTenantOverride(searchParams.get("tenantId"), ctx.tenantId);
   if (!guard.ok) return jsonNoStore({ ok: false, error: guard.error }, guard.status);
 
   const dateParam = (searchParams.get("date") ?? "").trim(); // YYYY-MM-DD
@@ -76,7 +85,7 @@ export async function GET(req: NextRequest) {
   try {
     const sessions = await prisma.attendanceSession.findMany({
       where: {
-        tenantId: auth.ctx.tenantId,
+        tenantId: ctx.tenantId,
         date: { gte: day.start, lt: day.endExclusive },
       },
       select: {
@@ -124,9 +133,11 @@ export async function GET(req: NextRequest) {
       const grade = (session.classroom?.grade as string | undefined) ?? "";
       const arm = (session.classroom?.arm as string | undefined) ?? "";
       const name = (session.classroom?.name as string | undefined) ?? "";
-      const classLabel = (name && name.trim())
-        ? name.trim()
-        : ([grade, arm].filter(Boolean).join(" ").trim() || "Unknown class");
+
+      const classLabel =
+        name && name.trim()
+          ? name.trim()
+          : ([grade, arm].filter(Boolean).join(" ").trim() || "Unknown class");
 
       const sessionDateIso =
         session.date instanceof Date ? session.date.toISOString() : new Date(day.start).toISOString();
@@ -136,8 +147,7 @@ export async function GET(req: NextRequest) {
         const studentId = String(s?.id ?? "").trim();
         if (!studentId) continue;
 
-        const studentName =
-          [s?.firstName, s?.lastName].filter(Boolean).join(" ").trim() || "Unnamed learner";
+        const studentName = [s?.firstName, s?.lastName].filter(Boolean).join(" ").trim() || "Unnamed learner";
 
         items.push({
           markId: String(m.id),
@@ -153,15 +163,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return jsonNoStore(
-      { ok: true, items, count: items.length, date: dateParam, tenantId: auth.ctx.tenantId },
-      200
-    );
+    return jsonNoStore({ ok: true, items, count: items.length, date: dateParam, tenantId: ctx.tenantId }, 200);
   } catch (err: any) {
     console.error("[ADMIN_ABSENTEES_ERROR]", err);
-    return jsonNoStore(
-      { ok: false, error: err?.message || "Failed to load absentees. Please try again." },
-      500
-    );
+    return jsonNoStore({ ok: false, error: err?.message || "Failed to load absentees. Please try again." }, 500);
   }
 }

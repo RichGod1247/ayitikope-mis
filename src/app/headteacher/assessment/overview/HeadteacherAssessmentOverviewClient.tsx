@@ -1,5 +1,7 @@
+// src/app/headteacher/assessment/overview/HeadteacherAssessmentOverviewClient.tsx
 "use client";
 
+import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
@@ -19,7 +21,9 @@ type ClassOverview = {
   learnersCount: number;
   itemsCount: number;
   averagePercent: number | null;
-  bands?: ClassBandSummary[];
+  draftItemsCount: number;
+  publishedItemsCount: number;
+  lockedItemsCount: number;
 };
 
 type HeadteacherAssessmentOverviewResponse = {
@@ -35,7 +39,6 @@ type HeadteacherAssessmentOverviewResponse = {
 type RemarkSummaryResponse = {
   ok: boolean;
   context: {
-    tenantId: string;
     classroomId: string;
     term: string;
     academicYear: string;
@@ -43,6 +46,76 @@ type RemarkSummaryResponse = {
   totalLearnersEvaluated: number;
   bands: ClassBandSummary[];
 };
+
+type GovernanceOk = {
+  ok: true;
+  scope: {
+    tenantId: string;
+    term: string;
+    academicYear: string;
+    start: string;
+    end: string;
+  };
+  metrics: {
+    attendance: {
+      totalSessions: number;
+      closedSessions: number;
+      certifiedSessions: number;
+      pendingCertification: number;
+      notifiedSessions: number;
+      attendanceCertificationRate: number | null;
+      notifyRate: number | null;
+      avgCertifyDelayHrs: number | null;
+      avgNotifyDelayHrs: number | null;
+    };
+    pipeline: {
+      approvedNotesCount: number;
+      deliveredLessonsCount: number;
+      deliveryCoveragePercent: number | null;
+      totalAssessmentsCount: number;
+      linkedAssessmentsCount: number;
+      assessmentLinkCoveragePercent: number | null;
+      scoredAssessmentsCount: number;
+      scoringCoveragePercent: number | null;
+    };
+    headteacherScore: number;
+  };
+  anomalies: {
+    approvedNotDelivered: Array<{
+      id: string;
+      subject: string;
+      lessonTitle: string | null;
+      approvedAt: string | null;
+      classroomId: string | null;
+      teacherUserId: string;
+    }>;
+    deliveredNotAssessed: Array<{
+      id: string;
+      subject: string;
+      indicatorCode: string | null;
+      dateTaught: string | null;
+      classroomId: string;
+      teacherUserId: string;
+    }>;
+    assessedNotLinked: Array<{
+      id: string;
+      subject: string;
+      title: string;
+      date: string | null;
+      classroomId: string;
+    }>;
+  };
+  actions: Array<{
+    code: string;
+    priority: "HIGH" | "MEDIUM" | "LOW";
+    because: string[];
+    message: string;
+  }>;
+};
+
+type GovernanceResp = GovernanceOk | { ok: false; error: string };
+
+type StreamMode = "single" | "multi";
 
 const DEFAULT_TERM = "1st Term";
 const DEFAULT_YEAR = "2025/2026";
@@ -62,14 +135,197 @@ function bandOrder(band: ClassBandSummary): number {
   return 100 - (band.minPercent ?? 0);
 }
 
+async function safeJson<T>(res: Response): Promise<T | null> {
+  try {
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function normalizeStageBucket(raw: unknown): string | null {
+  const compact = cleanStr(raw).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!compact) return null;
+
+  let m =
+    compact.match(/^KG([12])(?:[A-Z].*)?$/) ||
+    compact.match(/^KINDERGARTEN([12])(?:[A-Z].*)?$/);
+  if (m) return `KG ${m[1]}`;
+
+  m = compact.match(/^(PRIMARY|PRI|P)([1-6])(?:[A-Z].*)?$/);
+  if (m) return `PRIMARY ${m[2]}`;
+
+  m = compact.match(/^(BASIC|B)([1-9])(?:[A-Z].*)?$/);
+  if (m) {
+    const n = Number(m[2]);
+    if (n >= 1 && n <= 6) return `PRIMARY ${n}`;
+    if (n === 7) return "JHS 1";
+    if (n === 8) return "JHS 2";
+    if (n === 9) return "JHS 3";
+  }
+
+  m = compact.match(/^JHS([1-3])(?:[A-Z].*)?$/);
+  if (m) return `JHS ${m[1]}`;
+
+  return null;
+}
+
+function getStageBucketForClassroom(
+  c: Pick<ClassOverview, "grade" | "classroomName">
+) {
+  return normalizeStageBucket(c.grade) ?? normalizeStageBucket(c.classroomName);
+}
+
+function hasDuplicateStageBuckets(list: ClassOverview[]) {
+  const seen = new Set<string>();
+  for (const c of list) {
+    const bucket = getStageBucketForClassroom(c);
+    if (!bucket) continue;
+    if (seen.has(bucket)) return true;
+    seen.add(bucket);
+  }
+  return false;
+}
+
+function fullClassLabel(c: ClassOverview) {
+  const name = cleanStr(c.classroomName);
+  const grade = cleanStr(c.grade);
+  const arm = cleanStr(c.arm);
+
+  if (name && grade) {
+    const same = name.toUpperCase() === grade.toUpperCase();
+    if (same) return `${name}${arm ? ` ${arm}` : ""}`;
+    return `${name} (${grade}${arm ? ` ${arm}` : ""})`;
+  }
+
+  if (name) return `${name}${arm ? ` ${arm}` : ""}`;
+  if (grade) return `${grade}${arm ? ` ${arm}` : ""}`;
+
+  return "Class";
+}
+
+function singleStreamLabel(c: ClassOverview) {
+  return getStageBucketForClassroom(c) || fullClassLabel(c);
+}
+
+function pickSingleStreamRepresentative(
+  group: ClassOverview[],
+  preferredClassroomId: string | null
+) {
+  const preferred =
+    group.find((x) => x.classroomId === preferredClassroomId) ?? null;
+
+  if (preferred && !cleanStr(preferred.arm)) {
+    return preferred;
+  }
+
+  const armLess = group
+    .filter((x) => !cleanStr(x.arm))
+    .sort((a, b) => fullClassLabel(a).localeCompare(fullClassLabel(b)));
+
+  if (armLess.length > 0) {
+    return armLess[0];
+  }
+
+  return (
+    preferred ??
+    [...group].sort((a, b) =>
+      fullClassLabel(a).localeCompare(fullClassLabel(b))
+    )[0]
+  );
+}
+
+function buildSingleStreamClasses(
+  list: ClassOverview[],
+  preferredClassroomId: string | null
+): ClassOverview[] {
+  const orderedBuckets = [
+    "KG 1",
+    "KG 2",
+    "PRIMARY 1",
+    "PRIMARY 2",
+    "PRIMARY 3",
+    "PRIMARY 4",
+    "PRIMARY 5",
+    "PRIMARY 6",
+    "JHS 1",
+    "JHS 2",
+    "JHS 3",
+  ] as const;
+
+  const grouped = new Map<string, ClassOverview[]>();
+  const others: ClassOverview[] = [];
+
+  for (const c of list) {
+    const bucket = getStageBucketForClassroom(c);
+    if (!bucket) {
+      others.push(c);
+      continue;
+    }
+
+    const arr = grouped.get(bucket) ?? [];
+    arr.push(c);
+    grouped.set(bucket, arr);
+  }
+
+  const picked: ClassOverview[] = [];
+
+  for (const bucket of orderedBuckets) {
+    const group = grouped.get(bucket) ?? [];
+    if (!group.length) continue;
+    picked.push(pickSingleStreamRepresentative(group, preferredClassroomId));
+  }
+
+  return [
+    ...picked,
+    ...others.sort((a, b) => fullClassLabel(a).localeCompare(fullClassLabel(b))),
+  ];
+}
+
+function pctLabel(v: number | null | undefined) {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return `${Math.max(0, Math.min(100, v)).toFixed(1)}%`;
+}
+
+function priorityChip(priority: "HIGH" | "MEDIUM" | "LOW") {
+  const cls =
+    priority === "HIGH"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : priority === "MEDIUM"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : "border-slate-200 bg-slate-50 text-slate-700";
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${cls}`}
+    >
+      {priority}
+    </span>
+  );
+}
+
+function pill(text: string, tone: "rose" | "amber" | "slate") {
+  const cls =
+    tone === "rose"
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : tone === "amber"
+      ? "border-amber-200 bg-amber-50 text-amber-800"
+      : "border-slate-200 bg-slate-50 text-slate-700";
+
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold ${cls}`}>
+      {text}
+    </span>
+  );
+}
+
 const HeadteacherAssessmentOverviewClient: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-
-  const tenantId =
-    searchParams.get("tenantId") ||
-    process.env.NEXT_PUBLIC_DEMO_TENANT_ID ||
-    "cmhhnghn00008vcpgp3fl07fl";
 
   const initialTerm = searchParams.get("term") || DEFAULT_TERM;
   const initialYear = searchParams.get("academicYear") || DEFAULT_YEAR;
@@ -77,239 +333,197 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   const [term, setTerm] = useState(initialTerm);
   const [academicYear, setAcademicYear] = useState(initialYear);
 
-  const [overview, setOverview] =
-    useState<HeadteacherAssessmentOverviewResponse | null>(null);
+  const [overview, setOverview] = useState<HeadteacherAssessmentOverviewResponse | null>(null);
+  const [governance, setGovernance] = useState<GovernanceResp | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [govError, setGovError] = useState<string | null>(null);
 
-  const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(
-    null
-  );
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
 
-  const [remarkBandsByClassroom, setRemarkBandsByClassroom] = useState<
-    Record<string, ClassBandSummary[]>
-  >({});
-  const [remarkLoadingClassId, setRemarkLoadingClassId] = useState<string | null>(
-    null
-  );
+  const [remarkBandsByClassroom, setRemarkBandsByClassroom] = useState<Record<string, ClassBandSummary[]>>({});
+  const [remarkLoadingClassId, setRemarkLoadingClassId] = useState<string | null>(null);
   const [remarkError, setRemarkError] = useState<string | null>(null);
 
+  const [streamMode, setStreamMode] = useState<StreamMode>("single");
+
   const classes: ClassOverview[] = overview?.classes ?? [];
+  const governanceOk = governance && (governance as any).ok === true;
+
+  const canToggleMultiStream = useMemo(() => hasDuplicateStageBuckets(classes), [classes]);
+
+  const visibleClasses = useMemo(() => {
+    if (!canToggleMultiStream) return classes;
+    if (streamMode === "multi") return classes;
+    return buildSingleStreamClasses(classes, selectedClassroomId);
+  }, [classes, canToggleMultiStream, streamMode, selectedClassroomId]);
 
   const selectedClass = useMemo(() => {
-    if (!classes.length) return null;
-    if (selectedClassroomId) {
-      const found = classes.find((c) => c.classroomId === selectedClassroomId);
-      if (found) return found;
-    }
-    return classes[0];
-  }, [classes, selectedClassroomId]);
+    if (!visibleClasses.length && !classes.length) return null;
 
+    if (selectedClassroomId) {
+      const foundInVisible = visibleClasses.find((c) => c.classroomId === selectedClassroomId);
+      if (foundInVisible) return foundInVisible;
+
+      const foundInAll = classes.find((c) => c.classroomId === selectedClassroomId);
+      if (foundInAll) return foundInAll;
+    }
+
+    return visibleClasses[0] ?? classes[0] ?? null;
+  }, [visibleClasses, classes, selectedClassroomId]);
+
+  // Keep URL in sync
   useEffect(() => {
     const params = new URLSearchParams();
-    if (tenantId) params.set("tenantId", tenantId);
     if (term) params.set("term", term);
     if (academicYear) params.set("academicYear", academicYear);
     router.replace(`/headteacher/assessment/overview?${params.toString()}`);
-  }, [tenantId, term, academicYear, router]);
+  }, [term, academicYear, router]);
 
-  async function loadRemarkSummaryForClass(
-    tenantIdValue: string,
-    classroomId: string,
-    termValue: string,
-    yearValue: string
-  ) {
-    if (!tenantIdValue || !classroomId) return;
+  // Ensure selected class is valid when visible list changes
+  useEffect(() => {
+    if (!visibleClasses.length) {
+      if (selectedClassroomId) setSelectedClassroomId(null);
+      return;
+    }
+
+    if (visibleClasses.some((c) => c.classroomId === selectedClassroomId)) return;
+
+    const current = classes.find((c) => c.classroomId === selectedClassroomId);
+    const currentBucket = current ? getStageBucketForClassroom(current) : null;
+
+    if (currentBucket) {
+      const sameBucketVisible = visibleClasses.find(
+        (c) => getStageBucketForClassroom(c) === currentBucket
+      );
+      if (sameBucketVisible) {
+        setSelectedClassroomId(sameBucketVisible.classroomId);
+        return;
+      }
+    }
+
+    setSelectedClassroomId(visibleClasses[0].classroomId);
+  }, [visibleClasses, classes, selectedClassroomId]);
+
+  async function loadRemarkSummaryForClass(classroomId: string, termValue: string, yearValue: string) {
+    if (!classroomId) return;
 
     setRemarkError(null);
     setRemarkLoadingClassId(classroomId);
 
     try {
       const params = new URLSearchParams({
-        tenantId: tenantIdValue,
         classroomId,
         term: termValue,
         academicYear: yearValue,
       });
 
-      const url = `/api/teacher/assessment/remark-summary?${params.toString()}`;
-      const res = await fetch(url);
-      const text = await res.text();
+      const res = await fetch(`/api/teacher/assessment/remark-summary?${params.toString()}`, {
+        cache: "no-store",
+      });
 
-      if (!res.ok) {
-        console.error(
-          "[HeadteacherAssessmentOverview] remark-summary HTTP error",
-          res.status,
-          text
-        );
-        setRemarkError(
-          "Failed to load remark-band summary for this class. Please try again later."
-        );
-        setRemarkBandsByClassroom((prev) => ({
-          ...prev,
-          [classroomId]: [],
-        }));
-        return;
-      }
+      const data = await safeJson<RemarkSummaryResponse>(res);
 
-      let data: RemarkSummaryResponse | null = null;
-      try {
-        data = JSON.parse(text);
-      } catch (err) {
-        console.error(
-          "[HeadteacherAssessmentOverview] remark-summary JSON parse error",
-          err,
-          text
-        );
-        setRemarkError("Failed to read remark-band data from server.");
-        setRemarkBandsByClassroom((prev) => ({
-          ...prev,
-          [classroomId]: [],
-        }));
-        return;
-      }
-
-      if (!data?.ok) {
-        console.error(
-          "[HeadteacherAssessmentOverview] remark-summary ok:false",
-          data
-        );
-        setRemarkError(
-          "Server returned an error while loading remark-band summary."
-        );
-        setRemarkBandsByClassroom((prev) => ({
-          ...prev,
-          [classroomId]: [],
-        }));
+      if (!res.ok || !data?.ok) {
+        setRemarkError("Failed to load remark-band summary for this class.");
+        setRemarkBandsByClassroom((prev) => ({ ...prev, [classroomId]: [] }));
         return;
       }
 
       setRemarkBandsByClassroom((prev) => ({
         ...prev,
-        [classroomId]: Array.isArray(data?.bands) ? data.bands : [],
+        [classroomId]: Array.isArray(data.bands) ? data.bands : [],
       }));
-    } catch (err) {
-      console.error(
-        "[HeadteacherAssessmentOverview] remark-summary network error",
-        err
-      );
+    } catch {
       setRemarkError("Network error while loading remark-band summary.");
-      setRemarkBandsByClassroom((prev) => ({
-        ...prev,
-        [classroomId]: [],
-      }));
+      setRemarkBandsByClassroom((prev) => ({ ...prev, [classroomId]: [] }));
     } finally {
       setRemarkLoadingClassId(null);
     }
   }
 
-  async function loadOverview(
-    tenantIdValue: string,
-    termValue: string,
-    yearValue: string
-  ) {
-    if (!tenantIdValue) {
-      setLoadError("Tenant ID is missing.");
-      setOverview(null);
-      return;
-    }
-
+  async function loadOverviewAndGovernance(termValue: string, yearValue: string) {
     setLoading(true);
     setLoadError(null);
+    setGovError(null);
 
     try {
-      const params = new URLSearchParams({
-        tenantId: tenantIdValue,
-        term: termValue,
-        academicYear: yearValue,
-      });
+      setRemarkBandsByClassroom({});
 
-      const url = `/api/headteacher/assessment/overview?${params.toString()}`;
-      const res = await fetch(url);
+      const params = new URLSearchParams({ term: termValue, academicYear: yearValue });
 
-      const text = await res.text();
+      const [oRes, gRes] = await Promise.all([
+        fetch(`/api/headteacher/assessment/overview?${params.toString()}`, { cache: "no-store" }),
+        fetch(`/api/headteacher/insights/governance?${params.toString()}`, { cache: "no-store" }),
+      ]);
 
-      if (!res.ok) {
-        console.error(
-          "[HeadteacherAssessmentOverview] HTTP error",
-          res.status,
-          text
-        );
+      const [oJson, gJson] = await Promise.all([
+        safeJson<HeadteacherAssessmentOverviewResponse>(oRes),
+        safeJson<GovernanceResp>(gRes),
+      ]);
+
+      if (!oRes.ok || !oJson?.ok) {
         setLoadError("Unexpected server error while loading overview.");
         setOverview(null);
-        return;
-      }
-
-      let data: HeadteacherAssessmentOverviewResponse | null = null;
-      try {
-        data = JSON.parse(text);
-      } catch (err) {
-        console.error(
-          "[HeadteacherAssessmentOverview] Failed to parse JSON",
-          err,
-          text
-        );
-        setLoadError("Failed to parse overview response from server.");
-        setOverview(null);
-        return;
-      }
-
-      if (!data?.ok) {
-        console.error(
-          "[HeadteacherAssessmentOverview] Response ok:false",
-          data
-        );
-        setLoadError("Server returned an error while loading overview.");
-        setOverview(null);
-        return;
-      }
-
-      setOverview(data);
-
-      if (data.classes && data.classes.length > 0) {
-        const firstClass = data.classes[0];
-        setSelectedClassroomId(firstClass.classroomId);
-
-        await loadRemarkSummaryForClass(
-          tenantIdValue,
-          firstClass.classroomId,
-          termValue,
-          yearValue
-        );
       } else {
-        setSelectedClassroomId(null);
+        setOverview(oJson);
+
+        const nextSelected =
+          oJson.classes.find((c) => c.classroomId === selectedClassroomId)?.classroomId ??
+          oJson.classes[0]?.classroomId ??
+          null;
+
+        setSelectedClassroomId(nextSelected);
       }
-    } catch (err) {
-      console.error(
-        "[HeadteacherAssessmentOverview] Network or unexpected error",
-        err
-      );
+
+      if (!gRes.ok || !gJson || (gJson as any).ok === false) {
+        const err = (gJson as any)?.error || `Failed to load governance (HTTP ${gRes.status}).`;
+        setGovError(err);
+        setGovernance(gJson ?? { ok: false, error: err });
+      } else {
+        setGovernance(gJson);
+      }
+    } catch {
       setLoadError("Network error while loading overview data.");
       setOverview(null);
+      setGovError("Network error while loading governance.");
+      setGovernance({ ok: false, error: "Network error while loading governance." });
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    if (!tenantId) return;
-    loadOverview(tenantId, term, academicYear);
+    void loadOverviewAndGovernance(term, academicYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId, term, academicYear]);
+  }, [term, academicYear]);
+
+  useEffect(() => {
+    if (!selectedClassroomId) return;
+    if (remarkBandsByClassroom[selectedClassroomId]) return;
+    void loadRemarkSummaryForClass(selectedClassroomId, term, academicYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClassroomId, term, academicYear]);
 
   const totalClasses = classes.length;
+
   const totalLearners = useMemo(
     () => classes.reduce((sum, c) => sum + (c.learnersCount || 0), 0),
     [classes]
   );
+
   const totalItems = useMemo(
     () => classes.reduce((sum, c) => sum + (c.itemsCount || 0), 0),
     [classes]
   );
+
   const averageAcrossSchool = useMemo(() => {
-    if (!classes.length) return null;
-    const sum = classes.reduce((acc, c) => acc + (c.averagePercent ?? 0), 0);
-    return sum / classes.length;
+    const vals = classes
+      .map((c) => c.averagePercent)
+      .filter((v): v is number => typeof v === "number");
+    if (!vals.length) return null;
+    return vals.reduce((acc, v) => acc + v, 0) / vals.length;
   }, [classes]);
 
   const selectedBands: ClassBandSummary[] = useMemo(() => {
@@ -317,39 +531,92 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
     return remarkBandsByClassroom[selectedClassroomId] ?? [];
   }, [selectedClassroomId, remarkBandsByClassroom]);
 
-  const isRemarkLoading =
-    selectedClass && remarkLoadingClassId === selectedClass.classroomId;
+  const isRemarkLoading = selectedClass && remarkLoadingClassId === selectedClass.classroomId;
+
+  const classReportHref = selectedClass
+    ? `/headteacher/reports?classroomId=${encodeURIComponent(selectedClass.classroomId)}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`
+    : "/headteacher/reports";
+
+  // ---- Derive per-class anomaly counts from governance (schema-aligned) ----
+  const perClassGov = useMemo(() => {
+    const map: Record<
+      string,
+      { approvedNotDelivered: number; deliveredNotAssessed: number; assessedNotLinked: number; total: number }
+    > = {};
+
+    if (!governanceOk) return map;
+    const g = governance as GovernanceOk;
+
+    for (const a of g.anomalies.approvedNotDelivered) {
+      const cid = cleanStr(a.classroomId);
+      if (!cid) continue;
+      if (!map[cid]) map[cid] = { approvedNotDelivered: 0, deliveredNotAssessed: 0, assessedNotLinked: 0, total: 0 };
+      map[cid].approvedNotDelivered += 1;
+      map[cid].total += 1;
+    }
+
+    for (const d of g.anomalies.deliveredNotAssessed) {
+      const cid = cleanStr(d.classroomId);
+      if (!cid) continue;
+      if (!map[cid]) map[cid] = { approvedNotDelivered: 0, deliveredNotAssessed: 0, assessedNotLinked: 0, total: 0 };
+      map[cid].deliveredNotAssessed += 1;
+      map[cid].total += 1;
+    }
+
+    for (const x of g.anomalies.assessedNotLinked) {
+      const cid = cleanStr(x.classroomId);
+      if (!cid) continue;
+      if (!map[cid]) map[cid] = { approvedNotDelivered: 0, deliveredNotAssessed: 0, assessedNotLinked: 0, total: 0 };
+      map[cid].assessedNotLinked += 1;
+      map[cid].total += 1;
+    }
+
+    return map;
+  }, [governanceOk, governance]);
+
+  const selectedGovCounts = useMemo(() => {
+    const cid = selectedClass?.classroomId ?? "";
+    if (!cid) return null;
+    return perClassGov[cid] ?? { approvedNotDelivered: 0, deliveredNotAssessed: 0, assessedNotLinked: 0, total: 0 };
+  }, [perClassGov, selectedClass?.classroomId]);
+
+  const selectedGovLists = useMemo(() => {
+    if (!governanceOk || !selectedClass?.classroomId) {
+      return { approvedNotDelivered: [], deliveredNotAssessed: [], assessedNotLinked: [] };
+    }
+    const g = governance as GovernanceOk;
+    const cid = selectedClass.classroomId;
+
+    return {
+      approvedNotDelivered: g.anomalies.approvedNotDelivered.filter((x) => x.classroomId === cid).slice(0, 5),
+      deliveredNotAssessed: g.anomalies.deliveredNotAssessed.filter((x) => x.classroomId === cid).slice(0, 5),
+      assessedNotLinked: g.anomalies.assessedNotLinked.filter((x) => x.classroomId === cid).slice(0, 5),
+    };
+  }, [governanceOk, governance, selectedClass?.classroomId]);
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto px-4 py-6 space-y-5">
-        {/* Top bar */}
-        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Headteacher • Assessment Overview
+      <div className="container mx-auto space-y-5 px-4 py-6">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Headteacher • Assessment Insights
+              </div>
+              <div className="text-lg font-semibold text-slate-900">
+                Class performance health for support, diagnosis, and improvement
+              </div>
+              <div className="max-w-3xl text-[12px] text-slate-600">
+                Teachers record real assessment scores from lessons delivered. This view helps you spot weak classes, weak learners,
+                and weak learning areas that need support or verification against exercise books and marked scripts.
+              </div>
             </div>
-            <div className="text-sm font-semibold text-slate-900">
-              Whole-School Continuous Assessment Snapshot
-            </div>
-            <div className="text-[11px] text-slate-600">
-              Term:{" "}
-              <span className="font-medium">{term || overview?.context.term}</span>{" "}
-              • Academic Year:{" "}
-              <span className="font-medium">
-                {academicYear || overview?.context.academicYear}
-              </span>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-[11px] text-slate-600">
+            <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1">
-                <label className="block text-[10px] font-medium text-slate-500">
-                  Term
-                </label>
+                <label className="block text-[10px] font-medium text-slate-500">Term</label>
                 <select
-                  className="rounded-md border border-slate-300 px-2 py-1 text-[11px]"
+                  className="rounded-md border border-slate-300 px-3 py-2 text-[11px]"
                   value={term}
                   onChange={(e) => setTerm(e.target.value)}
                 >
@@ -358,249 +625,441 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
                   <option value="3rd Term">3rd Term</option>
                 </select>
               </div>
+
               <div className="space-y-1">
-                <label className="block text-[10px] font-medium text-slate-500">
-                  Academic Year
-                </label>
+                <label className="block text-[10px] font-medium text-slate-500">Academic Year</label>
                 <input
-                  className="w-28 rounded-md border border-slate-300 px-2 py-1 text-[11px]"
+                  className="w-32 rounded-md border border-slate-300 px-3 py-2 text-[11px]"
                   value={academicYear}
                   onChange={(e) => setAcademicYear(e.target.value)}
                   placeholder="2025/2026"
                 />
               </div>
+
+              <button
+                type="button"
+                onClick={() => void loadOverviewAndGovernance(term, academicYear)}
+                disabled={loading}
+                className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-[11px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              >
+                {loading ? "Refreshing…" : "Refresh"}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => loadOverview(tenantId, term, academicYear)}
-              disabled={loading}
-              className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? "Refreshing…" : "Refresh data"}
-            </button>
           </div>
+        </div>
+
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3 text-[11px] text-emerald-900">
+          Assessment data here is for <span className="font-semibold">improvement</span>, not for humiliating teachers or learners.
+          Parent-facing release stays separate and should be used only for end-of-term exam results for now.
         </div>
 
         {loadError && (
           <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
-            {loadError} Please check that the API route is working correctly or
-            contact the system administrator.
+            {loadError}
           </div>
         )}
 
+        {govError && !loadError ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+            Governance: {govError}
+          </div>
+        ) : null}
+
+        {/* Governance Copilot summary (schema-aligned to your endpoint) */}
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Governance copilot
+              </div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">
+                Chain discipline: approved note → delivered lesson → linked assessment → scored assessment
+              </div>
+              <div className="mt-1 text-[11px] text-slate-600">
+                {governanceOk
+                  ? `${(governance as GovernanceOk).scope.start} to ${(governance as GovernanceOk).scope.end}`
+                  : "Loading governance…"}
+              </div>
+            </div>
+
+            {governanceOk ? (
+              <div className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+                Headteacher score: {pctLabel((governance as GovernanceOk).metrics.headteacherScore)}
+              </div>
+            ) : (
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
+                Score: —
+              </div>
+            )}
+          </div>
+
+          {governanceOk ? (
+            <>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <MiniStat
+                  title="Attendance certify"
+                  value={pctLabel((governance as GovernanceOk).metrics.attendance.attendanceCertificationRate)}
+                  sub={`${(governance as GovernanceOk).metrics.attendance.pendingCertification} pending`}
+                />
+                <MiniStat
+                  title="Notify rate"
+                  value={pctLabel((governance as GovernanceOk).metrics.attendance.notifyRate)}
+                  sub={`Avg notify delay ${(governance as GovernanceOk).metrics.attendance.avgNotifyDelayHrs ?? "—"}h`}
+                />
+                <MiniStat
+                  title="Delivery coverage"
+                  value={pctLabel((governance as GovernanceOk).metrics.pipeline.deliveryCoveragePercent)}
+                  sub={`${(governance as GovernanceOk).metrics.pipeline.deliveredLessonsCount} delivered`}
+                />
+                <MiniStat
+                  title="Assessment linking"
+                  value={pctLabel((governance as GovernanceOk).metrics.pipeline.assessmentLinkCoveragePercent)}
+                  sub={`${(governance as GovernanceOk).metrics.pipeline.linkedAssessmentsCount} linked`}
+                />
+                <MiniStat
+                  title="Scoring coverage"
+                  value={pctLabel((governance as GovernanceOk).metrics.pipeline.scoringCoveragePercent)}
+                  sub={`${(governance as GovernanceOk).metrics.pipeline.scoredAssessmentsCount} scored`}
+                />
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <div className="text-[11px] font-semibold text-slate-800">Priority actions</div>
+                {(governance as GovernanceOk).actions.length ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {(governance as GovernanceOk).actions.slice(0, 6).map((a) => (
+                      <div key={a.code} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[11px] font-semibold text-slate-900">{a.code}</div>
+                          {priorityChip(a.priority)}
+                        </div>
+                        <div className="mt-1 text-[11px] text-slate-700">{a.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-[11px] text-emerald-900">
+                    Governance is stable in this window. Keep discipline consistent.
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="mt-3 text-[11px] text-slate-600">
+              {!governance ? "Loading…" : (governance as any).ok === false ? (governance as any).error : "Loading…"}
+            </div>
+          )}
+        </div>
+
         {!loading && !loadError && !classes.length && (
           <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-600">
-            No assessment overview data yet for this term. Once teachers record
-            continuous assessment scores and class averages are computed, a
-            whole-school snapshot will appear here.
+            No assessment overview data yet for this term.
           </div>
         )}
 
         {classes.length > 0 && (
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.8fr)]">
-            <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs">
-                  <div className="text-[11px] font-medium text-slate-500">
-                    Classes reporting
-                  </div>
-                  <div className="mt-1 text-xl font-semibold text-slate-900">
-                    {formatNumber(totalClasses)}
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-slate-500">
-                    With at least one assessment captured
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs">
-                  <div className="text-[11px] font-medium text-slate-500">
-                    Learners covered
-                  </div>
-                  <div className="mt-1 text-xl font-semibold text-slate-900">
-                    {formatNumber(totalLearners)}
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-slate-500">
-                    Across all reporting classes
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs">
-                  <div className="text-[11px] font-medium text-slate-500">
-                    Schoolwide average
-                  </div>
-                  <div className="mt-1 text-xl font-semibold text-slate-900">
-                    {formatPercent(averageAcrossSchool)}
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-slate-500">
-                    Mean of class averages
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div>
-                    <h2 className="text-xs font-semibold text-slate-900">
-                      Classes (overview)
-                    </h2>
-                    <p className="text-[11px] text-slate-600">
-                      Select a class to see its CA distribution and remark bands.
-                    </p>
-                  </div>
-                  <span className="min-w-8 rounded-full bg-slate-100 px-2 py-0.5 text-center text-[10px] font-medium text-slate-700">
-                    {classes.length} class{classes.length === 1 ? "" : "es"}
-                  </span>
-                </div>
-
-                <div className="max-h-[340px] overflow-auto">
-                  <ul className="space-y-1.5">
-                    {classes.map((cls) => {
-                      const isSelected =
-                        selectedClass?.classroomId === cls.classroomId;
-                      return (
-                        <li key={cls.classroomId}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedClassroomId(cls.classroomId);
-                              if (!remarkBandsByClassroom[cls.classroomId]) {
-                                loadRemarkSummaryForClass(
-                                  tenantId,
-                                  cls.classroomId,
-                                  term,
-                                  academicYear
-                                );
-                              }
-                            }}
-                            className={[
-                              "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition",
-                              isSelected
-                                ? "border-blue-500 bg-blue-50/80"
-                                : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40",
-                            ].join(" ")}
-                          >
-                            <div className="space-y-0.5">
-                              <div className="text-xs font-semibold text-slate-900">
-                                {cls.classroomName}
-                              </div>
-                              <div className="text-[11px] text-slate-600">
-                                Learners: {formatNumber(cls.learnersCount)} • Items:{" "}
-                                {formatNumber(cls.itemsCount)}
-                              </div>
-                            </div>
-                            <div className="text-right text-[11px] text-slate-600">
-                              <div className="font-semibold text-slate-900">
-                                {formatPercent(cls.averagePercent)}
-                              </div>
-                              <div className="text-[10px] text-slate-500">
-                                Class average
-                              </div>
-                            </div>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </div>
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard label="Classes reporting" value={formatNumber(totalClasses)} />
+              <MetricCard label="Learners covered" value={formatNumber(totalLearners)} />
+              <MetricCard label="Assessment items" value={formatNumber(totalItems)} />
+              <MetricCard label="Schoolwide average" value={formatPercent(averageAcrossSchool)} />
             </div>
 
-            <div className="space-y-3">
-              <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs">
+            <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-sm font-semibold text-slate-900">Classes</h2>
+                      <p className="text-[11px] text-slate-600">Default view is single-stream to reduce noise.</p>
+                    </div>
+
+                    {canToggleMultiStream ? (
+                      <label className="inline-flex items-center gap-2 text-[11px] text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={streamMode === "multi"}
+                          onChange={(e) => setStreamMode(e.target.checked ? "multi" : "single")}
+                        />
+                        Show multistream
+                      </label>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 max-h-[420px] overflow-auto">
+                    <ul className="space-y-2">
+                      {visibleClasses.map((cls) => {
+                        const isSelected = selectedClass?.classroomId === cls.classroomId;
+                        const g = perClassGov[cls.classroomId];
+                        const hasIssues = !!g && g.total > 0;
+
+                        return (
+                          <li key={cls.classroomId}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedClassroomId(cls.classroomId)}
+                              className={[
+                                "w-full rounded-xl border px-3 py-3 text-left transition",
+                                isSelected
+                                  ? "border-blue-500 bg-blue-50/80"
+                                  : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40",
+                              ].join(" ")}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-semibold text-slate-900">
+                                    {streamMode === "single" ? singleStreamLabel(cls) : fullClassLabel(cls)}
+                                  </div>
+
+                                  <div className="mt-1 text-[11px] text-slate-600">
+                                    Learners: {formatNumber(cls.learnersCount)} • Items: {formatNumber(cls.itemsCount)}
+                                  </div>
+
+                                  {hasIssues ? (
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                      {pill(`Approved→No delivery: ${g.approvedNotDelivered}`, g.approvedNotDelivered ? "amber" : "slate")}
+                                      {pill(`Delivered→No assessment: ${g.deliveredNotAssessed}`, g.deliveredNotAssessed ? "amber" : "slate")}
+                                      {pill(`Assessed→No link: ${g.assessedNotLinked}`, g.assessedNotLinked ? "amber" : "slate")}
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <div className="text-right">
+                                  <div className="text-sm font-semibold text-slate-900">
+                                    {formatPercent(cls.averagePercent)}
+                                  </div>
+                                  <div className="text-[10px] text-slate-500">Avg</div>
+                                </div>
+                              </div>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
                 {!selectedClass ? (
-                  <div className="py-6 text-center text-[11px] text-slate-600">
-                    Select a class on the left to view its assessment summary.
+                  <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
+                    Select a class to inspect its performance health.
                   </div>
                 ) : (
                   <>
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <div className="text-xs font-semibold text-slate-900">
-                          {selectedClass.classroomName}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <div className="text-lg font-semibold text-slate-900">{fullClassLabel(selectedClass)}</div>
+                          <div className="mt-1 text-[12px] text-slate-600">
+                            Learners: <span className="font-semibold">{formatNumber(selectedClass.learnersCount)}</span> • Items:{" "}
+                            <span className="font-semibold">{formatNumber(selectedClass.itemsCount)}</span> • Average:{" "}
+                            <span className="font-semibold">{formatPercent(selectedClass.averagePercent)}</span>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-600">
-                          Learners:{" "}
-                          <span className="font-medium">
-                            {formatNumber(selectedClass.learnersCount)}
-                          </span>{" "}
-                          • Items:{" "}
-                          <span className="font-medium">
-                            {formatNumber(selectedClass.itemsCount)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-[11px] font-medium text-slate-500">
-                          Class average
-                        </div>
-                        <div className="text-xl font-semibold text-slate-900">
-                          {formatPercent(selectedClass.averagePercent)}
+
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href={classReportHref}
+                            className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50"
+                          >
+                            Open class term report
+                          </Link>
+
+                          <Link
+                            href="/headteacher/reports/student-report"
+                            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Open learner report
+                          </Link>
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-2 space-y-2">
-                      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                        Learner distribution by remark band
-                      </h3>
-
-                      {isRemarkLoading ? (
-                        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
-                          Loading remark summary for this class…
-                        </div>
-                      ) : selectedBands.length === 0 ? (
-                        <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
-                          No remark summary data yet for this class. Once term totals
-                          are computed and remark bands are generated, the WAEC-style
-                          bands (Excellent, Very Good, etc.) will appear here.
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {remarkError && (
-                            <div className="rounded-md bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
-                              {remarkError}
-                            </div>
-                          )}
-                          <div className="grid gap-1.5 md:grid-cols-2">
-                            {selectedBands
-                              .slice()
-                              .sort((a, b) => bandOrder(a) - bandOrder(b))
-                              .map((band) => (
-                                <div
-                                  key={band.grade}
-                                  className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-1.5 text-[11px]"
-                                >
-                                  <div>
-                                    <div className="font-semibold text-slate-900">
-                                      {band.label}
-                                    </div>
-                                    <div className="text-[10px] text-slate-500">
-                                      {band.minPercent}–{band.maxPercent}%
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="text-sm font-semibold text-slate-900">
-                                      {formatNumber(band.learnersCount)}
-                                    </div>
-                                    <div className="text-[10px] text-slate-500">
-                                      learners
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
+                    {/* NEW: Class governance anomalies panel (derived from your endpoint, no guessing) */}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">Governance anomalies (this class)</div>
+                          <div className="mt-1 text-[11px] text-slate-600">
+                            These issues block accurate analytics and parent trust. Fix the chain, then performance numbers become meaningful.
                           </div>
                         </div>
+                        {selectedGovCounts ? (
+                          <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
+                            Total: {selectedGovCounts.total}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {!governanceOk ? (
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
+                          Governance data not available.
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid gap-2 sm:grid-cols-3">
+                            <MiniStat
+                              title="Approved → Not delivered"
+                              value={String(selectedGovCounts?.approvedNotDelivered ?? 0)}
+                              sub="Approved lesson notes missing delivery proof"
+                            />
+                            <MiniStat
+                              title="Delivered → Not assessed"
+                              value={String(selectedGovCounts?.deliveredNotAssessed ?? 0)}
+                              sub="Delivered lessons with no assessment items"
+                            />
+                            <MiniStat
+                              title="Assessed → Not linked"
+                              value={String(selectedGovCounts?.assessedNotLinked ?? 0)}
+                              sub="Assessment items missing lesson linkage"
+                            />
+                          </div>
+
+                          {(selectedGovCounts?.total ?? 0) > 0 ? (
+                            <div className="space-y-3">
+                              {selectedGovLists.approvedNotDelivered.length ? (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                                  <div className="text-[11px] font-semibold text-amber-900">
+                                    Approved notes not delivered (sample)
+                                  </div>
+                                  <ul className="mt-2 space-y-1 text-[11px] text-amber-950">
+                                    {selectedGovLists.approvedNotDelivered.map((x) => (
+                                      <li key={x.id}>
+                                        • {x.subject} — {x.lessonTitle ?? "Lesson"}{" "}
+                                        <span className="text-amber-700">
+                                          ({x.approvedAt ? x.approvedAt.slice(0, 10) : "no date"})
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+
+                              {selectedGovLists.deliveredNotAssessed.length ? (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                                  <div className="text-[11px] font-semibold text-amber-900">
+                                    Delivered lessons not assessed (sample)
+                                  </div>
+                                  <ul className="mt-2 space-y-1 text-[11px] text-amber-950">
+                                    {selectedGovLists.deliveredNotAssessed.map((x) => (
+                                      <li key={x.id}>
+                                        • {x.subject} — {x.indicatorCode ?? "No indicator"}{" "}
+                                        <span className="text-amber-700">
+                                          ({x.dateTaught ? x.dateTaught.slice(0, 10) : "no date"})
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+
+                              {selectedGovLists.assessedNotLinked.length ? (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                                  <div className="text-[11px] font-semibold text-amber-900">
+                                    Assessed items not linked (sample)
+                                  </div>
+                                  <ul className="mt-2 space-y-1 text-[11px] text-amber-950">
+                                    {selectedGovLists.assessedNotLinked.map((x) => (
+                                      <li key={x.id}>
+                                        • {x.subject} — {x.title}{" "}
+                                        <span className="text-amber-700">
+                                          ({x.date ? x.date.slice(0, 10) : "no date"})
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-[11px] text-emerald-900">
+                              No anomalies detected for this class in the current governance window.
+                            </div>
+                          )}
+                        </>
                       )}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <h3 className="text-sm font-semibold text-slate-900">Learner distribution by remark band</h3>
+
+                      <div className="mt-3">
+                        {isRemarkLoading ? (
+                          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
+                            Loading remark summary for this class…
+                          </div>
+                        ) : selectedBands.length === 0 ? (
+                          <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
+                            No remark summary data yet for this class.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {remarkError && (
+                              <div className="rounded-md bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
+                                {remarkError}
+                              </div>
+                            )}
+
+                            <div className="grid gap-2 md:grid-cols-2">
+                              {selectedBands
+                                .slice()
+                                .sort((a, b) => bandOrder(a) - bandOrder(b))
+                                .map((band) => (
+                                  <div
+                                    key={band.grade}
+                                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px]"
+                                  >
+                                    <div>
+                                      <div className="font-semibold text-slate-900">{band.label}</div>
+                                      <div className="text-[10px] text-slate-500">
+                                        {band.minPercent}–{band.maxPercent}%
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm font-semibold text-slate-900">
+                                        {formatNumber(band.learnersCount)}
+                                      </div>
+                                      <div className="text-[10px] text-slate-500">learners</div>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </>
                 )}
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
   );
 };
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+      <div className="text-[11px] font-medium text-slate-500">{label}</div>
+      <div className="mt-1 text-2xl font-semibold text-slate-900">{value}</div>
+    </div>
+  );
+}
+
+function MiniStat(props: { title: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+        {props.title}
+      </div>
+      <div className="mt-2 text-xl font-semibold text-slate-900">{props.value}</div>
+      {props.sub ? <div className="mt-1 text-[11px] text-slate-600">{props.sub}</div> : null}
+    </div>
+  );
+}
 
 export default HeadteacherAssessmentOverviewClient;

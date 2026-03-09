@@ -1,0 +1,372 @@
+{
+  "inputPath": "C:\\Users\\OWNER\\Documents\\ayitikope-mis\\prisma\\seed\\curriculum\\kg2-owop-media.json",
+  "outputPath": "C:\\Users\\OWNER\\Documents\\ayitikope-mis\\prisma\\seed\\curriculum\\kg2-our-world-and-our-people-media.clean.json",
+  "totalInput": 45,
+  "totalOutput": 45,
+  "kept": 45,
+  "dropped": 0,
+  "exactMappings": 29,
+  "bestFitMappings": 16,
+  "report": [
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.1-body-features.png",
+      "oldIndicatorCode": "K2.1.1.1.1",
+      "newIndicatorCode": "K2.1.1.1.1",
+      "mappingType": "exact",
+      "note": "Body identity/self-description reuse is exact."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.2-personal-hygiene.png",
+      "oldIndicatorCode": "K2.1.1.1.2",
+      "newIndicatorCode": "K2.1.3.1.1",
+      "mappingType": "exact",
+      "note": "Personal hygiene image belongs under hygiene/body-care."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.3-book-parts-and-body-parts.png",
+      "oldIndicatorCode": "K2.1.1.1.3",
+      "newIndicatorCode": "K2.1.2.1.2",
+      "mappingType": "best_fit",
+      "note": "Read-aloud/body-functions bridge; best-fit under body-parts-and-functions text work."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.4-body-parts-in-action.png",
+      "oldIndicatorCode": "K2.1.1.1.4",
+      "newIndicatorCode": "K2.1.1.1.7",
+      "mappingType": "best_fit",
+      "note": "Movement/body-parts reuse accepted as support media for body-parts/counting integration."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.5-personal-hygiene-routines.png",
+      "oldIndicatorCode": "K2.1.1.1.5",
+      "newIndicatorCode": "K2.1.3.1.1",
+      "mappingType": "exact",
+      "note": "Daily hygiene routines are exact support media for hygiene."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.1-family-types-and-members.png",
+      "oldIndicatorCode": "K2.1.2.1.1",
+      "newIndicatorCode": "K2.2.1.1.1",
+      "mappingType": "exact",
+      "note": "Family types/members reuse is exact."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.2-matching-family-duties.png",
+      "oldIndicatorCode": "K2.1.2.1.2",
+      "newIndicatorCode": "K2.2.1.1.1",
+      "mappingType": "exact",
+      "note": "Family duties strongly support roles/responsibilities."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.3-family-story-roles.png",
+      "oldIndicatorCode": "K2.1.2.1.3",
+      "newIndicatorCode": "K2.2.1.1.2",
+      "mappingType": "exact",
+      "note": "Family story read-aloud reuse is exact enough for family text work."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.4-family-texts.png",
+      "oldIndicatorCode": "K2.1.2.1.4",
+      "newIndicatorCode": "K2.2.1.1.2",
+      "mappingType": "exact",
+      "note": "Family texts are exact support media for family reading activity."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.5-family-love-and-respect.png",
+      "oldIndicatorCode": "K2.1.2.1.5",
+      "newIndicatorCode": "K2.3.1.1.1",
+      "mappingType": "best_fit",
+      "note": "Family love/respect is best-fit under personal values."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.3.1.1-home-parts.png",
+      "oldIndicatorCode": "K2.1.3.1.1",
+      "newIndicatorCode": "K2.2.1.1.1",
+      "mappingType": "best_fit",
+      "note": "Home-part scene reused under family-life context."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.3.1.2-home-activities.png",
+      "oldIndicatorCode": "K2.1.3.1.2",
+      "newIndicatorCode": "K2.2.1.1.1",
+      "mappingType": "best_fit",
+      "note": "Home roles/routines reused under family-life context."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.3.1.3-home-books-and-stories.png",
+      "oldIndicatorCode": "K2.1.3.1.3",
+      "newIndicatorCode": "K2.2.1.1.2",
+      "mappingType": "best_fit",
+      "note": "Home story reuse placed under family text activity."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.3.1.4-home-safety-rules.png",
+      "oldIndicatorCode": "K2.1.3.1.4",
+      "newIndicatorCode": "K2.1.5.1.1",
+      "mappingType": "exact",
+      "note": "Home/environment safety fits environment and health."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.4.1.1-school-physical-features.png",
+      "oldIndicatorCode": "K2.1.4.1.1",
+      "newIndicatorCode": "K2.2.4.1.1",
+      "mappingType": "exact",
+      "note": "School features fit school family and school life."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.4.1.2-school-community-members.png",
+      "oldIndicatorCode": "K2.1.4.1.2",
+      "newIndicatorCode": "K2.2.4.1.1",
+      "mappingType": "exact",
+      "note": "School community members fit school family."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.4.1.3-school-activities.png",
+      "oldIndicatorCode": "K2.1.4.1.3",
+      "newIndicatorCode": "K2.2.4.1.1",
+      "mappingType": "best_fit",
+      "note": "School activities support school family/life context."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.4.1.4-school-texts.png",
+      "oldIndicatorCode": "K2.1.4.1.4",
+      "newIndicatorCode": "K2.2.4.1.2",
+      "mappingType": "best_fit",
+      "note": "School text reuse aligned to school-family literacy activity."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.4.1.5-school-safety.png",
+      "oldIndicatorCode": "K2.1.4.1.5",
+      "newIndicatorCode": "K2.2.4.1.1",
+      "mappingType": "best_fit",
+      "note": "School safety kept under school family context."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.1.1.1-living-and-nonliving-environment.png",
+      "oldIndicatorCode": "K2.2.1.1.1",
+      "newIndicatorCode": "K2.6.1.1.1",
+      "mappingType": "exact",
+      "note": "Living/non-living environment reuse is exact."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.1.1.2-living-vs-nonliving-characteristics.png",
+      "oldIndicatorCode": "K2.2.1.1.2",
+      "newIndicatorCode": "K2.6.1.1.1",
+      "mappingType": "exact",
+      "note": "Characteristics chart directly supports classification discussion."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.1.1.3-living-nonliving-storytime.png",
+      "oldIndicatorCode": "K2.2.1.1.3",
+      "newIndicatorCode": "K2.6.1.1.2",
+      "mappingType": "exact",
+      "note": "Story/read-aloud reuse is exact enough."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.2.1.1-plant-parts-observation.png",
+      "oldIndicatorCode": "K2.2.2.1.1",
+      "newIndicatorCode": "K2.6.5.1.1",
+      "mappingType": "exact",
+      "note": "Plant parts observation reuse is exact."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.2.1.2-uses-of-plants.png",
+      "oldIndicatorCode": "K2.2.2.1.2",
+      "newIndicatorCode": "K2.6.5.1.1",
+      "mappingType": "best_fit",
+      "note": "Plant uses accepted under plant-parts-and-uses content standard."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.2.1.3-plants-texts.png",
+      "oldIndicatorCode": "K2.2.2.1.3",
+      "newIndicatorCode": "K2.6.6.1.3",
+      "mappingType": "exact",
+      "note": "Plant-growth text reuse fits Plants-2 story/read-aloud work."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.2.1.4-care-for-plants.png",
+      "oldIndicatorCode": "K2.2.2.1.4",
+      "newIndicatorCode": "K2.6.6.1.1",
+      "mappingType": "exact",
+      "note": "Plant care image fits plant needs/growth discussion."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.3.1.1-domestic-and-wild-animals.png",
+      "oldIndicatorCode": "K2.2.3.1.1",
+      "newIndicatorCode": "K2.6.2.1.1",
+      "mappingType": "exact",
+      "note": "Domestic/wild animal chart reuse is exact."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.3.1.2-animal-sounds-and-movements.png",
+      "oldIndicatorCode": "K2.2.3.1.2",
+      "newIndicatorCode": "K2.6.2.1.4",
+      "mappingType": "best_fit",
+      "note": "Animal sounds/movements accepted under animal name/syllable activity."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.3.1.3-animal-texts.png",
+      "oldIndicatorCode": "K2.2.3.1.3",
+      "newIndicatorCode": "K2.6.2.1.2",
+      "mappingType": "exact",
+      "note": "Animal text reuse is exact enough."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.3.1.4-animal-kindness.png",
+      "oldIndicatorCode": "K2.2.3.1.4",
+      "newIndicatorCode": "K2.6.2.1.1",
+      "mappingType": "best_fit",
+      "note": "Animal-care image retained as support media for animal importance/care discussion."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.4.1.1-water-sources.png",
+      "oldIndicatorCode": "K2.2.4.1.1",
+      "newIndicatorCode": "K2.6.3.1.1",
+      "mappingType": "exact",
+      "note": "Water sources reuse is exact."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.4.1.2-water-uses.png",
+      "oldIndicatorCode": "K2.2.4.1.2",
+      "newIndicatorCode": "K2.6.3.1.1",
+      "mappingType": "exact",
+      "note": "Water uses directly support water importance discussion."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.4.1.3-water-texts.png",
+      "oldIndicatorCode": "K2.2.4.1.3",
+      "newIndicatorCode": "K2.6.3.1.2",
+      "mappingType": "exact",
+      "note": "Water text reuse is exact enough."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.4.1.4-water-use-and-storage.png",
+      "oldIndicatorCode": "K2.2.4.1.4",
+      "newIndicatorCode": "K2.6.3.1.1",
+      "mappingType": "best_fit",
+      "note": "Water care/storage retained under water importance/use discussion."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.5.1.1-air-presence.png",
+      "oldIndicatorCode": "K2.2.5.1.1",
+      "newIndicatorCode": "K2.6.4.1.1",
+      "mappingType": "exact",
+      "note": "Air presence reuse is exact."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.5.1.2-air-uses.png",
+      "oldIndicatorCode": "K2.2.5.1.2",
+      "newIndicatorCode": "K2.6.4.1.1",
+      "mappingType": "exact",
+      "note": "Air uses directly support air importance."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.5.1.3-air-texts.png",
+      "oldIndicatorCode": "K2.2.5.1.3",
+      "newIndicatorCode": "K2.6.4.1.3",
+      "mappingType": "exact",
+      "note": "Air text reuse is exact enough."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.5.1.4-clean-air-practices.png",
+      "oldIndicatorCode": "K2.2.5.1.4",
+      "newIndicatorCode": "K2.6.4.1.1",
+      "mappingType": "best_fit",
+      "note": "Clean-air stewardship kept under air importance discussion."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.1.1.1-creation-gifts.png",
+      "oldIndicatorCode": "K2.3.1.1.1",
+      "newIndicatorCode": "K2.3.4.1.1",
+      "mappingType": "exact",
+      "note": "Creation/belief media aligns with beliefs strand."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.1.1.2-god-provides.png",
+      "oldIndicatorCode": "K2.3.1.1.2",
+      "newIndicatorCode": "K2.3.4.1.1",
+      "mappingType": "best_fit",
+      "note": "Provision scene kept under beliefs discussion."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.1.1.3-creation-texts.png",
+      "oldIndicatorCode": "K2.3.1.1.3",
+      "newIndicatorCode": "K2.3.4.1.2",
+      "mappingType": "exact",
+      "note": "Creation text reuse is exact enough."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.1.1.4-appreciation-to-god.png",
+      "oldIndicatorCode": "K2.3.1.1.4",
+      "newIndicatorCode": "K2.3.4.1.1",
+      "mappingType": "best_fit",
+      "note": "Appreciation/worship scene retained under beliefs discussion."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.2.1.1-good-values.png",
+      "oldIndicatorCode": "K2.3.2.1.1",
+      "newIndicatorCode": "K2.3.2.1.1",
+      "mappingType": "exact",
+      "note": "Good values reuse is exact."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.2.1.2-practising-values.png",
+      "oldIndicatorCode": "K2.3.2.1.2",
+      "newIndicatorCode": "K2.3.2.1.1",
+      "mappingType": "exact",
+      "note": "Practising values supports cultural virtues/behaviour."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.2.1.3-values-texts.png",
+      "oldIndicatorCode": "K2.3.2.1.3",
+      "newIndicatorCode": "K2.3.2.1.2",
+      "mappingType": "exact",
+      "note": "Values text reuse is exact enough."
+    }
+  ]
+}

@@ -118,6 +118,21 @@ export default async function TeacherDashboardPage() {
       border: "border-emerald-200",
       pillCls: "bg-emerald-100 text-emerald-900 border-emerald-200",
     },
+
+    // ✅ Replaces Curriculum Explorer (duplication) → Scheme of Work
+    {
+      title: "Scheme of Work",
+      subtitle: "Weekly plan → Indicators → Studio",
+      desc: "View and manage your term scheme. Open a scheme to see week-by-week indicators and jump into Lesson Note Studio fast.",
+      pill: "Planning",
+      icon: "🗓️",
+      href: "/teacher/schemes",
+      enabled: true,
+      grad: "from-teal-50 to-white",
+      border: "border-teal-200",
+      pillCls: "bg-teal-100 text-teal-950 border-teal-200",
+    },
+
     {
       title: "Assessments & Reports",
       subtitle: "Scores · Insights · Term summaries",
@@ -149,18 +164,6 @@ export default async function TeacherDashboardPage() {
             : attendanceState.tone === "info"
               ? "bg-blue-100 text-blue-950 border-blue-200"
               : "bg-zinc-100 text-zinc-900 border-zinc-200",
-    },
-    {
-      title: "Curriculum Explorer",
-      subtitle: "Strands → Indicators → Exemplars",
-      desc: "Browse official curriculum details for accurate planning.",
-      pill: "Official",
-      icon: "🧭",
-      href: "/teacher/curriculum",
-      enabled: true,
-      grad: "from-zinc-50 to-white",
-      border: "border-zinc-200",
-      pillCls: "bg-zinc-100 text-zinc-900 border-zinc-200",
     },
     {
       title: "Wellbeing & Health",

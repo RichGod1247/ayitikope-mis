@@ -182,7 +182,7 @@
           "orderIndex": 3,
           "contentStandards": [
             {
-              "code": "K2.1.3",
+              "code": "K2.1.3.1",
               "description": "Demonstrate understanding of personal hygiene and care of the human body.",
               "orderIndex": 1,
               "indicators": [
@@ -344,7 +344,7 @@
           "orderIndex": 5,
           "contentStandards": [
             {
-              "code": "K2.1.5",
+              "code": "K2.1.5.1",
               "description": "Demonstrate understanding of the environment and how to keep it safe",
               "orderIndex": 1,
               "indicators": [
@@ -481,7 +481,7 @@
           "orderIndex": 1,
           "contentStandards": [
             {
-              "code": "K2.2.1",
+              "code": "K2.2.1.1",
               "description": "Demonstrate understanding of the rights, roles and responsibilities of family members",
               "orderIndex": 1,
               "indicators": [
@@ -1642,7 +1642,7 @@
               "orderIndex": 1,
               "indicators": [
                 {
-                  "code": "K2.6.6.1.1",
+                  "code": "K2.6.6.1.4",
                   "description": "Share ideas about the things (Nutrients) plants need to grow well.",
                   "orderIndex": 1,
                   "exemplars": [
@@ -1675,7 +1675,7 @@
                   ]
                 },
                 {
-                  "code": "K2.6.6.4",
+                  "code": "K2.6.6.1.4",
                   "description": "Blend the letter-sounds learn so far into syllables, read and write the syllables boldly and legibly in their books.",
                   "orderIndex": 4,
                   "exemplars": [

@@ -13,6 +13,7 @@ import {
 } from "@/lib/rateLimit";
 import bcrypt from "bcryptjs";
 import { normalizeStaffIdNorm } from "@/lib/staffId";
+import { normalizeTeacherClassLevel } from "@/lib/teacherScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -133,31 +134,19 @@ function normalizeSubjectKey(name: string) {
     .trim();
 }
 
-/**
- * ✅ CRITICAL: make JHS subjects canonical even if DB/UI decorates them.
- * Examples:
- * - "JHS 1 Mathematics" -> "Mathematics"
- * - "JHS (1,2,3) Mathematics" -> "Mathematics"
- * - "Basic 7 Mathematics" / "B7 Mathematics" -> "Mathematics"
- */
 function stripJhsDecorators(nameRaw: string) {
   let s = cleanStr(nameRaw);
 
-  // Leading JHS patterns
   s = s.replace(
     /^\s*JHS\s*(?:\(?\s*[1-3](?:\s*,\s*[1-3])*\s*\)?|[1-3])\s*[-:–—]?\s*/i,
     ""
   );
   s = s.replace(/^\s*JUNIOR\s+HIGH\s+SCHOOL\s*(?:\(?\s*[1-3]\s*\)?|[1-3])?\s*[-:–—]?\s*/i, "");
-
-  // Leading Basic 7/8/9 patterns used by your DB levels sometimes
   s = s.replace(/^\s*BASIC\s*[7-9]\s*[-:–—]?\s*/i, "");
   s = s.replace(/^\s*B\s*[7-9]\s*[-:–—]?\s*/i, "");
-
-  // Trailing "(JHS 1)" patterns
   s = s.replace(/\s*\(\s*JHS\s*[1-3](?:\s*,\s*[1-3])*\s*\)\s*$/i, "");
-
   s = s.replace(/\s+/g, " ").trim();
+
   return s;
 }
 
@@ -169,7 +158,6 @@ function stripJhsDecorators(nameRaw: string) {
 function normalizeJhsLevelToken(raw: unknown): "JHS1" | "JHS2" | "JHS3" | null {
   const v = cleanStr(raw).toUpperCase();
 
-  // UI patterns
   let m =
     v.match(/^JHS\s*([1-3])$/) ||
     v.match(/^J\.?H\.?S\.?\s*([1-3])$/) ||
@@ -177,7 +165,6 @@ function normalizeJhsLevelToken(raw: unknown): "JHS1" | "JHS2" | "JHS3" | null {
     v.match(/^JUNIOR\s+HIGH\s+SCHOOL\s*([1-3])$/);
   if (m) return `JHS${m[1]}` as "JHS1" | "JHS2" | "JHS3";
 
-  // DB patterns (Basic 7/8/9)
   m = v.match(/^BASIC\s*([7-9])$/) || v.match(/^B\s*([7-9])$/);
   if (m) {
     const n = Number(m[1]);
@@ -210,18 +197,13 @@ function normalizeAssignments(v: unknown): JhsAssignment[] | undefined {
   return out.length ? out : undefined;
 }
 
-/**
- * DB reality:
- * phase is NOT "JHS" — it is "Junior High School".
- * We build index from BOTH phase + levels fallback.
- */
 const DB_JHS_PHASES = ["Junior High School", "JHS", "Junior High"];
 const DB_JHS_LEVELS = ["Basic 7", "Basic 8", "Basic 9", "JHS 1", "JHS 2", "JHS 3"];
 
 type JhsIndex = {
-  levelSubjectExists: Set<string>; // `${JHS1}::${subjectKey}`
-  allLevelsSubjectExists: Set<string>; // subjectKey for subjects with no usable level
-  subjectExists: Set<string>; // subjectKey exists in JHS at all
+  levelSubjectExists: Set<string>;
+  allLevelsSubjectExists: Set<string>;
+  subjectExists: Set<string>;
   slugToSubjectKey: Map<string, string>;
   canonicalNameByKey: Map<string, string>;
 };
@@ -279,7 +261,6 @@ async function getJhsIndexCached(): Promise<JhsIndex> {
   return index;
 }
 
-// Feature flag: strict JHS subject per-level validation
 const JHS_STRICT = String(process.env.AUTH_JHS_SUBJECT_STRICT || "").trim() === "1";
 
 async function canonicalizeJhsAssignmentsOrFail(assignments: JhsAssignment[] | undefined) {
@@ -329,7 +310,6 @@ async function canonicalizeJhsAssignmentsOrFail(assignments: JhsAssignment[] | u
     const keyFromSlug = subjSlug ? index.slugToSubjectKey.get(subjSlug) ?? "" : "";
     const subjectKey = keyFromName || keyFromSlug;
 
-    // If we can't map it at all, reject.
     if (!subjectKey || !index.subjectExists.has(subjectKey)) {
       fieldErrors.jhsAssignments =
         "Invalid JHS subject selection. Please refresh and select from the list again.";
@@ -337,11 +317,10 @@ async function canonicalizeJhsAssignmentsOrFail(assignments: JhsAssignment[] | u
       continue;
     }
 
-    // Strict mode: enforce per-level coverage if DB has level-specific rows.
     if (JHS_STRICT) {
       let okForAll = true;
       for (const cls of validClasses) {
-        const lvl = normalizeJhsLevelToken(cls); // cls is "JHS 1/2/3"
+        const lvl = normalizeJhsLevelToken(cls);
         if (!lvl) continue;
 
         const levelPairOk =
@@ -369,7 +348,6 @@ async function canonicalizeJhsAssignmentsOrFail(assignments: JhsAssignment[] | u
     }
     seenSubjectKeys.add(subjectKey);
 
-    // ✅ Store canonical subject name (no "JHS 1 ..." prefixes)
     const canonicalName =
       index.canonicalNameByKey.get(subjectKey) || subjNameCanonical || subjNameRaw;
 
@@ -381,11 +359,12 @@ async function canonicalizeJhsAssignmentsOrFail(assignments: JhsAssignment[] | u
   }
 
   if (Object.keys(fieldErrors).length) return { ok: false as const, fieldErrors };
-  if (!canonical.length)
+  if (!canonical.length) {
     return {
       ok: false as const,
       fieldErrors: { jhsAssignments: "Add at least one valid JHS subject assignment." },
     };
+  }
 
   canonical.sort((a, b) => normalizeSubjectKey(a.subject).localeCompare(normalizeSubjectKey(b.subject)));
   return { ok: true as const, items: canonical };
@@ -626,7 +605,7 @@ async function resolveAccessOrThrow(opts: {
       method: "INVITE" as const,
       tenantId: invite.tenantId,
       roleId: invite.roleId,
-      roleName: roleName as any,
+      roleName: roleName as "TEACHER" | "HEADTEACHER",
       inviteRowId: invite.id,
     };
   }
@@ -646,7 +625,12 @@ async function resolveAccessOrThrow(opts: {
   });
   if (!teacherRole) throw new Error("ROLE_NOT_FOUND_IN_TENANT");
 
-  return { method: "ONBOARDING" as const, tenantId: resolved, roleId: teacherRole.id, roleName: "TEACHER" as const };
+  return {
+    method: "ONBOARDING" as const,
+    tenantId: resolved,
+    roleId: teacherRole.id,
+    roleName: "TEACHER" as const,
+  };
 }
 
 function parseBoolean(v: unknown) {
@@ -760,12 +744,17 @@ export async function POST(req: NextRequest) {
       return jsonFail("VALIDATION_FAILED", 400, { phase: "Phase is required." });
     }
 
-    classLevel = cleanStr((body as any).classLevel || "");
+    classLevel =
+      phase === "KG" || phase === "PRIMARY"
+        ? normalizeTeacherClassLevel(phase, (body as any).classLevel) ?? ""
+        : "";
 
     if (phase === "KG" || phase === "PRIMARY") {
       if (!classLevel) {
         await recordFail(ip, userAgent, email || "unknown", "VALIDATION_FAILED");
-        return jsonFail("VALIDATION_FAILED", 400, { classLevel: "Class level is required." });
+        return jsonFail("VALIDATION_FAILED", 400, {
+          classLevel: "Use KG 1, KG 2, or B1-B6.",
+        });
       }
     } else if (phase === "JHS") {
       const assignments = normalizeAssignments((body as any).jhsAssignments);
@@ -849,9 +838,15 @@ export async function POST(req: NextRequest) {
           if (existingNorm && existingNorm !== staffIdNorm) throw new Error("STAFF_ID_LOCKED");
 
           if (!existingNorm) {
-            await tx.membership.update({ where: { id: existingMembership.id }, data: { staffId, staffIdNorm } });
+            await tx.membership.update({
+              where: { id: existingMembership.id },
+              data: { staffId, staffIdNorm },
+            });
           } else if (!cleanStr(existingMembership.staffId)) {
-            await tx.membership.update({ where: { id: existingMembership.id }, data: { staffId } });
+            await tx.membership.update({
+              where: { id: existingMembership.id },
+              data: { staffId },
+            });
           }
         } else {
           await tx.membership.create({
@@ -912,13 +907,22 @@ export async function POST(req: NextRequest) {
             });
           } else {
             if (String(existingProfile.phase) !== String(phase)) throw new Error("SCOPE_ALREADY_LOCKED");
-            if ((phase === "KG" || phase === "PRIMARY") && cleanStr(existingProfile.classLevel) !== classLevel) {
+
+            const existingClassLevel =
+              phase === "KG" || phase === "PRIMARY"
+                ? normalizeTeacherClassLevel(phase, existingProfile.classLevel)
+                : null;
+
+            if ((phase === "KG" || phase === "PRIMARY") && existingClassLevel !== classLevel) {
               throw new Error("SCOPE_ALREADY_LOCKED");
             }
+
             if (phase === "JHS") {
               const prevN = normalizeJhsAssignmentsForCompare(existingProfile.jhsAssignments);
               const nextN = normalizeJhsAssignmentsForCompare(canonicalJhs as any);
-              if (JSON.stringify(prevN) !== JSON.stringify(nextN)) throw new Error("SCOPE_ALREADY_LOCKED");
+              if (JSON.stringify(prevN) !== JSON.stringify(nextN)) {
+                throw new Error("SCOPE_ALREADY_LOCKED");
+              }
             }
           }
         }

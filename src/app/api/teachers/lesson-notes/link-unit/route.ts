@@ -80,8 +80,12 @@ const BodySchema = z
   .superRefine((v, ctx) => {
     const hasUnit = !!v.curriculumUnitId;
     const hasScheme = !!v.schemeOfWorkItemId || !!v.schemeItemId;
-    if (!hasUnit && !hasScheme) ctx.addIssue({ code: "custom", message: "Provide curriculumUnitId or schemeOfWorkItemId." });
-    if (hasUnit && hasScheme) ctx.addIssue({ code: "custom", message: "Provide only ONE: curriculumUnitId OR schemeOfWorkItemId." });
+    if (!hasUnit && !hasScheme) {
+      ctx.addIssue({ code: "custom", message: "Provide curriculumUnitId or schemeOfWorkItemId." });
+    }
+    if (hasUnit && hasScheme) {
+      ctx.addIssue({ code: "custom", message: "Provide only ONE: curriculumUnitId OR schemeOfWorkItemId." });
+    }
   });
 
 function subjectOrFilters(subject: string) {
@@ -139,7 +143,6 @@ function jaccard(a: Set<string>, b: Set<string>) {
   return union ? inter / union : 0;
 }
 
-// ✅ Build multiple code variants so we don’t “miss” because of spaces/dots formatting.
 function codeVariants(raw: unknown): string[] {
   const s = normalizeSpaces(cleanStr(raw));
   if (!s) return [];
@@ -199,7 +202,6 @@ async function resolveCurriculumUnitIdFromSchemeItem(args: {
     AND: [{ OR: subjOr }, { OR: levelOr }, { OR: termOr }, { weekNumber: args.weekNumber }],
   };
 
-  // ✅ Prefer code match if possible (with variants)
   const codes = codeVariants(args.indicatorCode);
   if (codes.length) {
     const byCode = await prisma.curriculumUnit.findFirst({
@@ -272,7 +274,7 @@ export async function POST(req: NextRequest) {
 
   const note = await prisma.lessonNote.findFirst({
     where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, lessonTitle: true },
   });
   if (!note) return Notice(404, { ok: false, error: "Lesson note not found." });
 
@@ -298,6 +300,8 @@ export async function POST(req: NextRequest) {
         substrand: cleanStr(unit.substrand) || "",
         contentStandard: cleanStr(unit.contentStandard) || null,
         indicator: cleanStr(unit.indicator) || null,
+        lessonTitle:
+          cleanStr(note.lessonTitle) || cleanStr(unit.substrand) || cleanStr(unit.indicator) || null,
         status: "DRAFT",
       } as any,
       select: { id: true },
@@ -333,49 +337,32 @@ export async function POST(req: NextRequest) {
       indicatorDesc: cleanStr(item.indicatorDescription) || undefined,
     })) ?? null;
 
-  if (resolvedUnitId) {
-    const unit = await prisma.curriculumUnit.findFirst({
-      where: { id: resolvedUnitId, OR: [{ tenantId: ctx.tenantId }, { tenantId: null }] } as any,
-      select: { id: true, strand: true, substrand: true, contentStandard: true, indicator: true },
-    });
+  const resolvedUnit = resolvedUnitId
+    ? await prisma.curriculumUnit.findFirst({
+        where: { id: resolvedUnitId, OR: [{ tenantId: ctx.tenantId }, { tenantId: null }] } as any,
+        select: { id: true, strand: true, substrand: true, contentStandard: true, indicator: true },
+      })
+    : null;
 
-    if (unit?.id) {
-      await prisma.lessonNote.update({
-        where: { id: lessonNoteId },
-        data: {
-          curriculumUnitId: unit.id,
-          schemeOfWorkItemId: item.id,
-          strand: cleanStr(unit.strand) || cleanStr(item.strandTitle) || "",
-          substrand: cleanStr(unit.substrand) || cleanStr(item.subStrandTitle) || "",
-          contentStandard: cleanStr(unit.contentStandard) || cleanStr(item.contentStandardDescription) || null,
-          indicator: cleanStr(unit.indicator) || cleanStr(item.indicatorDescription) || null,
-          status: "DRAFT",
-        } as any,
-      });
-
-      return Notice(200, {
-        ok: true,
-        lessonNoteId,
-        curriculumUnitId: unit.id,
-        schemeOfWorkItemId: item.id,
-        resolved: true,
-      });
-    }
-  }
-
-  const cs =
-    cleanStr(item.contentStandardDescription) || (cleanStr(item.contentStandardCode) ? cleanStr(item.contentStandardCode) : "");
-  const ind = cleanStr(item.indicatorDescription) || (cleanStr(item.indicatorCode) ? cleanStr(item.indicatorCode) : "");
+  const strand = cleanStr(item.strandTitle) || cleanStr(resolvedUnit?.strand) || "";
+  const substrand = cleanStr(item.subStrandTitle) || cleanStr(resolvedUnit?.substrand) || "";
+  const contentStandard =
+    cleanStr(item.contentStandardDescription) || cleanStr(resolvedUnit?.contentStandard) || null;
+  const indicator =
+    cleanStr(item.indicatorDescription) || cleanStr(resolvedUnit?.indicator) || null;
+  const lessonTitle =
+    cleanStr(note.lessonTitle) || substrand || indicator || null;
 
   await prisma.lessonNote.update({
     where: { id: lessonNoteId },
     data: {
-      curriculumUnitId: null,
+      curriculumUnitId: resolvedUnit?.id ?? null,
       schemeOfWorkItemId: item.id,
-      strand: cleanStr(item.strandTitle) || "",
-      substrand: cleanStr(item.subStrandTitle) || "",
-      contentStandard: cs || null,
-      indicator: ind || null,
+      strand,
+      substrand,
+      contentStandard,
+      indicator,
+      lessonTitle,
       status: "DRAFT",
     } as any,
   });
@@ -383,9 +370,14 @@ export async function POST(req: NextRequest) {
   return Notice(200, {
     ok: true,
     lessonNoteId,
-    curriculumUnitId: null,
+    curriculumUnitId: resolvedUnit?.id ?? null,
     schemeOfWorkItemId: item.id,
-    resolved: false,
-    warning: "CurriculumUnit not found for this scheme item; linked using scheme item text + schemeOfWorkItemId anchor.",
+    resolved: !!resolvedUnit?.id,
+    ...(resolvedUnit?.id
+      ? {}
+      : {
+          warning:
+            "CurriculumUnit not found for this scheme item; linked using scheme item text + schemeOfWorkItemId anchor.",
+        }),
   });
 }

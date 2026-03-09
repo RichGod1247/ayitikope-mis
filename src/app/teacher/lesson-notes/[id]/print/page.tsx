@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { notFound, redirect } from "next/navigation";
 import HeadteacherReviewPanel from "./HeadteacherReviewPanel";
+import { mediaUrl } from "@/lib/media";
+import ZoomableImage from "./ZoomableImage";
 
 export const dynamic = "force-dynamic";
 
@@ -12,19 +14,27 @@ function formatDate(value: Date | string | null | undefined) {
   if (!value) return "";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
+
 function normalizeLabel(value: string | null | undefined): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   return trimmed.length ? trimmed : null;
 }
+
 function clean(v: unknown) {
   return String(v ?? "").trim();
 }
+
 function safeLower(v: unknown) {
   return typeof v === "string" ? v.toLowerCase().trim() : "";
 }
+
 function titleCase(s: string) {
   const x = clean(s);
   if (!x) return "";
@@ -35,6 +45,7 @@ function titleCase(s: string) {
     .join(" ")
     .replace(/\b(i|ii|iii|iv|v|vi)\b/gi, (m) => m.toUpperCase());
 }
+
 function firstMeaningfulLine(text: string) {
   const s = clean(text);
   if (!s) return "";
@@ -44,9 +55,11 @@ function firstMeaningfulLine(text: string) {
     .filter(Boolean);
   return parts[0] ?? s;
 }
+
 function uniq<T>(arr: T[]) {
   return [...new Set(arr)];
 }
+
 function parseListish(input: unknown): string[] {
   const s = clean(input);
   if (!s) return [];
@@ -60,10 +73,12 @@ function parseListish(input: unknown): string[] {
       .filter(Boolean)
   );
 }
+
 function joinForPrint(list: string[], fallback: string) {
   const xs = uniq(list.map((x) => clean(x)).filter(Boolean));
   return xs.length ? xs.join("; ") : fallback;
 }
+
 function signatureDataUrlFromSvg(svgRaw: unknown): string | null {
   if (typeof svgRaw !== "string") return null;
   const svg = svgRaw.trim();
@@ -71,10 +86,20 @@ function signatureDataUrlFromSvg(svgRaw: unknown): string | null {
 
   const lower = svg.toLowerCase();
   if (!lower.startsWith("<svg")) return null;
-  if (lower.includes("<script") || lower.includes("javascript:") || lower.includes("onload=") || lower.includes("onerror="))
+  if (
+    lower.includes("<script") ||
+    lower.includes("javascript:") ||
+    lower.includes("onload=") ||
+    lower.includes("onerror=")
+  ) {
     return null;
+  }
 
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function isAbsoluteUrl(s: string) {
+  return /^https?:\/\//i.test(s);
 }
 
 /** ----------------------- subject-aware defaults ----------------------- */
@@ -87,6 +112,7 @@ function subjectKind(subjectRaw: string) {
   if (s.includes("english")) return "ENGLISH" as const;
   return "GENERAL" as const;
 }
+
 function defaultCoreCompetencies(subject: string) {
   const k = subjectKind(subject);
   if (k === "ENGLISH") {
@@ -98,10 +124,19 @@ function defaultCoreCompetencies(subject: string) {
     ];
   }
   if (k === "MATH") {
-    return ["Critical Thinking and Problem-Solving", "Creativity and Innovation", "Communication and Collaboration"];
+    return [
+      "Critical Thinking and Problem-Solving",
+      "Creativity and Innovation",
+      "Communication and Collaboration",
+    ];
   }
-  return ["Critical Thinking and Problem-Solving", "Communication and Collaboration", "Personal Development and Leadership"];
+  return [
+    "Critical Thinking and Problem-Solving",
+    "Communication and Collaboration",
+    "Personal Development and Leadership",
+  ];
 }
+
 function defaultTeachingResources(subject: string) {
   const k = subjectKind(subject);
   if (k === "MATH") {
@@ -114,24 +149,100 @@ function defaultTeachingResources(subject: string) {
     ];
   }
   if (k === "COMPUTING") {
-    return ["Chalk/marker + board", "Computer/phone (if available)", "Printed screenshots (teacher-made)", "Exercise books"];
+    return [
+      "Chalk/marker + board",
+      "Computer/phone (if available)",
+      "Printed screenshots (teacher-made)",
+      "Exercise books",
+    ];
   }
   if (k === "SOCIAL") {
-    return ["Chalk/marker + board", "Pictures/charts (phone if available)", "Short local examples (home/school/community)", "Exercise books"];
+    return [
+      "Chalk/marker + board",
+      "Pictures/charts (phone if available)",
+      "Short local examples (home/school/community)",
+      "Exercise books",
+    ];
   }
   if (k === "ENGLISH") {
-    return ["Chalk/marker + board", "Word/sentence cards (paper)", "Short reading text (teacher-made)", "Exercise books"];
+    return [
+      "Chalk/marker + board",
+      "Word/sentence cards (paper)",
+      "Short reading text (teacher-made)",
+      "Exercise books",
+    ];
   }
-  return ["Chalk/marker + board", "Exercise books", "Locally available safe objects (if needed)"];
+  return [
+    "Chalk/marker + board",
+    "Exercise books",
+    "Locally available safe objects (if needed)",
+  ];
 }
 
 /** ----------------------- seeded-curriculum keyword extraction ----------------------- */
 
 const STOPWORDS = new Set([
-  "the","and","or","of","to","a","an","in","on","for","with","as","at","by","from","into","that","this","these","those",
-  "is","are","be","being","been","was","were","will","can","should","may","might","must","do","does","did","done",
-  "use","using","show","exhibit","demonstrate","understanding","understand","explain","identify","describe","discuss",
-  "learners","students","pupils","teacher","lesson","topic","today","their","they","them","we","our","your"
+  "the",
+  "and",
+  "or",
+  "of",
+  "to",
+  "a",
+  "an",
+  "in",
+  "on",
+  "for",
+  "with",
+  "as",
+  "at",
+  "by",
+  "from",
+  "into",
+  "that",
+  "this",
+  "these",
+  "those",
+  "is",
+  "are",
+  "be",
+  "being",
+  "been",
+  "was",
+  "were",
+  "will",
+  "can",
+  "should",
+  "may",
+  "might",
+  "must",
+  "do",
+  "does",
+  "did",
+  "done",
+  "use",
+  "using",
+  "show",
+  "exhibit",
+  "demonstrate",
+  "understanding",
+  "understand",
+  "explain",
+  "identify",
+  "describe",
+  "discuss",
+  "learners",
+  "students",
+  "pupils",
+  "teacher",
+  "lesson",
+  "topic",
+  "today",
+  "their",
+  "they",
+  "them",
+  "we",
+  "our",
+  "your",
 ]);
 
 function extractKeywords(parts: string[], max = 6) {
@@ -146,29 +257,61 @@ function extractKeywords(parts: string[], max = 6) {
       bag.push(w);
     }
   }
+
   const counts = new Map<string, number>();
   for (const w of bag) counts.set(w, (counts.get(w) ?? 0) + 1);
 
-  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([w]) => w);
+  const sorted = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([w]) => w);
 
   const out: string[] = [];
   for (const w of sorted) {
     if (out.length >= max) break;
     const pretty = w.includes("-")
-      ? w.split("-").map((x) => (x ? x[0]!.toUpperCase() + x.slice(1) : "")).join("-")
+      ? w
+          .split("-")
+          .map((x) => (x ? x[0]!.toUpperCase() + x.slice(1) : ""))
+          .join("-")
       : w[0]!.toUpperCase() + w.slice(1);
     out.push(pretty);
   }
   return out;
 }
 
-async function fetchExemplarText(args: { indicatorCode?: string | null; contentStandardCode?: string | null }): Promise<string[]> {
+async function fetchExemplarText(args: {
+  indicatorId?: string | null;
+  indicatorCode?: string | null;
+  contentStandardCode?: string | null;
+}): Promise<string[]> {
+  const indicatorId = clean(args.indicatorId);
   const indicatorCode = clean(args.indicatorCode);
   const contentStandardCode = clean(args.contentStandardCode);
 
   const hasIndicatorModel = typeof (prisma as any)?.curriculumIndicator?.findFirst === "function";
   const hasCSModel = typeof (prisma as any)?.curriculumContentStandard?.findFirst === "function";
-  if (!hasIndicatorModel || !indicatorCode) return [];
+  if (!hasIndicatorModel) return [];
+
+  if (indicatorId) {
+    try {
+      const row = await (prisma as any).curriculumIndicator.findFirst({
+        where: { id: indicatorId },
+        select: {
+          exemplars: {
+            orderBy: { orderIndex: "asc" },
+            take: 6,
+            select: { description: true },
+          },
+        },
+      });
+      const xs = Array.isArray(row?.exemplars) ? row.exemplars : [];
+      return xs.map((x: any) => clean(x?.description)).filter(Boolean);
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!indicatorCode) return [];
 
   if (contentStandardCode && hasCSModel) {
     try {
@@ -180,20 +323,34 @@ async function fetchExemplarText(args: { indicatorCode?: string | null; contentS
       if (cs?.id) {
         const row = await (prisma as any).curriculumIndicator.findFirst({
           where: { code: indicatorCode, contentStandardId: cs.id },
-          select: { exemplars: { orderBy: { orderIndex: "asc" }, take: 6, select: { description: true } } },
+          select: {
+            exemplars: {
+              orderBy: { orderIndex: "asc" },
+              take: 6,
+              select: { description: true },
+            },
+          },
         });
 
         const xs = Array.isArray(row?.exemplars) ? row.exemplars : [];
         const out = xs.map((x: any) => clean(x?.description)).filter(Boolean);
         if (out.length) return out;
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 
   try {
     const row = await (prisma as any).curriculumIndicator.findFirst({
       where: { code: indicatorCode },
-      select: { exemplars: { orderBy: { orderIndex: "asc" }, take: 6, select: { description: true } } },
+      select: {
+        exemplars: {
+          orderBy: { orderIndex: "asc" },
+          take: 6,
+          select: { description: true },
+        },
+      },
     });
 
     const xs = Array.isArray(row?.exemplars) ? row.exemplars : [];
@@ -201,6 +358,54 @@ async function fetchExemplarText(args: { indicatorCode?: string | null; contentS
   } catch {
     return [];
   }
+}
+
+function pickBestMedia(
+  rows: Array<{ id: string; imagePath: string; altText: string | null; pageNumberInPdf: number }>,
+  indicatorCode: string | null | undefined
+) {
+  const code = clean(indicatorCode).replace(/\s+/g, "");
+  const scored = rows.map((r) => {
+    let score = 0;
+    const p = String(r.imagePath ?? "");
+    const lower = p.toLowerCase();
+
+    if (isAbsoluteUrl(p)) score += 50;
+    if (lower.includes("r2.dev") || lower.includes("cloudflarestorage")) score += 20;
+
+    if (code) {
+      const c = code.toLowerCase();
+      if (lower.endsWith(`/${c}.png`) || lower.endsWith(`${c}.png`)) score += 10;
+      if (lower.endsWith(`/${c}.webp`) || lower.endsWith(`${c}.webp`)) score += 8;
+    }
+
+    if (lower.endsWith(".png")) score += 2;
+    if (lower.endsWith(".webp")) score += 1;
+    if ((r.pageNumberInPdf ?? 0) === 0) score += 1;
+
+    return { r, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score || a.r.id.localeCompare(b.r.id));
+  return scored[0]?.r ?? null;
+}
+
+function classroomExampleFor(subject: string, topic: string) {
+  const k = subjectKind(subject);
+
+  if (k === "MATH") {
+    return `Use counters (bottle tops/beans) to model one problem related to “${topic}”, then learners explain their steps.`;
+  }
+  if (k === "ENGLISH") {
+    return `Ask learners to explain “${topic}” in 2–3 simple sentences and give one example from home/school/community.`;
+  }
+  if (k === "COMPUTING") {
+    return `Demonstrate one simple step related to “${topic}” on the board; learners practise in pairs and explain what each step does.`;
+  }
+  if (k === "SOCIAL") {
+    return `Let learners mention 2 real-life examples related to “${topic}” and explain one clearly in a sentence.`;
+  }
+  return `Ask learners to mention 2 examples related to “${topic}” from their home/community and explain one in simple words.`;
 }
 
 /** ----------------------- page ----------------------- */
@@ -220,47 +425,206 @@ export default async function Page({ params }: PageProps) {
     where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
     select: { status: true, role: { select: { name: true } } },
   });
+
   if (!membership || membership.status !== "ACTIVE") redirect("/app/dashboard");
 
   const roleName = membership.role?.name ?? "";
-  const isReviewer = roleName === "HEADTEACHER" || roleName === "SCHOOL_ADMIN" || roleName === "SUPERADMIN";
+  const isReviewer =
+    roleName === "HEADTEACHER" || roleName === "SCHOOL_ADMIN" || roleName === "SUPERADMIN";
 
   const note = await prisma.lessonNote.findFirst({
     where: isReviewer
       ? { id: noteId, tenantId: ctx.tenantId }
       : { id: noteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-    include: { tenant: true, teacher: true, classroom: true, curriculumUnit: true },
+    select: {
+      id: true,
+      tenantId: true,
+      teacherUserId: true,
+      classroomId: true,
+
+      weekNumber: true,
+      term: true,
+      academicYear: true,
+
+      subject: true,
+      strand: true,
+      substrand: true,
+      contentStandard: true,
+      indicator: true,
+
+      lessonTitle: true,
+      objectives: true,
+      priorKnowledge: true,
+      introduction: true,
+      lessonDevelopment: true,
+      conclusion: true,
+      assessment: true,
+      homework: true,
+      coreCompetencies: true,
+      teachingLearningResources: true,
+      differentiationNotes: true,
+      reflectionNotes: true,
+
+      lessonDate: true,
+      createdAt: true,
+      updatedAt: true,
+
+      phase: true,
+      level: true,
+
+      curriculumUnitId: true,
+      schemeOfWorkItemId: true,
+
+      status: true,
+      headteacherComment: true,
+      approvedAt: true,
+      approvalSignatureSvg: true,
+    },
   });
 
   if (!note) return notFound();
   if (isReviewer && note.teacherUserId === ctx.userId) return notFound();
 
-  const subject = note.subject ?? (note.curriculumUnit as any)?.subject ?? "";
-  const strand = note.strand ?? (note.curriculumUnit as any)?.strand ?? "";
-  const substrand = note.substrand ?? (note.curriculumUnit as any)?.substrand ?? "";
-  const contentStandard = note.contentStandard ?? (note.curriculumUnit as any)?.contentStandard ?? "";
-  const indicator = note.indicator ?? (note.curriculumUnit as any)?.indicator ?? "";
+  const [tenantRow, teacherRow, classroomRow, unitRow, schemeItemRow] = await Promise.all([
+    prisma.tenant.findUnique({
+      where: { id: note.tenantId },
+      select: { name: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: note.teacherUserId },
+      select: { name: true, email: true },
+    }),
+    note.classroomId
+      ? prisma.classroom.findUnique({
+          where: { id: note.classroomId },
+          select: { name: true },
+        })
+      : Promise.resolve(null),
+    note.curriculumUnitId
+      ? prisma.curriculumUnit.findFirst({
+          where: {
+            id: note.curriculumUnitId,
+            OR: [{ tenantId: note.tenantId }, { tenantId: null }],
+          } as any,
+          select: {
+            phase: true,
+            level: true,
+            subject: true,
+            strandCode: true,
+            strand: true,
+            substrandCode: true,
+            substrand: true,
+            contentStandardCode: true,
+            contentStandard: true,
+            indicatorCode: true,
+            indicator: true,
+          },
+        })
+      : Promise.resolve(null),
+    note.schemeOfWorkItemId
+      ? prisma.schemeOfWorkItem.findFirst({
+          where: { id: note.schemeOfWorkItemId },
+          select: {
+            indicatorId: true,
+            indicatorCode: true,
+            contentStandardCode: true,
+          },
+        })
+      : Promise.resolve(null),
+  ]);
 
-  const strandCode = (note.curriculumUnit as any)?.strandCode ?? null;
-  const indicatorCode = (note.curriculumUnit as any)?.indicatorCode ?? null;
-  const contentStandardCode = (note.curriculumUnit as any)?.contentStandardCode ?? null;
+  const subject = note.subject ?? unitRow?.subject ?? "";
+  const strand = note.strand ?? unitRow?.strand ?? "";
+  const substrand = note.substrand ?? unitRow?.substrand ?? "";
+  const contentStandard = note.contentStandard ?? unitRow?.contentStandard ?? "";
+  const indicator = note.indicator ?? unitRow?.indicator ?? "";
+
+  const strandCode = unitRow?.strandCode ?? null;
+  const contentStandardCode =
+    unitRow?.contentStandardCode ?? schemeItemRow?.contentStandardCode ?? null;
+  const indicatorCode = unitRow?.indicatorCode ?? schemeItemRow?.indicatorCode ?? null;
+
+  // ✅ exact indicator identity first from scheme item
+  let indicatorIdExact = clean(schemeItemRow?.indicatorId) || null;
+
+  // ✅ fallback for notes linked by CurriculumUnit but not by SchemeOfWorkItem
+  if (!indicatorIdExact && unitRow?.indicatorCode) {
+    try {
+      let resolvedContentStandardId: string | null = null;
+
+      if (unitRow.contentStandardCode) {
+        const cs = await prisma.curriculumContentStandard.findFirst({
+          where: { code: unitRow.contentStandardCode },
+          select: { id: true },
+        });
+        resolvedContentStandardId = cs?.id ?? null;
+      }
+
+      const indicatorRow = await prisma.curriculumIndicator.findFirst({
+        where: resolvedContentStandardId
+          ? {
+              code: unitRow.indicatorCode,
+              contentStandardId: resolvedContentStandardId,
+            }
+          : {
+              code: unitRow.indicatorCode,
+            },
+        select: { id: true },
+      });
+
+      indicatorIdExact = indicatorRow?.id ?? null;
+    } catch {
+      indicatorIdExact = null;
+    }
+  }
+
+  const mediaRows = indicatorIdExact
+    ? await prisma.curriculumMedia.findMany({
+        where: { indicatorId: indicatorIdExact },
+        select: {
+          id: true,
+          imagePath: true,
+          altText: true,
+          pageNumberInPdf: true,
+        },
+        take: 10,
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      })
+    : [];
+
+  const pickedMedia = mediaRows.length ? pickBestMedia(mediaRows, indicatorCode) : null;
+
+  const rawPath = pickedMedia?.imagePath ? String(pickedMedia.imagePath).trim() : "";
+  const finalUrl = rawPath ? mediaUrl(rawPath) : "";
+
+  const baseMissing = !String(process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "").trim();
+  const relativeNeedsBase = !!rawPath && !isAbsoluteUrl(rawPath) && baseMissing;
 
   let lessonTitle: string;
-  if (note.lessonTitle && note.lessonTitle.trim().length > 0) lessonTitle = note.lessonTitle;
-  else if ((note.curriculumUnit as any)?.indicator?.trim()) lessonTitle = (note.curriculumUnit as any).indicator;
-  else if ((note.curriculumUnit as any)?.substrand?.trim()) lessonTitle = (note.curriculumUnit as any).substrand;
-  else if (substrand?.trim()) lessonTitle = substrand;
-  else lessonTitle = "______________________________________________";
+  if (note.lessonTitle && note.lessonTitle.trim().length > 0) {
+    lessonTitle = note.lessonTitle;
+  } else if (unitRow?.indicator?.trim()) {
+    lessonTitle = unitRow.indicator;
+  } else if (unitRow?.substrand?.trim()) {
+    lessonTitle = unitRow.substrand ?? "";
+  } else if (substrand?.trim()) {
+    lessonTitle = substrand;
+  } else {
+    lessonTitle = "______________________________________________";
+  }
 
-  const topic = titleCase(lessonTitle === "______________________________________________" ? clean(indicator) : lessonTitle) || "Lesson";
+  const topic =
+    titleCase(
+      lessonTitle === "______________________________________________" ? clean(indicator) : lessonTitle
+    ) || "Lesson";
 
-  const schoolName = note.tenant?.name ?? "__________________________";
-  const teacherName = note.teacher?.name ?? "__________________________";
-  const teacherEmail = note.teacher?.email ?? "";
+  const schoolName = tenantRow?.name ?? "__________________________";
+  const teacherName = teacherRow?.name ?? "__________________________";
+  const teacherEmail = teacherRow?.email ?? "";
 
-  const classroomName = normalizeLabel(note.classroom?.name);
-  const phaseLabel = normalizeLabel(note.phase ?? (note.curriculumUnit as any)?.phase);
-  const levelLabel = normalizeLabel(note.level ?? (note.curriculumUnit as any)?.level);
+  const classroomName = normalizeLabel(classroomRow?.name);
+  const phaseLabel = normalizeLabel(note.phase ?? unitRow?.phase ?? null);
+  const levelLabel = normalizeLabel(note.level ?? unitRow?.level ?? null);
 
   const classLabel =
     classroomName ??
@@ -271,42 +635,71 @@ export default async function Page({ params }: PageProps) {
 
   const termLabel = note.term ?? "";
   const academicYearLabel = note.academicYear ?? "";
-
-  const weekNumberLabel = typeof note.weekNumber === "number" ? note.weekNumber.toString() : "____";
+  const weekNumberLabel =
+    typeof note.weekNumber === "number" ? note.weekNumber.toString() : "____";
   const durationLabel = "40 minutes";
 
-  const weekEndingSource = (note as any).lessonDate ?? note.createdAt;
+  const weekEndingSource = note.lessonDate ?? note.createdAt;
   const weekEndingLabel = formatDate(weekEndingSource);
 
-  const exemplarText: string[] = await fetchExemplarText({ indicatorCode, contentStandardCode });
+  const exemplarText: string[] = await fetchExemplarText({
+    indicatorId: indicatorIdExact,
+    indicatorCode,
+    contentStandardCode,
+  });
 
   const dbPerf =
-    normalizeLabel((note as any).performanceIndicator) ?? normalizeLabel((note.curriculumUnit as any)?.performanceIndicator);
+    normalizeLabel((note as any).performanceIndicator) ??
+    normalizeLabel((unitRow as any)?.performanceIndicator);
 
-  const perfFromIndicator = indicator ? `Learners can ${clean(indicator).toLowerCase()}` : "";
-  const perfFromExemplar = exemplarText.length ? `Learners can ${firstMeaningfulLine(exemplarText[0]!).replace(/^[•\-\s]+/g, "")}` : "";
+  const perfFromIndicator = indicator
+    ? `Learners can ${clean(indicator).toLowerCase()}`
+    : "";
+  const perfFromExemplar = exemplarText.length
+    ? `Learners can ${firstMeaningfulLine(exemplarText[0]!).replace(/^[•\-\s]+/g, "")}`
+    : "";
 
-  const performanceIndicatorText = dbPerf ?? (perfFromIndicator || perfFromExemplar || `Learners can explain ${topic} and give relevant examples.`);
+  const performanceIndicatorText =
+    dbPerf ??
+    (perfFromIndicator ||
+      perfFromExemplar ||
+      `Learners can explain ${topic} and give relevant examples.`);
 
   const dbCore =
-    normalizeLabel((note as any).coreCompetencies) ?? normalizeLabel((note.curriculumUnit as any)?.coreCompetencies);
+    normalizeLabel(note.coreCompetencies) ??
+    normalizeLabel((unitRow as any)?.coreCompetencies);
 
   const coreList = dbCore ? parseListish(dbCore) : defaultCoreCompetencies(subject);
-  const coreCompetenciesText = joinForPrint(coreList, defaultCoreCompetencies(subject).join("; "));
+  const coreCompetenciesText = joinForPrint(
+    coreList,
+    defaultCoreCompetencies(subject).join("; ")
+  );
 
-  const dbKeywords = normalizeLabel((note as any).keywords) ?? normalizeLabel((note.curriculumUnit as any)?.keywords);
+  const dbKeywords =
+    normalizeLabel((note as any).keywords) ??
+    normalizeLabel((unitRow as any)?.keywords);
 
   const generatedKeywords = extractKeywords(
-    [topic, clean(subject), clean(strand), clean(substrand), clean(contentStandard), clean(indicator), ...exemplarText.map((t) => firstMeaningfulLine(t))],
+    [
+      topic,
+      clean(subject),
+      clean(strand),
+      clean(substrand),
+      clean(contentStandard),
+      clean(indicator),
+      ...exemplarText.map((t) => firstMeaningfulLine(t)),
+    ],
     6
   );
 
-  const keywordsText =
-    dbKeywords ? joinForPrint(parseListish(dbKeywords), generatedKeywords.join(", "))
-    : generatedKeywords.length ? generatedKeywords.join(", ")
-    : "—";
+  const keywordsText = dbKeywords
+    ? joinForPrint(parseListish(dbKeywords), generatedKeywords.join(", "))
+    : generatedKeywords.length
+      ? generatedKeywords.join(", ")
+      : "—";
 
-  const teachingResources = note.teachingLearningResources ?? defaultTeachingResources(subject).join("; ");
+  const teachingResources =
+    note.teachingLearningResources ?? defaultTeachingResources(subject).join("; ");
 
   const lessonObjectives =
     note.objectives ??
@@ -314,40 +707,63 @@ export default async function Page({ params }: PageProps) {
       ? `Learning Outcomes (By the end of the lesson, learners can):\n• ${clean(indicator)}.`
       : `Learning Outcomes (By the end of the lesson, learners can):\n• Explain ${topic} and give examples.`);
 
-  const priorKnowledgeText = note.priorKnowledge ?? `Learners can share relevant experiences about ${topic}.`;
-  const introductionText = note.introduction ?? `Introduce ${topic} with a quick question, short discussion, or local example.`;
+  const priorKnowledgeText =
+    note.priorKnowledge ?? `Learners can share relevant experiences about ${topic}.`;
+
+  const introductionText =
+    note.introduction ??
+    `Introduce ${topic} with a quick question, short discussion, or local example.`;
 
   const developmentText =
     note.lessonDevelopment ??
     (() => {
       const k = subjectKind(subject);
-      if (k === "SOCIAL") return `Teacher explains ${topic} with 1 clear local example; learners discuss in pairs/groups, identify key ideas, and share short answers. Use a short scenario/role-play if helpful.`;
-      if (k === "ENGLISH") return `Use a short text/picture prompt; model the skill once, practise together, then learners work independently while teacher supports.`;
-      if (k === "MATH") return `Model one example (I do); practise together (We do); learners solve similar items (You do) while teacher coaches.`;
-      if (k === "COMPUTING") return `Demonstrate the steps once; learners practise in pairs, then complete a short task independently while teacher supports.`;
+      if (k === "SOCIAL") {
+        return `Teacher explains ${topic} with 1 clear local example; learners discuss in pairs/groups, identify key ideas, and share short answers. Use a short scenario/role-play if helpful.`;
+      }
+      if (k === "ENGLISH") {
+        return `Use a short text/picture prompt; model the skill once, practise together, then learners work independently while teacher supports.`;
+      }
+      if (k === "MATH") {
+        return `Model one example (I do); practise together (We do); learners solve similar items (You do) while teacher coaches.`;
+      }
+      if (k === "COMPUTING") {
+        return `Demonstrate the steps once; learners practise in pairs, then complete a short task independently while teacher supports.`;
+      }
       return `Explain the key idea; demonstrate once; practise together; then learners complete a short task while teacher supports.`;
     })();
 
-  const conclusionText = note.conclusion ?? `Review key points; invite 2 learners to share an example/answer; summarise in one sentence.`;
-  const assessmentText = note.assessment ?? `Use short oral questions and a quick exit task aligned to the indicator. Note learners who need support.`;
-  const homeworkText = note.homework ?? `Find one example of ${topic} from home/community and write 2–3 lines (or draw) to share next lesson.`;
+  const conclusionText =
+    note.conclusion ??
+    `Review key points; invite 2 learners to share an example/answer; summarise in one sentence.`;
+
+  const assessmentText =
+    note.assessment ??
+    `Use short oral questions and a quick exit task aligned to the indicator. Note learners who need support.`;
+
+  const homeworkText =
+    note.homework ??
+    `Find one example of ${topic} from home/community and write 2–3 lines (or draw) to share next lesson.`;
 
   const differentiationText =
     note.differentiationNotes ??
     `Support: break tasks into smaller steps; pair struggling learners with supportive peers.\nExtension: ask fast learners to explain “why” and create one new example.`;
 
   const reflectionText =
-    note.reflectionNotes ?? `After the lesson, reflect on what worked, challenges faced, and what to improve next time.`;
+    note.reflectionNotes ??
+    `After the lesson, reflect on what worked, challenges faced, and what to improve next time.`;
 
   const createdAtLabel = formatDate(note.createdAt);
   const updatedAtLabel = formatDate(note.updatedAt);
 
-  const headteacherComment = (note as any).headteacherComment ?? "";
-  const approvedAtLabel = formatDate((note as any).approvedAt);
-  const isApproved = (note as any).status === "APPROVED";
-  const signatureDataUrl = signatureDataUrlFromSvg((note as any).approvalSignatureSvg);
+  const headteacherComment = note.headteacherComment ?? "";
+  const approvedAtLabel = formatDate(note.approvedAt);
+  const isApproved = String(note.status ?? "").toUpperCase() === "APPROVED";
+  const signatureDataUrl = signatureDataUrlFromSvg(note.approvalSignatureSvg);
 
   const referencesText = `Official NaCCA ${subject || "Curriculum"}; Teacher Resource Pack; EduLife OS Teacher Lesson Design Studio printout.`;
+
+  const classroomExample = classroomExampleFor(subject, topic);
 
   return (
     <main className="min-h-screen bg-zinc-200 print:bg-white flex justify-center py-4 sm:py-6 px-2">
@@ -371,33 +787,52 @@ export default async function Page({ params }: PageProps) {
           {(termLabel || academicYearLabel) && (
             <p className="text-[11px]">
               Term: <span className="font-semibold">{termLabel || "________"}</span> | Academic Year:{" "}
-              <span className="font-semibold">{academicYearLabel || "________/________"}</span>
+              <span className="font-semibold">
+                {academicYearLabel || "________/________"}
+              </span>
             </p>
           )}
-          <p className="text-[10px] text-zinc-600">EduLife OS – NaCCA-aligned lesson note (print-ready)</p>
+          <p className="text-[10px] text-zinc-600">
+            EduLife OS – NaCCA-aligned lesson note (print-ready)
+          </p>
         </header>
 
-        {/* MAIN INFO TABLE (mobile-safe) */}
         <div className="overflow-x-auto print:overflow-visible">
           <table className="min-w-[860px] sm:min-w-0 print:min-w-0 w-full border border-black border-collapse text-[11px] mb-4 table-fixed">
             <tbody>
               <tr>
                 <td className="border border-black font-semibold px-1 py-1 w-[10%]">SUBJECT</td>
-                <td className="border border-black px-1 py-1 w-[20%] break-words">{subject || "____________________"}</td>
+                <td className="border border-black px-1 py-1 w-[20%] break-words">
+                  {subject || "____________________"}
+                </td>
                 <td className="border border-black font-semibold px-1 py-1 w-[8%]">WEEK</td>
-                <td className="border border-black px-1 py-1 w-[6%] text-center">{weekNumberLabel}</td>
-                <td className="border border-black font-semibold px-1 py-1 w-[10%]">DURATION</td>
-                <td className="border border-black px-1 py-1 w-[10%] text-center">{durationLabel}</td>
+                <td className="border border-black px-1 py-1 w-[6%] text-center">
+                  {weekNumberLabel}
+                </td>
+                <td className="border border-black font-semibold px-1 py-1 w-[10%]">
+                  DURATION
+                </td>
+                <td className="border border-black px-1 py-1 w-[10%] text-center">
+                  {durationLabel}
+                </td>
                 <td className="border border-black font-semibold px-1 py-1 w-[8%]">CLASS</td>
-                <td className="border border-black px-1 py-1 w-[8%] text-center break-words">{classLabel}</td>
-                <td className="border border-black font-semibold px-1 py-1 w-[12%]">WEEK ENDING</td>
-                <td className="border border-black px-1 py-1 w-[8%] text-center">{weekEndingLabel || "____________"}</td>
+                <td className="border border-black px-1 py-1 w-[8%] text-center break-words">
+                  {classLabel}
+                </td>
+                <td className="border border-black font-semibold px-1 py-1 w-[12%]">
+                  WEEK ENDING
+                </td>
+                <td className="border border-black px-1 py-1 w-[8%] text-center">
+                  {weekEndingLabel || "____________"}
+                </td>
               </tr>
 
               <tr>
                 <td className="border border-black font-semibold px-1 py-1">STRAND</td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
-                  {strandCode ? `${strandCode} – ${strand || "______________________________________________"}` : strand || "______________________________________________"}
+                  {strandCode
+                    ? `${strandCode} – ${strand || "______________________________________________"}`
+                    : strand || "______________________________________________"}
                 </td>
               </tr>
 
@@ -411,14 +846,18 @@ export default async function Page({ params }: PageProps) {
               <tr>
                 <td className="border border-black font-semibold px-1 py-1">CONTENT</td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
-                  {contentStandardCode ? `${contentStandardCode} – ${contentStandard || "______________________________________________"}` : contentStandard || "______________________________________________"}
+                  {contentStandardCode
+                    ? `${contentStandardCode} – ${contentStandard || "______________________________________________"}`
+                    : contentStandard || "______________________________________________"}
                 </td>
               </tr>
 
               <tr>
                 <td className="border border-black font-semibold px-1 py-1">INDICATOR</td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
-                  {indicatorCode ? `${indicatorCode} – ${indicator || "______________________________________________"}` : indicator || "______________________________________________"}
+                  {indicatorCode
+                    ? `${indicatorCode} – ${indicator || "______________________________________________"}`
+                    : indicator || "______________________________________________"}
                 </td>
               </tr>
 
@@ -430,35 +869,45 @@ export default async function Page({ params }: PageProps) {
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">PERFORMANCE INDICATOR(S)</td>
+                <td className="border border-black font-semibold px-1 py-1 align-top">
+                  PERFORMANCE INDICATOR(S)
+                </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {performanceIndicatorText}
                 </td>
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">CORE COMPETENCIES</td>
+                <td className="border border-black font-semibold px-1 py-1 align-top">
+                  CORE COMPETENCIES
+                </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {coreCompetenciesText}
                 </td>
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">TEACHING &amp; LEARNING RESOURCES</td>
+                <td className="border border-black font-semibold px-1 py-1 align-top">
+                  TEACHING &amp; LEARNING RESOURCES
+                </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {teachingResources}
                 </td>
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">KEYWORDS</td>
+                <td className="border border-black font-semibold px-1 py-1 align-top">
+                  KEYWORDS
+                </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {keywordsText}
                 </td>
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">REFERENCES</td>
+                <td className="border border-black font-semibold px-1 py-1 align-top">
+                  REFERENCES
+                </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {referencesText}
                 </td>
@@ -467,20 +916,82 @@ export default async function Page({ params }: PageProps) {
           </table>
         </div>
 
-        {/* LESSON BODY */}
+        <section className="border border-black text-[11px] mb-4">
+          <div className="border-b border-black px-2 py-1 font-semibold">
+            INDICATOR ILLUSTRATION
+          </div>
+
+          <div className="px-2 py-2">
+            {!indicatorIdExact ? (
+              <div className="text-[11px] text-zinc-700">
+                Link a NaCCA unit first to load the exact indicator image.
+              </div>
+            ) : !pickedMedia ? (
+              <div className="text-[11px] text-zinc-700">
+                No indicator image is available for this note’s exact indicatorId.
+              </div>
+            ) : relativeNeedsBase ? (
+              <div className="text-[11px] text-zinc-700">
+                This indicator has a relative imagePath, but{" "}
+                <span className="font-semibold">NEXT_PUBLIC_MEDIA_BASE_URL</span> is not set.
+              </div>
+            ) : (
+              <div className="w-full">
+                <ZoomableImage
+                  src={finalUrl}
+                  alt={pickedMedia.altText ?? "Indicator illustration"}
+                  heightClassName="h-[240px] sm:h-[320px] md:h-[380px] lg:h-[420px]"
+                />
+
+                <div className="mt-2 space-y-1 text-[10px] leading-snug text-zinc-800">
+                  <div>
+                    <span className="font-semibold">Indicator:</span>{" "}
+                    {indicatorCode ? `${indicatorCode} — ` : ""}
+                    {indicator ? indicator : "—"}
+                  </div>
+
+                  <div>
+                    <span className="font-semibold">Topic:</span> {topic}
+                  </div>
+
+                  {pickedMedia.altText ? (
+                    <div className="text-zinc-600">
+                      <span className="font-semibold text-zinc-700">Illustration:</span>{" "}
+                      {pickedMedia.altText}
+                    </div>
+                  ) : null}
+
+                  <div className="text-zinc-600">
+                    <span className="font-semibold text-zinc-700">Classroom example:</span>{" "}
+                    {classroomExample}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
         <div className="overflow-x-auto print:overflow-visible">
           <table className="min-w-[900px] md:min-w-0 print:min-w-0 w-full border border-black border-collapse text-[11px] mb-4 table-fixed">
             <thead>
               <tr>
                 <th className="border border-black px-1 py-1 w-[12%]">DAY</th>
-                <th className="border border-black px-1 py-1 w-[30%]">PHASE 1: STARTER</th>
-                <th className="border border-black px-1 py-1 w-[33%]">PHASE 2: NEW LEARNING &amp; ASSESSMENT</th>
-                <th className="border border-black px-1 py-1 w-[25%]">PHASE 3: PLENARY / REFLECTION</th>
+                <th className="border border-black px-1 py-1 w-[30%]">
+                  PHASE 1: STARTER
+                </th>
+                <th className="border border-black px-1 py-1 w-[33%]">
+                  PHASE 2: NEW LEARNING &amp; ASSESSMENT
+                </th>
+                <th className="border border-black px-1 py-1 w-[25%]">
+                  PHASE 3: PLENARY / REFLECTION
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr className="align-top">
-                <td className="border border-black px-1 py-1 font-semibold">{weekNumberLabel ? "Monday" : "Day"}</td>
+                <td className="border border-black px-1 py-1 font-semibold">
+                  {weekNumberLabel ? "Monday" : "Day"}
+                </td>
                 <td className="border border-black px-1 py-1 whitespace-pre-line break-words">
                   <p className="font-semibold underline mb-1">LESSON OBJECTIVES</p>
                   <p className="mb-2">{lessonObjectives}</p>
@@ -491,8 +1002,13 @@ export default async function Page({ params }: PageProps) {
                 </td>
                 <td className="border border-black px-1 py-1 whitespace-pre-line break-words">
                   <p className="font-semibold underline mb-1">KEY LEARNING POINTS</p>
-                  <p className="mb-2">{contentStandard || `Highlight the main ideas and skills learners must acquire in ${topic}.`}</p>
-                  <p className="font-semibold underline mb-1">MAIN TEACHING &amp; LEARNING ACTIVITIES</p>
+                  <p className="mb-2">
+                    {contentStandard ||
+                      `Highlight the main ideas and skills learners must acquire in ${topic}.`}
+                  </p>
+                  <p className="font-semibold underline mb-1">
+                    MAIN TEACHING &amp; LEARNING ACTIVITIES
+                  </p>
                   <p>{developmentText}</p>
                 </td>
                 <td className="border border-black px-1 py-1 whitespace-pre-line break-words">
@@ -506,29 +1022,42 @@ export default async function Page({ params }: PageProps) {
           </table>
         </div>
 
-        {/* ASSESSMENT & HOMEWORK */}
         <section className="border border-black text-[11px] mb-4">
-          <div className="border-b border-black px-2 py-1 font-semibold">ASSESSMENT / EVALUATION</div>
+          <div className="border-b border-black px-2 py-1 font-semibold">
+            ASSESSMENT / EVALUATION
+          </div>
           <div className="px-2 py-1 whitespace-pre-line break-words">{assessmentText}</div>
-          <div className="border-t border-black px-2 py-1 font-semibold">HOMEWORK / ASSIGNMENT</div>
+          <div className="border-t border-black px-2 py-1 font-semibold">
+            HOMEWORK / ASSIGNMENT
+          </div>
           <div className="px-2 py-1 whitespace-pre-line break-words">{homeworkText}</div>
         </section>
 
-        {/* DIFFERENTIATION */}
         <section className="border border-black text-[11px] mb-4">
-          <div className="border-b border-black px-2 py-1 font-semibold">DIFFERENTIATION / SUPPORT FOR LEARNERS</div>
+          <div className="border-b border-black px-2 py-1 font-semibold">
+            DIFFERENTIATION / SUPPORT FOR LEARNERS
+          </div>
           <div className="px-2 py-1 whitespace-pre-line break-words">{differentiationText}</div>
-          <div className="border-t border-black px-2 py-1 font-semibold">TEACHER&apos;S REMARKS</div>
+          <div className="border-t border-black px-2 py-1 font-semibold">
+            TEACHER&apos;S REMARKS
+          </div>
           <div className="px-2 py-1 text-[10px] text-zinc-700 flex flex-col gap-1">
-            <div>Date prepared: <span className="font-semibold">{createdAtLabel || "____________"}</span></div>
-            <div>Last updated: <span className="font-semibold">{updatedAtLabel || "____________"}</span></div>
-            <div className="mt-2">Signature: ____________________________ &nbsp;&nbsp; Date: __________________</div>
+            <div>
+              Date prepared: <span className="font-semibold">{createdAtLabel || "____________"}</span>
+            </div>
+            <div>
+              Last updated: <span className="font-semibold">{updatedAtLabel || "____________"}</span>
+            </div>
+            <div className="mt-2">
+              Signature: ____________________________ &nbsp;&nbsp; Date: __________________
+            </div>
           </div>
         </section>
 
-        {/* HEADTEACHER REVIEW (stack on mobile) */}
         <section className="border border-black text-[11px] mb-4">
-          <div className="border-b border-black px-2 py-1 font-semibold">HEADTEACHER&apos;S REVIEW / APPROVAL</div>
+          <div className="border-b border-black px-2 py-1 font-semibold">
+            HEADTEACHER&apos;S REVIEW / APPROVAL
+          </div>
           <div className="px-2 py-1 whitespace-pre-line min-h-[48px] break-words">
             {headteacherComment || "______________________________________________"}
           </div>
@@ -538,9 +1067,17 @@ export default async function Page({ params }: PageProps) {
               <div className="h-10 flex items-center">
                 {isApproved ? (
                   signatureDataUrl ? (
-                    <img src={signatureDataUrl} alt="Headteacher Signature" className="h-10 object-contain" />
+                    <img
+                      src={signatureDataUrl}
+                      alt="Headteacher Signature"
+                      className="h-10 object-contain"
+                    />
                   ) : (
-                    <img src="/images/headteacher-signature.png" alt="Headteacher Signature" className="h-10 object-contain" />
+                    <img
+                      src="/images/headteacher-signature.png"
+                      alt="Headteacher Signature"
+                      className="h-10 object-contain"
+                    />
                   )
                 ) : (
                   <span>___________________________</span>
@@ -555,14 +1092,15 @@ export default async function Page({ params }: PageProps) {
         </section>
 
         <p className="text-[10px] text-zinc-500 text-center mt-2 print:hidden">
-          Tip: Use your browser&apos;s <span className="font-semibold">Print</span> command (Ctrl+P) to export as PDF.
+          Tip: Use your browser&apos;s <span className="font-semibold">Print</span> command
+          (Ctrl+P) to export as PDF.
         </p>
 
         <HeadteacherReviewPanel
           noteId={note.id}
           tenantId={note.tenantId}
           initialComment={headteacherComment}
-          currentStatus={(note as any).status as string}
+          currentStatus={String(note.status ?? "")}
         />
       </div>
     </main>

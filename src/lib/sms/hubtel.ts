@@ -1,5 +1,5 @@
 // src/lib/sms/hubtel.ts
-// Hubtel SMS helper + logging into SmsLog
+// Hubtel SMS helper + logging into SmsLog (bank-grade logging)
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -23,6 +23,11 @@ export type HubtelSendResult = {
   to: string;
   testMode: boolean;
   providerResponse: unknown;
+  // extra debug fields (safe): may be used in dev logs
+  httpStatus?: number;
+  providerStatus?: number | null;
+  providerStatusDescription?: string | null;
+  providerMessageId?: string | null;
 };
 
 type HubtelBrandConfig = {
@@ -34,8 +39,7 @@ type HubtelBrandConfig = {
 const SMS_PROVIDER = process.env.SMS_PROVIDER ?? "HUBTEL";
 const HUBTEL_BASE_URL = process.env.HUBTEL_BASE_URL ?? "https://smsc.hubtel.com";
 
-const SMS_TEST_MODE =
-  (process.env.SMS_TEST_MODE ?? "false").toLowerCase() === "true";
+const SMS_TEST_MODE = (process.env.SMS_TEST_MODE ?? "false").toLowerCase() === "true";
 const TEST_SMS_TO = process.env.TEST_SMS_TO ?? "";
 const DEFAULT_BRAND: BrandName = "AYITIADMIN";
 
@@ -86,29 +90,35 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue | null {
   }
 }
 
-function getObjProp(obj: unknown, key: string): unknown {
-  if (!obj || typeof obj !== "object") return undefined;
-  return (obj as Record<string, unknown>)[key];
-}
-
-function getNumber(obj: unknown, key: string): number | null {
-  const v = getObjProp(obj, key);
-  return typeof v === "number" ? v : null;
-}
-
-function getString(obj: unknown, key: string): string | null {
-  const v = getObjProp(obj, key);
-  return typeof v === "string" ? v : null;
-}
-
 type SmsLogModel = {
   create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
 };
 
+function isObj(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object";
+}
+
+function pickString(data: unknown, keys: string[]): string | null {
+  if (!isObj(data)) return null;
+  for (const k of keys) {
+    const v = (data as any)[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+function pickNumber(data: unknown, keys: string[]): number | null {
+  if (!isObj(data)) return null;
+  for (const k of keys) {
+    const v = (data as any)[k];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+  }
+  return null;
+}
+
 /**
  * Log SMS attempt into SmsLog table.
  * Never throws; on error it only logs to console.
- * Uses a guarded access so sends never crash if smsLog model isn't present.
  */
 async function logSmsAttempt(args: {
   to: string;
@@ -127,9 +137,7 @@ async function logSmsAttempt(args: {
     const smsLog = client.smsLog;
 
     if (!smsLog || typeof smsLog.create !== "function") {
-      console.warn(
-        "[SMS_LOG_WARN] prisma.smsLog.create is not available. Skipping log."
-      );
+      console.warn("[SMS_LOG_WARN] prisma.smsLog.create is not available. Skipping log.");
       return;
     }
 
@@ -142,8 +150,7 @@ async function logSmsAttempt(args: {
         tenantId: args.tenantId ?? undefined,
         actorId: args.actorId ?? undefined,
         providerMessageId: args.providerMessageId ?? undefined,
-        providerStatus:
-          typeof args.providerStatus === "number" ? args.providerStatus : undefined,
+        providerStatus: typeof args.providerStatus === "number" ? args.providerStatus : undefined,
         providerStatusDescription: args.providerStatusDescription ?? undefined,
         providerRaw: toJsonValue(args.providerRaw) ?? undefined,
       },
@@ -155,26 +162,18 @@ async function logSmsAttempt(args: {
 
 /**
  * Main SMS sender using Hubtel query-string API.
+ * IMPORTANT: Always logs httpStatus even if provider payload parsing is weird.
  */
-export async function sendViaHubtel(
-  params: HubtelSendParams
-): Promise<HubtelSendResult> {
+export async function sendViaHubtel(params: HubtelSendParams): Promise<HubtelSendResult> {
   if (SMS_PROVIDER.toUpperCase() !== "HUBTEL") {
-    throw new Error(
-      `SMS_PROVIDER is set to '${SMS_PROVIDER}', but sendViaHubtel was called.`
-    );
+    throw new Error(`SMS_PROVIDER is set to '${SMS_PROVIDER}', but sendViaHubtel was called.`);
   }
-
-  if (!HUBTEL_BASE_URL) {
-    throw new Error("Hubtel base URL missing in environment.");
-  }
+  if (!HUBTEL_BASE_URL) throw new Error("Hubtel base URL missing in environment.");
 
   const brand = (params.brand ?? DEFAULT_BRAND).toString();
   const { clientId, clientSecret, from } = getBrandConfig(brand);
 
-  if (!clientId || !clientSecret) {
-    throw new Error(`Missing Hubtel credentials for brand ${brand}`);
-  }
+  if (!clientId || !clientSecret) throw new Error(`Missing Hubtel credentials for brand ${brand}`);
 
   const logicalTo = normalizeGhanaPhone(params.to);
   if (!logicalTo) throw new Error("Invalid 'to' phone number.");
@@ -198,6 +197,7 @@ export async function sendViaHubtel(
 
   try {
     const res = await fetch(url.toString(), { method: "GET" });
+    const httpStatus = res.status;
 
     const text = await res.text();
     try {
@@ -206,9 +206,16 @@ export async function sendViaHubtel(
       data = text || null;
     }
 
-    const statusCode = getNumber(data, "status");
-    const statusDesc = getString(data, "statusDescription");
-    const messageId = getString(data, "messageId");
+    // Hubtel responses vary; try multiple key variants
+    const providerStatus =
+      pickNumber(data, ["status", "Status", "code", "Code"]) ?? null;
+
+    const providerStatusDescription =
+      pickString(data, ["statusDescription", "StatusDescription", "message", "Message"]) ??
+      (res.ok ? "HTTP_OK" : `HTTP_${httpStatus}`);
+
+    const providerMessageId =
+      pickString(data, ["messageId", "MessageId", "smsId", "SmsId"]) ?? null;
 
     await logSmsAttempt({
       to: actualTo,
@@ -217,11 +224,12 @@ export async function sendViaHubtel(
       brand,
       tenantId: params.tenantId,
       actorId: params.actorId,
-      providerMessageId: messageId,
-      providerStatus: statusCode,
-      providerStatusDescription: statusDesc,
+      providerMessageId,
+      // IMPORTANT: always store HTTP status if providerStatus missing
+      providerStatus: providerStatus ?? httpStatus,
+      providerStatusDescription,
       providerRaw: {
-        httpStatus: res.status,
+        httpStatus,
         testMode,
         logicalTo,
         meta: params.meta ?? null,
@@ -230,7 +238,7 @@ export async function sendViaHubtel(
     });
 
     if (!res.ok) {
-      throw new Error(`Hubtel error ${res.status}`);
+      throw new Error(`Hubtel HTTP ${httpStatus}`);
     }
 
     return {
@@ -240,10 +248,13 @@ export async function sendViaHubtel(
       to: actualTo,
       testMode,
       providerResponse: data,
+      httpStatus,
+      providerStatus,
+      providerStatusDescription,
+      providerMessageId,
     };
   } catch (err) {
-    const msg =
-      err instanceof Error ? err.message : typeof err === "string" ? err : "Unknown error";
+    const msg = err instanceof Error ? err.message : typeof err === "string" ? err : "Unknown error";
 
     await logSmsAttempt({
       to: actualTo,
@@ -254,7 +265,7 @@ export async function sendViaHubtel(
       actorId: params.actorId,
       providerMessageId: null,
       providerStatus: null,
-      providerStatusDescription: "Network/Fetch error",
+      providerStatusDescription: "NETWORK_OR_FETCH_ERROR",
       providerRaw: {
         error: msg,
         testMode,

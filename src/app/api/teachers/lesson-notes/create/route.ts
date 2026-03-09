@@ -9,9 +9,25 @@ export const dynamic = "force-dynamic";
 
 const CANONICAL_TERMS = ["1st Term", "2nd Term", "3rd Term"] as const;
 type CanonicalTerm = (typeof CANONICAL_TERMS)[number];
+type TeacherPhase = "KG" | "PRIMARY" | "JHS";
+type JhsAssignment = { subject: string; classes: string[] };
 
-function cleanStr(v: unknown) {
+function cleanStr(v: unknown): string {
   return String(v ?? "").trim();
+}
+
+function uniq(list: string[]): string[] {
+  return Array.from(new Set(list.map((x) => cleanStr(x)).filter(Boolean)));
+}
+
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 
 function normalizeTerm(raw: unknown): CanonicalTerm | null {
@@ -19,25 +35,22 @@ function normalizeTerm(raw: unknown): CanonicalTerm | null {
   if (!s) return null;
 
   const lc = s.toLowerCase().trim();
-
-  // Normalize “Term 1”, “term1”, “Term-1”, “term 1”, etc.
   const compact = lc.replace(/[\s._-]+/g, "");
 
-  // Already canonical?
   for (const t of CANONICAL_TERMS) {
     if (t.toLowerCase() === lc) return t;
     if (t.toLowerCase().replace(/\s+/g, "") === compact) return t;
   }
 
-  // Common variants
   if (
     compact === "1" ||
     compact === "t1" ||
     compact === "term1" ||
     compact === "firstterm" ||
     compact === "1stterm"
-  )
+  ) {
     return "1st Term";
+  }
 
   if (
     compact === "2" ||
@@ -45,8 +58,9 @@ function normalizeTerm(raw: unknown): CanonicalTerm | null {
     compact === "term2" ||
     compact === "secondterm" ||
     compact === "2ndterm"
-  )
+  ) {
     return "2nd Term";
+  }
 
   if (
     compact === "3" ||
@@ -54,8 +68,9 @@ function normalizeTerm(raw: unknown): CanonicalTerm | null {
     compact === "term3" ||
     compact === "thirdterm" ||
     compact === "3rdterm"
-  )
+  ) {
     return "3rd Term";
+  }
 
   return null;
 }
@@ -84,12 +99,9 @@ const BodySchema = z
   .object({
     term: TermSchema,
     academicYear: AcademicYearSchema,
-
-    // client may send these, but we will enforce scope from TeacherProfile
     phase: z.string().optional().nullable(),
     level: z.string().optional().nullable(),
     subject: z.string().min(1, "Subject is required.").transform((s) => s.trim()),
-
     weekNumber: z
       .union([z.number(), z.string()])
       .optional()
@@ -101,54 +113,149 @@ const BodySchema = z
   })
   .strict();
 
-function json(status: number, payload: any) {
-  return NextResponse.json(payload, {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+function normalizeLevelToken(raw: unknown): string | null {
+  const original = cleanStr(raw);
+  if (!original) return null;
+
+  const s = original
+    .toUpperCase()
+    .replace(/\./g, "")
+    .replace(/\s+/g, "")
+    .trim();
+
+  if (s === "KG1") return "KG1";
+  if (s === "KG2") return "KG2";
+
+  if (/^B[1-6]$/.test(s)) return s;
+  if (/^P[1-6]$/.test(s)) return `B${s.slice(1)}`;
+  if (/^PRIMARY[1-6]$/.test(s)) return `B${s.slice("PRIMARY".length)}`;
+  if (/^BASIC[1-6]$/.test(s)) return `B${s.slice("BASIC".length)}`;
+
+  if (/^JHS[1-3]$/.test(s)) return s;
+  if (/^B[7-9]$/.test(s)) return `JHS${Number(s.slice(1)) - 6}`;
+  if (/^BASIC[7-9]$/.test(s)) return `JHS${Number(s.slice("BASIC".length)) - 6}`;
+
+  return null;
 }
 
-function uniq(list: string[]) {
-  return Array.from(new Set(list.map((x) => cleanStr(x)).filter(Boolean)));
+function canonicalDisplayLevel(raw: unknown): string | null {
+  const token = normalizeLevelToken(raw);
+  if (!token) {
+    const fallback = cleanStr(raw);
+    return fallback || null;
+  }
+
+  if (token.startsWith("KG")) return `KG ${token.slice(2)}`;
+  if (token.startsWith("JHS")) return `JHS ${token.slice(3)}`;
+  return token;
 }
 
-type JhsAssignment = { subject: string; classes: string[] };
+function normalizeTeacherScopedLevel(phase: TeacherPhase, raw: unknown): string | null {
+  const token = normalizeLevelToken(raw);
+  if (!token) return null;
+
+  if (phase === "KG" && /^KG[1-2]$/.test(token)) return `KG ${token.slice(2)}`;
+  if (phase === "PRIMARY" && /^B[1-6]$/.test(token)) return token;
+  if (phase === "JHS" && /^JHS[1-3]$/.test(token)) return `JHS ${token.slice(3)}`;
+
+  return null;
+}
+
+function levelVariants(raw: string): string[] {
+  const token = normalizeLevelToken(raw);
+  const out = new Set<string>();
+
+  if (!token) {
+    const s = cleanStr(raw);
+    return s ? [s] : [];
+  }
+
+  if (token.startsWith("KG")) {
+    const n = token.slice(2);
+    [`KG ${n}`, `KG${n}`, `kg ${n}`, `kg${n}`].forEach((x) => out.add(x));
+    return Array.from(out);
+  }
+
+  if (token.startsWith("JHS")) {
+    const n = token.slice(3);
+    const basic = Number(n) + 6;
+    [
+      `JHS ${n}`,
+      `JHS${n}`,
+      `jhs ${n}`,
+      `jhs${n}`,
+      `Basic ${basic}`,
+      `Basic${basic}`,
+      `basic ${basic}`,
+      `B${basic}`,
+      `B ${basic}`,
+    ].forEach((x) => out.add(x));
+    return Array.from(out);
+  }
+
+  if (/^B[1-6]$/.test(token)) {
+    const n = token.slice(1);
+    [
+      `B${n}`,
+      `B ${n}`,
+      `Basic ${n}`,
+      `Basic${n}`,
+      `basic ${n}`,
+      `Primary ${n}`,
+      `Primary${n}`,
+      `primary ${n}`,
+      `P${n}`,
+      `P ${n}`,
+    ].forEach((x) => out.add(x));
+    return Array.from(out);
+  }
+
+  return [raw];
+}
+
+function sameNormalizedLevel(a: unknown, b: unknown): boolean {
+  const aa = normalizeLevelToken(a);
+  const bb = normalizeLevelToken(b);
+  return Boolean(aa && bb && aa === bb);
+}
 
 function parseJhsAssignments(v: unknown): JhsAssignment[] {
   if (!Array.isArray(v)) return [];
+
   const out: JhsAssignment[] = [];
 
   for (const row of v) {
     if (!row || typeof row !== "object") continue;
-    const r = row as any;
+    const r = row as Record<string, unknown>;
+
     const subject = cleanStr(r.subject);
     const classes = Array.isArray(r.classes)
-      ? r.classes.map((c: any) => cleanStr(c).toUpperCase()).filter(Boolean)
+      ? r.classes.map((c) => cleanStr(c)).filter(Boolean)
       : [];
 
-    if (subject && classes.length) out.push({ subject, classes: uniq(classes) });
+    if (subject && classes.length) {
+      out.push({ subject, classes: uniq(classes) });
+    }
   }
 
-  const by = new Map<string, Set<string>>();
+  const bySubject = new Map<string, Set<string>>();
+
   for (const a of out) {
     const key = a.subject.toLowerCase();
-    const set = by.get(key) ?? new Set<string>();
-    a.classes.forEach((c) => set.add(c));
-    by.set(key, set);
+    const set = bySubject.get(key) ?? new Set<string>();
+    for (const c of a.classes) set.add(c);
+    bySubject.set(key, set);
   }
 
-  return Array.from(by.entries()).map(([k, set]) => ({
-    subject: out.find((x) => x.subject.toLowerCase() === k)?.subject ?? k,
-    classes: Array.from(set.values()).sort(),
+  return Array.from(bySubject.entries()).map(([subjectLc, classesSet]) => ({
+    subject: out.find((x) => x.subject.toLowerCase() === subjectLc)?.subject ?? subjectLc,
+    classes: Array.from(classesSet).sort(),
   }));
 }
 
 export async function POST(req: NextRequest) {
-  // Auth
   let ctx: { userId: string; tenantId: string };
+
   try {
     const c = await requireServerUserContext({ requireTenant: true });
     ctx = { userId: c.userId, tenantId: c.tenantId };
@@ -161,8 +268,9 @@ export async function POST(req: NextRequest) {
     return json(415, { ok: false, error: "Content-Type must be application/json." });
   }
 
-  const raw = await req.json().catch(() => null);
-  const parsed = BodySchema.safeParse(raw);
+  const rawBody: unknown = await req.json().catch(() => null);
+  const parsed = BodySchema.safeParse(rawBody);
+
   if (!parsed.success) {
     return json(400, {
       ok: false,
@@ -170,19 +278,21 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Membership gate
   const membership = await prisma.membership.findUnique({
     where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
     select: { status: true },
   });
+
   if (!membership || membership.status !== "ACTIVE") {
     return json(403, { ok: false, error: "Forbidden (membership inactive)." });
   }
 
-  // TeacherProfile gate + scope
   const tp = await prisma.teacherProfile.findUnique({
     where: {
-      teacherProfile_tenant_user_unique: { tenantId: ctx.tenantId, userId: ctx.userId },
+      teacherProfile_tenant_user_unique: {
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+      },
     },
     select: {
       phase: true,
@@ -192,51 +302,100 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  if (!tp) return json(400, { ok: false, error: "Missing teacher profile." });
+  if (!tp) {
+    return json(400, { ok: false, error: "Missing teacher profile." });
+  }
 
-  const phase = String(tp.phase); // authoritative
+  const phase = String(tp.phase) as TeacherPhase;
   const subject = parsed.data.subject;
-// ✅ safe cast: BodySchema already validated term is canonical
-const term = parsed.data.term as CanonicalTerm;
-const academicYear = parsed.data.academicYear;
+  const term = parsed.data.term as CanonicalTerm;
+  const academicYear = parsed.data.academicYear;
   const weekNumber = parsed.data.weekNumber;
 
-  // Determine level authoritatively
+  const rawLevelFromRequest = cleanStr(
+    (rawBody as Record<string, unknown> | null)?.level ?? parsed.data.level
+  );
+  const rawLevelFallback = rawLevelFromRequest || cleanStr(tp.classLevel);
+
   let level: string | null = null;
+  let classroomIdForCreate: string | null = null;
 
   if (phase === "KG" || phase === "PRIMARY") {
-    level = cleanStr(tp.classLevel) || null;
-    if (!level) return json(400, { ok: false, error: "Teacher class level is not set." });
+    level = normalizeTeacherScopedLevel(phase, rawLevelFallback);
+
+    if (!level) {
+      const phaseLabel = phase === "KG" ? "KG" : "PRIMARY";
+      return json(400, {
+        ok: false,
+        error: `A valid ${phaseLabel} level is required.`,
+      });
+    }
+
+    const levelOr = levelVariants(level).map((lv) => ({
+      level: { equals: lv, mode: "insensitive" as const },
+    }));
 
     const allowed = await prisma.curriculumSubject.findFirst({
-      where: { isActive: true, level, name: { equals: subject, mode: "insensitive" } },
+      where: {
+        isActive: true,
+        name: { equals: subject, mode: "insensitive" },
+        OR: levelOr,
+      },
       select: { id: true },
     });
+
     if (!allowed) {
       return json(400, {
         ok: false,
         error: `Subject "${subject}" is not allowed for level "${level}".`,
       });
     }
+
+    if (tp.primaryClassroomId && sameNormalizedLevel(level, tp.classLevel)) {
+      classroomIdForCreate = tp.primaryClassroomId;
+    }
   } else if (phase === "JHS") {
-    const requestedLevel = cleanStr((raw as any)?.level ?? parsed.data.level).toUpperCase();
-    if (!requestedLevel) return json(400, { ok: false, error: "Class/level is required for JHS." });
+    const requestedLevel = normalizeTeacherScopedLevel("JHS", rawLevelFallback);
+
+    if (!requestedLevel) {
+      return json(400, {
+        ok: false,
+        error: "A valid JHS class/level is required.",
+      });
+    }
 
     const assigns = parseJhsAssignments(tp.jhsAssignments);
-    const allowedLevels = uniq(assigns.flatMap((a) => a.classes.map((c) => c.toUpperCase())));
+
+    const allowedLevels = uniq(
+      assigns
+        .flatMap((a) => a.classes)
+        .map((c) => normalizeTeacherScopedLevel("JHS", c) ?? canonicalDisplayLevel(c) ?? cleanStr(c))
+        .filter(Boolean)
+    );
 
     if (!allowedLevels.includes(requestedLevel)) {
-      return json(400, { ok: false, error: `Level "${requestedLevel}" is not in your assigned scope.` });
+      return json(400, {
+        ok: false,
+        error: `Level "${requestedLevel}" is not in your assigned scope.`,
+      });
     }
 
     const subjectsForLevel = uniq(
       assigns
-        .filter((a) => a.classes.map((c) => c.toUpperCase()).includes(requestedLevel))
+        .filter((a) =>
+          a.classes.some((c) => {
+            const normalized = normalizeTeacherScopedLevel("JHS", c) ?? canonicalDisplayLevel(c);
+            return normalized === requestedLevel;
+          })
+        )
         .map((a) => a.subject)
     );
 
-    const ok = subjectsForLevel.some((s) => s.toLowerCase() === subject.toLowerCase());
-    if (!ok) {
+    const subjectAllowed = subjectsForLevel.some(
+      (s) => s.toLowerCase() === subject.toLowerCase()
+    );
+
+    if (!subjectAllowed) {
       return json(400, {
         ok: false,
         error: `Subject "${subject}" is not assigned for "${requestedLevel}".`,
@@ -244,14 +403,14 @@ const academicYear = parsed.data.academicYear;
     }
 
     level = requestedLevel;
+    classroomIdForCreate = null;
   } else {
-    level = cleanStr((raw as any)?.level ?? parsed.data.level) || null;
+    const fallbackLevel = canonicalDisplayLevel(rawLevelFallback);
+    level = fallbackLevel ? fallbackLevel : null;
+    classroomIdForCreate = null;
   }
 
-  // Back-compat: if older rows exist using "Term 2", prevent duplicates.
   const termCandidates = [term, legacyTerm(term)];
-
-  // Basic idempotency: prevent double-click duplicates within 2 minutes
   const now = new Date();
   const twoMinAgo = new Date(now.getTime() - 2 * 60 * 1000);
 
@@ -279,43 +438,26 @@ const academicYear = parsed.data.academicYear;
       data: {
         tenantId: ctx.tenantId,
         teacherUserId: ctx.userId,
-        classroomId: tp.primaryClassroomId ?? null,
-
+        ...(classroomIdForCreate ? { classroomId: classroomIdForCreate } : {}),
         phase,
-        level,
+        ...(level ? { level } : {}),
         subject,
-        term, // ✅ always store canonical now
+        term,
         academicYear,
         weekNumber,
-
-        // Required columns in your schema (must NOT be null)
         strand: "",
         substrand: "",
-
-        // Optional fields start empty
-        contentStandard: null,
-        indicator: null,
-        lessonTitle: null,
-        objectives: null,
-        priorKnowledge: null,
-        teachingLearningResources: null,
-        introduction: null,
-        lessonDevelopment: null,
-        conclusion: null,
-        assessment: null,
-        homework: null,
-        differentiationNotes: null,
-        reflectionNotes: null,
-
         status: "DRAFT",
-        headteacherComment: null,
-      } as any,
+      },
       select: { id: true },
     });
 
     return json(200, { ok: true, lessonNoteId: created.id });
   } catch (e) {
     console.error("[LESSON_NOTE_CREATE_ERROR]", e);
-    return json(500, { ok: false, error: "Failed to create lesson note. Please try again." });
+    return json(500, {
+      ok: false,
+      error: "Failed to create lesson note. Please try again.",
+    });
   }
 }

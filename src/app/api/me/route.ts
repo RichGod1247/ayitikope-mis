@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { effectiveRole } from "@/lib/roleRouting";
+import { normalizeTeacherScopeForRead } from "@/lib/teacherScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,35 +52,7 @@ function isLikelyNextAuthDecryptError(err: unknown) {
   );
 }
 
-/**
- * ✅ "Never again" guardrail:
- * If any legacy/dirty teacherProfile.jhsAssignments subjects include level prefixes
- * (e.g. "JHS 1 Mathematics", "Basic 7 Science"), normalize them to canonical names ("Mathematics", "Science")
- * at the API boundary.
- */
-function normalizeJhsSubjectLabel(raw: unknown) {
-  const s = cleanStr(raw);
-  if (!s) return s;
-  return s.replace(/^\s*(JHS\s*[1-3]\s+|BASIC\s*[7-9]\s+|B\s*[7-9]\s+)/i, "").trim();
-}
-
-function normalizeTeacherScope(scope: any) {
-  if (!scope) return null;
-
-  // Only normalize for JHS.
-  if (String(scope.phase) !== "JHS") return scope;
-
-  const arr = Array.isArray(scope.jhsAssignments) ? scope.jhsAssignments : [];
-  const normalized = arr.map((row: any) => {
-    const subject = normalizeJhsSubjectLabel(row?.subject);
-    return { ...row, subject };
-  });
-
-  return { ...scope, jhsAssignments: normalized };
-}
-
 export async function GET() {
-  // ✅ Never allow bad/old cookies to crash /api/me
   let session: any = null;
   try {
     session = (await getServerSession(authOptions)) ?? null;
@@ -101,7 +74,6 @@ export async function GET() {
   const email = user.email ?? null;
   const name = user.name ?? null;
 
-  // Load all memberships for switcher + guardrails.
   const memberships = await prisma.membership.findMany({
     where: { userId },
     select: {
@@ -113,7 +85,9 @@ export async function GET() {
     orderBy: { createdAt: "asc" },
   });
 
-  const tenantIds = Array.from(new Set(memberships.map((m) => cleanStr(m.tenantId)).filter((x) => x.length > 0)));
+  const tenantIds = Array.from(
+    new Set(memberships.map((m) => cleanStr(m.tenantId)).filter((x) => x.length > 0))
+  );
 
   const tenants = tenantIds.length
     ? await prisma.tenant.findMany({
@@ -155,7 +129,6 @@ export async function GET() {
     };
   });
 
-  // 🔒 Strict rule: selected tenant comes from session only.
   const tenantId = cleanStr(user.tenantId) || null;
 
   if (!tenantId) {
@@ -190,7 +163,10 @@ export async function GET() {
   const membership = memberships.find((m) => cleanStr(m.tenantId) === tenantId) ?? null;
 
   if (!membership) {
-    return jsonNoStore({ ok: false, error: "TENANT_MEMBERSHIP_NOT_FOUND", tenantId, userId, memberships: membershipsView }, 403);
+    return jsonNoStore(
+      { ok: false, error: "TENANT_MEMBERSHIP_NOT_FOUND", tenantId, userId, memberships: membershipsView },
+      403
+    );
   }
 
   if (String(membership.status) !== "ACTIVE") {
@@ -221,12 +197,10 @@ export async function GET() {
     select: { phone: true, phoneNorm: true },
   });
 
-  // DB-truth role/staffId (never trust session for these)
   const roleNameDb = membership.role?.name ?? null;
   const eff = roleNameDb ? effectiveRole(roleNameDb) : null;
   const staffId = membership.staffId ?? null;
 
-  // ✅ DB-truth teacher scope (prevents “session drift”)
   const teacherProfile = await prisma.teacherProfile
     .findUnique({
       where: {
@@ -253,7 +227,7 @@ export async function GET() {
         }
       : null;
 
-  const teacherScope = normalizeTeacherScope(teacherScopeRaw);
+  const teacherScope = normalizeTeacherScopeForRead(teacherScopeRaw);
 
   return jsonNoStore(
     {

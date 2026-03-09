@@ -124,14 +124,11 @@ type SchemesListResponse = {
 
 type Notice = { tone: "ok" | "error" | "info"; text: string };
 
-const pillBase =
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
+const pillBase = "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
 const btnBase =
   "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-const btnOutline =
-  btnBase + " bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50";
-const btnPrimary =
-  btnBase + " bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700";
+const btnOutline = btnBase + " bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50";
+const btnPrimary = btnBase + " bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700";
 const inputBase =
   "w-full rounded-xl border border-zinc-300 bg-white px-2 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black";
 const selectBase =
@@ -160,9 +157,7 @@ function normalizeAcademicYearClient(raw: unknown): string {
 
 function handleAuthFailure() {
   const here =
-    typeof window !== "undefined"
-      ? `${window.location.pathname}${window.location.search}`
-      : "/teacher/curriculum";
+    typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "/teacher/curriculum";
 
   const p = new URLSearchParams();
   p.set("callbackUrl", here);
@@ -253,15 +248,13 @@ export default function TeacherCurriculumExplorerClient() {
   const [selectedSubStrandId, setSelectedSubStrandId] = useState<string | null>(null);
   const [selectedIndicatorId, setSelectedIndicatorId] = useState<string | null>(null);
 
-  // Schemes (subject scoped)
+  // Schemes (subject scoped) — used ONLY by scheme builder mode
   const [schemes, setSchemes] = useState<SchemeSummary[]>([]);
   const [schemesLoading, setSchemesLoading] = useState(false);
   const [schemesError, setSchemesError] = useState<string | null>(null);
 
-  const [addToSchemeOpen, setAddToSchemeOpen] = useState(false);
   const [selectedSchemeIdForAdd, setSelectedSchemeIdForAdd] = useState<string>("");
   const [addToSchemeSaving, setAddToSchemeSaving] = useState(false);
-  const [addToSchemeMessage, setAddToSchemeMessage] = useState<string | null>(null);
 
   const schemeReturnTarget = useMemo(() => {
     const fallback =
@@ -416,10 +409,7 @@ export default function TeacherCurriculumExplorerClient() {
     return subjects.filter((s) => (s.phase || "") === selectedPhase && (s.level || "") === selectedLevel);
   }, [subjects, selectedPhase, selectedLevel]);
 
-  const selectedSubject = useMemo(
-    () => subjects.find((s) => s.id === selectedSubjectId) ?? null,
-    [subjects, selectedSubjectId]
-  );
+  const selectedSubject = useMemo(() => subjects.find((s) => s.id === selectedSubjectId) ?? null, [subjects, selectedSubjectId]);
 
   // -----------------------------
   // Load curriculum tree
@@ -440,8 +430,11 @@ export default function TeacherCurriculumExplorerClient() {
       setSelectedStrandId(null);
       setSelectedSubStrandId(null);
       setSelectedIndicatorId(null);
+
+      // reset scheme UI for new subject selection
       setSchemes([]);
       setSchemesError(null);
+      setSelectedSchemeIdForAdd("");
 
       try {
         const params = new URLSearchParams();
@@ -565,7 +558,7 @@ export default function TeacherCurriculumExplorerClient() {
   const hasCurriculum = !!curriculum;
 
   // -----------------------------
-  // Scheme loads
+  // Scheme loads (schemeMode only)
   // -----------------------------
   async function loadSchemeSummary() {
     setSchemeSummaryLoading(true);
@@ -671,14 +664,11 @@ export default function TeacherCurriculumExplorerClient() {
   const canReturnToLessonNotes = useMemo(() => {
     if (!schemeMode) return false;
     if (!schemeTerm || !schemeAcademicYear) return false;
-    return schemeSummary.some(
-      (s) => s.term === schemeTerm && s.academicYear === schemeAcademicYear && getSchemeCount(s) > 0
-    );
+    return schemeSummary.some((s) => s.term === schemeTerm && s.academicYear === schemeAcademicYear && getSchemeCount(s) > 0);
   }, [schemeMode, schemeTerm, schemeAcademicYear, schemeSummary]);
 
   async function handleAddSelectedIndicatorToScheme() {
     setSchemeNotice(null);
-    setAddToSchemeMessage(null);
 
     if (!curriculum || !selectedIndicator) {
       setSchemeNotice({ tone: "error", text: "Select an indicator first." });
@@ -692,7 +682,7 @@ export default function TeacherCurriculumExplorerClient() {
 
     const week = Number.parseInt(schemeWeekNumber, 10);
     if (!Number.isFinite(week) || week <= 0) {
-      setSchemeNotice({ tone: "error", text: "Enter a valid week number (1, 2, 3…)." });
+      setSchemeNotice({ tone: "error", text: "Enter a valid week number (1, 2, 3…)."} );
       return;
     }
 
@@ -753,25 +743,21 @@ export default function TeacherCurriculumExplorerClient() {
           "Forbidden. This usually means your teacher profile isn’t assigned to this subject/level."
         );
         setSchemeNotice({ tone: "error", text: msg });
-        setAddToSchemeMessage(msg);
         return;
       }
 
       if (!res.ok || !data?.ok) {
         const msg = pickErrorMessage(res, data, "Failed to add indicator to scheme.");
         setSchemeNotice({ tone: "error", text: msg });
-        setAddToSchemeMessage(msg);
         return;
       }
 
       setSchemeNotice({ tone: "ok", text: "Saved. Indicator added to scheme." });
-      setAddToSchemeMessage("Saved. Indicator added to scheme.");
 
       await Promise.all([loadSchemesForSubject(), loadSchemeSummary()]);
     } catch (err) {
       console.error("Error adding to scheme", err);
       setSchemeNotice({ tone: "error", text: "Network or server error while adding to scheme." });
-      setAddToSchemeMessage("Network or server error while adding to scheme.");
     } finally {
       setAddToSchemeSaving(false);
     }
@@ -803,39 +789,31 @@ export default function TeacherCurriculumExplorerClient() {
         <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>
-                EduLife OS · Curriculum Explorer
-              </span>
+              <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>EduLife OS · Curriculum Explorer</span>
               {schemeMode ? (
-                <span className={`${pillBase} border-emerald-200 bg-emerald-50 text-emerald-800`}>
-                  Mode: Scheme Builder
-                </span>
+                <span className={`${pillBase} border-emerald-200 bg-emerald-50 text-emerald-800`}>Mode: Scheme Builder</span>
               ) : (
-                <span className="text-[11px] text-zinc-500">
-                  NaCCA KG–JHS curriculum · read-only, trusted source
-                </span>
+                <span className="text-[11px] text-zinc-500">NaCCA KG–JHS curriculum · read-only, trusted source</span>
               )}
             </div>
             <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Teacher Curriculum Explorer</h1>
             <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
               Choose a <span className="font-semibold">phase, level</span> and{" "}
-              <span className="font-semibold">subject</span>. EduLife OS will load the official NaCCA
-              structure for that subject: strands, sub-strands, content standards, indicators and exemplars.
+              <span className="font-semibold">subject</span>. EduLife OS will load the official NaCCA structure for that subject:
+              strands, sub-strands, content standards, indicators and exemplars.
             </p>
           </div>
 
           <div className="text-[11px] text-zinc-500 max-w-xs md:text-right">
             <p>
-              This page is the <span className="font-semibold">single source of truth</span> for your
-              curriculum tree. Lesson notes and Scheme of Work tools all read from here.
+              This page is the <span className="font-semibold">single source of truth</span> for your curriculum tree. Lesson notes
+              and Scheme of Work tools all read from here.
             </p>
           </div>
         </header>
 
         {subjectsError && (
-          <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">
-            {subjectsError}
-          </div>
+          <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">{subjectsError}</div>
         )}
 
         <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1.4fr)] gap-4 md:gap-6">
@@ -923,16 +901,13 @@ export default function TeacherCurriculumExplorerClient() {
                   <span className="font-semibold">full curriculum tree</span>.
                 </p>
                 <div className="text-[11px] text-zinc-500">
-                  Status:{" "}
-                  {curriculumLoading ? "Loading curriculum…" : hasCurriculum ? "Curriculum loaded" : "No curriculum loaded yet"}
+                  Status: {curriculumLoading ? "Loading curriculum…" : hasCurriculum ? "Curriculum loaded" : "No curriculum loaded yet"}
                 </div>
               </div>
             </div>
 
             {curriculumError && (
-              <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">
-                {curriculumError}
-              </div>
+              <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">{curriculumError}</div>
             )}
 
             <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
@@ -1202,19 +1177,9 @@ export default function TeacherCurriculumExplorerClient() {
             <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-sm font-semibold text-zinc-900">3 · Focus indicator &amp; details</h2>
-                {selectedIndicator && !schemeMode && (
-                  <button
-                    type="button"
-                    className={btnPrimary + " text-[11px] h-8"}
-                    onClick={async () => {
-                      setAddToSchemeMessage(null);
-                      if (!schemes.length && !schemesLoading) await loadSchemesForSubject();
-                      setAddToSchemeOpen(true);
-                    }}
-                  >
-                    Add to Scheme of Work
-                  </button>
-                )}
+
+                {/* ✅ IMPORTANT: Remove legacy non-scheme "Add to Scheme of Work" button.
+                    Only schemeMode is canonical + working. */}
                 {selectedIndicator && schemeMode && (
                   <button
                     type="button"
@@ -1298,10 +1263,6 @@ export default function TeacherCurriculumExplorerClient() {
                   <div className="mt-2 border-t border-dashed border-zinc-200 pt-2 text-[11px] text-zinc-600">
                     Use <span className="font-semibold">Scheme Builder</span> to attach this indicator to a week.
                   </div>
-
-                  {addToSchemeMessage && !schemeMode && (
-                    <p className="text-[11px] text-emerald-700">{addToSchemeMessage}</p>
-                  )}
                 </div>
               )}
             </div>
@@ -1321,7 +1282,9 @@ export default function TeacherCurriculumExplorerClient() {
                   <p className="text-[11px]">
                     Country: <span className="font-semibold">{curriculum.countryCode ?? "GH"}</span> · Subject:{" "}
                     <span className="font-semibold">{curriculum.name}</span> · Phase/Level:{" "}
-                    <span className="font-semibold">{curriculum.phase ?? "—"} / {curriculum.level ?? "—"}</span>
+                    <span className="font-semibold">
+                      {curriculum.phase ?? "—"} / {curriculum.level ?? "—"}
+                    </span>
                   </p>
 
                   <p className="text-[11px]">
@@ -1348,9 +1311,7 @@ export default function TeacherCurriculumExplorerClient() {
                   )}
 
                   {curriculum.lastVerifiedAt && (
-                    <p className="text-[10px] text-zinc-500">
-                      Last verified: {new Date(curriculum.lastVerifiedAt).toLocaleDateString()}
-                    </p>
+                    <p className="text-[10px] text-zinc-500">Last verified: {new Date(curriculum.lastVerifiedAt).toLocaleDateString()}</p>
                   )}
                 </>
               )}
@@ -1362,71 +1323,17 @@ export default function TeacherCurriculumExplorerClient() {
                 This page is <span className="font-semibold">read-only</span> for curriculum editing, but active for schemes + lesson notes.
               </p>
               <ul className="list-disc list-inside space-y-0.5">
-                <li>Attaching indicators to weekly <span className="font-semibold">Schemes of Work</span>.</li>
-                <li>Generating NaCCA-aligned <span className="font-semibold">Lesson Notes</span>.</li>
+                <li>
+                  Attaching indicators to weekly <span className="font-semibold">Schemes of Work</span>.
+                </li>
+                <li>
+                  Generating NaCCA-aligned <span className="font-semibold">Lesson Notes</span>.
+                </li>
               </ul>
             </div>
           </aside>
         </section>
       </div>
-
-      {addToSchemeOpen && !schemeMode && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-lg p-4 md:p-5 space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-900">Add indicator to Scheme of Work</h2>
-                <p className="text-[11px] text-zinc-600">Attach this NaCCA indicator to a weekly Scheme of Work.</p>
-              </div>
-              <button
-                type="button"
-                className="text-[11px] text-zinc-500 hover:text-zinc-800"
-                onClick={() => setAddToSchemeOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            {schemesLoading && <p className="text-[11px] text-zinc-500">Checking for existing schemes…</p>}
-            {schemesError && <p className="text-[11px] text-red-600">{schemesError}</p>}
-
-            {!schemesLoading && !schemesError && (
-              <div className="space-y-2">
-                {schemes.length > 0 ? (
-                  <>
-                    <label className="block text-[11px] font-medium text-zinc-700 mb-1">Scheme</label>
-                    <select
-                      className={selectBase}
-                      value={selectedSchemeIdForAdd}
-                      onChange={(e) => setSelectedSchemeIdForAdd(e.target.value)}
-                    >
-                      {schemes.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {(s.title ?? s.subject) + " · " + s.term + " " + s.academicYear}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-[11px] text-zinc-500">
-                      Best practice: use <span className="font-semibold">Lesson Notes → Prepare scheme of work</span> (scheme mode)
-                      so term/year/week are enforced.
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-[11px] text-zinc-500">No schemes found for this subject yet.</p>
-                )}
-              </div>
-            )}
-
-            {addToSchemeMessage && <p className="text-[11px] text-emerald-700">{addToSchemeMessage}</p>}
-
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <button type="button" className={btnOutline + " h-8 text-[11px]"} onClick={() => setAddToSchemeOpen(false)}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

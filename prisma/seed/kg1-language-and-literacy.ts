@@ -4,7 +4,14 @@ import fs from 'fs';
 import path from 'path';
 
 const prisma = new PrismaClient();
-
+const EXTRACTION_MODE = "KG_LL_EXTRACTED_TREE";
+/**
+ * KG LL subjects are extracted trees, not literal integrated curriculum mirrors.
+ * Keep original curriculum codes and orderIndex values.
+ * Missing indicator numbers are allowed when omitted indicators are non-LL.
+ * Never renumber to remove gaps.
+ * Sub-strand and content-standard titles must still match curriculum wording exactly.
+ */
 type ExemplarJson = {
   orderIndex: number;
   description: string;

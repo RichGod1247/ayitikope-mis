@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma, TeacherPhase } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getServerUserContextOrNull } from "@/lib/serverAuth";
+import {
+  normalizeJhsAssignmentsLoose,
+  normalizeTeacherClassLevel,
+  normalizeTeacherScopeForRead,
+  sameNormalizedJhsAssignments,
+} from "@/lib/teacherScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +47,6 @@ async function getCtxOrNull() {
   const ctx = await getServerUserContextOrNull({ requireTenant: true });
   if (!ctx?.userId || !ctx?.tenantId) return null;
 
-  // Bank-grade: require ACTIVE membership in tenant
   const m = await prisma.membership.findFirst({
     where: { userId: ctx.userId, tenantId: ctx.tenantId, status: "ACTIVE" },
     select: { id: true },
@@ -55,7 +60,6 @@ export async function GET(_req: NextRequest) {
   const ctx = await getCtxOrNull();
   if (!ctx) return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
 
-  // ✅ Must use compound unique: (tenantId, userId)
   const profile = await prisma.teacherProfile.findUnique({
     where: {
       teacherProfile_tenant_user_unique: {
@@ -72,14 +76,17 @@ export async function GET(_req: NextRequest) {
     );
   }
 
-  return jsonNoStore({ ok: true, profile }, { status: 200 });
+  return jsonNoStore(
+    { ok: true, profile: normalizeTeacherScopeForRead(profile) },
+    { status: 200 }
+  );
 }
 
 type PostBody = {
   phone: string;
   phase: "KG" | "PRIMARY" | "JHS" | TeacherPhase;
   classLevel?: string | null;
-  jhsAssignments?: unknown; // JSON
+  jhsAssignments?: unknown;
   additionalDuties?: unknown;
 };
 
@@ -96,21 +103,66 @@ export async function POST(req: NextRequest) {
   const phase = validatePhase(body.phase);
   if (!phase) return jsonNoStore({ ok: false, error: "Invalid phase." }, { status: 400 });
 
-  const classLevel = cleanStr(body.classLevel) || null;
+  const classLevel =
+    phase === "KG" || phase === "PRIMARY"
+      ? normalizeTeacherClassLevel(phase, body.classLevel)
+      : null;
+
+  if ((phase === "KG" || phase === "PRIMARY") && !classLevel) {
+    return jsonNoStore(
+      { ok: false, error: "Invalid class level for the selected phase." },
+      { status: 400 }
+    );
+  }
+
+  const normalizedJhsAssignments =
+    phase === "JHS" ? normalizeJhsAssignmentsLoose(body.jhsAssignments) : [];
+
+  if (phase === "JHS" && normalizedJhsAssignments.length === 0) {
+    return jsonNoStore(
+      { ok: false, error: "Add at least one valid JHS subject assignment." },
+      { status: 400 }
+    );
+  }
 
   const additionalDuties = Array.isArray(body.additionalDuties)
     ? body.additionalDuties.map((x) => cleanStr(x)).filter(Boolean)
     : [];
 
-  // Normalize JHS assignments
-  const jhsAssignmentsJson: Prisma.InputJsonValue =
-    body.jhsAssignments === undefined || body.jhsAssignments === null
-      ? []
-      : (body.jhsAssignments as Prisma.InputJsonValue);
+  const existingProfile = await prisma.teacherProfile.findUnique({
+    where: {
+      teacherProfile_tenant_user_unique: {
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+      },
+    },
+    select: {
+      id: true,
+      phase: true,
+      classLevel: true,
+      jhsAssignments: true,
+    },
+  });
 
-  // ✅ IMPORTANT: for Json? fields, do NOT use `null` — use Prisma.DbNull (DB NULL)
-  const jhsAssignmentsValue =
-    phase === "JHS" ? jhsAssignmentsJson : Prisma.DbNull;
+  if (existingProfile) {
+    if (existingProfile.phase !== phase) {
+      return jsonNoStore({ ok: false, error: "SCOPE_ALREADY_LOCKED" }, { status: 409 });
+    }
+
+    if (
+      (phase === "KG" || phase === "PRIMARY") &&
+      normalizeTeacherClassLevel(phase, existingProfile.classLevel) !== classLevel
+    ) {
+      return jsonNoStore({ ok: false, error: "SCOPE_ALREADY_LOCKED" }, { status: 409 });
+    }
+
+    if (
+      phase === "JHS" &&
+      !sameNormalizedJhsAssignments(existingProfile.jhsAssignments, normalizedJhsAssignments)
+    ) {
+      return jsonNoStore({ ok: false, error: "SCOPE_ALREADY_LOCKED" }, { status: 409 });
+    }
+  }
 
   try {
     const profile = await prisma.teacherProfile.upsert({
@@ -125,22 +177,34 @@ export async function POST(req: NextRequest) {
         userId: ctx.userId,
         phone,
         phase,
-        classLevel,
-        jhsAssignments: jhsAssignmentsValue,
+        classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
+        jhsAssignments:
+          phase === "JHS"
+            ? (normalizedJhsAssignments as Prisma.InputJsonValue)
+            : Prisma.DbNull,
         additionalDuties,
       },
       update: {
         phone,
         phase,
-        classLevel,
-        jhsAssignments: jhsAssignmentsValue,
+        classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
+        jhsAssignments:
+          phase === "JHS"
+            ? (normalizedJhsAssignments as Prisma.InputJsonValue)
+            : Prisma.DbNull,
         additionalDuties,
       },
     });
 
-    return jsonNoStore({ ok: true, profile }, { status: 200 });
+    return jsonNoStore(
+      { ok: true, profile: normalizeTeacherScopeForRead(profile) },
+      { status: 200 }
+    );
   } catch (err) {
     console.error("TEACHER_PROFILE_SAVE_ERROR", err);
-    return jsonNoStore({ ok: false, error: "Failed to save teacher profile." }, { status: 500 });
+    return jsonNoStore(
+      { ok: false, error: "Failed to save teacher profile." },
+      { status: 500 }
+    );
   }
 }

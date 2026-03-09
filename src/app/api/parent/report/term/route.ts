@@ -1,112 +1,99 @@
 // src/app/api/parent/report/term/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireParentSession, digitsOnly } from "@/lib/parentSession";
+import { StudentStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function normalisePhone(phone: string | null | undefined): string {
-  if (!phone) return "";
-  return String(phone).replace(/\D/g, "");
+function noStoreJson(payload: any, status = 200, extraHeaders?: HeadersInit) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      ...(extraHeaders ?? {}),
+    },
+  });
 }
 
-function phoneMatches(a: string, b: string) {
-  const A = normalisePhone(a);
-  const B = normalisePhone(b);
+function noStoreEmpty(status = 204, extraHeaders?: HeadersInit) {
+  return new NextResponse(null, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      ...(extraHeaders ?? {}),
+    },
+  });
+}
+
+// If the browser ever preflights (or a proxy/middleware does), don't let it 405.
+export async function OPTIONS() {
+  return noStoreEmpty(204, {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,OPTIONS,HEAD",
+    "access-control-allow-headers": "content-type,accept",
+  });
+}
+
+// Some environments/browsers can issue HEAD; don't let it 405 either.
+export async function HEAD() {
+  return noStoreEmpty(200);
+}
+
+function normDigits(v: unknown) {
+  return digitsOnly(String(v ?? ""));
+}
+
+function phoneMatchesBySuffix(a: string, b: string) {
+  const A = normDigits(a);
+  const B = normDigits(b);
   if (!A || !B) return false;
   return A.endsWith(B) || B.endsWith(A);
 }
 
-const ADMINISH = new Set(["ADMIN", "SCHOOL_ADMIN", "HEADTEACHER"]);
-
-async function getSafeTenantCtx() {
-  const session = await getServerSession(authOptions);
-  const u = session?.user as any;
-
-  const userId = typeof u?.id === "string" ? u.id : "";
-  const tenantId = typeof u?.tenantId === "string" ? u.tenantId : "";
-  const userPhone = normalisePhone(u?.phone ?? u?.phoneNumber ?? u?.guardianPhone ?? "");
-
-  if (!session || !userId) {
-    return { ok: false as const, status: 401, error: "UNAUTHORIZED" };
-  }
-  if (!tenantId) {
-    return { ok: false as const, status: 403, error: "NO_ACTIVE_TENANT" };
-  }
-
-  const membership = await prisma.membership.findUnique({
-    where: { userId_tenantId: { userId, tenantId } },
-    select: { status: true, role: { select: { name: true } } },
-  });
-
-  if (!membership || membership.status !== "ACTIVE") {
-    return { ok: false as const, status: 403, error: "FORBIDDEN" };
-  }
-
-  return {
-    ok: true as const,
-    userId,
-    tenantId,
-    userPhone,
-    roleName: String(membership.role?.name ?? "").trim(),
-  };
+function isValidSuffixForLookup(suffix: string) {
+  const s = normDigits(suffix);
+  return s.length >= 7;
 }
 
 /**
- * Parent Term Report API (session-tenant scoped)
+ * Parent Term Report API (parent-cookie scoped)
  *
- * GET /api/parent/report/term?tenantId=...&studentId=...&term=...&academicYear=...
+ * GET /api/parent/report/term?studentId=...&term=...&academicYear=...
  *
- * tenantId param is backward-compat ONLY. Actual tenantId comes from session.
+ * Parents are blocked unless results are released for:
+ *  - whole school (scopeKey="SCHOOL"), OR
+ *  - the student's classroom (scopeKey=classroomId)
  */
 export async function GET(req: NextRequest) {
   try {
-    const safe = await getSafeTenantCtx();
-    if (!safe.ok) {
-      return NextResponse.json(
-        { ok: false, error: safe.error },
-        { status: safe.status, headers: { "cache-control": "no-store" } }
-      );
-    }
+    const gate = requireParentSession(req as any);
+    if (!gate.ok) return gate.res as any;
 
-    // 🔒 Role gate (Roadmap #1)
-    const isParent = safe.roleName === "PARENT";
-    const isAdminish = ADMINISH.has(safe.roleName);
-    if (!isParent && !isAdminish) {
-      return NextResponse.json(
-        { ok: false, error: "FORBIDDEN" },
-        { status: 403, headers: { "cache-control": "no-store" } }
-      );
-    }
+    const sess = gate.session;
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: sess.tenantId },
+      select: { id: true, status: true, name: true },
+    });
+
+    if (!tenant) return noStoreJson({ ok: false, error: "TENANT_NOT_FOUND" }, 401);
+    if (tenant.status !== "ACTIVE")
+      return noStoreJson({ ok: false, error: "TENANT_NOT_ACTIVE" }, 403);
 
     const { searchParams } = new URL(req.url);
-
-    const tenantIdParam = String(searchParams.get("tenantId") || "").trim();
-    if (tenantIdParam && tenantIdParam !== safe.tenantId) {
-      return NextResponse.json(
-        { ok: false, error: "Forbidden (tenant mismatch)." },
-        { status: 403, headers: { "cache-control": "no-store" } }
-      );
-    }
 
     const studentId = String(searchParams.get("studentId") || "").trim();
     const term = String(searchParams.get("term") || "1st Term").trim();
     const academicYear = String(searchParams.get("academicYear") || "2025/2026").trim();
 
-    if (!studentId) {
-      return NextResponse.json(
-        { ok: false, error: "studentId is required." },
-        { status: 400, headers: { "cache-control": "no-store" } }
-      );
-    }
+    if (!studentId) return noStoreJson({ ok: false, error: "studentId is required." }, 400);
 
-    const client = prisma as any;
-
-    // 1) Load student + classroom (required)
-    const student = await client.student.findFirst({
-      where: { id: studentId, tenantId: safe.tenantId },
+    const student = await prisma.student.findFirst({
+      where: { id: studentId, tenantId: sess.tenantId, status: StudentStatus.ACTIVE },
       select: {
         id: true,
         tenantId: true,
@@ -117,52 +104,58 @@ export async function GET(req: NextRequest) {
         dob: true,
         guardianName: true,
         guardianPhone: true,
+        guardianPhoneNorm: true,
         note: true,
-        classroom: {
-          select: { id: true, name: true, grade: true, arm: true },
-        },
+        classroom: { select: { id: true, name: true, grade: true, arm: true } },
       },
     });
 
-    if (!student) {
-      return NextResponse.json(
-        { ok: false, error: "Student not found for this tenant." },
-        { status: 404, headers: { "cache-control": "no-store" } }
+    if (!student) return noStoreJson({ ok: false, error: "STUDENT_NOT_FOUND" }, 404);
+
+    // ✅ Parent authorization (match phone)
+    const sessE164 = String(sess.guardianPhoneE164 ?? "").trim();
+    const sessSuffix9 = normDigits(sess.guardianSuffix9 ?? "");
+
+    const studentGuardianNorm = String(student.guardianPhoneNorm ?? "").trim();
+    const studentGuardianRaw = String(student.guardianPhone ?? "").trim();
+
+    const okByE164 =
+      !!sessE164 &&
+      !!studentGuardianNorm &&
+      normDigits(sessE164) === normDigits(studentGuardianNorm);
+
+    const okBySuffix =
+      isValidSuffixForLookup(sessSuffix9) &&
+      (phoneMatchesBySuffix(sessSuffix9, studentGuardianNorm) ||
+        phoneMatchesBySuffix(sessSuffix9, studentGuardianRaw));
+
+    if (!okByE164 && !okBySuffix) {
+      return noStoreJson({ ok: false, error: "GUARDIAN_MISMATCH" }, 403);
+    }
+
+    // ✅ RELEASE ENFORCEMENT
+    const classroomId = student.classroomId ? String(student.classroomId) : "";
+    const scopeKeys = ["SCHOOL", ...(classroomId ? [classroomId] : [])];
+
+    const rel = await prisma.resultsRelease.findFirst({
+      where: { tenantId: sess.tenantId, term, academicYear, scopeKey: { in: scopeKeys } },
+      select: { id: true, scope: true, scopeKey: true, releasedAt: true },
+    });
+
+    if (!rel) {
+      return noStoreJson(
+        { ok: false, error: "RESULTS_NOT_RELEASED", term, academicYear },
+        403
       );
     }
 
-    // 1b) Parent authorization: must match student's guardianPhone
-    if (isParent) {
-      if (!safe.userPhone) {
-        return NextResponse.json(
-          { ok: false, error: "PARENT_PHONE_MISSING_IN_SESSION" },
-          { status: 400, headers: { "cache-control": "no-store" } }
-        );
-      }
-
-      const studentGuardian = normalisePhone(student.guardianPhone);
-      if (!studentGuardian) {
-        return NextResponse.json(
-          { ok: false, error: "NO_GUARDIAN_PHONE_ON_STUDENT" },
-          { status: 403, headers: { "cache-control": "no-store" } }
-        );
-      }
-
-      if (!phoneMatches(safe.userPhone, studentGuardian)) {
-        return NextResponse.json(
-          { ok: false, error: "Forbidden (guardian mismatch)." },
-          { status: 403, headers: { "cache-control": "no-store" } }
-        );
-      }
-    }
-
-    // 2) Subjects from AssessmentScore – best-effort
+    // ------------- Subjects (best-effort from AssessmentScore) -------------
     let subjects: any[] = [];
     try {
-      const scores = await client.assessmentScore.findMany({
+      const scores = await prisma.assessmentScore.findMany({
         where: {
           studentId: student.id,
-          item: { term, academicYear, tenantId: safe.tenantId },
+          item: { term, academicYear, tenantId: sess.tenantId },
         },
         select: {
           score: true,
@@ -173,11 +166,14 @@ export async function GET(req: NextRequest) {
       const bySubject: Record<string, { subject: string; total: number; max: number }> = {};
 
       for (const s of scores) {
-        const subjectName = s.item?.subject || "Subject";
+        const subjectName = (s.item?.subject || "Subject").trim() || "Subject";
         if (!bySubject[subjectName]) bySubject[subjectName] = { subject: subjectName, total: 0, max: 0 };
 
-        bySubject[subjectName].total += typeof s.score === "number" ? s.score : 0;
-        bySubject[subjectName].max += typeof s.item?.maxScore === "number" ? s.item.maxScore : 0;
+        const sc = typeof s.score === "number" ? s.score : 0;
+        const mx = typeof s.item?.maxScore === "number" ? s.item.maxScore : 0;
+
+        bySubject[subjectName].total += sc;
+        bySubject[subjectName].max += mx;
       }
 
       subjects = Object.values(bySubject).map((entry) => ({
@@ -196,39 +192,37 @@ export async function GET(req: NextRequest) {
       subjects = [];
     }
 
-    // 3) Attendance summary – placeholder
+    // Attendance summary: still null for now (safe)
     const attendanceSummary: any = null;
 
-    // 4) Fees summary – robust best-effort (don’t assume relation names always work)
+    // Fees summary (best-effort)
     let feesSummary: any = null;
     try {
-      const invAgg = await client.feeInvoice.aggregate({
-        where: { tenantId: safe.tenantId, term, academicYear, studentId: student.id },
+      const invAgg = await prisma.feeInvoice.aggregate({
+        where: { tenantId: sess.tenantId, term, academicYear, studentId: student.id },
         _sum: { totalBilledPesewas: true, totalWaivedPesewas: true },
       });
 
       let paidSum = 0;
 
       try {
-        // If FeePayment.invoice relation exists
-        const payAgg = await client.feePayment.aggregate({
-          where: { tenantId: safe.tenantId, invoice: { term, academicYear, studentId: student.id } },
+        const payAgg = await prisma.feePayment.aggregate({
+          where: { tenantId: sess.tenantId, invoice: { term, academicYear, studentId: student.id } },
           _sum: { amountPesewas: true },
         });
         paidSum = payAgg._sum.amountPesewas ?? 0;
       } catch {
-        // Fallback: load invoice IDs then sum payments
-        const invoices = await client.feeInvoice.findMany({
-          where: { tenantId: safe.tenantId, term, academicYear, studentId: student.id },
+        const invoices = await prisma.feeInvoice.findMany({
+          where: { tenantId: sess.tenantId, term, academicYear, studentId: student.id },
           select: { id: true },
         });
-        const ids = invoices.map((x: any) => x.id);
+        const ids = invoices.map((x) => x.id);
         if (ids.length) {
-          const pays = await client.feePayment.findMany({
-            where: { tenantId: safe.tenantId, invoiceId: { in: ids } },
+          const pays = await prisma.feePayment.findMany({
+            where: { tenantId: sess.tenantId, invoiceId: { in: ids } },
             select: { amountPesewas: true },
           });
-          paidSum = pays.reduce((s: number, p: any) => s + (p.amountPesewas ?? 0), 0);
+          paidSum = pays.reduce((sum, p) => sum + (p.amountPesewas ?? 0), 0);
         }
       }
 
@@ -248,11 +242,11 @@ export async function GET(req: NextRequest) {
       feesSummary = null;
     }
 
-    // 5) Health summary – best-effort
+    // Health summary (best-effort)
     let healthSummary: any = null;
     try {
-      const screenings = await client.studentHealthDaily.findMany({
-        where: { tenantId: safe.tenantId, studentId: student.id },
+      const screenings = await prisma.studentHealthDaily.findMany({
+        where: { tenantId: sess.tenantId, studentId: student.id },
         orderBy: { date: "desc" },
         take: 50,
       });
@@ -284,25 +278,19 @@ export async function GET(req: NextRequest) {
       subjects,
     };
 
-    return NextResponse.json(
-      {
-        ok: true,
-        context: { tenantId: safe.tenantId, studentId, term, academicYear },
-        student,
-        classroom: student.classroom,
-        termSummary,
-        subjects,
-        attendanceSummary,
-        feesSummary,
-        healthSummary,
-      },
-      { status: 200, headers: { "cache-control": "no-store" } }
-    );
+    return noStoreJson({
+      ok: true,
+      context: { tenantId: sess.tenantId, studentId, term, academicYear },
+      student,
+      classroom: student.classroom,
+      termSummary,
+      subjects,
+      attendanceSummary,
+      feesSummary,
+      healthSummary,
+    });
   } catch (err) {
     console.error("[PARENT_TERM_REPORT_ERROR]", err);
-    return NextResponse.json(
-      { ok: false, error: "Failed to load parent term report." },
-      { status: 500, headers: { "cache-control": "no-store" } }
-    );
+    return noStoreJson({ ok: false, error: "Failed to load parent term report." }, 500);
   }
 }

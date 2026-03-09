@@ -1,3 +1,4 @@
+//prisma/seed/basic-1-our-world-our-people.ts
 import { PrismaClient } from "@prisma/client";
 import { promises as fs } from "fs";
 import path from "path";

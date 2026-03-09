@@ -1,12 +1,15 @@
 // src/components/HeadteacherReportsClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type Classroom = {
   id: string;
   name: string;
+  grade?: string | null;
+  arm?: string | null;
 };
 
 type Props = {
@@ -40,23 +43,231 @@ type SummaryState =
   | { status: "error"; message: string }
   | { status: "ready"; data: ClassTermSummaryResponse };
 
+type StreamMode = "single" | "multi";
+
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function normalizeStageBucket(raw: unknown): string | null {
+  const compact = cleanStr(raw).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!compact) return null;
+
+  let m =
+    compact.match(/^KG([12])(?:[A-Z].*)?$/) ||
+    compact.match(/^KINDERGARTEN([12])(?:[A-Z].*)?$/);
+  if (m) return `KG ${m[1]}`;
+
+  m = compact.match(/^(PRIMARY|PRI|P)([1-6])(?:[A-Z].*)?$/);
+  if (m) return `PRIMARY ${m[2]}`;
+
+  m = compact.match(/^(BASIC|B)([1-9])(?:[A-Z].*)?$/);
+  if (m) {
+    const n = Number(m[2]);
+    if (n >= 1 && n <= 6) return `PRIMARY ${n}`;
+    if (n === 7) return "JHS 1";
+    if (n === 8) return "JHS 2";
+    if (n === 9) return "JHS 3";
+  }
+
+  m = compact.match(/^JHS([1-3])(?:[A-Z].*)?$/);
+  if (m) return `JHS ${m[1]}`;
+
+  return null;
+}
+
+function getStageBucketForClassroom(c: Classroom) {
+  return normalizeStageBucket(c.grade) ?? normalizeStageBucket(c.name);
+}
+
+function hasDuplicateStageBuckets(list: Classroom[]) {
+  const seen = new Set<string>();
+  for (const c of list) {
+    const bucket = getStageBucketForClassroom(c);
+    if (!bucket) continue;
+    if (seen.has(bucket)) return true;
+    seen.add(bucket);
+  }
+  return false;
+}
+
+function fullClassLabel(c: Classroom) {
+  const name = cleanStr(c.name);
+  const grade = cleanStr(c.grade);
+  const arm = cleanStr(c.arm);
+
+  if (name && grade) {
+    const same = name.toUpperCase() === grade.toUpperCase();
+    if (same) return `${name}${arm ? ` ${arm}` : ""}`;
+    return `${name} (${grade}${arm ? ` ${arm}` : ""})`;
+  }
+
+  if (name) return `${name}${arm ? ` ${arm}` : ""}`;
+  if (grade) return `${grade}${arm ? ` ${arm}` : ""}`;
+
+  return "Class";
+}
+
+function singleStreamLabel(c: Classroom) {
+  return getStageBucketForClassroom(c) || fullClassLabel(c);
+}
+
+function pickSingleStreamRepresentative(
+  group: Classroom[],
+  preferredClassroomId: string | null
+) {
+  const preferred = group.find((x) => x.id === preferredClassroomId) ?? null;
+
+  if (preferred && !cleanStr(preferred.arm)) {
+    return preferred;
+  }
+
+  const armLess = group
+    .filter((x) => !cleanStr(x.arm))
+    .sort((a, b) => fullClassLabel(a).localeCompare(fullClassLabel(b)));
+
+  if (armLess.length > 0) {
+    return armLess[0];
+  }
+
+  return (
+    preferred ??
+    [...group].sort((a, b) => fullClassLabel(a).localeCompare(fullClassLabel(b)))[0]
+  );
+}
+
+function buildSingleStreamClassrooms(
+  list: Classroom[],
+  preferredClassroomId: string | null
+): Classroom[] {
+  const orderedBuckets = [
+    "KG 1",
+    "KG 2",
+    "PRIMARY 1",
+    "PRIMARY 2",
+    "PRIMARY 3",
+    "PRIMARY 4",
+    "PRIMARY 5",
+    "PRIMARY 6",
+    "JHS 1",
+    "JHS 2",
+    "JHS 3",
+  ] as const;
+
+  const grouped = new Map<string, Classroom[]>();
+  const others: Classroom[] = [];
+
+  for (const c of list) {
+    const bucket = getStageBucketForClassroom(c);
+    if (!bucket) {
+      others.push(c);
+      continue;
+    }
+
+    const arr = grouped.get(bucket) ?? [];
+    arr.push(c);
+    grouped.set(bucket, arr);
+  }
+
+  const picked: Classroom[] = [];
+
+  for (const bucket of orderedBuckets) {
+    const group = grouped.get(bucket) ?? [];
+    if (!group.length) continue;
+    picked.push(pickSingleStreamRepresentative(group, preferredClassroomId));
+  }
+
+  return [
+    ...picked,
+    ...others.sort((a, b) => fullClassLabel(a).localeCompare(fullClassLabel(b))),
+  ];
+}
+
+function resolveInitialSingleStreamClassId(
+  classrooms: Classroom[],
+  requestedClassroomId: string | null
+) {
+  if (!classrooms.length) return "";
+
+  if (!requestedClassroomId) {
+    return buildSingleStreamClassrooms(classrooms, null)[0]?.id ?? classrooms[0].id;
+  }
+
+  const requested = classrooms.find((c) => c.id === requestedClassroomId);
+  if (!requested) {
+    return buildSingleStreamClassrooms(classrooms, null)[0]?.id ?? classrooms[0].id;
+  }
+
+  const bucket = getStageBucketForClassroom(requested);
+  if (!bucket) return requested.id;
+
+  const group = classrooms.filter((c) => getStageBucketForClassroom(c) === bucket);
+  return pickSingleStreamRepresentative(group, requestedClassroomId).id;
+}
+
 export function HeadteacherReportsClient({
   classrooms,
   defaultTerm,
   defaultAcademicYear,
 }: Props) {
-  const [selectedClassId, setSelectedClassId] = useState<string>(
-    classrooms[0]?.id ?? ""
-  );
-  const [term, setTerm] = useState<string>(defaultTerm);
+  const searchParams = useSearchParams();
+
+  const initialSelectedClassId = useMemo(() => {
+    return resolveInitialSingleStreamClassId(
+      classrooms,
+      searchParams.get("classroomId")
+    );
+  }, [classrooms, searchParams]);
+
+  const initialTerm = searchParams.get("term") ?? defaultTerm;
+  const initialAcademicYear =
+    searchParams.get("academicYear") ?? defaultAcademicYear;
+
+  const [selectedClassId, setSelectedClassId] =
+    useState<string>(initialSelectedClassId);
+  const [term, setTerm] = useState<string>(initialTerm);
   const [academicYear, setAcademicYear] =
-    useState<string>(defaultAcademicYear);
+    useState<string>(initialAcademicYear);
+  const [streamMode, setStreamMode] = useState<StreamMode>("single");
 
   const [state, setState] = useState<SummaryState>({
     status: "idle",
   });
 
-  // Auto-load when classroom / term / year changes
+  const canToggleMultiStream = useMemo(() => {
+    return hasDuplicateStageBuckets(classrooms);
+  }, [classrooms]);
+
+  const visibleClassrooms = useMemo(() => {
+    if (!canToggleMultiStream) return classrooms;
+    if (streamMode === "multi") return classrooms;
+    return buildSingleStreamClassrooms(classrooms, selectedClassId || null);
+  }, [classrooms, canToggleMultiStream, streamMode, selectedClassId]);
+
+  useEffect(() => {
+    if (!visibleClassrooms.length) {
+      if (selectedClassId) setSelectedClassId("");
+      return;
+    }
+
+    if (visibleClassrooms.some((c) => c.id === selectedClassId)) return;
+
+    const current = classrooms.find((c) => c.id === selectedClassId);
+    const currentBucket = current ? getStageBucketForClassroom(current) : null;
+
+    if (currentBucket) {
+      const sameBucketVisible = visibleClassrooms.find(
+        (c) => getStageBucketForClassroom(c) === currentBucket
+      );
+      if (sameBucketVisible) {
+        setSelectedClassId(sameBucketVisible.id);
+        return;
+      }
+    }
+
+    setSelectedClassId(visibleClassrooms[0].id);
+  }, [visibleClassrooms, classrooms, selectedClassId]);
+
   useEffect(() => {
     if (!selectedClassId || !term || !academicYear) {
       setState({ status: "idle" });
@@ -79,15 +290,14 @@ export function HeadteacherReportsClient({
           `/api/headteacher/reports/class-term-summary?${params.toString()}`,
           {
             method: "GET",
+            cache: "no-store",
           }
         );
 
-        const json: ClassTermSummaryResponse = await res
-          .json()
-          .catch(() => ({
-            ok: false,
-            error: "Invalid JSON from server",
-          }));
+        const json: ClassTermSummaryResponse = await res.json().catch(() => ({
+          ok: false,
+          error: "Invalid JSON from server",
+        }));
 
         if (cancelled) return;
 
@@ -105,7 +315,7 @@ export function HeadteacherReportsClient({
           status: "ready",
           data: json,
         });
-      } catch (err) {
+      } catch {
         if (cancelled) return;
         setState({
           status: "error",
@@ -124,32 +334,48 @@ export function HeadteacherReportsClient({
 
   return (
     <section className="space-y-4">
-      {/* Controls */}
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
         <div className="grid gap-3 md:grid-cols-3 md:items-end">
           <div className="space-y-1">
             <label className="block text-[11px] font-medium text-slate-700">
               Class
             </label>
+
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
               className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
-              {classrooms.length === 0 ? (
+              {visibleClassrooms.length === 0 ? (
                 <option value="">No classes found</option>
               ) : (
-                classrooms.map((c) => (
+                visibleClassrooms.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name}
+                    {streamMode === "single"
+                      ? singleStreamLabel(c)
+                      : fullClassLabel(c)}
                   </option>
                 ))
               )}
             </select>
-            {classrooms.length === 0 && (
+
+            {canToggleMultiStream ? (
+              <label className="mt-1 inline-flex items-center gap-2 text-[11px] text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={streamMode === "multi"}
+                  onChange={(e) =>
+                    setStreamMode(e.target.checked ? "multi" : "single")
+                  }
+                />
+                Show multistream classes
+              </label>
+            ) : null}
+
+            {visibleClassrooms.length === 0 && (
               <p className="mt-1 text-[10px] text-red-700">
-                No classrooms found for this school. Please create
-                classrooms and assign learners first.
+                No classrooms found for this school. Please create classrooms and
+                assign learners first.
               </p>
             )}
           </div>
@@ -182,16 +408,13 @@ export function HeadteacherReportsClient({
             />
           </div>
         </div>
+
         <p className="mt-2 text-[10px] text-slate-500">
-          Tip: For your March 31st demo, pick your{" "}
-          <span className="font-semibold">JHS class</span> and the
-          term you&apos;ve seeded with real assessments. Click{" "}
-          <span className="font-semibold">View report</span> on any
-          learner to open their full term report.
+          Use this grid to study learner-by-learner term performance, then open
+          the full learner report where needed.
         </p>
       </div>
 
-      {/* Summary display */}
       <ClassTermSummaryView
         state={state}
         term={term}
@@ -210,9 +433,7 @@ function ClassTermSummaryView({
   term: string;
   academicYear: string;
 }) {
-  if (state.status === "idle") {
-    return null;
-  }
+  if (state.status === "idle") return null;
 
   if (state.status === "loading") {
     return (
@@ -250,18 +471,12 @@ function ClassTermSummaryView({
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm overflow-x-auto">
-      <p className="text-[11px] font-semibold text-slate-900 mb-2">
+      <p className="mb-2 text-[11px] font-semibold text-slate-900">
         Class term report grid
       </p>
-      <p className="text-[10px] text-slate-600 mb-3 max-w-xl">
-        Each row is a learner. Each subject shows the{" "}
-        <span className="font-semibold">
-          total score across all assessments
-        </span>{" "}
-        for that subject in this term. You also see the overall total
-        and maximum possible marks. Use{" "}
-        <span className="font-semibold">View report</span> to open a
-        full per-learner term report.
+      <p className="mb-3 max-w-xl text-[10px] text-slate-600">
+        Each row is a learner. Each subject shows the total score across all
+        recorded assessments for that subject in this term.
       </p>
 
       <table className="min-w-full text-[11px] border-collapse">
@@ -289,12 +504,11 @@ function ClassTermSummaryView({
             </th>
           </tr>
         </thead>
+
         <tbody>
           {students.map((s, idx) => {
-            const zebra =
-              idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
+            const zebra = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
 
-            // Build link to the learner term report page with query params
             const href = `/headteacher/reports/student-report?studentId=${encodeURIComponent(
               s.id
             )}&term=${encodeURIComponent(
@@ -311,15 +525,12 @@ function ClassTermSummaryView({
                 {subjects.map((subj) => {
                   const val = s.scoresBySubject[subj] ?? 0;
                   return (
-                    <td
-                      key={subj}
-                      className="px-2 py-1 text-slate-800"
-                    >
+                    <td key={subj} className="px-2 py-1 text-slate-800">
                       {val}
                     </td>
                   );
                 })}
-                <td className="px-2 py-1 text-slate-900 font-semibold">
+                <td className="px-2 py-1 font-semibold text-slate-900">
                   {s.totalScore}
                 </td>
                 <td className="px-2 py-1 text-slate-600">
@@ -338,12 +549,6 @@ function ClassTermSummaryView({
           })}
         </tbody>
       </table>
-
-      <p className="mt-3 text-[10px] text-slate-500">
-        Next steps (future slice): enable direct print & PDF export
-        from the learner term report view, plus quick teacher/head
-        comments.
-      </p>
     </div>
   );
 }

@@ -1,0 +1,21 @@
+{
+  "inputPath": "C:\\Users\\OWNER\\Documents\\ayitikope-mis\\prisma\\seed\\curriculum\\kg2-our-world-and-our-people.json",
+  "outputPath": "C:\\Users\\OWNER\\Documents\\ayitikope-mis\\prisma\\seed\\curriculum\\kg2-our-world-and-our-people.clean.json",
+  "warningCount": 2,
+  "warnings": [
+    {
+      "kind": "indicator_code_normalized",
+      "path": "K2.2.4.1.indicator[5]",
+      "from": "K2.2.2.1.7",
+      "to": "K2.2.4.1.7",
+      "note": "Parent path normalized."
+    },
+    {
+      "kind": "indicator_code_normalized",
+      "path": "K2.6.6.1.indicator[3]",
+      "from": "K2.6.6.4",
+      "to": "K2.6.6.1.4",
+      "note": "Parent path normalized."
+    }
+  ]
+}

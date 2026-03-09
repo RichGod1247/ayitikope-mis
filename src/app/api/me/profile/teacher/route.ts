@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
+import {
+  normalizeJhsAssignmentsLoose,
+  normalizeTeacherClassLevel,
+  normalizeTeacherScopeForRead,
+  sameNormalizedJhsAssignments,
+} from "@/lib/teacherScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +34,6 @@ function jsonOk(payload: unknown, status = 200) {
   });
 }
 
-// E.164-ish normalization for Ghana (+233…)
 function normalizePhone(raw: unknown): string | null {
   const s = cleanStr(raw).replace(/\s+/g, "");
   if (!s) return null;
@@ -44,7 +49,10 @@ function normalizePhone(raw: unknown): string | null {
 }
 
 export async function GET(req: Request) {
-  const auth = await requireApiUserContext(req, { requireTenant: true, requireRoleNames: ["TEACHER", "HEADTEACHER"] });
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["TEACHER", "HEADTEACHER"],
+  });
   if (!auth.ok) return auth.res;
 
   const { userId, tenantId, roleName } = auth.ctx;
@@ -82,16 +90,19 @@ export async function GET(req: Request) {
       phoneNorm: user?.phoneNorm ?? null,
     },
     teacherProfile: tp
-      ? {
+      ? normalizeTeacherScopeForRead({
           ...tp,
           additionalDuties: Array.isArray(tp.additionalDuties) ? tp.additionalDuties : [],
-        }
+        })
       : null,
   });
 }
 
 export async function POST(req: Request) {
-  const auth = await requireApiUserContext(req, { requireTenant: true, requireRoleNames: ["TEACHER", "HEADTEACHER"] });
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["TEACHER", "HEADTEACHER"],
+  });
   if (!auth.ok) return auth.res;
 
   const { userId, tenantId } = auth.ctx;
@@ -105,26 +116,75 @@ export async function POST(req: Request) {
   if (!phoneNorm) fieldErrors.phone = "Invalid phone. Use 024xxxxxxx or +233xxxxxxxxx.";
 
   const phaseRaw = cleanStr(body.phase) as TeacherPhase;
-  const phase: TeacherPhase | null = phaseRaw === "KG" || phaseRaw === "PRIMARY" || phaseRaw === "JHS" ? phaseRaw : null;
+  const phase: TeacherPhase | null =
+    phaseRaw === "KG" || phaseRaw === "PRIMARY" || phaseRaw === "JHS" ? phaseRaw : null;
   if (!phase) fieldErrors.phase = "Phase must be KG, PRIMARY, or JHS.";
 
-  const classLevel = cleanStr(body.classLevel) || null;
+  const classLevel =
+    phase === "KG" || phase === "PRIMARY"
+      ? normalizeTeacherClassLevel(phase, body.classLevel)
+      : null;
+
   if ((phase === "KG" || phase === "PRIMARY") && !classLevel) {
-    fieldErrors.classLevel = "Class level is required for KG/PRIMARY.";
+    fieldErrors.classLevel = "Use KG 1, KG 2, or B1-B6.";
   }
 
-  const jhsIn = body.jhsAssignments;
-  const jhsAssignments =
-    jhsIn === undefined ? undefined : jhsIn === null ? Prisma.DbNull : (jhsIn as Prisma.InputJsonValue);
+  const normalizedJhsAssignments =
+    phase === "JHS" ? normalizeJhsAssignmentsLoose(body.jhsAssignments) : [];
+
+  if (phase === "JHS" && normalizedJhsAssignments.length === 0) {
+    fieldErrors.jhsAssignments = "Add at least one valid JHS subject assignment.";
+  }
+
+  const additionalDuties = Array.isArray(body.additionalDuties)
+    ? body.additionalDuties.map((x: unknown) => cleanStr(x)).filter(Boolean)
+    : [];
 
   if (Object.keys(fieldErrors).length) return jsonFail("VALIDATION_FAILED", 400, fieldErrors);
 
-  // Global phone identity uniqueness
   const clash = await prisma.user.findFirst({
     where: { phoneNorm: phoneNorm!, NOT: { id: userId } },
     select: { id: true },
   });
-  if (clash?.id) return jsonFail("PHONE_IN_USE", 409, { phone: "This phone number is already used by another account." });
+  if (clash?.id) {
+    return jsonFail("PHONE_IN_USE", 409, {
+      phone: "This phone number is already used by another account.",
+    });
+  }
+
+  const existingProfile = await prisma.teacherProfile.findUnique({
+    where: { teacherProfile_tenant_user_unique: { tenantId, userId } },
+    select: {
+      id: true,
+      phase: true,
+      classLevel: true,
+      jhsAssignments: true,
+    },
+  });
+
+  if (existingProfile) {
+    if (existingProfile.phase !== phase) {
+      return jsonFail("SCOPE_ALREADY_LOCKED", 409);
+    }
+
+    if (
+      (phase === "KG" || phase === "PRIMARY") &&
+      normalizeTeacherClassLevel(phase, existingProfile.classLevel) !== classLevel
+    ) {
+      return jsonFail("SCOPE_ALREADY_LOCKED", 409, {
+        classLevel: "Teaching scope is locked for this account.",
+      });
+    }
+
+    if (
+      phase === "JHS" &&
+      !sameNormalizedJhsAssignments(existingProfile.jhsAssignments, normalizedJhsAssignments)
+    ) {
+      return jsonFail("SCOPE_ALREADY_LOCKED", 409, {
+        jhsAssignments: "Teaching scope is locked for this account.",
+      });
+    }
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -141,19 +201,28 @@ export async function POST(req: Request) {
           phone: phoneNorm!,
           phase: phase!,
           classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
-          ...(phase === "JHS" ? { jhsAssignments: jhsAssignments ?? Prisma.DbNull } : {}),
+          jhsAssignments:
+            phase === "JHS"
+              ? (normalizedJhsAssignments as Prisma.InputJsonValue)
+              : Prisma.DbNull,
+          additionalDuties,
         },
         update: {
           phone: phoneNorm!,
           phase: phase!,
           classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
-          ...(phase === "JHS" ? { jhsAssignments: jhsAssignments ?? Prisma.DbNull } : { jhsAssignments: Prisma.DbNull }),
+          jhsAssignments:
+            phase === "JHS"
+              ? (normalizedJhsAssignments as Prisma.InputJsonValue)
+              : Prisma.DbNull,
+          additionalDuties,
         },
       });
     });
 
     return await GET(req);
-  } catch {
+  } catch (err) {
+    console.error("TEACHER_ME_PROFILE_SAVE_ERROR", err);
     return jsonFail("SAVE_FAILED", 500);
   }
 }

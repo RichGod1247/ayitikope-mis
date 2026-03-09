@@ -52,8 +52,8 @@ function coerceJhsAssignments(raw: unknown): any[] {
 
   if (raw && typeof raw === "object") {
     const obj = raw as Record<string, unknown>;
-    if (Array.isArray(obj.jhsAssignments)) return obj.jhsAssignments as any[];
-    if (Array.isArray(obj.assignments)) return obj.assignments as any[];
+    if (Array.isArray((obj as any).jhsAssignments)) return (obj as any).jhsAssignments as any[];
+    if (Array.isArray((obj as any).assignments)) return (obj as any).assignments as any[];
   }
 
   return [];
@@ -89,6 +89,56 @@ function parseJhsAssignments(v: unknown): JhsAssignment[] {
     subject: out.find((x) => x.subject.toLowerCase() === k)?.subject ?? k,
     classes: Array.from(set.values()).sort(),
   }));
+}
+
+function normalizeSpaces(s: string) {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Bank-grade: CurriculumSubject.level must match teacher classLevel.
+ * KG is the offender ("KG 1" vs "KG1"), but we support other variants safely.
+ */
+function levelLookupVariants(raw: unknown): string[] {
+  const s0 = normalizeSpaces(cleanStr(raw));
+  if (!s0) return [];
+
+  const out = new Set<string>();
+  out.add(s0);
+
+  // KG1 / KG 1
+  let m = s0.match(/^KG\s*([12])$/i) || s0.match(/^KG([12])$/i);
+  if (m) {
+    const n = m[1];
+    [`KG${n}`, `KG ${n}`].forEach((x) => out.add(x));
+    return Array.from(out.values());
+  }
+
+  // Basic / B / P
+  m =
+    s0.match(/^Basic\s*([1-9])$/i) ||
+    s0.match(/^Basic([1-9])$/i) ||
+    s0.match(/^B\s*([1-9])$/i) ||
+    s0.match(/^B([1-9])$/i) ||
+    s0.match(/^P\s*([1-6])$/i) ||
+    s0.match(/^P([1-6])$/i);
+
+  if (m) {
+    const n = Number(m[1]);
+    [`B${n}`, `B ${n}`, `Basic ${n}`, `Basic${n}`, `P${n}`, `P ${n}`].forEach((x) => out.add(x));
+    return Array.from(out.values());
+  }
+
+  // JHS (not used in this branch usually, but safe)
+  m = s0.match(/^JHS\s*([1-3])$/i) || s0.match(/^JHS([1-3])$/i);
+  if (m) {
+    const j = Number(m[1]);
+    const basic = 6 + j; // JHS1=Basic7
+    [`JHS ${j}`, `JHS${j}`, `Basic ${basic}`, `Basic${basic}`, `B${basic}`, `B ${basic}`].forEach((x) => out.add(x));
+    return Array.from(out.values());
+  }
+
+  return Array.from(out.values());
 }
 
 export default async function Page({
@@ -151,27 +201,35 @@ export default async function Page({
   };
 
   const phase = tp.phase;
-  const signupLevel = cleanStr(tp.classLevel) || null;
+  const signupLevelRaw = cleanStr(tp.classLevel) || null;
 
   const jhsAssignments = phase === "JHS" ? parseJhsAssignments(tp.jhsAssignments) : [];
   const allowedLevels =
     phase === "JHS"
       ? uniqStrings(jhsAssignments.flatMap((a) => a.classes)).sort()
-      : signupLevel
-        ? [signupLevel]
+      : signupLevelRaw
+        ? [signupLevelRaw]
         : [];
 
   let allowedSubjects: string[] = [];
   if (phase === "JHS") {
     allowedSubjects = uniqStrings(jhsAssignments.map((a) => a.subject)).sort();
   } else {
-    if (signupLevel) {
+    if (signupLevelRaw) {
+      const levelVariants = levelLookupVariants(signupLevelRaw);
+
       const subs = await prisma.curriculumSubject.findMany({
-        where: { isActive: true, level: signupLevel },
+        where: {
+          isActive: true,
+          OR: levelVariants.map((lv) => ({
+            level: { equals: lv, mode: "insensitive" as const },
+          })),
+        },
         select: { name: true, orderIndex: true },
         orderBy: [{ orderIndex: "asc" }, { name: "asc" }],
         take: 200,
       });
+
       allowedSubjects = uniqStrings(subs.map((s) => s.name));
     }
   }
@@ -189,7 +247,7 @@ export default async function Page({
         email,
         roleName,
         phase: String(phase),
-        signupLevel,
+        signupLevel: signupLevelRaw,
         primaryAssignedLabel,
         jhsAssignments,
         allowedLevels,

@@ -4,10 +4,6 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-/* -----------------------------
- * Types
- * ----------------------------*/
-
 type SubjectSummary = {
   subject: string;
   classScore: number | null;
@@ -68,46 +64,19 @@ type TermSummary = {
 
 type ParentTermReportResponse = {
   ok: boolean;
-  context: {
+  error?: string;
+  message?: string;
+  detail?: string;
+  context?: {
     tenantId: string;
     studentId: string;
     term: string;
     academicYear: string;
   };
-  student: {
-    id: string;
-    tenantId: string;
-    classroomId: string;
-    firstName: string;
-    lastName: string;
-    sex: string | null;
-    dob: string | null;
-    guardianName: string;
-    guardianPhone: string;
-    note: string | null;
-    classroom: {
-      id: string;
-      name: string;
-      grade: string | null;
-      arm: string | null;
-    };
-  };
-  classroom: {
-    id: string;
-    name: string;
-    grade: string | null;
-    arm: string | null;
-  };
-  termSummary: TermSummary;
-  subjects: SubjectSummary[];
-  attendanceSummary: AttendanceSummary;
-  feesSummary: FeesSummary;
-  healthSummary: HealthSummary;
+  student?: any;
+  classroom?: any;
+  termSummary?: TermSummary;
 };
-
-/* -----------------------------
- * Helpers
- * ----------------------------*/
 
 function formatMoneyFromPesewas(value: number | null | undefined): string {
   if (value == null) return "0.00";
@@ -130,12 +99,62 @@ function percentageDisplay(value: number | null | undefined): string {
   return `${value.toFixed(1)}%`;
 }
 
-/* -----------------------------
- * Report Card UI
- * ----------------------------*/
+function looksLikeHtml(text: string) {
+  const t = (text || "").trim().slice(0, 200).toLowerCase();
+  return (
+    t.startsWith("<!doctype") ||
+    t.startsWith("<html") ||
+    t.includes("<head") ||
+    t.includes("<body")
+  );
+}
+
+function safeJsonParse<T>(text: string): T | null {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
+function looksLikeErrorCode(value: string | null | undefined) {
+  const s = String(value ?? "").trim();
+  if (!s) return false;
+  return /^[A-Z0-9_]+$/.test(s);
+}
+
+function readableApiMessage(
+  payload: any,
+  status: number,
+  fallback: string
+): string {
+  const candidates = [
+    payload?.message,
+    payload?.detail,
+    payload?.errorMessage,
+    payload?.error,
+  ]
+    .map((v: unknown) => String(v ?? "").trim())
+    .filter(Boolean);
+
+  const firstHuman = candidates.find((v: string) => !looksLikeErrorCode(v));
+  if (firstHuman) return firstHuman;
+
+  if (status === 401) {
+    return "Parent session expired or missing. Please log in again with OTP.";
+  }
+
+  if (status === 403) {
+    return "This report is not available to print right now.";
+  }
+
+  return fallback;
+}
 
 function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
-  const { student, classroom, termSummary } = report;
+  const student = report.student;
+  const classroom = report.classroom;
+  const termSummary = report.termSummary as TermSummary;
 
   const subjects = termSummary.subjects ?? [];
   const overallPercent = termSummary.overallPercentage;
@@ -147,16 +166,15 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
   const health = termSummary.health;
   const behaviour = termSummary.behaviour;
 
-  const fullName = `${student.lastName} ${student.firstName}`.trim();
+  const fullName = `${student?.lastName ?? ""} ${student?.firstName ?? ""}`.trim();
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm print:shadow-none">
-      {/* Header */}
       <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Ayitikope M/A Basic School
+              School Terminal Report
             </div>
             <div className="text-lg font-bold text-slate-900">
               BECE-Style Terminal Report
@@ -176,7 +194,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
           </div>
         </div>
 
-        {/* Student + term meta */}
         <div className="grid gap-2 rounded-md bg-slate-50 p-3 text-[11px] text-slate-700 md:grid-cols-3">
           <div className="space-y-1">
             <div>
@@ -185,24 +202,24 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
             </div>
             <div>
               <span className="font-semibold">Sex:</span>{" "}
-              <span>{student.sex || "—"}</span>
+              <span>{student?.sex || "—"}</span>
             </div>
             <div>
               <span className="font-semibold">Class:</span>{" "}
               <span>
-                {classroom.name}
-                {classroom.arm ? ` (${classroom.arm})` : ""}
+                {classroom?.name ?? "—"}
+                {classroom?.arm ? ` (${classroom.arm})` : ""}
               </span>
             </div>
           </div>
           <div className="space-y-1">
             <div>
               <span className="font-semibold">Guardian:</span>{" "}
-              <span>{student.guardianName || "—"}</span>
+              <span>{student?.guardianName || "—"}</span>
             </div>
             <div>
               <span className="font-semibold">Guardian Phone:</span>{" "}
-              <span>{student.guardianPhone || "—"}</span>
+              <span>{student?.guardianPhone || "—"}</span>
             </div>
             <div>
               <span className="font-semibold">Term:</span>{" "}
@@ -230,9 +247,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
         </div>
       </div>
 
-      {/* Body */}
       <div className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1.2fr)]">
-        {/* LEFT: Subjects table */}
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
@@ -252,15 +267,9 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                   </th>
                   <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
                     Class Score
-                    <span className="block text-[9px] font-normal text-slate-500">
-                      (e.g. /40)
-                    </span>
                   </th>
                   <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
                     Exam Score
-                    <span className="block text-[9px] font-normal text-slate-500">
-                      (e.g. /60)
-                    </span>
                   </th>
                   <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
                     Total
@@ -333,7 +342,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
           </div>
         </div>
 
-        {/* RIGHT: Attendance, fees, health, behaviour */}
         <div className="space-y-3">
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
@@ -341,7 +349,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
             </h3>
 
             <div className="grid gap-2 text-[11px] lg:grid-cols-1">
-              {/* Attendance */}
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="font-semibold text-slate-800">Attendance</span>
@@ -372,7 +379,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                 )}
               </div>
 
-              {/* Fees */}
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="font-semibold text-slate-800">Fees</span>
@@ -409,7 +415,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                 )}
               </div>
 
-              {/* Health */}
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="font-semibold text-slate-800">Health</span>
@@ -446,7 +451,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
             </div>
           </div>
 
-          {/* Behaviour & remarks */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
               Behaviour &amp; Remarks
@@ -463,7 +467,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                     "Teacher’s notes on conduct, attitude to work, and interest in school activities will appear here."}
                 </p>
               </div>
-
               <div className="grid gap-2 md:grid-cols-2">
                 <div className="rounded-md border border-slate-200 bg-white p-2.5">
                   <div className="mb-1 font-semibold text-slate-800">
@@ -477,7 +480,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                     Signature: ______________________
                   </div>
                 </div>
-
                 <div className="rounded-md border border-slate-200 bg-white p-2.5">
                   <div className="mb-1 font-semibold text-slate-800">
                     Headteacher’s Remark
@@ -491,7 +493,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                   </div>
                 </div>
               </div>
-
               <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-slate-800">
@@ -511,10 +512,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
     </div>
   );
 }
-
-/* -----------------------------
- * Suspense wrapper + client logic
- * ----------------------------*/
 
 function PrintShell({ children }: { children: React.ReactNode }) {
   return (
@@ -538,22 +535,20 @@ function PrintFallback() {
 
 function ParentReportPrintClient() {
   const searchParams = useSearchParams();
-  const qp = searchParams.toString(); // stable dependency
+  const qp = searchParams.toString();
 
   const [report, setReport] = useState<ParentTermReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load report from API using query params
   useEffect(() => {
     const sp = new URLSearchParams(qp);
 
-    const tenantId = sp.get("tenantId") || "";
     const studentId = sp.get("studentId") || "";
     const term = sp.get("term") || "";
     const academicYear = sp.get("academicYear") || "";
 
-    if (!tenantId || !studentId || !term || !academicYear) {
+    if (!studentId || !term || !academicYear) {
       setError(
         "Missing report parameters. Please open this page from the parent portal."
       );
@@ -567,22 +562,39 @@ function ParentReportPrintClient() {
       setError(null);
 
       try {
-        const params = new URLSearchParams({
-          tenantId,
-          studentId,
-          term,
-          academicYear,
+        const params = new URLSearchParams({ studentId, term, academicYear });
+        const url = `/api/parent/report/term?${params.toString()}`;
+
+        const res = await fetch(url, {
+          cache: "no-store",
+          credentials: "include",
+          headers: { Accept: "application/json" },
         });
 
-        const url = `/api/parent/report/term?${params.toString()}`;
-        const res = await fetch(url, { cache: "no-store" });
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        const text = await res.text();
+        const json = safeJsonParse<ParentTermReportResponse>(text);
 
-        const json = (await res.json().catch(() => null)) as
-          | ParentTermReportResponse
-          | null;
+        if (
+          res.redirected ||
+          looksLikeHtml(text) ||
+          (!ct.includes("application/json") && !json)
+        ) {
+          setError(
+            "Parent session was not accepted in this print tab. Go back to the portal and click Print again."
+          );
+          setReport(null);
+          return;
+        }
 
         if (!res.ok || !json?.ok) {
-          setError("Failed to load term report.");
+          setError(
+            readableApiMessage(
+              json,
+              res.status,
+              "Failed to load term report for printing."
+            )
+          );
           setReport(null);
           return;
         }
@@ -600,7 +612,6 @@ function ParentReportPrintClient() {
     load();
   }, [qp]);
 
-  // Auto-print when report is ready
   useEffect(() => {
     if (!loading && report && typeof window !== "undefined") {
       const timer = setTimeout(() => window.print(), 400);
@@ -611,15 +622,13 @@ function ParentReportPrintClient() {
 
   return (
     <PrintShell>
-      {/* Top bar only visible on screen, not on printed paper */}
       <div className="mb-3 flex items-center justify-between gap-2 text-xs text-slate-600 print:hidden">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             EduLife OS • Parent Report
           </div>
           <div className="text-[11px] text-slate-600">
-            This view is optimised for A4 printing. Use your browser&apos;s print
-            dialog.
+            This view is optimised for A4 printing.
           </div>
         </div>
         <button

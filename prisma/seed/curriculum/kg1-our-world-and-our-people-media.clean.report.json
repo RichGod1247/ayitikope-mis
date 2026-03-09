@@ -1,0 +1,390 @@
+{
+  "inputPath": "C:\\Users\\OWNER\\Documents\\ayitikope-mis\\prisma\\seed\\curriculum\\kg1-owop-media.legacy.json",
+  "outputPath": "C:\\Users\\OWNER\\Documents\\ayitikope-mis\\prisma\\seed\\curriculum\\kg1-our-world-and-our-people-media.clean.json",
+  "totalInput": 56,
+  "totalOutput": 44,
+  "dropped": 12,
+  "kept": 44,
+  "report": [
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.1-body-features.png",
+      "oldIndicatorCode": "K1.1.1.1.1",
+      "newIndicatorCode": "K1.1.1.1.1",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.2-personal-hygiene.png",
+      "oldIndicatorCode": "K1.1.1.1.2",
+      "newIndicatorCode": "K1.1.2.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.3-book-parts-and-body-parts.png",
+      "oldIndicatorCode": "K1.1.1.1.3",
+      "newIndicatorCode": "K1.1.1.1.3",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.4-body-parts-in-action.png",
+      "oldIndicatorCode": "K1.1.1.1.4",
+      "newIndicatorCode": "K1.1.2.1.5",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.1.1.5-personal-hygiene-routines.png",
+      "oldIndicatorCode": "K1.1.1.1.5",
+      "newIndicatorCode": "K1.1.3.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.1-family-types-and-members.png",
+      "oldIndicatorCode": "K1.1.2.1.1",
+      "newIndicatorCode": "K1.2.1.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.2-matching-family-duties.png",
+      "oldIndicatorCode": "K1.1.2.1.2",
+      "newIndicatorCode": "K1.2.1.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.3-family-story-roles.png",
+      "oldIndicatorCode": "K1.1.2.1.3",
+      "newIndicatorCode": "K1.2.1.1.3",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.1.3.1.1-home-parts.png",
+      "oldIndicatorCode": "K1.1.3.1.1",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.1.3.1.2-home-activities.png",
+      "oldIndicatorCode": "K1.1.3.1.2",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.1.3.1.3-home-story-time.png",
+      "oldIndicatorCode": "K1.1.3.1.3",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.1.3.1.4-home-safety-rules.png",
+      "oldIndicatorCode": "K1.1.3.1.4",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.4-family-texts.png",
+      "oldIndicatorCode": "K1.1.2.1.4",
+      "newIndicatorCode": "K1.2.1.1.3",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.2.1.5-family-love-and-respect.png",
+      "oldIndicatorCode": "K1.1.2.1.5",
+      "newIndicatorCode": "K1.3.1.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.1.4.1.1-school-physical-features.png",
+      "oldIndicatorCode": "K1.1.4.1.1",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.4.1.2-school-community-members.png",
+      "oldIndicatorCode": "K1.1.4.1.2",
+      "newIndicatorCode": "K1.2.4.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.4.1.3-school-activities.png",
+      "oldIndicatorCode": "K1.1.4.1.3",
+      "newIndicatorCode": "K1.2.4.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.1.4.1.4-school-texts.png",
+      "oldIndicatorCode": "K1.1.4.1.4",
+      "newIndicatorCode": "K1.2.4.1.2",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.1.4.1.5-school-safety.png",
+      "oldIndicatorCode": "K1.1.4.1.5",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.1.1.1-living-and-nonliving-environment.png",
+      "oldIndicatorCode": "K1.2.1.1.1",
+      "newIndicatorCode": "K1.6.1.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.1.1.2-living-and-nonliving-differences.png",
+      "oldIndicatorCode": "K1.2.1.1.2",
+      "newIndicatorCode": "K1.6.1.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.1.1.3-living-and-nonliving-texts.png",
+      "oldIndicatorCode": "K1.2.1.1.3",
+      "newIndicatorCode": "K1.6.1.1.2",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.2.1.1-plant-parts.png",
+      "oldIndicatorCode": "K1.2.2.1.1",
+      "newIndicatorCode": "K1.6.5.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.2.1.2-plant-uses.png",
+      "oldIndicatorCode": "K1.2.2.1.2",
+      "newIndicatorCode": "K1.6.6.1.4",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.2.1.3-plant-texts.png",
+      "oldIndicatorCode": "K1.2.2.1.3",
+      "newIndicatorCode": "K1.6.5.1.2",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.2.1.4-plant-care.png",
+      "oldIndicatorCode": "K1.2.2.1.4",
+      "newIndicatorCode": "K1.6.6.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.3.1.1-animal-types.png",
+      "oldIndicatorCode": "K1.2.3.1.1",
+      "newIndicatorCode": "K1.6.2.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.2.3.1.2-animal-sounds-and-movements.png",
+      "oldIndicatorCode": "K1.2.3.1.2",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.3.1.3-animal-texts.png",
+      "oldIndicatorCode": "K1.2.3.1.3",
+      "newIndicatorCode": "K1.6.2.1.2",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.2.3.1.4-animal-kindness.png",
+      "oldIndicatorCode": "K1.2.3.1.4",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.4.1.1-water-sources.png",
+      "oldIndicatorCode": "K1.2.4.1.1",
+      "newIndicatorCode": "K1.6.3.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.4.1.2-water-uses.png",
+      "oldIndicatorCode": "K1.2.4.1.2",
+      "newIndicatorCode": "K1.6.3.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.4.1.3-water-texts.png",
+      "oldIndicatorCode": "K1.2.4.1.3",
+      "newIndicatorCode": "K1.6.3.1.2",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.2.4.1.4-water-use-and-storage.png",
+      "oldIndicatorCode": "K1.2.4.1.4",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.5.1.1-air-presence.png",
+      "oldIndicatorCode": "K1.2.5.1.1",
+      "newIndicatorCode": "K1.6.4.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.5.1.2-air-uses.png",
+      "oldIndicatorCode": "K1.2.5.1.2",
+      "newIndicatorCode": "K1.6.4.1.4",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.2.5.1.3-air-texts.png",
+      "oldIndicatorCode": "K1.2.5.1.3",
+      "newIndicatorCode": "K1.6.4.1.2",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.2.5.1.4-clean-air-practices.png",
+      "oldIndicatorCode": "K1.2.5.1.4",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.1.1.1-creation-gifts.png",
+      "oldIndicatorCode": "K1.3.1.1.1",
+      "newIndicatorCode": "K1.3.4.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.1.1.2-god-provides.png",
+      "oldIndicatorCode": "K1.3.1.1.2",
+      "newIndicatorCode": "K1.3.4.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.1.1.3-creation-texts.png",
+      "oldIndicatorCode": "K1.3.1.1.3",
+      "newIndicatorCode": "K1.3.4.1.3",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.1.1.4-appreciation-to-god.png",
+      "oldIndicatorCode": "K1.3.1.1.4",
+      "newIndicatorCode": "K1.3.4.1.5",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.2.1.1-good-values.png",
+      "oldIndicatorCode": "K1.3.2.1.1",
+      "newIndicatorCode": "K1.3.2.1.1",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.2.1.2-practising-values.png",
+      "oldIndicatorCode": "K1.3.2.1.2",
+      "newIndicatorCode": "K1.3.2.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.3.2.1.3-values-texts.png",
+      "oldIndicatorCode": "K1.3.2.1.3",
+      "newIndicatorCode": "K1.3.2.1.3",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.4.1.1.1-special-places-walk.png",
+      "oldIndicatorCode": "K1.4.1.1.1",
+      "newIndicatorCode": "K1.4.1.1.1",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.4.1.1.2-special-places-texts.png",
+      "oldIndicatorCode": "K1.4.1.1.2",
+      "newIndicatorCode": "K1.4.1.1.2",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.4.1.1.3-national-celebrations-texts.png",
+      "oldIndicatorCode": "K1.4.1.1.3",
+      "newIndicatorCode": "K1.5.1.1.3",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.4.2.1.1-neighbours-jobs.png",
+      "oldIndicatorCode": "K1.4.2.1.1",
+      "newIndicatorCode": "K1.4.2.1.1",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.4.2.1.3-resource-people.png",
+      "oldIndicatorCode": "K1.4.2.1.3",
+      "newIndicatorCode": "K1.4.2.1.3",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.4.3.1.1-community-leaders.png",
+      "oldIndicatorCode": "K1.4.3.1.1",
+      "newIndicatorCode": "K1.4.3.1.1",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.4.3.1.2-leaders-readaloud.png",
+      "oldIndicatorCode": "K1.4.3.1.2",
+      "newIndicatorCode": "K1.4.3.1.2",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.4.3.1.3-traditional-songs.png",
+      "oldIndicatorCode": "K1.4.3.1.3",
+      "newIndicatorCode": "K1.4.3.1.3",
+      "note": "Kept as-is."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.5.1.1.1-means-of-communication.png",
+      "oldIndicatorCode": "K1.5.1.1.1",
+      "note": "No safe mapping into clean KG hierarchy."
+    },
+    {
+      "status": "kept",
+      "basename": "K1.5.1.1.2-means-of-transportation.png",
+      "oldIndicatorCode": "K1.5.1.1.2",
+      "newIndicatorCode": "K1.7.1.1.1",
+      "note": "Remapped into clean KG hierarchy."
+    },
+    {
+      "status": "dropped",
+      "basename": "K1.5.1.1.3-communication-transportation-texts.png",
+      "oldIndicatorCode": "K1.5.1.1.3",
+      "note": "No safe mapping into clean KG hierarchy."
+    }
+  ]
+}

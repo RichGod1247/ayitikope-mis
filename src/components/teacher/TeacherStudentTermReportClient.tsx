@@ -25,6 +25,19 @@ function gesGradeFromPercentage(pct: number | null | undefined): GesGradeResult 
   return { grade: 9, remark: "Lowest / Fail" };
 }
 
+function fmtPct(v: number | null | undefined) {
+  return typeof v === "number" ? `${v.toFixed(1)}%` : "—";
+}
+
+function fmtDate(v: string | null | undefined) {
+  if (!v) return "—";
+  try {
+    return new Date(v).toISOString().slice(0, 10);
+  } catch {
+    return "—";
+  }
+}
+
 export default function TeacherStudentTermReportClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -59,7 +72,11 @@ export default function TeacherStudentTermReportClient() {
 
       const params = new URLSearchParams({ studentId: s, term: tm, academicYear: yr });
 
-      const res = await fetch(`/api/teachers/assessment/student-term-report?${params.toString()}`);
+      // ✅ Canonical session-scoped route
+      const res = await fetch(`/api/teacher/assessment/student-term-report?${params.toString()}`, {
+        cache: "no-store",
+      });
+
       const text = await res.text();
 
       let json: any;
@@ -81,7 +98,6 @@ export default function TeacherStudentTermReportClient() {
       setReport(json);
       setLoadState("loaded");
 
-      // Bookmarkable (NO tenantId/teacherUserId)
       const newParams = new URLSearchParams({ studentId: s, term: tm, academicYear: yr });
       router.replace(`/teacher/assessment/student-report?${newParams.toString()}`);
     } catch {
@@ -102,22 +118,29 @@ export default function TeacherStudentTermReportClient() {
     student?.fullName ||
     (student?.firstName && student?.lastName ? `${student.firstName} ${student.lastName}` : "Learner");
 
-  const classLabel: string = classroom?.name || classroom?.grade || "Class";
+  const classLabel: string =
+    classroom?.name ||
+    classroom?.grade ||
+    "Class";
 
-  const subjects: any[] = report?.subjects ?? [];
+  const subjects: any[] = Array.isArray(report?.subjects) ? report.subjects : [];
   const overallPercentage: number | null =
-    typeof report?.termSummary?.overallPercentage === "number" ? report.termSummary.overallPercentage : null;
+    typeof report?.termSummary?.overallPercentage === "number"
+      ? report.termSummary.overallPercentage
+      : null;
 
   const overallGes = gesGradeFromPercentage(overallPercentage ?? undefined);
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
         <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Per-learner term summary (teacher)</h1>
+            <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
+              Per-learner term summary (teacher)
+            </h1>
             <p className="mt-1 text-sm text-slate-600">
-              Session-protected teacher report. No tenant/user IDs in URLs.
+              Session-protected teacher report. Subject totals + item-by-item clarity.
             </p>
           </div>
 
@@ -190,70 +213,129 @@ export default function TeacherStudentTermReportClient() {
         </section>
 
         {report && (
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm text-xs sm:text-sm">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">{studentName}</div>
+          <section className="space-y-5">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm text-xs sm:text-sm">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">{studentName}</div>
+                  <div className="text-[11px] text-slate-600">
+                    {classLabel} • Term: <span className="font-medium">{term}</span> • Year:{" "}
+                    <span className="font-medium">{academicYear}</span>
+                  </div>
+                </div>
+
                 <div className="text-[11px] text-slate-600">
-                  {classLabel} • Term: <span className="font-medium">{term}</span> • Year:{" "}
-                  <span className="font-medium">{academicYear}</span>
+                  Guardian: <span className="font-medium">{student?.guardianName || "—"}</span>
+                  {student?.guardianPhone ? ` • ${student.guardianPhone}` : ""}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white overflow-auto">
-              <table className="min-w-full border-separate border-spacing-0 text-xs">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="border-b border-slate-200 px-3 py-2 text-left text-[11px] font-semibold text-slate-700">
-                      Subject
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2 text-right text-[11px] font-semibold text-slate-700">
-                      Total
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2 text-right text-[11px] font-semibold text-slate-700">
-                      Max
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2 text-right text-[11px] font-semibold text-slate-700">
-                      %
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2 text-center text-[11px] font-semibold text-slate-700">
-                      Grade
-                    </th>
-                    <th className="border-b border-slate-200 px-3 py-2 text-left text-[11px] font-semibold text-slate-700">
-                      Remark
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subjects.map((s: any, idx: number) => {
-                    const zebra = idx % 2 ? "bg-slate-50/70" : "bg-white";
-                    return (
-                      <tr key={`${s.subject}-${idx}`} className={zebra}>
-                        <td className="border-b border-slate-100 px-3 py-1.5 text-slate-800">
-                          {s.subject ?? "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-800">
+            {subjects.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-600">
+                No assessment items found for this learner in the selected term/year and allowed subject scope.
+              </div>
+            ) : (
+              subjects.map((s: any, idx: number) => (
+                <div key={`${s.subject}-${idx}`} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">{s.subject ?? "—"}</h3>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Recorded items:{" "}
+                        <span className="font-medium">{s.recordedItemCount ?? 0}</span> /{" "}
+                        <span className="font-medium">{s.itemCount ?? 0}</span>
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+                      <div className="rounded-lg bg-slate-50 px-3 py-2">
+                        <div className="text-slate-500">Total</div>
+                        <div className="mt-1 font-semibold text-slate-900">
                           {typeof s.totalScore === "number" ? s.totalScore.toFixed(1) : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-800">
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-3 py-2">
+                        <div className="text-slate-500">Max</div>
+                        <div className="mt-1 font-semibold text-slate-900">
                           {typeof s.maxScore === "number" ? s.maxScore.toFixed(1) : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-800">
-                          {typeof s.percentage === "number" ? `${s.percentage.toFixed(1)}%` : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-3 py-1.5 text-center font-semibold text-slate-900">
-                          {s.grade ?? "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-3 py-1.5 text-slate-700">
-                          {s.remark ?? "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-3 py-2">
+                        <div className="text-slate-500">%</div>
+                        <div className="mt-1 font-semibold text-slate-900">{fmtPct(s.percentage)}</div>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-3 py-2">
+                        <div className="text-slate-500">Grade</div>
+                        <div className="mt-1 font-semibold text-slate-900">
+                          {s.grade ?? "—"} {s.remark ? `• ${s.remark}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 overflow-auto rounded-lg border border-slate-200">
+                    <table className="min-w-full border-separate border-spacing-0 text-xs">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+                            Assessment item
+                          </th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+                            Type
+                          </th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+                            Date
+                          </th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold text-slate-700">
+                            Score
+                          </th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold text-slate-700">
+                            Max
+                          </th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-right font-semibold text-slate-700">
+                            %
+                          </th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+                            Comment
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(Array.isArray(s.items) ? s.items : []).map((it: any, itemIdx: number) => {
+                          const zebra = itemIdx % 2 ? "bg-slate-50/70" : "bg-white";
+                          return (
+                            <tr key={it.itemId || `${s.subject}-${itemIdx}`} className={zebra}>
+                              <td className="border-b border-slate-100 px-3 py-1.5 text-slate-900">
+                                <div className="font-medium">{it.title ?? "Untitled Assessment"}</div>
+                              </td>
+                              <td className="border-b border-slate-100 px-3 py-1.5 text-slate-700">
+                                {it.type ?? "—"}
+                              </td>
+                              <td className="border-b border-slate-100 px-3 py-1.5 text-slate-700">
+                                {fmtDate(it.date)}
+                              </td>
+                              <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-800">
+                                {typeof it.score === "number" ? it.score.toFixed(1) : "Not recorded"}
+                              </td>
+                              <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-800">
+                                {typeof it.maxScore === "number" ? it.maxScore.toFixed(1) : "—"}
+                              </td>
+                              <td className="border-b border-slate-100 px-3 py-1.5 text-right text-slate-800">
+                                {fmtPct(it.percentage)}
+                              </td>
+                              <td className="border-b border-slate-100 px-3 py-1.5 text-slate-700">
+                                {it.comment || "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))
+            )}
           </section>
         )}
       </div>

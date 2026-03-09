@@ -1,181 +1,141 @@
 // prisma/seed/kg1-owop-media.ts
-//
-// Seed real CurriculumMedia rows for KG1 Our World and Our People
-// using a JSON file of image descriptions.
-//
-// Run with:
-//   npx ts-node prisma/seed/kg1-owop-media.ts
-
 import { PrismaClient } from "@prisma/client";
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// prisma/seed -> prisma/.env
+dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
 const prisma = new PrismaClient();
 
-type KgMediaSeedItem = {
+type MediaSeedRow = {
+  subjectSlug: string;
   phase: string;
   level: string;
-  subject: string;
-  subjectSlug: string;
 
   strandCode: string;
   subStrandCode: string;
   contentStandardCode: string;
   indicatorCode: string;
 
-  assetType: "image";
-
-  ageBand: string;
-
+  pageNumberInPdf: number;
+  figureLabel?: string;
   imagePath: string;
-
-  caption: string;
   altText: string;
   detailedDescription: string;
-
-  sourceDocumentTitle: string;
-  sourceDocumentYear: number;
-  sourcePage: number; // MUST be integer in JSON
+  tags?: string[];
 };
 
 async function mainReal() {
-  const jsonPath = path.join(
-    process.cwd(),
-    "prisma",
-    "seed",
+  const seedPath = path.join(
+    __dirname,
     "curriculum",
-    "kg1-owop-media.json"
+    "kg1-our-world-and-our-people-media.clean.json"
   );
 
-  if (!fs.existsSync(jsonPath)) {
-    console.error("❌ Seed JSON not found at:", jsonPath);
-    process.exit(1);
-  }
+  console.log("📖 Loading KG1 OWOP media seed from:", seedPath);
 
-  const raw = fs.readFileSync(jsonPath, "utf8");
-  const items = JSON.parse(raw) as KgMediaSeedItem[];
-
-  console.log(`📖 Loading KG1 OWOP media seed from: ${jsonPath}`);
-  console.log(`   Items in JSON: ${items.length}`);
+  const raw = fs.readFileSync(seedPath, "utf8");
+  const items: MediaSeedRow[] = JSON.parse(raw);
 
   if (!items.length) {
-    console.error("❌ No items in kg1-owop-media.json. Exiting.");
-    process.exit(1);
+    throw new Error("No rows found in kg1-our-world-and-our-people-media.clean.json");
   }
 
-  // 🔎 All items share the same subjectSlug for KG1 OWOP
   const subjectSlug = items[0].subjectSlug;
+
   const subject = await prisma.curriculumSubject.findUnique({
     where: { slug: subjectSlug },
+    select: { id: true, name: true, slug: true },
   });
 
   if (!subject) {
-    console.error(
-      `❌ CurriculumSubject not found for slug='${subjectSlug}'. ` +
-        `Seed the KG1 OWOP curriculum first (kg1-our-world-and-our-people.ts).`
+    throw new Error(
+      `CurriculumSubject not found for slug='${subjectSlug}'. Seed KG1 curriculum first.`
     );
-    process.exit(1);
   }
 
-  console.log(
-    `   ✅ Using subject '${subject.name}' (id=${subject.id}, slug=${subject.slug})`
-  );
+  console.log(`   ✅ Using subject '${subject.name}' (id=${subject.id})`);
+  console.log(`   Items in JSON: ${items.length}`);
 
-  for (const item of items) {
-    console.log(
-      `\n→ Processing indicator ${item.indicatorCode} (${item.subject})`
-    );
+  // Deterministic reset of subject media
+  const deleted = await prisma.curriculumMedia.deleteMany({
+    where: { subjectId: subject.id },
+  });
 
-    // Sanity check: we need a valid page number or Prisma will explode
-    if (
-      typeof item.sourcePage !== "number" ||
-      !Number.isInteger(item.sourcePage)
-    ) {
-      console.error(
-        `   ❌ Invalid or missing sourcePage for indicator ${item.indicatorCode}. ` +
-          `Check kg1-owop-media.json and ensure "sourcePage" is an integer. Skipping.`
-      );
-      continue;
-    }
+  console.log(`   🗑️ Deleted existing media rows for subject: ${deleted.count}`);
+  console.log();
 
-    // Find the indicator under the correct subject/strand tree
+  let created = 0;
+  let skipped = 0;
+
+  for (const row of items) {
+    console.log(`→ Processing ${row.indicatorCode}`);
+
     const indicator = await prisma.curriculumIndicator.findFirst({
       where: {
-        code: item.indicatorCode,
+        code: row.indicatorCode,
         contentStandard: {
+          code: row.contentStandardCode,
           subStrand: {
+            code: row.subStrandCode,
             strand: {
+              code: row.strandCode,
               subject: {
-                slug: item.subjectSlug,
+                slug: row.subjectSlug,
               },
             },
           },
         },
       },
+      select: { id: true, code: true },
     });
 
     if (!indicator) {
-      console.warn(
-        `   ⚠️ No CurriculumIndicator found for code ${item.indicatorCode} under subject slug ${item.subjectSlug}. Skipping.`
+      console.log(
+        `   ⚠️ Could not find indicator ${row.indicatorCode} under ${row.subjectSlug}. Skipping.\n`
       );
+      skipped++;
       continue;
     }
 
-    console.log(`   ✅ Found indicator ${indicator.code} (id=${indicator.id})`);
+    const imagePath = row.imagePath.replace(/^\/+/, "");
 
-    // Check if there is already a media row for this indicator + image path
-    const existing = await prisma.curriculumMedia.findFirst({
-      where: {
+    const createdRow = await prisma.curriculumMedia.create({
+      data: {
+        subjectId: subject.id,
         indicatorId: indicator.id,
-        imagePath: item.imagePath,
+        figureLabel: row.figureLabel,
+        imagePath,
+        altText: row.altText,
+        detailedDescription: row.detailedDescription,
+        tags: row.tags ? row.tags.join(", ") : undefined,
+        pageNumberInPdf: row.pageNumberInPdf,
       },
     });
 
-    const figureLabel = item.caption;
-    const tags = `${item.phase}, ${item.level}, ${item.subject}, ${item.indicatorCode}`;
-
-    if (existing) {
-      console.log(
-        `   🔁 Existing media found (id=${existing.id}), updating...`
-      );
-      await prisma.curriculumMedia.update({
-        where: { id: existing.id },
-        data: {
-          subjectId: subject.id, // 🔐 FIX: always bind to KG1 OWOP subject
-          pageNumberInPdf: item.sourcePage,
-          figureLabel,
-          altText: item.altText,
-          detailedDescription: item.detailedDescription,
-          tags,
-        },
-      });
-      console.log("   ✅ Updated existing media row.");
-    } else {
-      console.log("   ➕ No existing media found, creating new row...");
-      const created = await prisma.curriculumMedia.create({
-        data: {
-          subjectId: subject.id, // 🔐 FIX: always bind to KG1 OWOP subject
-          indicatorId: indicator.id,
-          pageNumberInPdf: item.sourcePage,
-          figureLabel,
-          imagePath: item.imagePath,
-          altText: item.altText,
-          detailedDescription: item.detailedDescription,
-          tags,
-        },
-      });
-      console.log(`   ✅ Created CurriculumMedia with id=${created.id}`);
-    }
+    console.log(`   ✅ Created media row ${createdRow.id}\n`);
+    created++;
   }
 
-  console.log("\n🎉 Done seeding KG1 OWOP media.");
+  console.log("🎉 Done seeding KG1 OWOP media.");
+  console.log({ created, skipped });
 }
 
-mainReal()
-  .catch((err) => {
+async function main() {
+  try {
+    await mainReal();
+  } catch (err) {
     console.error("❌ Error in KG1 OWOP media seed:", err);
     process.exit(1);
-  })
-  .finally(async () => {
+  } finally {
     await prisma.$disconnect();
-  });
+  }
+}
+
+main();

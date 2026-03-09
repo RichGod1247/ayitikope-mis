@@ -48,14 +48,17 @@ function b64urlToUint8Array(s: string) {
 }
 
 let cachedKey: CryptoKey | null = null;
-async function getHmacKey() {
+
+async function getHmacKey(): Promise<CryptoKey | null> {
   if (cachedKey) return cachedKey;
 
   const secret =
     process.env.PARENT_SESSION_SECRET ||
     process.env.OTP_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    "dev-edulife-parent-secret";
+    process.env.NEXTAUTH_SECRET;
+
+  // Bank-grade: if secrets are missing, do NOT accept cookies.
+  if (!secret) return null;
 
   const enc = new TextEncoder();
   cachedKey = await crypto.subtle.importKey(
@@ -65,6 +68,7 @@ async function getHmacKey() {
     false,
     ["sign", "verify"]
   );
+
   return cachedKey;
 }
 
@@ -79,6 +83,8 @@ async function verifyParentCookie(token: string): Promise<boolean> {
   if (!base || !sig) return false;
 
   const key = await getHmacKey();
+  if (!key) return false;
+
   const enc = new TextEncoder();
   const baseBytes = enc.encode(base);
   const sigBytes = b64urlToUint8Array(sig);
@@ -89,6 +95,7 @@ async function verifyParentCookie(token: string): Promise<boolean> {
   try {
     const payloadJson = new TextDecoder().decode(b64urlToUint8Array(base));
     const payload = JSON.parse(payloadJson);
+
     const exp = Number(payload?.exp);
     if (!exp || !Number.isFinite(exp)) return false;
 
@@ -109,11 +116,8 @@ function isPublicConsentEndpoint(req: NextRequest) {
   const path = req.nextUrl.pathname;
   if (!path.startsWith("/api/consent/")) return false;
 
-  // Copy-message helper is GET-only
   if (path === "/api/consent/optin/sms-text" && req.method === "GET") return true;
 
-  // Consent link should be public (token is the security boundary).
-  // Allow GET (render/capture) + POST (confirm) to avoid future breakage.
   if (path === "/api/consent/optin/student/link" && (req.method === "GET" || req.method === "POST")) return true;
 
   return false;
@@ -141,12 +145,14 @@ function isParentPublicPath(path: string) {
 }
 
 function isParentProtectedPath(path: string) {
+  // ✅ IMPORTANT: include /api/parent/* so report APIs are actually protected by parent cookie.
   return (
     path === "/parent-portal" ||
     path.startsWith("/parent-portal/") ||
     path.startsWith("/parents/") ||
     path.startsWith("/parent/") ||
-    path.startsWith("/api/parents/")
+    path.startsWith("/api/parents/") ||
+    path.startsWith("/api/parent/")
   );
 }
 

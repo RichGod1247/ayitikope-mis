@@ -1,149 +1,107 @@
 // src/app/api/parent/overview/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireParentSession, digitsOnly } from "@/lib/parentSession";
+import { StudentStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function normalisePhone(phone: string | null | undefined): string {
-  if (!phone) return "";
-  return String(phone).replace(/\D/g, "");
-}
-
-function phoneMatches(a: string, b: string) {
-  const A = normalisePhone(a);
-  const B = normalisePhone(b);
-  if (!A || !B) return false;
-  return A.endsWith(B) || B.endsWith(A);
-}
-
-const ADMINISH = new Set(["ADMIN", "SCHOOL_ADMIN", "HEADTEACHER"]);
-
-async function getTenantCtx() {
-  const session = await getServerSession(authOptions);
-  const u = session?.user as any;
-
-  const userId = typeof u?.id === "string" ? u.id : "";
-  const tenantId = typeof u?.tenantId === "string" ? u.tenantId : "";
-  const userPhone = normalisePhone(u?.phone ?? u?.phoneNumber ?? "");
-
-  if (!session || !userId) return { ok: false as const, status: 401, error: "UNAUTHORIZED" };
-  if (!tenantId) return { ok: false as const, status: 403, error: "NO_ACTIVE_TENANT" };
-
-  const membership = await prisma.membership.findUnique({
-    where: { userId_tenantId: { userId, tenantId } },
-    select: { status: true, role: { select: { name: true } } },
+function noStoreJson(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
   });
-
-  if (!membership || membership.status !== "ACTIVE") {
-    return { ok: false as const, status: 403, error: "FORBIDDEN" };
-  }
-
-  const roleName = String(membership.role?.name ?? "").trim();
-  return { ok: true as const, userId, tenantId, roleName, userPhone };
 }
 
-export async function GET(req: Request) {
+function isValidSuffixForLookup(suffix: string) {
+  const s = digitsOnly(suffix);
+  return s.length >= 7;
+}
+
+export async function GET(req: NextRequest) {
   try {
-    const ctx = await getTenantCtx();
-    if (!ctx.ok) {
-      return NextResponse.json(
-        { ok: false, error: ctx.error },
-        { status: ctx.status, headers: { "cache-control": "no-store" } }
-      );
+    const gate = requireParentSession(req as any);
+    if (!gate.ok) return gate.res as any;
+
+    const sess = gate.session;
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: sess.tenantId },
+      select: { id: true, name: true, status: true },
+    });
+
+    if (!tenant || tenant.status !== "ACTIVE") {
+      return noStoreJson(403, { ok: false, error: "TENANT_NOT_ACTIVE" });
     }
 
     const url = new URL(req.url);
-
-    // Backward compat only. Real tenantId comes from session.
-    const tenantIdParam = String(url.searchParams.get("tenantId") || "").trim();
-    if (tenantIdParam && tenantIdParam !== ctx.tenantId) {
-      return NextResponse.json(
-        { ok: false, error: "Forbidden (tenant mismatch)." },
-        { status: 403, headers: { "cache-control": "no-store" } }
-      );
-    }
-
     const term = String(url.searchParams.get("term") || "1st Term").trim();
-    const academicYear = String(url.searchParams.get("academicYear") || "2025/2026").trim();
+    const academicYear = String(
+      url.searchParams.get("academicYear") || "2025/2026"
+    ).trim();
 
-    // guardianPhone rules:
-    // - PARENT: must match session phone (or omitted -> we use session phone)
-    // - ADMINISH: may provide guardianPhone for support/debug
-    // - TEACHER: forbidden
-    const guardianPhoneParam = String(url.searchParams.get("guardianPhone") || "").trim();
-    const guardianPhoneDigits = normalisePhone(guardianPhoneParam);
+    const e164 = String(sess.guardianPhoneE164 ?? "").trim();
+    const suffix9 = digitsOnly(sess.guardianSuffix9 ?? "");
 
-    let guardianPhoneForQuery = "";
+    const OR: any[] = [];
+    if (e164) OR.push({ guardianPhoneNorm: e164 });
 
-    if (ctx.roleName === "PARENT") {
-      if (!ctx.userPhone) {
-        return NextResponse.json(
-          { ok: false, error: "PARENT_PHONE_MISSING_IN_SESSION" },
-          { status: 400, headers: { "cache-control": "no-store" } }
-        );
-      }
-
-      if (guardianPhoneParam && !phoneMatches(ctx.userPhone, guardianPhoneDigits)) {
-        return NextResponse.json(
-          { ok: false, error: "Forbidden (guardianPhone mismatch)." },
-          { status: 403, headers: { "cache-control": "no-store" } }
-        );
-      }
-
-      guardianPhoneForQuery = ctx.userPhone;
-    } else if (ADMINISH.has(ctx.roleName)) {
-      if (!guardianPhoneDigits) {
-        return NextResponse.json(
-          { ok: false, error: "guardianPhone is required for admin support view." },
-          { status: 400, headers: { "cache-control": "no-store" } }
-        );
-      }
-      guardianPhoneForQuery = guardianPhoneDigits;
-    } else {
-      // TEACHER and others blocked
-      return NextResponse.json(
-        { ok: false, error: "FORBIDDEN" },
-        { status: 403, headers: { "cache-control": "no-store" } }
-      );
+    if (isValidSuffixForLookup(suffix9)) {
+      OR.push({ guardianPhoneNorm: { endsWith: suffix9 } });
+      OR.push({ guardianPhone: { endsWith: suffix9 } });
+      OR.push({ guardianPhoneNorm: { endsWith: `233${suffix9}` } });
+      OR.push({ guardianPhone: { endsWith: `233${suffix9}` } });
     }
 
-    const client = prisma as any;
-    const tenantId = ctx.tenantId;
+    if (OR.length === 0) {
+      return noStoreJson(200, {
+        ok: true,
+        guardianPhone: e164 || suffix9 || null,
+        meta: { term, academicYear },
+        students: [],
+      });
+    }
 
-    // For matching phone formats (+233 / 0...), we query by suffix (last 9 digits)
-    const suffix = guardianPhoneForQuery.length >= 9 ? guardianPhoneForQuery.slice(-9) : guardianPhoneForQuery;
-
-    const students = await client.student.findMany({
+    const students = await prisma.student.findMany({
       where: {
-        tenantId,
-        OR: [
-          { guardianPhone: { endsWith: suffix } },
-          { guardianPhone: guardianPhoneForQuery },
-        ],
+        tenantId: sess.tenantId,
+        status: StudentStatus.ACTIVE,
+        OR,
       },
       select: {
         id: true,
         firstName: true,
         lastName: true,
-        classroom: { select: { name: true } },
+        classroom: {
+          select: { name: true },
+        },
       },
-      orderBy: { firstName: "asc" },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
+      take: 200,
     });
 
     if (!students.length) {
-      return NextResponse.json(
-        { ok: true, guardianPhone: guardianPhoneForQuery, meta: { term, academicYear }, students: [] },
-        { status: 200, headers: { "cache-control": "no-store" } }
-      );
+      return noStoreJson(200, {
+        ok: true,
+        guardianPhone: e164 || suffix9 || null,
+        meta: { term, academicYear },
+        students: [],
+      });
     }
 
-    const studentIds = students.map((s: any) => s.id);
+    const studentIds = students.map((s) => s.id);
 
-    const invoices = await client.feeInvoice.findMany({
-      where: { tenantId, studentId: { in: studentIds }, term, academicYear },
+    const invoices = await prisma.feeInvoice.findMany({
+      where: {
+        tenantId: sess.tenantId,
+        studentId: { in: studentIds },
+        term,
+        academicYear,
+      },
       select: {
         id: true,
         studentId: true,
@@ -154,27 +112,54 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "asc" },
     });
 
-    const invoiceIds = invoices.map((inv: any) => inv.id);
+    const invoiceIds = invoices.map((inv) => inv.id);
 
-    let payments: any[] = [];
+    let payments: {
+      invoiceId: string;
+      amountPesewas: number;
+      paidAt: Date;
+    }[] = [];
+
     if (invoiceIds.length) {
-      payments = await client.feePayment.findMany({
-        where: { tenantId, invoiceId: { in: invoiceIds } },
-        select: { invoiceId: true, amountPesewas: true, paidAt: true },
+      payments = await prisma.feePayment.findMany({
+        where: {
+          tenantId: sess.tenantId,
+          invoiceId: { in: invoiceIds },
+        },
+        select: {
+          invoiceId: true,
+          amountPesewas: true,
+          paidAt: true,
+        },
         orderBy: { paidAt: "asc" },
       });
     }
 
-    const healthRows = await client.studentHealthDaily.findMany({
-      where: { tenantId, studentId: { in: studentIds } },
+    const healthRows = await prisma.studentHealthDaily.findMany({
+      where: {
+        tenantId: sess.tenantId,
+        studentId: { in: studentIds },
+      },
       orderBy: { date: "desc" },
       take: studentIds.length * 5,
     });
 
-    const paymentByInvoice = new Map<string, { totalPaid: number; lastPaymentAmount: number | null; lastPaidAt: Date | null }>();
+    const paymentByInvoice = new Map<
+      string,
+      {
+        totalPaid: number;
+        lastPaymentAmount: number | null;
+        lastPaidAt: Date | null;
+      }
+    >();
+
     for (const p of payments) {
       const key = String(p.invoiceId);
-      const prev = paymentByInvoice.get(key) ?? { totalPaid: 0, lastPaymentAmount: null, lastPaidAt: null };
+      const prev = paymentByInvoice.get(key) ?? {
+        totalPaid: 0,
+        lastPaymentAmount: null,
+        lastPaidAt: null,
+      };
 
       const amt = p.amountPesewas ?? 0;
       const paidAt = p.paidAt ? new Date(p.paidAt) : null;
@@ -187,16 +172,29 @@ export async function GET(req: Request) {
         lastAt = paidAt;
       }
 
-      paymentByInvoice.set(key, { totalPaid: prev.totalPaid + amt, lastPaymentAmount: lastAmt, lastPaidAt: lastAt });
+      paymentByInvoice.set(key, {
+        totalPaid: prev.totalPaid + amt,
+        lastPaymentAmount: lastAmt,
+        lastPaidAt: lastAt,
+      });
     }
 
-    const healthByStudent = new Map<string, { lastDate: string; temperatureC: number | null; symptoms: string | null; notes: string | null }>();
+    const healthByStudent = new Map<
+      string,
+      {
+        lastDate: string;
+        temperatureC: number | null;
+        symptoms: string | null;
+        notes: string | null;
+      }
+    >();
+
     for (const h of healthRows) {
       const sid = String(h.studentId);
       if (!healthByStudent.has(sid)) {
         healthByStudent.set(sid, {
           lastDate: h.date ? new Date(h.date).toISOString() : "",
-          temperatureC: h.temperatureC ?? null,
+          temperatureC: h.temperatureC ? Number(h.temperatureC) : null,
           symptoms: h.symptoms ?? null,
           notes: h.notes ?? null,
         });
@@ -205,7 +203,13 @@ export async function GET(req: Request) {
 
     const invoicesByStudent = new Map<
       string,
-      { totalBilledPesewas: number; totalWaivedPesewas: number; totalPaidPesewas: number; lastPaymentAmountPesewas: number | null; lastPaymentAt: string | null }
+      {
+        totalBilledPesewas: number;
+        totalWaivedPesewas: number;
+        totalPaidPesewas: number;
+        lastPaymentAmountPesewas: number | null;
+        lastPaymentAt: string | null;
+      }
     >();
 
     for (const inv of invoices) {
@@ -213,7 +217,11 @@ export async function GET(req: Request) {
       const billed = inv.totalBilledPesewas ?? 0;
       const waived = inv.totalWaivedPesewas ?? 0;
 
-      const pay = paymentByInvoice.get(String(inv.id)) ?? { totalPaid: 0, lastPaymentAmount: null, lastPaidAt: null };
+      const pay = paymentByInvoice.get(String(inv.id)) ?? {
+        totalPaid: 0,
+        lastPaymentAmount: null,
+        lastPaidAt: null,
+      };
 
       const prev = invoicesByStudent.get(sid) ?? {
         totalBilledPesewas: 0,
@@ -240,7 +248,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const resultStudents = students.map((s: any) => {
+    const resultStudents = students.map((s) => {
       const sid = String(s.id);
       const fee = invoicesByStudent.get(sid) ?? {
         totalBilledPesewas: 0,
@@ -250,7 +258,9 @@ export async function GET(req: Request) {
         lastPaymentAt: null,
       };
 
-      const balance = fee.totalBilledPesewas - fee.totalWaivedPesewas - fee.totalPaidPesewas;
+      const balance =
+        fee.totalBilledPesewas - fee.totalWaivedPesewas - fee.totalPaidPesewas;
+
       const health = healthByStudent.get(sid) ?? null;
 
       return {
@@ -271,15 +281,18 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json(
-      { ok: true, guardianPhone: guardianPhoneForQuery, meta: { term, academicYear }, students: resultStudents },
-      { status: 200, headers: { "cache-control": "no-store" } }
-    );
+    return noStoreJson(200, {
+      ok: true,
+      guardianPhone: e164 || suffix9 || null,
+      meta: { term, academicYear },
+      students: resultStudents,
+    });
   } catch (err) {
     console.error("[PARENT_OVERVIEW_ERROR]", err);
-    return NextResponse.json(
-      { ok: false, error: "Failed to load parent overview. Please try again or contact the school office." },
-      { status: 500, headers: { "cache-control": "no-store" } }
-    );
+    return noStoreJson(500, {
+      ok: false,
+      error:
+        "Failed to load parent overview. Please try again or contact the school office.",
+    });
   }
 }

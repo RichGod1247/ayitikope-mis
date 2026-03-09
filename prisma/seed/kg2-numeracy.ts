@@ -1,16 +1,10 @@
 // prisma/seed/kg2-numeracy.ts
 import { PrismaClient } from "@prisma/client";
-import fs from "fs";
+import { promises as fs } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const prisma = new PrismaClient();
-
-// Polyfill __dirname for ESM / ts-node
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ---------- Types matching your normalized JSON ----------
 
 type ExemplarJson = {
   orderIndex: number;
@@ -47,233 +41,271 @@ type StrandJson = {
   subStrands?: SubStrandJson[];
 };
 
-type CurriculumJson = {
+type CurriculumSubjectJson = {
   phase: string;
   level: string;
-  subject: string; // "Numeracy" in your JSON
-  name: string;    // "KG2 Numeracy"
-  slug: string;    // "kg2-numeracy"
+  subject: string;
+  name: string;
+  slug: string;
   orderIndex: number;
   description: string;
   strands: StrandJson[];
 };
 
-async function main() {
-  // Read the normalized KG2 Numeracy JSON file
-  const filePath = path.join(__dirname, "curriculum", "kg2-numeracy.json");
-  const raw = fs.readFileSync(filePath, "utf8");
-  const data: CurriculumJson = JSON.parse(raw);
+function cleanStr(v: unknown): string {
+  return String(v ?? "").trim();
+}
 
-  console.log("📚 Seeding curriculum for:", data.name);
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
 
-  // 1. Upsert subject based on slug (slug is unique in your schema)
-  const subjectRecord = await prisma.curriculumSubject.upsert({
-    where: { slug: data.slug },
-    update: {
-      phase: data.phase,
-      level: data.level,
-      name: data.name,
-      description: data.description,
-      orderIndex: data.orderIndex,
-    },
-    create: {
-      phase: data.phase,
-      level: data.level,
-      name: data.name,
-      slug: data.slug,
-      description: data.description,
-      orderIndex: data.orderIndex,
-    },
-  });
+function validateCurriculum(curriculum: CurriculumSubjectJson) {
+  assert(cleanStr(curriculum.phase), "phase is required");
+  assert(cleanStr(curriculum.level), "level is required");
+  assert(cleanStr(curriculum.subject), "subject is required");
+  assert(cleanStr(curriculum.name), "name is required");
+  assert(cleanStr(curriculum.slug), "slug is required");
+  assert(Array.isArray(curriculum.strands), "strands must be an array");
 
-  console.log(
-    `✅ Subject upserted: ${subjectRecord.name} (${subjectRecord.phase} – ${subjectRecord.level})`,
-  );
+  const strandCodes = new Set<string>();
+  const subCodes = new Set<string>();
+  const csCodes = new Set<string>();
+  const indCodes = new Set<string>();
 
-  // 2. Seed strands → subStrands → contentStandards → indicators → exemplars
-  for (const strandJson of data.strands) {
-    console.log(`\n➡️  Strand ${strandJson.code}: ${strandJson.title}`);
+  for (const strand of curriculum.strands ?? []) {
+    assert(cleanStr(strand.code), "Every strand must have a code");
+    assert(!strandCodes.has(strand.code), `Duplicate strand code: ${strand.code}`);
+    strandCodes.add(strand.code);
 
-    // Find strand by (subjectId + code), then update or create by id
-    let strand = await prisma.curriculumStrand.findFirst({
-      where: {
-        subjectId: subjectRecord.id,
-        code: strandJson.code,
-      },
-    });
-
-    if (strand) {
-      strand = await prisma.curriculumStrand.update({
-        where: { id: strand.id },
-        data: {
-          title: strandJson.title,
-          description: strandJson.description,
-          orderIndex: strandJson.orderIndex,
-        },
-      });
-    } else {
-      strand = await prisma.curriculumStrand.create({
-        data: {
-          subjectId: subjectRecord.id,
-          code: strandJson.code,
-          title: strandJson.title,
-          description: strandJson.description,
-          orderIndex: strandJson.orderIndex,
-        },
-      });
-    }
-
-    if (!strandJson.subStrands || strandJson.subStrands.length === 0) {
-      console.log(`   (no subStrands for ${strandJson.code})`);
-      continue;
-    }
-
-    for (const subStrandJson of strandJson.subStrands) {
-      console.log(
-        `   → SubStrand ${subStrandJson.code}: ${subStrandJson.title}`,
+    for (const sub of strand.subStrands ?? []) {
+      assert(cleanStr(sub.code), `Sub-strand code missing under ${strand.code}`);
+      assert(
+        sub.code.startsWith(`${strand.code}.`),
+        `Sub-strand code ${sub.code} does not belong under strand ${strand.code}`
       );
+      assert(!subCodes.has(sub.code), `Duplicate sub-strand code: ${sub.code}`);
+      subCodes.add(sub.code);
 
-      // Find subStrand by (strandId + code), then update or create
-      let subStrand = await prisma.curriculumSubStrand.findFirst({
-        where: {
-          strandId: strand.id,
-          code: subStrandJson.code,
-        },
-      });
-
-      if (subStrand) {
-        subStrand = await prisma.curriculumSubStrand.update({
-          where: { id: subStrand.id },
-          data: {
-            title: subStrandJson.title,
-            description: subStrandJson.description,
-            orderIndex: subStrandJson.orderIndex,
-          },
-        });
-      } else {
-        subStrand = await prisma.curriculumSubStrand.create({
-          data: {
-            strandId: strand.id,
-            code: subStrandJson.code,
-            title: subStrandJson.title,
-            description: subStrandJson.description,
-            orderIndex: subStrandJson.orderIndex,
-          },
-        });
-      }
-
-      if (
-        !subStrandJson.contentStandards ||
-        subStrandJson.contentStandards.length === 0
-      ) {
-        console.log(`     (no contentStandards for ${subStrandJson.code})`);
-        continue;
-      }
-
-      for (const csJson of subStrandJson.contentStandards) {
-        console.log(
-          `     → ContentStandard ${csJson.code} (order ${csJson.orderIndex})`,
+      for (const cs of sub.contentStandards ?? []) {
+        assert(cleanStr(cs.code), `Content standard code missing under ${sub.code}`);
+        assert(
+          cs.code.startsWith(`${sub.code}.`),
+          `Content standard code ${cs.code} does not belong under sub-strand ${sub.code}`
         );
+        assert(!csCodes.has(cs.code), `Duplicate content standard code: ${cs.code}`);
+        csCodes.add(cs.code);
 
-        // Find contentStandard by (subStrandId + code), then update/create
-        let contentStandard =
-          await prisma.curriculumContentStandard.findFirst({
-            where: {
-              subStrandId: subStrand.id,
-              code: csJson.code,
-            },
-          });
-
-        if (contentStandard) {
-          contentStandard = await prisma.curriculumContentStandard.update({
-            where: { id: contentStandard.id },
-            data: {
-              description: csJson.description,
-              orderIndex: csJson.orderIndex,
-            },
-          });
-        } else {
-          contentStandard = await prisma.curriculumContentStandard.create({
-            data: {
-              subStrandId: subStrand.id,
-              code: csJson.code,
-              description: csJson.description,
-              orderIndex: csJson.orderIndex,
-            },
-          });
-        }
-
-        if (!csJson.indicators || csJson.indicators.length === 0) {
-          console.log(`       (no indicators for ${csJson.code})`);
-          continue;
-        }
-
-        for (const indJson of csJson.indicators) {
-          console.log(
-            `       → Indicator ${indJson.code} (order ${indJson.orderIndex})`,
+        for (const ind of cs.indicators ?? []) {
+          assert(cleanStr(ind.code), `Indicator code missing under ${cs.code}`);
+          assert(
+            ind.code.startsWith(`${cs.code}.`),
+            `Indicator code ${ind.code} does not belong under content standard ${cs.code}`
           );
-
-          // Find indicator by (contentStandardId + code), then update/create
-          let indicator = await prisma.curriculumIndicator.findFirst({
-            where: {
-              contentStandardId: contentStandard.id,
-              code: indJson.code,
-            },
-          });
-
-          if (indicator) {
-            indicator = await prisma.curriculumIndicator.update({
-              where: { id: indicator.id },
-              data: {
-                description: indJson.description,
-                orderIndex: indJson.orderIndex,
-              },
-            });
-          } else {
-            indicator = await prisma.curriculumIndicator.create({
-              data: {
-                contentStandardId: contentStandard.id,
-                code: indJson.code,
-                description: indJson.description,
-                orderIndex: indJson.orderIndex,
-              },
-            });
-          }
-
-          // Exemplars: delete all existing for this indicator and recreate
-          await prisma.curriculumExemplar.deleteMany({
-            where: { indicatorId: indicator.id },
-          });
-
-          if (!indJson.exemplars || indJson.exemplars.length === 0) {
-            console.log(`         (no exemplars for ${indJson.code})`);
-            continue;
-          }
-
-          for (const exJson of indJson.exemplars) {
-            console.log(
-              `         → Exemplar (indicator ${indJson.code}, order ${exJson.orderIndex})`,
-            );
-
-            await prisma.curriculumExemplar.create({
-              data: {
-                indicatorId: indicator.id,
-                orderIndex: exJson.orderIndex,
-                description: exJson.description,
-              },
-            });
-          }
+          assert(!indCodes.has(ind.code), `Duplicate indicator code: ${ind.code}`);
+          indCodes.add(ind.code);
         }
       }
     }
   }
+}
 
-  console.log("\n✅ Finished seeding KG2 Numeracy curriculum.");
+async function deleteExistingCurriculumTree(subjectId: string) {
+  console.log("   🔎 Discovering existing curriculum tree...");
+
+  const strands = await prisma.curriculumStrand.findMany({
+    where: { subjectId },
+    select: { id: true, code: true },
+  });
+  const strandIds = strands.map((s) => s.id);
+
+  const subStrands =
+    strandIds.length > 0
+      ? await prisma.curriculumSubStrand.findMany({
+          where: { strandId: { in: strandIds } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const subStrandIds = subStrands.map((s) => s.id);
+
+  const contentStandards =
+    subStrandIds.length > 0
+      ? await prisma.curriculumContentStandard.findMany({
+          where: { subStrandId: { in: subStrandIds } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const contentStandardIds = contentStandards.map((c) => c.id);
+
+  const indicators =
+    contentStandardIds.length > 0
+      ? await prisma.curriculumIndicator.findMany({
+          where: { contentStandardId: { in: contentStandardIds } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const indicatorIds = indicators.map((i) => i.id);
+
+  console.log(`   • Strands: ${strandIds.length}`);
+  console.log(`   • SubStrands: ${subStrandIds.length}`);
+  console.log(`   • ContentStandards: ${contentStandardIds.length}`);
+  console.log(`   • Indicators: ${indicatorIds.length}`);
+
+  const deletedSubjectMedia = await prisma.curriculumMedia.deleteMany({
+    where: { subjectId },
+  });
+  console.log(`   🗑️ Deleted subject media: ${deletedSubjectMedia.count}`);
+
+  if (indicatorIds.length > 0) {
+    const deletedIndicatorMedia = await prisma.curriculumMedia.deleteMany({
+      where: { indicatorId: { in: indicatorIds } },
+    });
+    console.log(`   🗑️ Deleted indicator media: ${deletedIndicatorMedia.count}`);
+  }
+
+  if (indicatorIds.length > 0) {
+    const deletedExemplars = await prisma.curriculumExemplar.deleteMany({
+      where: { indicatorId: { in: indicatorIds } },
+    });
+    console.log(`   🗑️ Deleted exemplars: ${deletedExemplars.count}`);
+  }
+
+  if (indicatorIds.length > 0) {
+    const deletedIndicators = await prisma.curriculumIndicator.deleteMany({
+      where: { id: { in: indicatorIds } },
+    });
+    console.log(`   🗑️ Deleted indicators: ${deletedIndicators.count}`);
+  }
+
+  if (contentStandardIds.length > 0) {
+    const deletedContentStandards =
+      await prisma.curriculumContentStandard.deleteMany({
+        where: { id: { in: contentStandardIds } },
+      });
+    console.log(
+      `   🗑️ Deleted content standards: ${deletedContentStandards.count}`
+    );
+  }
+
+  if (subStrandIds.length > 0) {
+    const deletedSubStrands = await prisma.curriculumSubStrand.deleteMany({
+      where: { id: { in: subStrandIds } },
+    });
+    console.log(`   🗑️ Deleted sub-strands: ${deletedSubStrands.count}`);
+  }
+
+  if (strandIds.length > 0) {
+    const deletedStrands = await prisma.curriculumStrand.deleteMany({
+      where: { id: { in: strandIds } },
+    });
+    console.log(`   🗑️ Deleted strands: ${deletedStrands.count}`);
+  }
+
+  await prisma.curriculumSubject.delete({
+    where: { id: subjectId },
+  });
+  console.log("   🗑️ Deleted curriculum subject.");
+}
+
+async function main() {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  const jsonPath = path.join(__dirname, "curriculum", "kg2-numeracy.json");
+
+  const raw = await fs.readFile(jsonPath, "utf8");
+  const curriculum = JSON.parse(raw) as CurriculumSubjectJson;
+
+  validateCurriculum(curriculum);
+
+  console.log(`📖 Loading KG2 Numeracy curriculum from: ${jsonPath}`);
+  console.log(`→ Subject: ${curriculum.name} (${curriculum.slug})`);
+  console.log(`   Phase/Level: ${curriculum.phase} / ${curriculum.level}`);
+  console.log(`   Strands in JSON: ${curriculum.strands.length}`);
+
+  const existing = await prisma.curriculumSubject.findUnique({
+    where: { slug: curriculum.slug },
+    select: { id: true, slug: true },
+  });
+
+  if (existing) {
+    console.log(
+      `⚠️ Found existing curriculumSubject for slug "${curriculum.slug}", deleting tree...`
+    );
+    await deleteExistingCurriculumTree(existing.id);
+    console.log("   ✅ Existing curriculum tree removed.");
+  } else {
+    console.log(
+      `ℹ️ No existing curriculumSubject to delete for slug: ${curriculum.slug}`
+    );
+  }
+
+  const created = await prisma.curriculumSubject.create({
+    data: {
+      phase: curriculum.phase,
+      level: curriculum.level,
+      name: curriculum.name,
+      slug: curriculum.slug,
+      orderIndex: curriculum.orderIndex,
+      description: curriculum.description,
+
+      strands: {
+        create: (curriculum.strands ?? []).map((strand, strandIndex) => ({
+          code: strand.code,
+          title: strand.title,
+          description: strand.description,
+          orderIndex: strand.orderIndex ?? strandIndex + 1,
+
+          subStrands: {
+            create: (strand.subStrands ?? []).map((subStrand, subIndex) => ({
+              code: subStrand.code,
+              title: subStrand.title,
+              description: subStrand.description,
+              orderIndex: subStrand.orderIndex ?? subIndex + 1,
+
+              contentStandards: {
+                create: (subStrand.contentStandards ?? []).map(
+                  (contentStandard, csIndex) => ({
+                    code: contentStandard.code,
+                    description: contentStandard.description,
+                    orderIndex: contentStandard.orderIndex ?? csIndex + 1,
+
+                    indicators: {
+                      create: (contentStandard.indicators ?? []).map(
+                        (indicator, indIndex) => ({
+                          code: indicator.code,
+                          description: indicator.description,
+                          orderIndex: indicator.orderIndex ?? indIndex + 1,
+
+                          exemplars: {
+                            create: (indicator.exemplars ?? []).map(
+                              (exemplar, exIndex) => ({
+                                description: exemplar.description,
+                                orderIndex:
+                                  exemplar.orderIndex ?? exIndex + 1,
+                              })
+                            ),
+                          },
+                        })
+                      ),
+                    },
+                  })
+                ),
+              },
+            })),
+          },
+        })),
+      },
+    },
+  });
+
+  console.log(`✅ Seeded KG2 Mathematics (Numeracy) with id: ${created.id}`);
+  console.log(`   Strands created from JSON: ${curriculum.strands.length}`);
 }
 
 main()
   .catch((err) => {
-    console.error("❌ Error seeding KG2 Numeracy curriculum", err);
+    console.error("❌ Error seeding KG2 Mathematics (Numeracy):", err);
     process.exit(1);
   })
   .finally(async () => {

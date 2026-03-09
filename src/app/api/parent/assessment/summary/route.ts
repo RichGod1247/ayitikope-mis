@@ -36,7 +36,7 @@ function phoneMatches(a: string, b: string) {
   return A.endsWith(B) || B.endsWith(A);
 }
 
-const ADMINISH = new Set(["ADMIN", "SCHOOL_ADMIN", "HEADTEACHER"]);
+const ADMINISH = new Set(["ADMIN", "SCHOOL_ADMIN", "HEADTEACHER", "SUPERADMIN"]);
 
 async function getSafeTenantCtx() {
   const session = await getServerSession(authOptions);
@@ -65,6 +65,22 @@ async function getSafeTenantCtx() {
     roleName: String(membership.role?.name ?? "").trim(),
     userPhone,
   };
+}
+
+async function checkReleased(args: {
+  tenantId: string;
+  classroomId: string | null;
+  term: string;
+  academicYear: string;
+}) {
+  const scopeKeys = ["SCHOOL", ...(args.classroomId ? [args.classroomId] : [])];
+
+  const rel = await prisma.resultsRelease.findFirst({
+    where: { tenantId: args.tenantId, term: args.term, academicYear: args.academicYear, scopeKey: { in: scopeKeys } },
+    select: { id: true },
+  });
+
+  return !!rel;
 }
 
 export async function GET(req: NextRequest) {
@@ -104,7 +120,7 @@ export async function GET(req: NextRequest) {
     // Ensure student belongs to this tenant + guardian match if PARENT
     const student = await client.student.findFirst({
       where: { id: studentId, tenantId: ctx.tenantId },
-      select: { id: true, guardianPhone: true },
+      select: { id: true, guardianPhone: true, classroomId: true },
     });
 
     if (!student) {
@@ -124,14 +140,28 @@ export async function GET(req: NextRequest) {
       const studentGuardian = normalisePhone(student.guardianPhone);
       if (!studentGuardian || !phoneMatches(ctx.userPhone, studentGuardian)) {
         return NextResponse.json(
-          { ok: false, error: "Forbidden (guardian mismatch)." },
+          { ok: false, error: "GUARDIAN_MISMATCH" },
+          { status: 403, headers: { "cache-control": "no-store" } }
+        );
+      }
+
+      // ✅ Release gating for parent role
+      const released = await checkReleased({
+        tenantId: ctx.tenantId,
+        classroomId: student.classroomId ? String(student.classroomId) : null,
+        term,
+        academicYear,
+      });
+
+      if (!released) {
+        return NextResponse.json(
+          { ok: false, error: "RESULTS_NOT_RELEASED", term, academicYear },
           { status: 403, headers: { "cache-control": "no-store" } }
         );
       }
     }
 
     // Strict tenant scope via AssessmentItem.tenantId (if present).
-    // If your schema doesn't have tenantId on item, we refuse to leak by returning empty.
     let scores: any[] = [];
     try {
       scores = await client.assessmentScore.findMany({

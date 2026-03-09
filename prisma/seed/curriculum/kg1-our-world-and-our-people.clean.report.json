@@ -1,0 +1,43 @@
+{
+  "inputPath": "C:\\Users\\OWNER\\Documents\\ayitikope-mis\\prisma\\seed\\curriculum\\kg1-our-world-and-our-people.json",
+  "outputPath": "C:\\Users\\OWNER\\Documents\\ayitikope-mis\\prisma\\seed\\curriculum\\kg1-our-world-and-our-people.clean.json",
+  "warningCount": 6,
+  "warnings": [
+    {
+      "kind": "content_standard_code_normalized",
+      "path": "K1.1.2.1",
+      "from": "K1.2.1.1",
+      "to": "K1.1.2.1"
+    },
+    {
+      "kind": "indicator_code_normalized",
+      "path": "K1.1.2.1.3",
+      "from": "K1.2.1.3",
+      "to": "K1.1.2.1.3"
+    },
+    {
+      "kind": "indicator_code_normalized",
+      "path": "K1.1.2.1.4",
+      "from": "K1.2.1.4",
+      "to": "K1.1.2.1.4"
+    },
+    {
+      "kind": "indicator_code_normalized",
+      "path": "K1.1.2.1.5",
+      "from": "K1.2.1.5",
+      "to": "K1.1.2.1.5"
+    },
+    {
+      "kind": "indicator_code_normalized",
+      "path": "K1.1.2.1.6",
+      "from": "K1.2.1.6",
+      "to": "K1.1.2.1.6"
+    },
+    {
+      "kind": "indicator_code_normalized",
+      "path": "K1.1.2.1.7",
+      "from": "K1.2.1.7",
+      "to": "K1.1.2.1.7"
+    }
+  ]
+}

@@ -1,9 +1,8 @@
 // src/app/headteacher/reports/page.tsx
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
+import { requireServerUserContext } from "@/lib/serverAuth";
 import { HeadteacherReportsClient } from "@/components/HeadteacherReportsClient";
 
 export const metadata: Metadata = {
@@ -15,56 +14,50 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const HEAD_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN"]);
-
 type SafeClassroom = {
   id: string;
   name: string;
+  grade: string | null;
+  arm: string | null;
 };
 
 export default async function HeadteacherReportsPage() {
-  const session = await getServerSession(authOptions);
-  const user = session?.user as any;
-  const userId: string | undefined = user?.id;
-
-  if (!userId) {
-    redirect(
-      `/api/auth/signin?callbackUrl=${encodeURIComponent("/headteacher/reports")}`
-    );
-  }
-
-  const membership = await prisma.membership.findFirst({
-    where: { userId, status: "ACTIVE" },
-    select: {
-      tenantId: true,
-      role: { select: { name: true } },
-      tenant: { select: { name: true, status: true } },
-    },
+  const ctx = await requireServerUserContext({
+    redirectTo: "/headteacher/reports",
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "ADMIN", "SUPERADMIN"],
   });
 
-  if (!membership?.tenantId) redirect("/app");
-  if (membership.tenant?.status && membership.tenant.status !== "ACTIVE")
-    redirect("/pending");
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: ctx.tenantId },
+    select: { name: true, status: true },
+  });
 
-  const roleName = (membership.role?.name ?? "").trim();
-  if (!HEAD_ROLES.has(roleName)) redirect("/app");
+  if (!tenant) redirect("/app");
+  if (tenant.status !== "ACTIVE") redirect("/pending");
 
-  const tenantId = membership.tenantId;
-  const tenantName = membership.tenant?.name ?? "Your school";
+  const settings = await prisma.tenantSettings.findUnique({
+    where: { tenantId: ctx.tenantId },
+    select: { currentTerm: true, currentAcademicYear: true },
+  });
+
+  const tenantName = tenant.name ?? "Your school";
 
   const classrooms = await prisma.classroom.findMany({
-    where: { tenantId },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
+    where: { tenantId: ctx.tenantId, status: "ACTIVE" },
+    select: { id: true, name: true, grade: true, arm: true },
+    orderBy: [{ grade: "asc" }, { name: "asc" }, { arm: "asc" }],
   });
 
   const safeClassrooms: SafeClassroom[] = classrooms.map((c) => ({
     id: c.id,
     name: c.name ?? "Unnamed class",
+    grade: c.grade ?? null,
+    arm: c.arm ?? null,
   }));
 
-  const defaultTerm = "1st Term";
-  const defaultAcademicYear = "2025/2026";
+  const defaultTerm = settings?.currentTerm ?? "1st Term";
+  const defaultAcademicYear = settings?.currentAcademicYear ?? "2025/2026";
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -78,19 +71,15 @@ export default async function HeadteacherReportsPage() {
               Class term reports
             </h1>
             <p className="mt-1 max-w-2xl text-xs text-slate-600 sm:text-sm">
-              View a{" "}
-              <span className="font-semibold">simple term report grid</span> for
-              each class, based on{" "}
-              <span className="font-semibold">assessment items & scores</span>{" "}
-              recorded in EduLife OS.
+              Review class-by-class learner performance across the term from
+              recorded assessment scores.
             </p>
           </div>
+
           <div className="text-xs text-right text-slate-500 space-y-1">
             <p>
               Signed in as{" "}
-              <span className="font-semibold">
-                {session?.user?.email ?? "Headteacher"}
-              </span>
+              <span className="font-semibold">{ctx.email ?? "Headteacher"}</span>
             </p>
             <p className="text-[11px]">
               School: <span className="font-semibold">{tenantName}</span>

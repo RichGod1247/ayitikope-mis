@@ -1,12 +1,7 @@
 // src/app/parent/report/page.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-
-const DEMO_TENANT_ID =
-  process.env.NEXT_PUBLIC_DEMO_TENANT_ID || "cmhhnghn00008vcpgp3fl07fl";
-const DEMO_TENANT_SLUG =
-  process.env.NEXT_PUBLIC_DEMO_TENANT_SLUG || "ayitikope-basic";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 type ParentChild = {
   id: string;
@@ -24,7 +19,9 @@ type ParentChild = {
 type ChildrenResponse = {
   ok: boolean;
   error?: string;
-  guardianPhone: string;
+  message?: string;
+  detail?: string;
+  guardianPhone: string | null;
   students: {
     id: string;
     name: string;
@@ -65,7 +62,9 @@ type ParentOverviewStudent = {
 type ParentOverviewResponse = {
   ok: boolean;
   error?: string;
-  guardianPhone: string;
+  message?: string;
+  detail?: string;
+  guardianPhone: string | null;
   meta: {
     term: string;
     academicYear: string;
@@ -153,6 +152,9 @@ type TermSummary = {
 
 type ParentTermReportResponse = {
   ok: boolean;
+  error?: string;
+  message?: string;
+  detail?: string;
   context: {
     tenantId: string;
     studentId: string;
@@ -190,8 +192,6 @@ type ParentTermReportResponse = {
   healthSummary: HealthSummary;
 };
 
-type Stage = "PHONE" | "OTP" | "PORTAL";
-
 const DEFAULT_TERM = "1st Term";
 const DEFAULT_YEAR = "2025/2026";
 
@@ -214,6 +214,52 @@ function formatDateNice(value: string | null | undefined): string {
 function percentageDisplay(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "—";
   return `${value.toFixed(1)}%`;
+}
+
+function looksLikeErrorCode(value: string | null | undefined) {
+  const s = String(value ?? "").trim();
+  if (!s) return false;
+  return /^[A-Z0-9_]+$/.test(s);
+}
+
+function readableApiMessage(
+  payload: any,
+  status: number,
+  fallback: string
+): string {
+  const candidates = [
+    payload?.message,
+    payload?.errorMessage,
+    payload?.detail,
+    payload?.error,
+  ]
+    .map((v) => String(v ?? "").trim())
+    .filter(Boolean);
+
+  const firstHuman = candidates.find((v) => !looksLikeErrorCode(v));
+  if (firstHuman) return firstHuman;
+
+  if (status === 401) {
+    return "Your parent session has expired. Please log in again.";
+  }
+
+  if (status === 403) {
+    return "This report is not available right now.";
+  }
+
+  return fallback;
+}
+
+async function readJsonResponse<T>(res: Response): Promise<{
+  data: T | null;
+  text: string;
+}> {
+  const text = await res.text();
+  try {
+    return { data: JSON.parse(text) as T, text };
+  } catch {
+    return { data: null, text };
+  }
 }
 
 /**
@@ -267,10 +313,8 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
   const fullName = `${student.firstName} ${student.lastName}`.trim();
   const childName = fullName || "your child";
   const sex = student.sex?.toUpperCase() ?? null;
-  const pronoun =
-    sex === "M" ? "he" : sex === "F" ? "she" : "they";
-  const possessive =
-    sex === "M" ? "his" : sex === "F" ? "her" : "their";
+  const pronoun = sex === "M" ? "he" : sex === "F" ? "she" : "they";
+  const possessive = sex === "M" ? "his" : sex === "F" ? "her" : "their";
 
   const renderSubjectTags = (list: SubjectSummary[]) => {
     if (!list.length) {
@@ -314,13 +358,12 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
             <span className="font-semibold">
               what this report is saying about {childName}
             </span>{" "}
-            and how you can support {pronoun} at home – in the spirit of EduLife
-            OS: calm, honest, and focused on growth.
+            and how you can support {pronoun} at home – in the spirit of
+            EduLife OS: calm, honest, and focused on growth.
           </p>
         </div>
       </div>
 
-      {/* Overall view */}
       <div className="space-y-1.5 rounded-xl bg-white/80 px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-semibold text-indigo-900">
@@ -346,7 +389,6 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
         </p>
       </div>
 
-      {/* Strengths & growth areas */}
       <div className="grid gap-2.5 md:grid-cols-2">
         <div className="space-y-1.5 rounded-xl bg-white/80 px-3 py-2.5">
           <div className="text-[11px] font-semibold text-indigo-900">
@@ -372,7 +414,6 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
         </div>
       </div>
 
-      {/* Almost there */}
       <div className="space-y-1.5 rounded-xl bg-white/80 px-3 py-2.5">
         <div className="text-[11px] font-semibold text-indigo-900">
           4. “Almost there” subjects
@@ -384,9 +425,7 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
         {renderSubjectTags(almostThere)}
       </div>
 
-      {/* Life factors – attendance, fees, health */}
       <div className="grid gap-2.5 md:grid-cols-3">
-        {/* Attendance */}
         <div className="space-y-1 rounded-xl bg-white/80 px-3 py-2">
           <div className="text-[11px] font-semibold text-indigo-900">
             5. Attendance story
@@ -394,18 +433,14 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
           {attendance ? (
             <p className="text-[11px] text-indigo-900/90">
               Present:{" "}
+              <span className="font-semibold">{attendance.daysPresent}</span> /{" "}
               <span className="font-semibold">
-                {attendance?.daysPresent}
-              </span>{" "}
-              /{" "}
-              <span className="font-semibold">
-                {attendance?.totalSchoolDays}
+                {attendance.totalSchoolDays}
               </span>{" "}
               days.{" "}
-              {attendance?.daysAbsent === 0
+              {attendance.daysAbsent === 0
                 ? "Excellent consistency – keep protecting school days as much as possible."
-                : attendance?.daysAbsent !== undefined &&
-                  attendance.daysAbsent <= 3
+                : attendance.daysAbsent <= 3
                 ? "Absences are low. Continue monitoring reasons (sickness, family duties) so they don’t quietly increase."
                 : "There were several absences. It may help to quietly explore with your child what made those days difficult."}
             </p>
@@ -417,7 +452,6 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
           )}
         </div>
 
-        {/* Fees */}
         <div className="space-y-1 rounded-xl bg-white/80 px-3 py-2">
           <div className="text-[11px] font-semibold text-indigo-900">
             6. Fees pressure (or peace)
@@ -445,7 +479,6 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
           )}
         </div>
 
-        {/* Health */}
         <div className="space-y-1 rounded-xl bg-white/80 px-3 py-2">
           <div className="text-[11px] font-semibold text-indigo-900">
             7. Health & energy
@@ -468,7 +501,6 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
         </div>
       </div>
 
-      {/* Simple home support plan */}
       <div className="space-y-1.5 rounded-xl border border-indigo-200 bg-indigo-900 px-3 py-2.5 text-[11px] text-indigo-50">
         <div className="font-semibold">
           8. A gentle 3-step support plan at home
@@ -499,7 +531,7 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
 }
 
 /**
- * BECE-style report card (same as before, but null-safe)
+ * BECE-style report card
  */
 function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
   const { student, classroom, termSummary } = report;
@@ -518,12 +550,11 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      {/* Header + student meta */}
       <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Ayitikope M/A Basic School
+              School Terminal Report
             </div>
             <div className="text-lg font-bold text-slate-900">
               BECE-Style Terminal Report
@@ -543,7 +574,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
           </div>
         </div>
 
-        {/* Student + term meta */}
         <div className="grid gap-2 rounded-md bg-slate-50 p-3 text-[11px] text-slate-700 md:grid-cols-3">
           <div className="space-y-1">
             <div>
@@ -597,9 +627,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
         </div>
       </div>
 
-      {/* Main body */}
       <div className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1.2fr)]">
-        {/* LEFT: Subjects table */}
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
@@ -667,7 +695,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                         : null;
 
                     return (
-                      <tr key={subj.subject} className={rowBg}>
+                      <tr key={`${subj.subject}-${idx}`} className={rowBg}>
                         <td className="border-b border-slate-100 px-2 py-1.5 text-left font-medium text-slate-800">
                           {subj.subject}
                         </td>
@@ -706,14 +734,12 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
           </div>
         </div>
 
-        {/* RIGHT: Attendance, fees, health, behaviour */}
         <div className="space-y-3">
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
               Attendance, Fees &amp; Health Summary
             </h3>
             <div className="grid gap-2 text-[11px] lg:grid-cols-1">
-              {/* Attendance */}
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="font-semibold text-slate-800">
@@ -724,19 +750,19 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                   <div className="grid grid-cols-2 gap-1 text-slate-700">
                     <div>
                       <span className="font-semibold">Days Present:</span>{" "}
-                      <span>{attendance?.daysPresent}</span>
+                      <span>{attendance.daysPresent}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Days Absent:</span>{" "}
-                      <span>{attendance?.daysAbsent}</span>
+                      <span>{attendance.daysAbsent}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Days Late:</span>{" "}
-                      <span>{attendance?.daysLate}</span>
+                      <span>{attendance.daysLate}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Total School Days:</span>{" "}
-                      <span>{attendance?.totalSchoolDays}</span>
+                      <span>{attendance.totalSchoolDays}</span>
                     </div>
                   </div>
                 ) : (
@@ -746,7 +772,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                 )}
               </div>
 
-              {/* Fees */}
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="font-semibold text-slate-800">Fees</span>
@@ -756,35 +781,25 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                     <div>
                       <span className="font-semibold">Total Billed:</span>{" "}
                       <span>
-                        GHS{" "}
-                        {formatMoneyFromPesewas(
-                          fees.totalBilledPesewas ?? 0
-                        )}
+                        GHS {formatMoneyFromPesewas(fees.totalBilledPesewas ?? 0)}
                       </span>
                     </div>
                     <div>
                       <span className="font-semibold">Total Paid:</span>{" "}
                       <span>
-                        GHS{" "}
-                        {formatMoneyFromPesewas(fees.totalPaidPesewas ?? 0)}
+                        GHS {formatMoneyFromPesewas(fees.totalPaidPesewas ?? 0)}
                       </span>
                     </div>
                     <div>
                       <span className="font-semibold">Waived:</span>{" "}
                       <span>
-                        GHS{" "}
-                        {formatMoneyFromPesewas(
-                          fees.totalWaivedPesewas ?? 0
-                        )}
+                        GHS {formatMoneyFromPesewas(fees.totalWaivedPesewas ?? 0)}
                       </span>
                     </div>
                     <div>
                       <span className="font-semibold">Outstanding:</span>{" "}
                       <span className="font-semibold text-rose-700">
-                        GHS{" "}
-                        {formatMoneyFromPesewas(
-                          fees.outstandingPesewas ?? 0
-                        )}
+                        GHS {formatMoneyFromPesewas(fees.outstandingPesewas ?? 0)}
                       </span>
                     </div>
                     <div className="col-span-2">
@@ -799,7 +814,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                 )}
               </div>
 
-              {/* Health */}
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="font-semibold text-slate-800">Health</span>
@@ -808,23 +822,23 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                   <div className="grid grid-cols-2 gap-1 text-slate-700">
                     <div>
                       <span className="font-semibold">Screenings:</span>{" "}
-                      <span>{health?.totalScreenings ?? 0}</span>
+                      <span>{health.totalScreenings ?? 0}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Fever Episodes:</span>{" "}
-                      <span>{health?.feverCount ?? 0}</span>
+                      <span>{health.feverCount ?? 0}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Symptoms Logged:</span>{" "}
-                      <span>{health?.symptomsCount ?? 0}</span>
+                      <span>{health.symptomsCount ?? 0}</span>
                     </div>
                     <div>
                       <span className="font-semibold">Last Screened:</span>{" "}
-                      <span>{formatDateNice(health?.lastScreenedAt)}</span>
+                      <span>{formatDateNice(health.lastScreenedAt)}</span>
                     </div>
                     <div className="col-span-2">
                       <span className="font-semibold">Health Flag:</span>{" "}
-                      <span>{health?.overallFlag || "—"}</span>
+                      <span>{health.overallFlag || "—"}</span>
                     </div>
                   </div>
                 ) : (
@@ -836,7 +850,6 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
             </div>
           </div>
 
-          {/* Behaviour & remarks */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
               Behaviour &amp; Remarks
@@ -894,26 +907,17 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
             </div>
           </div>
         </div>
-      </div> 
+      </div>
     </div>
   );
 }
 
-/**
- * MAIN PAGE
- */
 const ParentReportPage: React.FC = () => {
-  const [stage, setStage] = useState<Stage>("PHONE");
-
-  const [guardianPhone, setGuardianPhone] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpToken, setOtpToken] = useState<string | null>(null);
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-
   const [term, setTerm] = useState(DEFAULT_TERM);
   const [academicYear, setAcademicYear] = useState(DEFAULT_YEAR);
+
+  const [guardianPhone, setGuardianPhone] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const [children, setChildren] = useState<ParentChild[]>([]);
   const [childrenLoading, setChildrenLoading] = useState(false);
@@ -929,7 +933,6 @@ const ParentReportPage: React.FC = () => {
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
 
-  // Map childId -> overview student
   const overviewByStudentId = useMemo(() => {
     const map = new Map<string, ParentOverviewStudent>();
     if (overview?.students) {
@@ -940,398 +943,233 @@ const ParentReportPage: React.FC = () => {
     return map;
   }, [overview]);
 
-  async function handleRequestOtp() {
-    if (!guardianPhone.trim()) {
-      setOtpError("Please enter the phone number registered with the school.");
-      return;
-    }
-    setIsRequestingOtp(true);
-    setOtpError(null);
-    try {
-      const res = await fetch("/api/parent/otp/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          guardianPhone: guardianPhone.trim(),
-          tenantSlug: DEMO_TENANT_SLUG,
-        }),
-      });
-
-      const text = await res.text();
-      let data: any;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
-      }
-
-      if (!res.ok || !data?.ok) {
-        console.error(
-          "[ParentOTP] Request error:",
-          res.status,
-          text || data?.error
-        );
-        setOtpError(
-          data?.error ||
-            "Failed to send OTP. Please check the number and try again."
-        );
-        return;
-      }
-
-      setOtpToken(data.token);
-      setStage("OTP");
-    } catch (err) {
-      console.error("[ParentOTP] Network error requesting OTP", err);
-      setOtpError("Network error requesting OTP. Please try again.");
-    } finally {
-      setIsRequestingOtp(false);
-    }
-  }
-
-  async function handleVerifyOtp() {
-    if (!otpToken) {
-      setOtpError("Please request a code first.");
-      return;
-    }
-    if (!otpCode.trim()) {
-      setOtpError("Please enter the code you received.");
-      return;
-    }
-
-    setIsVerifyingOtp(true);
-    setOtpError(null);
-    try {
-      const res = await fetch("/api/parent/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: otpToken,
-          code: otpCode.trim(),
-        }),
-      });
-
-      const text = await res.text();
-      let data: any;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
-      }
-
-      if (!res.ok || !data?.ok) {
-        console.error(
-          "[ParentOTP] Verify error:",
-          res.status,
-          text || data?.error
-        );
-        setOtpError(
-          data?.error ||
-            "Invalid or expired code. Please try again or request a new one."
-        );
-        return;
-      }
-
-      setStage("PORTAL");
-      await loadChildrenAndOverview(guardianPhone.trim(), term, academicYear);
-    } catch (err) {
-      console.error("[ParentOTP] Network error verifying OTP", err);
-      setOtpError("Network error verifying code. Please try again.");
-    } finally {
-      setIsVerifyingOtp(false);
-    }
-  }
-
-  async function loadChildrenAndOverview(
-    phone: string,
-    termValue: string,
-    yearValue: string
-  ) {
-    setChildrenLoading(true);
-    setOverviewLoading(true);
-    setChildrenError(null);
-    setOverviewError(null);
-    try {
-      const childrenUrl = `/api/parent/children?tenantSlug=${encodeURIComponent(
-        DEMO_TENANT_SLUG
-      )}&guardianPhone=${encodeURIComponent(phone)}`;
-
-      const overviewParams = new URLSearchParams({
-        tenantId: DEMO_TENANT_ID,
-        guardianPhone: phone,
-        term: termValue,
-        academicYear: yearValue,
-      });
-      const overviewUrl = `/api/parent/overview?${overviewParams.toString()}`;
-
-      const [childrenRes, overviewRes] = await Promise.all([
-        fetch(childrenUrl),
-        fetch(overviewUrl),
-      ]);
-
-      const childrenText = await childrenRes.text();
-      const overviewText = await overviewRes.text();
-
-      let childrenData: ChildrenResponse | null = null;
-      let overviewData: ParentOverviewResponse | null = null;
+  const loadChildrenAndOverview = useCallback(
+    async (termValue: string, yearValue: string) => {
+      setChildrenLoading(true);
+      setOverviewLoading(true);
+      setChildrenError(null);
+      setOverviewError(null);
+      setSessionExpired(false);
 
       try {
-        childrenData = JSON.parse(childrenText);
-      } catch {
-        childrenData = null;
-      }
+        const [childrenRes, overviewRes] = await Promise.all([
+          fetch("/api/parent/children", {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+          }),
+          fetch(
+            `/api/parent/overview?term=${encodeURIComponent(
+              termValue
+            )}&academicYear=${encodeURIComponent(yearValue)}`,
+            {
+              method: "GET",
+              credentials: "include",
+              cache: "no-store",
+              headers: { Accept: "application/json" },
+            }
+          ),
+        ]);
 
-      try {
-        overviewData = JSON.parse(overviewText);
-      } catch {
-        overviewData = null;
-      }
+        const [{ data: childrenData }, { data: overviewData }] =
+          await Promise.all([
+            readJsonResponse<ChildrenResponse>(childrenRes),
+            readJsonResponse<ParentOverviewResponse>(overviewRes),
+          ]);
 
-      if (!childrenRes.ok || !childrenData?.ok) {
-        console.error(
-          "[ParentChildren] error",
-          childrenRes.status,
-          childrenText
-        );
-        setChildrenError(
-          childrenData?.error ||
-            "Failed to load children for this phone number."
-        );
-      } else {
-        setChildren(childrenData.students || []);
-        if (!selectedChildId && childrenData.students.length > 0) {
-          setSelectedChildId(childrenData.students[0].id);
+        const unauthorized =
+          childrenRes.status === 401 ||
+          overviewRes.status === 401 ||
+          childrenData?.error === "UNAUTHORIZED_PARENT" ||
+          overviewData?.error === "UNAUTHORIZED_PARENT";
+
+        if (unauthorized) {
+          setSessionExpired(true);
+          setChildren([]);
+          setOverview(null);
+          setSelectedChildId(null);
+          setGuardianPhone(null);
+          return;
         }
+
+        if (!childrenRes.ok || !childrenData?.ok) {
+          setChildrenError(
+            readableApiMessage(
+              childrenData,
+              childrenRes.status,
+              "Failed to load your children."
+            )
+          );
+          setChildren([]);
+        } else {
+          const nextChildren = Array.isArray(childrenData.students)
+            ? childrenData.students
+            : [];
+
+          setChildren(nextChildren);
+          setGuardianPhone(childrenData.guardianPhone || null);
+
+          setSelectedChildId((prev) => {
+            if (prev && nextChildren.some((child) => child.id === prev)) {
+              return prev;
+            }
+            return nextChildren[0]?.id ?? null;
+          });
+        }
+
+        if (!overviewRes.ok || !overviewData?.ok) {
+          setOverviewError(
+            readableApiMessage(
+              overviewData,
+              overviewRes.status,
+              "Failed to load overview for this term and year."
+            )
+          );
+          setOverview(null);
+        } else {
+          setOverview(overviewData);
+          setGuardianPhone((prev) => prev || overviewData.guardianPhone || null);
+        }
+      } catch (err) {
+        console.error("[ParentPortal] error loading children/overview", err);
+        setChildrenError("Network error loading children.");
+        setOverviewError("Network error loading overview.");
+      } finally {
+        setChildrenLoading(false);
+        setOverviewLoading(false);
       }
+    },
+    []
+  );
 
-      if (!overviewRes.ok || !overviewData?.ok) {
-        console.error(
-          "[ParentOverview] error",
-          overviewRes.status,
-          overviewText
-        );
-        setOverviewError(
-          overviewData?.error ||
-            "Failed to load overview for this term and year."
-        );
-      } else {
-        setOverview(overviewData);
-      }
-    } catch (err) {
-      console.error("[ParentPortal] error loading children/overview", err);
-      setChildrenError("Network error loading children.");
-      setOverviewError("Network error loading overview.");
-    } finally {
-      setChildrenLoading(false);
-      setOverviewLoading(false);
-    }
-  }
+  const loadReportForSelection = useCallback(
+    async (studentId: string, termValue: string, yearValue: string) => {
+      setReportLoading(true);
+      setReportError(null);
 
-  async function loadReportForSelection(
-    studentId: string,
-    termValue: string,
-    yearValue: string
-  ) {
-    setReportLoading(true);
-    setReportError(null);
-    try {
-      const params = new URLSearchParams({
-        tenantId: DEMO_TENANT_ID,
-        studentId,
-        term: termValue,
-        academicYear: yearValue,
-      });
-      const url = `/api/parent/report/term?${params.toString()}`;
-      const res = await fetch(url);
-
-      const text = await res.text();
-      if (!res.ok) {
-        console.error(
-          "[ParentTermReportPage] HTTP error:",
-          res.status,
-          text
-        );
-        setReportError("Failed to load parent term report.");
-        setReport(null);
-        return;
-      }
-
-      let data: ParentTermReportResponse | null = null;
       try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
-      }
+        const url = `/api/parent/report/term?studentId=${encodeURIComponent(
+          studentId
+        )}&term=${encodeURIComponent(termValue)}&academicYear=${encodeURIComponent(
+          yearValue
+        )}`;
 
-      if (!data?.ok) {
-        setReportError("Failed to load parent term report.");
+        const res = await fetch(url, {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+
+        const { data } = await readJsonResponse<ParentTermReportResponse>(res);
+
+        const unauthorized =
+          res.status === 401 || data?.error === "UNAUTHORIZED_PARENT";
+
+        if (unauthorized) {
+          setSessionExpired(true);
+          setReport(null);
+          return;
+        }
+
+        if (!res.ok || !data?.ok) {
+          setReportError(
+            readableApiMessage(
+              data,
+              res.status,
+              "Failed to load parent term report."
+            )
+          );
+          setReport(null);
+          return;
+        }
+
+        setReport(data);
+      } catch (err) {
+        console.error("[ParentTermReportPage] error loading report", err);
+        setReportError("Network error loading term report.");
         setReport(null);
-        return;
+      } finally {
+        setReportLoading(false);
       }
+    },
+    []
+  );
 
-      setReport(data);
-    } catch (err) {
-      console.error("[ParentTermReportPage] error loading report", err);
-      setReportError("Network error loading term report.");
-      setReport(null);
-    } finally {
-      setReportLoading(false);
-    }
-  }
-
-  // Whenever we are in PORTAL and selected child/term/year changes, load report
   useEffect(() => {
-    if (stage !== "PORTAL") return;
+    loadChildrenAndOverview(term, academicYear);
+  }, [term, academicYear, loadChildrenAndOverview]);
+
+  useEffect(() => {
+    if (sessionExpired) return;
     if (!selectedChildId) {
       setReport(null);
       return;
     }
+
     loadReportForSelection(selectedChildId, term, academicYear);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, selectedChildId, term, academicYear]);
+  }, [
+    sessionExpired,
+    selectedChildId,
+    term,
+    academicYear,
+    loadReportForSelection,
+  ]);
 
   function handlePrintCurrent() {
-    if (!report) return;
+    if (!report?.context) return;
+
     const params = new URLSearchParams({
-      tenantId: report.context.tenantId,
       studentId: report.context.studentId,
       term: report.context.term,
       academicYear: report.context.academicYear,
     });
-    const url = `/parent/report/print?${params.toString()}`;
-    window.open(url, "_blank");
+
+    window.open(`/parent/report/print?${params.toString()}`, "_blank");
   }
 
-  // ------------- RENDER --------------
-
-  if (stage === "PHONE") {
+  if (sessionExpired) {
     return (
       <div className="min-h-screen bg-slate-50">
         <div className="container mx-auto px-4 py-10">
           <div className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h1 className="text-base font-semibold text-slate-900">
-              Parent Term Report &amp; SMS Portal
+              Parent session required
             </h1>
-            <p className="mt-1 text-xs text-slate-600">
-              Enter the phone number registered with the school to receive a
-              one-time code (OTP). You&apos;ll use this to view your child&apos;s
-              BECE-style report, fees, and health summaries.
+            <p className="mt-2 text-xs text-slate-600">
+              Your parent session has expired or is missing. Please log in again
+              to continue.
             </p>
 
-            <div className="mt-4 space-y-2 text-xs">
-              <label className="block text-[11px] font-medium text-slate-700">
-                Registered Phone Number
-              </label>
-              <input
-                type="tel"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="e.g. 0267496357"
-                value={guardianPhone}
-                onChange={(e) => setGuardianPhone(e.target.value)}
-              />
-            </div>
-
-            {otpError && (
-              <p className="mt-2 text-[11px] text-rose-600">{otpError}</p>
-            )}
-
-            <div className="mt-4 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={handleRequestOtp}
-                disabled={isRequestingOtp}
-                className="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            <div className="mt-4">
+              <a
+                href="/parent/login?next=/parent/report"
+                className="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-blue-700"
               >
-                {isRequestingOtp ? "Sending code..." : "Send OTP"}
-              </button>
+                Go to parent login
+              </a>
             </div>
-
-            <p className="mt-3 text-[10px] text-slate-500">
-              For demo testing, make sure you use the same phone number as in
-              the seeded data (e.g.{" "}
-              <span className="font-semibold">0267496357</span>{" "}
-              for Evelyn Addo).
-            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (stage === "OTP") {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="container mx-auto px-4 py-10">
-          <div className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h1 className="text-base font-semibold text-slate-900">
-              Enter One-Time Code
-            </h1>
-            <p className="mt-1 text-xs text-slate-600">
-              A 6-digit code has been sent to{" "}
-              <span className="font-semibold">{guardianPhone}</span>. Enter it
-              below to continue.
-            </p>
-
-            <div className="mt-4 space-y-2 text-xs">
-              <label className="block text-[11px] font-medium text-slate-700">
-                One-Time Code
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-center text-base tracking-[0.35em] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-              />
-            </div>
-
-            {otpError && (
-              <p className="mt-2 text-[11px] text-rose-600">{otpError}</p>
-            )}
-
-            <div className="mt-4 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setStage("PHONE")}
-                className="inline-flex items-center justify-center rounded-md border border-slate-300 px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Change phone
-              </button>
-              <button
-                type="button"
-                onClick={handleVerifyOtp}
-                disabled={isVerifyingOtp}
-                className="inline-flex flex-1 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isVerifyingOtp ? "Verifying..." : "Verify &amp; Continue"}
-              </button>
-            </div>
-
-            <p className="mt-3 text-[10px] text-slate-500">
-              Didn&apos;t receive a code? Go back and check that the phone
-              number matches the one the school has on record.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // STAGE: PORTAL
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto space-y-5 px-4 py-6">
-        {/* Top context bar */}
         <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Parent Portal • Ayitikope M/A Basic School
+              Parent Portal
             </div>
             <div className="text-sm font-semibold text-slate-900">
               BECE-Style Term Report &amp; Health-Aware Summary
             </div>
             <div className="text-[11px] text-slate-600">
-              Phone: <span className="font-medium">{guardianPhone}</span>
+              Phone:{" "}
+              <span className="font-medium">{guardianPhone || "Signed in"}</span>
             </div>
           </div>
 
@@ -1363,15 +1201,10 @@ const ParentReportPage: React.FC = () => {
                 />
               </div>
             </div>
+
             <button
               type="button"
-              onClick={() =>
-                loadChildrenAndOverview(
-                  guardianPhone.trim(),
-                  term,
-                  academicYear
-                )
-              }
+              onClick={() => loadChildrenAndOverview(term, academicYear)}
               className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
             >
               Refresh data
@@ -1379,9 +1212,7 @@ const ParentReportPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Main grid: children & overview + report + coach */}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.7fr)]">
-          {/* LEFT COLUMN: Children list + quick overview */}
           <div className="space-y-3">
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs">
               <div className="mb-2 flex items-center justify-between gap-2">
@@ -1390,8 +1221,8 @@ const ParentReportPage: React.FC = () => {
                     Your children this term
                   </h2>
                   <p className="text-[11px] text-slate-600">
-                    Select a child to view detailed BECE-style report, fees, and
-                    health summary.
+                    Select a child to view detailed report, fees, and health
+                    summary.
                   </p>
                 </div>
                 <span className="min-w-8 rounded-full bg-slate-100 px-2 py-0.5 text-center text-[10px] font-medium text-slate-700">
@@ -1410,7 +1241,7 @@ const ParentReportPage: React.FC = () => {
                 </div>
               ) : children.length === 0 ? (
                 <div className="py-4 text-center text-[11px] text-slate-500">
-                  No children found for this phone number yet.
+                  No children found for this parent session yet.
                 </div>
               ) : (
                 <ul className="space-y-1.5">
@@ -1438,10 +1269,7 @@ const ParentReportPage: React.FC = () => {
                               {child.name}
                             </div>
                             <div className="text-[11px] text-slate-600">
-                              Class:{" "}
-                              {child.classroom?.name
-                                ? child.classroom.name
-                                : "—"}
+                              Class: {child.classroom?.name || "—"}
                             </div>
                             <div className="flex flex-wrap gap-1 text-[10px]">
                               <span className="rounded-full bg-white px-2 py-0.5 text-slate-600">
@@ -1468,7 +1296,6 @@ const ParentReportPage: React.FC = () => {
               )}
             </div>
 
-            {/* Overview status */}
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <h2 className="text-xs font-semibold text-slate-900">
@@ -1518,8 +1345,7 @@ const ParentReportPage: React.FC = () => {
                         </span>
                         {s.health?.lastDate && (
                           <span className="rounded-full bg-white px-2 py-0.5">
-                            Last health check:{" "}
-                            {formatDateNice(s.health.lastDate)}
+                            Last health check: {formatDateNice(s.health.lastDate)}
                           </span>
                         )}
                       </div>
@@ -1530,7 +1356,6 @@ const ParentReportPage: React.FC = () => {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: BECE report + parent AI coach */}
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-xs font-semibold text-slate-900">
@@ -1563,9 +1388,7 @@ const ParentReportPage: React.FC = () => {
               </div>
             ) : !report ? (
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-[11px] text-slate-600">
-                No report data available yet for this term. Once teachers record
-                assessments and the school finalizes report cards, they will
-                appear here.
+                No report data available yet for this term.
               </div>
             ) : (
               <>

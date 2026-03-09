@@ -1,121 +1,99 @@
 // src/app/api/headteacher/reports/class-term-summary/route.ts
 
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+function noStoreJson(status: number, payload: any) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
 
 /**
  * GET /api/headteacher/reports/class-term-summary
  *
  * Query params:
  *  - classroomId (required)
- *  - term (required) – e.g. "1st Term"
- *  - academicYear (required) – e.g. "2025/2026"
- *
- * Returns:
- *  - subjects[] – list of subjects with at least one assessment
- *  - students[] – each with scores by subject and totals
+ *  - term (required)
+ *  - academicYear (required)
  */
 export async function GET(req: Request) {
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
+
+  const { ctx } = auth;
+
   try {
     const url = new URL(req.url);
-    const classroomId = url.searchParams.get("classroomId");
-    const term = url.searchParams.get("term");
-    const academicYear = url.searchParams.get("academicYear");
+    const classroomId = (url.searchParams.get("classroomId") ?? "").trim();
+    const term = (url.searchParams.get("term") ?? "").trim();
+    const academicYear = (url.searchParams.get("academicYear") ?? "").trim();
 
     if (!classroomId || !term || !academicYear) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error:
-            "classroomId, term and academicYear are required query parameters.",
-        },
-        { status: 400 }
-      );
+      return noStoreJson(400, {
+        ok: false,
+        error: "classroomId, term and academicYear are required query parameters.",
+      });
     }
 
-    // 1) Auth – ensure headteacher is signed in
-    const session = await getServerSession(authOptions);
-    const user = session?.user as any;
-    const userId: string | undefined = user?.id;
-
-    if (!userId) {
-      return NextResponse.json(
-        { ok: false, error: "Not signed in" },
-        { status: 401 }
-      );
-    }
-
-    // 2) Tenant – check membership
-    const membership = await prisma.membership.findFirst({
-      where: { userId },
+    const classroom = await prisma.classroom.findFirst({
+      where: {
+        id: classroomId,
+        tenantId: ctx.tenantId,
+        status: "ACTIVE",
+      },
+      select: { id: true },
     });
 
-    if (!membership?.tenantId) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "No tenant membership found for this user.",
-        },
-        { status: 401 }
-      );
+    if (!classroom) {
+      return noStoreJson(404, {
+        ok: false,
+        error: "CLASSROOM_NOT_FOUND",
+      });
     }
 
-    const tenantId = membership.tenantId;
-
-    // 3) Load students for this class & tenant
     const students = await prisma.student.findMany({
       where: {
-        tenantId,
+        tenantId: ctx.tenantId,
         classroomId,
+        status: "ACTIVE",
       },
       select: {
         id: true,
         firstName: true,
         lastName: true,
       },
-      orderBy: {
-        firstName: "asc",
-      },
+      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     });
 
     if (students.length === 0) {
-      return NextResponse.json(
-        {
-          ok: true,
-          tenantId,
-          classroomId,
-          term,
-          academicYear,
-          subjects: [],
-          students: [],
-          message:
-            "No learners found for this class. Please assign learners to this classroom first.",
-        },
-        { status: 200 }
-      );
+      return noStoreJson(200, {
+        ok: true,
+        tenantId: ctx.tenantId,
+        classroomId,
+        term,
+        academicYear,
+        subjects: [],
+        students: [],
+        message:
+          "No learners found for this class. Please assign learners to this classroom first.",
+      });
     }
 
-    // 4) Load assessment items for this class, term & year
-    //
-    // Expected shape:
-    //   model AssessmentItem {
-    //     id           String @id @default(cuid())
-    //     tenantId     String
-    //     classroomId  String
-    //     term         String
-    //     academicYear String
-    //     subject      String
-    //     title        String
-    //     maxScore     Int
-    //   }
     const items = await prisma.assessmentItem.findMany({
       where: {
-        tenantId,
+        tenantId: ctx.tenantId,
         classroomId,
         term,
         academicYear,
@@ -126,62 +104,41 @@ export async function GET(req: Request) {
         title: true,
         maxScore: true,
       },
-      orderBy: {
-        subject: "asc",
-      },
+      orderBy: [{ subject: "asc" }, { createdAt: "asc" }],
     });
 
     if (items.length === 0) {
-      return NextResponse.json(
-        {
-          ok: true,
-          tenantId,
-          classroomId,
-          term,
-          academicYear,
-          subjects: [],
-          students: students.map((s) => ({
-            id: s.id,
-            firstName: s.firstName ?? "",
-            lastName: s.lastName ?? "",
-            totalScore: 0,
-            maxTotalScore: 0,
-            scoresBySubject: {},
-          })),
-          message:
-            "No assessment items found for this class and term yet. Once assessments are recorded, this report will populate.",
-        },
-        { status: 200 }
-      );
+      return noStoreJson(200, {
+        ok: true,
+        tenantId: ctx.tenantId,
+        classroomId,
+        term,
+        academicYear,
+        subjects: [],
+        students: students.map((s) => ({
+          id: s.id,
+          firstName: s.firstName ?? "",
+          lastName: s.lastName ?? "",
+          totalScore: 0,
+          maxTotalScore: 0,
+          scoresBySubject: {},
+        })),
+        message:
+          "No assessment items found for this class and term yet. Once assessments are recorded, this report will populate.",
+      });
     }
 
     const itemIds = items.map((i) => i.id);
 
-    // Compute total possible marks per subject
     const maxBySubject = new Map<string, number>();
     for (const item of items) {
       const subject = item.subject ?? "Unknown";
-      const max = item.maxScore ?? 0;
-      const prev = maxBySubject.get(subject) ?? 0;
-      maxBySubject.set(subject, prev + max);
+      const max = Number(item.maxScore ?? 0);
+      maxBySubject.set(subject, (maxBySubject.get(subject) ?? 0) + max);
     }
 
     const subjects = Array.from(maxBySubject.keys()).sort();
 
-    // 5) Load scores for those items
-    //
-    // Your real shape (from the TS error) is:
-    //   model AssessmentScore {
-    //     id        String  @id @default(cuid())
-    //     createdAt DateTime
-    //     updatedAt DateTime
-    //     studentId String
-    //     itemId    String   // FK to AssessmentItem
-    //     score     Int
-    //     comment   String?
-    //   }
-    //
-    // So we filter by itemId (not assessmentItemId) and don't use tenantId here.
     const scores = await prisma.assessmentScore.findMany({
       where: {
         itemId: {
@@ -195,19 +152,14 @@ export async function GET(req: Request) {
       },
     });
 
-    // Map itemId -> { subject, maxScore }
-    const itemMeta = new Map<
-      string,
-      { subject: string; maxScore: number }
-    >();
+    const itemMeta = new Map<string, { subject: string; maxScore: number }>();
     for (const item of items) {
       itemMeta.set(item.id, {
         subject: item.subject ?? "Unknown",
-        maxScore: item.maxScore ?? 0,
+        maxScore: Number(item.maxScore ?? 0),
       });
     }
 
-    // Build per-student aggregates
     type StudentAgg = {
       totalScore: number;
       maxTotalScore: number;
@@ -235,21 +187,16 @@ export async function GET(req: Request) {
       const meta = itemMeta.get(sc.itemId);
       if (!meta) continue;
 
-      const { subject, maxScore } = meta;
-      const scoreValue = sc.score ?? 0;
-
       const agg = ensureAgg(sc.studentId);
-      // Sum totals
-      agg.totalScore += scoreValue;
-      agg.maxTotalScore += maxScore;
+      const scoreValue = Number(sc.score ?? 0);
 
-      // Sum per subject
-      const prevSubjectScore = agg.scoresBySubject[subject] ?? 0;
-      agg.scoresBySubject[subject] =
-        prevSubjectScore + scoreValue;
+      agg.totalScore += Number.isFinite(scoreValue) ? scoreValue : 0;
+      agg.maxTotalScore += meta.maxScore;
+      agg.scoresBySubject[meta.subject] =
+        (agg.scoresBySubject[meta.subject] ?? 0) +
+        (Number.isFinite(scoreValue) ? scoreValue : 0);
     }
 
-    // 6) Build response for all students
     const studentRows = students.map((s) => {
       const agg = aggByStudent.get(s.id) ?? {
         totalScore: 0,
@@ -267,31 +214,21 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json(
-      {
-        ok: true,
-        tenantId,
-        classroomId,
-        term,
-        academicYear,
-        subjects,
-        students: studentRows,
-      },
-      { status: 200 }
-    );
+    return noStoreJson(200, {
+      ok: true,
+      tenantId: ctx.tenantId,
+      classroomId,
+      term,
+      academicYear,
+      subjects,
+      students: studentRows,
+    });
   } catch (err: any) {
-    console.error(
-      "Error in /api/headteacher/reports/class-term-summary",
-      err
-    );
-    return NextResponse.json(
-      {
-        ok: false,
-        error:
-          err?.message ||
-          "Unexpected error while building class term summary.",
-      },
-      { status: 500 }
-    );
+    console.error("[HEADTEACHER_CLASS_TERM_SUMMARY_GET]", err);
+    return noStoreJson(500, {
+      ok: false,
+      error:
+        err?.message || "Unexpected error while building class term summary.",
+    });
   }
 }

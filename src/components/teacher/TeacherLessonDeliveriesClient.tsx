@@ -1,0 +1,584 @@
+// src/components/teacher/TeacherLessonDeliveriesClient.tsx
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+
+type ClassroomPick = {
+  id: string;
+  name: string;
+  grade?: string | null;
+  arm?: string | null;
+};
+
+type TeacherPhaseCode = "KG" | "PRIMARY" | "JHS" | null;
+
+type ContextOk = {
+  ok: true;
+  term: string;
+  academicYear: string;
+  defaultClassroomId: string | null;
+  classrooms: ClassroomPick[];
+  teacherPhase: TeacherPhaseCode;
+};
+
+type ContextErr = { ok: false; error: string };
+type ContextResponse = ContextOk | ContextErr;
+
+type ApprovedNote = {
+  id: string;
+  classroomId: string | null;
+  teacherUserId: string;
+  subject: string;
+  term: string;
+  academicYear: string;
+  lessonDate?: string | null;
+  lessonTitle?: string | null;
+  curriculumUnitId?: string | null;
+  contentStandard?: string | null;
+  indicator?: string | null;
+  approvedAt?: string | null;
+};
+
+type ApprovedNotesOk = {
+  ok: true;
+  items: ApprovedNote[];
+};
+
+type ApprovedNotesErr = { ok: false; error: string };
+type ApprovedNotesResponse = ApprovedNotesOk | ApprovedNotesErr;
+
+type LessonDeliveryItem = {
+  id: string;
+  classroomId: string;
+  teacherUserId?: string;
+  term: string;
+  academicYear: string;
+  subject: string;
+  dateTaught?: string | null;
+  lessonNoteId?: string | null;
+  curriculumUnitId?: string | null;
+  contentStandardCode?: string | null;
+  indicatorCode?: string | null;
+  notes?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+type LessonDeliveryListOk = {
+  ok: true;
+  items: LessonDeliveryItem[];
+};
+
+type LessonDeliveryListErr = { ok: false; error: string };
+type LessonDeliveryListResponse = LessonDeliveryListOk | LessonDeliveryListErr;
+
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function safeJson<T>(raw: unknown): T | null {
+  if (!raw || typeof raw !== "object") return null;
+  return raw as T;
+}
+
+function formatDate(v: string | null | undefined) {
+  if (!v) return "—";
+  try {
+    return new Date(v).toISOString().slice(0, 10);
+  } catch {
+    return "—";
+  }
+}
+
+function fullClassroomLabel(c: ClassroomPick) {
+  const name = cleanStr(c.name);
+  const grade = cleanStr(c.grade);
+  const arm = cleanStr(c.arm);
+
+  if (grade) {
+    return `${name}${grade ? ` (${grade}${arm ? ` ${arm}` : ""})` : ""}`;
+  }
+
+  return name || "Classroom";
+}
+
+function noteLabel(n: ApprovedNote) {
+  const parts: string[] = [];
+  const dt = formatDate(n.lessonDate);
+  if (dt !== "—") parts.push(dt);
+  if (cleanStr(n.subject)) parts.push(n.subject);
+  if (cleanStr(n.lessonTitle)) parts.push(n.lessonTitle!);
+  return parts.join(" • ") || n.id;
+}
+
+function deliveryLabel(d: LessonDeliveryItem) {
+  const parts: string[] = [];
+  const dt = formatDate(d.dateTaught);
+  if (dt !== "—") parts.push(dt);
+  if (cleanStr(d.subject)) parts.push(d.subject);
+  if (cleanStr(d.indicatorCode)) parts.push(d.indicatorCode!);
+  else if (cleanStr(d.contentStandardCode)) parts.push(d.contentStandardCode!);
+  if (d.lessonNoteId) parts.push("Lesson note linked");
+  return parts.join(" • ") || d.id;
+}
+
+export default function TeacherLessonDeliveriesClient() {
+  const searchParams = useSearchParams();
+
+  const initialClassroomId = searchParams.get("classroomId") ?? "";
+  const initialTerm = searchParams.get("term") ?? "";
+  const initialAcademicYear = searchParams.get("academicYear") ?? "";
+
+  const [ctxLoading, setCtxLoading] = useState(true);
+  const [ctxError, setCtxError] = useState<string | null>(null);
+
+  const [classrooms, setClassrooms] = useState<ClassroomPick[]>([]);
+  const [classroomId, setClassroomId] = useState<string>(initialClassroomId);
+  const [term, setTerm] = useState<string>(initialTerm || "1st Term");
+  const [academicYear, setAcademicYear] = useState<string>(initialAcademicYear || "2025/2026");
+
+  const [approvedNotes, setApprovedNotes] = useState<ApprovedNote[]>([]);
+  const [approvedNotesLoading, setApprovedNotesLoading] = useState(false);
+  const [approvedNotesError, setApprovedNotesError] = useState<string | null>(null);
+
+  const [deliveries, setDeliveries] = useState<LessonDeliveryItem[]>([]);
+  const [deliveriesLoading, setDeliveriesLoading] = useState(false);
+  const [deliveriesError, setDeliveriesError] = useState<string | null>(null);
+
+  const [selectedNoteId, setSelectedNoteId] = useState<string>("");
+  const [dateTaught, setDateTaught] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState<string>("");
+
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const selectedNote = useMemo(
+    () => approvedNotes.find((n) => n.id === selectedNoteId) ?? null,
+    [approvedNotes, selectedNoteId]
+  );
+
+  const assessmentHref = useMemo(() => {
+    if (!classroomId) return "/teacher/assessment";
+    const params = new URLSearchParams({ classroomId, term, academicYear });
+    return `/teacher/assessment?${params.toString()}`;
+  }, [classroomId, term, academicYear]);
+
+  useEffect(() => {
+    const boot = async () => {
+      try {
+        setCtxLoading(true);
+        setCtxError(null);
+
+        const res = await fetch("/api/teacher/assessment/context", {
+          cache: "no-store",
+        });
+        const raw = await res.json().catch(() => null);
+        const json = safeJson<ContextResponse>(raw);
+
+        if (!json) {
+          setCtxError(`Invalid context response (HTTP ${res.status}).`);
+          return;
+        }
+
+        if (!res.ok || !json.ok) {
+          setCtxError((json as any)?.error || "Failed to load context.");
+          return;
+        }
+
+        const nextClassrooms = Array.isArray(json.classrooms) ? json.classrooms : [];
+        setClassrooms(nextClassrooms);
+
+        if (!initialClassroomId) {
+          setClassroomId(json.defaultClassroomId || nextClassrooms[0]?.id || "");
+        }
+        if (!initialTerm) setTerm(json.term || "1st Term");
+        if (!initialAcademicYear) setAcademicYear(json.academicYear || "2025/2026");
+      } catch {
+        setCtxError("Failed to load delivery context.");
+      } finally {
+        setCtxLoading(false);
+      }
+    };
+
+    boot();
+  }, [initialAcademicYear, initialClassroomId, initialTerm]);
+
+  useEffect(() => {
+    const loadApprovedNotes = async () => {
+      if (!classroomId || !term || !academicYear) {
+        setApprovedNotes([]);
+        return;
+      }
+
+      try {
+        setApprovedNotesLoading(true);
+        setApprovedNotesError(null);
+
+        const params = new URLSearchParams({ classroomId, term, academicYear });
+        const res = await fetch(
+          `/api/teacher/lesson-deliveries/approved-notes/list?${params.toString()}`,
+          { cache: "no-store" }
+        );
+
+        const raw = await res.json().catch(() => null);
+        const json = safeJson<ApprovedNotesResponse>(raw);
+
+        if (!json) throw new Error(`Invalid approved-notes response (HTTP ${res.status}).`);
+        if (!res.ok || !json.ok) {
+          throw new Error((json as any)?.error || `HTTP ${res.status}`);
+        }
+
+        const next = Array.isArray(json.items) ? json.items : [];
+        setApprovedNotes(next);
+
+        setSelectedNoteId((prev) => {
+          if (prev && next.some((n) => n.id === prev)) return prev;
+          return next[0]?.id || "";
+        });
+      } catch (err: any) {
+        setApprovedNotes([]);
+        setApprovedNotesError(String(err?.message || "Failed to load approved lesson notes."));
+      } finally {
+        setApprovedNotesLoading(false);
+      }
+    };
+
+    loadApprovedNotes();
+  }, [classroomId, term, academicYear]);
+
+  useEffect(() => {
+    const loadDeliveries = async () => {
+      if (!classroomId || !term || !academicYear) {
+        setDeliveries([]);
+        return;
+      }
+
+      try {
+        setDeliveriesLoading(true);
+        setDeliveriesError(null);
+
+        const params = new URLSearchParams({ classroomId, term, academicYear });
+        const res = await fetch(`/api/teacher/lesson-deliveries/list?${params.toString()}`, {
+          cache: "no-store",
+        });
+
+        const raw = await res.json().catch(() => null);
+        const json = safeJson<LessonDeliveryListResponse>(raw);
+
+        if (!json) throw new Error(`Invalid lesson-deliveries response (HTTP ${res.status}).`);
+        if (!res.ok || !json.ok) {
+          throw new Error((json as any)?.error || `HTTP ${res.status}`);
+        }
+
+        setDeliveries(Array.isArray(json.items) ? json.items : []);
+      } catch (err: any) {
+        setDeliveries([]);
+        setDeliveriesError(String(err?.message || "Failed to load lesson deliveries."));
+      } finally {
+        setDeliveriesLoading(false);
+      }
+    };
+
+    loadDeliveries();
+  }, [classroomId, term, academicYear]);
+
+  async function handleCreateDelivery(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!classroomId || !selectedNote || !dateTaught) {
+      setActionError("Select a class, an approved lesson note, and a date taught.");
+      setSaveState("error");
+      return;
+    }
+
+    try {
+      setSaveState("saving");
+      setActionError(null);
+
+      const body = {
+        classroomId,
+        subject: selectedNote.subject,
+        term,
+        academicYear,
+        dateTaught,
+        lessonNoteId: selectedNote.id,
+        curriculumUnitId: selectedNote.curriculumUnitId ?? null,
+        notes: notes.trim() || null,
+      };
+
+      const res = await fetch("/api/teacher/lesson-deliveries/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const raw = await res.json().catch(() => null);
+      const json = safeJson<any>(raw);
+
+      if (!res.ok || !json?.ok) {
+        setActionError(String(json?.error || "Failed to record lesson delivery."));
+        setSaveState("error");
+        return;
+      }
+
+      const params = new URLSearchParams({ classroomId, term, academicYear });
+      const refetch = await fetch(`/api/teacher/lesson-deliveries/list?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const refetchRaw = await refetch.json().catch(() => null);
+      const refetchJson = safeJson<LessonDeliveryListResponse>(refetchRaw);
+
+      if (refetch.ok && refetchJson?.ok) {
+        setDeliveries(Array.isArray(refetchJson.items) ? refetchJson.items : []);
+      }
+
+      setNotes("");
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 900);
+    } catch {
+      setActionError("Unexpected error recording lesson delivery.");
+      setSaveState("error");
+    }
+  }
+
+  if (ctxLoading) {
+    return <div className="p-6 text-sm text-slate-600">Loading lesson-delivery context…</div>;
+  }
+
+  if (ctxError) {
+    return <div className="p-6 text-sm text-rose-700">{ctxError}</div>;
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
+              Lesson delivery tracker
+            </h1>
+            <p className="mt-1 text-sm text-slate-600">
+              Approved lesson notes do not count as delivered until a delivery record is created.
+            </p>
+          </div>
+
+          <Link
+            href={assessmentHref}
+            className="inline-flex items-center rounded-full border border-indigo-500 bg-indigo-50 px-3 py-1 text-[11px] font-medium text-indigo-700 hover:bg-indigo-100"
+          >
+            Go to assessment
+          </Link>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+          <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Record a delivered lesson</h2>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Delivery is created from an approved lesson note. That is the evidence link.
+              </p>
+            </div>
+
+            {actionError ? (
+              <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                {actionError}
+              </div>
+            ) : null}
+
+            <form onSubmit={handleCreateDelivery} className="space-y-3 text-xs">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="block text-[11px] font-medium text-slate-700">Class</label>
+                  <select
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                    value={classroomId}
+                    onChange={(e) => setClassroomId(e.target.value)}
+                  >
+                    {classrooms.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {fullClassroomLabel(c)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-medium text-slate-700">Term</label>
+                  <input
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                    value={term}
+                    onChange={(e) => setTerm(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-medium text-slate-700">Academic year</label>
+                  <input
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                    value={academicYear}
+                    onChange={(e) => setAcademicYear(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="block text-[11px] font-medium text-slate-700">
+                    Approved lesson note
+                  </label>
+                  <select
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                    value={selectedNoteId}
+                    onChange={(e) => setSelectedNoteId(e.target.value)}
+                    disabled={approvedNotesLoading || approvedNotes.length === 0}
+                  >
+                    {approvedNotes.length === 0 ? (
+                      <option value="">
+                        {approvedNotesLoading ? "Loading approved notes..." : "No approved notes found"}
+                      </option>
+                    ) : (
+                      approvedNotes.map((n) => (
+                        <option key={n.id} value={n.id}>
+                          {noteLabel(n)}
+                        </option>
+                      ))
+                    )}
+                  </select>
+
+                  {approvedNotesError ? (
+                    <p className="text-[10px] text-amber-700">{approvedNotesError}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-medium text-slate-700">Date taught</label>
+                  <input
+                    type="date"
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                    value={dateTaught}
+                    onChange={(e) => setDateTaught(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[11px] font-medium text-slate-700">Subject</label>
+                  <input
+                    readOnly
+                    className="w-full rounded border border-slate-300 bg-slate-50 px-2 py-1 text-xs"
+                    value={selectedNote?.subject || ""}
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="block text-[11px] font-medium text-slate-700">
+                    Delivery notes (optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {selectedNote ? (
+                <div className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] text-indigo-800">
+                  Selected note: <span className="font-medium">{noteLabel(selectedNote)}</span>
+                  {selectedNote.curriculumUnitId ? (
+                    <span className="ml-1 text-indigo-700">• Curriculum unit attached</span>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={saveState === "saving" || !selectedNoteId}
+                  className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {saveState === "saving" ? "Recording..." : "Record lesson delivery"}
+                </button>
+
+                {saveState === "error" ? (
+                  <span className="text-[11px] text-rose-600">Failed to save.</span>
+                ) : null}
+                {saveState === "saved" ? (
+                  <span className="text-[11px] text-emerald-600">Recorded successfully.</span>
+                ) : null}
+              </div>
+            </form>
+          </section>
+
+          <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Recorded deliveries</h2>
+              <p className="mt-1 text-[11px] text-slate-500">
+                These are the records that the assessment screen should link to.
+              </p>
+            </div>
+
+            {deliveriesError ? (
+              <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                {deliveriesError}
+              </div>
+            ) : null}
+
+            {deliveriesLoading ? (
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
+                Loading lesson deliveries…
+              </div>
+            ) : null}
+
+            {!deliveriesLoading && deliveries.length === 0 ? (
+              <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-xs text-slate-600">
+                No lesson deliveries recorded yet for this class, term, and year.
+              </div>
+            ) : null}
+
+            {!deliveriesLoading && deliveries.length > 0 ? (
+              <div className="max-h-[520px] overflow-auto rounded-lg border border-slate-100 text-xs">
+                <table className="min-w-full border-separate border-spacing-0 text-xs">
+                  <thead className="sticky top-0 bg-slate-50">
+                    <tr>
+                      <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+                        Delivery
+                      </th>
+                      <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+                        Linked note
+                      </th>
+                      <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+                        Notes
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deliveries.map((d, idx) => {
+                      const zebra = idx % 2 ? "bg-slate-50/60" : "bg-white";
+                      return (
+                        <tr key={d.id} className={zebra}>
+                          <td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-900">
+                            <div className="font-medium">{deliveryLabel(d)}</div>
+                            <div className="text-[11px] text-slate-500">{d.id}</div>
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-700">
+                            {d.lessonNoteId || "—"}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-700">
+                            {d.notes || "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+}

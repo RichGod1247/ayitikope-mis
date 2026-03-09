@@ -1,9 +1,8 @@
 // src/app/headteacher/reports/student-report/page.tsx
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
+import { requireServerUserContext } from "@/lib/serverAuth";
 import { HeadteacherStudentReportClient } from "@/components/HeadteacherStudentReportClient";
 
 export const metadata: Metadata = {
@@ -15,40 +14,30 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const HEAD_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN"]);
-
 export default async function HeadteacherStudentReportPage() {
-  const session = await getServerSession(authOptions);
-  const user = session?.user as any;
-  const userId: string | undefined = user?.id;
-
-  if (!userId) {
-    redirect(
-      `/api/auth/signin?callbackUrl=${encodeURIComponent(
-        "/headteacher/reports/student-report"
-      )}`
-    );
-  }
-
-  const membership = await prisma.membership.findFirst({
-    where: { userId, status: "ACTIVE" },
-    select: {
-      tenantId: true,
-      role: { select: { name: true } },
-      tenant: { select: { name: true, status: true } },
-    },
+  // ✅ Bank-grade: tenant + role come from session and ACTIVE membership (DB-truth)
+  const ctx = await requireServerUserContext({
+    redirectTo: "/headteacher/reports/student-report",
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "ADMIN", "SUPERADMIN"],
   });
 
-  if (!membership?.tenantId) redirect("/app");
-  if (membership.tenant?.status && membership.tenant.status !== "ACTIVE")
-    redirect("/pending");
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: ctx.tenantId },
+    select: { name: true, status: true },
+  });
 
-  const roleName = (membership.role?.name ?? "").trim();
-  if (!HEAD_ROLES.has(roleName)) redirect("/app");
+  if (!tenant) redirect("/app");
+  if (tenant.status !== "ACTIVE") redirect("/pending");
 
-  const tenantName = membership.tenant?.name ?? "Your school";
-  const defaultTerm = "1st Term";
-  const defaultAcademicYear = "2025/2026";
+  const settings = await prisma.tenantSettings.findUnique({
+    where: { tenantId: ctx.tenantId },
+    select: { currentTerm: true, currentAcademicYear: true },
+  });
+
+  const tenantName = tenant.name ?? "Your school";
+  const defaultTerm = settings?.currentTerm ?? "1st Term";
+  const defaultAcademicYear = settings?.currentAcademicYear ?? "2025/2026";
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -71,9 +60,7 @@ export default async function HeadteacherStudentReportPage() {
           <div className="text-xs text-right text-slate-500 space-y-1">
             <p>
               Signed in as{" "}
-              <span className="font-semibold">
-                {session?.user?.email ?? "Headteacher"}
-              </span>
+              <span className="font-semibold">{ctx.email ?? "Headteacher"}</span>
             </p>
             <p className="text-[11px]">
               School: <span className="font-semibold">{tenantName}</span>
@@ -82,6 +69,7 @@ export default async function HeadteacherStudentReportPage() {
         </header>
 
         <HeadteacherStudentReportClient
+          tenantName={tenantName}
           defaultTerm={defaultTerm}
           defaultAcademicYear={defaultAcademicYear}
         />

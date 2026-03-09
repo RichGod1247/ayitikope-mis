@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import { mediaUrl } from "@/lib/media";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,6 +70,7 @@ type Grounding = {
   contentStandardCode?: string | null;
   contentStandardDesc?: string | null;
 
+  indicatorId?: string | null; // ✅ NEW: enables exact media resolution (no cross-subject mismatches)
   indicatorCode?: string | null;
   indicatorDesc?: string | null;
 
@@ -93,6 +95,24 @@ type Grounding = {
     description: string;
     assessmentNotes?: string | null;
   }>;
+};
+
+type MediaResolutionStatus =
+  | "NO_MODEL"
+  | "NONE"
+  | "FOUND_BY_INDICATOR_ID"
+  | "FOUND_BY_CODE_FALLBACK"
+  | "AMBIGUOUS";
+
+type ResolvedMedia = {
+  status: MediaResolutionStatus;
+  indicatorId: string | null;
+  indicatorCode: string | null;
+  candidatesCount: number;
+  selected: { imagePath: string; url: string; altText: string | null } | null;
+  // "safeToDescribe" means we are confident the selected media is scoped to the same indicator record (indicatorId).
+  safeToDescribe: boolean;
+  note?: string | null;
 };
 
 function jsonNoStore(payload: any, init?: { status?: number; headers?: HeadersInit }) {
@@ -266,9 +286,174 @@ function subjectStyle(subjectRaw: string) {
   };
 }
 
+/** ------------------ Media resolution (image-aware, zero hallucination) ------------------ */
+
+function normalizeIndicatorCode(raw: unknown) {
+  // keep dots; remove spaces; preserve letters/numbers/dots
+  return clean(raw).replace(/\s+/g, "").replace(/[^A-Za-z0-9.]/g, "");
+}
+
+function fileExt(path: string) {
+  const p = clean(path).toLowerCase();
+  const m = p.match(/\.(png|webp|jpg|jpeg)$/);
+  return m ? m[1] : "";
+}
+
+function scoreMediaCandidate(args: {
+  imagePath: string;
+  indicatorCode: string;
+}) {
+  const pRaw = clean(args.imagePath);
+  const p = pRaw.toLowerCase();
+  const code = normalizeIndicatorCode(args.indicatorCode);
+  const codeLower = code.toLowerCase();
+
+  let score = 0;
+
+  // strong preference: canonical filename "<code>.png"
+  if (code && p.endsWith(`/${codeLower}.png`) || (code && p.endsWith(`${codeLower}.png`))) score += 80;
+
+  // medium: contains indicator code somewhere
+  if (code && p.includes(codeLower)) score += 25;
+
+  const ext = fileExt(pRaw);
+  if (ext === "png") score += 10;
+  else if (ext === "webp") score += 6;
+  else if (ext === "jpg" || ext === "jpeg") score += 4;
+
+  // prefer stable hosted assets (but still accept relative)
+  if (/^https?:\/\//i.test(pRaw)) score += 6;
+
+  return score;
+}
+
+async function resolveIndicatorMedia(args: {
+  indicatorId: string | null;
+  indicatorCode: string | null;
+}): Promise<ResolvedMedia> {
+  const indicatorId = clean(args.indicatorId) || null;
+  const indicatorCode = normalizeIndicatorCode(args.indicatorCode) || null;
+
+  const client: any = (prisma as any).curriculumMedia;
+  if (!client || typeof client.findMany !== "function") {
+    return {
+      status: "NO_MODEL",
+      indicatorId,
+      indicatorCode,
+      candidatesCount: 0,
+      selected: null,
+      safeToDescribe: false,
+      note: "CurriculumMedia model not available in Prisma client.",
+    };
+  }
+
+  // Attempt indicatorId first (mathematically exact: avoids cross-subject code collisions)
+  const tryWheres: Array<{ label: string; where: any }> = [];
+
+  if (indicatorId) {
+    tryWheres.push({ label: "indicatorId", where: { indicatorId } });
+    tryWheres.push({ label: "curriculumIndicatorId", where: { curriculumIndicatorId: indicatorId } });
+  }
+
+  if (indicatorCode) {
+    tryWheres.push({ label: "indicatorCode", where: { indicatorCode } });
+  }
+
+  let rows: Array<{ imagePath: string; altText: string | null }> = [];
+  let usedLabel: string | null = null;
+
+  for (const w of tryWheres) {
+    try {
+      const r = await client.findMany({
+        where: w.where,
+        select: { imagePath: true, altText: true },
+        take: 200, // defensive
+      });
+      if (Array.isArray(r)) {
+        rows = r
+          .map((x: any) => ({
+            imagePath: clean(x?.imagePath),
+            altText: x?.altText != null ? String(x.altText) : null,
+          }))
+          .filter((x: any) => !!x.imagePath);
+      }
+      usedLabel = w.label;
+      // If we queried by indicatorId and got something, stop immediately (most exact).
+      if (rows.length && w.label !== "indicatorCode") break;
+      // If we queried by indicatorCode and got something, stop (fallback).
+      if (rows.length && w.label === "indicatorCode") break;
+    } catch {
+      // try next
+      continue;
+    }
+  }
+
+  const candidatesCount = rows.length;
+  if (!rows.length) {
+    return {
+      status: "NONE",
+      indicatorId,
+      indicatorCode,
+      candidatesCount: 0,
+      selected: null,
+      safeToDescribe: false,
+      note: "No media found for this indicator.",
+    };
+  }
+
+  // Deterministic selection among candidates
+  const codeForScore = indicatorCode ?? "";
+  const ranked = [...rows]
+    .map((r) => ({
+      ...r,
+      score: scoreMediaCandidate({ imagePath: r.imagePath, indicatorCode: codeForScore }),
+    }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      // stable tie-breaker
+      return a.imagePath.localeCompare(b.imagePath);
+    });
+
+  const top = ranked[0]!;
+  const selected = {
+    imagePath: top.imagePath,
+    url: mediaUrl(top.imagePath),
+    altText: top.altText,
+  };
+
+  // Safety: only "safeToDescribe" when matched by indicatorId-based lookup
+  const safeToDescribe = usedLabel === "indicatorId" || usedLabel === "curriculumIndicatorId";
+
+  // Ambiguity: if we only had code-based lookup AND multiple candidates, do not claim specificity.
+  if (!safeToDescribe && candidatesCount > 1) {
+    return {
+      status: "AMBIGUOUS",
+      indicatorId,
+      indicatorCode,
+      candidatesCount,
+      selected,
+      safeToDescribe: false,
+      note:
+        "Multiple media candidates found by indicatorCode (code collisions across subjects). Selection is deterministic, but descriptions must stay generic.",
+    };
+  }
+
+  return {
+    status: safeToDescribe ? "FOUND_BY_INDICATOR_ID" : "FOUND_BY_CODE_FALLBACK",
+    indicatorId,
+    indicatorCode,
+    candidatesCount,
+    selected,
+    safeToDescribe,
+    note: safeToDescribe
+      ? "Resolved by indicatorId (exact)."
+      : "Resolved by indicatorCode fallback (best-effort).",
+  };
+}
+
 /**
  * Fetch curriculum grounding safely.
- * - Prefer SchemeOfWorkItem.indicatorId (strongest link to seeded exemplars)
+ * - Prefer SchemeOfWorkItem.indicatorId (strongest link to seeded exemplars + media)
  * - Else use indicatorCode + contentStandardCode
  * - Else fall back to flattened CurriculumUnit fields
  */
@@ -285,10 +470,15 @@ async function fetchGrounding(args: {
   const out: Grounding = {
     exemplars: [],
     schemeItem: null,
+    indicatorId: null,
   };
 
   // 1) Flattened CurriculumUnit (optional but useful)
-  if (note.curriculumUnitId && isPlausibleId(note.curriculumUnitId) && typeof (prisma as any)?.curriculumUnit?.findFirst === "function") {
+  if (
+    note.curriculumUnitId &&
+    isPlausibleId(note.curriculumUnitId) &&
+    typeof (prisma as any)?.curriculumUnit?.findFirst === "function"
+  ) {
     const unit = await (prisma as any).curriculumUnit.findFirst({
       where: { id: note.curriculumUnitId, OR: [{ tenantId }, { tenantId: null }] },
       select: {
@@ -320,7 +510,11 @@ async function fetchGrounding(args: {
   }
 
   // 2) SchemeOfWorkItem (stronger "teacher planned" signal + might carry indicatorId)
-  if (note.schemeOfWorkItemId && isPlausibleId(note.schemeOfWorkItemId) && typeof (prisma as any)?.schemeOfWorkItem?.findFirst === "function") {
+  if (
+    note.schemeOfWorkItemId &&
+    isPlausibleId(note.schemeOfWorkItemId) &&
+    typeof (prisma as any)?.schemeOfWorkItem?.findFirst === "function"
+  ) {
     const sItem = await (prisma as any).schemeOfWorkItem.findFirst({
       where: {
         id: note.schemeOfWorkItemId,
@@ -354,6 +548,9 @@ async function fetchGrounding(args: {
         contentStandardDescription: sItem.contentStandardDescription ?? null,
       };
 
+      // ✅ exact indicator id if present
+      out.indicatorId = clean(sItem.indicatorId) || out.indicatorId || null;
+
       // scheme values override weaker unit strings if present
       out.strandTitle = out.strandTitle ?? sItem.strandTitle ?? null;
       out.subStrandTitle = out.subStrandTitle ?? sItem.subStrandTitle ?? null;
@@ -365,7 +562,7 @@ async function fetchGrounding(args: {
   }
 
   // 3) Seeded Indicator → Exemplars (best grounding)
-  const indicatorId = clean(out.schemeItem?.indicatorId);
+  const indicatorIdFromScheme = clean(out.schemeItem?.indicatorId);
   const indicatorCode = clean(out.indicatorCode);
 
   const hasIndicatorModel = typeof (prisma as any)?.curriculumIndicator?.findFirst === "function";
@@ -374,10 +571,11 @@ async function fetchGrounding(args: {
   if (hasIndicatorModel) {
     let indicatorRow: any = null;
 
-    if (indicatorId && isPlausibleId(indicatorId)) {
+    if (indicatorIdFromScheme && isPlausibleId(indicatorIdFromScheme)) {
       indicatorRow = await (prisma as any).curriculumIndicator.findFirst({
-        where: { id: indicatorId },
+        where: { id: indicatorIdFromScheme },
         select: {
+          id: true, // ✅ NEW
           code: true,
           description: true,
           exemplars: {
@@ -413,6 +611,7 @@ async function fetchGrounding(args: {
           indicatorRow = await (prisma as any).curriculumIndicator.findFirst({
             where: { code: indicatorCode, contentStandardId: cs.id },
             select: {
+              id: true, // ✅ NEW
               code: true,
               description: true,
               exemplars: {
@@ -442,6 +641,7 @@ async function fetchGrounding(args: {
         indicatorRow = await (prisma as any).curriculumIndicator.findFirst({
           where: { code: indicatorCode },
           select: {
+            id: true, // ✅ NEW
             code: true,
             description: true,
             exemplars: {
@@ -468,6 +668,7 @@ async function fetchGrounding(args: {
     }
 
     if (indicatorRow) {
+      out.indicatorId = out.indicatorId ?? clean(indicatorRow.id) ?? null; // ✅ NEW
       out.indicatorCode = out.indicatorCode ?? indicatorRow.code ?? null;
       out.indicatorDesc = out.indicatorDesc ?? indicatorRow.description ?? null;
 
@@ -670,10 +871,11 @@ function buildWorldClassCoachV4(note: LessonNoteForCoach, grounding: Grounding, 
     "Teaching & Learning Resources:",
     bullet(style.coreMaterials),
     "",
-    "Suggested visuals (image-aware):",
+    // ✅ still generic and safe; image-specific details are returned in meta only (no hallucinations)
+    "Suggested visuals (indicator-safe):",
     bullet(
       [
-        `If you have EduLife/topic images or textbook pictures, display 1–2 and ask: “What do you notice?”`,
+        "If EduLife provides an indicator image on the print/preview page, use it as the main visual prompt.",
         ...style.visuals.map((v) => `Use a ${v} (or draw a quick version on the board).`),
         style.kind === "SOCIAL" ? "Pictures/video/charts (phone if available) to make examples real." : "",
       ].filter(Boolean)
@@ -694,7 +896,7 @@ function buildWorldClassCoachV4(note: LessonNoteForCoach, grounding: Grounding, 
     `Starter focus: connect the topic to ${localContext}.`,
     pick(rng, [
       `Hook (2 mins): Ask learners to give 2 examples connected to ${topic}.`,
-      `Hook (2 mins): Show a picture/quick sketch and ask: “What do you see? What does it mean?”`,
+      `Hook (2 mins): Show a relevant picture (from the indicator image or your sketch) and ask: “What do you see? What does it mean?”`,
       `Hook (2 mins): Think–Pair–Share: “What do you already know about ${topic}?”`,
     ]),
     priorKnowledgeLine,
@@ -1021,7 +1223,65 @@ export async function POST(req: NextRequest) {
       mode,
     });
 
+    // ✅ Image-aware meta only: resolve media by indicatorId first (exact), else fallback by indicatorCode.
+    const media = await resolveIndicatorMedia({
+      indicatorId: clean(grounding.indicatorId) || clean(grounding.schemeItem?.indicatorId) || null,
+      indicatorCode: clean(grounding.indicatorCode) || null,
+    });
+
     const result = buildWorldClassCoachV4(coachInput, grounding, mode);
+
+    // ✅ Minimal "metrics + actions" contract, meta-only (no breaking changes)
+    const metaMetrics = {
+      hasCurriculumUnitId: !!coachInput.curriculumUnitId,
+      hasSchemeOfWorkItemId: !!coachInput.schemeOfWorkItemId,
+      hasIndicatorId: !!(clean(grounding.indicatorId) || clean(grounding.schemeItem?.indicatorId)),
+      indicatorCode: clean(grounding.indicatorCode) || null,
+      exemplarCount: grounding.exemplars.length,
+      mediaStatus: media.status,
+      mediaCandidatesCount: media.candidatesCount,
+      hasResolvedMedia: !!media.selected,
+    };
+
+    const metaActions: Array<{
+      code: string;
+      priority: "HIGH" | "MEDIUM" | "LOW";
+      because: string[];
+      message: string;
+    }> = [];
+
+    if (!metaMetrics.hasCurriculumUnitId && !metaMetrics.hasSchemeOfWorkItemId) {
+      metaActions.push({
+        code: "LINK_UNIT_FIRST",
+        priority: "HIGH",
+        because: ["metrics.hasCurriculumUnitId", "metrics.hasSchemeOfWorkItemId"],
+        message: "Link the correct NaCCA unit first. It makes the coach outputs and indicator media exact (no guessing).",
+      });
+    }
+
+    if (metaMetrics.hasResolvedMedia && metaMetrics.mediaStatus === "FOUND_BY_INDICATOR_ID") {
+      metaActions.push({
+        code: "USE_INDICATOR_IMAGE",
+        priority: "MEDIUM",
+        because: ["metrics.mediaStatus"],
+        message: "An official indicator image is available. Use it as a starter visual prompt and align questions to the indicator.",
+      });
+    } else if (metaMetrics.mediaStatus === "AMBIGUOUS") {
+      metaActions.push({
+        code: "AVOID_IMAGE_DESCRIPTION",
+        priority: "HIGH",
+        because: ["metrics.mediaStatus", "metrics.mediaCandidatesCount"],
+        message:
+          "Multiple images exist for this indicator code across subjects. Do not describe a specific image in text; rely on the print/preview indicator image resolver.",
+      });
+    } else if (metaMetrics.mediaStatus === "NONE") {
+      metaActions.push({
+        code: "PROCEED_WITHOUT_IMAGE",
+        priority: "LOW",
+        because: ["metrics.mediaStatus"],
+        message: "No indicator image found yet. Use a quick board sketch or a real object demo instead.",
+      });
+    }
 
     return jsonNoStore(
       {
@@ -1033,14 +1293,33 @@ export async function POST(req: NextRequest) {
           groundedOnLessonNoteId: lessonNoteId,
           curriculumUnitId: coachInput.curriculumUnitId ?? null,
           schemeOfWorkItemId: coachInput.schemeOfWorkItemId ?? null,
+
+          // kept
           exemplarCount: grounding.exemplars.length,
           engine: "RULE_BASED_COTUTOR_V4_TEMPLATE_GROUNDED",
+
+          // ✅ new (meta-only, safe)
+          metrics: metaMetrics,
+          actions: metaActions,
+          media: {
+            indicatorId: media.indicatorId,
+            indicatorCode: media.indicatorCode,
+            status: media.status,
+            candidatesCount: media.candidatesCount,
+            selected: media.selected,
+            safeToDescribe: media.safeToDescribe,
+            note: media.note ?? null,
+          },
+          contract: "AI_COTUTOR_META_IMAGE_AWARE_V1",
         },
       },
       { status: 200 }
     );
   } catch (err) {
     console.error("[TEACHER_LESSON_NOTE_AI_SUPPORT_ERROR]", err);
-    return jsonNoStore({ ok: false, error: "The AI Co-Tutor could not generate support at the moment. Please try again." }, { status: 500 });
+    return jsonNoStore(
+      { ok: false, error: "The AI Co-Tutor could not generate support at the moment. Please try again." },
+      { status: 500 }
+    );
   }
 }

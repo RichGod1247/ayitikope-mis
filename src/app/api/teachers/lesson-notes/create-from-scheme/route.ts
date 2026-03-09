@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { normalizeLevelToken } from "@/lib/teacherScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,28 +28,20 @@ function json(status: number, payload: any) {
 function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
+
 function normalizeSpaces(s: string) {
   return s.replace(/\s+/g, " ").trim();
 }
 
-// accept unknown because scheme.level is string | null
-function normalizeLevel(raw: unknown) {
-  const s = normalizeSpaces(cleanStr(raw));
-  if (!s) return "";
+function canonicalLevelDisplay(raw: unknown) {
+  const token = normalizeLevelToken(raw);
+  if (!token) return normalizeSpaces(cleanStr(raw));
 
-  let m = s.match(/^JHS\s*([1-3])$/i) || s.match(/^JHS([1-3])$/i);
-  if (m) return `JHS ${m[1]}`;
+  if (token.startsWith("JHS")) return `JHS ${token.slice(3)}`;
+  if (token.startsWith("KG")) return `KG ${token.slice(2)}`;
+  if (/^B[1-6]$/.test(token)) return token;
 
-  m = s.match(/^KG\s*([12])$/i) || s.match(/^KG([12])$/i);
-  if (m) return `KG${m[1]}`;
-
-  m = s.match(/^B\s*([1-9])$/i) || s.match(/^B([1-9])$/i);
-  if (m) return `Basic ${m[1]}`;
-
-  m = s.match(/^Basic\s*([1-9])$/i) || s.match(/^Basic([1-9])$/i);
-  if (m) return `Basic ${m[1]}`;
-
-  return s;
+  return normalizeSpaces(cleanStr(raw));
 }
 
 const VALID_TERMS = ["1st Term", "2nd Term", "3rd Term"] as const;
@@ -86,31 +79,26 @@ function termVariants(term: Term): string[] {
 }
 
 function levelVariants(raw: string): string[] {
-  const lv = normalizeLevel(raw);
-  if (!lv) return [];
+  const token = normalizeLevelToken(raw);
   const out = new Set<string>();
-  out.add(lv);
 
-  let m = lv.match(/^JHS\s*([1-3])$/i);
-  if (m) {
-    out.add(`JHS${m[1]}`);
-    out.add(`jhs ${m[1]}`);
-    out.add(`jhs${m[1]}`);
+  if (!token) {
+    const s = cleanStr(raw);
+    return s ? [s] : [];
   }
 
-  m = lv.match(/^Basic\s*([1-9])$/i);
-  if (m) {
-    out.add(`Basic${m[1]}`);
-    out.add(`B${m[1]}`);
-    out.add(`basic ${m[1]}`);
-    out.add(`basic${m[1]}`);
-  }
-
-  m = lv.match(/^KG([12])$/i);
-  if (m) {
-    out.add(`KG ${m[1]}`);
-    out.add(`kg${m[1]}`);
-    out.add(`kg ${m[1]}`);
+  if (token.startsWith("JHS")) {
+    const n = token.slice(3);
+    const basic = Number(n) + 6;
+    [`JHS ${n}`, `JHS${n}`, `jhs ${n}`, `jhs${n}`, `Basic ${basic}`, `Basic${basic}`, `B${basic}`, `B ${basic}`].forEach((x) =>
+      out.add(x)
+    );
+  } else if (token.startsWith("KG")) {
+    const n = token.slice(2);
+    [`KG ${n}`, `KG${n}`, `kg ${n}`, `kg${n}`].forEach((x) => out.add(x));
+  } else if (/^B[1-6]$/.test(token)) {
+    const n = token.slice(1);
+    [`B${n}`, `B ${n}`, `Basic ${n}`, `Basic${n}`, `basic ${n}`, `P${n}`, `P ${n}`].forEach((x) => out.add(x));
   }
 
   return Array.from(out.values());
@@ -129,7 +117,7 @@ async function findBestCurriculumUnit(
   }
 ) {
   const subject = normalizeSpaces(args.subject);
-  const level = normalizeLevel(args.level);
+  const level = canonicalLevelDisplay(args.level);
 
   const levelOr = levelVariants(level).map((v) => ({
     level: { equals: v, mode: "insensitive" as const },
@@ -208,6 +196,10 @@ async function findBestCurriculumUnit(
   return null;
 }
 
+function shouldReplaceTitle(existingTitle: string | null | undefined) {
+  return !cleanStr(existingTitle);
+}
+
 export async function POST(req: Request) {
   let ctx: { userId: string; tenantId: string };
   try {
@@ -262,14 +254,13 @@ export async function POST(req: Request) {
   if (!item || !item.scheme) return json(404, { ok: false, error: "Scheme item not found." });
 
   const scheme = item.scheme;
-
   const weekNumber = Number(item.weekNumber);
   if (!Number.isFinite(weekNumber) || weekNumber <= 0) {
     return json(400, { ok: false, error: "Scheme item has an invalid weekNumber." });
   }
 
   const subject = normalizeSpaces(cleanStr(scheme.subject));
-  const level = normalizeLevel(scheme.level);
+  const level = canonicalLevelDisplay(scheme.level);
   const termMaybe = normalizeTerm(scheme.term);
   const academicYear = normalizeSpaces(cleanStr(scheme.academicYear));
 
@@ -290,14 +281,10 @@ export async function POST(req: Request) {
     indicatorDesc = indicatorDesc || cleanStr(ind?.description);
   }
 
-  const indicatorText = [indicatorCode, indicatorDesc].filter(Boolean).join(" — ").trim();
-  const contentStdText = [item.contentStandardCode, item.contentStandardDescription].filter(Boolean).join(" — ").trim();
-
   const classroomId = scheme.classroomId ?? null;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 🔥 Critical fix: include classroomId to prevent cross-class collisions
       const existing = await tx.lessonNote.findFirst({
         where: {
           tenantId: ctx.tenantId,
@@ -311,7 +298,7 @@ export async function POST(req: Request) {
             { OR: levelVariants(level).map((v) => ({ level: { equals: v, mode: "insensitive" as const } })) },
           ],
         } as any,
-        select: { id: true, curriculumUnitId: true, status: true },
+        select: { id: true, curriculumUnitId: true, schemeOfWorkItemId: true, lessonTitle: true, status: true },
       });
 
       const bestUnit = await findBestCurriculumUnit(tx, {
@@ -324,24 +311,38 @@ export async function POST(req: Request) {
         indicatorDescription: indicatorDesc,
       });
 
+      const strandText = cleanStr(item.strandTitle) || cleanStr(bestUnit?.strand) || "";
+      const subStrandText = cleanStr(item.subStrandTitle) || cleanStr(bestUnit?.substrand) || "";
+      const contentStandardText =
+        cleanStr(item.contentStandardDescription) || cleanStr(bestUnit?.contentStandard) || null;
+      const indicatorText = indicatorDesc || cleanStr(bestUnit?.indicator) || null;
+      const lessonTitle = subStrandText || indicatorText || null;
+
       if (existing?.id) {
         const st = String(existing.status ?? "").toUpperCase();
+
         if (st === "DRAFT" || st === "REJECTED") {
           await tx.lessonNote.update({
             where: { id: existing.id },
             data: {
               curriculumUnitId: existing.curriculumUnitId ?? bestUnit?.id ?? null,
-              strand: cleanStr(bestUnit?.strand) || cleanStr(item.strandTitle) || "",
-              substrand: cleanStr(bestUnit?.substrand) || cleanStr(item.subStrandTitle) || "",
-              contentStandard: cleanStr(bestUnit?.contentStandard) || (contentStdText || null),
-              indicator: cleanStr(bestUnit?.indicator) || (indicatorText || indicatorDesc || null),
+              schemeOfWorkItemId: item.id,
+              strand: strandText,
+              substrand: subStrandText,
+              contentStandard: contentStandardText,
+              indicator: indicatorText,
+              lessonTitle: shouldReplaceTitle(existing.lessonTitle) ? lessonTitle : existing.lessonTitle,
               term,
               level,
             },
             select: { id: true },
           });
         }
-        return { lessonNoteId: existing.id, linkedUnitId: bestUnit?.id ?? existing.curriculumUnitId ?? null };
+
+        return {
+          lessonNoteId: existing.id,
+          linkedUnitId: bestUnit?.id ?? existing.curriculumUnitId ?? null,
+        };
       }
 
       const created = await tx.lessonNote.create({
@@ -358,12 +359,13 @@ export async function POST(req: Request) {
           weekNumber,
 
           curriculumUnitId: bestUnit?.id ?? null,
+          schemeOfWorkItemId: item.id,
 
-          strand: cleanStr(bestUnit?.strand) || cleanStr(item.strandTitle) || "",
-          substrand: cleanStr(bestUnit?.substrand) || cleanStr(item.subStrandTitle) || "",
-
-          contentStandard: cleanStr(bestUnit?.contentStandard) || (contentStdText || null),
-          indicator: cleanStr(bestUnit?.indicator) || (indicatorText || indicatorDesc || null),
+          strand: strandText,
+          substrand: subStrandText,
+          contentStandard: contentStandardText,
+          indicator: indicatorText,
+          lessonTitle,
 
           status: "DRAFT",
           headteacherComment: null,

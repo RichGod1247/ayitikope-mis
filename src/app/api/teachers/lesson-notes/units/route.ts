@@ -35,17 +35,15 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-// ✅ JHS ↔ Basic mapping
 function parseLevelVariants(raw: unknown): string[] {
   const s = normalizeSpaces(cleanStr(raw));
   if (!s) return [];
   const out = new Set<string>();
 
-  // JHS 1-3 (map to Basic 7-9)
   let m = s.match(/^JHS\s*([1-3])$/i) || s.match(/^JHS([1-3])$/i);
   if (m) {
     const j = Number(m[1]);
-    const basic = 6 + j; // JHS1=Basic7, JHS2=Basic8, JHS3=Basic9
+    const basic = 6 + j;
     [`JHS ${j}`, `JHS${j}`, `jhs ${j}`, `jhs${j}`].forEach((x) => out.add(x));
     [
       `Basic ${basic}`,
@@ -60,7 +58,6 @@ function parseLevelVariants(raw: unknown): string[] {
     return Array.from(out);
   }
 
-  // KG
   m = s.match(/^KG\s*([12])$/i) || s.match(/^KG([12])$/i);
   if (m) {
     const n = m[1];
@@ -68,7 +65,6 @@ function parseLevelVariants(raw: unknown): string[] {
     return Array.from(out);
   }
 
-  // Basic / B (map Basic 7-9 back to JHS 1-3)
   m =
     s.match(/^Basic\s*([1-9])$/i) ||
     s.match(/^Basic([1-9])$/i) ||
@@ -155,7 +151,6 @@ function academicYearVariants(raw: unknown): string[] {
   return Array.from(out).filter(Boolean);
 }
 
-// ✅ subject match tolerant: "Social Studies" matches "JHS 2 Social Studies"
 function subjectOrFilters(subject: string) {
   const s = normalizeSpaces(cleanStr(subject));
   if (!s) return [];
@@ -208,7 +203,6 @@ export async function GET(req: NextRequest) {
   });
   if (!note) return jsonNoStore(404, { ok: false, error: "Lesson note not found." });
 
-  // Backfill level from classroom grade if missing
   let levelRaw = cleanStr(note.level);
   if (!levelRaw && note.classroomId) {
     const cls = await prisma.classroom.findUnique({
@@ -258,12 +252,7 @@ export async function GET(req: NextRequest) {
   const schemeWhere: any = {
     tenantId: ctx.tenantId,
     teacherUserId: ctx.userId,
-    AND: [
-      { OR: subjOr },
-      { OR: yearOr },
-      { OR: levelOr },
-      { OR: termOr },
-    ],
+    AND: [{ OR: subjOr }, { OR: yearOr }, { OR: levelOr }, { OR: termOr }],
   };
 
   const candidates = await prisma.schemeOfWork.findMany({
@@ -330,6 +319,8 @@ export async function GET(req: NextRequest) {
       items: rows.map((r) => ({
         kind: "SCHEME_ITEM",
         schemeItemId: r.id,
+        schemeOfWorkItemId: r.id,
+        curriculumUnitId: null,
         weekNumber: r.weekNumber,
         strandTitle: r.strandTitle ?? null,
         subStrandTitle: r.subStrandTitle ?? null,
@@ -342,7 +333,6 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // If no scheme match, return empty but with debug
   return jsonNoStore(200, {
     ok: true,
     widened: ignoreWeek,

@@ -66,7 +66,7 @@ function ParentLoginFallback() {
 function ParentLoginContent() {
   const router = useRouter();
   const sp = useSearchParams();
-  const nextPath = useMemo(() => safeInternalPath(sp.get("next"), "/parent-portal"), [sp]);
+  const nextPath = useMemo(() => safeInternalPath(sp.get("next"), "/parent/report"), [sp]);
 
   // School search + selection
   const [schoolQuery, setSchoolQuery] = useState("");

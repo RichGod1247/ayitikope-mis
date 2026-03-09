@@ -59,7 +59,11 @@ export default function TeacherAssessmentSummaryClient() {
 
       const params = new URLSearchParams({ classroomId: c, term: tm, academicYear: yr });
 
-      const res = await fetch(`/api/teachers/assessment/term-summary?${params.toString()}`);
+      // ✅ Canonical session-scoped route
+      const res = await fetch(`/api/teacher/assessment/term-summary?${params.toString()}`, {
+        cache: "no-store",
+      });
+
       const text = await res.text();
 
       let json: any;

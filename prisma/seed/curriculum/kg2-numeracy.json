@@ -526,50 +526,39 @@
       ]
     },
     {
-      "code": "K2.5",
-      "title": "My Nation Ghana",
-      "description": "Integration of numeracy concepts within the theme of national history.",
-      "orderIndex": 5,
-      "subStrands": [
+  "code": "K2.5",
+  "title": "My Nation Ghana",
+  "description": "Integration of numeracy concepts within the theme of national history.",
+  "orderIndex": 5,
+  "subStrands": [
+    {
+      "code": "K2.5.1",
+      "title": "History and Celebrations of Ghana",
+      "description": "Identifying money and patterns.",
+      "orderIndex": 1,
+      "contentStandards": [
         {
-          "code": "K2.5.1",
-          "title": "History and Celebrations of Ghana",
-          "description": "Identifying money and patterns.",
+          "code": "K2.5.1.1",
+          "description": "Demonstrate understanding of history and celebrations of Ghana",
           "orderIndex": 1,
-          "contentStandards": [
+          "indicators": [
             {
-              "code": "K2.5.1.1",
-              "description": "Demonstrate understanding of history and celebrations of Ghana",
-              "orderIndex": 1,
-              "indicators": [
+              "code": "K2.5.1.1.7",
+              "description": "Identify Ghanaian coins and money by name and use it to buy and sell in the classroom store.",
+              "orderIndex": 7,
+              "exemplars": [
                 {
-                  "code": "K2.5.1.1.4",
-                  "description": "Identify the beginning and ending rhyming sounds in words, delete and replace the rhyming sounds to get another rhyming pair.",
-                  "orderIndex": 4,
-                  "exemplars": [
-                    {
-                      "orderIndex": 1,
-                      "description": "Give an example of two syllables that rhyme. e.g... [ to, mo.] Say the sound and have learners repeat the two words that have same rhyming ending. Repeat the two words slowly again, and have learners repeat after you. Ask them what they notice about the two words. Delete the ending vowel and replace with a new vowel sound to make a new syllable with a different rhyming pair. Replace the o with [a] and we get {ta and ma}. Do this for the beginning sound too. First delete the /s/ in [Sabala] and you get [abala], Replace /S/ with /t/ and you get [tabala}. Have learners manipulate the sound in a playful way."
-                    }
-                  ]
-                },
-                {
-                  "code": "K2.5.1.1.7",
-                  "description": "Identify Ghanaian coins and money by name and use it to buy and sell in the classroom store.",
-                  "orderIndex": 7,
-                  "exemplars": [
-                    {
-                      "orderIndex": 1,
-                      "description": "Display the various coins currently being used for transaction in Ghana. Have learners touch, feel and say the features of each coin. Play games with the learners asking them to identify the coins and buying things with them in the classroom store."
-                    }
-                  ]
+                  "orderIndex": 1,
+                  "description": "Display the various coins currently being used for transaction in Ghana. Have learners touch, feel and say the features of each coin. Play games with the learners asking them to identify the coins and buying things with them in the classroom store."
                 }
               ]
             }
           ]
         }
       ]
-    },
+    }
+  ]
+},
     {
       "code": "K2.6",
       "title": "All Around Us",

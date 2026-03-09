@@ -1,9 +1,6 @@
-// src/app/headteacher/attendance/weekly/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-
-type Tenant = { id: string; name: string; slug: string };
 
 type KPI = {
   classLabel: string;
@@ -23,13 +20,6 @@ type AiExplainResponse = {
   error?: string;
 };
 
-type Me = {
-  ok: boolean;
-  tenantId: string | null;
-  // optional future-proofing
-  tenants?: Tenant[];
-};
-
 function startOfWeekMonday(d: Date): Date {
   const day = d.getUTCDay();
   const diff = (day === 0 ? -6 : 1) - day;
@@ -43,9 +33,6 @@ function fmt(n: number) {
 }
 
 export default function WeeklyAttendancePage() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState<string>("");
-
   const [start, setStart] = useState<string>("");
   const [end, setEnd] = useState<string>("");
 
@@ -61,7 +48,6 @@ export default function WeeklyAttendancePage() {
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Initial load: default week + active tenant from session
   useEffect(() => {
     const today = new Date();
     const mon = startOfWeekMonday(today);
@@ -69,29 +55,9 @@ export default function WeeklyAttendancePage() {
     fri.setUTCDate(mon.getUTCDate() + 4);
     setStart(mon.toISOString().slice(0, 10));
     setEnd(fri.toISOString().slice(0, 10));
-
-    (async () => {
-      try {
-        const meRes = await fetch("/api/me", { cache: "no-store" });
-        const me = (await meRes.json().catch(() => ({}))) as Me;
-
-        const list = Array.isArray(me?.tenants) ? me.tenants : [];
-        if (list.length) {
-          setTenants(list);
-          if (!tenantId) setTenantId(me.tenantId || list[0].id);
-        } else if (me?.tenantId) {
-          // Single-tenant fallback
-          setTenants([{ id: me.tenantId, name: "Current school", slug: "current" }]);
-          if (!tenantId) setTenantId(me.tenantId);
-        }
-      } catch {
-        // silent
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const canQuery = useMemo(() => Boolean(tenantId && start && end), [tenantId, start, end]);
+  const canQuery = useMemo(() => Boolean(start && end), [start, end]);
 
   async function loadNow() {
     if (!canQuery) return;
@@ -108,7 +74,6 @@ export default function WeeklyAttendancePage() {
 
     try {
       const u = new URL("/api/headteacher/attendance/weekly/csv", window.location.origin);
-      u.searchParams.set("tenantId", tenantId);
       u.searchParams.set("start", start);
       u.searchParams.set("end", end);
 
@@ -124,7 +89,7 @@ export default function WeeklyAttendancePage() {
         .map((line) => {
           const [label, enrolled, marks, present, absent, late, excused, pct] = line.split(",");
           return {
-            classLabel: label,
+            classLabel: label?.replace(/^"|"$/g, "").replace(/""/g, '"') || "Class",
             enrolled: Number(enrolled || 0),
             marks: Number(marks || 0),
             present: Number(present || 0),
@@ -147,15 +112,19 @@ export default function WeeklyAttendancePage() {
   useEffect(() => {
     if (!canQuery) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => { void loadNow(); }, 400);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    timerRef.current = setTimeout(() => {
+      void loadNow();
+    }, 350);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId, start, end]);
+  }, [start, end]);
 
   function downloadCSV() {
     if (!canQuery) return;
     const u = new URL("/api/headteacher/attendance/weekly/csv", window.location.origin);
-    u.searchParams.set("tenantId", tenantId);
     u.searchParams.set("start", start);
     u.searchParams.set("end", end);
     window.location.href = u.toString();
@@ -174,14 +143,15 @@ export default function WeeklyAttendancePage() {
     { enrolled: 0, marks: 0, present: 0, absent: 0, late: 0, excused: 0 }
   );
 
-  const pctOverall = totals.marks > 0 ? Math.round((totals.present / totals.marks) * 1000) / 10 : 0;
+  const pctOverall =
+    totals.marks > 0 ? Math.round((totals.present / totals.marks) * 1000) / 10 : 0;
 
   const sortedByPct = [...rows].sort((a, b) => b.pct - a.pct);
   const bestClass = sortedByPct[0];
   const worstClass = sortedByPct[sortedByPct.length - 1];
 
   async function handleAskAi() {
-    if (!canQuery || rows.length === 0) return;
+    if (!canQuery) return;
 
     setAiLoading(true);
     setAiError(null);
@@ -189,33 +159,10 @@ export default function WeeklyAttendancePage() {
     setAiSuggestions(null);
 
     try {
-      const res = await fetch("/api/headteacher/attendance/weekly/explain", {
+      const res = await fetch("/api/headteacher/attendance/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenantId,
-          start,
-          end,
-          pctOverall,
-          totals: {
-            enrolled: totals.enrolled,
-            marks: totals.marks,
-            present: totals.present,
-            absent: totals.absent,
-            late: totals.late,
-            excused: totals.excused,
-          },
-          rows: rows.map((r) => ({
-            classLabel: r.classLabel,
-            enrolled: r.enrolled,
-            marks: r.marks,
-            present: r.present,
-            absent: r.absent,
-            late: r.late,
-            excused: r.excused,
-            pct: r.pct,
-          })),
-        }),
+        body: JSON.stringify({ start, end }),
       });
 
       const j = (await res.json().catch(() => ({}))) as AiExplainResponse;
@@ -228,7 +175,7 @@ export default function WeeklyAttendancePage() {
       setAiSummary(j.summary ?? null);
       setAiSuggestions(j.suggestions ?? null);
     } catch {
-      setAiError("Network or server error while talking to the AI explainer. Please try again.");
+      setAiError("Network or server error while loading the attendance explanation.");
     } finally {
       setAiLoading(false);
     }
@@ -245,17 +192,16 @@ export default function WeeklyAttendancePage() {
             <div className="space-y-1">
               <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Weekly attendance pulse</h1>
               <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
-                One glance view of <span className="font-semibold">how faithfully classes met</span>{" "}
-                this week. Designed so that a headteacher can act quickly — not drown in spreadsheets.
+                One-glance view of how faithfully classes met this week, with a
+                server-trusted explainer for decision-making.
               </p>
             </div>
             <div className="text-xs text-zinc-500 md:text-right">
-              <p>Week: <span className="font-semibold">{start || "—"} → {end || "—"}</span></p>
               <p>
-                School:{" "}
-                <span className="font-semibold">
-                  {tenants.find((t) => t.id === tenantId)?.name ?? "Select school"}
-                </span>
+                Week: <span className="font-semibold">{start || "—"} → {end || "—"}</span>
+              </p>
+              <p>
+                Scope: <span className="font-semibold">Current signed-in school</span>
               </p>
             </div>
           </div>
@@ -263,35 +209,33 @@ export default function WeeklyAttendancePage() {
 
         <section className="rounded-2xl border border-zinc-200 bg-white/80 px-4 py-4 md:px-5 md:py-4 shadow-sm flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div className="flex flex-col md:flex-row gap-3 md:items-end w-full">
-            <div className="flex-1 space-y-1">
-              <label className="text-[11px] font-medium text-zinc-700">School (tenant)</label>
-              <select
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              >
-                {tenants.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-            </div>
-
             <div className="space-y-1">
               <label className="text-[11px] font-medium text-zinc-700">Start (Mon)</label>
-              <input type="date" value={start} onChange={(e) => setStart(e.target.value)}
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              <input
+                type="date"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
             </div>
 
             <div className="space-y-1">
               <label className="text-[11px] font-medium text-zinc-700">End (Fri)</label>
-              <input type="date" value={end} onChange={(e) => setEnd(e.target.value)}
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+              <input
+                type="date"
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button onClick={loadNow} disabled={loading || !canQuery}
-              className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2 text-xs md:text-sm font-medium text-white shadow-sm hover:bg-black disabled:opacity-50">
+            <button
+              onClick={loadNow}
+              disabled={loading || !canQuery}
+              className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2 text-xs md:text-sm font-medium text-white shadow-sm hover:bg-black disabled:opacity-50"
+            >
               {loading ? "Loading…" : "Refresh"}
             </button>
 
@@ -310,8 +254,11 @@ export default function WeeklyAttendancePage() {
               This week (Mon–Fri)
             </button>
 
-            <button onClick={downloadCSV} disabled={!canQuery} title="Download CSV"
-              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs md:text-sm font-medium text-zinc-800 hover:bg-zinc-50">
+            <button
+              onClick={downloadCSV}
+              disabled={!canQuery}
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs md:text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+            >
               Download CSV
             </button>
           </div>
@@ -319,37 +266,37 @@ export default function WeeklyAttendancePage() {
 
         <section className="grid grid-cols-1 lg:grid-cols-[1.5fr_minmax(0,1.3fr)] gap-4 md:gap-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Classes in report" value={fmt(rows.length)} hint="Total distinct classes with marks in this range." />
+            <KpiCard label="Classes in report" value={fmt(rows.length)} hint="Distinct classes with marks in this range." />
             <KpiCard label="Marks taken" value={fmt(totals.marks)} hint="Every time a register was taken." />
             <KpiCard label="Present marks" value={fmt(totals.present)} hint="Total present across all marks." />
             <KpiCard
               label="Overall present %"
               value={`${pctOverall.toFixed(1)}%`}
               tone={pctOverall >= 90 ? "good" : pctOverall >= 80 ? "ok" : "warn"}
-              hint="Simple whole-school attendance rate for the week."
+              hint="Whole-school attendance rate for the week."
             />
           </div>
 
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 md:px-5 md:py-5 space-y-3 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm md:text-base font-semibold text-emerald-900">AI attendance explainer</h2>
+                <h2 className="text-sm md:text-base font-semibold text-emerald-900">Attendance explainer</h2>
                 <p className="text-[11px] md:text-xs text-emerald-900/90">
-                  Let EduLife OS turn these numbers into a short <span className="font-semibold">story you can share</span> with staff or your circuit supervisor.
+                  Converts the real weekly figures into a clear leadership summary.
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full bg-emerald-900 text-white text-[10px] font-medium px-3 py-1">
-                Beta · Head only
+                Head only
               </span>
             </div>
 
             <button
               type="button"
-              disabled={aiLoading || rows.length === 0 || !canQuery}
+              disabled={aiLoading || !canQuery}
               onClick={handleAskAi}
               className="inline-flex items-center justify-center rounded-xl bg-emerald-900 px-3 py-2 text-xs md:text-sm font-medium text-white shadow-sm hover:bg-emerald-950 disabled:opacity-50"
             >
-              {aiLoading ? "Thinking with you…" : rows.length === 0 ? "No data to explain" : "Explain this week for me"}
+              {aiLoading ? "Explaining…" : "Explain this week for me"}
             </button>
 
             {aiError && (
@@ -369,12 +316,6 @@ export default function WeeklyAttendancePage() {
                   </div>
                 )}
               </div>
-            )}
-
-            {!aiError && !aiSummary && !aiLoading && rows.length === 0 && (
-              <p className="text-[11px] text-emerald-900/90">
-                Once there is at least one week of marks in this range, you can ask the AI explainer to summarise strengths, gaps and a simple follow-up action.
-              </p>
             )}
 
             {rows.length > 0 && (
@@ -405,7 +346,7 @@ export default function WeeklyAttendancePage() {
         <section className="rounded-2xl border border-zinc-200 bg-white/80 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
             <h2 className="text-sm font-semibold text-zinc-900">By class (Mon–Fri)</h2>
-            <p className="text-[11px] text-zinc-500">Each row is a class, rolled up across the selected dates.</p>
+            <p className="text-[11px] text-zinc-500">Each row is a class rolled up across the selected dates.</p>
           </div>
 
           <div className="overflow-x-auto">
@@ -435,10 +376,11 @@ export default function WeeklyAttendancePage() {
                     <td className="px-3 py-2 text-right font-mono">{r.pct.toFixed(1)}%</td>
                   </tr>
                 ))}
+
                 {rows.length === 0 && !loading && (
                   <tr>
                     <td className="px-4 py-6 text-center text-xs text-zinc-500" colSpan={8}>
-                      No data in this range yet. Once teachers take attendance through EduLife OS, this table will light up.
+                      No data in this range yet.
                     </td>
                   </tr>
                 )}
@@ -451,10 +393,6 @@ export default function WeeklyAttendancePage() {
               {error}
             </div>
           )}
-
-          <div className="px-4 py-3 text-[11px] text-zinc-500 border-t border-zinc-100">
-            Tip: this weekly view pairs with the <span className="font-semibold">Head Portal</span> tile so that attendance is never a surprise — only a conversation starter.
-          </div>
         </section>
       </div>
     </main>

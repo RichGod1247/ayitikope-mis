@@ -31,7 +31,11 @@ export default function TeacherTermDashboardClient() {
         setErrorMessage(null);
 
         const params = new URLSearchParams({ classroomId, term, academicYear });
-        const res = await fetch(`/api/teachers/assessment/term-dashboard?${params.toString()}`);
+
+        // ✅ Canonical session-scoped route
+        const res = await fetch(`/api/teacher/assessment/term-dashboard?${params.toString()}`, {
+          cache: "no-store",
+        });
 
         const text = await res.text();
         let json: any;

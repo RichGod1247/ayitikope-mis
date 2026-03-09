@@ -14,8 +14,6 @@ function toSignIn(callbackUrl: string, error?: string) {
 }
 
 export default async function HeadteacherDashboardPage() {
-  // ✅ Bank-grade boundary:
-  // If not authorized, no silent access. Return to sign-in with safe callbackUrl.
   try {
     await requireHeadteacherContext({ redirectTo: "/headteacher/dashboard" });
   } catch {
@@ -25,8 +23,10 @@ export default async function HeadteacherDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Dashboard</h1>
-        <p className="text-sm text-zinc-600">Weekly attendance pulse + pending certifications.</p>
+        <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
+        <p className="text-sm text-slate-600">
+          Academic leadership, attendance oversight, lesson-note review, and parent result access.
+        </p>
       </div>
 
       <HeadteacherDashboardClient />

@@ -7,6 +7,10 @@ function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
 
+function squashToken(v: unknown) {
+  return cleanStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 export function normalizeSubjectKey(name: string) {
   return cleanStr(name)
     .toUpperCase()
@@ -32,7 +36,8 @@ export function normalizeLevelToken(raw: unknown): string | null {
   m =
     v.match(/^JHS\s*([1-3])$/) ||
     v.match(/^J\.?H\.?S\.?\s*([1-3])$/) ||
-    v.match(/^JHS([1-3])$/);
+    v.match(/^JHS([1-3])$/) ||
+    v.match(/^JUNIOR\s+HIGH\s+SCHOOL\s*([1-3])$/);
   if (m) return `JHS${m[1]}`;
 
   // JHS written as Basic 7/8/9 or B7/B8/B9 or BS7
@@ -50,7 +55,10 @@ export function normalizeLevelToken(raw: unknown): string | null {
   }
 
   // Primary / Lower / Upper Basic 1–6
-  m = v.match(/^BASIC\s*([1-6])$/) || v.match(/^B\s*([1-6])$/) || v.match(/^B([1-6])$/);
+  m =
+    v.match(/^BASIC\s*([1-6])$/) ||
+    v.match(/^B\s*([1-6])$/) ||
+    v.match(/^B([1-6])$/);
   if (m) return `B${m[1]}`;
 
   m = v.match(/^PRIMARY\s*([1-6])$/) || v.match(/^P\s*([1-6])$/);
@@ -59,14 +67,61 @@ export function normalizeLevelToken(raw: unknown): string | null {
   return null;
 }
 
+/**
+ * Canonical DB storage values:
+ * KG      => "KG 1" | "KG 2"
+ * PRIMARY => "B1" ... "B6"
+ * JHS     => null (JHS uses jhsAssignments, not classLevel)
+ */
+export function normalizeTeacherClassLevel(
+  phase: TeacherPhase | "KG" | "PRIMARY" | "JHS",
+  raw: unknown
+): string | null {
+  const token = normalizeLevelToken(raw);
+  if (!token) return null;
+
+  if (phase === "KG") {
+    if (token === "KG1") return "KG 1";
+    if (token === "KG2") return "KG 2";
+    return null;
+  }
+
+  if (phase === "PRIMARY") {
+    const m = token.match(/^B([1-6])$/);
+    return m ? `B${m[1]}` : null;
+  }
+
+  return null;
+}
+
 function stripLeadingLevelPrefixFromName(input: string): string {
   const s = cleanStr(input);
   if (!s) return "";
-  // Strip things like: "JHS 1 ", "JHS1 ", "Basic 7 ", "B7 ", "BS7 ", "P4 ", etc.
   return s.replace(
-    /^(?:(?:JHS\s*[1-3]|JHS[1-3])|(?:BASIC\s*[1-9]|BASIC[1-9])|(?:BS\s*[1-9]|BS[1-9])|(?:B\s*[1-9]|B[1-9])|(?:P\s*[1-6]|P[1-6])|(?:KG\s*[1-2]|KG[1-2]))\s*[:\-–—]?\s*/i,
+    /^(?:(?:JHS\s*[1-3]|JHS[1-3])|(?:JUNIOR\s+HIGH\s+SCHOOL\s*[1-3])|(?:BASIC\s*[1-9]|BASIC[1-9])|(?:BS\s*[1-9]|BS[1-9])|(?:B\s*[1-9]|B[1-9])|(?:P\s*[1-6]|P[1-6])|(?:PRIMARY\s*[1-6])|(?:KG\s*[1-2]|KG[1-2]))\s*[:\-–—]?\s*/i,
     ""
   ).trim();
+}
+
+export function stripJhsDecorators(nameRaw: unknown): string {
+  let s = cleanStr(nameRaw);
+  if (!s) return "";
+
+  s = s.replace(
+    /^\s*JHS\s*(?:\(?\s*[1-3](?:\s*,\s*[1-3])*\s*\)?|[1-3])\s*[-:–—]?\s*/i,
+    ""
+  );
+  s = s.replace(
+    /^\s*JUNIOR\s+HIGH\s+SCHOOL\s*(?:\(?\s*[1-3](?:\s*,\s*[1-3])*\s*\)?|[1-3])?\s*[-:–—]?\s*/i,
+    ""
+  );
+  s = s.replace(/^\s*BASIC\s*[7-9]\s*[-:–—]?\s*/i, "");
+  s = s.replace(/^\s*B\s*[7-9]\s*[-:–—]?\s*/i, "");
+  s = s.replace(/^\s*BS\s*[7-9]\s*[-:–—]?\s*/i, "");
+  s = s.replace(/\s*\(\s*JHS\s*[1-3](?:\s*,\s*[1-3])*\s*\)\s*$/i, "");
+  s = s.replace(/\s+/g, " ").trim();
+
+  return s;
 }
 
 /**
@@ -85,14 +140,13 @@ function normalizeSubjectKeyFromMaybeSlug(input: string) {
 
   const slug = normalizeSubjectSlug(raw);
   if (!slug) {
-    // ✅ Bank-grade: also strip level prefixes from plain subject names
-    const stripped = stripLeadingLevelPrefixFromName(raw);
+    const stripped = stripLeadingLevelPrefixFromName(stripJhsDecorators(raw));
     return normalizeSubjectKey(stripped || raw);
   }
 
   let s = slug;
 
-  // Strip common level prefixes if present (so we can compare subjects consistently)
+  // Strip common level prefixes if present
   s = s.replace(/^kg-?([12])-(.+)$/i, "$2");
   s = s.replace(/^basic-?([1-9])-(.+)$/i, "$2");
   s = s.replace(/^b-?([1-9])-(.+)$/i, "$2");
@@ -102,6 +156,29 @@ function normalizeSubjectKeyFromMaybeSlug(input: string) {
   s = s.replace(/^jhs([1-3])-(.+)$/i, "$2");
 
   return normalizeSubjectKey(s.replace(/-/g, " "));
+}
+
+export type CanonicalJhsClass = "JHS 1" | "JHS 2" | "JHS 3";
+
+export type CanonicalJhsAssignmentLite = {
+  subject: string;
+  subjectSlug: null;
+  classes: CanonicalJhsClass[];
+};
+
+function normalizeJhsClass(raw: unknown): CanonicalJhsClass | null {
+  const token = normalizeLevelToken(raw);
+  if (token === "JHS1") return "JHS 1";
+  if (token === "JHS2") return "JHS 2";
+  if (token === "JHS3") return "JHS 3";
+  return null;
+}
+
+const JHS_CLASS_ORDER: CanonicalJhsClass[] = ["JHS 1", "JHS 2", "JHS 3"];
+
+function sortJhsClasses(xs: CanonicalJhsClass[]) {
+  const s = new Set(xs);
+  return JHS_CLASS_ORDER.filter((c) => s.has(c));
 }
 
 function extractAssignedLevels(classes: unknown): string[] {
@@ -143,6 +220,90 @@ function coerceJhsAssignments(raw: unknown): any[] {
   }
 
   return [];
+}
+
+export function normalizeJhsAssignmentsLoose(raw: unknown): CanonicalJhsAssignmentLite[] {
+  const arr = coerceJhsAssignments(raw);
+  const byKey = new Map<string, CanonicalJhsAssignmentLite>();
+
+  for (const row of arr) {
+    const subjectRaw = cleanStr((row as any)?.subject);
+    const subject = stripJhsDecorators(subjectRaw);
+    const classesRaw = extractAssignedLevels((row as any)?.classes);
+
+    const classes = sortJhsClasses(
+      Array.from(
+        new Set(
+          classesRaw
+            .map((c) => normalizeJhsClass(c))
+            .filter(Boolean) as CanonicalJhsClass[]
+        )
+      )
+    );
+
+    if (!subject || !classes.length) continue;
+
+    const key = normalizeSubjectKey(subject);
+    if (!key) continue;
+
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, { subject, subjectSlug: null, classes });
+      continue;
+    }
+
+    byKey.set(key, {
+      subject: existing.subject,
+      subjectSlug: null,
+      classes: sortJhsClasses(
+        Array.from(new Set([...existing.classes, ...classes]))
+      ),
+    });
+  }
+
+  return Array.from(byKey.values()).sort((a, b) =>
+    normalizeSubjectKey(a.subject).localeCompare(normalizeSubjectKey(b.subject))
+  );
+}
+
+export function sameNormalizedJhsAssignments(a: unknown, b: unknown) {
+  return (
+    JSON.stringify(normalizeJhsAssignmentsLoose(a)) ===
+    JSON.stringify(normalizeJhsAssignmentsLoose(b))
+  );
+}
+
+export function normalizeTeacherScopeForRead<T extends Record<string, unknown> | null | undefined>(
+  scope: T
+) {
+  if (!scope) return null;
+
+  const phase = cleanStr(scope.phase).toUpperCase();
+
+  if (phase === "KG") {
+    return {
+      ...scope,
+      classLevel: normalizeTeacherClassLevel("KG", scope.classLevel) ?? (cleanStr(scope.classLevel) || null),
+    };
+  }
+
+  if (phase === "PRIMARY") {
+    return {
+      ...scope,
+      classLevel:
+        normalizeTeacherClassLevel("PRIMARY", scope.classLevel) ??
+        (cleanStr(scope.classLevel) || null),
+    };
+  }
+
+  if (phase === "JHS") {
+    return {
+      ...scope,
+      jhsAssignments: normalizeJhsAssignmentsLoose(scope.jhsAssignments),
+    };
+  }
+
+  return scope;
 }
 
 type LevelSubjectToSlugMap = Map<string, string>; // `${lvlToken}::${subjectKey}` -> subjectSlug
@@ -200,7 +361,10 @@ export type TeacherScope = {
   allowedSubjectKeys: Set<string>;
 };
 
-export async function getTeacherScopeOrNull(tenantId: string, userId: string): Promise<TeacherScope | null> {
+export async function getTeacherScopeOrNull(
+  tenantId: string,
+  userId: string
+): Promise<TeacherScope | null> {
   if (!tenantId || !userId) return null;
 
   const tp = await prisma.teacherProfile.findUnique({

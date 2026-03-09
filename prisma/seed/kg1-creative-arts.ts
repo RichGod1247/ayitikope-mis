@@ -1,56 +1,47 @@
 // prisma/seed/kg1-creative-arts.ts
-import { PrismaClient } from '@prisma/client';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { PrismaClient } from "@prisma/client";
+import { promises as fs } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const prisma = new PrismaClient();
 
-// ESM-safe __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+type ExemplarJson = {
+  orderIndex: number;
+  description: string;
+};
 
-// Path to the KG1 Creative Arts curriculum JSON
-const CURRICULUM_JSON_PATH = path.join(
-  __dirname,
-  'curriculum',
-  'kg1-creative-arts.json'
-);
-
-interface CurriculumIndicatorJson {
+type IndicatorJson = {
   code: string;
   description: string;
   orderIndex: number;
-  exemplars?: {
-    orderIndex: number;
-    description: string;
-  }[];
-}
+  exemplars: ExemplarJson[];
+};
 
-interface CurriculumContentStandardJson {
+type ContentStandardJson = {
   code: string;
   description: string;
   orderIndex: number;
-  indicators: CurriculumIndicatorJson[];
-}
+  indicators: IndicatorJson[];
+};
 
-interface CurriculumSubStrandJson {
+type SubStrandJson = {
   code: string;
   title: string;
   description: string;
   orderIndex: number;
-  contentStandards: CurriculumContentStandardJson[];
-}
+  contentStandards: ContentStandardJson[];
+};
 
-interface CurriculumStrandJson {
+type StrandJson = {
   code: string;
   title: string;
   description: string;
   orderIndex: number;
-  subStrands: CurriculumSubStrandJson[];
-}
+  subStrands: SubStrandJson[];
+};
 
-interface CurriculumSubjectJson {
+type CurriculumSubjectJson = {
   phase: string;
   level: string;
   subject: string;
@@ -58,233 +49,212 @@ interface CurriculumSubjectJson {
   slug: string;
   orderIndex: number;
   description: string;
-  strands: CurriculumStrandJson[];
+  strands: StrandJson[];
+};
+
+async function deleteExistingCurriculumTree(subjectId: string) {
+  console.log("   🔎 Discovering existing curriculum tree...");
+
+  const strands = await prisma.curriculumStrand.findMany({
+    where: { subjectId },
+    select: { id: true, code: true },
+  });
+  const strandIds = strands.map((s) => s.id);
+
+  const subStrands =
+    strandIds.length > 0
+      ? await prisma.curriculumSubStrand.findMany({
+          where: { strandId: { in: strandIds } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const subStrandIds = subStrands.map((s) => s.id);
+
+  const contentStandards =
+    subStrandIds.length > 0
+      ? await prisma.curriculumContentStandard.findMany({
+          where: { subStrandId: { in: subStrandIds } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const contentStandardIds = contentStandards.map((c) => c.id);
+
+  const indicators =
+    contentStandardIds.length > 0
+      ? await prisma.curriculumIndicator.findMany({
+          where: { contentStandardId: { in: contentStandardIds } },
+          select: { id: true, code: true },
+        })
+      : [];
+  const indicatorIds = indicators.map((i) => i.id);
+
+  console.log(`   • Strands: ${strandIds.length}`);
+  console.log(`   • SubStrands: ${subStrandIds.length}`);
+  console.log(`   • ContentStandards: ${contentStandardIds.length}`);
+  console.log(`   • Indicators: ${indicatorIds.length}`);
+
+  // 1) Media first (subject-level and indicator-level)
+  const deletedSubjectMedia = await prisma.curriculumMedia.deleteMany({
+    where: { subjectId },
+  });
+  console.log(`   🗑️ Deleted subject media: ${deletedSubjectMedia.count}`);
+
+  if (indicatorIds.length > 0) {
+    const deletedIndicatorMedia = await prisma.curriculumMedia.deleteMany({
+      where: { indicatorId: { in: indicatorIds } },
+    });
+    console.log(`   🗑️ Deleted indicator media: ${deletedIndicatorMedia.count}`);
+  }
+
+  // 2) Exemplars
+  if (indicatorIds.length > 0) {
+    const deletedExemplars = await prisma.curriculumExemplar.deleteMany({
+      where: { indicatorId: { in: indicatorIds } },
+    });
+    console.log(`   🗑️ Deleted exemplars: ${deletedExemplars.count}`);
+  }
+
+  // 3) Indicators
+  if (indicatorIds.length > 0) {
+    const deletedIndicators = await prisma.curriculumIndicator.deleteMany({
+      where: { id: { in: indicatorIds } },
+    });
+    console.log(`   🗑️ Deleted indicators: ${deletedIndicators.count}`);
+  }
+
+  // 4) Content standards
+  if (contentStandardIds.length > 0) {
+    const deletedContentStandards =
+      await prisma.curriculumContentStandard.deleteMany({
+        where: { id: { in: contentStandardIds } },
+      });
+    console.log(
+      `   🗑️ Deleted content standards: ${deletedContentStandards.count}`
+    );
+  }
+
+  // 5) SubStrands
+  if (subStrandIds.length > 0) {
+    const deletedSubStrands = await prisma.curriculumSubStrand.deleteMany({
+      where: { id: { in: subStrandIds } },
+    });
+    console.log(`   🗑️ Deleted sub-strands: ${deletedSubStrands.count}`);
+  }
+
+  // 6) Strands
+  if (strandIds.length > 0) {
+    const deletedStrands = await prisma.curriculumStrand.deleteMany({
+      where: { id: { in: strandIds } },
+    });
+    console.log(`   🗑️ Deleted strands: ${deletedStrands.count}`);
+  }
+
+  // 7) Subject last
+  await prisma.curriculumSubject.delete({
+    where: { id: subjectId },
+  });
+  console.log("   🗑️ Deleted curriculum subject.");
 }
 
 async function main() {
-  console.log(
-    `📖 Loading KG1 Creative Arts curriculum from: ${CURRICULUM_JSON_PATH}`
-  );
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
 
-  const raw = await fs.readFile(CURRICULUM_JSON_PATH, 'utf-8');
-  const data: CurriculumSubjectJson = JSON.parse(raw);
+  const jsonPath = path.join(__dirname, "curriculum", "kg1-creative-arts.json");
+  // If you later canonicalize this file, change only this line to:
+  // const jsonPath = path.join(__dirname, "curriculum", "kg1-creative-arts.clean.json");
 
-  // 1️⃣ Upsert the subject by slug (canonical: "kg1-creative-arts")
-  const subject = await prisma.curriculumSubject.upsert({
-    where: { slug: data.slug },
-    update: {
-      name: data.name,
-      phase: data.phase,
-      level: data.level,
-      description: data.description,
-      orderIndex: data.orderIndex,
-    },
-    create: {
-      slug: data.slug,
-      name: data.name,
-      phase: data.phase,
-      level: data.level,
-      description: data.description,
-      orderIndex: data.orderIndex,
+  const raw = await fs.readFile(jsonPath, "utf8");
+  const curriculum = JSON.parse(raw) as CurriculumSubjectJson;
+
+  console.log(`📖 Loading KG1 Creative Arts curriculum from: ${jsonPath}`);
+  console.log(`→ Subject: ${curriculum.name} (${curriculum.slug})`);
+  console.log(`   Phase/Level: ${curriculum.phase} / ${curriculum.level}`);
+  console.log(`   Strands in JSON: ${curriculum.strands.length}`);
+
+  const existing = await prisma.curriculumSubject.findUnique({
+    where: { slug: curriculum.slug },
+    select: { id: true, slug: true },
+  });
+
+  if (existing) {
+    console.log(
+      `⚠️ Found existing curriculumSubject for slug "${curriculum.slug}", deleting tree...`
+    );
+    await deleteExistingCurriculumTree(existing.id);
+    console.log("   ✅ Existing curriculum tree removed.");
+  } else {
+    console.log(
+      `ℹ️ No existing curriculumSubject to delete for slug: ${curriculum.slug}`
+    );
+  }
+
+  const created = await prisma.curriculumSubject.create({
+    data: {
+      phase: curriculum.phase,
+      level: curriculum.level,
+      name: curriculum.name,
+      slug: curriculum.slug,
+      orderIndex: curriculum.orderIndex,
+      description: curriculum.description,
+
+      strands: {
+        create: curriculum.strands.map((strand, strandIndex) => ({
+          code: strand.code,
+          title: strand.title,
+          description: strand.description,
+          orderIndex: strand.orderIndex ?? strandIndex + 1,
+
+          subStrands: {
+            create: strand.subStrands.map((subStrand, subIndex) => ({
+              code: subStrand.code,
+              title: subStrand.title,
+              description: subStrand.description,
+              orderIndex: subStrand.orderIndex ?? subIndex + 1,
+
+              contentStandards: {
+                create: subStrand.contentStandards.map(
+                  (contentStandard, csIndex) => ({
+                    code: contentStandard.code,
+                    description: contentStandard.description,
+                    orderIndex: contentStandard.orderIndex ?? csIndex + 1,
+
+                    indicators: {
+                      create: contentStandard.indicators.map(
+                        (indicator, indIndex) => ({
+                          code: indicator.code,
+                          description: indicator.description,
+                          orderIndex: indicator.orderIndex ?? indIndex + 1,
+
+                          exemplars: {
+                            create: (indicator.exemplars ?? []).map(
+                              (exemplar, exIndex) => ({
+                                description: exemplar.description,
+                                orderIndex:
+                                  exemplar.orderIndex ?? exIndex + 1,
+                              })
+                            ),
+                          },
+                        })
+                      ),
+                    },
+                  })
+                ),
+              },
+            })),
+          },
+        })),
+      },
     },
   });
 
-  console.log(
-    `🎯 Upserted CurriculumSubject: ${subject.slug} (id=${subject.id})`
-  );
-
-  // 2️⃣ Upsert strands, sub-strands, content standards, indicators
-  for (const strandJson of data.strands) {
-    console.log(`\n→ Strand ${strandJson.code} – ${strandJson.title}`);
-
-    // Strand
-    let strand = await prisma.curriculumStrand.findFirst({
-      where: {
-        code: strandJson.code,
-        subjectId: subject.id,
-      },
-    });
-
-    if (strand) {
-      strand = await prisma.curriculumStrand.update({
-        where: { id: strand.id },
-        data: {
-          title: strandJson.title,
-          description: strandJson.description,
-          orderIndex: strandJson.orderIndex,
-        },
-      });
-    } else {
-      strand = await prisma.curriculumStrand.create({
-        data: {
-          code: strandJson.code,
-          title: strandJson.title,
-          description: strandJson.description,
-          orderIndex: strandJson.orderIndex,
-          subject: {
-            connect: { id: subject.id },
-          },
-        },
-      });
-    }
-
-    console.log(`   ✅ Strand upserted (id=${strand.id})`);
-
-    // Sub-strands
-    for (const subStrandJson of strandJson.subStrands) {
-      console.log(
-        `   → SubStrand ${subStrandJson.code} – ${subStrandJson.title}`
-      );
-
-      let subStrand = await prisma.curriculumSubStrand.findFirst({
-        where: {
-          code: subStrandJson.code,
-          strandId: strand.id,
-        },
-      });
-
-      if (subStrand) {
-        subStrand = await prisma.curriculumSubStrand.update({
-          where: { id: subStrand.id },
-          data: {
-            title: subStrandJson.title,
-            description: subStrandJson.description,
-            orderIndex: subStrandJson.orderIndex,
-          },
-        });
-      } else {
-        subStrand = await prisma.curriculumSubStrand.create({
-          data: {
-            code: subStrandJson.code,
-            title: subStrandJson.title,
-            description: subStrandJson.description,
-            orderIndex: subStrandJson.orderIndex,
-            strand: {
-              connect: { id: strand.id },
-            },
-          },
-        });
-      }
-
-      console.log(`      ✅ SubStrand upserted (id=${subStrand.id})`);
-
-      // Content standards
-      for (const csJson of subStrandJson.contentStandards) {
-        console.log(
-          `      → ContentStandard ${csJson.code} – ${csJson.description.slice(
-            0,
-            40
-          )}...`
-        );
-
-        let contentStandard =
-          await prisma.curriculumContentStandard.findFirst({
-            where: {
-              code: csJson.code,
-              subStrandId: subStrand.id,
-            },
-          });
-
-        if (contentStandard) {
-          contentStandard =
-            await prisma.curriculumContentStandard.update({
-              where: { id: contentStandard.id },
-              data: {
-                description: csJson.description,
-                orderIndex: csJson.orderIndex,
-              },
-            });
-        } else {
-          contentStandard =
-            await prisma.curriculumContentStandard.create({
-              data: {
-                code: csJson.code,
-                description: csJson.description,
-                orderIndex: csJson.orderIndex,
-                subStrand: {
-                  connect: { id: subStrand.id },
-                },
-              },
-            });
-        }
-
-        console.log(
-          `         ✅ ContentStandard upserted (id=${contentStandard.id})`
-        );
-
-        // Indicators
-        for (const indJson of csJson.indicators) {
-          console.log(
-            `         → Indicator ${indJson.code} – ${indJson.description.slice(
-              0,
-              40
-            )}...`
-          );
-
-          let indicator = await prisma.curriculumIndicator.findFirst({
-            where: {
-              code: indJson.code,
-              contentStandardId: contentStandard.id,
-            },
-          });
-
-          if (indicator) {
-            indicator = await prisma.curriculumIndicator.update({
-              where: { id: indicator.id },
-              data: {
-                description: indJson.description,
-                orderIndex: indJson.orderIndex,
-              },
-            });
-          } else {
-            indicator = await prisma.curriculumIndicator.create({
-              data: {
-                code: indJson.code,
-                description: indJson.description,
-                orderIndex: indJson.orderIndex,
-                contentStandard: {
-                  connect: { id: contentStandard.id },
-                },
-              },
-            });
-          }
-
-          console.log(`            ✅ Indicator upserted (id=${indicator.id})`);
-
-          // (Optional) Exemplars – only if your Prisma model supports them.
-          // I’ll leave a placeholder here; uncomment and adjust if you already have a CurriculumExemplar model.
-          //
-          // if (indJson.exemplars && indJson.exemplars.length > 0) {
-          //   for (const ex of indJson.exemplars) {
-          //     await prisma.curriculumExemplar.upsert({
-          //       where: {
-          //         indicatorId_orderIndex: {
-          //           indicatorId: indicator.id,
-          //           orderIndex: ex.orderIndex,
-          //         },
-          //       },
-          //       update: {
-          //         description: ex.description,
-          //       },
-          //       create: {
-          //         indicator: { connect: { id: indicator.id } },
-          //         orderIndex: ex.orderIndex,
-          //         description: ex.description,
-          //       },
-          //     });
-          //   }
-          // }
-        }
-      }
-    }
-  }
-
-  console.log('\n🎉 Finished seeding KG1 Creative Arts curriculum.');
+  console.log(`✅ Seeded KG1 Creative Arts with id: ${created.id}`);
+  console.log(`   Strands created from JSON: ${curriculum.strands.length}`);
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Error in KG1 Creative Arts curriculum seed:', e);
+  .catch((err) => {
+    console.error("❌ Error seeding KG1 Creative Arts:", err);
     process.exit(1);
   })
   .finally(async () => {

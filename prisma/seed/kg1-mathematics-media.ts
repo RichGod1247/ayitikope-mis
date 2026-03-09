@@ -1,19 +1,19 @@
+// prisma/seed/kg1-mathematics-media.ts
 import { PrismaClient } from "@prisma/client";
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// prisma/seed -> prisma/.env
+dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
 const prisma = new PrismaClient();
 
-// Resolve from project root (where you run npx ts-node …)
-const MEDIA_JSON_PATH = path.join(
-  process.cwd(),
-  "prisma",
-  "seed",
-  "curriculum",
-  "kg1-mathematics-media.json"
-);
-
-type RawMediaItem = {
+type MediaSeedRow = {
   subjectSlug: string;
   phase: string;
   level: string;
@@ -24,150 +24,182 @@ type RawMediaItem = {
   indicatorCode: string;
 
   pageNumberInPdf: number;
-  figureLabel?: string | null;
-
+  figureLabel?: string;
   imagePath: string;
   altText: string;
   detailedDescription: string;
-  tags?: string[] | string | null;
+  tags?: string[];
 };
 
-async function mainReal() {
-  console.log(
-    `📖 Loading KG1 Mathematics media seed from: ${MEDIA_JSON_PATH}`
+function cleanStr(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function normalizeImagePath(value: string): string {
+  return cleanStr(value).replace(/^\/+/, "");
+}
+
+function normalizeTags(tags?: string[]): string | undefined {
+  if (!Array.isArray(tags) || tags.length === 0) return undefined;
+
+  const cleaned = tags.map((t) => cleanStr(t)).filter(Boolean);
+  return cleaned.length ? cleaned.join(", ") : undefined;
+}
+
+function resolveSeedPath(): string {
+  const candidates = [
+    path.join(__dirname, "curriculum", "kg1-mathematics-media.clean.json"),
+    path.join(__dirname, "curriculum", "kg1-mathematics-media.json"),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(
+    [
+      "Seed file not found. Checked:",
+      ...candidates.map((p) => `- ${p}`),
+      "Rename your file to one of the above or place it in prisma/seed/curriculum.",
+    ].join("\n")
   );
+}
 
-  if (!fs.existsSync(MEDIA_JSON_PATH)) {
-    console.error("❌ Media JSON file not found.");
-    process.exit(1);
+function validateRow(row: MediaSeedRow, index: number) {
+  const prefix = `Row ${index + 1}`;
+
+  if (!cleanStr(row.subjectSlug)) {
+    throw new Error(`${prefix}: subjectSlug is required`);
+  }
+  if (!cleanStr(row.phase)) {
+    throw new Error(`${prefix}: phase is required`);
+  }
+  if (!cleanStr(row.level)) {
+    throw new Error(`${prefix}: level is required`);
   }
 
-  const raw = fs.readFileSync(MEDIA_JSON_PATH, "utf8");
-  let items: RawMediaItem[];
-
-  try {
-    items = JSON.parse(raw);
-  } catch (err) {
-    console.error("❌ Failed to parse kg1-mathematics-media.json as JSON:", err);
-    process.exit(1);
-    return;
+  if (!cleanStr(row.strandCode)) {
+    throw new Error(`${prefix}: strandCode is required`);
+  }
+  if (!cleanStr(row.subStrandCode)) {
+    throw new Error(`${prefix}: subStrandCode is required`);
+  }
+  if (!cleanStr(row.contentStandardCode)) {
+    throw new Error(`${prefix}: contentStandardCode is required`);
+  }
+  if (!cleanStr(row.indicatorCode)) {
+    throw new Error(`${prefix}: indicatorCode is required`);
   }
 
+  if (
+    typeof row.pageNumberInPdf !== "number" ||
+    !Number.isInteger(row.pageNumberInPdf)
+  ) {
+    throw new Error(`${prefix}: pageNumberInPdf must be an integer`);
+  }
+
+  if (!cleanStr(row.imagePath)) {
+    throw new Error(`${prefix}: imagePath is required`);
+  }
+  if (!cleanStr(row.altText)) {
+    throw new Error(`${prefix}: altText is required`);
+  }
+  if (!cleanStr(row.detailedDescription)) {
+    throw new Error(`${prefix}: detailedDescription is required`);
+  }
+}
+
+async function mainReal() {
+  const seedPath = resolveSeedPath();
+
+  console.log("📖 Loading KG1 Mathematics media seed from:", seedPath);
+
+  const raw = fs.readFileSync(seedPath, "utf8");
+  const items = JSON.parse(raw) as MediaSeedRow[];
+
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error("No rows found in KG1 Mathematics media JSON.");
+  }
+
+  items.forEach((row, index) => validateRow(row, index));
+
+  const subjectSlug = cleanStr(items[0].subjectSlug);
+
+  const subject = await prisma.curriculumSubject.findUnique({
+    where: { slug: subjectSlug },
+    select: { id: true, name: true, slug: true },
+  });
+
+  if (!subject) {
+    throw new Error(
+      `CurriculumSubject not found for slug='${subjectSlug}'. Seed KG1 Mathematics curriculum first.`
+    );
+  }
+
+  console.log(`   ✅ Using subject '${subject.name}' (id=${subject.id})`);
   console.log(`   Items in JSON: ${items.length}`);
 
-  for (const item of items) {
-    const {
-      subjectSlug,
-      strandCode,
-      subStrandCode,
-      contentStandardCode,
-      indicatorCode,
-    } = item;
+  const deleted = await prisma.curriculumMedia.deleteMany({
+    where: { subjectId: subject.id },
+  });
 
-    console.log(
-      `\n→ Processing indicator ${indicatorCode} (${subjectSlug || "KG1 Mathematics"})`
-    );
+  console.log(`   🗑️ Deleted existing media rows for subject: ${deleted.count}`);
+  console.log();
 
-    // 1. Find the indicator via subject → strand → substrand → content standard → indicator
+  let created = 0;
+  let skipped = 0;
+
+  for (const row of items) {
+    console.log(`→ Processing ${row.indicatorCode}`);
+
     const indicator = await prisma.curriculumIndicator.findFirst({
       where: {
-        code: indicatorCode,
+        code: cleanStr(row.indicatorCode),
         contentStandard: {
-          code: contentStandardCode,
+          code: cleanStr(row.contentStandardCode),
           subStrand: {
-            code: subStrandCode,
+            code: cleanStr(row.subStrandCode),
             strand: {
-              code: strandCode,
+              code: cleanStr(row.strandCode),
               subject: {
-                slug: subjectSlug,
+                slug: cleanStr(row.subjectSlug),
               },
             },
           },
         },
       },
+      select: { id: true, code: true },
     });
 
     if (!indicator) {
-      console.warn(
-        `   ⚠️ Could not find indicator ${indicatorCode} (strand=${strandCode}, subStrand=${subStrandCode}, contentStandard=${contentStandardCode}, subjectSlug=${subjectSlug}). Skipping.`
+      console.log(
+        `   ⚠️ Could not find indicator ${row.indicatorCode} under ${row.subjectSlug}. Skipping.\n`
       );
+      skipped++;
       continue;
     }
 
-    console.log(`   ✅ Found indicator ${indicatorCode} (id=${indicator.id})`);
-
-    // 2. Prepare tags as a single string (or null) to match your existing schema behaviour
-    let tags: string | null = null;
-    if (Array.isArray(item.tags)) {
-      tags = item.tags.join(", ");
-    } else if (typeof item.tags === "string") {
-      tags = item.tags;
-    } else {
-      tags = null;
-    }
-
-    // 3. Normalise imagePath (remove leading slash if present)
-    const imagePathNormalised = item.imagePath.startsWith("/")
-      ? item.imagePath.slice(1)
-      : item.imagePath;
-
-    // 4. pageNumberInPdf is required by the Prisma schema
-    if (
-      typeof item.pageNumberInPdf !== "number" ||
-      Number.isNaN(item.pageNumberInPdf)
-    ) {
-      console.error(
-        `   ❌ Invalid or missing pageNumberInPdf for indicator ${indicatorCode}. Value: ${item.pageNumberInPdf}`
-      );
-      continue;
-    }
-
-    const data = {
-      figureLabel: item.figureLabel ?? null,
-      imagePath: imagePathNormalised,
-      altText: item.altText,
-      detailedDescription: item.detailedDescription,
-      tags,
-      pageNumberInPdf: item.pageNumberInPdf,
-      indicator: {
-        connect: {
-          id: indicator.id,
-        },
-      },
-    };
-
-    // 5. Check if a CurriculumMedia row already exists for this indicator + imagePath
-    //    (this works together with the DB unique constraint on (indicatorId, imagePath))
-    const existing = await prisma.curriculumMedia.findFirst({
-      where: {
+    const createdRow = await prisma.curriculumMedia.create({
+      data: {
+        subjectId: subject.id,
         indicatorId: indicator.id,
-        imagePath: imagePathNormalised,
+        figureLabel: cleanStr(row.figureLabel) || undefined,
+        imagePath: normalizeImagePath(row.imagePath),
+        altText: cleanStr(row.altText),
+        detailedDescription: cleanStr(row.detailedDescription),
+        tags: normalizeTags(row.tags),
+        pageNumberInPdf: row.pageNumberInPdf,
       },
     });
 
-    if (existing) {
-      console.log(
-        `   🔁 Existing media found (id=${existing.id}), updating...`
-      );
-      await prisma.curriculumMedia.update({
-        where: {
-          id: existing.id,
-        },
-        data,
-      });
-      console.log(`   ✅ Updated existing media row.`);
-    } else {
-      console.log(`   ➕ No existing media found, creating new row...`);
-      const created = await prisma.curriculumMedia.create({
-        data,
-      });
-      console.log(
-        `   ✅ Created CurriculumMedia with id=${created.id}`
-      );
-    }
+    console.log(`   ✅ Created media row ${createdRow.id}\n`);
+    created++;
   }
 
-  console.log("\n🎉 Done seeding KG1 Mathematics media.");
+  console.log("🎉 Done seeding KG1 Mathematics media.");
+  console.log({ created, skipped });
 }
 
 async function main() {

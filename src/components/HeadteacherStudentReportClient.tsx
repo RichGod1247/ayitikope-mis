@@ -1,21 +1,33 @@
-// src/components/HeadteacherStudentReportClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+type ClassroomDTO = {
+  id: string;
+  name: string | null;
+  grade: string | null;
+  arm: string | null;
+};
 
 type StudentTermReportResponse = {
   ok: boolean;
   error?: string;
   tenantId?: string;
+
   student?: {
     id: string;
     firstName: string;
     lastName: string;
-    sex: string;
+    sex: string | null;
     classroomId?: string | null;
+    classroom?: ClassroomDTO | null;
   };
+
+  classroom?: ClassroomDTO | null;
+
   term?: string;
   academicYear?: string;
+
   subjects?: {
     subject: string;
     totalScore: number;
@@ -29,15 +41,18 @@ type StudentTermReportResponse = {
       comment: string | null;
     }[];
   }[];
+
   overall?: {
     totalScore: number;
     maxTotalScore: number;
     percentage: number | null;
   };
+
   message?: string;
 };
 
 type Props = {
+  tenantName: string;
   defaultTerm: string;
   defaultAcademicYear: string;
 };
@@ -48,44 +63,94 @@ type ReportState =
   | { status: "error"; message: string }
   | { status: "ready"; data: StudentTermReportResponse };
 
+function pctStr(p: number | null | undefined) {
+  if (p == null || Number.isNaN(p)) return "—";
+  return `${p.toFixed(1)}%`;
+}
+
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function looksLikeOpaqueId(value: string) {
+  const s = cleanStr(value);
+  if (!s) return false;
+
+  // UUID
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s)) {
+    return true;
+  }
+
+  // Long generated IDs like cuid-ish / opaque DB ids
+  if (/^[a-z0-9_-]{20,}$/i.test(s)) {
+    return true;
+  }
+
+  return false;
+}
+
+function safeHumanText(value: unknown) {
+  const s = cleanStr(value);
+  if (!s) return "";
+  if (looksLikeOpaqueId(s)) return "";
+  return s;
+}
+
+function classLabelFrom(c: ClassroomDTO | null | undefined) {
+  if (!c) return "";
+
+  const name = safeHumanText(c.name);
+  if (name) return name;
+
+  const grade = safeHumanText(c.grade);
+  const arm = safeHumanText(c.arm);
+
+  return [grade, arm].filter(Boolean).join(" ").trim();
+}
+
 export function HeadteacherStudentReportClient({
+  tenantName,
   defaultTerm,
   defaultAcademicYear,
 }: Props) {
   const [studentId, setStudentId] = useState<string>("");
   const [term, setTerm] = useState<string>(defaultTerm);
-  const [academicYear, setAcademicYear] =
-    useState<string>(defaultAcademicYear);
-  const [state, setState] = useState<ReportState>({
-    status: "idle",
-  });
+  const [academicYear, setAcademicYear] = useState<string>(defaultAcademicYear);
 
-  // Read ?studentId=&term=&academicYear= from URL (if present)
+  const [state, setState] = useState<ReportState>({ status: "idle" });
+
+  const prefilledFromUrlRef = useRef(false);
+  const autoLoadedRef = useRef(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
 
+    const params = new URLSearchParams(window.location.search);
     const fromUrlStudentId = params.get("studentId");
     const fromUrlTerm = params.get("term");
     const fromUrlYear = params.get("academicYear");
 
     if (fromUrlStudentId) {
       setStudentId(fromUrlStudentId);
+      prefilledFromUrlRef.current = true;
     }
-    if (fromUrlTerm) {
-      setTerm(fromUrlTerm);
-    }
-    if (fromUrlYear) {
-      setAcademicYear(fromUrlYear);
-    }
+    if (fromUrlTerm) setTerm(fromUrlTerm);
+    if (fromUrlYear) setAcademicYear(fromUrlYear);
   }, []);
 
-  async function handleLoad() {
-    if (!studentId.trim() || !term || !academicYear) {
+  async function handleLoad(next?: {
+    studentId?: string;
+    term?: string;
+    academicYear?: string;
+  }) {
+    const sid = (next?.studentId ?? studentId).trim();
+    const tm = (next?.term ?? term).trim();
+    const yr = (next?.academicYear ?? academicYear).trim();
+
+    if (!sid || !tm || !yr) {
       setState({
         status: "error",
-        message:
-          "Please enter a learner ID and choose term & academic year.",
+        message: "Please enter a learner ID and choose term & academic year.",
       });
       return;
     }
@@ -94,24 +159,20 @@ export function HeadteacherStudentReportClient({
 
     try {
       const params = new URLSearchParams({
-        studentId: studentId.trim(),
-        term,
-        academicYear,
+        studentId: sid,
+        term: tm,
+        academicYear: yr,
       });
 
       const res = await fetch(
         `/api/headteacher/reports/student-term-report?${params.toString()}`,
-        {
-          method: "GET",
-        }
+        { method: "GET", cache: "no-store" }
       );
 
-      const json: StudentTermReportResponse = await res
-        .json()
-        .catch(() => ({
-          ok: false,
-          error: "Invalid JSON from server",
-        }));
+      const json: StudentTermReportResponse = await res.json().catch(() => ({
+        ok: false,
+        error: "Invalid JSON from server",
+      }));
 
       if (!res.ok || !json.ok) {
         setState({
@@ -123,11 +184,8 @@ export function HeadteacherStudentReportClient({
         return;
       }
 
-      setState({
-        status: "ready",
-        data: json,
-      });
-    } catch (err) {
+      setState({ status: "ready", data: json });
+    } catch {
       setState({
         status: "error",
         message:
@@ -135,6 +193,21 @@ export function HeadteacherStudentReportClient({
       });
     }
   }
+
+  useEffect(() => {
+    if (!prefilledFromUrlRef.current) return;
+    if (autoLoadedRef.current) return;
+
+    const sid = studentId.trim();
+    const tm = term.trim();
+    const yr = academicYear.trim();
+
+    if (!sid || !tm || !yr) return;
+
+    autoLoadedRef.current = true;
+    void handleLoad({ studentId: sid, term: tm, academicYear: yr });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentId, term, academicYear]);
 
   function handlePrint() {
     if (typeof window === "undefined") return;
@@ -145,10 +218,8 @@ export function HeadteacherStudentReportClient({
 
   return (
     <section className="space-y-4">
-      {/* Controls */}
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm print:hidden">
         <div className="grid gap-3 md:grid-cols-3 md:items-end">
-          {/* Student ID */}
           <div className="space-y-1 md:col-span-2">
             <label className="block text-[11px] font-medium text-slate-700">
               Learner ID
@@ -161,16 +232,10 @@ export function HeadteacherStudentReportClient({
               placeholder="Paste learner ID (e.g. from attendance/fees views)"
             />
             <p className="text-[10px] text-slate-500">
-              When you come from the{" "}
-              <span className="font-semibold">
-                class term report grid
-              </span>
-              , this ID, term and academic year will be pre-filled for
-              you. You can still adjust them manually.
+              Coming from the class grid pre-fills ID, term and year.
             </p>
           </div>
 
-          {/* Term & Year */}
           <div className="space-y-2">
             <div className="space-y-1">
               <label className="block text-[11px] font-medium text-slate-700">
@@ -205,7 +270,7 @@ export function HeadteacherStudentReportClient({
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={handleLoad}
+            onClick={() => void handleLoad()}
             className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-emerald-700"
           >
             Load term report
@@ -220,40 +285,30 @@ export function HeadteacherStudentReportClient({
             Print / Save as PDF
           </button>
 
-          <p className="text-[10px] text-slate-500">
-            After loading a learner&apos;s report, use{" "}
-            <span className="font-semibold">
-              Print / Save as PDF
-            </span>{" "}
-            to generate a physical copy or PDF export from your
-            browser.
-          </p>
+          {state.status === "error" ? (
+            <p className="text-[11px] text-red-700">{state.message}</p>
+          ) : null}
+          {state.status === "loading" ? (
+            <p className="text-[11px] text-emerald-800">Loading…</p>
+          ) : null}
         </div>
-
-        {state.status === "error" && (
-          <p className="mt-2 text-[11px] text-red-700">
-            {state.message}
-          </p>
-        )}
-        {state.status === "loading" && (
-          <p className="mt-2 text-[11px] text-emerald-800">
-            Loading learner report…
-          </p>
-        )}
       </div>
 
-      {/* Printable report */}
       <div className="print:bg-white print:text-black">
-        <LearnerReportView state={state} />
+        <LearnerReportView tenantName={tenantName} state={state} />
       </div>
     </section>
   );
 }
 
-function LearnerReportView({ state }: { state: ReportState }) {
-  if (state.status !== "ready") {
-    return null;
-  }
+function LearnerReportView({
+  tenantName,
+  state,
+}: {
+  tenantName: string;
+  state: ReportState;
+}) {
+  if (state.status !== "ready") return null;
 
   const data = state.data;
   const student = data.student;
@@ -267,69 +322,64 @@ function LearnerReportView({ state }: { state: ReportState }) {
           No learner data
         </p>
         <p className="mt-1 text-[11px] text-slate-600">
-          The server did not return learner details. Please check the
-          learner ID and try again.
+          The server did not return learner details. Please check the learner ID
+          and try again.
         </p>
       </div>
     );
   }
 
-  // Compute overall percentage as 0–100 string
-  const overallPercentStr =
-    overall && overall.percentage !== null
-      ? (overall.percentage * 100).toFixed(1) + "%"
-      : "—";
+  const overallPercentStr = pctStr(overall?.percentage);
+  const c = student.classroom ?? data.classroom ?? null;
+  const classLabel = classLabelFrom(c);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm print:shadow-none print:border print:border-slate-300 print:rounded-none">
-      {/* Top header – printable look */}
-      <div className="border-b border-slate-200 pb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-b border-slate-200 pb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
-            Term report · {data.term} · {data.academicYear}
+            {tenantName}
           </p>
-          <p className="mt-1 text-lg font-semibold text-slate-900">
+          <p className="mt-1 text-[11px] text-slate-600">
+            Term report · <span className="font-semibold">{data.term}</span> ·{" "}
+            <span className="font-semibold">{data.academicYear}</span>
+          </p>
+
+          <p className="mt-2 text-lg font-semibold text-slate-900">
             {student.firstName} {student.lastName}
           </p>
+
           <div className="mt-0.5 text-[11px] text-slate-600 flex flex-wrap gap-3">
-            {student.sex && (
+            {student.sex ? (
               <span>
-                Sex:{" "}
-                <span className="font-semibold">
-                  {student.sex}
-                </span>
+                Sex: <span className="font-semibold">{student.sex}</span>
               </span>
-            )}
-            {student.classroomId && (
+            ) : null}
+
+            {classLabel ? (
               <span>
-                Classroom ID:{" "}
-                <span className="font-semibold">
-                  {student.classroomId}
-                </span>
+                Classroom:{" "}
+                <span className="font-semibold">{classLabel}</span>
               </span>
-            )}
+            ) : null}
           </div>
         </div>
+
         <div className="text-right space-y-1">
-          <p className="text-[11px] text-slate-600">
-            Overall percentage
-          </p>
+          <p className="text-[11px] text-slate-600">Overall percentage</p>
           <p className="text-xl font-semibold text-emerald-700">
             {overallPercentStr}
           </p>
-          {overall && overall.maxTotalScore > 0 && (
+          {overall && overall.maxTotalScore > 0 ? (
             <p className="text-[10px] text-slate-500">
               Total:{" "}
-              <span className="font-semibold">
-                {overall.totalScore}
-              </span>{" "}
-              / {overall.maxTotalScore}
+              <span className="font-semibold">{overall.totalScore}</span> /{" "}
+              {overall.maxTotalScore}
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* Subject summary table */}
       <div className="mt-3 overflow-x-auto">
         <table className="min-w-full text-[11px] border-collapse">
           <thead>
@@ -349,50 +399,34 @@ function LearnerReportView({ state }: { state: ReportState }) {
             </tr>
           </thead>
           <tbody>
-            {subjects.length === 0 && (
+            {subjects.length === 0 ? (
               <tr>
-                <td
-                  colSpan={4}
-                  className="px-2 py-2 text-[11px] text-slate-600"
-                >
-                  No assessment records have been captured yet for this
-                  learner in the selected term and academic year.
+                <td colSpan={4} className="px-2 py-2 text-[11px] text-slate-600">
+                  No assessment records yet for this term/year.
                 </td>
               </tr>
-            )}
-            {subjects.map((subj, idx) => {
-              const zebra =
-                idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
-              const subjPct =
-                subj.percentage !== null
-                  ? (subj.percentage * 100).toFixed(1) + "%"
-                  : "—";
-
-              return (
-                <tr key={subj.subject} className={zebra}>
-                  <td className="px-2 py-1 text-slate-900">
-                    <span className="font-semibold">
+            ) : (
+              subjects.map((subj, idx) => {
+                const zebra = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
+                return (
+                  <tr key={subj.subject} className={zebra}>
+                    <td className="px-2 py-1 text-slate-900 font-semibold">
                       {subj.subject}
-                    </span>
-                  </td>
-                  <td className="px-2 py-1 text-slate-900">
-                    {subj.totalScore}
-                  </td>
-                  <td className="px-2 py-1 text-slate-700">
-                    {subj.maxTotalScore}
-                  </td>
-                  <td className="px-2 py-1 text-slate-900">
-                    {subjPct}
-                  </td>
-                </tr>
-              );
-            })}
+                    </td>
+                    <td className="px-2 py-1 text-slate-900">{subj.totalScore}</td>
+                    <td className="px-2 py-1 text-slate-700">{subj.maxTotalScore}</td>
+                    <td className="px-2 py-1 text-slate-900">
+                      {pctStr(subj.percentage)}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Detailed items per subject */}
-      {subjects.length > 0 && (
+      {subjects.length > 0 ? (
         <div className="mt-4 space-y-3">
           {subjects.map((subj) => (
             <div
@@ -405,6 +439,7 @@ function LearnerReportView({ state }: { state: ReportState }) {
                   total {subj.totalScore} / {subj.maxTotalScore}
                 </span>
               </p>
+
               <div className="mt-1 grid gap-1 text-[10px]">
                 {subj.items.length === 0 ? (
                   <p className="text-slate-600">
@@ -420,11 +455,9 @@ function LearnerReportView({ state }: { state: ReportState }) {
                         <p className="font-semibold text-slate-800">
                           {it.title || "Assessment"}
                         </p>
-                        {it.comment && (
-                          <p className="text-slate-600">
-                            Comment: {it.comment}
-                          </p>
-                        )}
+                        {it.comment ? (
+                          <p className="text-slate-600">Comment: {it.comment}</p>
+                        ) : null}
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-slate-900">
@@ -438,16 +471,7 @@ function LearnerReportView({ state }: { state: ReportState }) {
             </div>
           ))}
         </div>
-      )}
-
-      <p className="mt-4 text-[10px] text-slate-500 print:hidden">
-        Tip: Use your browser&apos;s{" "}
-        <span className="font-semibold">Print</span> option to select a
-        printer or{" "}
-        <span className="font-semibold">Save as PDF</span>. In a
-        future slice, we&apos;ll add branded school headers and
-        signature spaces.
-      </p>
+      ) : null}
     </div>
   );
 }

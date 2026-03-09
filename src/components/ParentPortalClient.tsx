@@ -1,4 +1,4 @@
-// src/components/ParentPortalClient.tsx
+//src/components/ParentPortalClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -13,149 +13,127 @@ type Props = {
   initialStudents: SafeStudent[];
 };
 
-type ParentStudentSummaryResponse = {
-  ok: boolean;
-  error?: string;
-  tenantId?: string;
+type ResultsReleaseInfo = {
+  released: boolean;
+  scope?: "SCHOOL" | "CLASSROOM";
+  scopeKey?: string;
+  releasedAt?: string | null;
+};
 
-  student?: {
+type ParentChildInsightsOk = {
+  ok: true;
+  term: string;
+  academicYear: string;
+
+  children: Array<{
     id: string;
-    firstName: string;
-    lastName: string;
-    sex: string | null;
-    guardianName: string | null;
-    guardianPhone: string | null;
-    guardianSmsOptIn: boolean;
-    note: string | null;
-    createdAt: string;
+    name: string;
+    classroomId: string | null;
+  }>;
+
+  selected: {
+    id: string;
+    name: string;
+    classroomId: string | null;
   };
 
-  fees?: {
-    invoiceCount: number;
-    totalBilled: number;
-    totalPaid: number;
-    totalOutstanding: number;
-    invoices: {
-      id: string;
-      term: string;
-      academicYear: string;
-      note: string | null;
-      billed: number;
-      paid: number;
-      outstanding: number;
-      createdAt: string;
-    }[];
-  };
+  // ✅ tells portal whether report/performance is unlocked
+  report: ResultsReleaseInfo;
 
-  attendance?: {
+  attendance: {
+    window: { start: string; end: string };
     present: number;
     absent: number;
     late: number;
-    other: number;
-    totalMarks: number;
-    attendanceRate: number | null; // 0..1
+    excused: number;
+    attendancePercent: number | null;
   };
+
+  health: {
+    window: { start: string; end: string };
+    healthRecords: number;
+    feverFlags: number;
+    feverThreshold: number;
+  };
+
+  // When not released, server returns safe empty values.
+  performance: {
+    overallPercent: number | null;
+    subjects: Array<{ subject: string; percent: number | null }>;
+    expectedAssessmentsCount: number;
+    scoredAssessmentsCount: number;
+    missingAssessmentsCount: number;
+    locked?: boolean;
+  };
+
+  insights: {
+    strengths: string[];
+    weaknesses: string[];
+    improvementFocus: string;
+    risks: string[];
+    locked?: boolean;
+  };
+
+  message?: string;
 };
 
-type SummaryState =
-  | { status: "idle" }
-  | { status: "loading"; studentId: string }
-  | { status: "error"; message: string }
-  | { status: "ready"; data: ParentStudentSummaryResponse };
+type ParentChildInsightsResponse =
+  | ParentChildInsightsOk
+  | { ok: false; error: string };
 
-function safeNum(v: unknown, fallback = 0) {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : fallback;
+function pct(v: number | null | undefined) {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return `${v.toFixed(1)}%`;
 }
 
-function formatMoney(v: unknown) {
-  return safeNum(v, 0).toFixed(2);
-}
-
-async function safeJson<T>(res: Response): Promise<T | null> {
-  try {
-    const ct = res.headers.get("content-type") || "";
-    if (!ct.toLowerCase().includes("application/json")) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
+function buildPrintHref(args: { studentId: string; term: string; academicYear: string }) {
+  const sp = new URLSearchParams({
+    studentId: args.studentId,
+    term: args.term,
+    academicYear: args.academicYear,
+  });
+  return `/parent/report/print?${sp.toString()}`;
 }
 
 export function ParentPortalClient({ initialStudents }: Props) {
   const students = Array.isArray(initialStudents) ? initialStudents : [];
   const [selectedId, setSelectedId] = useState<string>(students[0]?.id ?? "");
-  const [state, setState] = useState<SummaryState>({ status: "idle" });
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<ParentChildInsightsResponse | null>(null);
 
-  // If students load empty or change, keep selection safe.
   useEffect(() => {
-    if (students.length === 0) {
+    if (!students.length) {
       setSelectedId("");
-      setState({ status: "idle" });
+      setData(null);
       return;
     }
     if (!selectedId || !students.some((s) => s.id === selectedId)) {
       setSelectedId(students[0].id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [students.length]);
+  }, [students, selectedId]);
 
   useEffect(() => {
-    // Never fetch when no learner is selected
     if (!selectedId) {
-      setState({ status: "idle" });
+      setData(null);
       return;
     }
 
     let cancelled = false;
 
     (async () => {
-      setState({ status: "loading", studentId: selectedId });
-
+      setLoading(true);
       try {
-        const res = await fetch(`/api/parent/student/summary?studentId=${encodeURIComponent(selectedId)}`, {
-          method: "GET",
+        const sp = new URLSearchParams({ studentId: selectedId });
+        const res = await fetch(`/api/parent/insights/child?${sp.toString()}`, {
           cache: "no-store",
         });
 
-        const json =
-          (await safeJson<ParentStudentSummaryResponse>(res)) ??
-          ({
-            ok: false,
-            error: `Server returned non-JSON (HTTP ${res.status}).`,
-          } as ParentStudentSummaryResponse);
-
+        const json = (await res.json().catch(() => null)) as ParentChildInsightsResponse | null;
         if (cancelled) return;
 
-        if (!res.ok || !json.ok) {
-          setState({
-            status: "error",
-            message:
-              json.error ||
-              (res.status === 401
-                ? "Session expired. Please login again."
-                : res.status === 403
-                ? "Access denied for this learner."
-                : "Could not load the summary. Please try again."),
-          });
-          return;
-        }
-
-        if (!json.student || !json.fees || !json.attendance) {
-          setState({
-            status: "error",
-            message: "Summary is incomplete. Please refresh or contact the school office.",
-          });
-          return;
-        }
-
-        setState({ status: "ready", data: json });
-      } catch {
-        if (cancelled) return;
-        setState({
-          status: "error",
-          message: "Network error while loading summary. Check connection and try again.",
-        });
+        setData(json ?? { ok: false, error: `Failed to load child insights (HTTP ${res.status}).` });
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
@@ -170,15 +148,26 @@ export function ParentPortalClient({ initialStudents }: Props) {
     return `${s.firstName ?? ""} ${s.lastName ?? ""}`.trim() || "Select learner";
   }, [students, selectedId]);
 
+  const reportReleased = data?.ok ? (data as ParentChildInsightsOk).report?.released === true : false;
+
+  const printHref = useMemo(() => {
+    if (!data?.ok) return "#";
+    if (!reportReleased) return "#";
+    return buildPrintHref({
+      studentId: (data as ParentChildInsightsOk).selected.id,
+      term: (data as ParentChildInsightsOk).term,
+      academicYear: (data as ParentChildInsightsOk).academicYear,
+    });
+  }, [data, reportReleased]);
+
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
             <h2 className="text-sm font-semibold text-slate-900">Choose learner</h2>
             <p className="text-[11px] text-slate-500 max-w-xl">
-              Select the learner you want to view. You&apos;ll see a simple summary of{" "}
-              <span className="font-semibold">fees and attendance</span>.
+              Parent copilot uses attendance + health + (released) performance together — not scores alone.
             </p>
           </div>
 
@@ -204,163 +193,228 @@ export function ParentPortalClient({ initialStudents }: Props) {
         </div>
 
         {students.length === 0 ? (
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
-            No learners are linked to this phone number in the school records yet. Please contact the school office to
-            confirm the phone number on your child&apos;s file.
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+            No learners are linked to this phone number in the school records yet.
           </div>
         ) : (
-          <p className="mt-2 text-[11px] text-slate-500">
+          <p className="text-[11px] text-slate-500">
             Viewing: <span className="font-semibold">{selectedLabel}</span>
           </p>
         )}
+
+        {/* Term report / print gate */}
+        {data?.ok ? (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-[11px] font-semibold text-slate-900">Term report</div>
+                <div className="text-[11px] text-slate-600">
+                  {(data as ParentChildInsightsOk).term} • {(data as ParentChildInsightsOk).academicYear}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                    reportReleased
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border-amber-200 bg-amber-50 text-amber-800"
+                  }`}
+                >
+                  {reportReleased ? "Released" : "Locked"}
+                </span>
+
+                <a
+                  href={printHref}
+                  className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-[11px] font-semibold ${
+                    reportReleased
+                      ? "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+                      : "border-slate-300 text-slate-400 pointer-events-none"
+                  }`}
+                >
+                  Open report / Print
+                </a>
+              </div>
+            </div>
+
+            {!reportReleased ? (
+              <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                Report is not released yet by the headteacher. Attendance and health remain visible, but performance stays locked.
+              </div>
+            ) : (data as ParentChildInsightsOk).report?.releasedAt ? (
+              <div className="mt-2 text-[11px] text-slate-600">
+                Released at:{" "}
+                <span className="font-semibold">
+                  {new Date((data as ParentChildInsightsOk).report.releasedAt as string).toLocaleString()}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      {selectedId ? <ChildSummary state={state} /> : null}
+      {loading ? (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-[11px] text-emerald-900 shadow-sm">
+          Loading child insights…
+        </div>
+      ) : data && !data.ok ? (
+        <div className="rounded-2xl border border-red-100 bg-red-50/70 px-4 py-3 text-[11px] text-red-900 shadow-sm">
+          {data.error}
+        </div>
+      ) : data && data.ok ? (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Selected learner</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">{data.selected.name}</p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {data.term} • {data.academicYear}
+                </p>
+              </div>
+
+              <div className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+                Overall performance: {reportReleased ? pct(data.performance.overallPercent) : "Locked"}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card title="Attendance" tone="sky">
+              <p className="text-sm font-semibold text-slate-900">{pct(data.attendance.attendancePercent)}</p>
+              <p className="mt-1 text-[11px] text-slate-600">
+                Present {data.attendance.present} • Absent {data.attendance.absent} • Late {data.attendance.late}
+              </p>
+            </Card>
+
+            <Card title="Health" tone="amber">
+              <p className="text-sm font-semibold text-slate-900">{data.health.healthRecords} records</p>
+              <p className="mt-1 text-[11px] text-slate-600">
+                Fever flags {data.health.feverFlags} • Threshold {data.health.feverThreshold}°C
+              </p>
+            </Card>
+
+            <Card title="Assessment coverage" tone="emerald">
+              {reportReleased ? (
+                <>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {data.performance.scoredAssessmentsCount} / {data.performance.expectedAssessmentsCount}
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-600">Missing assessments {data.performance.missingAssessmentsCount}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-slate-900">Locked</p>
+                  <p className="mt-1 text-[11px] text-slate-600">Visible after results are released.</p>
+                </>
+              )}
+            </Card>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">Subject performance</p>
+              <div className="mt-3 space-y-2">
+                {!reportReleased ? (
+                  <p className="text-[11px] text-slate-600">
+                    Performance is locked until the headteacher releases results for this term.
+                  </p>
+                ) : data.performance.subjects.length ? (
+                  data.performance.subjects.map((s) => (
+                    <div key={s.subject} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-slate-900">{s.subject}</span>
+                        <span className="text-[11px] text-slate-700">{pct(s.percent)}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[11px] text-slate-600">No subject performance signal yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <SwotCard title="Strengths" tone="emerald" items={reportReleased ? data.insights.strengths : []} locked={!reportReleased} />
+              <SwotCard title="Weaknesses" tone="rose" items={reportReleased ? data.insights.weaknesses : []} locked={!reportReleased} />
+              <SwotCard title="Risks" tone="amber" items={data.insights.risks} locked={false} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-4 shadow-sm">
+            <p className="text-sm font-semibold text-indigo-900">Parent action focus</p>
+            <p className="mt-2 text-sm text-indigo-950">
+              {reportReleased
+                ? data.insights.improvementFocus
+                : "Results are not released yet. For now: protect attendance, sleep, and daily revision habits. When released, use the report to target weak subjects calmly."}
+            </p>
+          </div>
+
+          {data.message ? (
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] text-slate-600 shadow-sm">
+              {data.message}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function ChildSummary({ state }: { state: SummaryState }) {
-  if (state.status === "idle") return null;
-
-  if (state.status === "loading") {
-    return (
-      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-[11px] text-emerald-900 shadow-sm">
-        Loading summary…
-      </div>
-    );
-  }
-
-  if (state.status === "error") {
-    return (
-      <div className="rounded-2xl border border-red-100 bg-red-50/70 px-4 py-3 text-[11px] text-red-900 shadow-sm">
-        {state.message}
-      </div>
-    );
-  }
-
-  const data = state.data;
-  const student = data.student!;
-  const fees = data.fees!;
-  const attendance = data.attendance!;
-
-  const attendanceRatePercent =
-    attendance.attendanceRate != null && Number.isFinite(attendance.attendanceRate)
-      ? (attendance.attendanceRate * 100).toFixed(1)
-      : null;
+function Card({
+  title,
+  tone,
+  children,
+}: {
+  title: string;
+  tone: "sky" | "amber" | "emerald";
+  children: React.ReactNode;
+}) {
+  const cls =
+    tone === "sky"
+      ? "border-sky-200 bg-sky-50/70"
+      : tone === "amber"
+      ? "border-amber-200 bg-amber-50/70"
+      : "border-emerald-200 bg-emerald-50/70";
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Learner</p>
-        <p className="mt-1 text-lg font-semibold text-slate-900">
-          {student.firstName} {student.lastName}
-        </p>
+    <div className={`rounded-2xl border px-4 py-4 shadow-sm ${cls}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">{title}</p>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
 
-        <div className="mt-1 text-[11px] text-slate-600 flex flex-wrap gap-3">
-          {student.sex ? (
-            <span>
-              Sex: <span className="font-semibold">{student.sex}</span>
-            </span>
-          ) : null}
+function SwotCard({
+  title,
+  tone,
+  items,
+  locked,
+}: {
+  title: string;
+  tone: "emerald" | "rose" | "amber";
+  items: string[];
+  locked: boolean;
+}) {
+  const cls =
+    tone === "emerald"
+      ? "border-emerald-200 bg-emerald-50/70"
+      : tone === "rose"
+      ? "border-rose-200 bg-rose-50/70"
+      : "border-amber-200 bg-amber-50/70";
 
-          {student.guardianPhone ? (
-            <span>
-              Your phone on record: <span className="font-semibold">{student.guardianPhone}</span>
-            </span>
-          ) : null}
-
-          <span>
-            SMS consent:{" "}
-            <span className="font-semibold">
-              {student.guardianSmsOptIn ? "Yes – school can send updates" : "No – consent not recorded yet"}
-            </span>
-          </span>
-        </div>
-
-        {student.note ? <p className="mt-1 text-[11px] text-slate-500">School note: {student.note}</p> : null}
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-amber-100 bg-amber-50/70 px-4 py-3 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">Fees summary</p>
-          <p className="mt-0.5 text-[11px] text-amber-900/90 max-w-xs">Overview of school fees recorded for this learner.</p>
-
-          <div className="mt-3 text-[11px] text-amber-900/90 space-y-0.5">
-            <p>
-              Total billed: <span className="font-semibold">GH₵ {formatMoney(fees.totalBilled)}</span>
-            </p>
-            <p>
-              Total paid: <span className="font-semibold">GH₵ {formatMoney(fees.totalPaid)}</span>
-            </p>
-            <p>
-              Outstanding balance: <span className="font-semibold">GH₵ {formatMoney(fees.totalOutstanding)}</span>
-            </p>
-            <p className="text-[10px] text-amber-800/80">Invoices recorded: {safeNum(fees.invoiceCount, 0)}</p>
-          </div>
-
-          <div className="mt-3 space-y-1 max-h-48 overflow-y-auto pr-1">
-            {Array.isArray(fees.invoices) && fees.invoices.length > 0 ? (
-              fees.invoices.map((inv) => (
-                <div key={inv.id} className="rounded-xl border border-amber-100 bg-white px-3 py-2 text-[10px] text-amber-900/90">
-                  <div className="flex flex-wrap items-center justify-between gap-1">
-                    <span className="font-semibold">
-                      {inv.term} · {inv.academicYear}
-                    </span>
-                    <span className="text-amber-700/80">{new Date(inv.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="mt-0.5">
-                    Billed: GH₵ {formatMoney(inv.billed)} · Paid: GH₵ {formatMoney(inv.paid)} · Outstanding: GH₵{" "}
-                    {formatMoney(inv.outstanding)}
-                  </div>
-                  {inv.note ? <div className="mt-0.5 text-amber-700/80">Note: {inv.note}</div> : null}
-                </div>
-              ))
-            ) : (
-              <p className="text-[10px] text-amber-800/80">
-                No invoices recorded yet for this learner. Contact the school office if you have questions.
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800">Attendance summary</p>
-          <p className="mt-0.5 text-[11px] text-sky-900/90 max-w-xs">Based on attendance records captured in EduLife OS.</p>
-
-          <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-sky-900/90">
-            <div>
-              <p className="text-sky-700/80">Total school days recorded</p>
-              <p className="mt-0.5 text-sm font-semibold text-sky-900">{safeNum(attendance.totalMarks, 0)}</p>
-              <p className="mt-0.5 text-[10px] text-sky-700/80">Each record = one session when attendance was taken.</p>
-            </div>
-            <div>
-              <p className="text-sky-700/80">Attendance rate</p>
-              <p className="mt-0.5 text-sm font-semibold text-sky-900">
-                {attendanceRatePercent !== null ? `${attendanceRatePercent}%` : "—"}
-              </p>
-              <p className="mt-0.5 text-[10px] text-sky-700/80">Present + Excused out of total marks.</p>
-            </div>
-          </div>
-
-          <div className="mt-3 text-[11px] text-sky-900/90 space-y-0.5">
-            <p>
-              Present: <span className="font-semibold">{safeNum(attendance.present, 0)}</span> · Absent:{" "}
-              <span className="font-semibold">{safeNum(attendance.absent, 0)}</span>
-            </p>
-            <p>
-              Late: <span className="font-semibold">{safeNum(attendance.late, 0)}</span> · Other:{" "}
-              <span className="font-semibold">{safeNum(attendance.other, 0)}</span>
-            </p>
-          </div>
-
-          {safeNum(attendance.totalMarks, 0) === 0 ? (
-            <p className="mt-2 text-[10px] text-sky-700/80">
-              No attendance records yet for this learner. Once teachers start recording attendance, this updates automatically.
-            </p>
-          ) : null}
-        </div>
-      </div>
+  return (
+    <div className={`rounded-2xl border px-4 py-4 shadow-sm ${cls}`}>
+      <p className="text-sm font-semibold text-slate-900">{title}</p>
+      <ul className="mt-2 space-y-1 text-[11px] text-slate-700">
+        {locked ? (
+          <li>• Locked until results are released.</li>
+        ) : items.length ? (
+          items.map((x, i) => <li key={`${title}-${i}`}>• {x}</li>)
+        ) : (
+          <li>• No strong signal yet.</li>
+        )}
+      </ul>
     </div>
   );
 }
