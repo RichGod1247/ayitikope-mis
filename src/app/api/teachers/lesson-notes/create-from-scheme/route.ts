@@ -284,7 +284,7 @@ export async function POST(req: Request) {
   const classroomId = scheme.classroomId ?? null;
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const existing = await tx.lessonNote.findFirst({
         where: {
           tenantId: ctx.tenantId,

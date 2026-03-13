@@ -6,6 +6,29 @@ import { getServerUserContextOrNull } from "@/lib/serverAuth";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type SchemeCandidate = {
+  id: string;
+  status: string | null;
+  classroomId: string | null;
+  updatedAt: Date;
+};
+
+type SchemeMatchScore = {
+  s: SchemeCandidate;
+  score: number;
+};
+
+type SchemeItemRow = {
+  id: string;
+  weekNumber: number;
+  strandTitle: string | null;
+  subStrandTitle: string | null;
+  contentStandardCode: string | null;
+  contentStandardDescription: string | null;
+  indicatorCode: string | null;
+  indicatorDescription: string | null;
+};
+
 function jsonNoStore(status: number, payload: any) {
   return NextResponse.json(payload, {
     status,
@@ -266,7 +289,7 @@ export async function GET(req: NextRequest) {
 
   const bestScheme =
     candidates
-      .map((s) => {
+      .map((s: SchemeCandidate) => {
         const st = String(s.status ?? "").toUpperCase();
         const statusScore = STATUS_SCORE[st] ?? 0;
         const classroomBonus =
@@ -274,7 +297,7 @@ export async function GET(req: NextRequest) {
         const recency = s.updatedAt ? Math.floor(s.updatedAt.getTime() / 1000) : 0;
         return { s, score: statusScore + classroomBonus + recency / 1_000_000 };
       })
-      .sort((a, b) => b.score - a.score)[0]?.s ?? null;
+      .sort((a: SchemeMatchScore, b: SchemeMatchScore) => b.score - a.score)[0]?.s ?? null;
 
   if (bestScheme?.id) {
     const whereItems: any = {
@@ -316,7 +339,7 @@ export async function GET(req: NextRequest) {
       schemeApplied: true,
       schemeId: bestScheme.id,
       schemeStatus: bestScheme.status,
-      items: rows.map((r) => ({
+      items: rows.map((r: SchemeItemRow) => ({
         kind: "SCHEME_ITEM",
         schemeItemId: r.id,
         schemeOfWorkItemId: r.id,

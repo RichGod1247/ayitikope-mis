@@ -1,3 +1,5 @@
-//src/app/api/teacher/lesson-notes/update/route.ts
-export { runtime, dynamic } from "@/app/api/teachers/lesson-notes/update/route";
+// src/app/api/teacher/lesson-notes/update/route.ts
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export { POST } from "@/app/api/teachers/lesson-notes/update/route";

@@ -1,3 +1,9 @@
 // src/app/api/teachers/assessment/remark-summary/route.ts
-export { runtime, dynamic } from "@/app/api/teachers/assessments/remark-summary/route";
-export { GET, POST } from "@/app/api/teachers/assessments/remark-summary/route";
+import { GET as upstreamGET } from "@/app/api/teachers/assessments/remark-summary/route";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(...args: Parameters<typeof upstreamGET>) {
+  return upstreamGET(...args);
+}
