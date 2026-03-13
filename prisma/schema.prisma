@@ -998,7 +998,7 @@ model CurriculumMedia {
   indicator           CurriculumIndicator?       @relation(fields: [indicatorId], references: [id])
   subject             CurriculumSubject?         @relation(fields: [subjectId], references: [id])
 
-  @@unique([indicatorId, imagePath], name: "CurriculumMedia_indicator_image_unique", map: "CurriculumMedia_indicator_image_unique")
+  @@unique([indicatorId, imagePath], map: "curriculum_media_indicator_imagepath_uq")
   @@index([subjectId])
   @@index([contentStandardId])
   @@index([indicatorId])
