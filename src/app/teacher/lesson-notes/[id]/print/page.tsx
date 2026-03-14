@@ -1,4 +1,4 @@
-// src/app/teacher/lesson-notes/[id]/print/page.tsx
+//src/app/teacher/lesson-notes/[id]/print/page.tsx
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { notFound, redirect } from "next/navigation";
@@ -102,14 +102,142 @@ function isAbsoluteUrl(s: string) {
   return /^https?:\/\//i.test(s);
 }
 
+function normalizeStorageKey(value: unknown) {
+  return String(value ?? "")
+    .replace(/\\/g, "/")
+    .replace(/^\.\/+/, "")
+    .replace(/^\/+/, "")
+    .replace(/\/{2,}/g, "/")
+    .trim();
+}
+
+function canonicalKgFolderForSubjectSlug(subjectSlug: string | null | undefined) {
+  const slug = safeLower(subjectSlug);
+
+  switch (slug) {
+    case "kg1-mathematics":
+    case "kg2-numeracy":
+      return "mathematics";
+
+    case "kg1-language-and-literacy":
+    case "kg2-language-and-literacy":
+      return "language-and-literacy";
+
+    case "kg1-our-world-and-our-people":
+    case "kg2-our-world-and-our-people":
+      return "our-world-and-our-people";
+
+    case "kg1-creative-arts":
+    case "kg2-creative-arts":
+      return "creative-arts";
+
+    default:
+      return "";
+  }
+}
+
+function inferSubjectSlugFromRuntime(args: {
+  subject: string;
+  phase: string | null;
+  level: string | null;
+}) {
+  const subject = safeLower(args.subject);
+  const phase = clean(args.phase).toUpperCase();
+  const level = clean(args.level).toUpperCase();
+
+  if (phase === "KG" && level === "KG1") {
+    if (subject.includes("math")) return "kg1-mathematics";
+    if (subject.includes("language") || subject.includes("literacy")) {
+      return "kg1-language-and-literacy";
+    }
+    if (subject.includes("our world") || subject.includes("owop")) {
+      return "kg1-our-world-and-our-people";
+    }
+    if (subject.includes("creative")) return "kg1-creative-arts";
+  }
+
+  if (phase === "KG" && level === "KG2") {
+    if (subject.includes("math") || subject.includes("numeracy")) return "kg2-numeracy";
+    if (subject.includes("language") || subject.includes("literacy")) {
+      return "kg2-language-and-literacy";
+    }
+    if (subject.includes("our world") || subject.includes("owop")) {
+      return "kg2-our-world-and-our-people";
+    }
+    if (subject.includes("creative")) return "kg2-creative-arts";
+  }
+
+  return null;
+}
+
+function normalizeMediaPathForRender(args: {
+  path: string;
+  subject: string;
+  phase: string | null;
+  level: string | null;
+  subjectSlug: string | null;
+}) {
+  const raw = normalizeStorageKey(args.path);
+  if (!raw || isAbsoluteUrl(raw)) return raw;
+
+  const lower = raw.toLowerCase();
+  const phase = clean(args.phase).toUpperCase();
+  const level = clean(args.level).toUpperCase();
+
+  const subjectSlug =
+    args.subjectSlug ??
+    inferSubjectSlugFromRuntime({
+      subject: args.subject,
+      phase: args.phase,
+      level: args.level,
+    });
+
+  const folder = canonicalKgFolderForSubjectSlug(subjectSlug);
+
+  if (
+    folder &&
+    phase === "KG" &&
+    (level === "KG1" || level === "KG2") &&
+    lower.startsWith(`curriculum/${level.toLowerCase()}/${folder}/`)
+  ) {
+    return raw.replace(
+      new RegExp(`^curriculum/${level.toLowerCase()}/${folder}/`, "i"),
+      `lower-primary/${level.toLowerCase()}/${folder}/`
+    );
+  }
+
+  return raw;
+}
+
+function isCanonicalLowerPrimaryPath(path: string) {
+  return normalizeStorageKey(path).toLowerCase().startsWith("lower-primary/");
+}
+
+function isKnownBadLegacyKg2Path(path: string, subjectSlug: string | null | undefined) {
+  const p = normalizeStorageKey(path).toLowerCase();
+  const slug = safeLower(subjectSlug);
+
+  if (slug === "kg2-numeracy" && p.startsWith("curriculum/kg2/mathematics/")) return true;
+  if (
+    slug === "kg2-language-and-literacy" &&
+    p.startsWith("curriculum/kg2/language-and-literacy/")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 /** ----------------------- subject-aware defaults ----------------------- */
 
 function subjectKind(subjectRaw: string) {
   const s = safeLower(subjectRaw);
-  if (s.includes("math")) return "MATH" as const;
+  if (s.includes("math") || s.includes("numeracy")) return "MATH" as const;
   if (s.includes("comput") || s.includes("ict")) return "COMPUTING" as const;
   if (s.includes("social")) return "SOCIAL" as const;
-  if (s.includes("english")) return "ENGLISH" as const;
+  if (s.includes("english") || s.includes("language") || s.includes("literacy")) {
+    return "ENGLISH" as const;
+  }
   return "GENERAL" as const;
 }
 
@@ -243,6 +371,13 @@ const STOPWORDS = new Set([
   "we",
   "our",
   "your",
+  "kg1",
+  "kg2",
+  "subject",
+  "classroom",
+  "children",
+  "child",
+  "ghanaian",
 ]);
 
 function extractKeywords(parts: string[], max = 6) {
@@ -279,6 +414,87 @@ function extractKeywords(parts: string[], max = 6) {
   return out;
 }
 
+function normalizeSearchText(value: unknown) {
+  return clean(value)
+    .toLowerCase()
+    .replace(/[“”"’']/g, " ")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenizeForSearch(...parts: Array<string | null | undefined>) {
+  const out = new Set<string>();
+
+  for (const part of parts) {
+    const s = normalizeSearchText(part);
+    if (!s) continue;
+
+    const words = s.split(/[\s-]+/g).map((x) => x.trim()).filter(Boolean);
+
+    for (const w of words) {
+      if (w.length < 3) continue;
+      if (STOPWORDS.has(w)) continue;
+
+      out.add(w);
+
+      if (w.endsWith("s") && w.length > 4) out.add(w.slice(0, -1));
+      if (w.endsWith("es") && w.length > 5) out.add(w.slice(0, -2));
+      if (w.endsWith("ing") && w.length > 6) out.add(w.slice(0, -3));
+      if (w.endsWith("ed") && w.length > 5) out.add(w.slice(0, -2));
+    }
+  }
+
+  return out;
+}
+
+function overlapCount(a: Set<string>, b: Set<string>) {
+  let count = 0;
+  for (const x of a) {
+    if (b.has(x)) count += 1;
+  }
+  return count;
+}
+
+function parseCodeNumbers(code: string | null | undefined) {
+  const s = clean(code);
+  if (!s) return [] as number[];
+  const matches = s.match(/\d+/g);
+  if (!matches) return [];
+  return matches.map((n) => Number(n)).filter((n) => Number.isFinite(n));
+}
+
+function codeDistance(a: string | null | undefined, b: string | null | undefined) {
+  const ax = parseCodeNumbers(a);
+  const bx = parseCodeNumbers(b);
+  if (!ax.length || !bx.length) return 999;
+
+  const len = Math.max(ax.length, bx.length);
+  let diff = 0;
+
+  for (let i = 0; i < len; i += 1) {
+    diff += Math.abs((ax[i] ?? 0) - (bx[i] ?? 0));
+  }
+
+  return diff;
+}
+
+function buildSearchBigrams(text: string) {
+  const words = normalizeSearchText(text).split(/\s+/g).filter(Boolean);
+  const out = new Set<string>();
+
+  for (let i = 0; i < words.length - 1; i += 1) {
+    const a = words[i];
+    const b = words[i + 1];
+    if (!a || !b) continue;
+    if (STOPWORDS.has(a) && STOPWORDS.has(b)) continue;
+    out.add(`${a} ${b}`);
+  }
+
+  return out;
+}
+
 async function fetchExemplarText(args: {
   indicatorId?: string | null;
   indicatorCode?: string | null;
@@ -289,7 +505,8 @@ async function fetchExemplarText(args: {
   const contentStandardCode = clean(args.contentStandardCode);
 
   const hasIndicatorModel = typeof (prisma as any)?.curriculumIndicator?.findFirst === "function";
-  const hasCSModel = typeof (prisma as any)?.curriculumContentStandard?.findFirst === "function";
+  const hasCSModel =
+    typeof (prisma as any)?.curriculumContentStandard?.findFirst === "function";
   if (!hasIndicatorModel) return [];
 
   if (indicatorId) {
@@ -360,34 +577,809 @@ async function fetchExemplarText(args: {
   }
 }
 
-function pickBestMedia(
-  rows: Array<{ id: string; imagePath: string; altText: string | null; pageNumberInPdf: number }>,
-  indicatorCode: string | null | undefined
-) {
-  const code = clean(indicatorCode).replace(/\s+/g, "");
-  const scored = rows.map((r) => {
-    let score = 0;
-    const p = String(r.imagePath ?? "");
-    const lower = p.toLowerCase();
+/** ----------------------- media fallback engine ----------------------- */
 
-    if (isAbsoluteUrl(p)) score += 50;
-    if (lower.includes("r2.dev") || lower.includes("cloudflarestorage")) score += 20;
+type FallbackScope =
+  | "EXACT"
+  | "SAME_CONTENT_STANDARD"
+  | "SAME_SUBSTRAND"
+  | "SAME_STRAND"
+  | "CROSS_SUBJECT";
 
-    if (code) {
-      const c = code.toLowerCase();
-      if (lower.endsWith(`/${c}.png`) || lower.endsWith(`${c}.png`)) score += 10;
-      if (lower.endsWith(`/${c}.webp`) || lower.endsWith(`${c}.webp`)) score += 8;
+function humanizeFallbackScope(scope: FallbackScope) {
+  switch (scope) {
+    case "EXACT":
+      return "Exact indicator match";
+    case "SAME_CONTENT_STANDARD":
+      return "Smart reuse — same content standard";
+    case "SAME_SUBSTRAND":
+      return "Smart reuse — same sub-strand";
+    case "SAME_STRAND":
+      return "Smart reuse — same strand";
+    case "CROSS_SUBJECT":
+      return "Smart reuse — related curriculum subject";
+    default:
+      return "Smart reuse";
+  }
+}
+
+type IndicatorContext = {
+  id: string | null;
+  code: string | null;
+  description: string | null;
+  contentStandardCode: string | null;
+  contentStandardDescription: string | null;
+  subStrandCode: string | null;
+  subStrandTitle: string | null;
+  strandCode: string | null;
+  strandTitle: string | null;
+  subjectSlug: string | null;
+  subjectName: string | null;
+  phase: string | null;
+  level: string | null;
+};
+
+type MediaCandidate = {
+  id: string;
+  imagePath: string;
+  altText: string | null;
+  detailedDescription: string | null;
+  figureLabel: string | null;
+  tags: string | null;
+  pageNumberInPdf: number;
+
+  indicatorId: string | null;
+  indicatorCode: string | null;
+  indicatorDescription: string | null;
+
+  contentStandardCode: string | null;
+  contentStandardDescription: string | null;
+
+  subStrandCode: string | null;
+  subStrandTitle: string | null;
+
+  strandCode: string | null;
+  strandTitle: string | null;
+
+  subjectSlug: string | null;
+  subjectName: string | null;
+  phase: string | null;
+  level: string | null;
+
+  fallbackScope: FallbackScope;
+};
+
+type MediaScoreTarget = {
+  subject: string;
+  subjectSlug: string | null;
+  phase: string | null;
+  level: string | null;
+
+  strand: string;
+  substrand: string;
+  contentStandard: string;
+  indicator: string;
+
+  strandCode: string | null;
+  subStrandCode: string | null;
+  contentStandardCode: string | null;
+  indicatorCode: string | null;
+};
+
+type CrossSubjectReusePlan = {
+  subjectSlugs: string[];
+  allowedLevels: string[];
+};
+
+async function resolveIndicatorContext(args: {
+  indicatorIdExact?: string | null;
+  indicatorCode?: string | null;
+  contentStandardCode?: string | null;
+  strandCode?: string | null;
+  subjectSlugHint?: string | null;
+}): Promise<IndicatorContext | null> {
+  const indicatorIdExact = clean(args.indicatorIdExact);
+  const indicatorCode = clean(args.indicatorCode);
+  const contentStandardCode = clean(args.contentStandardCode);
+  const strandCode = clean(args.strandCode);
+  const subjectSlugHint = clean(args.subjectSlugHint);
+
+  if (indicatorIdExact) {
+    try {
+      const row = await prisma.curriculumIndicator.findFirst({
+        where: { id: indicatorIdExact },
+        select: {
+          id: true,
+          code: true,
+          description: true,
+          contentStandard: {
+            select: {
+              code: true,
+              description: true,
+              subStrand: {
+                select: {
+                  code: true,
+                  title: true,
+                  strand: {
+                    select: {
+                      code: true,
+                      title: true,
+                      subject: {
+                        select: {
+                          slug: true,
+                          name: true,
+                          phase: true,
+                          level: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (row) {
+        return {
+          id: row.id,
+          code: row.code,
+          description: row.description ?? null,
+          contentStandardCode: row.contentStandard?.code ?? null,
+          contentStandardDescription: row.contentStandard?.description ?? null,
+          subStrandCode: row.contentStandard?.subStrand?.code ?? null,
+          subStrandTitle: row.contentStandard?.subStrand?.title ?? null,
+          strandCode: row.contentStandard?.subStrand?.strand?.code ?? null,
+          strandTitle: row.contentStandard?.subStrand?.strand?.title ?? null,
+          subjectSlug: row.contentStandard?.subStrand?.strand?.subject?.slug ?? null,
+          subjectName: row.contentStandard?.subStrand?.strand?.subject?.name ?? null,
+          phase: row.contentStandard?.subStrand?.strand?.subject?.phase ?? null,
+          level: row.contentStandard?.subStrand?.strand?.subject?.level ?? null,
+        };
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!indicatorCode) return null;
+
+  try {
+    const where: any = { code: indicatorCode };
+
+    if (contentStandardCode || strandCode || subjectSlugHint) {
+      where.contentStandard = {};
+
+      if (contentStandardCode) {
+        where.contentStandard.code = contentStandardCode;
+      }
+
+      if (strandCode || subjectSlugHint) {
+        where.contentStandard.subStrand = { strand: {} as any };
+
+        if (strandCode) {
+          where.contentStandard.subStrand.strand.code = strandCode;
+        }
+
+        if (subjectSlugHint) {
+          where.contentStandard.subStrand.strand.subject = { slug: subjectSlugHint };
+        }
+      }
     }
 
-    if (lower.endsWith(".png")) score += 2;
-    if (lower.endsWith(".webp")) score += 1;
-    if ((r.pageNumberInPdf ?? 0) === 0) score += 1;
+    const row = await prisma.curriculumIndicator.findFirst({
+      where,
+      select: {
+        id: true,
+        code: true,
+        description: true,
+        contentStandard: {
+          select: {
+            code: true,
+            description: true,
+            subStrand: {
+              select: {
+                code: true,
+                title: true,
+                strand: {
+                  select: {
+                    code: true,
+                    title: true,
+                    subject: {
+                      select: {
+                        slug: true,
+                        name: true,
+                        phase: true,
+                        level: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
 
-    return { r, score };
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      code: row.code,
+      description: row.description ?? null,
+      contentStandardCode: row.contentStandard?.code ?? null,
+      contentStandardDescription: row.contentStandard?.description ?? null,
+      subStrandCode: row.contentStandard?.subStrand?.code ?? null,
+      subStrandTitle: row.contentStandard?.subStrand?.title ?? null,
+      strandCode: row.contentStandard?.subStrand?.strand?.code ?? null,
+      strandTitle: row.contentStandard?.subStrand?.strand?.title ?? null,
+      subjectSlug: row.contentStandard?.subStrand?.strand?.subject?.slug ?? null,
+      subjectName: row.contentStandard?.subStrand?.strand?.subject?.name ?? null,
+      phase: row.contentStandard?.subStrand?.strand?.subject?.phase ?? null,
+      level: row.contentStandard?.subStrand?.strand?.subject?.level ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function rowToCandidate(row: any, fallbackScope: FallbackScope): MediaCandidate {
+  return {
+    id: row.id,
+    imagePath: row.imagePath,
+    altText: row.altText ?? null,
+    detailedDescription: row.detailedDescription ?? null,
+    figureLabel: row.figureLabel ?? null,
+    tags: row.tags ?? null,
+    pageNumberInPdf: row.pageNumberInPdf ?? 0,
+
+    indicatorId: row.indicator?.id ?? null,
+    indicatorCode: row.indicator?.code ?? null,
+    indicatorDescription: row.indicator?.description ?? null,
+
+    contentStandardCode: row.indicator?.contentStandard?.code ?? null,
+    contentStandardDescription: row.indicator?.contentStandard?.description ?? null,
+
+    subStrandCode: row.indicator?.contentStandard?.subStrand?.code ?? null,
+    subStrandTitle: row.indicator?.contentStandard?.subStrand?.title ?? null,
+
+    strandCode: row.indicator?.contentStandard?.subStrand?.strand?.code ?? null,
+    strandTitle: row.indicator?.contentStandard?.subStrand?.strand?.title ?? null,
+
+    subjectSlug: row.indicator?.contentStandard?.subStrand?.strand?.subject?.slug ?? null,
+    subjectName: row.indicator?.contentStandard?.subStrand?.strand?.subject?.name ?? null,
+    phase: row.indicator?.contentStandard?.subStrand?.strand?.subject?.phase ?? null,
+    level: row.indicator?.contentStandard?.subStrand?.strand?.subject?.level ?? null,
+
+    fallbackScope,
+  };
+}
+
+async function queryMediaCandidates(where: any, fallbackScope: FallbackScope, take = 25) {
+  const rows = await prisma.curriculumMedia.findMany({
+    where,
+    take,
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    select: {
+      id: true,
+      imagePath: true,
+      altText: true,
+      detailedDescription: true,
+      figureLabel: true,
+      tags: true,
+      pageNumberInPdf: true,
+      indicator: {
+        select: {
+          id: true,
+          code: true,
+          description: true,
+          contentStandard: {
+            select: {
+              code: true,
+              description: true,
+              subStrand: {
+                select: {
+                  code: true,
+                  title: true,
+                  strand: {
+                    select: {
+                      code: true,
+                      title: true,
+                      subject: {
+                        select: {
+                          slug: true,
+                          name: true,
+                          phase: true,
+                          level: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
-  scored.sort((a, b) => b.score - a.score || a.r.id.localeCompare(b.r.id));
-  return scored[0]?.r ?? null;
+  return rows
+    .map((row) => rowToCandidate(row, fallbackScope))
+    .filter(
+      (row) => !isKnownBadLegacyKg2Path(row.imagePath, row.subjectSlug)
+    );
+}
+
+function getCrossSubjectReusePlan(target: IndicatorContext | null): CrossSubjectReusePlan {
+  const slug = safeLower(target?.subjectSlug);
+  const phase = clean(target?.phase).toUpperCase();
+  const level = clean(target?.level).toUpperCase();
+
+  if (phase !== "KG") {
+    return {
+      subjectSlugs: target?.subjectSlug ? [target.subjectSlug] : [],
+      allowedLevels: level ? [level] : [],
+    };
+  }
+
+  if (slug === "kg1-language-and-literacy") {
+    return {
+      subjectSlugs: [
+        "kg1-language-and-literacy",
+        "kg1-our-world-and-our-people",
+        "kg1-creative-arts",
+      ],
+      allowedLevels: ["KG1"],
+    };
+  }
+
+  if (slug === "kg2-language-and-literacy") {
+    return {
+      subjectSlugs: [
+        "kg2-language-and-literacy",
+        "kg1-language-and-literacy",
+        "kg1-our-world-and-our-people",
+        "kg1-creative-arts",
+      ],
+      allowedLevels: ["KG2", "KG1"],
+    };
+  }
+
+  if (slug === "kg1-mathematics") {
+    return {
+      subjectSlugs: ["kg1-mathematics"],
+      allowedLevels: ["KG1"],
+    };
+  }
+
+  if (slug === "kg2-numeracy") {
+    return {
+      subjectSlugs: ["kg2-numeracy", "kg1-mathematics"],
+      allowedLevels: ["KG2", "KG1"],
+    };
+  }
+
+  if (slug === "kg1-our-world-and-our-people") {
+    return {
+      subjectSlugs: ["kg1-our-world-and-our-people"],
+      allowedLevels: ["KG1"],
+    };
+  }
+
+  if (slug === "kg2-our-world-and-our-people") {
+    return {
+      subjectSlugs: ["kg2-our-world-and-our-people", "kg1-our-world-and-our-people"],
+      allowedLevels: ["KG2", "KG1"],
+    };
+  }
+
+  if (slug === "kg1-creative-arts") {
+    return {
+      subjectSlugs: ["kg1-creative-arts"],
+      allowedLevels: ["KG1"],
+    };
+  }
+
+  if (slug === "kg2-creative-arts") {
+    return {
+      subjectSlugs: ["kg2-creative-arts", "kg1-creative-arts"],
+      allowedLevels: ["KG2", "KG1"],
+    };
+  }
+
+  return {
+    subjectSlugs: target?.subjectSlug ? [target.subjectSlug] : [],
+    allowedLevels: level ? [level] : [],
+  };
+}
+
+async function collectMediaCandidates(target: IndicatorContext | null): Promise<MediaCandidate[]> {
+  if (!target) return [];
+
+  const all: MediaCandidate[] = [];
+  const seen = new Set<string>();
+
+  const pushUnique = (rows: MediaCandidate[]) => {
+    for (const row of rows) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      all.push(row);
+    }
+  };
+
+  if (target.id) {
+    pushUnique(await queryMediaCandidates({ indicatorId: target.id }, "EXACT", 10));
+  }
+
+  if (target.subjectSlug && target.contentStandardCode) {
+    pushUnique(
+      await queryMediaCandidates(
+        {
+          indicator: {
+            contentStandard: {
+              code: target.contentStandardCode,
+              subStrand: {
+                strand: {
+                  subject: { slug: target.subjectSlug },
+                },
+              },
+            },
+          },
+        },
+        "SAME_CONTENT_STANDARD",
+        15
+      )
+    );
+  }
+
+  if (target.subjectSlug && target.subStrandCode) {
+    pushUnique(
+      await queryMediaCandidates(
+        {
+          indicator: {
+            contentStandard: {
+              subStrand: {
+                code: target.subStrandCode,
+                strand: {
+                  subject: { slug: target.subjectSlug },
+                },
+              },
+            },
+          },
+        },
+        "SAME_SUBSTRAND",
+        20
+      )
+    );
+  }
+
+  if (target.subjectSlug && target.strandCode) {
+    pushUnique(
+      await queryMediaCandidates(
+        {
+          indicator: {
+            contentStandard: {
+              subStrand: {
+                strand: {
+                  code: target.strandCode,
+                  subject: { slug: target.subjectSlug },
+                },
+              },
+            },
+          },
+        },
+        "SAME_STRAND",
+        30
+      )
+    );
+  }
+
+  const reusePlan = getCrossSubjectReusePlan(target);
+
+  if (reusePlan.subjectSlugs.length > 1) {
+    pushUnique(
+      await queryMediaCandidates(
+        {
+          indicator: {
+            contentStandard: {
+              subStrand: {
+                strand: {
+                  subject: {
+                    slug: { in: reusePlan.subjectSlugs },
+                    level: { in: reusePlan.allowedLevels },
+                  },
+                },
+              },
+            },
+          },
+        },
+        "CROSS_SUBJECT",
+        220
+      )
+    );
+  }
+
+  return all;
+}
+
+function scoreMediaCandidate(row: MediaCandidate, target: MediaScoreTarget) {
+  let score = 0;
+
+  if (row.fallbackScope === "EXACT") score += 10000;
+  if (row.fallbackScope === "SAME_CONTENT_STANDARD") score += 2500;
+  if (row.fallbackScope === "SAME_SUBSTRAND") score += 1600;
+  if (row.fallbackScope === "SAME_STRAND") score += 900;
+  if (row.fallbackScope === "CROSS_SUBJECT") score += 300;
+
+  if (row.subjectSlug && row.subjectSlug === target.subjectSlug) score += 120;
+  if (row.strandCode && row.strandCode === target.strandCode) score += 90;
+  if (row.subStrandCode && row.subStrandCode === target.subStrandCode) score += 70;
+  if (row.contentStandardCode && row.contentStandardCode === target.contentStandardCode) {
+    score += 60;
+  }
+
+  if (isCanonicalLowerPrimaryPath(row.imagePath)) score += 40;
+  if ((row.pageNumberInPdf ?? 0) === 0) score += 6;
+  if (normalizeStorageKey(row.imagePath).toLowerCase().endsWith(".png")) score += 5;
+
+  const targetIndicatorTokens = tokenizeForSearch(target.indicator);
+  const targetContentTokens = tokenizeForSearch(target.contentStandard);
+  const targetSubStrandTokens = tokenizeForSearch(target.substrand);
+  const targetAllTokens = tokenizeForSearch(
+    target.subject,
+    target.strand,
+    target.substrand,
+    target.contentStandard,
+    target.indicator,
+    target.subjectSlug ?? "",
+    target.strandCode ?? "",
+    target.subStrandCode ?? "",
+    target.contentStandardCode ?? "",
+    target.indicatorCode ?? ""
+  );
+
+  const fileStem =
+    normalizeStorageKey(row.imagePath).split("/").pop()?.replace(/\.[a-z0-9]+$/i, "") ?? "";
+
+  const candidatePrimaryTokens = tokenizeForSearch(
+    row.figureLabel,
+    row.indicatorDescription,
+    row.contentStandardDescription,
+    row.subStrandTitle,
+    row.strandTitle,
+    fileStem
+  );
+
+  const candidateSecondaryTokens = tokenizeForSearch(
+    row.altText,
+    row.detailedDescription,
+    row.tags,
+    row.subjectName,
+    row.subjectSlug ?? ""
+  );
+
+  const indicatorOverlapPrimary = overlapCount(targetIndicatorTokens, candidatePrimaryTokens);
+  const indicatorOverlapSecondary = overlapCount(
+    targetIndicatorTokens,
+    candidateSecondaryTokens
+  );
+  const contentOverlapPrimary = overlapCount(targetContentTokens, candidatePrimaryTokens);
+  const contentOverlapSecondary = overlapCount(
+    targetContentTokens,
+    candidateSecondaryTokens
+  );
+  const subStrandOverlap = overlapCount(targetSubStrandTokens, candidatePrimaryTokens);
+  const broadPrimaryOverlap = overlapCount(targetAllTokens, candidatePrimaryTokens);
+  const broadSecondaryOverlap = overlapCount(targetAllTokens, candidateSecondaryTokens);
+
+  score += indicatorOverlapPrimary * 240;
+  score += indicatorOverlapSecondary * 120;
+  score += contentOverlapPrimary * 90;
+  score += contentOverlapSecondary * 45;
+  score += subStrandOverlap * 70;
+  score += broadPrimaryOverlap * 22;
+  score += broadSecondaryOverlap * 10;
+
+  const targetText = [target.substrand, target.contentStandard, target.indicator]
+    .map(normalizeSearchText)
+    .join(" ");
+
+  const candidateText = [
+    row.figureLabel,
+    row.altText,
+    row.detailedDescription,
+    row.indicatorDescription,
+    row.contentStandardDescription,
+    row.subStrandTitle,
+    row.strandTitle,
+    fileStem,
+    row.tags,
+  ]
+    .map(normalizeSearchText)
+    .join(" ");
+
+  const targetBigrams = buildSearchBigrams(targetText);
+  const candidateBigrams = buildSearchBigrams(candidateText);
+  score += overlapCount(targetBigrams, candidateBigrams) * 160;
+
+  const distance = codeDistance(target.indicatorCode, row.indicatorCode);
+  if (row.subjectSlug === target.subjectSlug && distance < 999) {
+    score += Math.max(0, 40 - distance * 4);
+  }
+
+  const thematicBoosts: Array<[string, number]> = [
+    ["body", 130],
+    ["parts", 120],
+    ["feature", 140],
+    ["features", 140],
+    ["unique", 150],
+    ["wonderful", 120],
+    ["identity", 140],
+    ["creation", 120],
+    ["internal", 150],
+    ["heart", 170],
+    ["lungs", 170],
+    ["stomach", 160],
+    ["intestines", 150],
+    ["function", 120],
+    ["poster", 90],
+    ["book", 75],
+    ["human", 90],
+    ["food", 90],
+    ["family", 110],
+    ["clean", 90],
+    ["hygiene", 140],
+    ["environment", 90],
+    ["respect", 90],
+    ["belief", 80],
+    ["community", 100],
+    ["occupation", 110],
+    ["leader", 110],
+    ["leaders", 110],
+    ["water", 110],
+    ["plant", 120],
+    ["animal", 110],
+    ["animals", 110],
+    ["weather", 120],
+    ["light", 110],
+    ["air", 110],
+    ["soil", 120],
+    ["garden", 90],
+    ["global", 100],
+    ["communication", 100],
+    ["transport", 100],
+    ["writing", 85],
+    ["letter", 80],
+    ["reading", 60],
+    ["story", 45],
+  ];
+
+  for (const [term, bonus] of thematicBoosts) {
+    if (targetAllTokens.has(term) && candidateText.includes(term)) {
+      score += bonus;
+    }
+  }
+
+  const phraseBoosts: Array<[string, number]> = [
+    ["body features", 300],
+    ["unique body", 220],
+    ["unique creation", 230],
+    ["self identity", 220],
+    ["wonderful features", 220],
+    ["parts of the body", 280],
+    ["body parts", 260],
+    ["internal body", 220],
+    ["internal body parts", 280],
+    ["personal hygiene", 240],
+    ["safe and unsafe", 220],
+    ["road safety", 240],
+    ["family story", 200],
+    ["community leaders", 220],
+    ["domestic and wild", 220],
+    ["sources of water", 220],
+    ["parts of a plant", 260],
+    ["types of soil", 240],
+    ["weather conditions", 240],
+    ["global community", 220],
+    ["conversation poster", 180],
+    ["front cover", 120],
+    ["back cover", 120],
+    ["pre writing", 180],
+    ["own name", 180],
+  ];
+
+  for (const [phrase, bonus] of phraseBoosts) {
+    if (targetText.includes(phrase) && candidateText.includes(phrase)) {
+      score += bonus;
+    }
+  }
+
+  const mismatchPenalties: Array<[string, number]> = [
+    ["festival", 150],
+    ["celebration", 150],
+    ["feelings", 140],
+    ["emotion", 140],
+    ["pre-writing", 180],
+    ["writing own name", 220],
+    ["name card", 180],
+    ["environmental print", 180],
+    ["story circle", 160],
+    ["listening and responding", 140],
+    ["traditional songs", 130],
+  ];
+
+  for (const [phrase, penalty] of mismatchPenalties) {
+    const normalizedPhrase = normalizeSearchText(phrase);
+    const phraseTokens = tokenizeForSearch(normalizedPhrase);
+    const targetHasTheme = overlapCount(targetAllTokens, phraseTokens) > 0;
+    const candidateHasTheme = candidateText.includes(normalizedPhrase);
+    if (!targetHasTheme && candidateHasTheme) {
+      score -= penalty;
+    }
+  }
+
+  if (
+    target.subjectSlug === "kg1-language-and-literacy" &&
+    row.subjectSlug === "kg1-our-world-and-our-people"
+  ) {
+    score += 80;
+  }
+
+  if (
+    target.subjectSlug === "kg1-language-and-literacy" &&
+    row.subjectSlug === "kg1-creative-arts"
+  ) {
+    score += 25;
+  }
+
+  if (
+    target.subjectSlug === "kg2-language-and-literacy" &&
+    row.subjectSlug === "kg1-language-and-literacy"
+  ) {
+    score += 140;
+  }
+
+  if (
+    target.subjectSlug === "kg2-language-and-literacy" &&
+    row.subjectSlug === "kg1-our-world-and-our-people"
+  ) {
+    score += 110;
+  }
+
+  if (
+    target.subjectSlug === "kg2-language-and-literacy" &&
+    row.subjectSlug === "kg1-creative-arts"
+  ) {
+    score += 80;
+  }
+
+  if (
+    target.subjectSlug === "kg2-numeracy" &&
+    row.subjectSlug === "kg1-mathematics"
+  ) {
+    score += 160;
+  }
+
+  return score;
+}
+
+function pickBestMedia(rows: MediaCandidate[], target: MediaScoreTarget): MediaCandidate | null {
+  if (!rows.length) return null;
+
+  const scored = rows.map((row) => ({
+    row,
+    score: scoreMediaCandidate(row, target),
+  }));
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.row.id.localeCompare(b.row.id);
+  });
+
+  return scored[0]?.row ?? null;
 }
 
 function classroomExampleFor(subject: string, topic: string) {
@@ -526,6 +1518,7 @@ export default async function Page({ params }: PageProps) {
           where: { id: note.schemeOfWorkItemId },
           select: {
             indicatorId: true,
+            curriculumIndicatorId: true,
             indicatorCode: true,
             contentStandardCode: true,
           },
@@ -544,10 +1537,9 @@ export default async function Page({ params }: PageProps) {
     unitRow?.contentStandardCode ?? schemeItemRow?.contentStandardCode ?? null;
   const indicatorCode = unitRow?.indicatorCode ?? schemeItemRow?.indicatorCode ?? null;
 
-  // ✅ exact indicator identity first from scheme item
-  let indicatorIdExact = clean(schemeItemRow?.indicatorId) || null;
+  let indicatorIdExact =
+    clean(schemeItemRow?.curriculumIndicatorId) || clean(schemeItemRow?.indicatorId) || null;
 
-  // ✅ fallback for notes linked by CurriculumUnit but not by SchemeOfWorkItem
   if (!indicatorIdExact && unitRow?.indicatorCode) {
     try {
       let resolvedContentStandardId: string | null = null;
@@ -578,23 +1570,50 @@ export default async function Page({ params }: PageProps) {
     }
   }
 
-  const mediaRows = indicatorIdExact
-    ? await prisma.curriculumMedia.findMany({
-        where: { indicatorId: indicatorIdExact },
-        select: {
-          id: true,
-          imagePath: true,
-          altText: true,
-          pageNumberInPdf: true,
-        },
-        take: 10,
-        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+  const subjectSlugHint =
+    inferSubjectSlugFromRuntime({
+      subject,
+      phase: note.phase ?? unitRow?.phase ?? null,
+      level: note.level ?? unitRow?.level ?? null,
+    }) ?? null;
+
+  const indicatorContext = await resolveIndicatorContext({
+    indicatorIdExact,
+    indicatorCode,
+    contentStandardCode,
+    strandCode,
+    subjectSlugHint,
+  });
+
+  const mediaCandidates = await collectMediaCandidates(indicatorContext);
+
+  const pickedMedia = pickBestMedia(mediaCandidates, {
+    subject,
+    subjectSlug: indicatorContext?.subjectSlug ?? subjectSlugHint ?? null,
+    phase: note.phase ?? unitRow?.phase ?? indicatorContext?.phase ?? null,
+    level: note.level ?? unitRow?.level ?? indicatorContext?.level ?? null,
+
+    strand,
+    substrand,
+    contentStandard,
+    indicator,
+
+    strandCode: indicatorContext?.strandCode ?? strandCode ?? null,
+    subStrandCode: indicatorContext?.subStrandCode ?? null,
+    contentStandardCode: indicatorContext?.contentStandardCode ?? contentStandardCode ?? null,
+    indicatorCode: indicatorContext?.code ?? indicatorCode ?? null,
+  });
+
+  const rawPath = pickedMedia?.imagePath
+    ? normalizeMediaPathForRender({
+        path: String(pickedMedia.imagePath).trim(),
+        subject,
+        phase: note.phase ?? unitRow?.phase ?? indicatorContext?.phase ?? null,
+        level: note.level ?? unitRow?.level ?? indicatorContext?.level ?? null,
+        subjectSlug: pickedMedia.subjectSlug ?? indicatorContext?.subjectSlug ?? subjectSlugHint,
       })
-    : [];
+    : "";
 
-  const pickedMedia = mediaRows.length ? pickBestMedia(mediaRows, indicatorCode) : null;
-
-  const rawPath = pickedMedia?.imagePath ? String(pickedMedia.imagePath).trim() : "";
   const finalUrl = rawPath ? mediaUrl(rawPath) : "";
 
   const baseMissing = !String(process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "").trim();
@@ -623,8 +1642,8 @@ export default async function Page({ params }: PageProps) {
   const teacherEmail = teacherRow?.email ?? "";
 
   const classroomName = normalizeLabel(classroomRow?.name);
-  const phaseLabel = normalizeLabel(note.phase ?? unitRow?.phase ?? null);
-  const levelLabel = normalizeLabel(note.level ?? unitRow?.level ?? null);
+  const phaseLabel = normalizeLabel(note.phase ?? unitRow?.phase ?? indicatorContext?.phase ?? null);
+  const levelLabel = normalizeLabel(note.level ?? unitRow?.level ?? indicatorContext?.level ?? null);
 
   const classLabel =
     classroomName ??
@@ -643,7 +1662,7 @@ export default async function Page({ params }: PageProps) {
   const weekEndingLabel = formatDate(weekEndingSource);
 
   const exemplarText: string[] = await fetchExemplarText({
-    indicatorId: indicatorIdExact,
+    indicatorId: indicatorContext?.id ?? indicatorIdExact,
     indicatorCode,
     contentStandardCode,
   });
@@ -652,9 +1671,7 @@ export default async function Page({ params }: PageProps) {
     normalizeLabel((note as any).performanceIndicator) ??
     normalizeLabel((unitRow as any)?.performanceIndicator);
 
-  const perfFromIndicator = indicator
-    ? `Learners can ${clean(indicator).toLowerCase()}`
-    : "";
+  const perfFromIndicator = indicator ? `Learners can ${clean(indicator).toLowerCase()}` : "";
   const perfFromExemplar = exemplarText.length
     ? `Learners can ${firstMeaningfulLine(exemplarText[0]!).replace(/^[•\-\s]+/g, "")}`
     : "";
@@ -666,18 +1683,13 @@ export default async function Page({ params }: PageProps) {
       `Learners can explain ${topic} and give relevant examples.`);
 
   const dbCore =
-    normalizeLabel(note.coreCompetencies) ??
-    normalizeLabel((unitRow as any)?.coreCompetencies);
+    normalizeLabel(note.coreCompetencies) ?? normalizeLabel((unitRow as any)?.coreCompetencies);
 
   const coreList = dbCore ? parseListish(dbCore) : defaultCoreCompetencies(subject);
-  const coreCompetenciesText = joinForPrint(
-    coreList,
-    defaultCoreCompetencies(subject).join("; ")
-  );
+  const coreCompetenciesText = joinForPrint(coreList, defaultCoreCompetencies(subject).join("; "));
 
   const dbKeywords =
-    normalizeLabel((note as any).keywords) ??
-    normalizeLabel((unitRow as any)?.keywords);
+    normalizeLabel((note as any).keywords) ?? normalizeLabel((unitRow as any)?.keywords);
 
   const generatedKeywords = extractKeywords(
     [
@@ -711,8 +1723,7 @@ export default async function Page({ params }: PageProps) {
     note.priorKnowledge ?? `Learners can share relevant experiences about ${topic}.`;
 
   const introductionText =
-    note.introduction ??
-    `Introduce ${topic} with a quick question, short discussion, or local example.`;
+    note.introduction ?? `Introduce ${topic} with a quick question, short discussion, or local example.`;
 
   const developmentText =
     note.lessonDevelopment ??
@@ -766,10 +1777,10 @@ export default async function Page({ params }: PageProps) {
   const classroomExample = classroomExampleFor(subject, topic);
 
   return (
-    <main className="min-h-screen bg-zinc-200 print:bg-white flex justify-center py-4 sm:py-6 px-2">
-      <div className="bg-white text-black max-w-5xl w-full mx-auto border border-black p-3 sm:p-4 md:p-6 print:shadow-none shadow-sm text-xs md:text-sm overflow-x-hidden">
-        <header className="mb-4 text-center space-y-1">
-          <h1 className="text-base md:text-lg font-bold tracking-wide">
+    <main className="flex min-h-screen justify-center bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] px-2 py-4 print:bg-white sm:py-6">
+      <div className="mx-auto w-full max-w-5xl overflow-x-hidden rounded-[28px] border border-white/10 bg-white p-3 text-black shadow-[0_28px_90px_rgba(0,0,0,0.34)] print:rounded-none print:border-black print:shadow-none sm:p-4 md:p-6">
+        <header className="mb-4 space-y-1 text-center">
+          <h1 className="text-base font-bold tracking-wide md:text-lg">
             LEARNER PLAN – {subject || "____________________"}
           </h1>
           <p className="font-semibold">
@@ -786,7 +1797,8 @@ export default async function Page({ params }: PageProps) {
           </p>
           {(termLabel || academicYearLabel) && (
             <p className="text-[11px]">
-              Term: <span className="font-semibold">{termLabel || "________"}</span> | Academic Year:{" "}
+              Term: <span className="font-semibold">{termLabel || "________"}</span> | Academic
+              Year:{" "}
               <span className="font-semibold">
                 {academicYearLabel || "________/________"}
               </span>
@@ -798,37 +1810,37 @@ export default async function Page({ params }: PageProps) {
         </header>
 
         <div className="overflow-x-auto print:overflow-visible">
-          <table className="min-w-[860px] sm:min-w-0 print:min-w-0 w-full border border-black border-collapse text-[11px] mb-4 table-fixed">
+          <table className="mb-4 min-w-[860px] w-full table-fixed border border-black border-collapse text-[11px] sm:min-w-0 print:min-w-0">
             <tbody>
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 w-[10%]">SUBJECT</td>
-                <td className="border border-black px-1 py-1 w-[20%] break-words">
+                <td className="w-[10%] border border-black px-1 py-1 font-semibold">SUBJECT</td>
+                <td className="w-[20%] border border-black px-1 py-1 break-words">
                   {subject || "____________________"}
                 </td>
-                <td className="border border-black font-semibold px-1 py-1 w-[8%]">WEEK</td>
-                <td className="border border-black px-1 py-1 w-[6%] text-center">
+                <td className="w-[8%] border border-black px-1 py-1 font-semibold">WEEK</td>
+                <td className="w-[6%] border border-black px-1 py-1 text-center">
                   {weekNumberLabel}
                 </td>
-                <td className="border border-black font-semibold px-1 py-1 w-[10%]">
+                <td className="w-[10%] border border-black px-1 py-1 font-semibold">
                   DURATION
                 </td>
-                <td className="border border-black px-1 py-1 w-[10%] text-center">
+                <td className="w-[10%] border border-black px-1 py-1 text-center">
                   {durationLabel}
                 </td>
-                <td className="border border-black font-semibold px-1 py-1 w-[8%]">CLASS</td>
-                <td className="border border-black px-1 py-1 w-[8%] text-center break-words">
+                <td className="w-[8%] border border-black px-1 py-1 font-semibold">CLASS</td>
+                <td className="w-[8%] border border-black px-1 py-1 text-center break-words">
                   {classLabel}
                 </td>
-                <td className="border border-black font-semibold px-1 py-1 w-[12%]">
+                <td className="w-[12%] border border-black px-1 py-1 font-semibold">
                   WEEK ENDING
                 </td>
-                <td className="border border-black px-1 py-1 w-[8%] text-center">
+                <td className="w-[8%] border border-black px-1 py-1 text-center">
                   {weekEndingLabel || "____________"}
                 </td>
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1">STRAND</td>
+                <td className="border border-black px-1 py-1 font-semibold">STRAND</td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {strandCode
                     ? `${strandCode} – ${strand || "______________________________________________"}`
@@ -837,23 +1849,25 @@ export default async function Page({ params }: PageProps) {
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1">SUB-STRAND</td>
+                <td className="border border-black px-1 py-1 font-semibold">SUB-STRAND</td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {substrand || "______________________________________________"}
                 </td>
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1">CONTENT</td>
+                <td className="border border-black px-1 py-1 font-semibold">CONTENT</td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {contentStandardCode
-                    ? `${contentStandardCode} – ${contentStandard || "______________________________________________"}`
+                    ? `${contentStandardCode} – ${
+                        contentStandard || "______________________________________________"
+                      }`
                     : contentStandard || "______________________________________________"}
                 </td>
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1">INDICATOR</td>
+                <td className="border border-black px-1 py-1 font-semibold">INDICATOR</td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {indicatorCode
                     ? `${indicatorCode} – ${indicator || "______________________________________________"}`
@@ -862,14 +1876,14 @@ export default async function Page({ params }: PageProps) {
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1">LESSON TITLE</td>
+                <td className="border border-black px-1 py-1 font-semibold">LESSON TITLE</td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
                   {lessonTitle}
                 </td>
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">
+                <td className="border border-black px-1 py-1 font-semibold align-top">
                   PERFORMANCE INDICATOR(S)
                 </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
@@ -878,7 +1892,7 @@ export default async function Page({ params }: PageProps) {
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">
+                <td className="border border-black px-1 py-1 font-semibold align-top">
                   CORE COMPETENCIES
                 </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
@@ -887,7 +1901,7 @@ export default async function Page({ params }: PageProps) {
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">
+                <td className="border border-black px-1 py-1 font-semibold align-top">
                   TEACHING &amp; LEARNING RESOURCES
                 </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
@@ -896,7 +1910,7 @@ export default async function Page({ params }: PageProps) {
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">
+                <td className="border border-black px-1 py-1 font-semibold align-top">
                   KEYWORDS
                 </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
@@ -905,7 +1919,7 @@ export default async function Page({ params }: PageProps) {
               </tr>
 
               <tr>
-                <td className="border border-black font-semibold px-1 py-1 align-top">
+                <td className="border border-black px-1 py-1 font-semibold align-top">
                   REFERENCES
                 </td>
                 <td className="border border-black px-1 py-1 break-words" colSpan={9}>
@@ -916,19 +1930,20 @@ export default async function Page({ params }: PageProps) {
           </table>
         </div>
 
-        <section className="border border-black text-[11px] mb-4">
+        <section className="mb-4 border border-black text-[11px]">
           <div className="border-b border-black px-2 py-1 font-semibold">
             INDICATOR ILLUSTRATION
           </div>
 
           <div className="px-2 py-2">
-            {!indicatorIdExact ? (
+            {!indicatorIdExact && !indicatorCode ? (
               <div className="text-[11px] text-zinc-700">
                 Link a NaCCA unit first to load the exact indicator image.
               </div>
             ) : !pickedMedia ? (
               <div className="text-[11px] text-zinc-700">
-                No indicator image is available for this note’s exact indicatorId.
+                No indicator image is available for this note after exact, same-subject and
+                smart-reuse checks.
               </div>
             ) : relativeNeedsBase ? (
               <div className="text-[11px] text-zinc-700">
@@ -954,6 +1969,19 @@ export default async function Page({ params }: PageProps) {
                     <span className="font-semibold">Topic:</span> {topic}
                   </div>
 
+                  <div className="text-zinc-600">
+                    <span className="font-semibold text-zinc-700">Image source:</span>{" "}
+                    {humanizeFallbackScope(pickedMedia.fallbackScope)}
+                    {pickedMedia.subjectName ? ` (${pickedMedia.subjectName})` : ""}
+                  </div>
+
+                  {pickedMedia.figureLabel ? (
+                    <div className="text-zinc-600">
+                      <span className="font-semibold text-zinc-700">Figure:</span>{" "}
+                      {pickedMedia.figureLabel}
+                    </div>
+                  ) : null}
+
                   {pickedMedia.altText ? (
                     <div className="text-zinc-600">
                       <span className="font-semibold text-zinc-700">Illustration:</span>{" "}
@@ -972,17 +2000,17 @@ export default async function Page({ params }: PageProps) {
         </section>
 
         <div className="overflow-x-auto print:overflow-visible">
-          <table className="min-w-[900px] md:min-w-0 print:min-w-0 w-full border border-black border-collapse text-[11px] mb-4 table-fixed">
+          <table className="mb-4 min-w-[900px] w-full table-fixed border border-black border-collapse text-[11px] md:min-w-0 print:min-w-0">
             <thead>
               <tr>
-                <th className="border border-black px-1 py-1 w-[12%]">DAY</th>
-                <th className="border border-black px-1 py-1 w-[30%]">
+                <th className="w-[12%] border border-black px-1 py-1">DAY</th>
+                <th className="w-[30%] border border-black px-1 py-1">
                   PHASE 1: STARTER
                 </th>
-                <th className="border border-black px-1 py-1 w-[33%]">
+                <th className="w-[33%] border border-black px-1 py-1">
                   PHASE 2: NEW LEARNING &amp; ASSESSMENT
                 </th>
-                <th className="border border-black px-1 py-1 w-[25%]">
+                <th className="w-[25%] border border-black px-1 py-1">
                   PHASE 3: PLENARY / REFLECTION
                 </th>
               </tr>
@@ -993,28 +2021,28 @@ export default async function Page({ params }: PageProps) {
                   {weekNumberLabel ? "Monday" : "Day"}
                 </td>
                 <td className="border border-black px-1 py-1 whitespace-pre-line break-words">
-                  <p className="font-semibold underline mb-1">LESSON OBJECTIVES</p>
+                  <p className="mb-1 font-semibold underline">LESSON OBJECTIVES</p>
                   <p className="mb-2">{lessonObjectives}</p>
-                  <p className="font-semibold underline mb-1">PRIOR KNOWLEDGE</p>
+                  <p className="mb-1 font-semibold underline">PRIOR KNOWLEDGE</p>
                   <p className="mb-2">{priorKnowledgeText}</p>
-                  <p className="font-semibold underline mb-1">INTRODUCTION (STARTER)</p>
+                  <p className="mb-1 font-semibold underline">INTRODUCTION (STARTER)</p>
                   <p>{introductionText}</p>
                 </td>
                 <td className="border border-black px-1 py-1 whitespace-pre-line break-words">
-                  <p className="font-semibold underline mb-1">KEY LEARNING POINTS</p>
+                  <p className="mb-1 font-semibold underline">KEY LEARNING POINTS</p>
                   <p className="mb-2">
                     {contentStandard ||
                       `Highlight the main ideas and skills learners must acquire in ${topic}.`}
                   </p>
-                  <p className="font-semibold underline mb-1">
+                  <p className="mb-1 font-semibold underline">
                     MAIN TEACHING &amp; LEARNING ACTIVITIES
                   </p>
                   <p>{developmentText}</p>
                 </td>
                 <td className="border border-black px-1 py-1 whitespace-pre-line break-words">
-                  <p className="font-semibold underline mb-1">CONCLUSION</p>
+                  <p className="mb-1 font-semibold underline">CONCLUSION</p>
                   <p className="mb-2">{conclusionText}</p>
-                  <p className="font-semibold underline mb-1">REFLECTION</p>
+                  <p className="mb-1 font-semibold underline">REFLECTION</p>
                   <p>{reflectionText}</p>
                 </td>
               </tr>
@@ -1022,7 +2050,7 @@ export default async function Page({ params }: PageProps) {
           </table>
         </div>
 
-        <section className="border border-black text-[11px] mb-4">
+        <section className="mb-4 border border-black text-[11px]">
           <div className="border-b border-black px-2 py-1 font-semibold">
             ASSESSMENT / EVALUATION
           </div>
@@ -1033,7 +2061,7 @@ export default async function Page({ params }: PageProps) {
           <div className="px-2 py-1 whitespace-pre-line break-words">{homeworkText}</div>
         </section>
 
-        <section className="border border-black text-[11px] mb-4">
+        <section className="mb-4 border border-black text-[11px]">
           <div className="border-b border-black px-2 py-1 font-semibold">
             DIFFERENTIATION / SUPPORT FOR LEARNERS
           </div>
@@ -1041,12 +2069,14 @@ export default async function Page({ params }: PageProps) {
           <div className="border-t border-black px-2 py-1 font-semibold">
             TEACHER&apos;S REMARKS
           </div>
-          <div className="px-2 py-1 text-[10px] text-zinc-700 flex flex-col gap-1">
+          <div className="flex flex-col gap-1 px-2 py-1 text-[10px] text-zinc-700">
             <div>
-              Date prepared: <span className="font-semibold">{createdAtLabel || "____________"}</span>
+              Date prepared:{" "}
+              <span className="font-semibold">{createdAtLabel || "____________"}</span>
             </div>
             <div>
-              Last updated: <span className="font-semibold">{updatedAtLabel || "____________"}</span>
+              Last updated:{" "}
+              <span className="font-semibold">{updatedAtLabel || "____________"}</span>
             </div>
             <div className="mt-2">
               Signature: ____________________________ &nbsp;&nbsp; Date: __________________
@@ -1054,17 +2084,17 @@ export default async function Page({ params }: PageProps) {
           </div>
         </section>
 
-        <section className="border border-black text-[11px] mb-4">
+        <section className="mb-4 border border-black text-[11px]">
           <div className="border-b border-black px-2 py-1 font-semibold">
             HEADTEACHER&apos;S REVIEW / APPROVAL
           </div>
-          <div className="px-2 py-1 whitespace-pre-line min-h-[48px] break-words">
+          <div className="min-h-[48px] px-2 py-1 whitespace-pre-line break-words">
             {headteacherComment || "______________________________________________"}
           </div>
-          <div className="border-t border-black px-2 py-2 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-            <div className="flex-1 flex flex-col gap-1">
+          <div className="flex flex-col gap-3 border-t border-black px-2 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-1 flex-col gap-1">
               <span className="text-[10px] text-zinc-700">Headteacher&apos;s Signature:</span>
-              <div className="h-10 flex items-center">
+              <div className="flex h-10 items-center">
                 {isApproved ? (
                   signatureDataUrl ? (
                     <img
@@ -1084,24 +2114,26 @@ export default async function Page({ params }: PageProps) {
                 )}
               </div>
             </div>
-            <div className="flex flex-col sm:items-end gap-1">
+            <div className="flex flex-col gap-1 sm:items-end">
               <span className="text-[10px] text-zinc-700">Date:</span>
               <div>{isApproved && approvedAtLabel ? approvedAtLabel : "________________"}</div>
             </div>
           </div>
         </section>
 
-        <p className="text-[10px] text-zinc-500 text-center mt-2 print:hidden">
+        <p className="mt-2 text-center text-[10px] text-zinc-500 print:hidden">
           Tip: Use your browser&apos;s <span className="font-semibold">Print</span> command
           (Ctrl+P) to export as PDF.
         </p>
 
-        <HeadteacherReviewPanel
-          noteId={note.id}
-          tenantId={note.tenantId}
-          initialComment={headteacherComment}
-          currentStatus={String(note.status ?? "")}
-        />
+        <div className="mt-6 rounded-[24px] border border-zinc-200 bg-zinc-50 p-3 print:hidden sm:p-4">
+          <HeadteacherReviewPanel
+            noteId={note.id}
+            tenantId={note.tenantId}
+            initialComment={headteacherComment}
+            currentStatus={String(note.status ?? "")}
+          />
+        </div>
       </div>
     </main>
   );

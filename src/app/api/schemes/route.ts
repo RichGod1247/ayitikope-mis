@@ -87,10 +87,30 @@ function normalizeAcademicYear(raw: unknown): string | null {
   const v = String(raw ?? "").trim();
   if (!v) return null;
 
-  const dash = v.match(/^(\d{4})-(\d{4})$/);
-  if (dash) return `${dash[1]}/${dash[2]}`;
+  const fullSlash = v.match(/^(\d{4})\/(\d{4})$/);
+  if (fullSlash) return `${fullSlash[1]}/${fullSlash[2]}`;
 
-  if (/^\d{4}\/\d{4}$/.test(v)) return v;
+  const fullDash = v.match(/^(\d{4})-(\d{4})$/);
+  if (fullDash) return `${fullDash[1]}/${fullDash[2]}`;
+
+  const shortSlash = v.match(/^(\d{4})\/(\d{2})$/);
+  if (shortSlash) {
+    const start = Number(shortSlash[1]);
+    const end2 = Number(shortSlash[2]);
+    const century = Math.floor(start / 100) * 100;
+    const derived = century + end2;
+    return `${start}/${derived}`;
+  }
+
+  const shortDash = v.match(/^(\d{4})-(\d{2})$/);
+  if (shortDash) {
+    const start = Number(shortDash[1]);
+    const end2 = Number(shortDash[2]);
+    const century = Math.floor(start / 100) * 100;
+    const derived = century + end2;
+    return `${start}/${derived}`;
+  }
+
   return null;
 }
 
@@ -263,6 +283,21 @@ async function getCtx() {
   return { userId: ctx.userId, tenantId: ctx.tenantId, roleName: membership.role?.name ?? null };
 }
 
+type IndicatorSliceInput = {
+  indicatorId?: string | null;
+  indicatorCode?: string | null;
+  indicatorDescription?: string | null;
+  strandTitle?: string | null;
+  subStrandTitle?: string | null;
+  contentStandardCode?: string | null;
+  contentStandardDescription?: string | null;
+  phase?: string | null;
+  level?: string | null;
+  subjectSlug?: string | null;
+  strandCode?: string | null;
+  subStrandCode?: string | null;
+};
+
 type PostBody = {
   classroomId?: string | null;
   subject?: string | null;
@@ -272,7 +307,7 @@ type PostBody = {
   title?: string | null;
   notes?: string | null;
   weekNumber: number;
-  indicatorSlice: { indicatorId: string };
+  indicatorSlice?: IndicatorSliceInput | null;
   schemeId?: string;
 };
 
@@ -284,9 +319,9 @@ async function readJson<T>(req: NextRequest): Promise<T | null> {
   }
 }
 
-async function getCanonicalFromIndicator(indicatorId: string) {
+async function getCanonicalFromIndicatorWhere(where: any) {
   const ind = await prisma.curriculumIndicator.findFirst({
-    where: { id: indicatorId },
+    where,
     select: {
       id: true,
       code: true,
@@ -337,6 +372,71 @@ async function getCanonicalFromIndicator(indicatorId: string) {
     indicatorCode: ind.code ?? null,
     indicatorDescription: ind.description ?? null,
   };
+}
+
+async function getCanonicalFromIndicator(indicatorId: string) {
+  return getCanonicalFromIndicatorWhere({ id: indicatorId });
+}
+
+async function getCanonicalFromIndicatorSlice(
+  slice: IndicatorSliceInput | null | undefined,
+  bodySubjectSlug: string | null
+) {
+  const directIndicatorId = cleanStr(slice?.indicatorId);
+
+  // 1) Fast path for real DB IDs
+  if (directIndicatorId && isPlausibleId(directIndicatorId)) {
+    const byId = await getCanonicalFromIndicator(directIndicatorId);
+    if (byId) return byId;
+  }
+
+  // 2) Canonical resolution path for synthetic UI ids
+  const subjectSlug =
+    normalizeSubjectSlug(slice?.subjectSlug) ??
+    normalizeSubjectSlug(bodySubjectSlug);
+
+  const indicatorCode = cleanStr(slice?.indicatorCode);
+  const contentStandardCode = cleanStr(slice?.contentStandardCode);
+  const subStrandCode = cleanStr(slice?.subStrandCode);
+  const strandCode = cleanStr(slice?.strandCode);
+
+  if (subjectSlug && indicatorCode && contentStandardCode && subStrandCode && strandCode) {
+    const byFullChain = await getCanonicalFromIndicatorWhere({
+      code: indicatorCode,
+      contentStandard: {
+        code: contentStandardCode,
+        subStrand: {
+          code: subStrandCode,
+          strand: {
+            code: strandCode,
+            subject: {
+              slug: subjectSlug,
+            },
+          },
+        },
+      },
+    });
+    if (byFullChain) return byFullChain;
+  }
+
+  // 3) Fallback: code within subject slug
+  if (subjectSlug && indicatorCode) {
+    const bySubjectAndCode = await getCanonicalFromIndicatorWhere({
+      code: indicatorCode,
+      contentStandard: {
+        subStrand: {
+          strand: {
+            subject: {
+              slug: subjectSlug,
+            },
+          },
+        },
+      },
+    });
+    if (bySubjectAndCode) return bySubjectAndCode;
+  }
+
+  return null;
 }
 
 function isPrismaSchemaOutOfSyncError(err: unknown) {
@@ -459,13 +559,12 @@ export async function GET(req: NextRequest) {
   const ctx = await getCtx();
   if (!ctx) return jsonNoStore({ ok: false, error: "Unauthorized.", reqId }, { status: 401 });
 
-  const tenantId = ctx.tenantId; // safe for closures
+  const tenantId = ctx.tenantId;
 
   const url = new URL(req.url);
   const mode = cleanStr(url.searchParams.get("mode"));
   const id = cleanStr(url.searchParams.get("id"));
 
-  // ---- DIAGNOSE MODE ----
   if (mode === "diagnose") {
     const privileged = isPrivilegedRole(ctx.roleName);
     const envSchemaParam = parseSchemaParamFromUrl(process.env.DATABASE_URL) || null;
@@ -606,7 +705,6 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Summary list
   if (mode === "summary") {
     try {
       const where: any = { tenantId, teacherUserId };
@@ -631,7 +729,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Detail
   if (id) {
     try {
       const scheme = await prisma.schemeOfWork.findFirst({
@@ -704,7 +801,6 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Filter by subject / subjectSlug
   if (subjectSlug || subject) {
     try {
       const where: any = { tenantId, teacherUserId };
@@ -749,7 +845,7 @@ export async function POST(req: NextRequest) {
   const ctx = await getCtx();
   if (!ctx) return jsonNoStore({ ok: false, error: "Unauthorized.", reqId }, { status: 401 });
 
-  const tenantId = ctx.tenantId; // safe snapshot
+  const tenantId = ctx.tenantId;
   const privileged = isPrivilegedRole(ctx.roleName);
 
   const body = await readJson<PostBody>(req);
@@ -760,13 +856,32 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "weekNumber must be a positive whole number.", reqId }, { status: 400 });
   }
 
-  const indicatorId = cleanStr(body.indicatorSlice?.indicatorId);
-  if (!indicatorId || !isPlausibleId(indicatorId)) {
-    return jsonNoStore({ ok: false, error: "indicatorSlice.indicatorId is required.", reqId }, { status: 400 });
+  const rawIndicatorId = cleanStr(body.indicatorSlice?.indicatorId);
+  const hasCanonicalFields =
+    !!cleanStr(body.indicatorSlice?.indicatorCode) &&
+    !!cleanStr(body.indicatorSlice?.contentStandardCode) &&
+    !!cleanStr(body.indicatorSlice?.subStrandCode) &&
+    !!cleanStr(body.indicatorSlice?.strandCode) &&
+    !!(normalizeSubjectSlug(body.indicatorSlice?.subjectSlug) ?? normalizeSubjectSlug(body.subjectSlug));
+
+  if (!rawIndicatorId && !hasCanonicalFields) {
+    return jsonNoStore(
+      { ok: false, error: "indicatorSlice is missing both a usable indicator id and canonical curriculum fields.", reqId },
+      { status: 400 }
+    );
   }
 
-  const canonical = await getCanonicalFromIndicator(indicatorId);
-  if (!canonical) return jsonNoStore({ ok: false, error: "Curriculum indicator not found.", reqId }, { status: 404 });
+  const canonical = await getCanonicalFromIndicatorSlice(
+    body.indicatorSlice,
+    normalizeSubjectSlug(body.subjectSlug)
+  );
+
+  if (!canonical) {
+    return jsonNoStore(
+      { ok: false, error: "Curriculum indicator not found. Refresh the curriculum explorer and try again.", reqId },
+      { status: 404 }
+    );
+  }
 
   const canonicalLevelRaw = canonical.level ? cleanStr(canonical.level) : null;
   if (!canonicalLevelRaw) {
@@ -795,7 +910,6 @@ export async function POST(req: NextRequest) {
   const subjectFromClient = cleanStr(body.subject);
   const subjectSlugFromClient = normalizeSubjectSlug(body.subjectSlug);
 
-  // If client sends subject, it MUST match canonical subject (scope-safe)
   if (subjectFromClient) {
     const clientKey = normalizeSubjectKey(subjectFromClient);
     const canonicalVariants = subjectVariantsForScope(canonical.subject, canonicalSlug);
@@ -816,7 +930,6 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "Subject slug mismatch. Please refresh and try again.", reqId }, { status: 400 });
   }
 
-  // Scope enforcement (non-privileged only)
   if (!privileged) {
     const scope = await getTeacherScopeOrNull(tenantId, ctx.userId);
     if (!scope) return jsonNoStore({ ok: false, error: "Forbidden: teacher profile missing.", reqId }, { status: 403 });
@@ -883,8 +996,6 @@ export async function POST(req: NextRequest) {
     let scheme: any = null;
 
     if (schemeIdRaw) {
-      // If you later want ADMIN/HEADTEACHER to add to other teachers’ schemes, we can extend this,
-      // but for now we keep behavior strict (teacher-owned).
       scheme = await prisma.schemeOfWork.findFirst({
         where: { id: schemeIdRaw, tenantId, teacherUserId: ctx.userId },
         select: schemeSelect,

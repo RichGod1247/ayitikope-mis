@@ -18,11 +18,8 @@ type SchemeOfWorkItemDto = {
 type SchemeOfWorkDetail = {
   id: string;
   subject: string;
-
-  // ✅ these are returned by /api/schemes already — we should use them
   subjectSlug?: string | null;
   level?: string | null;
-
   term: string;
   academicYear: string;
   teacherName?: string | null;
@@ -38,10 +35,20 @@ type SchemeDetailResponse = {
   error?: string;
 };
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 const pillBase =
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
+  "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold";
 const btnBase =
-  "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
+const btnOutline =
+  btnBase +
+  " border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10";
+const btnPrimary =
+  btnBase +
+  " border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] hover:brightness-105";
 
 function isThenable(v: unknown): v is Promise<any> {
   return (
@@ -51,7 +58,6 @@ function isThenable(v: unknown): v is Promise<any> {
   );
 }
 
-// 🔒 Conservative slug validation (client-side only; server remains source of truth)
 function normalizeSubjectSlug(raw: unknown): string | null {
   const v = String(raw ?? "").trim().toLowerCase();
   if (!v) return null;
@@ -59,8 +65,6 @@ function normalizeSubjectSlug(raw: unknown): string | null {
   return v;
 }
 
-// Simple “best effort” phase from level token.
-// (Studio can ignore this if it doesn’t need it; we pass it anyway.)
 function inferPhaseFromLevel(level: string | null | undefined): string | null {
   const v = String(level ?? "").trim().toUpperCase();
   if (!v) return null;
@@ -71,10 +75,6 @@ function inferPhaseFromLevel(level: string | null | undefined): string | null {
   return null;
 }
 
-/**
- * Fallback only: Infer meta from subject label if old records lack level/slug.
- * Keep this so the page still works even if older schemes don’t have these fields.
- */
 function inferCurriculumMetaFromSubject(subject: string): {
   phase?: string;
   level?: string;
@@ -89,7 +89,6 @@ function inferCurriculumMetaFromSubject(subject: string): {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
-  // KG 1 / KG1
   let m = src.match(/^KG\s*([12])\s+/i) || src.match(/^KG([12])\s+/i);
   if (m) {
     const num = parseInt(m[1], 10);
@@ -103,7 +102,6 @@ function inferCurriculumMetaFromSubject(subject: string): {
     };
   }
 
-  // Basic 1..9 / Basic1..9
   m = src.match(/^Basic\s*([1-9])\s+/i) || src.match(/^Basic([1-9])\s+/i);
   if (m) {
     const num = parseInt(m[1], 10);
@@ -118,7 +116,6 @@ function inferCurriculumMetaFromSubject(subject: string): {
     };
   }
 
-  // JHS 1..3 / JHS1..3
   m = src.match(/^JHS\s*([1-3])\s+/i) || src.match(/^JHS([1-3])\s+/i);
   if (m) {
     const num = parseInt(m[1], 10);
@@ -136,6 +133,11 @@ function inferCurriculumMetaFromSubject(subject: string): {
   return coreSlug ? { subjectSlug: coreSlug } : {};
 }
 
+function formatWeeks(items: SchemeOfWorkItemDto[]) {
+  const weeks = Array.from(new Set(items.map((x) => x.weekNumber).filter((x) => Number.isFinite(x))));
+  return weeks.sort((a, b) => a - b).join(", ");
+}
+
 export default function SchemeDetailPage({
   params,
 }: {
@@ -148,7 +150,6 @@ export default function SchemeDetailPage({
   const [scheme, setScheme] = useState<SchemeOfWorkDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 1) Resolve params safely (no render-time Promise work)
   useEffect(() => {
     let alive = true;
 
@@ -184,7 +185,6 @@ export default function SchemeDetailPage({
     };
   }, [params]);
 
-  // 2) Load scheme once schemeId is known
   useEffect(() => {
     if (!paramsReady) return;
 
@@ -241,7 +241,6 @@ export default function SchemeDetailPage({
     };
   }, [paramsReady, schemeId]);
 
-  // Helper: build Lesson Note Studio deep-link URL (authoritative first, fallback second)
   const buildLessonNoteUrl = (weekNumber: number, item: SchemeOfWorkItemDto) => {
     if (!scheme) return "#";
 
@@ -260,7 +259,6 @@ export default function SchemeDetailPage({
     if (weekNumber) qs.set("weekNumber", String(weekNumber));
     if (item.indicatorCode) qs.set("indicatorCode", item.indicatorCode);
 
-    // Prefer API truth, fallback only if missing
     const finalLevel = levelFromApi || fallback.level || "";
     const finalPhase = phaseFromApi || fallback.phase || "";
     const finalSlug = subjectSlugFromApi || fallback.subjectSlug || "";
@@ -272,9 +270,9 @@ export default function SchemeDetailPage({
     return `/teacher/lesson-notes/studio?${qs.toString()}`;
   };
 
-  // Group items by week
   const groupedByWeek = useMemo(() => {
     if (!scheme) return [];
+
     const map = new Map<number, SchemeOfWorkItemDto[]>();
 
     for (const item of scheme.items) {
@@ -296,104 +294,137 @@ export default function SchemeDetailPage({
   const hasItems = !!scheme && scheme.items.length > 0;
 
   return (
-    <main className="min-h-screen bg-zinc-50">
-      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-5">
-        <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`${pillBase} border-emerald-200 bg-emerald-50 text-emerald-800`}>
-                EduLife OS · Teacher · Scheme of Work
-              </span>
-              {scheme && (
-                <span className="text-[11px] text-zinc-500">
-                  {scheme.subject} · {scheme.term} · {scheme.academicYear}
+    <main className="min-h-screen print:bg-white print:text-black">
+      <div className="mx-auto max-w-6xl space-y-5 px-4 py-6 md:py-8 print:max-w-none print:px-0 print:py-0">
+        <header className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6 print:rounded-none print:border-slate-300 print:bg-white print:text-black print:shadow-none">
+          <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px] print:hidden" />
+          <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl print:hidden" />
+          <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl print:hidden" />
+
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2 print:hidden">
+                <span className={cx(pillBase, "border-emerald-300/25 bg-emerald-400/14 text-emerald-100")}>
+                  EduLife OS · Teacher · Scheme of Work
                 </span>
-              )}
+                {scheme && (
+                  <span className="text-[11px] text-[#AEB6C4]">
+                    {scheme.subject} · {scheme.term} · {scheme.academicYear}
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-2xl font-extrabold tracking-tight text-[#F7F4ED] print:text-black md:text-3xl">
+                {scheme ? `${scheme.subject} – Scheme of Work` : "Scheme of Work"}
+              </h1>
+
+              <p className="max-w-2xl text-sm leading-7 text-[#C9CDD6] print:text-slate-700">
+                This page shows a <span className="font-semibold text-[#F7F4ED] print:text-black">real Scheme of Work</span>{" "}
+                generated from NaCCA indicators. You can print it directly for your headteacher
+                or inspection, or jump into <span className="font-semibold text-[#F7F4ED] print:text-black">Lesson Note Studio</span>{" "}
+                for any indicator.
+              </p>
             </div>
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-zinc-900">
-              {scheme ? `${scheme.subject} – Scheme of Work` : "Scheme of Work"}
-            </h1>
-            <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
-              This page shows a <span className="font-semibold">real Scheme of Work</span>{" "}
-              generated from NaCCA indicators. You can print it directly for your headteacher
-              or inspection, or jump into <span className="font-semibold">Lesson Note Studio</span>{" "}
-              for any indicator.
-            </p>
-          </div>
 
-          <div className="flex flex-col items-start md:items-end gap-2 text-[11px] text-zinc-500">
-            {scheme && (
-              <>
-                <p>
-                  Term: <span className="font-semibold">{scheme.term}</span>
-                </p>
-                <p>
-                  Academic year: <span className="font-semibold">{scheme.academicYear}</span>
-                </p>
-                {scheme.className && (
+            <div className="flex flex-col items-start gap-2 text-[11px] text-[#AEB6C4] print:text-slate-600 md:items-end">
+              {scheme && (
+                <>
                   <p>
-                    Class: <span className="font-semibold">{scheme.className}</span>
+                    Term: <span className="font-semibold text-[#F7F4ED] print:text-black">{scheme.term}</span>
                   </p>
-                )}
-                {scheme.teacherName && (
                   <p>
-                    Teacher: <span className="font-semibold">{scheme.teacherName}</span>
+                    Academic year: <span className="font-semibold text-[#F7F4ED] print:text-black">{scheme.academicYear}</span>
                   </p>
-                )}
-              </>
-            )}
+                  {scheme.className && (
+                    <p>
+                      Class: <span className="font-semibold text-[#F7F4ED] print:text-black">{scheme.className}</span>
+                    </p>
+                  )}
+                  {scheme.teacherName && (
+                    <p>
+                      Teacher: <span className="font-semibold text-[#F7F4ED] print:text-black">{scheme.teacherName}</span>
+                    </p>
+                  )}
+                </>
+              )}
 
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className={`${btnBase} bg-white text-zinc-800 border-zinc-300 hover:bg-zinc-100`}
-              disabled={!scheme}
-            >
-              Print Scheme of Work
-            </button>
+              <div className="flex flex-wrap gap-2 print:hidden">
+                <Link href="/teacher/schemes" className={btnOutline}>
+                  Back to Schemes
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className={btnPrimary}
+                  disabled={!scheme}
+                >
+                  Print Scheme of Work
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
         {loading && (
-          <div className="border border-zinc-200 bg-white rounded-2xl px-4 py-3 text-sm text-zinc-600">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-[#C9CDD6]">
             Loading Scheme of Work…
           </div>
         )}
 
         {error && !loading && (
-          <div className="border border-red-200 bg-red-50 rounded-2xl px-4 py-3 text-sm text-red-700">
+          <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
             {error}
           </div>
         )}
 
         {!loading && !error && !scheme && (
-          <div className="border border-zinc-200 bg-white rounded-2xl px-4 py-3 text-sm text-zinc-600">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-[#C9CDD6]">
             Scheme of Work not found.
           </div>
         )}
 
         {scheme && (
-          <section className="border border-zinc-200 bg-white rounded-2xl p-4 md:p-5 space-y-4">
-            <div className="flex items-center justify-between gap-2 border-b border-zinc-200 pb-2">
+          <section className="space-y-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl print:rounded-none print:border-slate-300 print:bg-white print:shadow-none md:p-5">
+            <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2 print:border-slate-200">
               <div className="space-y-0.5">
-                <h2 className="text-sm font-semibold text-zinc-900">Weekly breakdown</h2>
-                <p className="text-[11px] text-zinc-500">
+                <h2 className="text-sm font-semibold text-[#F7F4ED] print:text-black">
+                  Weekly breakdown
+                </h2>
+                <p className="text-[11px] text-[#AEB6C4] print:text-slate-600">
                   Each row links a NaCCA indicator to a specific week, strand and sub-strand.
-                  You can now <span className="font-semibold">open Lesson Note Studio</span>{" "}
+                  You can now <span className="font-semibold text-[#F7F4ED] print:text-black">open Lesson Note Studio</span>{" "}
                   directly from here.
                 </p>
               </div>
+
               {hasItems && (
-                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-700">
+                <span className="rounded-full border border-emerald-300/20 bg-emerald-400/12 px-2 py-0.5 text-[10px] font-medium text-emerald-100 print:border-slate-300 print:bg-slate-100 print:text-slate-700">
                   {scheme.items.length} indicator{scheme.items.length === 1 ? "" : "s"}
                 </span>
               )}
             </div>
 
+            <div className="rounded-2xl border border-white/10 bg-[#08111C]/85 px-3 py-2 text-[11px] text-[#C9CDD6] print:border-slate-200 print:bg-slate-50 print:text-slate-700">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span>
+                  Subject: <span className="font-semibold text-[#F7F4ED] print:text-black">{scheme.subject}</span>
+                </span>
+                <span>
+                  Term: <span className="font-semibold text-[#F7F4ED] print:text-black">{scheme.term}</span>
+                </span>
+                <span>
+                  Year: <span className="font-semibold text-[#F7F4ED] print:text-black">{scheme.academicYear}</span>
+                </span>
+                <span>
+                  Weeks: <span className="font-semibold text-[#F7F4ED] print:text-black">{formatWeeks(scheme.items) || "—"}</span>
+                </span>
+              </div>
+            </div>
+
             {!hasItems && (
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[#AEB6C4] print:text-slate-600">
                 No items have been added to this Scheme of Work yet. You can add indicators from{" "}
-                <span className="font-semibold">Teacher → Curriculum</span>{" "}
+                <span className="font-semibold text-[#F7F4ED] print:text-black">Teacher → Curriculum</span>{" "}
                 using the “Add to Scheme of Work” button.
               </p>
             )}
@@ -403,74 +434,83 @@ export default function SchemeDetailPage({
                 {groupedByWeek.map((group) => (
                   <div
                     key={group.weekNumber}
-                    className="border border-zinc-200 rounded-xl overflow-hidden bg-zinc-50"
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-[#08111C]/85 print:border-slate-300 print:bg-white"
                   >
-                    <div className="flex items-center justify-between gap-2 bg-zinc-100 px-3 py-2">
-                      <div className="text-xs font-semibold text-zinc-800">
+                    <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-white/[0.04] px-3 py-2 print:border-slate-200 print:bg-slate-50">
+                      <div className="text-xs font-semibold text-[#F7F4ED] print:text-black">
                         Week {group.weekNumber}
                       </div>
-                      <div className="text-[10px] text-zinc-600">
+                      <div className="text-[10px] text-[#AEB6C4] print:text-slate-600">
                         {group.items.length} indicator{group.items.length === 1 ? "" : "s"}
                       </div>
                     </div>
 
                     <div className="overflow-x-auto">
-                      <table className="min-w-full border-t border-zinc-200 text-[11px]">
-                        <thead className="bg-zinc-100/80">
+                      <table className="min-w-full border-collapse text-[11px]">
+                        <thead className="bg-white/[0.04] print:bg-slate-50">
                           <tr>
-                            <th className="px-3 py-2 text-left font-semibold text-zinc-700 border-b border-zinc-200">
+                            <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700">
                               Strand
                             </th>
-                            <th className="px-3 py-2 text-left font-semibold text-zinc-700 border-b border-zinc-200">
+                            <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700">
                               Sub-strand
                             </th>
-                            <th className="px-3 py-2 text-left font-semibold text-zinc-700 border-b border-zinc-200">
+                            <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700">
                               Content Std.
                             </th>
-                            <th className="px-3 py-2 text-left font-semibold text-zinc-700 border-b border-zinc-200">
+                            <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700">
                               Indicator Code
                             </th>
-                            <th className="px-3 py-2 text-left font-semibold text-zinc-700 border-b border-zinc-200">
+                            <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700">
                               Indicator Description
                             </th>
-                            <th className="px-3 py-2 text-left font-semibold text-zinc-700 border-b border-zinc-200">
+                            <th className="border-b border-white/10 px-3 py-2 text-left font-semibold text-[#E8C96A] print:border-slate-200 print:text-slate-700 print:hidden">
                               Lesson Note
                             </th>
                           </tr>
                         </thead>
+
                         <tbody>
-                          {group.items.map((item) => (
-                            <tr key={item.id} className="odd:bg-white even:bg-zinc-50">
-                              <td className="px-3 py-2 align-top border-b border-zinc-200">
+                          {group.items.map((item, index) => (
+                            <tr
+                              key={item.id}
+                              className={index % 2 === 0 ? "bg-transparent" : "bg-white/[0.03] print:bg-slate-50/60"}
+                            >
+                              <td className="border-b border-white/10 px-3 py-2 align-top text-[#F7F4ED] print:border-slate-200 print:text-black">
                                 {item.strandTitle || "—"}
                               </td>
-                              <td className="px-3 py-2 align-top border-b border-zinc-200">
+
+                              <td className="border-b border-white/10 px-3 py-2 align-top text-[#F7F4ED] print:border-slate-200 print:text-black">
                                 {item.subStrandTitle || "—"}
                               </td>
-                              <td className="px-3 py-2 align-top border-b border-zinc-200">
+
+                              <td className="border-b border-white/10 px-3 py-2 align-top text-[#C9CDD6] print:border-slate-200 print:text-slate-700">
                                 {item.contentStandardCode ? item.contentStandardCode : "—"}
                                 {item.contentStandardDescription && (
-                                  <span className="block text-[10px] text-zinc-500 mt-0.5">
+                                  <span className="mt-0.5 block text-[10px] text-[#8F98A8] print:text-slate-500">
                                     {item.contentStandardDescription}
                                   </span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 align-top border-b border-zinc-200 whitespace-nowrap">
+
+                              <td className="whitespace-nowrap border-b border-white/10 px-3 py-2 align-top text-[#F7F4ED] print:border-slate-200 print:text-black">
                                 {item.indicatorCode || "—"}
                               </td>
-                              <td className="px-3 py-2 align-top border-b border-zinc-200">
+
+                              <td className="border-b border-white/10 px-3 py-2 align-top text-[#F7F4ED] print:border-slate-200 print:text-black">
                                 {item.indicatorDescription}
                               </td>
-                              <td className="px-3 py-2 align-top border-b border-zinc-200 whitespace-nowrap">
+
+                              <td className="whitespace-nowrap border-b border-white/10 px-3 py-2 align-top print:hidden">
                                 {item.indicatorCode ? (
                                   <Link
                                     href={buildLessonNoteUrl(group.weekNumber, item)}
-                                    className={`${btnBase} bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700 text-[10px] md:text-[11px]`}
+                                    className={btnPrimary}
                                   >
                                     Open in Studio
                                   </Link>
                                 ) : (
-                                  <span className="text-[10px] text-zinc-400">No indicator code</span>
+                                  <span className="text-[10px] text-[#8F98A8]">No indicator code</span>
                                 )}
                               </td>
                             </tr>
@@ -485,14 +525,14 @@ export default function SchemeDetailPage({
           </section>
         )}
 
-        <section className="border border-dashed border-zinc-200 bg-zinc-50 rounded-2xl px-4 py-3 text-[11px] text-zinc-600">
+        <section className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-3 text-[11px] text-[#C9CDD6] print:hidden">
           <p>
             From here you can now choose a week and{" "}
-            <span className="font-semibold">open Lesson Note Studio</span>{" "}
+            <span className="font-semibold text-[#F7F4ED]">open Lesson Note Studio</span>{" "}
             for a specific indicator using the{" "}
-            <span className="font-semibold">“Open in Studio”</span>{" "}
+            <span className="font-semibold text-[#F7F4ED]">“Open in Studio”</span>{" "}
             button. This keeps your{" "}
-            <span className="font-semibold">Scheme of Work → Lesson Notes</span>{" "}
+            <span className="font-semibold text-[#F7F4ED]">Scheme of Work → Lesson Notes</span>{" "}
             flow in one place, fully tied to the trusted NaCCA curriculum.
           </p>
         </section>

@@ -152,13 +152,13 @@ async function apiJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
 function Badge({ tone, children }: { tone: "ok" | "warn" | "info" | "muted"; children: React.ReactNode }) {
   const cls =
     tone === "ok"
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
       : tone === "warn"
-        ? "bg-amber-50 text-amber-800 border-amber-200"
+        ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
         : tone === "info"
-          ? "bg-blue-50 text-blue-800 border-blue-200"
-          : "bg-zinc-50 text-zinc-700 border-zinc-200";
-  return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${cls}`}>{children}</span>;
+          ? "border-sky-300/20 bg-sky-400/12 text-sky-100"
+          : "border-white/10 bg-white/5 text-[#D0D6E2]";
+  return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] ${cls}`}>{children}</span>;
 }
 
 function ToastViewport(props: { toasts: Toast[]; onDismiss: (id: string) => void }) {
@@ -167,22 +167,22 @@ function ToastViewport(props: { toasts: Toast[]; onDismiss: (id: string) => void
       {props.toasts.map((t) => {
         const cls =
           t.tone === "success"
-            ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+            ? "border-emerald-300/20 bg-[#08111F]/95 text-emerald-100"
             : t.tone === "error"
-              ? "border-red-200 bg-red-50 text-red-900"
+              ? "border-rose-300/20 bg-[#1A0E14]/95 text-rose-100"
               : t.tone === "warn"
-                ? "border-amber-200 bg-amber-50 text-amber-900"
-                : "border-blue-200 bg-blue-50 text-blue-900";
+                ? "border-amber-300/20 bg-[#181109]/95 text-amber-100"
+                : "border-sky-300/20 bg-[#08111F]/95 text-sky-100";
         return (
-          <div key={t.id} className={`rounded-2xl border px-4 py-3 shadow-sm ${cls}`}>
+          <div key={t.id} className={`rounded-2xl border px-4 py-3 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl ${cls}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-sm font-semibold">{t.title}</div>
-                {t.message ? <div className="mt-1 text-xs opacity-90 whitespace-pre-wrap">{t.message}</div> : null}
+                {t.message ? <div className="mt-1 whitespace-pre-wrap text-xs opacity-90">{t.message}</div> : null}
               </div>
               <button
                 type="button"
-                className="rounded-lg border px-2 py-1 text-xs hover:bg-white/40"
+                className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs hover:bg-white/10"
                 onClick={() => props.onDismiss(t.id)}
               >
                 Close
@@ -209,28 +209,28 @@ function ConfirmDialog(props: {
 
   const btn =
     props.tone === "danger"
-      ? "bg-red-600 border-red-600 text-white hover:bg-red-700"
-      : "bg-black border-black text-white hover:bg-zinc-800";
+      ? "bg-rose-600 border-rose-600 text-white hover:bg-rose-700"
+      : "bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] border-transparent text-[#071A3D] hover:opacity-95";
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 px-4">
-      <div className="w-full max-w-md rounded-3xl border bg-white p-5 shadow-lg">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.96),rgba(7,26,61,0.96),rgba(5,7,11,0.98))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.35)]">
         <div className="space-y-2">
-          <div className="text-lg font-semibold text-zinc-900">{props.title}</div>
-          <div className="text-sm text-zinc-600">{props.message}</div>
+          <div className="text-lg font-semibold text-[#F7F4ED]">{props.title}</div>
+          <div className="text-sm text-[#C9CDD6]">{props.message}</div>
         </div>
 
         <div className="mt-5 flex items-center justify-end gap-2">
           <button
             type="button"
-            className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
             onClick={props.onClose}
           >
             {props.cancelText ?? "Cancel"}
           </button>
           <button
             type="button"
-            className={`rounded-xl border px-3 py-2 text-sm ${btn}`}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold ${btn}`}
             onClick={() => {
               props.onConfirm();
               props.onClose();
@@ -255,10 +255,10 @@ function Field(props: {
 }) {
   return (
     <div>
-      <label className="text-xs font-medium text-zinc-700">{props.label}</label>
-      {props.hint ? <div className="mt-1 text-[11px] text-zinc-500">{props.hint}</div> : null}
+      <label className="text-xs font-medium text-[#F7F4ED]">{props.label}</label>
+      {props.hint ? <div className="mt-1 text-[11px] text-[#8F98A8]">{props.hint}</div> : null}
       <textarea
-        className="mt-2 w-full rounded-xl border border-zinc-300 bg-white p-3 text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black disabled:bg-zinc-100"
+        className="mt-2 w-full rounded-2xl border border-white/10 bg-[#07111F] p-3 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:border-[#D4AF37]/30 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/15 disabled:bg-white/5 disabled:text-[#7E8796]"
         rows={props.rows ?? 4}
         value={props.value}
         placeholder={props.placeholder}
@@ -271,7 +271,6 @@ function Field(props: {
 
 function shouldRetryLinkPayload(msg: string) {
   const m = msg.toLowerCase();
-  // zod / strict schemas / missing keys typically surface like this
   return (
     m.includes("invalid") ||
     m.includes("unrecognized") ||
@@ -285,7 +284,6 @@ function shouldRetryLinkPayload(msg: string) {
 export default function LessonNoteEditorClient({ id }: { id: string }) {
   const router = useRouter();
 
-  // --- toast system ---
   const [toasts, setToasts] = useState<Toast[]>([]);
   const pushToast = (t: Omit<Toast, "id">, ttlMs = 3500) => {
     const toast: Toast = { id: uid(), ...t };
@@ -299,7 +297,6 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
   const [note, setNote] = useState<LessonNote | null>(null);
 
-  // Editable fields
   const [lessonTitle, setLessonTitle] = useState("");
   const [objectives, setObjectives] = useState("");
   const [tlr, setTlr] = useState("");
@@ -314,10 +311,8 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Confirmation dialog
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Unit picker (scheme-backed)
   const [unitOpen, setUnitOpen] = useState(false);
   const [unitQ, setUnitQ] = useState("");
   const [unitsLoading, setUnitsLoading] = useState(false);
@@ -327,7 +322,6 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
   const [unitMode, setUnitMode] = useState<UnitQueryMode>({ includeWeek: true });
 
-  // AI coach
   const [aiLoading, setAiLoading] = useState(false);
   const [aiErr, setAiErr] = useState<string | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
@@ -363,7 +357,6 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     return baselineRef.current !== "" && baselineRef.current !== draftSnapshot;
   }, [draftSnapshot, note]);
 
-  // Submit gating
   const submitChecks = useMemo(() => {
     const hasUnit = Boolean(note?.schemeOfWorkItemId || note?.curriculumUnitId);
     const hasIndicator = Boolean(trimOrEmpty(note?.indicator));
@@ -382,9 +375,6 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       const data = await apiJson<{ ok: true; item: LessonNote }>(`/api/teachers/lesson-notes/item/${id}`);
       setNote(data.item);
 
-      // ✅ IMPORTANT:
-      // - DO NOT synthesize placeholder titles into state.
-      // - If DB already contains the old placeholder and the note is NOT linked, hide it (treat as blank).
       const rawTitle = safeStr(data.item.lessonTitle);
       const isLinked = Boolean(data.item.schemeOfWorkItemId || data.item.curriculumUnitId);
       const shouldHideOldPlaceholder =
@@ -427,7 +417,6 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Warn on navigation if dirty
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!dirty) return;
@@ -438,7 +427,6 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
 
-  // Ctrl+S quick save
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
@@ -466,10 +454,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lessonNoteId: note.id,
-
-          // ✅ store null when blank (so list shows as blank, not empty string)
           lessonTitle: lessonTitle.trim() ? lessonTitle : null,
-
           objectives,
           teachingLearningResources: tlr,
           introduction: intro,
@@ -531,11 +516,8 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     const sp = new URLSearchParams();
     sp.set("lessonNoteId", note.id);
     sp.set("take", "80");
-
-    // strict = includeWeek true; widen = ignoreWeek=1
     if (mode.includeWeek && note.weekNumber) sp.set("weekNumber", String(note.weekNumber));
     if (!mode.includeWeek) sp.set("ignoreWeek", "1");
-
     if (unitQ.trim()) sp.set("q", unitQ.trim());
     return sp.toString();
   }
@@ -556,7 +538,6 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       setUnits(Array.isArray(data.items) ? data.items : []);
       setUnitsMeta({ widened: data.widened, message: data.message, reason: data.reason });
 
-      // If API tells us why it's empty, surface it (bank-grade UX: no silent failure)
       if ((data.items?.length ?? 0) === 0 && (data.message || data.reason)) {
         setUnitErr(data.message || (data.reason ? `No units: ${data.reason}` : null));
       } else if (data.widened) {
@@ -588,18 +569,10 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     const cu = trimOrEmpty(u.curriculumUnitId);
     const si = trimOrEmpty(u.schemeOfWorkItemId) || trimOrEmpty(u.schemeItemId);
 
-    // Build payloads in safest order. Prefer curriculumUnitId if present (new API),
-    // but fall back to schemeItemId (old API). This prevents you from getting trapped
-    // in a client/server mismatch again.
     const payloads: Array<{ label: string; body: any }> = [];
 
-    // 1) Preferred: curriculum unit (required by submit route)
     if (cu) payloads.push({ label: "curriculumUnitId", body: { lessonNoteId: note.id, curriculumUnitId: cu } });
-
-    // 2) Canonical scheme link (DB field is schemeOfWorkItemId)
     if (si) payloads.push({ label: "schemeOfWorkItemId", body: { lessonNoteId: note.id, schemeOfWorkItemId: si } });
-
-    // 3) Legacy fallback (older servers might expect schemeItemId)
     if (si) payloads.push({ label: "schemeItemId", body: { lessonNoteId: note.id, schemeItemId: si } });
 
     if (payloads.length === 0) {
@@ -628,9 +601,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
       } catch (e: any) {
         lastErr = e;
         const msg = safeStr(e?.message || "");
-        // If it's a schema mismatch, try the next payload.
         if (shouldRetryLinkPayload(msg)) continue;
-        // Otherwise it's a real failure (scope mismatch, forbidden, etc.)
         break;
       }
     }
@@ -717,36 +688,36 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
     });
   }
 
-  // Auto-load units when dialog opens
   useEffect(() => {
     if (!unitOpen) return;
-    void loadUnits({ includeWeek: true }); // strict first
+    void loadUnits({ includeWeek: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unitOpen]);
 
-  if (loading) return <div className="p-6 text-sm text-zinc-700">Loading…</div>;
+  if (loading) return <div className="p-6 text-sm text-[#C9CDD6]">Loading…</div>;
 
   if (pageErr) {
     return (
       <div className="p-6">
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{pageErr}</div>
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">{pageErr}</div>
       </div>
     );
   }
 
-  if (!note) return <div className="p-6 text-sm text-zinc-700">Not found.</div>;
+  if (!note) return <div className="p-6 text-sm text-[#C9CDD6]">Not found.</div>;
 
   const statusTone =
     note.status === "APPROVED" ? "ok" : note.status === "SUBMITTED" ? "info" : note.status === "REJECTED" ? "warn" : "muted";
 
   const unitQueryPreview = buildUnitsQueryString(unitMode);
 
-  const lessonTitlePlaceholder = note.curriculumUnitId || note.schemeOfWorkItemId
-    ? (note.substrand ? `Auto title: ${note.substrand}` : "Auto-filled from Sub-strand after linking unit.")
-    : "Auto-filled from Sub-strand after linking unit.";
+  const lessonTitlePlaceholder =
+    note.curriculumUnitId || note.schemeOfWorkItemId
+      ? (note.substrand ? `Auto title: ${note.substrand}` : "Auto-filled from Sub-strand after linking unit.")
+      : "Auto-filled from Sub-strand after linking unit.";
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+    <div className="space-y-6">
       <ToastViewport toasts={toasts} onDismiss={dismissToast} />
 
       <ConfirmDialog
@@ -759,76 +730,84 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
         onClose={() => setConfirmOpen(false)}
       />
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl md:text-2xl font-semibold text-zinc-900">Lesson Note Editor</h1>
-            <Badge tone={statusTone}>{note.status}</Badge>
-            {dirty ? <Badge tone="warn">Unsaved changes</Badge> : <Badge tone="muted">All changes saved</Badge>}
-          </div>
-          <p className="mt-1 text-sm text-zinc-600">{context}</p>
+      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
+        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+        <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+        <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl" />
 
-          {note.headteacherComment ? (
-            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <div className="font-semibold">Headteacher comment</div>
-              <div className="mt-1 whitespace-pre-wrap">{note.headteacherComment}</div>
+        <div className="relative flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">EduLife OS · Teacher</p>
+              <Badge tone={statusTone}>{note.status}</Badge>
+              {dirty ? <Badge tone="warn">Unsaved changes</Badge> : <Badge tone="muted">All changes saved</Badge>}
             </div>
-          ) : null}
+
+            <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#F7F4ED] md:text-3xl">
+              Lesson Note Editor
+            </h1>
+            <p className="mt-2 max-w-3xl text-sm leading-7 text-[#C9CDD6]">{context}</p>
+
+            {note.headteacherComment ? (
+              <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-sm text-amber-100">
+                <div className="font-semibold">Headteacher comment</div>
+                <div className="mt-1 whitespace-pre-wrap">{note.headteacherComment}</div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
+              onClick={() => router.push("/teacher/lesson-notes")}
+            >
+              Back
+            </button>
+
+            <button
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
+              onClick={() => router.push(`/teacher/lesson-notes/${note.id}/print`)}
+            >
+              Print
+            </button>
+
+            <button
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
+              disabled={locked || saving}
+              onClick={() => void saveDraft()}
+              title={locked ? "Locked while submitted/approved." : "Ctrl+S"}
+            >
+              {saving ? "Saving…" : "Save draft"}
+            </button>
+
+            <button
+              className="rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] disabled:opacity-60"
+              disabled={locked || !submitChecks.canSubmit || submitting}
+              onClick={() => setConfirmOpen(true)}
+              title={
+                locked
+                  ? "Locked while submitted/approved."
+                  : submitChecks.canSubmit
+                    ? ""
+                    : "Link a unit and fill objectives, lesson development, assessment."
+              }
+            >
+              {submitting ? "Submitting…" : "Submit"}
+            </button>
+          </div>
         </div>
+      </section>
 
-        <div className="flex gap-2 flex-wrap">
-          <button
-            className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50"
-            onClick={() => router.push("/teacher/lesson-notes")}
-          >
-            Back
-          </button>
-
-          <button
-            className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50"
-            onClick={() => router.push(`/teacher/lesson-notes/${note.id}/print`)}
-          >
-            Print
-          </button>
-
-          <button
-            className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-60"
-            disabled={locked || saving}
-            onClick={() => void saveDraft()}
-            title={locked ? "Locked while submitted/approved." : "Ctrl+S"}
-          >
-            {saving ? "Saving…" : "Save draft"}
-          </button>
-
-          <button
-            className="rounded-xl border border-black bg-black px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-60"
-            disabled={locked || !submitChecks.canSubmit || submitting}
-            onClick={() => setConfirmOpen(true)}
-            title={
-              locked
-                ? "Locked while submitted/approved."
-                : submitChecks.canSubmit
-                  ? ""
-                  : "Link a unit and fill objectives, lesson development, assessment."
-            }
-          >
-            {submitting ? "Submitting…" : "Submit"}
-          </button>
-        </div>
-      </div>
-
-      {/* Submission readiness */}
-      <div className="mt-4 rounded-2xl border bg-white p-4">
+      <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-sm font-semibold text-zinc-900">Submission checklist</div>
-            <div className="mt-1 text-xs text-zinc-500">Submit is only enabled when all required items are satisfied.</div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">Submission checklist</div>
+            <div className="mt-1 text-xs text-[#8F98A8]">Submit is only enabled when all required items are satisfied.</div>
           </div>
           <div>{submitChecks.canSubmit ? <Badge tone="ok">Ready to submit</Badge> : <Badge tone="warn">Not ready</Badge>}</div>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+        <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
           <ChecklistItem ok={submitChecks.hasUnit} label="Unit linked (scheme-backed)" />
           <ChecklistItem ok={submitChecks.hasIndicator} label="Indicator present" />
           <ChecklistItem ok={submitChecks.hasObjectives} label="Objectives filled" />
@@ -837,22 +816,21 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
         </div>
 
         {!submitChecks.canSubmit ? (
-          <div className="mt-3 text-xs text-zinc-600">
-            Fix the unchecked items. Most importantly: <span className="font-medium">Link the correct unit</span>.
+          <div className="mt-3 text-xs text-[#C9CDD6]">
+            Fix the unchecked items. Most importantly: <span className="font-medium text-[#F7F4ED]">Link the correct unit</span>.
           </div>
         ) : null}
-      </div>
+      </section>
 
-      {/* Unit Link */}
-      <div className="mt-4 rounded-2xl border bg-white p-4">
+      <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <div className="text-sm font-semibold text-zinc-900">NaCCA link</div>
-            <div className="text-xs text-zinc-500 mt-1">Pulled from your Scheme of Work (term/year/subject/level scoped).</div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">NaCCA link</div>
+            <div className="mt-1 text-xs text-[#8F98A8]">Pulled from your Scheme of Work (term/year/subject/level scoped).</div>
           </div>
 
           <button
-            className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-60"
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
             disabled={locked}
             onClick={() => setUnitOpen(true)}
           >
@@ -860,7 +838,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
           </button>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
           <InfoBox label="Strand" value={note.strand || "—"} />
           <InfoBox label="Sub-strand" value={note.substrand || "—"} />
           <InfoBox label="Content standard" value={note.contentStandard || "—"} />
@@ -868,27 +846,26 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
         </div>
 
         {unitOpen ? (
-          <div className="mt-4 rounded-2xl border bg-zinc-50 p-3">
-            {/* ...unchanged unit picker UI... */}
+          <div className="mt-4 rounded-[24px] border border-white/10 bg-[#07111F]/80 p-3">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold text-zinc-900">Pick unit from scheme</div>
+              <div className="text-sm font-semibold text-[#F7F4ED]">Pick unit from scheme</div>
               <button
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-1.5 text-xs hover:bg-zinc-50"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-[#F7F4ED] hover:bg-white/10"
                 onClick={() => setUnitOpen(false)}
               >
                 Close
               </button>
             </div>
 
-            <div className="mt-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
+            <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
               <input
-                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                className="w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:border-[#D4AF37]/30 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/15"
                 placeholder="Search indicator code / text..."
                 value={unitQ}
                 onChange={(e) => setUnitQ(e.target.value)}
               />
               <button
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-60"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                 disabled={unitsLoading}
                 onClick={() => void loadUnits()}
               >
@@ -896,14 +873,14 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               </button>
             </div>
 
-            <div className="mt-3 rounded-xl border bg-white p-3">
-              <div className="text-xs font-semibold text-zinc-800">Filters used</div>
-              <div className="mt-1 text-[11px] text-zinc-600 break-all">{unitQueryPreview || "—"}</div>
+            <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="text-xs font-semibold text-[#F7F4ED]">Filters used</div>
+              <div className="mt-1 break-all text-[11px] text-[#AEB6C4]">{unitQueryPreview || "—"}</div>
 
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="rounded-xl border border-zinc-300 bg-white px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:opacity-60"
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                   disabled={unitsLoading}
                   onClick={() => void loadUnits({ includeWeek: true })}
                   title="Strict: match note week first."
@@ -913,7 +890,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
                 <button
                   type="button"
-                  className="rounded-xl border border-zinc-300 bg-white px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:opacity-60"
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                   disabled={unitsLoading}
                   onClick={() => void loadUnits({ includeWeek: false })}
                   title="Widen: ignore week, return all scheme items."
@@ -922,7 +899,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
                 </button>
               </div>
 
-              <div className="mt-2 text-[11px] text-zinc-500">
+              <div className="mt-2 text-[11px] text-[#8F98A8]">
                 If strict finds nothing, widen. If widen finds nothing: your scheme scope doesn’t match the lesson note scope.
               </div>
 
@@ -934,20 +911,20 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
             </div>
 
             {unitErr ? (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">{unitErr}</div>
+              <div className="mt-3 rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-sm text-rose-100">{unitErr}</div>
             ) : null}
 
             {unitsLoading ? (
-              <div className="mt-3 text-sm text-zinc-700">Loading…</div>
+              <div className="mt-3 text-sm text-[#C9CDD6]">Loading…</div>
             ) : (
-              <div className="mt-3 max-h-[380px] overflow-auto rounded-2xl border bg-white">
+              <div className="mt-3 max-h-[380px] overflow-auto rounded-2xl border border-white/10 bg-[#05070B]/75">
                 {units.length === 0 ? (
-                  <div className="p-3 text-sm text-zinc-700">
-                    <div className="font-semibold">No units found.</div>
-                    <div className="mt-1 text-xs text-zinc-500">
-                      Try <span className="font-medium">Widen: ignore week</span>. If still none, your lesson note scope and scheme scope don’t match.
+                  <div className="p-3 text-sm text-[#C9CDD6]">
+                    <div className="font-semibold text-[#F7F4ED]">No units found.</div>
+                    <div className="mt-1 text-xs text-[#8F98A8]">
+                      Try <span className="font-medium text-[#F7F4ED]">Widen: ignore week</span>. If still none, your lesson note scope and scheme scope don’t match.
                       {unitsMeta?.reason || unitsMeta?.message ? (
-                        <div className="mt-2 text-[11px] text-zinc-600 whitespace-pre-wrap">
+                        <div className="mt-2 whitespace-pre-wrap text-[11px] text-[#AEB6C4]">
                           {unitsMeta.message ? unitsMeta.message : null}
                           {!unitsMeta.message && unitsMeta.reason ? `Reason: ${unitsMeta.reason}` : null}
                         </div>
@@ -955,7 +932,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
                     </div>
                   </div>
                 ) : (
-                  <ul className="divide-y">
+                  <ul className="divide-y divide-white/10">
                     {units.map((u, idx) => {
                       const cs = u.contentStandardCode
                         ? `${u.contentStandardCode}${u.contentStandardDescription ? ` — ${u.contentStandardDescription}` : ""}`
@@ -972,19 +949,19 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
                         `${u.weekNumber}-${trimOrEmpty(u.indicatorCode) || "na"}-${idx}`;
 
                       return (
-                        <li key={stableKey} className="p-3 flex items-start justify-between gap-3">
+                        <li key={stableKey} className="flex items-start justify-between gap-3 p-3">
                           <div className="min-w-0">
-                            <div className="text-sm font-semibold text-zinc-900">{ind}</div>
-                            <div className="mt-1 text-xs text-zinc-600">
+                            <div className="text-sm font-semibold text-[#F7F4ED]">{ind}</div>
+                            <div className="mt-1 text-xs text-[#C9CDD6]">
                               {u.strandTitle || "—"} • {u.subStrandTitle || "—"} • {cs}
                             </div>
-                            <div className="mt-1 text-[11px] text-zinc-500">
-                              Week: <span className="font-medium">{u.weekNumber}</span>
+                            <div className="mt-1 text-[11px] text-[#8F98A8]">
+                              Week: <span className="font-medium text-[#F7F4ED]">{u.weekNumber}</span>
                             </div>
                           </div>
 
                           <button
-                            className="shrink-0 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-60"
+                            className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                             disabled={locked}
                             onClick={() => void pickUnit(u)}
                           >
@@ -999,14 +976,12 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
             )}
           </div>
         ) : null}
-      </div>
+      </section>
 
-      {/* Main grid */}
-      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Fields */}
-        <div className="rounded-2xl border bg-white p-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="text-sm font-semibold text-zinc-900">Lesson fields</div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">Lesson fields</div>
             {locked ? <Badge tone="warn">Locked</Badge> : <Badge tone="info">Editable</Badge>}
           </div>
 
@@ -1032,38 +1007,36 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
           </div>
 
           <div className="mt-4 flex items-center justify-between flex-wrap gap-2">
-            <div className="text-[11px] text-zinc-500">
-              Tip: Use <span className="font-medium">Ctrl+S</span> to save.
+            <div className="text-[11px] text-[#8F98A8]">
+              Tip: Use <span className="font-medium text-[#F7F4ED]">Ctrl+S</span> to save.
             </div>
             <button
-              className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-60"
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
               disabled={locked || saving}
               onClick={() => void saveDraft()}
             >
               {saving ? "Saving…" : "Save draft"}
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* AI */}
-        <div className="rounded-2xl border bg-white p-4">
-          {/* ...unchanged AI panel... */}
+        <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div>
-              <div className="text-sm font-semibold text-zinc-900">AI Co-Tutor</div>
-              <div className="mt-1 text-xs text-zinc-500">Draft fast, then refine. It will not bypass submission rules.</div>
+              <div className="text-sm font-semibold text-[#F7F4ED]">AI Co-Tutor</div>
+              <div className="mt-1 text-xs text-[#8F98A8]">Draft fast, then refine. It will not bypass submission rules.</div>
             </div>
 
             <div className="flex gap-2">
               <button
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-60"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                 disabled={aiLoading}
                 onClick={() => void runAi("QUICK")}
               >
                 Quick
               </button>
               <button
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50 disabled:opacity-60"
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                 disabled={aiLoading}
                 onClick={() => void runAi("FULL")}
               >
@@ -1073,23 +1046,23 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
           </div>
 
           {!note.curriculumUnitId ? (
-            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-sm text-amber-100">
               Link a unit first. AI becomes far more grounded when indicator is present.
             </div>
           ) : null}
 
           {aiErr ? (
-            <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{aiErr}</div>
+            <div className="mt-3 rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">{aiErr}</div>
           ) : null}
 
           {aiLoading ? (
-            <div className="mt-3 text-sm text-zinc-700">Generating…</div>
+            <div className="mt-3 text-sm text-[#C9CDD6]">Generating…</div>
           ) : aiSuggestion ? (
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="text-sm font-semibold text-zinc-900">Suggestion</div>
+                <div className="text-sm font-semibold text-[#F7F4ED]">Suggestion</div>
                 <button
-                  className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm hover:bg-zinc-50"
+                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
                   onClick={applyAiToEmptyOnly}
                 >
                   Apply to empty only
@@ -1097,15 +1070,15 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               </div>
 
               <textarea
-                className="w-full rounded-2xl border border-zinc-300 bg-white p-3 text-xs h-[420px] focus:outline-none"
+                className="h-[420px] w-full rounded-2xl border border-white/10 bg-[#07111F] p-3 text-xs text-[#E7EBF2] focus:outline-none"
                 readOnly
                 value={aiSuggestion}
               />
             </div>
           ) : (
-            <div className="mt-3 text-sm text-zinc-600">Run AI after linking a unit. Otherwise it’s forced to guess.</div>
+            <div className="mt-3 text-sm text-[#C9CDD6]">Run AI after linking a unit. Otherwise it’s forced to guess.</div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
@@ -1113,24 +1086,24 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
 function ChecklistItem({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border bg-zinc-50 px-3 py-2">
+    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#07111F]/80 px-3 py-2">
       <span
         className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold ${
-          ok ? "bg-emerald-600 text-white" : "bg-zinc-300 text-zinc-700"
+          ok ? "bg-emerald-500 text-white" : "bg-white/10 text-[#C9CDD6]"
         }`}
       >
         {ok ? "✓" : "•"}
       </span>
-      <span className="text-sm text-zinc-900">{label}</span>
+      <span className="text-sm text-[#F7F4ED]">{label}</span>
     </div>
   );
 }
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border bg-white p-3">
-      <div className="text-xs text-zinc-500">{label}</div>
-      <div className="mt-1 text-sm text-zinc-900 whitespace-pre-wrap">{value}</div>
+    <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-3">
+      <div className="text-xs text-[#8F98A8]">{label}</div>
+      <div className="mt-1 whitespace-pre-wrap text-sm text-[#F7F4ED]">{value}</div>
     </div>
   );
 }

@@ -52,14 +52,12 @@ function normalizeAcademicYear(raw: string): string {
   const v = String(raw ?? "").trim();
   if (!v) return "";
 
-  // Accept YYYY-YYYY and normalize to YYYY/YYYY
   const dash = v.match(/^(\d{4})-(\d{4})$/);
   if (dash) return `${dash[1]}/${dash[2]}`;
 
-  // Already correct: YYYY/YYYY
   if (/^\d{4}\/\d{4}$/.test(v)) return v;
 
-  return v; // keep what user typed; server will validate on scheme mode usage
+  return v;
 }
 
 function toIntOrEmpty(raw: string): string {
@@ -71,6 +69,34 @@ function toIntOrEmpty(raw: string): string {
 }
 
 type TenantTermYearResponse = { ok?: boolean; term?: string | null; academicYear?: string | null };
+
+function statusBadgeClass(status: LessonNoteStatus) {
+  switch (status) {
+    case "DRAFT":
+      return "border-white/10 bg-white/5 text-[#D7DCE5]";
+    case "SUBMITTED":
+      return "border-sky-300/25 bg-sky-400/12 text-sky-100";
+    case "APPROVED":
+      return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
+    case "REJECTED":
+      return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+    default:
+      return "border-white/10 bg-white/5 text-[#D7DCE5]";
+  }
+}
+
+const cardShell =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+const panel =
+  "rounded-2xl border border-white/10 bg-[#0C1730]/78";
+const inputClass =
+  "mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#7E8796] focus:border-[#D4AF37]/40 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20";
+const outlineBtn =
+  "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-60";
+const goldBtn =
+  "rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_16px_40px_rgba(212,175,55,0.22)] transition hover:brightness-105 disabled:opacity-60";
+const cyanBtn =
+  "rounded-xl border border-cyan-300/20 bg-cyan-400/12 px-3 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/18 disabled:opacity-60";
 
 export default function LessonNotesListClient() {
   const router = useRouter();
@@ -86,7 +112,6 @@ export default function LessonNotesListClient() {
 
   const [schemeNavLoading, setSchemeNavLoading] = useState(false);
 
-  // Protect against race conditions (rapid filter changes)
   const loadSeq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -108,7 +133,6 @@ export default function LessonNotesListClient() {
   }, [status, term, academicYear, weekNumber]);
 
   async function load() {
-    // cancel previous
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
@@ -131,7 +155,6 @@ export default function LessonNotesListClient() {
         throw new Error(msg);
       }
 
-      // stale response? ignore.
       if (seq !== loadSeq.current) return;
 
       setItems((data?.items as ListItem[]) || []);
@@ -168,12 +191,6 @@ export default function LessonNotesListClient() {
     }
   }
 
-  /**
-   * Upgrade #1: Entry point to scheme-mode from Lesson Notes.
-   * - Uses teacher-entered term/year if present (normalized).
-   * - Otherwise fetches tenant defaults from /api/settings/current-term-year.
-   * - Routes to /teacher/curriculum?mode=scheme&term=...&academicYear=...&return=...
-   */
   async function openSchemeBuilder() {
     if (schemeNavLoading) return;
     setSchemeNavLoading(true);
@@ -182,7 +199,6 @@ export default function LessonNotesListClient() {
       let t = normalizeTerm(term);
       let y = normalizeAcademicYear(academicYear).trim();
 
-      // Only fetch tenant defaults if missing anything
       if (!t || !y) {
         try {
           const res = await fetch("/api/settings/current-term-year", {
@@ -196,7 +212,7 @@ export default function LessonNotesListClient() {
             if (!y && data.academicYear) y = normalizeAcademicYear(String(data.academicYear)).trim();
           }
         } catch {
-          // ignore; user can set inside scheme builder page
+          // ignore
         }
       }
 
@@ -205,7 +221,6 @@ export default function LessonNotesListClient() {
       if (t) p.set("term", t);
       if (y) p.set("academicYear", y);
 
-      // Return path back to lesson notes; preserve filters where possible
       const ret = new URLSearchParams();
       if (status) ret.set("status", status);
       if (t) ret.set("term", t);
@@ -226,177 +241,212 @@ export default function LessonNotesListClient() {
   const normalizedYear = normalizeAcademicYear(academicYear);
 
   return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold">Lesson Notes</h1>
-          <p className="text-sm opacity-80">Draft → link NaCCA unit → fill → submit. Server-enforced, multi-tenant safe.</p>
-        </div>
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
+        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+        <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+        <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl" />
 
-        <div className="flex gap-2 flex-wrap">
-          <button
-            className="px-3 py-2 rounded-md border text-sm disabled:opacity-60"
-            onClick={openSchemeBuilder}
-            disabled={schemeNavLoading}
-            title="Open Curriculum Explorer in Scheme Builder mode"
-          >
-            {schemeNavLoading ? "Opening…" : "Prepare scheme of work"}
-          </button>
-
-          <button
-            className="px-3 py-2 rounded-md bg-black text-white text-sm"
-            onClick={() => router.push("/teacher/lesson-notes/studio")}
-          >
-            New lesson note
-          </button>
-
-          <button className="px-3 py-2 rounded-md border text-sm" onClick={load}>
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div className="border rounded-md p-3">
-          <label className="text-xs opacity-70">Status</label>
-          <select
-            className="mt-1 w-full border rounded-md p-2 text-sm"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as any)}
-          >
-            <option value="">All</option>
-            <option value="DRAFT">DRAFT</option>
-            <option value="SUBMITTED">SUBMITTED</option>
-            <option value="APPROVED">APPROVED</option>
-            <option value="REJECTED">REJECTED</option>
-          </select>
-        </div>
-
-        <div className="border rounded-md p-3">
-          <label className="text-xs opacity-70">Term</label>
-          <select
-            className="mt-1 w-full border rounded-md p-2 text-sm"
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-          >
-            <option value="">All</option>
-            <option value="1st Term">1st Term</option>
-            <option value="2nd Term">2nd Term</option>
-            <option value="3rd Term">3rd Term</option>
-          </select>
-          {term && !normalizedTerm && (
-            <div className="mt-1 text-[11px] text-amber-700">Tip: Use “1st Term / 2nd Term / 3rd Term”.</div>
-          )}
-        </div>
-
-        <div className="border rounded-md p-3">
-          <label className="text-xs opacity-70">Academic year</label>
-          <input
-            className="mt-1 w-full border rounded-md p-2 text-sm"
-            placeholder="2025/2026"
-            value={academicYear}
-            onChange={(e) => setAcademicYear(e.target.value)}
-          />
-          <div className="mt-1 text-[11px] text-zinc-500">
-            Format: <span className="font-medium">YYYY/YYYY</span> (e.g. 2025/2026). “2025-2026” auto-normalizes.
+        <div className="relative flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">EduLife OS · Teacher</p>
+            <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#F7F4ED] md:text-3xl">
+              Lesson Notes
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-[#C9CDD6]">
+              Draft → link NaCCA unit → fill → submit. Server-enforced, multi-tenant safe.
+            </p>
           </div>
-          {academicYear.trim() && !/^\d{4}\/\d{4}$/.test(normalizedYear) && (
-            <div className="mt-1 text-[11px] text-amber-700">Heads-up: Scheme Builder requires YYYY/YYYY.</div>
-          )}
-        </div>
 
-        <div className="border rounded-md p-3">
-          <label className="text-xs opacity-70">Week number</label>
-          <input
-            className="mt-1 w-full border rounded-md p-2 text-sm"
-            placeholder="1"
-            inputMode="numeric"
-            value={weekNumber}
-            onChange={(e) => setWeekNumber(e.target.value)}
-          />
-          {weekNumber.trim() && !toIntOrEmpty(weekNumber) && (
-            <div className="mt-1 text-[11px] text-amber-700">Use a positive whole number.</div>
-          )}
-        </div>
-      </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={cyanBtn}
+              onClick={openSchemeBuilder}
+              disabled={schemeNavLoading}
+              title="Open Curriculum Explorer in Scheme Builder mode"
+            >
+              {schemeNavLoading ? "Opening…" : "Prepare scheme of work"}
+            </button>
 
-      {/* Data */}
-      <div className="mt-4">
-        {err && <div className="border border-red-300 bg-red-50 text-red-800 rounded-md p-3 text-sm">{err}</div>}
+            <button
+              className={goldBtn}
+              onClick={() => router.push("/teacher/lesson-notes/studio")}
+            >
+              New lesson note
+            </button>
 
-        {loading ? (
-          <div className="mt-4 text-sm opacity-80">Loading…</div>
-        ) : items.length === 0 ? (
-          <div className="mt-4 text-sm opacity-80">No lesson notes yet.</div>
-        ) : (
-          <div className="mt-4 overflow-x-auto border rounded-lg">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr className="text-left">
-                  <th className="p-3">Week</th>
-                  <th className="p-3">Subject</th>
-                  <th className="p-3">Title</th>
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Updated</th>
-                  <th className="p-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((n) => (
-                  <tr key={n.id} className="border-t">
-                    <td className="p-3">{n.weekNumber ?? "—"}</td>
-                    <td className="p-3">{n.subject ?? "—"}</td>
-                    <td className="p-3">
-                      <div className="font-medium">{n.lessonTitle ?? "—"}</div>
-                      <div className="text-xs opacity-70">
-                        {n.term ?? "—"} • {n.academicYear ?? "—"}
-                      </div>
-                      {n.headteacherComment ? (
-                        <div className="mt-1 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
-                          Headteacher: {n.headteacherComment}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={cx(
-                          "inline-flex px-2 py-1 rounded text-xs border",
-                          n.status === "DRAFT" && "bg-gray-50",
-                          n.status === "SUBMITTED" && "bg-blue-50 border-blue-200",
-                          n.status === "APPROVED" && "bg-green-50 border-green-200",
-                          n.status === "REJECTED" && "bg-red-50 border-red-200"
-                        )}
-                      >
-                        {n.status}
-                      </span>
-                    </td>
-                    <td className="p-3">{n.updatedAt ? new Date(n.updatedAt).toLocaleString() : "—"}</td>
-                    <td className="p-3">
-                      <div className="flex gap-2 flex-wrap">
-                        <button className="px-2 py-1 rounded border" onClick={() => router.push(`/teacher/lesson-notes/${n.id}`)}>
-                          Open
-                        </button>
-                        <button
-                          className="px-2 py-1 rounded border"
-                          onClick={() => router.push(`/teacher/lesson-notes/${n.id}/print`)}
-                        >
-                          Print
-                        </button>
-                        {n.status === "DRAFT" ? (
-                          <button className="px-2 py-1 rounded border" onClick={() => onDelete(n.id)}>
-                            Delete
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <button className={outlineBtn} onClick={load}>
+              Refresh
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      <section className={cardShell}>
+        <div className="p-4 md:p-6">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+              Filters
+            </h2>
+            <p className="mt-1 text-xs text-[#9AA4B2]">
+              Narrow the workspace by status, term, year, and week.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className={panel + " p-3"}>
+              <label className="text-xs text-[#9AA4B2]">Status</label>
+              <select
+                className={inputClass}
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+              >
+                <option value="">All</option>
+                <option value="DRAFT">DRAFT</option>
+                <option value="SUBMITTED">SUBMITTED</option>
+                <option value="APPROVED">APPROVED</option>
+                <option value="REJECTED">REJECTED</option>
+              </select>
+            </div>
+
+            <div className={panel + " p-3"}>
+              <label className="text-xs text-[#9AA4B2]">Term</label>
+              <select
+                className={inputClass}
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+              >
+                <option value="">All</option>
+                <option value="1st Term">1st Term</option>
+                <option value="2nd Term">2nd Term</option>
+                <option value="3rd Term">3rd Term</option>
+              </select>
+              {term && !normalizedTerm && (
+                <div className="mt-2 text-[11px] text-amber-200">Tip: Use “1st Term / 2nd Term / 3rd Term”.</div>
+              )}
+            </div>
+
+            <div className={panel + " p-3"}>
+              <label className="text-xs text-[#9AA4B2]">Academic year</label>
+              <input
+                className={inputClass}
+                placeholder="2025/2026"
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+              />
+              <div className="mt-2 text-[11px] text-[#8F98A8]">
+                Format: <span className="font-medium text-[#F7F4ED]">YYYY/YYYY</span>. “2025-2026” auto-normalizes.
+              </div>
+              {academicYear.trim() && !/^\d{4}\/\d{4}$/.test(normalizedYear) && (
+                <div className="mt-2 text-[11px] text-amber-200">Heads-up: Scheme Builder requires YYYY/YYYY.</div>
+              )}
+            </div>
+
+            <div className={panel + " p-3"}>
+              <label className="text-xs text-[#9AA4B2]">Week number</label>
+              <input
+                className={inputClass}
+                placeholder="1"
+                inputMode="numeric"
+                value={weekNumber}
+                onChange={(e) => setWeekNumber(e.target.value)}
+              />
+              {weekNumber.trim() && !toIntOrEmpty(weekNumber) && (
+                <div className="mt-2 text-[11px] text-amber-200">Use a positive whole number.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            {err && (
+              <div className="rounded-2xl border border-rose-300/20 bg-rose-500/12 p-3 text-sm text-rose-100">
+                {err}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-[#C9CDD6]">
+                Loading…
+              </div>
+            ) : items.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-white/12 bg-white/[0.04] p-4 text-sm text-[#C9CDD6]">
+                No lesson notes yet.
+              </div>
+            ) : (
+              <div className="mt-4 overflow-x-auto rounded-[24px] border border-white/10 bg-[#08111F]/90 shadow-[0_20px_70px_rgba(0,0,0,0.20)]">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-white/10 bg-white/[0.04]">
+                    <tr className="text-left text-[#E8C96A]">
+                      <th className="p-3 text-xs font-semibold uppercase tracking-[0.14em]">Week</th>
+                      <th className="p-3 text-xs font-semibold uppercase tracking-[0.14em]">Subject</th>
+                      <th className="p-3 text-xs font-semibold uppercase tracking-[0.14em]">Title</th>
+                      <th className="p-3 text-xs font-semibold uppercase tracking-[0.14em]">Status</th>
+                      <th className="p-3 text-xs font-semibold uppercase tracking-[0.14em]">Updated</th>
+                      <th className="p-3 text-xs font-semibold uppercase tracking-[0.14em]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((n) => (
+                      <tr key={n.id} className="border-t border-white/10 align-top">
+                        <td className="p-3 text-[#DDE3ED]">{n.weekNumber ?? "—"}</td>
+                        <td className="p-3 text-[#F7F4ED]">{n.subject ?? "—"}</td>
+                        <td className="p-3">
+                          <div className="font-medium text-[#F7F4ED]">{n.lessonTitle ?? "—"}</div>
+                          <div className="mt-1 text-xs text-[#8F98A8]">
+                            {n.term ?? "—"} • {n.academicYear ?? "—"}
+                          </div>
+                          {n.headteacherComment ? (
+                            <div className="mt-2 rounded-xl border border-amber-300/20 bg-amber-400/12 p-2 text-xs text-amber-100">
+                              Headteacher: {n.headteacherComment}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={cx(
+                              "inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold",
+                              statusBadgeClass(n.status)
+                            )}
+                          >
+                            {n.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-[#C9CDD6]">
+                          {n.updatedAt ? new Date(n.updatedAt).toLocaleString() : "—"}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              className={outlineBtn + " px-2.5 py-1.5 text-xs"}
+                              onClick={() => router.push(`/teacher/lesson-notes/${n.id}`)}
+                            >
+                              Open
+                            </button>
+                            <button
+                              className={outlineBtn + " px-2.5 py-1.5 text-xs"}
+                              onClick={() => router.push(`/teacher/lesson-notes/${n.id}/print`)}
+                            >
+                              Print
+                            </button>
+                            {n.status === "DRAFT" ? (
+                              <button
+                                className="rounded-xl border border-rose-300/20 bg-rose-500/12 px-2.5 py-1.5 text-xs font-medium text-rose-100 transition hover:bg-rose-500/18"
+                                onClick={() => onDelete(n.id)}
+                              >
+                                Delete
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

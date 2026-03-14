@@ -106,7 +106,6 @@ function levelLookupVariants(raw: unknown): string[] {
   const out = new Set<string>();
   out.add(s0);
 
-  // KG1 / KG 1
   let m = s0.match(/^KG\s*([12])$/i) || s0.match(/^KG([12])$/i);
   if (m) {
     const n = m[1];
@@ -114,7 +113,6 @@ function levelLookupVariants(raw: unknown): string[] {
     return Array.from(out.values());
   }
 
-  // Basic / B / P
   m =
     s0.match(/^Basic\s*([1-9])$/i) ||
     s0.match(/^Basic([1-9])$/i) ||
@@ -129,11 +127,10 @@ function levelLookupVariants(raw: unknown): string[] {
     return Array.from(out.values());
   }
 
-  // JHS (not used in this branch usually, but safe)
   m = s0.match(/^JHS\s*([1-3])$/i) || s0.match(/^JHS([1-3])$/i);
   if (m) {
     const j = Number(m[1]);
-    const basic = 6 + j; // JHS1=Basic7
+    const basic = 6 + j;
     [`JHS ${j}`, `JHS${j}`, `Basic ${basic}`, `Basic${basic}`, `B${basic}`, `B ${basic}`].forEach((x) => out.add(x));
     return Array.from(out.values());
   }
