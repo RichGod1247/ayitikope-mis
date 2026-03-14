@@ -49,6 +49,10 @@ function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 function normalizeStageBucket(raw: unknown): string | null {
   const compact = cleanStr(raw).toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!compact) return null;
@@ -205,6 +209,14 @@ function resolveInitialSingleStreamClassId(
   return pickSingleStreamRepresentative(group, requestedClassroomId).id;
 }
 
+const surfaceClass =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+
+const inputClass =
+  "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20";
+
+const labelClass = "block text-[11px] font-medium text-[#C9CDD6]";
+
 export function HeadteacherReportsClient({
   classrooms,
   defaultTerm,
@@ -334,17 +346,15 @@ export function HeadteacherReportsClient({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className={`${surfaceClass} px-4 py-4 md:px-5 md:py-5`}>
         <div className="grid gap-3 md:grid-cols-3 md:items-end">
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-slate-700">
-              Class
-            </label>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Class</label>
 
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className={inputClass}
             >
               {visibleClassrooms.length === 0 ? (
                 <option value="">No classes found</option>
@@ -360,34 +370,33 @@ export function HeadteacherReportsClient({
             </select>
 
             {canToggleMultiStream ? (
-              <label className="mt-1 inline-flex items-center gap-2 text-[11px] text-slate-600">
+              <label className="mt-1 inline-flex items-center gap-2 text-[11px] text-[#AEB6C4]">
                 <input
                   type="checkbox"
                   checked={streamMode === "multi"}
                   onChange={(e) =>
                     setStreamMode(e.target.checked ? "multi" : "single")
                   }
+                  className="h-4 w-4 rounded border-white/15 bg-[#07111F] accent-[#D4AF37]"
                 />
                 Show multistream classes
               </label>
             ) : null}
 
             {visibleClassrooms.length === 0 && (
-              <p className="mt-1 text-[10px] text-red-700">
+              <p className="mt-1 text-[10px] text-rose-200">
                 No classrooms found for this school. Please create classrooms and
                 assign learners first.
               </p>
             )}
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-slate-700">
-              Term
-            </label>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Term</label>
             <select
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className={inputClass}
             >
               <option value="1st Term">1st Term</option>
               <option value="2nd Term">2nd Term</option>
@@ -395,21 +404,19 @@ export function HeadteacherReportsClient({
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-slate-700">
-              Academic year
-            </label>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Academic year</label>
             <input
               type="text"
               value={academicYear}
               onChange={(e) => setAcademicYear(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className={inputClass}
               placeholder="e.g. 2025/2026"
             />
           </div>
         </div>
 
-        <p className="mt-2 text-[10px] text-slate-500">
+        <p className="mt-3 text-[10px] text-[#8F98A8]">
           Use this grid to study learner-by-learner term performance, then open
           the full learner report where needed.
         </p>
@@ -437,7 +444,7 @@ function ClassTermSummaryView({
 
   if (state.status === "loading") {
     return (
-      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-[11px] text-emerald-900 shadow-sm">
+      <div className="rounded-[24px] border border-sky-300/20 bg-sky-400/10 px-4 py-3 text-[11px] text-sky-100 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
         Loading class term report…
       </div>
     );
@@ -445,7 +452,7 @@ function ClassTermSummaryView({
 
   if (state.status === "error") {
     return (
-      <div className="rounded-2xl border border-red-100 bg-red-50/70 px-4 py-3 text-[11px] text-red-900 shadow-sm">
+      <div className="rounded-[24px] border border-rose-300/20 bg-rose-400/10 px-4 py-3 text-[11px] text-rose-100 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
         {state.message}
       </div>
     );
@@ -457,11 +464,11 @@ function ClassTermSummaryView({
 
   if (students.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <p className="text-[11px] font-semibold text-slate-900">
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-4 text-[#F7F4ED] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        <p className="text-[11px] font-semibold text-[#F7F4ED]">
           No learners or assessment data yet
         </p>
-        <p className="mt-1 text-[11px] text-slate-600 max-w-xl">
+        <p className="mt-1 max-w-xl text-[11px] text-[#C9CDD6]">
           {data.message ||
             "Either this class has no learners assigned yet, or no assessment items/scores have been recorded for the selected term and year."}
         </p>
@@ -470,36 +477,36 @@ function ClassTermSummaryView({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm overflow-x-auto">
-      <p className="mb-2 text-[11px] font-semibold text-slate-900">
+    <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl overflow-x-auto">
+      <p className="mb-2 text-[11px] font-semibold text-[#F7F4ED]">
         Class term report grid
       </p>
-      <p className="mb-3 max-w-xl text-[10px] text-slate-600">
+      <p className="mb-3 max-w-xl text-[10px] text-[#C9CDD6]">
         Each row is a learner. Each subject shows the total score across all
         recorded assessments for that subject in this term.
       </p>
 
-      <table className="min-w-full text-[11px] border-collapse">
+      <table className="min-w-full border-collapse text-[11px]">
         <thead>
-          <tr className="bg-slate-50 border-b border-slate-200">
-            <th className="px-2 py-1 text-left font-semibold text-slate-600">
+          <tr className="border-b border-white/10 bg-white/5">
+            <th className="px-2 py-2 text-left font-semibold text-[#E8C96A]">
               Learner
             </th>
             {subjects.map((subj) => (
               <th
                 key={subj}
-                className="px-2 py-1 text-left font-semibold text-slate-600"
+                className="px-2 py-2 text-left font-semibold text-[#E8C96A]"
               >
                 {subj}
               </th>
             ))}
-            <th className="px-2 py-1 text-left font-semibold text-slate-600">
+            <th className="px-2 py-2 text-left font-semibold text-[#E8C96A]">
               Total
             </th>
-            <th className="px-2 py-1 text-left font-semibold text-slate-600">
+            <th className="px-2 py-2 text-left font-semibold text-[#E8C96A]">
               Max
             </th>
-            <th className="px-2 py-1 text-left font-semibold text-slate-600">
+            <th className="px-2 py-2 text-left font-semibold text-[#E8C96A]">
               Report
             </th>
           </tr>
@@ -507,7 +514,7 @@ function ClassTermSummaryView({
 
         <tbody>
           {students.map((s, idx) => {
-            const zebra = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
+            const zebra = idx % 2 === 1 ? "bg-white/[0.03]" : "bg-transparent";
 
             const href = `/headteacher/reports/student-report?studentId=${encodeURIComponent(
               s.id
@@ -517,7 +524,7 @@ function ClassTermSummaryView({
 
             return (
               <tr key={s.id} className={zebra}>
-                <td className="px-2 py-1 text-slate-900">
+                <td className="px-2 py-2 text-[#F7F4ED]">
                   <span className="font-semibold">
                     {s.firstName} {s.lastName}
                   </span>
@@ -525,21 +532,21 @@ function ClassTermSummaryView({
                 {subjects.map((subj) => {
                   const val = s.scoresBySubject[subj] ?? 0;
                   return (
-                    <td key={subj} className="px-2 py-1 text-slate-800">
+                    <td key={subj} className="px-2 py-2 text-[#D7DCE5]">
                       {val}
                     </td>
                   );
                 })}
-                <td className="px-2 py-1 font-semibold text-slate-900">
+                <td className="px-2 py-2 font-semibold text-[#F7F4ED]">
                   {s.totalScore}
                 </td>
-                <td className="px-2 py-1 text-slate-600">
+                <td className="px-2 py-2 text-[#AEB6C4]">
                   {s.maxTotalScore}
                 </td>
-                <td className="px-2 py-1 text-slate-600">
+                <td className="px-2 py-2">
                   <Link
                     href={href}
-                    className="inline-flex items-center rounded-lg border border-emerald-600 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-50"
+                    className="inline-flex items-center rounded-lg border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-2.5 py-1 text-[10px] font-semibold text-[#071A3D] shadow-[0_14px_40px_rgba(212,175,55,0.18)] hover:brightness-105"
                   >
                     View report
                   </Link>

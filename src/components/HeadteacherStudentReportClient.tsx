@@ -1,3 +1,4 @@
+//src/components/HeadteacherStudentReportClient.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -76,12 +77,10 @@ function looksLikeOpaqueId(value: string) {
   const s = cleanStr(value);
   if (!s) return false;
 
-  // UUID
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s)) {
     return true;
   }
 
-  // Long generated IDs like cuid-ish / opaque DB ids
   if (/^[a-z0-9_-]{20,}$/i.test(s)) {
     return true;
   }
@@ -218,33 +217,33 @@ export function HeadteacherStudentReportClient({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm print:hidden">
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl print:hidden">
         <div className="grid gap-3 md:grid-cols-3 md:items-end">
           <div className="space-y-1 md:col-span-2">
-            <label className="block text-[11px] font-medium text-slate-700">
+            <label className="block text-[11px] font-medium text-[#C9CDD6]">
               Learner ID
             </label>
             <input
               type="text"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20"
               placeholder="Paste learner ID (e.g. from attendance/fees views)"
             />
-            <p className="text-[10px] text-slate-500">
+            <p className="text-[10px] text-[#8F98A8]">
               Coming from the class grid pre-fills ID, term and year.
             </p>
           </div>
 
           <div className="space-y-2">
             <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-slate-700">
+              <label className="block text-[11px] font-medium text-[#C9CDD6]">
                 Term
               </label>
               <select
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20"
               >
                 <option value="1st Term">1st Term</option>
                 <option value="2nd Term">2nd Term</option>
@@ -253,14 +252,14 @@ export function HeadteacherStudentReportClient({
             </div>
 
             <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-slate-700">
+              <label className="block text-[11px] font-medium text-[#C9CDD6]">
                 Academic year
               </label>
               <input
                 type="text"
                 value={academicYear}
                 onChange={(e) => setAcademicYear(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20"
                 placeholder="e.g. 2025/2026"
               />
             </div>
@@ -271,7 +270,7 @@ export function HeadteacherStudentReportClient({
           <button
             type="button"
             onClick={() => void handleLoad()}
-            className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-emerald-700"
+            className="inline-flex items-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-[11px] font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)]"
           >
             Load term report
           </button>
@@ -280,16 +279,16 @@ export function HeadteacherStudentReportClient({
             type="button"
             onClick={handlePrint}
             disabled={!canPrint}
-            className="inline-flex items-center rounded-xl border border-emerald-600 px-4 py-2 text-[11px] font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 disabled:opacity-60"
+            className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
           >
             Print / Save as PDF
           </button>
 
           {state.status === "error" ? (
-            <p className="text-[11px] text-red-700">{state.message}</p>
+            <p className="text-[11px] text-rose-200">{state.message}</p>
           ) : null}
           {state.status === "loading" ? (
-            <p className="text-[11px] text-emerald-800">Loading…</p>
+            <p className="text-[11px] text-emerald-100">Loading…</p>
           ) : null}
         </div>
       </div>
@@ -317,11 +316,11 @@ function LearnerReportView({
 
   if (!student) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <p className="text-[11px] font-semibold text-slate-900">
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        <p className="text-[11px] font-semibold text-[#F7F4ED]">
           No learner data
         </p>
-        <p className="mt-1 text-[11px] text-slate-600">
+        <p className="mt-1 text-[11px] text-[#C9CDD6]">
           The server did not return learner details. Please check the learner ID
           and try again.
         </p>
@@ -334,46 +333,46 @@ function LearnerReportView({
   const classLabel = classLabelFrom(c);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm print:shadow-none print:border print:border-slate-300 print:rounded-none">
-      <div className="border-b border-slate-200 pb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] px-4 py-4 shadow-[0_26px_90px_rgba(0,0,0,0.28)] print:rounded-none print:border print:border-slate-300 print:bg-white print:px-4 print:py-4 print:text-black print:shadow-none">
+      <div className="flex flex-col gap-3 border-b border-white/10 pb-3 print:border-slate-200 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[#E8C96A] print:text-slate-600">
             {tenantName}
           </p>
-          <p className="mt-1 text-[11px] text-slate-600">
-            Term report · <span className="font-semibold">{data.term}</span> ·{" "}
-            <span className="font-semibold">{data.academicYear}</span>
+          <p className="mt-1 text-[11px] text-[#C9CDD6] print:text-slate-600">
+            Term report · <span className="font-semibold text-[#F7F4ED] print:text-slate-900">{data.term}</span> ·{" "}
+            <span className="font-semibold text-[#F7F4ED] print:text-slate-900">{data.academicYear}</span>
           </p>
 
-          <p className="mt-2 text-lg font-semibold text-slate-900">
+          <p className="mt-2 text-lg font-semibold text-[#F7F4ED] print:text-slate-900">
             {student.firstName} {student.lastName}
           </p>
 
-          <div className="mt-0.5 text-[11px] text-slate-600 flex flex-wrap gap-3">
+          <div className="mt-0.5 flex flex-wrap gap-3 text-[11px] text-[#C9CDD6] print:text-slate-600">
             {student.sex ? (
               <span>
-                Sex: <span className="font-semibold">{student.sex}</span>
+                Sex: <span className="font-semibold text-[#F7F4ED] print:text-slate-900">{student.sex}</span>
               </span>
             ) : null}
 
             {classLabel ? (
               <span>
                 Classroom:{" "}
-                <span className="font-semibold">{classLabel}</span>
+                <span className="font-semibold text-[#F7F4ED] print:text-slate-900">{classLabel}</span>
               </span>
             ) : null}
           </div>
         </div>
 
-        <div className="text-right space-y-1">
-          <p className="text-[11px] text-slate-600">Overall percentage</p>
-          <p className="text-xl font-semibold text-emerald-700">
+        <div className="space-y-1 text-right">
+          <p className="text-[11px] text-[#C9CDD6] print:text-slate-600">Overall percentage</p>
+          <p className="text-xl font-semibold text-emerald-200 print:text-emerald-700">
             {overallPercentStr}
           </p>
           {overall && overall.maxTotalScore > 0 ? (
-            <p className="text-[10px] text-slate-500">
+            <p className="text-[10px] text-[#8F98A8] print:text-slate-500">
               Total:{" "}
-              <span className="font-semibold">{overall.totalScore}</span> /{" "}
+              <span className="font-semibold text-[#F7F4ED] print:text-slate-900">{overall.totalScore}</span> /{" "}
               {overall.maxTotalScore}
             </p>
           ) : null}
@@ -381,19 +380,19 @@ function LearnerReportView({
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="min-w-full text-[11px] border-collapse">
+        <table className="min-w-full border-collapse text-[11px]">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-2 py-1 text-left font-semibold text-slate-600">
+            <tr className="border-b border-white/10 bg-white/5 print:border-slate-200 print:bg-slate-50">
+              <th className="px-2 py-1 text-left font-semibold text-[#E8C96A] print:text-slate-600">
                 Subject
               </th>
-              <th className="px-2 py-1 text-left font-semibold text-slate-600">
+              <th className="px-2 py-1 text-left font-semibold text-[#E8C96A] print:text-slate-600">
                 Total score
               </th>
-              <th className="px-2 py-1 text-left font-semibold text-slate-600">
+              <th className="px-2 py-1 text-left font-semibold text-[#E8C96A] print:text-slate-600">
                 Max score
               </th>
-              <th className="px-2 py-1 text-left font-semibold text-slate-600">
+              <th className="px-2 py-1 text-left font-semibold text-[#E8C96A] print:text-slate-600">
                 Percentage
               </th>
             </tr>
@@ -401,21 +400,21 @@ function LearnerReportView({
           <tbody>
             {subjects.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-2 py-2 text-[11px] text-slate-600">
+                <td colSpan={4} className="px-2 py-2 text-[11px] text-[#C9CDD6] print:text-slate-600">
                   No assessment records yet for this term/year.
                 </td>
               </tr>
             ) : (
               subjects.map((subj, idx) => {
-                const zebra = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
+                const zebra = idx % 2 === 1 ? "bg-white/[0.03] print:bg-slate-50/60" : "bg-transparent print:bg-white";
                 return (
                   <tr key={subj.subject} className={zebra}>
-                    <td className="px-2 py-1 text-slate-900 font-semibold">
+                    <td className="px-2 py-1 font-semibold text-[#F7F4ED] print:text-slate-900">
                       {subj.subject}
                     </td>
-                    <td className="px-2 py-1 text-slate-900">{subj.totalScore}</td>
-                    <td className="px-2 py-1 text-slate-700">{subj.maxTotalScore}</td>
-                    <td className="px-2 py-1 text-slate-900">
+                    <td className="px-2 py-1 text-[#F7F4ED] print:text-slate-900">{subj.totalScore}</td>
+                    <td className="px-2 py-1 text-[#C9CDD6] print:text-slate-700">{subj.maxTotalScore}</td>
+                    <td className="px-2 py-1 text-[#F7F4ED] print:text-slate-900">
                       {pctStr(subj.percentage)}
                     </td>
                   </tr>
@@ -431,36 +430,36 @@ function LearnerReportView({
           {subjects.map((subj) => (
             <div
               key={subj.subject}
-              className="rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 print:border-slate-100 print:bg-slate-50/70"
             >
-              <p className="text-[11px] font-semibold text-slate-800">
+              <p className="text-[11px] font-semibold text-[#F7F4ED] print:text-slate-800">
                 {subj.subject} ·{" "}
-                <span className="font-normal text-slate-600">
+                <span className="font-normal text-[#C9CDD6] print:text-slate-600">
                   total {subj.totalScore} / {subj.maxTotalScore}
                 </span>
               </p>
 
               <div className="mt-1 grid gap-1 text-[10px]">
                 {subj.items.length === 0 ? (
-                  <p className="text-slate-600">
+                  <p className="text-[#C9CDD6] print:text-slate-600">
                     No individual assessments recorded yet.
                   </p>
                 ) : (
                   subj.items.map((it) => (
                     <div
                       key={it.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-white px-2 py-1"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-[#07111F]/80 px-2 py-1 print:border-slate-100 print:bg-white"
                     >
-                      <div className="flex-1 min-w-[10rem]">
-                        <p className="font-semibold text-slate-800">
+                      <div className="min-w-[10rem] flex-1">
+                        <p className="font-semibold text-[#F7F4ED] print:text-slate-800">
                           {it.title || "Assessment"}
                         </p>
                         {it.comment ? (
-                          <p className="text-slate-600">Comment: {it.comment}</p>
+                          <p className="text-[#C9CDD6] print:text-slate-600">Comment: {it.comment}</p>
                         ) : null}
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-slate-900">
+                        <p className="font-semibold text-[#F7F4ED] print:text-slate-900">
                           {it.score} / {it.maxScore}
                         </p>
                       </div>

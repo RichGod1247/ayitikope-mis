@@ -294,10 +294,10 @@ function pctLabel(v: number | null | undefined) {
 function priorityChip(priority: "HIGH" | "MEDIUM" | "LOW") {
   const cls =
     priority === "HIGH"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
+      ? "border-rose-300/25 bg-rose-400/12 text-rose-100"
       : priority === "MEDIUM"
-      ? "border-amber-200 bg-amber-50 text-amber-700"
-      : "border-slate-200 bg-slate-50 text-slate-700";
+      ? "border-amber-300/25 bg-amber-400/12 text-amber-100"
+      : "border-white/10 bg-white/5 text-[#DDE3ED]";
 
   return (
     <span
@@ -311,10 +311,10 @@ function priorityChip(priority: "HIGH" | "MEDIUM" | "LOW") {
 function pill(text: string, tone: "rose" | "amber" | "slate") {
   const cls =
     tone === "rose"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
+      ? "border-rose-300/25 bg-rose-400/12 text-rose-100"
       : tone === "amber"
-      ? "border-amber-200 bg-amber-50 text-amber-800"
-      : "border-slate-200 bg-slate-50 text-slate-700";
+      ? "border-amber-300/25 bg-amber-400/12 text-amber-100"
+      : "border-white/10 bg-white/5 text-[#DDE3ED]";
 
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold ${cls}`}>
@@ -373,7 +373,6 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
     return visibleClasses[0] ?? classes[0] ?? null;
   }, [visibleClasses, classes, selectedClassroomId]);
 
-  // Keep URL in sync
   useEffect(() => {
     const params = new URLSearchParams();
     if (term) params.set("term", term);
@@ -381,7 +380,6 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
     router.replace(`/headteacher/assessment/overview?${params.toString()}`);
   }, [term, academicYear, router]);
 
-  // Ensure selected class is valid when visible list changes
   useEffect(() => {
     if (!visibleClasses.length) {
       if (selectedClassroomId) setSelectedClassroomId(null);
@@ -537,7 +535,6 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
     ? `/headteacher/reports?classroomId=${encodeURIComponent(selectedClass.classroomId)}&term=${encodeURIComponent(term)}&academicYear=${encodeURIComponent(academicYear)}`
     : "/headteacher/reports";
 
-  // ---- Derive per-class anomaly counts from governance (schema-aligned) ----
   const perClassGov = useMemo(() => {
     const map: Record<
       string,
@@ -595,469 +592,469 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   }, [governanceOk, governance, selectedClass?.classroomId]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto space-y-5 px-4 py-6">
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] px-5 py-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:px-6 md:py-6">
+        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+        <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+        <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl" />
+
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-1">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">
+              Headteacher • Assessment Insights
+            </div>
+            <div className="text-lg font-semibold text-[#F7F4ED] md:text-2xl">
+              Class performance health for support, diagnosis, and improvement
+            </div>
+            <div className="max-w-3xl text-[12px] leading-6 text-[#C9CDD6]">
+              Teachers record real assessment scores from lessons delivered. This view helps you spot weak classes, weak learners,
+              and weak learning areas that need support or verification against exercise books and marked scripts.
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Headteacher • Assessment Insights
-              </div>
-              <div className="text-lg font-semibold text-slate-900">
-                Class performance health for support, diagnosis, and improvement
-              </div>
-              <div className="max-w-3xl text-[12px] text-slate-600">
-                Teachers record real assessment scores from lessons delivered. This view helps you spot weak classes, weak learners,
-                and weak learning areas that need support or verification against exercise books and marked scripts.
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-medium text-slate-500">Term</label>
-                <select
-                  className="rounded-md border border-slate-300 px-3 py-2 text-[11px]"
-                  value={term}
-                  onChange={(e) => setTerm(e.target.value)}
-                >
-                  <option value="1st Term">1st Term</option>
-                  <option value="2nd Term">2nd Term</option>
-                  <option value="3rd Term">3rd Term</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="block text-[10px] font-medium text-slate-500">Academic Year</label>
-                <input
-                  className="w-32 rounded-md border border-slate-300 px-3 py-2 text-[11px]"
-                  value={academicYear}
-                  onChange={(e) => setAcademicYear(e.target.value)}
-                  placeholder="2025/2026"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void loadOverviewAndGovernance(term, academicYear)}
-                disabled={loading}
-                className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-2 text-[11px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              <label className="block text-[10px] font-medium text-[#9AA4B2]">Term</label>
+              <select
+                className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[11px] text-[#F7F4ED] focus:border-[#D4AF37]/40 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20"
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
               >
-                {loading ? "Refreshing…" : "Refresh"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-3 text-[11px] text-emerald-900">
-          Assessment data here is for <span className="font-semibold">improvement</span>, not for humiliating teachers or learners.
-          Parent-facing release stays separate and should be used only for end-of-term exam results for now.
-        </div>
-
-        {loadError && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
-            {loadError}
-          </div>
-        )}
-
-        {govError && !loadError ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Governance: {govError}
-          </div>
-        ) : null}
-
-        {/* Governance Copilot summary (schema-aligned to your endpoint) */}
-        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Governance copilot
-              </div>
-              <div className="mt-1 text-sm font-semibold text-slate-900">
-                Chain discipline: approved note → delivered lesson → linked assessment → scored assessment
-              </div>
-              <div className="mt-1 text-[11px] text-slate-600">
-                {governanceOk
-                  ? `${(governance as GovernanceOk).scope.start} to ${(governance as GovernanceOk).scope.end}`
-                  : "Loading governance…"}
-              </div>
+                <option value="1st Term">1st Term</option>
+                <option value="2nd Term">2nd Term</option>
+                <option value="3rd Term">3rd Term</option>
+              </select>
             </div>
 
-            {governanceOk ? (
-              <div className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
-                Headteacher score: {pctLabel((governance as GovernanceOk).metrics.headteacherScore)}
-              </div>
-            ) : (
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
-                Score: —
-              </div>
-            )}
+            <div className="space-y-1">
+              <label className="block text-[10px] font-medium text-[#9AA4B2]">Academic Year</label>
+              <input
+                className="w-32 rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[11px] text-[#F7F4ED] placeholder:text-[#7E8796] focus:border-[#D4AF37]/40 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20"
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+                placeholder="2025/2026"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void loadOverviewAndGovernance(term, academicYear)}
+              disabled={loading}
+              className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-60"
+            >
+              {loading ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-[11px] text-emerald-100">
+        Assessment data here is for <span className="font-semibold">improvement</span>, not for humiliating teachers or learners.
+        Parent-facing release stays separate and should be used only for end-of-term exam results for now.
+      </div>
+
+      {loadError && (
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-xs text-rose-100">
+          {loadError}
+        </div>
+      )}
+
+      {govError && !loadError ? (
+        <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-xs text-amber-100">
+          Governance: {govError}
+        </div>
+      ) : null}
+
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">
+              Governance copilot
+            </div>
+            <div className="mt-1 text-sm font-semibold text-[#F7F4ED]">
+              Chain discipline: approved note → delivered lesson → linked assessment → scored assessment
+            </div>
+            <div className="mt-1 text-[11px] text-[#C9CDD6]">
+              {governanceOk
+                ? `${(governance as GovernanceOk).scope.start} to ${(governance as GovernanceOk).scope.end}`
+                : "Loading governance…"}
+            </div>
           </div>
 
           {governanceOk ? (
-            <>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <MiniStat
-                  title="Attendance certify"
-                  value={pctLabel((governance as GovernanceOk).metrics.attendance.attendanceCertificationRate)}
-                  sub={`${(governance as GovernanceOk).metrics.attendance.pendingCertification} pending`}
-                />
-                <MiniStat
-                  title="Notify rate"
-                  value={pctLabel((governance as GovernanceOk).metrics.attendance.notifyRate)}
-                  sub={`Avg notify delay ${(governance as GovernanceOk).metrics.attendance.avgNotifyDelayHrs ?? "—"}h`}
-                />
-                <MiniStat
-                  title="Delivery coverage"
-                  value={pctLabel((governance as GovernanceOk).metrics.pipeline.deliveryCoveragePercent)}
-                  sub={`${(governance as GovernanceOk).metrics.pipeline.deliveredLessonsCount} delivered`}
-                />
-                <MiniStat
-                  title="Assessment linking"
-                  value={pctLabel((governance as GovernanceOk).metrics.pipeline.assessmentLinkCoveragePercent)}
-                  sub={`${(governance as GovernanceOk).metrics.pipeline.linkedAssessmentsCount} linked`}
-                />
-                <MiniStat
-                  title="Scoring coverage"
-                  value={pctLabel((governance as GovernanceOk).metrics.pipeline.scoringCoveragePercent)}
-                  sub={`${(governance as GovernanceOk).metrics.pipeline.scoredAssessmentsCount} scored`}
-                />
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <div className="text-[11px] font-semibold text-slate-800">Priority actions</div>
-                {(governance as GovernanceOk).actions.length ? (
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {(governance as GovernanceOk).actions.slice(0, 6).map((a) => (
-                      <div key={a.code} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-[11px] font-semibold text-slate-900">{a.code}</div>
-                          {priorityChip(a.priority)}
-                        </div>
-                        <div className="mt-1 text-[11px] text-slate-700">{a.message}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-[11px] text-emerald-900">
-                    Governance is stable in this window. Keep discipline consistent.
-                  </div>
-                )}
-              </div>
-            </>
+            <div className="rounded-full border border-cyan-300/20 bg-cyan-400/12 px-3 py-1 text-[11px] font-semibold text-cyan-100">
+              Headteacher score: {pctLabel((governance as GovernanceOk).metrics.headteacherScore)}
+            </div>
           ) : (
-            <div className="mt-3 text-[11px] text-slate-600">
-              {!governance ? "Loading…" : (governance as any).ok === false ? (governance as any).error : "Loading…"}
+            <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-[#DDE3ED]">
+              Score: —
             </div>
           )}
         </div>
 
-        {!loading && !loadError && !classes.length && (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-xs text-slate-600">
-            No assessment overview data yet for this term.
-          </div>
-        )}
-
-        {classes.length > 0 && (
+        {governanceOk ? (
           <>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricCard label="Classes reporting" value={formatNumber(totalClasses)} />
-              <MetricCard label="Learners covered" value={formatNumber(totalLearners)} />
-              <MetricCard label="Assessment items" value={formatNumber(totalItems)} />
-              <MetricCard label="Schoolwide average" value={formatPercent(averageAcrossSchool)} />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <MiniStat
+                title="Attendance certify"
+                value={pctLabel((governance as GovernanceOk).metrics.attendance.attendanceCertificationRate)}
+                sub={`${(governance as GovernanceOk).metrics.attendance.pendingCertification} pending`}
+              />
+              <MiniStat
+                title="Notify rate"
+                value={pctLabel((governance as GovernanceOk).metrics.attendance.notifyRate)}
+                sub={`Avg notify delay ${(governance as GovernanceOk).metrics.attendance.avgNotifyDelayHrs ?? "—"}h`}
+              />
+              <MiniStat
+                title="Delivery coverage"
+                value={pctLabel((governance as GovernanceOk).metrics.pipeline.deliveryCoveragePercent)}
+                sub={`${(governance as GovernanceOk).metrics.pipeline.deliveredLessonsCount} delivered`}
+              />
+              <MiniStat
+                title="Assessment linking"
+                value={pctLabel((governance as GovernanceOk).metrics.pipeline.assessmentLinkCoveragePercent)}
+                sub={`${(governance as GovernanceOk).metrics.pipeline.linkedAssessmentsCount} linked`}
+              />
+              <MiniStat
+                title="Scoring coverage"
+                value={pctLabel((governance as GovernanceOk).metrics.pipeline.scoringCoveragePercent)}
+                sub={`${(governance as GovernanceOk).metrics.pipeline.scoredAssessmentsCount} scored`}
+              />
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
-              <div className="space-y-3">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <h2 className="text-sm font-semibold text-slate-900">Classes</h2>
-                      <p className="text-[11px] text-slate-600">Default view is single-stream to reduce noise.</p>
+            <div className="mt-4 space-y-2">
+              <div className="text-[11px] font-semibold text-[#F7F4ED]">Priority actions</div>
+              {(governance as GovernanceOk).actions.length ? (
+                <div className="grid gap-2 md:grid-cols-2">
+                  {(governance as GovernanceOk).actions.slice(0, 6).map((a) => (
+                    <div key={a.code} className="rounded-2xl border border-white/10 bg-[#0C1730]/78 px-3 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[11px] font-semibold text-[#F7F4ED]">{a.code}</div>
+                        {priorityChip(a.priority)}
+                      </div>
+                      <div className="mt-1 text-[11px] text-[#C9CDD6]">{a.message}</div>
                     </div>
-
-                    {canToggleMultiStream ? (
-                      <label className="inline-flex items-center gap-2 text-[11px] text-slate-600">
-                        <input
-                          type="checkbox"
-                          checked={streamMode === "multi"}
-                          onChange={(e) => setStreamMode(e.target.checked ? "multi" : "single")}
-                        />
-                        Show multistream
-                      </label>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-3 max-h-[420px] overflow-auto">
-                    <ul className="space-y-2">
-                      {visibleClasses.map((cls) => {
-                        const isSelected = selectedClass?.classroomId === cls.classroomId;
-                        const g = perClassGov[cls.classroomId];
-                        const hasIssues = !!g && g.total > 0;
-
-                        return (
-                          <li key={cls.classroomId}>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedClassroomId(cls.classroomId)}
-                              className={[
-                                "w-full rounded-xl border px-3 py-3 text-left transition",
-                                isSelected
-                                  ? "border-blue-500 bg-blue-50/80"
-                                  : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40",
-                              ].join(" ")}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <div className="text-sm font-semibold text-slate-900">
-                                    {streamMode === "single" ? singleStreamLabel(cls) : fullClassLabel(cls)}
-                                  </div>
-
-                                  <div className="mt-1 text-[11px] text-slate-600">
-                                    Learners: {formatNumber(cls.learnersCount)} • Items: {formatNumber(cls.itemsCount)}
-                                  </div>
-
-                                  {hasIssues ? (
-                                    <div className="mt-2 flex flex-wrap gap-1.5">
-                                      {pill(`Approved→No delivery: ${g.approvedNotDelivered}`, g.approvedNotDelivered ? "amber" : "slate")}
-                                      {pill(`Delivered→No assessment: ${g.deliveredNotAssessed}`, g.deliveredNotAssessed ? "amber" : "slate")}
-                                      {pill(`Assessed→No link: ${g.assessedNotLinked}`, g.assessedNotLinked ? "amber" : "slate")}
-                                    </div>
-                                  ) : null}
-                                </div>
-
-                                <div className="text-right">
-                                  <div className="text-sm font-semibold text-slate-900">
-                                    {formatPercent(cls.averagePercent)}
-                                  </div>
-                                  <div className="text-[10px] text-slate-500">Avg</div>
-                                </div>
-                              </div>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
+                  ))}
                 </div>
-              </div>
-
-              <div className="space-y-3">
-                {!selectedClass ? (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
-                    Select a class to inspect its performance health.
-                  </div>
-                ) : (
-                  <>
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div>
-                          <div className="text-lg font-semibold text-slate-900">{fullClassLabel(selectedClass)}</div>
-                          <div className="mt-1 text-[12px] text-slate-600">
-                            Learners: <span className="font-semibold">{formatNumber(selectedClass.learnersCount)}</span> • Items:{" "}
-                            <span className="font-semibold">{formatNumber(selectedClass.itemsCount)}</span> • Average:{" "}
-                            <span className="font-semibold">{formatPercent(selectedClass.averagePercent)}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <Link
-                            href={classReportHref}
-                            className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50"
-                          >
-                            Open class term report
-                          </Link>
-
-                          <Link
-                            href="/headteacher/reports/student-report"
-                            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                          >
-                            Open learner report
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* NEW: Class governance anomalies panel (derived from your endpoint, no guessing) */}
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-sm font-semibold text-slate-900">Governance anomalies (this class)</div>
-                          <div className="mt-1 text-[11px] text-slate-600">
-                            These issues block accurate analytics and parent trust. Fix the chain, then performance numbers become meaningful.
-                          </div>
-                        </div>
-                        {selectedGovCounts ? (
-                          <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
-                            Total: {selectedGovCounts.total}
-                          </div>
-                        ) : null}
-                      </div>
-
-                      {!governanceOk ? (
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
-                          Governance data not available.
-                        </div>
-                      ) : (
-                        <>
-                          <div className="grid gap-2 sm:grid-cols-3">
-                            <MiniStat
-                              title="Approved → Not delivered"
-                              value={String(selectedGovCounts?.approvedNotDelivered ?? 0)}
-                              sub="Approved lesson notes missing delivery proof"
-                            />
-                            <MiniStat
-                              title="Delivered → Not assessed"
-                              value={String(selectedGovCounts?.deliveredNotAssessed ?? 0)}
-                              sub="Delivered lessons with no assessment items"
-                            />
-                            <MiniStat
-                              title="Assessed → Not linked"
-                              value={String(selectedGovCounts?.assessedNotLinked ?? 0)}
-                              sub="Assessment items missing lesson linkage"
-                            />
-                          </div>
-
-                          {(selectedGovCounts?.total ?? 0) > 0 ? (
-                            <div className="space-y-3">
-                              {selectedGovLists.approvedNotDelivered.length ? (
-                                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-                                  <div className="text-[11px] font-semibold text-amber-900">
-                                    Approved notes not delivered (sample)
-                                  </div>
-                                  <ul className="mt-2 space-y-1 text-[11px] text-amber-950">
-                                    {selectedGovLists.approvedNotDelivered.map((x) => (
-                                      <li key={x.id}>
-                                        • {x.subject} — {x.lessonTitle ?? "Lesson"}{" "}
-                                        <span className="text-amber-700">
-                                          ({x.approvedAt ? x.approvedAt.slice(0, 10) : "no date"})
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ) : null}
-
-                              {selectedGovLists.deliveredNotAssessed.length ? (
-                                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-                                  <div className="text-[11px] font-semibold text-amber-900">
-                                    Delivered lessons not assessed (sample)
-                                  </div>
-                                  <ul className="mt-2 space-y-1 text-[11px] text-amber-950">
-                                    {selectedGovLists.deliveredNotAssessed.map((x) => (
-                                      <li key={x.id}>
-                                        • {x.subject} — {x.indicatorCode ?? "No indicator"}{" "}
-                                        <span className="text-amber-700">
-                                          ({x.dateTaught ? x.dateTaught.slice(0, 10) : "no date"})
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ) : null}
-
-                              {selectedGovLists.assessedNotLinked.length ? (
-                                <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-                                  <div className="text-[11px] font-semibold text-amber-900">
-                                    Assessed items not linked (sample)
-                                  </div>
-                                  <ul className="mt-2 space-y-1 text-[11px] text-amber-950">
-                                    {selectedGovLists.assessedNotLinked.map((x) => (
-                                      <li key={x.id}>
-                                        • {x.subject} — {x.title}{" "}
-                                        <span className="text-amber-700">
-                                          ({x.date ? x.date.slice(0, 10) : "no date"})
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-[11px] text-emerald-900">
-                              No anomalies detected for this class in the current governance window.
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                      <h3 className="text-sm font-semibold text-slate-900">Learner distribution by remark band</h3>
-
-                      <div className="mt-3">
-                        {isRemarkLoading ? (
-                          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
-                            Loading remark summary for this class…
-                          </div>
-                        ) : selectedBands.length === 0 ? (
-                          <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
-                            No remark summary data yet for this class.
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {remarkError && (
-                              <div className="rounded-md bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
-                                {remarkError}
-                              </div>
-                            )}
-
-                            <div className="grid gap-2 md:grid-cols-2">
-                              {selectedBands
-                                .slice()
-                                .sort((a, b) => bandOrder(a) - bandOrder(b))
-                                .map((band) => (
-                                  <div
-                                    key={band.grade}
-                                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px]"
-                                  >
-                                    <div>
-                                      <div className="font-semibold text-slate-900">{band.label}</div>
-                                      <div className="text-[10px] text-slate-500">
-                                        {band.minPercent}–{band.maxPercent}%
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-sm font-semibold text-slate-900">
-                                        {formatNumber(band.learnersCount)}
-                                      </div>
-                                      <div className="text-[10px] text-slate-500">learners</div>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+              ) : (
+                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-3 py-3 text-[11px] text-emerald-100">
+                  Governance is stable in this window. Keep discipline consistent.
+                </div>
+              )}
             </div>
           </>
+        ) : (
+          <div className="mt-3 text-[11px] text-[#C9CDD6]">
+            {!governance ? "Loading…" : (governance as any).ok === false ? (governance as any).error : "Loading…"}
+          </div>
         )}
       </div>
+
+      {!loading && !loadError && !classes.length && (
+        <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.04] px-4 py-6 text-center text-xs text-[#C9CDD6]">
+          No assessment overview data yet for this term.
+        </div>
+      )}
+
+      {classes.length > 0 && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard label="Classes reporting" value={formatNumber(totalClasses)} />
+            <MetricCard label="Learners covered" value={formatNumber(totalLearners)} />
+            <MetricCard label="Assessment items" value={formatNumber(totalItems)} />
+            <MetricCard label="Schoolwide average" value={formatPercent(averageAcrossSchool)} />
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
+            <div className="space-y-3">
+              <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#F7F4ED]">Classes</h2>
+                    <p className="text-[11px] text-[#C9CDD6]">Default view is single-stream to reduce noise.</p>
+                  </div>
+
+                  {canToggleMultiStream ? (
+                    <label className="inline-flex items-center gap-2 text-[11px] text-[#C9CDD6]">
+                      <input
+                        type="checkbox"
+                        checked={streamMode === "multi"}
+                        onChange={(e) => setStreamMode(e.target.checked ? "multi" : "single")}
+                      />
+                      Show multistream
+                    </label>
+                  ) : null}
+                </div>
+
+                <div className="mt-3 max-h-[420px] overflow-auto">
+                  <ul className="space-y-2">
+                    {visibleClasses.map((cls) => {
+                      const isSelected = selectedClass?.classroomId === cls.classroomId;
+                      const g = perClassGov[cls.classroomId];
+                      const hasIssues = !!g && g.total > 0;
+
+                      return (
+                        <li key={cls.classroomId}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedClassroomId(cls.classroomId)}
+                            className={[
+                              "w-full rounded-2xl border px-3 py-3 text-left transition",
+                              isSelected
+                                ? "border-cyan-300/25 bg-cyan-400/12"
+                                : "border-white/10 bg-[#0C1730]/78 hover:border-cyan-300/20 hover:bg-white/[0.06]",
+                            ].join(" ")}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-sm font-semibold text-[#F7F4ED]">
+                                  {streamMode === "single" ? singleStreamLabel(cls) : fullClassLabel(cls)}
+                                </div>
+
+                                <div className="mt-1 text-[11px] text-[#C9CDD6]">
+                                  Learners: {formatNumber(cls.learnersCount)} • Items: {formatNumber(cls.itemsCount)}
+                                </div>
+
+                                {hasIssues ? (
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {pill(`Approved→No delivery: ${g.approvedNotDelivered}`, g.approvedNotDelivered ? "amber" : "slate")}
+                                    {pill(`Delivered→No assessment: ${g.deliveredNotAssessed}`, g.deliveredNotAssessed ? "amber" : "slate")}
+                                    {pill(`Assessed→No link: ${g.assessedNotLinked}`, g.assessedNotLinked ? "amber" : "slate")}
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              <div className="text-right">
+                                <div className="text-sm font-semibold text-[#F7F4ED]">
+                                  {formatPercent(cls.averagePercent)}
+                                </div>
+                                <div className="text-[10px] text-[#8F98A8]">Avg</div>
+                              </div>
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {!selectedClass ? (
+                <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 text-center text-sm text-[#C9CDD6] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+                  Select a class to inspect its performance health.
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <div className="text-lg font-semibold text-[#F7F4ED]">{fullClassLabel(selectedClass)}</div>
+                        <div className="mt-1 text-[12px] text-[#C9CDD6]">
+                          Learners: <span className="font-semibold text-[#F7F4ED]">{formatNumber(selectedClass.learnersCount)}</span> • Items:{" "}
+                          <span className="font-semibold text-[#F7F4ED]">{formatNumber(selectedClass.itemsCount)}</span> • Average:{" "}
+                          <span className="font-semibold text-[#F7F4ED]">{formatPercent(selectedClass.averagePercent)}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={classReportHref}
+                          className="rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-400/18"
+                        >
+                          Open class term report
+                        </Link>
+
+                        <Link
+                          href="/headteacher/reports/student-report"
+                          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+                        >
+                          Open learner report
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-[#F7F4ED]">Governance anomalies (this class)</div>
+                        <div className="mt-1 text-[11px] text-[#C9CDD6]">
+                          These issues block accurate analytics and parent trust. Fix the chain, then performance numbers become meaningful.
+                        </div>
+                      </div>
+                      {selectedGovCounts ? (
+                        <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-[#DDE3ED]">
+                          Total: {selectedGovCounts.total}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {!governanceOk ? (
+                      <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-[11px] text-[#C9CDD6]">
+                        Governance data not available.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <MiniStat
+                            title="Approved → Not delivered"
+                            value={String(selectedGovCounts?.approvedNotDelivered ?? 0)}
+                            sub="Approved lesson notes missing delivery proof"
+                          />
+                          <MiniStat
+                            title="Delivered → Not assessed"
+                            value={String(selectedGovCounts?.deliveredNotAssessed ?? 0)}
+                            sub="Delivered lessons with no assessment items"
+                          />
+                          <MiniStat
+                            title="Assessed → Not linked"
+                            value={String(selectedGovCounts?.assessedNotLinked ?? 0)}
+                            sub="Assessment items missing lesson linkage"
+                          />
+                        </div>
+
+                        {(selectedGovCounts?.total ?? 0) > 0 ? (
+                          <div className="space-y-3">
+                            {selectedGovLists.approvedNotDelivered.length ? (
+                              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 p-3">
+                                <div className="text-[11px] font-semibold text-amber-100">
+                                  Approved notes not delivered (sample)
+                                </div>
+                                <ul className="mt-2 space-y-1 text-[11px] text-amber-50">
+                                  {selectedGovLists.approvedNotDelivered.map((x) => (
+                                    <li key={x.id}>
+                                      • {x.subject} — {x.lessonTitle ?? "Lesson"}{" "}
+                                      <span className="text-amber-100/75">
+                                        ({x.approvedAt ? x.approvedAt.slice(0, 10) : "no date"})
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+
+                            {selectedGovLists.deliveredNotAssessed.length ? (
+                              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 p-3">
+                                <div className="text-[11px] font-semibold text-amber-100">
+                                  Delivered lessons not assessed (sample)
+                                </div>
+                                <ul className="mt-2 space-y-1 text-[11px] text-amber-50">
+                                  {selectedGovLists.deliveredNotAssessed.map((x) => (
+                                    <li key={x.id}>
+                                      • {x.subject} — {x.indicatorCode ?? "No indicator"}{" "}
+                                      <span className="text-amber-100/75">
+                                        ({x.dateTaught ? x.dateTaught.slice(0, 10) : "no date"})
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+
+                            {selectedGovLists.assessedNotLinked.length ? (
+                              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 p-3">
+                                <div className="text-[11px] font-semibold text-amber-100">
+                                  Assessed items not linked (sample)
+                                </div>
+                                <ul className="mt-2 space-y-1 text-[11px] text-amber-50">
+                                  {selectedGovLists.assessedNotLinked.map((x) => (
+                                    <li key={x.id}>
+                                      • {x.subject} — {x.title}{" "}
+                                      <span className="text-amber-100/75">
+                                        ({x.date ? x.date.slice(0, 10) : "no date"})
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-3 py-3 text-[11px] text-emerald-100">
+                            No anomalies detected for this class in the current governance window.
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+                    <h3 className="text-sm font-semibold text-[#F7F4ED]">Learner distribution by remark band</h3>
+
+                    <div className="mt-3">
+                      {isRemarkLoading ? (
+                        <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-[11px] text-[#C9CDD6]">
+                          Loading remark summary for this class…
+                        </div>
+                      ) : selectedBands.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.04] px-3 py-3 text-[11px] text-[#C9CDD6]">
+                          No remark summary data yet for this class.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {remarkError && (
+                            <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
+                              {remarkError}
+                            </div>
+                          )}
+
+                          <div className="grid gap-2 md:grid-cols-2">
+                            {selectedBands
+                              .slice()
+                              .sort((a, b) => bandOrder(a) - bandOrder(b))
+                              .map((band) => (
+                                <div
+                                  key={band.grade}
+                                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0C1730]/78 px-3 py-2 text-[11px]"
+                                >
+                                  <div>
+                                    <div className="font-semibold text-[#F7F4ED]">{band.label}</div>
+                                    <div className="text-[10px] text-[#8F98A8]">
+                                      {band.minPercent}–{band.maxPercent}%
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-sm font-semibold text-[#F7F4ED]">
+                                      {formatNumber(band.learnersCount)}
+                                    </div>
+                                    <div className="text-[10px] text-[#8F98A8]">learners</div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-      <div className="text-[11px] font-medium text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold text-slate-900">{value}</div>
+    <div className="rounded-[24px] border border-white/10 bg-[#0C1730]/78 px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
+      <div className="text-[11px] font-medium text-[#8F98A8]">{label}</div>
+      <div className="mt-1 text-2xl font-semibold text-[#F7F4ED]">{value}</div>
     </div>
   );
 }
 
 function MiniStat(props: { title: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+    <div className="rounded-[24px] border border-white/10 bg-[#0C1730]/78 p-3 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
+      <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#E8C96A]">
         {props.title}
       </div>
-      <div className="mt-2 text-xl font-semibold text-slate-900">{props.value}</div>
-      {props.sub ? <div className="mt-1 text-[11px] text-slate-600">{props.sub}</div> : null}
+      <div className="mt-2 text-xl font-semibold text-[#F7F4ED]">{props.value}</div>
+      {props.sub ? <div className="mt-1 text-[11px] text-[#C9CDD6]">{props.sub}</div> : null}
     </div>
   );
 }

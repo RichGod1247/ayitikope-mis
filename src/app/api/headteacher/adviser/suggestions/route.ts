@@ -7,7 +7,51 @@ import { assertNoTenantOverride } from "@/lib/tenantGuard";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonNoStore(payload: any, status = 200) {
+type JsonPayload = Record<string, unknown>;
+
+type ClassRollupRow = {
+  classroomId: string;
+  label: string;
+  students: number;
+  sessions: number;
+  presentSum: number;
+  open: number;
+  closed: number;
+  certified: number;
+  noMarkSum: number;
+};
+
+type StudentRollupRow = {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  classroomId: string;
+  classLabel: string;
+  sessions: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  noMark: number;
+};
+
+type StudentSuggestion = {
+  studentId: string;
+  fullName: string;
+  classroomId: string;
+  classLabel: string;
+  sessions: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  noMark: number;
+  pctPresent: number;
+  issues: string[];
+  suggestion: string;
+};
+
+function jsonNoStore(payload: JsonPayload, status = 200) {
   return NextResponse.json(payload, {
     status,
     headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
@@ -37,7 +81,11 @@ async function requireHeadOrAdmin(tenantId: string, userId: string) {
   if (!m) return { ok: false as const, status: 403, error: "FORBIDDEN" };
 
   const roleName = String(m.role?.name ?? "").toUpperCase();
-  const ok = roleName.includes("HEAD") || roleName.includes("ADMIN") || roleName.includes("OWNER") || roleName.includes("SUPER");
+  const ok =
+    roleName.includes("HEAD") ||
+    roleName.includes("ADMIN") ||
+    roleName.includes("OWNER") ||
+    roleName.includes("SUPER");
 
   return ok
     ? ({ ok: true as const } as const)
@@ -49,7 +97,6 @@ async function requireHeadOrAdmin(tenantId: string, userId: string) {
  * (Optional legacy) tenantId=... is allowed ONLY if it matches session tenant.
  */
 export async function GET(req: NextRequest) {
-  // ✅ session tenant only
   let ctx: { tenantId: string; userId: string };
   try {
     const c = await requireServerUserContext({ requireTenant: true });
@@ -60,7 +107,6 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
 
-  // Back-compat: tenantId may be passed by old UI, must match session tenant
   const guard = assertNoTenantOverride(searchParams.get("tenantId"), ctx.tenantId);
   if (!guard.ok) return jsonNoStore({ ok: false, error: guard.error }, guard.status);
 
@@ -72,7 +118,6 @@ export async function GET(req: NextRequest) {
   }
   if (start > end) return jsonNoStore({ ok: false, error: "start must be <= end" }, 400);
 
-  // Guardrail: keep this endpoint sane
   const rangeDays = daysBetweenInclusive(start, end);
   if (rangeDays > 31) {
     return jsonNoStore({ ok: false, error: "Date range too large. Use 31 days or less." }, 400);
@@ -82,20 +127,7 @@ export async function GET(req: NextRequest) {
   if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, roleOk.status);
 
   try {
-    // -------- CLASS ROLLUP --------
-    const classRows = await prisma.$queryRaw<
-      Array<{
-        classroomId: string;
-        label: string;
-        students: number;
-        sessions: number;
-        presentSum: number;
-        open: number;
-        closed: number;
-        certified: number;
-        noMarkSum: number;
-      }>
-    >`
+    const classRows = await prisma.$queryRaw<ClassRollupRow[]>`
       WITH cls AS (
         SELECT
           c."id" AS "classroomId",
@@ -149,9 +181,10 @@ export async function GET(req: NextRequest) {
       ORDER BY c."label" ASC
     `;
 
-    const classSuggestions = classRows.map((r) => {
+    const classSuggestions = classRows.map((r: ClassRollupRow) => {
       const denom = Math.max(1, r.sessions * r.students);
-      const avgPctPresent = r.sessions > 0 && r.students > 0 ? Math.round((r.presentSum / denom) * 100) : 0;
+      const avgPctPresent =
+        r.sessions > 0 && r.students > 0 ? Math.round((r.presentSum / denom) * 100) : 0;
 
       const issues: string[] = [];
       if (r.sessions === 0) issues.push("No sessions this period");
@@ -165,16 +198,20 @@ export async function GET(req: NextRequest) {
       let suggestion = "Healthy — maintain routines and recognition.";
       if (issues.length) {
         if (issues.includes("No sessions this period")) {
-          suggestion = "Ensure daily register is opened; brief teachers on opening a session before marking.";
+          suggestion =
+            "Ensure daily register is opened; brief teachers on opening a session before marking.";
         } else if (r.open > 0) {
-          suggestion = "Close today’s register and ensure marks are saved; verify each class submits by end-of-day.";
+          suggestion =
+            "Close today’s register and ensure marks are saved; verify each class submits by end-of-day.";
         } else if (issues.includes("Closed but not certified")) {
-          suggestion = "Headteacher: review and certify closed sessions to lock records and trigger analytics.";
+          suggestion =
+            "Headteacher: review and certify closed sessions to lock records and trigger analytics.";
         } else if (issues.includes("Low average attendance (<80%)")) {
           suggestion =
             "Run quick check-ins: identify patterns, contact guardians of chronic absentees, and set class target ≥ 90%.";
         } else if (issues.includes("Missing marks indicated (NO_MARK high)")) {
-          suggestion = "Retrain class teacher on marking flow; spot-check devices/network; use Reopen to correct gaps.";
+          suggestion =
+            "Retrain class teacher on marking flow; spot-check devices/network; use Reopen to correct gaps.";
         }
       }
 
@@ -193,22 +230,7 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // -------- STUDENT ROLLUP --------
-    const studentRows = await prisma.$queryRaw<
-      Array<{
-        studentId: string;
-        firstName: string;
-        lastName: string;
-        classroomId: string;
-        classLabel: string;
-        sessions: number;
-        present: number;
-        absent: number;
-        late: number;
-        excused: number;
-        noMark: number;
-      }>
-    >`
+    const studentRows = await prisma.$queryRaw<StudentRollupRow[]>`
       WITH roster AS (
         SELECT
           st."id" AS "studentId",
@@ -264,7 +286,7 @@ export async function GET(req: NextRequest) {
       ORDER BY j."lastName", j."firstName"
     `;
 
-    const studentSuggestionsRaw = studentRows.map((r) => {
+    const studentSuggestionsRaw: StudentSuggestion[] = studentRows.map((r: StudentRollupRow) => {
       const fullName = [r.firstName, r.lastName].filter(Boolean).join(" ").trim();
       const pctPresent = r.sessions > 0 ? Math.round((r.present / r.sessions) * 100) : 0;
 
@@ -280,11 +302,13 @@ export async function GET(req: NextRequest) {
         if (issues.includes("Very low attendance (<60%)")) {
           suggestion = "Escalate: call guardian today, explore causes, agree on attendance plan.";
         } else if (issues.includes("Frequent absences (≥2)")) {
-          suggestion = "Contact guardian; set target for next period; consider mentor/peer buddy support.";
+          suggestion =
+            "Contact guardian; set target for next period; consider mentor/peer buddy support.";
         } else if (issues.includes("Repeated lateness/excused (≥3)")) {
           suggestion = "Coach morning routine; track on-time streak; reward improvement.";
         } else if (issues.includes("Missing marks (≥2)")) {
-          suggestion = "Verify teacher marks; if missing, correct; if present, fix device/network/marking flow.";
+          suggestion =
+            "Verify teacher marks; if missing, correct; if present, fix device/network/marking flow.";
         } else if (issues.includes("No sessions for class this period")) {
           suggestion = "Ensure class sessions are opened daily; verify timetable execution.";
         }
@@ -307,13 +331,13 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // Sort risky first
-    studentSuggestionsRaw.sort((a, b) => {
+    studentSuggestionsRaw.sort((a: StudentSuggestion, b: StudentSuggestion) => {
       const riskA =
         (a.pctPresent < 60 ? 1 : 0) +
         (a.absent >= 2 ? 1 : 0) +
         (a.late + a.excused >= 3 ? 1 : 0) +
         (a.noMark >= 2 ? 1 : 0);
+
       const riskB =
         (b.pctPresent < 60 ? 1 : 0) +
         (b.absent >= 2 ? 1 : 0) +
@@ -324,7 +348,6 @@ export async function GET(req: NextRequest) {
       return a.fullName.localeCompare(b.fullName);
     });
 
-    // Keep payload small and useful
     const studentSuggestions = studentSuggestionsRaw.slice(0, 50);
 
     return jsonNoStore(
@@ -336,7 +359,7 @@ export async function GET(req: NextRequest) {
       },
       200
     );
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("[HEADTEACHER_ADVISER_SUGGESTIONS_ERROR]", err);
     return jsonNoStore({ ok: false, error: "Failed to load adviser suggestions" }, 500);
   }

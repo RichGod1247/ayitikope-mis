@@ -327,27 +327,27 @@ export default function HeadteacherResultsReleaseClient({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm space-y-4">
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl space-y-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">
+          <h2 className="text-sm font-semibold text-[#F7F4ED]">
             Parent result release
           </h2>
-          <p className="mt-1 text-[11px] text-slate-600">
+          <p className="mt-1 text-[11px] text-[#C9CDD6]">
             For current practice, use this after{" "}
-            <span className="font-semibold">end-of-term exam results</span> are
+            <span className="font-semibold text-[#F7F4ED]">end-of-term exam results</span> are
             finalized. This is not your teacher continuous-assessment workflow.
           </p>
         </div>
 
         <div className="grid gap-3 md:grid-cols-3 md:items-end">
           <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-slate-700">
+            <label className="block text-[11px] font-medium text-[#C9CDD6]">
               Term
             </label>
             <select
               value={term}
               onChange={(e) => setTerm(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20"
             >
               <option value="1st Term">1st Term</option>
               <option value="2nd Term">2nd Term</option>
@@ -356,13 +356,13 @@ export default function HeadteacherResultsReleaseClient({
           </div>
 
           <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-slate-700">
+            <label className="block text-[11px] font-medium text-[#C9CDD6]">
               Academic year
             </label>
             <input
               value={academicYear}
               onChange={(e) => setAcademicYear(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20"
               placeholder="e.g. 2025/2026"
             />
           </div>
@@ -372,15 +372,15 @@ export default function HeadteacherResultsReleaseClient({
               type="button"
               onClick={() => void loadStatus()}
               disabled={busy === "status"}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-xs bg-white hover:bg-slate-50 disabled:opacity-60"
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
             >
               {busy === "status" ? "Refreshing…" : "Refresh status"}
             </button>
           </div>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-700">
-          <div className="font-semibold">Scope</div>
+        <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 px-3 py-3 text-[11px] text-[#C9CDD6]">
+          <div className="font-semibold text-[#F7F4ED]">Scope</div>
 
           <div className="mt-2 flex flex-wrap gap-2">
             <button
@@ -388,8 +388,8 @@ export default function HeadteacherResultsReleaseClient({
               onClick={() => setScope("SCHOOL")}
               className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold border ${
                 scope === "SCHOOL"
-                  ? "border-emerald-600 bg-emerald-600 text-white"
-                  : "border-slate-200 bg-white text-slate-700"
+                  ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D]"
+                  : "border-white/10 bg-white/5 text-[#D7DCE5]"
               }`}
             >
               Whole school
@@ -400,8 +400,8 @@ export default function HeadteacherResultsReleaseClient({
               onClick={() => setScope("CLASSROOM")}
               className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold border ${
                 scope === "CLASSROOM"
-                  ? "border-emerald-600 bg-emerald-600 text-white"
-                  : "border-slate-200 bg-white text-slate-700"
+                  ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D]"
+                  : "border-white/10 bg-white/5 text-[#D7DCE5]"
               }`}
             >
               Per class
@@ -413,7 +413,7 @@ export default function HeadteacherResultsReleaseClient({
               <select
                 value={classroomId}
                 onChange={(e) => setClassroomId(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px]"
+                className="w-full rounded-lg border border-white/10 bg-[#05070B] px-3 py-2 text-[11px] text-[#F7F4ED]"
               >
                 {visibleClassrooms.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -425,7 +425,7 @@ export default function HeadteacherResultsReleaseClient({
               </select>
 
               {canToggleMultiStream ? (
-                <label className="inline-flex items-center gap-2 text-[11px] text-slate-600">
+                <label className="inline-flex items-center gap-2 text-[11px] text-[#AEB6C4]">
                   <input
                     type="checkbox"
                     checked={streamMode === "multi"}
@@ -445,7 +445,7 @@ export default function HeadteacherResultsReleaseClient({
             type="button"
             onClick={() => void doRelease()}
             disabled={busy === "release"}
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            className="rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-[11px] font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] disabled:opacity-60"
           >
             {busy === "release" ? "Releasing…" : "Release parent access"}
           </button>
@@ -454,66 +454,66 @@ export default function HeadteacherResultsReleaseClient({
             type="button"
             onClick={() => void doUnrelease()}
             disabled={busy === "unrelease"}
-            className="rounded-xl border border-rose-300 bg-white px-4 py-2 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+            className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-4 py-2 text-[11px] font-semibold text-rose-100 hover:bg-rose-400/16 disabled:opacity-60"
           >
             {busy === "unrelease" ? "Turning off…" : "Turn release off"}
           </button>
 
-          <span className="text-[11px] text-slate-600">
+          <span className="text-[11px] text-[#C9CDD6]">
             Status:{" "}
             <span
               className={`font-semibold ${
-                isReleased ? "text-emerald-700" : "text-slate-700"
+                isReleased ? "text-emerald-100" : "text-[#F7F4ED]"
               }`}
             >
               {isReleased ? "Released" : "Not released"}
             </span>{" "}
-            for <span className="font-semibold">{term}</span> ·{" "}
-            <span className="font-semibold">{academicYear}</span>
+            for <span className="font-semibold text-[#F7F4ED]">{term}</span> ·{" "}
+            <span className="font-semibold text-[#F7F4ED]">{academicYear}</span>
           </span>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm space-y-2">
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl space-y-2">
         <div>
-          <p className="text-sm font-semibold text-slate-900">
+          <p className="text-sm font-semibold text-[#F7F4ED]">
             Notify parents by SMS (batched)
           </p>
-          <p className="text-[11px] text-slate-600 max-w-2xl">
-            Sends to guardians with <span className="font-semibold">SMS consent = true</span>.
+          <p className="max-w-2xl text-[11px] text-[#C9CDD6]">
+            Sends to guardians with <span className="font-semibold text-[#F7F4ED]">SMS consent = true</span>.
             One batch per click keeps delivery safer.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-[11px] text-slate-700">Batch size</label>
+          <label className="text-[11px] text-[#C9CDD6]">Batch size</label>
           <input
             type="number"
             value={batchSize}
             onChange={(e) =>
               setBatchSize(Math.max(5, Math.min(60, Number(e.target.value || 25))))
             }
-            className="w-24 rounded-lg border border-slate-300 px-3 py-1.5 text-[11px]"
+            className="w-24 rounded-lg border border-white/10 bg-[#07111F] px-3 py-1.5 text-[11px] text-[#F7F4ED]"
           />
 
           <button
             type="button"
             onClick={() => void sendNextBatch()}
             disabled={busy === "notify" || !isReleased}
-            className="rounded-xl border border-emerald-600 px-4 py-2 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
           >
             {busy === "notify" ? "Sending…" : "Send next batch"}
           </button>
 
           {!isReleased ? (
-            <span className="text-[11px] text-rose-700">
+            <span className="text-[11px] text-rose-200">
               Release must be ON before notifying.
             </span>
           ) : null}
         </div>
 
         {notify?.ok ? (
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 text-[11px] text-emerald-900">
+          <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-3 py-2 text-[11px] text-emerald-100">
             <div className="font-semibold">Batch result</div>
             <div className="mt-1">
               Sent: <span className="font-semibold">{notify.batch?.sent ?? 0}</span> ·
@@ -523,53 +523,53 @@ export default function HeadteacherResultsReleaseClient({
             {notify.done ? <div className="mt-1 font-semibold">Done ✅</div> : null}
           </div>
         ) : notify?.error ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
+          <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
             {notify.error}
           </div>
         ) : null}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <p className="text-sm font-semibold text-slate-900">
+      <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        <p className="text-sm font-semibold text-[#F7F4ED]">
           Release overview (this term/year)
         </p>
 
         {!status ? (
-          <p className="mt-2 text-[11px] text-slate-600">Loading…</p>
+          <p className="mt-2 text-[11px] text-[#C9CDD6]">Loading…</p>
         ) : status.ok !== true ? (
-          <p className="mt-2 text-[11px] text-rose-700">
+          <p className="mt-2 text-[11px] text-rose-200">
             {status.error || "Failed to load status."}
           </p>
         ) : (
           <div className="mt-3 overflow-x-auto">
-            <table className="min-w-full text-[11px] border-collapse">
+            <table className="min-w-full border-collapse text-[11px]">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-2 py-2 text-left font-semibold text-slate-600">
+                <tr className="border-b border-white/10 bg-white/5">
+                  <th className="px-2 py-2 text-left font-semibold text-[#E8C96A]">
                     Class
                   </th>
-                  <th className="px-2 py-2 text-left font-semibold text-slate-600">
+                  <th className="px-2 py-2 text-left font-semibold text-[#E8C96A]">
                     Released?
                   </th>
-                  <th className="px-2 py-2 text-left font-semibold text-slate-600">
+                  <th className="px-2 py-2 text-left font-semibold text-[#E8C96A]">
                     Released at
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {visibleClassrooms.map((c, idx) => {
-                  const zebra = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
+                  const zebra = idx % 2 === 1 ? "bg-white/[0.03]" : "bg-transparent";
                   const m = status.classroomReleaseMap?.[c.id] ?? null;
 
                   return (
                     <tr key={c.id} className={zebra}>
-                      <td className="px-2 py-2 font-semibold text-slate-900">
+                      <td className="px-2 py-2 font-semibold text-[#F7F4ED]">
                         {streamMode === "single"
                           ? singleStreamLabel(c)
                           : fullClassLabel(c)}
                       </td>
-                      <td className="px-2 py-2">{m ? "Yes" : "No"}</td>
-                      <td className="px-2 py-2 text-slate-600">
+                      <td className="px-2 py-2 text-[#C9CDD6]">{m ? "Yes" : "No"}</td>
+                      <td className="px-2 py-2 text-[#AEB6C4]">
                         {m?.releasedAt ?? "—"}
                       </td>
                     </tr>

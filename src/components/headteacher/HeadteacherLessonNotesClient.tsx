@@ -37,22 +37,24 @@ type ListResponse =
   | { ok: false; error: string };
 
 const btnBase =
-  "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-900`;
-const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50`;
+  "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+const btnPrimary =
+  `${btnBase} bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] border-transparent font-semibold shadow-[0_16px_40px_rgba(212,175,55,0.22)]`;
+const btnOutline =
+  `${btnBase} bg-white/5 text-[#F7F4ED] border-white/10 hover:bg-white/10`;
 const pillBase = "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
 
 function statusBadgeClasses(status: LessonNoteStatus) {
   const base = "inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-medium";
   switch (status) {
     case "DRAFT":
-      return `${base} bg-zinc-50 border-zinc-200 text-zinc-700`;
+      return `${base} bg-white/5 border-white/10 text-[#D7DCE5]`;
     case "SUBMITTED":
-      return `${base} bg-amber-50 border-amber-200 text-amber-800`;
+      return `${base} bg-amber-400/12 border-amber-300/20 text-amber-100`;
     case "APPROVED":
-      return `${base} bg-emerald-50 border-emerald-200 text-emerald-800`;
+      return `${base} bg-emerald-400/12 border-emerald-300/20 text-emerald-100`;
     case "REJECTED":
-      return `${base} bg-red-50 border-red-200 text-red-800`;
+      return `${base} bg-rose-400/12 border-rose-300/20 text-rose-100`;
     default:
       return base;
   }
@@ -166,21 +168,29 @@ export default function HeadteacherLessonNotesClient() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50">
-      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-5">
-        <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
+        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+        <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+        <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl" />
+
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>EduLife OS · Headteacher Review</span>
-              <span className="text-[11px] text-zinc-500">{subtitle}</span>
+              <span className={`${pillBase} border-sky-300/20 bg-sky-400/12 text-sky-100`}>
+                EduLife OS · Headteacher Review
+              </span>
+              <span className="text-[11px] text-[#AEB6C4]">{subtitle}</span>
             </div>
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Lesson Notes · Review &amp; Approval</h1>
-            <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
-              This inbox is <span className="font-semibold">tenant-scoped and role-guarded</span>. You review only notes in your school.
+            <h1 className="text-xl font-semibold tracking-tight text-[#F7F4ED] md:text-2xl">
+              Lesson Notes · Review &amp; Approval
+            </h1>
+            <p className="max-w-2xl text-xs text-[#C9CDD6] md:text-sm">
+              This inbox is <span className="font-semibold text-[#F7F4ED]">tenant-scoped and role-guarded</span>. You review only notes in your school.
             </p>
           </div>
 
-          <div className="flex flex-col items-start md:items-end gap-2">
+          <div className="flex flex-col items-start gap-2 md:items-end">
             <div className="inline-flex flex-wrap gap-1.5">
               {(["ALL", "DRAFT", "SUBMITTED", "APPROVED", "REJECTED"] as const).map((s) => {
                 const active = statusFilter === s;
@@ -191,7 +201,9 @@ export default function HeadteacherLessonNotesClient() {
                     type="button"
                     onClick={() => setStatusFilter(s)}
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] border ${
-                      active ? "bg-black text-white border-black" : "bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50"
+                      active
+                        ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] font-semibold"
+                        : "border-white/10 bg-white/5 text-[#D7DCE5] hover:bg-white/10"
                     }`}
                   >
                     {label}
@@ -203,113 +215,123 @@ export default function HeadteacherLessonNotesClient() {
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                className="rounded-xl border border-zinc-300 bg-white px-2 py-1.5 text-[11px] w-56 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                className="w-56 rounded-xl border border-white/10 bg-[#07111F] px-2 py-1.5 text-[11px] text-[#F7F4ED] placeholder:text-[#7E8796] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20"
                 placeholder="Filter by teacher name / email / ID…"
                 value={teacherFilter}
                 onChange={(e) => setTeacherFilter(e.target.value)}
               />
-              <span className="text-[11px] text-zinc-500">Debounced</span>
+              <span className="text-[11px] text-[#AEB6C4]">Debounced</span>
             </div>
           </div>
-        </header>
+        </div>
+      </section>
 
-        {loadError && <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">{loadError}</div>}
+      {loadError && (
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-sm text-rose-100">
+          {loadError}
+        </div>
+      )}
 
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="border border-zinc-200 bg-white rounded-2xl p-4 space-y-3 animate-pulse">
-                <div className="h-4 w-44 bg-zinc-100 rounded-md" />
-                <div className="h-3 w-60 bg-zinc-100 rounded-md" />
-                <div className="h-3 w-32 bg-zinc-100 rounded-md" />
-                <div className="h-8 w-full bg-zinc-100 rounded-md" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!loading && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-zinc-800">Lesson notes</h2>
-              {hasNotes && <span className="text-[11px] text-zinc-500">{items.length} shown</span>}
+      {loading && (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/10 bg-[#0C1730]/78 p-4 space-y-3 animate-pulse">
+              <div className="h-4 w-44 rounded-md bg-white/10" />
+              <div className="h-3 w-60 rounded-md bg-white/10" />
+              <div className="h-3 w-32 rounded-md bg-white/10" />
+              <div className="h-8 w-full rounded-md bg-white/10" />
             </div>
+          ))}
+        </div>
+      )}
 
-            {!hasNotes && !loadError && (
-              <div className="border border-dashed border-zinc-300 bg-white rounded-2xl px-4 py-5 md:px-5 md:py-6 space-y-3">
-                <h3 className="text-sm font-semibold text-zinc-800">No lesson notes match this filter</h3>
-                <p className="text-xs text-zinc-600 max-w-md">Switch status or clear the teacher filter.</p>
-                <button type="button" className={btnOutline} onClick={resetAndLoad}>
-                  Refresh
-                </button>
-              </div>
-            )}
+      {!loading && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-[#F7F4ED]">Lesson notes</h2>
+            {hasNotes && <span className="text-[11px] text-[#AEB6C4]">{items.length} shown</span>}
+          </div>
 
-            {hasNotes && (
-              <div className="space-y-2">
-                {items.map((item) => {
-                  const subjectLabel = item.subject || "Subject —";
-                  const termLabel = item.term || "Term —";
-                  const yearLabel = item.academicYear || "Year —";
-                  const weekLabel = item.weekNumber != null ? `Week ${item.weekNumber}` : "Week —";
-                  const strandLabel = item.strand || "Strand —";
+          {!hasNotes && !loadError && (
+            <div className="rounded-[28px] border border-dashed border-white/12 bg-white/[0.04] px-4 py-5 md:px-5 md:py-6 space-y-3">
+              <h3 className="text-sm font-semibold text-[#F7F4ED]">No lesson notes match this filter</h3>
+              <p className="max-w-md text-xs text-[#C9CDD6]">Switch status or clear the teacher filter.</p>
+              <button type="button" className={btnOutline} onClick={resetAndLoad}>
+                Refresh
+              </button>
+            </div>
+          )}
 
-                  // ✅ Use teacherName first, fallback to ID
-                  const teacherLabel = item.teacherName || item.teacherUserId || "Teacher —";
+          {hasNotes && (
+            <div className="space-y-2">
+              {items.map((item) => {
+                const subjectLabel = item.subject || "Subject —";
+                const termLabel = item.term || "Term —";
+                const yearLabel = item.academicYear || "Year —";
+                const weekLabel = item.weekNumber != null ? `Week ${item.weekNumber}` : "Week —";
+                const strandLabel = item.strand || "Strand —";
 
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => openNote(item.id)}
-                      className="w-full text-left border border-zinc-200 bg-white rounded-2xl px-4 py-3 md:px-5 md:py-4 hover:border-zinc-300 hover:shadow-sm transition-all"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="text-sm md:text-[15px] font-semibold text-zinc-900">
-                            {subjectLabel} • {termLabel} • {yearLabel}
-                          </div>
-                          <div className="text-[11px] text-zinc-600">
-                            {strandLabel}
-                            {item.substrand ? ` • ${item.substrand}` : ""}
-                          </div>
-                          <div className="text-[11px] text-zinc-500">{weekLabel} • Updated: {formatDateShort(item.updatedAt)}</div>
-                          <div className="text-[11px] text-zinc-500">
-                            Teacher: <span className="font-medium">{teacherLabel}</span>
-                          </div>
-                          {item.headteacherComment && (
-                            <p className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-2 py-1 mt-1">
-                              <span className="font-semibold">Last comment:</span> {item.headteacherComment}
-                            </p>
-                          )}
+                const teacherLabel = item.teacherName || item.teacherUserId || "Teacher —";
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => openNote(item.id)}
+                    className="w-full rounded-[24px] border border-white/10 bg-[#0C1730]/78 px-4 py-3 text-left transition-all hover:border-white/20 hover:bg-[#102044] md:px-5 md:py-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="text-sm font-semibold text-[#F7F4ED] md:text-[15px]">
+                          {subjectLabel} • {termLabel} • {yearLabel}
                         </div>
-
-                        <div className="flex flex-col items-end gap-1">
-                          <span className={statusBadgeClasses(item.status)}>{statusLabel(item.status)}</span>
-                          <span className="text-[10px] text-zinc-500 font-mono">{item.id.slice(0, 8)}…</span>
+                        <div className="text-[11px] text-[#C9CDD6]">
+                          {strandLabel}
+                          {item.substrand ? ` • ${item.substrand}` : ""}
                         </div>
+                        <div className="text-[11px] text-[#AEB6C4]">
+                          {weekLabel} • Updated: {formatDateShort(item.updatedAt)}
+                        </div>
+                        <div className="text-[11px] text-[#AEB6C4]">
+                          Teacher: <span className="font-medium text-[#F7F4ED]">{teacherLabel}</span>
+                        </div>
+                        {item.headteacherComment && (
+                          <p className="mt-1 rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-2 py-1 text-[11px] text-emerald-100">
+                            <span className="font-semibold">Last comment:</span> {item.headteacherComment}
+                          </p>
+                        )}
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
 
-            {nextCursor && (
-              <div className="flex justify-center pt-2">
-                <button type="button" className={btnPrimary} disabled={loadingMore} onClick={() => void loadPage({ cursor: nextCursor, append: true })}>
-                  {loadingMore ? "Loading…" : "Load more"}
-                </button>
-              </div>
-            )}
-          </section>
-        )}
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={statusBadgeClasses(item.status)}>{statusLabel(item.status)}</span>
+                        <span className="font-mono text-[10px] text-[#8F98A8]">{item.id.slice(0, 8)}…</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
-        <section className="border rounded-2xl bg-white p-3.5 md:p-4 text-[11px] text-zinc-600 space-y-1.5">
-          <h3 className="text-xs font-semibold text-zinc-800">Security model</h3>
-          <p>Tenant-scoped on server. No client-controlled reviewer identity.</p>
+          {nextCursor && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                className={btnPrimary}
+                disabled={loadingMore}
+                onClick={() => void loadPage({ cursor: nextCursor, append: true })}
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          )}
         </section>
-      </div>
-    </main>
+      )}
+
+      <section className="rounded-2xl border border-white/10 bg-white/5 p-3.5 text-[11px] text-[#C9CDD6] space-y-1.5 md:p-4">
+        <h3 className="text-xs font-semibold text-[#F7F4ED]">Security model</h3>
+        <p>Tenant-scoped on server. No client-controlled reviewer identity.</p>
+      </section>
+    </div>
   );
 }

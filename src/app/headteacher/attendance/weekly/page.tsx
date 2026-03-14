@@ -1,3 +1,4 @@
+//src/app/headteacher/attendance/weekly/page.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -182,50 +183,59 @@ export default function WeeklyAttendancePage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50">
-      <div className="mx-auto max-w-6xl px-4 py-6 md:py-8 space-y-6">
-        <header className="space-y-2">
-          <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-800">
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.92),rgba(7,26,61,0.94),rgba(5,7,11,0.96))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
+        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+        <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+        <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl" />
+
+        <div className="relative space-y-3">
+          <div className="inline-flex items-center rounded-full border border-emerald-300/20 bg-emerald-400/12 px-3 py-1 text-[11px] font-medium text-emerald-100">
             EduLife OS · Head · Attendance
           </div>
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="space-y-1">
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Weekly attendance pulse</h1>
-              <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
+              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED] md:text-3xl">
+                Weekly attendance pulse
+              </h1>
+              <p className="max-w-2xl text-xs text-[#C9CDD6] md:text-sm">
                 One-glance view of how faithfully classes met this week, with a
                 server-trusted explainer for decision-making.
               </p>
             </div>
-            <div className="text-xs text-zinc-500 md:text-right">
+            <div className="text-xs text-[#AEB6C4] md:text-right">
               <p>
-                Week: <span className="font-semibold">{start || "—"} → {end || "—"}</span>
+                Week: <span className="font-semibold text-[#F7F4ED]">{start || "—"} → {end || "—"}</span>
               </p>
               <p>
-                Scope: <span className="font-semibold">Current signed-in school</span>
+                Scope: <span className="font-semibold text-[#F7F4ED]">Current signed-in school</span>
               </p>
             </div>
           </div>
-        </header>
+        </div>
+      </section>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white/80 px-4 py-4 md:px-5 md:py-4 shadow-sm flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-          <div className="flex flex-col md:flex-row gap-3 md:items-end w-full">
+      <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl md:px-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="flex w-full flex-col gap-3 md:flex-row md:items-end">
             <div className="space-y-1">
-              <label className="text-[11px] font-medium text-zinc-700">Start (Mon)</label>
+              <label className="text-[11px] font-medium text-[#C9CDD6]">Start (Mon)</label>
               <input
                 type="date"
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20 md:text-sm"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-medium text-zinc-700">End (Fri)</label>
+              <label className="text-[11px] font-medium text-[#C9CDD6]">End (Fri)</label>
               <input
                 type="date"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20 md:text-sm"
               />
             </div>
           </div>
@@ -234,7 +244,7 @@ export default function WeeklyAttendancePage() {
             <button
               onClick={loadNow}
               disabled={loading || !canQuery}
-              className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2 text-xs md:text-sm font-medium text-white shadow-sm hover:bg-black disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-xs font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] disabled:opacity-50 md:text-sm"
             >
               {loading ? "Loading…" : "Refresh"}
             </button>
@@ -249,7 +259,7 @@ export default function WeeklyAttendancePage() {
                 setEnd(fri.toISOString().slice(0, 10));
               }}
               disabled={loading}
-              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs md:text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10 md:text-sm"
             >
               This week (Mon–Fri)
             </button>
@@ -257,35 +267,37 @@ export default function WeeklyAttendancePage() {
             <button
               onClick={downloadCSV}
               disabled={!canQuery}
-              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs md:text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10 md:text-sm"
             >
               Download CSV
             </button>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-[1.5fr_minmax(0,1.3fr)] gap-4 md:gap-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Classes in report" value={fmt(rows.length)} hint="Distinct classes with marks in this range." />
-            <KpiCard label="Marks taken" value={fmt(totals.marks)} hint="Every time a register was taken." />
-            <KpiCard label="Present marks" value={fmt(totals.present)} hint="Total present across all marks." />
-            <KpiCard
-              label="Overall present %"
-              value={`${pctOverall.toFixed(1)}%`}
-              tone={pctOverall >= 90 ? "good" : pctOverall >= 80 ? "ok" : "warn"}
-              hint="Whole-school attendance rate for the week."
-            />
-          </div>
+      <section className="grid grid-cols-1 gap-4 md:gap-5 lg:grid-cols-[1.5fr_minmax(0,1.3fr)]">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <KpiCard label="Classes in report" value={fmt(rows.length)} hint="Distinct classes with marks in this range." />
+          <KpiCard label="Marks taken" value={fmt(totals.marks)} hint="Every time a register was taken." />
+          <KpiCard label="Present marks" value={fmt(totals.present)} hint="Total present across all marks." />
+          <KpiCard
+            label="Overall present %"
+            value={`${pctOverall.toFixed(1)}%`}
+            tone={pctOverall >= 90 ? "good" : pctOverall >= 80 ? "ok" : "warn"}
+            hint="Whole-school attendance rate for the week."
+          />
+        </div>
 
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-4 md:px-5 md:py-5 space-y-3 shadow-sm">
+        <div className="rounded-[28px] border border-emerald-300/20 bg-emerald-400/12 px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl md:px-5 md:py-5">
+          <div className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm md:text-base font-semibold text-emerald-900">Attendance explainer</h2>
-                <p className="text-[11px] md:text-xs text-emerald-900/90">
+                <h2 className="text-sm font-semibold text-emerald-100 md:text-base">Attendance explainer</h2>
+                <p className="text-[11px] text-emerald-100/90 md:text-xs">
                   Converts the real weekly figures into a clear leadership summary.
                 </p>
               </div>
-              <span className="inline-flex items-center rounded-full bg-emerald-900 text-white text-[10px] font-medium px-3 py-1">
+              <span className="inline-flex items-center rounded-full bg-emerald-950 px-3 py-1 text-[10px] font-medium text-white">
                 Head only
               </span>
             </div>
@@ -294,24 +306,24 @@ export default function WeeklyAttendancePage() {
               type="button"
               disabled={aiLoading || !canQuery}
               onClick={handleAskAi}
-              className="inline-flex items-center justify-center rounded-xl bg-emerald-900 px-3 py-2 text-xs md:text-sm font-medium text-white shadow-sm hover:bg-emerald-950 disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-950 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-emerald-900 disabled:opacity-50 md:text-sm"
             >
               {aiLoading ? "Explaining…" : "Explain this week for me"}
             </button>
 
             {aiError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-800">
+              <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
                 {aiError}
               </div>
             )}
 
             {aiSummary && (
               <div className="space-y-2">
-                <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-[11px] text-emerald-950 whitespace-pre-line">
+                <div className="whitespace-pre-line rounded-xl border border-emerald-300/20 bg-[#08111F]/80 px-3 py-2 text-[11px] text-emerald-50">
                   {aiSummary}
                 </div>
                 {aiSuggestions && (
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-900 whitespace-pre-line">
+                  <div className="whitespace-pre-line rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] text-emerald-100">
                     {aiSuggestions}
                   </div>
                 )}
@@ -319,9 +331,9 @@ export default function WeeklyAttendancePage() {
             )}
 
             {rows.length > 0 && (
-              <div className="border-t border-emerald-100 pt-2 mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-emerald-900">
+              <div className="mt-2 grid grid-cols-1 gap-2 border-t border-emerald-300/15 pt-2 text-[11px] text-emerald-100 sm:grid-cols-2">
                 {bestClass && (
-                  <div className="rounded-xl bg-white/70 px-3 py-2 border border-emerald-100">
+                  <div className="rounded-xl border border-emerald-300/20 bg-[#08111F]/75 px-3 py-2">
                     <div className="font-semibold">Strongest attendance</div>
                     <div className="flex items-baseline justify-between gap-2">
                       <span>{bestClass.classLabel}</span>
@@ -330,7 +342,7 @@ export default function WeeklyAttendancePage() {
                   </div>
                 )}
                 {worstClass && (
-                  <div className="rounded-xl bg-white/60 px-3 py-2 border border-amber-100">
+                  <div className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2">
                     <div className="font-semibold">Needs attention</div>
                     <div className="flex items-baseline justify-between gap-2">
                       <span>{worstClass.classLabel}</span>
@@ -341,61 +353,61 @@ export default function WeeklyAttendancePage() {
               </div>
             )}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white/80 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
-            <h2 className="text-sm font-semibold text-zinc-900">By class (Mon–Fri)</h2>
-            <p className="text-[11px] text-zinc-500">Each row is a class rolled up across the selected dates.</p>
-          </div>
+      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+          <h2 className="text-sm font-semibold text-[#F7F4ED]">By class (Mon–Fri)</h2>
+          <p className="text-[11px] text-[#AEB6C4]">Each row is a class rolled up across the selected dates.</p>
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs md:text-sm">
-              <thead className="bg-zinc-50 border-b border-zinc-100">
-                <tr>
-                  <Th label="Class" align="left" />
-                  <Th label="Enrolled" />
-                  <Th label="Marks" />
-                  <Th label="Present" />
-                  <Th label="Absent" />
-                  <Th label="Late" />
-                  <Th label="Excused" />
-                  <Th label="Present %" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs md:text-sm">
+            <thead className="border-b border-white/10 bg-white/5">
+              <tr>
+                <Th label="Class" align="left" />
+                <Th label="Enrolled" />
+                <Th label="Marks" />
+                <Th label="Present" />
+                <Th label="Absent" />
+                <Th label="Late" />
+                <Th label="Excused" />
+                <Th label="Present %" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, idx) => (
+                <tr key={`${r.classLabel}-${idx}`} className="border-b border-white/10 hover:bg-white/[0.03]">
+                  <td className="whitespace-nowrap px-3 py-2 text-left text-[#F7F4ED]">{r.classLabel}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.enrolled)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.marks)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.present)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.absent)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.late)}</td>
+                  <td className="px-3 py-2 text-right text-[#DCE1EA]">{fmt(r.excused)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-[#F7F4ED]">{r.pct.toFixed(1)}%</td>
                 </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, idx) => (
-                  <tr key={`${r.classLabel}-${idx}`} className="border-b border-zinc-100 hover:bg-zinc-50/60">
-                    <td className="px-3 py-2 text-left whitespace-nowrap">{r.classLabel}</td>
-                    <td className="px-3 py-2 text-right">{fmt(r.enrolled)}</td>
-                    <td className="px-3 py-2 text-right">{fmt(r.marks)}</td>
-                    <td className="px-3 py-2 text-right">{fmt(r.present)}</td>
-                    <td className="px-3 py-2 text-right">{fmt(r.absent)}</td>
-                    <td className="px-3 py-2 text-right">{fmt(r.late)}</td>
-                    <td className="px-3 py-2 text-right">{fmt(r.excused)}</td>
-                    <td className="px-3 py-2 text-right font-mono">{r.pct.toFixed(1)}%</td>
-                  </tr>
-                ))}
+              ))}
 
-                {rows.length === 0 && !loading && (
-                  <tr>
-                    <td className="px-4 py-6 text-center text-xs text-zinc-500" colSpan={8}>
-                      No data in this range yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+              {rows.length === 0 && !loading && (
+                <tr>
+                  <td className="px-4 py-6 text-center text-xs text-[#AEB6C4]" colSpan={8}>
+                    No data in this range yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {error && (
+          <div className="border-t border-rose-300/20 bg-rose-400/12 px-4 py-3 text-xs text-rose-100">
+            {error}
           </div>
-
-          {error && (
-            <div className="px-4 py-3 text-xs text-red-700 bg-red-50 border-t border-red-100">
-              {error}
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -410,23 +422,27 @@ function KpiCard({
   hint?: string;
   tone?: "neutral" | "good" | "ok" | "warn";
 }) {
-  let ringClass = "ring-0 border-zinc-200 bg-white text-zinc-900 shadow-sm";
-  if (tone === "good") ringClass = "border-emerald-200 bg-emerald-50/80 text-emerald-900 shadow-sm";
-  else if (tone === "ok") ringClass = "border-amber-200 bg-amber-50/80 text-amber-900 shadow-sm";
-  else if (tone === "warn") ringClass = "border-red-200 bg-red-50/80 text-red-900 shadow-sm";
+  let ringClass = "border-white/10 bg-[#0C1730]/78 text-[#F7F4ED] shadow-[0_12px_36px_rgba(0,0,0,0.16)]";
+  if (tone === "good") ringClass = "border-emerald-300/20 bg-emerald-400/12 text-emerald-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]";
+  else if (tone === "ok") ringClass = "border-amber-300/20 bg-amber-400/12 text-amber-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]";
+  else if (tone === "warn") ringClass = "border-rose-300/20 bg-rose-400/12 text-rose-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]";
 
   return (
     <div className={`rounded-2xl border px-3 py-3 md:px-4 md:py-4 ${ringClass}`}>
-      <div className="text-[11px] md:text-xs font-medium text-zinc-600">{label}</div>
-      <div className="mt-1 text-lg md:text-2xl font-semibold">{value}</div>
-      {hint && <p className="mt-1 text-[10px] text-zinc-500 max-w-xs">{hint}</p>}
+      <div className="text-[11px] font-medium text-[#AEB6C4] md:text-xs">{label}</div>
+      <div className="mt-1 text-lg font-semibold md:text-2xl">{value}</div>
+      {hint && <p className="mt-1 max-w-xs text-[10px] text-[#8F98A8]">{hint}</p>}
     </div>
   );
 }
 
 function Th({ label, align = "right" }: { label: string; align?: "left" | "right" }) {
   return (
-    <th className={`px-3 py-2 text-[11px] font-semibold text-zinc-500 ${align === "left" ? "text-left" : "text-right"}`}>
+    <th
+      className={`px-3 py-2 text-[11px] font-semibold text-[#E8C96A] ${
+        align === "left" ? "text-left" : "text-right"
+      }`}
+    >
       {label}
     </th>
   );

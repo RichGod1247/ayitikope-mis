@@ -6,10 +6,8 @@ export default function HeadteacherAssessmentOverviewPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50">
-          <div className="container mx-auto px-4 py-8 text-sm text-slate-600">
-            Loading assessment overview…
-          </div>
+        <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 text-sm text-[#C9CDD6] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+          Loading assessment overview…
         </div>
       }
     >

@@ -1,3 +1,4 @@
+//src/app/headteacher/dashboard/ui.tsx
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -198,14 +199,18 @@ function errorOf(resp: any) {
   return "";
 }
 
+function panelClass(extra?: string) {
+  return `rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] ${extra ?? ""}`;
+}
+
 function StatCard(props: { title: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+    <div className="rounded-2xl border border-white/10 bg-[#0C1730] p-4">
+      <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#8F98A8]">
         {props.title}
       </p>
-      <p className="mt-2 text-2xl font-semibold text-slate-900">{props.value}</p>
-      {props.sub ? <p className="mt-1 text-xs text-slate-600">{props.sub}</p> : null}
+      <p className="mt-2 text-2xl font-semibold text-[#F7F4ED]">{props.value}</p>
+      {props.sub ? <p className="mt-1 text-xs text-[#C9CDD6]">{props.sub}</p> : null}
     </div>
   );
 }
@@ -222,16 +227,16 @@ function MajorTile(props: {
     <button
       type="button"
       onClick={props.onClick}
-      className={`group w-full rounded-3xl border p-4 text-left transition hover:-translate-y-0.5 ${props.toneClass}`}
+      className={`group w-full rounded-[28px] border bg-gradient-to-br p-4 text-left shadow-[0_12px_36px_rgba(0,0,0,0.20)] transition hover:-translate-y-1 ${props.toneClass}`}
     >
       <div
-        className={`inline-flex rounded-2xl px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${props.accentClass}`}
+        className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${props.accentClass}`}
       >
         Open
       </div>
-      <div className="mt-4 text-base font-semibold text-slate-900">{props.title}</div>
-      <div className="mt-1 text-xs leading-5 text-slate-700">{props.desc}</div>
-      <div className="mt-4 text-[11px] font-semibold text-slate-900 group-hover:underline">
+      <div className="mt-4 text-base font-semibold text-[#F7F4ED]">{props.title}</div>
+      <div className="mt-2 text-xs leading-6 text-[#D9DEE8]">{props.desc}</div>
+      <div className="mt-4 text-[11px] font-semibold text-[#F7F4ED] group-hover:underline">
         {props.cta}
       </div>
     </button>
@@ -261,10 +266,10 @@ function formatDateShort(iso: string | null | undefined) {
 function statusPill(text: string, tone: "green" | "amber" | "slate") {
   const cls =
     tone === "green"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      ? "border-emerald-300/25 bg-emerald-400/12 text-emerald-100"
       : tone === "amber"
-      ? "border-amber-200 bg-amber-50 text-amber-900"
-      : "border-slate-200 bg-slate-50 text-slate-700";
+        ? "border-amber-300/25 bg-amber-400/12 text-amber-100"
+        : "border-white/10 bg-white/5 text-[#C9CDD6]";
 
   return (
     <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold ${cls}`}>
@@ -276,10 +281,10 @@ function statusPill(text: string, tone: "green" | "amber" | "slate") {
 function priorityChip(priority: "HIGH" | "MEDIUM" | "LOW") {
   const cls =
     priority === "HIGH"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
+      ? "border-rose-300/25 bg-rose-400/12 text-rose-100"
       : priority === "MEDIUM"
-      ? "border-amber-200 bg-amber-50 text-amber-700"
-      : "border-slate-200 bg-slate-50 text-slate-700";
+        ? "border-amber-300/25 bg-amber-400/12 text-amber-100"
+        : "border-white/10 bg-white/5 text-[#C9CDD6]";
 
   return (
     <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${cls}`}>
@@ -289,9 +294,9 @@ function priorityChip(priority: "HIGH" | "MEDIUM" | "LOW") {
 }
 
 function riskTone(score: number) {
-  if (score >= 80) return "border-rose-200 bg-rose-50 text-rose-800";
-  if (score >= 70) return "border-amber-200 bg-amber-50 text-amber-900";
-  return "border-slate-200 bg-slate-50 text-slate-700";
+  if (score >= 80) return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+  if (score >= 70) return "border-amber-300/25 bg-amber-400/12 text-amber-100";
+  return "border-white/10 bg-white/5 text-[#C9CDD6]";
 }
 
 export default function HeadteacherDashboardClient() {
@@ -452,11 +457,11 @@ export default function HeadteacherDashboardClient() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
+      <div className={panelClass("p-4 sm:p-5")}>
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Headteacher control center</p>
-            <p className="mt-1 text-xs leading-5 text-slate-600">
+            <p className="text-sm font-semibold text-[#F7F4ED]">Headteacher control center</p>
+            <p className="mt-1 text-xs leading-6 text-[#C9CDD6]">
               Focus on academic performance, attendance health, lesson-note review, parent result access,
               and governance discipline.
             </p>
@@ -465,9 +470,9 @@ export default function HeadteacherDashboardClient() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col">
-                <label className="text-xs text-slate-600">Start</label>
+                <label className="mb-1 text-xs text-[#C9CDD6]">Start</label>
                 <input
-                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                  className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-2 text-sm text-[#F7F4ED] outline-none focus:border-[#E8C96A]/35"
                   type="date"
                   value={start}
                   onChange={(e) => setStart(e.target.value)}
@@ -475,9 +480,9 @@ export default function HeadteacherDashboardClient() {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-xs text-slate-600">End</label>
+                <label className="mb-1 text-xs text-[#C9CDD6]">End</label>
                 <input
-                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                  className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-2 text-sm text-[#F7F4ED] outline-none focus:border-[#E8C96A]/35"
                   type="date"
                   value={end}
                   onChange={(e) => setEnd(e.target.value)}
@@ -487,14 +492,17 @@ export default function HeadteacherDashboardClient() {
 
             <div className="flex gap-2">
               <button
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
                 onClick={() => void loadAll()}
                 disabled={loading}
               >
                 {loading ? "Refreshing..." : "Refresh"}
               </button>
 
-              <a className="rounded-xl border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50" href={csvHref}>
+              <a
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
+                href={csvHref}
+              >
                 Download CSV
               </a>
             </div>
@@ -507,8 +515,8 @@ export default function HeadteacherDashboardClient() {
           title="Assessment Insights"
           desc="See class-by-class academic health, remark bands, and improvement patterns."
           cta="Open assessment overview"
-          toneClass="border-indigo-200 bg-indigo-50/70 hover:bg-indigo-50"
-          accentClass="bg-indigo-100 text-indigo-700"
+          toneClass="border-indigo-300/20 from-[#1A1034] via-[#25194A] to-[#0C1320]"
+          accentClass="border-indigo-300/25 bg-indigo-400/12 text-indigo-100"
           onClick={() => router.push("/headteacher/assessment/overview")}
         />
 
@@ -516,8 +524,8 @@ export default function HeadteacherDashboardClient() {
           title="Attendance Weekly"
           desc="Open the schoolwide weekly attendance pulse and the server-trusted explainer."
           cta="Open weekly attendance"
-          toneClass="border-cyan-200 bg-cyan-50/70 hover:bg-cyan-50"
-          accentClass="bg-cyan-100 text-cyan-700"
+          toneClass="border-cyan-300/20 from-[#091C24] via-[#0D2530] to-[#08111C]"
+          accentClass="border-cyan-300/25 bg-cyan-400/12 text-cyan-100"
           onClick={() => router.push("/headteacher/attendance/weekly")}
         />
 
@@ -525,8 +533,8 @@ export default function HeadteacherDashboardClient() {
           title="Class Term Reports"
           desc="Open class report grids and compare learner performance across the term."
           cta="Open class reports"
-          toneClass="border-emerald-200 bg-emerald-50/70 hover:bg-emerald-50"
-          accentClass="bg-emerald-100 text-emerald-700"
+          toneClass="border-emerald-300/20 from-[#0A1F14] via-[#102C1D] to-[#08121C]"
+          accentClass="border-emerald-300/25 bg-emerald-400/12 text-emerald-100"
           onClick={() => router.push("/headteacher/reports")}
         />
 
@@ -534,8 +542,8 @@ export default function HeadteacherDashboardClient() {
           title="Learner Term Report"
           desc="Jump straight into a single learner’s printable report view."
           cta="Open learner report"
-          toneClass="border-sky-200 bg-sky-50/70 hover:bg-sky-50"
-          accentClass="bg-sky-100 text-sky-700"
+          toneClass="border-sky-300/20 from-[#0C1730] via-[#10244A] to-[#07111F]"
+          accentClass="border-sky-300/25 bg-sky-400/12 text-sky-100"
           onClick={() => router.push("/headteacher/reports/student-report")}
         />
 
@@ -543,8 +551,8 @@ export default function HeadteacherDashboardClient() {
           title="Parent Result Release"
           desc="Control when parents can see end-of-term results and send notification batches."
           cta="Open release controls"
-          toneClass="border-amber-200 bg-amber-50/70 hover:bg-amber-50"
-          accentClass="bg-amber-100 text-amber-800"
+          toneClass="border-amber-300/20 from-[#271408] via-[#362111] to-[#0C1320]"
+          accentClass="border-amber-300/25 bg-amber-400/12 text-amber-100"
           onClick={() => router.push("/headteacher/reports/release")}
         />
 
@@ -552,17 +560,17 @@ export default function HeadteacherDashboardClient() {
           title="Lesson Notes Inbox"
           desc="Review submitted lesson notes quickly and clear your approval queue."
           cta="Open lesson-note inbox"
-          toneClass="border-rose-200 bg-rose-50/70 hover:bg-rose-50"
-          accentClass="bg-rose-100 text-rose-700"
+          toneClass="border-rose-300/20 from-[#251013] via-[#30151B] to-[#0C1320]"
+          accentClass="border-rose-300/25 bg-rose-400/12 text-rose-100"
           onClick={() => router.push("/headteacher/lesson-notes")}
         />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+      <div className={panelClass("p-4")}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Parent result access</p>
-            <p className="text-xs text-slate-600">
+            <p className="text-sm font-semibold text-[#F7F4ED]">Parent result access</p>
+            <p className="text-xs leading-6 text-[#C9CDD6]">
               This is separate from teacher assessment entry. It only controls whether parents can view released results.
             </p>
           </div>
@@ -571,13 +579,15 @@ export default function HeadteacherDashboardClient() {
         </div>
 
         {releaseOk && releasedSchool ? (
-          <p className="text-[11px] text-slate-600">Parents can currently access released end-of-term results.</p>
+          <p className="mt-3 text-[11px] text-[#C9CDD6]">
+            Parents can currently access released end-of-term results.
+          </p>
         ) : releaseOk ? (
-          <p className="text-[11px] text-slate-600">
+          <p className="mt-3 text-[11px] text-[#C9CDD6]">
             Parents are currently blocked from viewing results until release is turned on.
           </p>
         ) : (
-          <p className="text-[11px] text-rose-700">
+          <p className="mt-3 text-[11px] text-rose-200">
             {(releaseStatus as any)?.error || "Failed to load release status."}
           </p>
         )}
@@ -613,65 +623,64 @@ export default function HeadteacherDashboardClient() {
         />
       </div>
 
-      {/* ✅ NEW: Schoolwide risk board (health + attendance + missing scores + low performance) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3">
+      <div className={panelClass("p-4 space-y-3")}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Schoolwide risk board</p>
-            <p className="text-xs text-slate-600">
+            <p className="text-sm font-semibold text-[#F7F4ED]">Schoolwide risk board</p>
+            <p className="text-xs leading-6 text-[#C9CDD6]">
               Combines attendance risk, fever flags, missing assessments, and low performance to prioritize follow-up.
             </p>
           </div>
 
           {riskOk ? (
-            <div className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+            <div className="rounded-full border border-indigo-300/25 bg-indigo-400/12 px-3 py-1 text-[11px] font-semibold text-indigo-100">
               At-risk: {(riskBoard as any).totals.atRiskStudents} • High-risk: {(riskBoard as any).totals.highRiskStudents}
             </div>
           ) : (
-            <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
+            <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-[#C9CDD6]">
               Risk: —
             </div>
           )}
         </div>
 
         {!riskBoard ? (
-          <p className="text-sm text-slate-600">Loading…</p>
+          <p className="text-sm text-[#C9CDD6]">Loading…</p>
         ) : riskOk ? (
           <>
             {(riskBoard as any).actions?.length ? (
               <div className="grid gap-2 md:grid-cols-2">
                 {(riskBoard as any).actions.slice(0, 4).map((a: any) => (
-                  <div key={a.code} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <div key={a.code} className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[11px] font-semibold text-slate-900">{a.code}</div>
+                      <div className="text-[11px] font-semibold text-[#F7F4ED]">{a.code}</div>
                       {priorityChip(a.priority)}
                     </div>
-                    <div className="mt-1 text-[11px] text-slate-700">{a.message}</div>
+                    <div className="mt-1 text-[11px] leading-5 text-[#C9CDD6]">{a.message}</div>
                   </div>
                 ))}
               </div>
             ) : null}
 
             <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-              <div className="rounded-2xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-4 py-3">
-                  <div className="text-sm font-semibold text-slate-900">Top at-risk learners</div>
-                  <div className="text-[11px] text-slate-600">
+              <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[#07111F]">
+                <div className="border-b border-white/10 px-4 py-3">
+                  <div className="text-sm font-semibold text-[#F7F4ED]">Top at-risk learners</div>
+                  <div className="text-[11px] text-[#C9CDD6]">
                     Window: {(riskBoard as any).scope.start} → {(riskBoard as any).scope.end}
                   </div>
                 </div>
 
-                <div className="p-4 space-y-2">
+                <div className="space-y-2 p-4">
                   {(riskBoard as any).topStudents?.length ? (
                     (riskBoard as any).topStudents.slice(0, 10).map((s: any) => (
-                      <div key={s.studentId} className="rounded-2xl border border-slate-200 p-3">
+                      <div key={s.studentId} className="rounded-2xl border border-white/10 bg-white/5 p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-sm font-semibold text-slate-900 truncate">{s.studentName}</div>
-                            <div className="mt-1 text-[11px] text-slate-600">
+                            <div className="truncate text-sm font-semibold text-[#F7F4ED]">{s.studentName}</div>
+                            <div className="mt-1 text-[11px] text-[#C9CDD6]">
                               {s.classLabel ?? "No class"} • Attendance {s.signals.attendancePercent ?? "—"}% • Fever {s.signals.feverFlags} • Missing {s.signals.missingAssessmentsCount}
                             </div>
-                            <div className="mt-2 text-[11px] text-slate-700">
+                            <div className="mt-2 text-[11px] leading-5 text-[#D9DEE8]">
                               {Array.isArray(s.reasons) && s.reasons.length ? s.reasons.slice(0, 3).join(" ") : "No reasons"}
                             </div>
                           </div>
@@ -683,31 +692,31 @@ export default function HeadteacherDashboardClient() {
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-[11px] text-emerald-900">
+                    <div className="rounded-2xl border border-emerald-300/25 bg-emerald-400/12 px-3 py-3 text-[11px] text-emerald-100">
                       No major risk signals detected in this window.
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white">
-                <div className="border-b border-slate-200 px-4 py-3">
-                  <div className="text-sm font-semibold text-slate-900">Top risk classes</div>
-                  <div className="text-[11px] text-slate-600">Based on aggregated learner risk</div>
+              <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[#07111F]">
+                <div className="border-b border-white/10 px-4 py-3">
+                  <div className="text-sm font-semibold text-[#F7F4ED]">Top risk classes</div>
+                  <div className="text-[11px] text-[#C9CDD6]">Based on aggregated learner risk</div>
                 </div>
 
-                <div className="p-4 space-y-2">
+                <div className="space-y-2 p-4">
                   {(riskBoard as any).topClasses?.length ? (
                     (riskBoard as any).topClasses.slice(0, 10).map((c: any) => (
-                      <div key={c.classroomId} className="rounded-2xl border border-slate-200 p-3">
+                      <div key={c.classroomId} className="rounded-2xl border border-white/10 bg-white/5 p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-sm font-semibold text-slate-900 truncate">{c.classLabel}</div>
-                            <div className="mt-1 text-[11px] text-slate-600">
+                            <div className="truncate text-sm font-semibold text-[#F7F4ED]">{c.classLabel}</div>
+                            <div className="mt-1 text-[11px] text-[#C9CDD6]">
                               Enrolled {c.enrolled} • At-risk {c.atRisk} • High-risk {c.highRisk}
                             </div>
                             {Array.isArray(c.reasonsTop) && c.reasonsTop.length ? (
-                              <div className="mt-2 text-[11px] text-slate-700">
+                              <div className="mt-2 text-[11px] leading-5 text-[#D9DEE8]">
                                 {c.reasonsTop.slice(0, 3).join(" ")}
                               </div>
                             ) : null}
@@ -720,7 +729,7 @@ export default function HeadteacherDashboardClient() {
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-700">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-[11px] text-[#C9CDD6]">
                       No class risk aggregation available yet.
                     </div>
                   )}
@@ -729,72 +738,72 @@ export default function HeadteacherDashboardClient() {
             </div>
 
             {(riskBoard as any).note ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[11px] text-slate-700">
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-[11px] leading-5 text-[#C9CDD6]">
                 {(riskBoard as any).note}
               </div>
             ) : null}
           </>
         ) : (
-          <p className="text-sm text-rose-600">{(riskBoard as any).error || "Failed to load risk board."}</p>
+          <p className="text-sm text-rose-200">{(riskBoard as any).error || "Failed to load risk board."}</p>
         )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          <div className="border-b border-slate-200 p-4">
-            <p className="text-sm font-semibold text-slate-900">Per-class weekly attendance</p>
-            <p className="text-xs text-slate-600">Spot weak classes quickly before certifying attendance.</p>
+        <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))]">
+          <div className="border-b border-white/10 p-4">
+            <p className="text-sm font-semibold text-[#F7F4ED]">Per-class weekly attendance</p>
+            <p className="text-xs text-[#C9CDD6]">Spot weak classes quickly before certifying attendance.</p>
           </div>
 
-          <div className="md:hidden p-4">
+          <div className="p-4 md:hidden">
             {!weekly ? (
-              <p className="text-sm text-slate-600">Loading…</p>
+              <p className="text-sm text-[#C9CDD6]">Loading…</p>
             ) : weeklyOk ? (
               (weekly as WeeklyOk).rows.length ? (
                 <div className="space-y-3">
                   {(weekly as WeeklyOk).rows.map((r) => (
-                    <div key={r.classroomId} className="rounded-2xl border border-slate-200 p-3">
+                    <div key={r.classroomId} className="rounded-2xl border border-white/10 bg-[#0C1730] p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">{r.classLabel}</p>
-                          <p className="mt-1 text-[11px] text-slate-600">
+                          <p className="text-sm font-semibold text-[#F7F4ED]">{r.classLabel}</p>
+                          <p className="mt-1 text-[11px] text-[#C9CDD6]">
                             Enrolled {r.enrolled} • Marks {r.marks}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-slate-900">{pctLabel(r.pct)}</p>
-                          <p className="text-[10px] text-slate-500">Present %</p>
+                          <p className="text-sm font-semibold text-[#F7F4ED]">{pctLabel(r.pct)}</p>
+                          <p className="text-[10px] text-[#8F98A8]">Present %</p>
                         </div>
                       </div>
 
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                        <div className="rounded-xl bg-slate-50 px-3 py-2">
-                          Present: <span className="font-semibold">{r.present}</span>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-[#C9CDD6]">
+                        <div className="rounded-xl bg-white/5 px-3 py-2">
+                          Present: <span className="font-semibold text-[#F7F4ED]">{r.present}</span>
                         </div>
-                        <div className="rounded-xl bg-slate-50 px-3 py-2">
-                          Absent: <span className="font-semibold">{r.absent}</span>
+                        <div className="rounded-xl bg-white/5 px-3 py-2">
+                          Absent: <span className="font-semibold text-[#F7F4ED]">{r.absent}</span>
                         </div>
-                        <div className="rounded-xl bg-slate-50 px-3 py-2">
-                          Late: <span className="font-semibold">{r.late}</span>
+                        <div className="rounded-xl bg-white/5 px-3 py-2">
+                          Late: <span className="font-semibold text-[#F7F4ED]">{r.late}</span>
                         </div>
-                        <div className="rounded-xl bg-slate-50 px-3 py-2">
-                          Excused: <span className="font-semibold">{r.excused}</span>
+                        <div className="rounded-xl bg-white/5 px-3 py-2">
+                          Excused: <span className="font-semibold text-[#F7F4ED]">{r.excused}</span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-700">No class rows found for this range.</p>
+                <p className="text-sm text-[#C9CDD6]">No class rows found for this range.</p>
               )
             ) : (
-              <p className="text-sm text-rose-600">{(weekly as any).error || "Failed to load weekly totals."}</p>
+              <p className="text-sm text-rose-200">{(weekly as any).error || "Failed to load weekly totals."}</p>
             )}
           </div>
 
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-slate-700">
+              <thead className="bg-white/5 text-[#C9CDD6]">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Class</th>
                   <th className="px-4 py-3 text-right font-medium">Enrolled</th>
@@ -810,34 +819,34 @@ export default function HeadteacherDashboardClient() {
               <tbody>
                 {!weekly ? (
                   <tr>
-                    <td className="px-4 py-4 text-slate-600" colSpan={8}>
+                    <td className="px-4 py-4 text-[#C9CDD6]" colSpan={8}>
                       Loading…
                     </td>
                   </tr>
                 ) : weeklyOk ? (
                   (weekly as WeeklyOk).rows.length ? (
                     (weekly as WeeklyOk).rows.map((r) => (
-                      <tr key={r.classroomId} className="border-t border-slate-200">
-                        <td className="px-4 py-3 text-slate-900">{r.classLabel}</td>
+                      <tr key={r.classroomId} className="border-t border-white/10 text-[#E5E8EF]">
+                        <td className="px-4 py-3">{r.classLabel}</td>
                         <td className="px-4 py-3 text-right">{r.enrolled}</td>
                         <td className="px-4 py-3 text-right">{r.marks}</td>
                         <td className="px-4 py-3 text-right">{r.present}</td>
                         <td className="px-4 py-3 text-right">{r.absent}</td>
                         <td className="px-4 py-3 text-right">{r.late}</td>
                         <td className="px-4 py-3 text-right">{r.excused}</td>
-                        <td className="px-4 py-3 text-right font-medium">{pctLabel(r.pct)}</td>
+                        <td className="px-4 py-3 text-right font-medium text-[#F7F4ED]">{pctLabel(r.pct)}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td className="px-4 py-4 text-slate-600" colSpan={8}>
+                      <td className="px-4 py-4 text-[#C9CDD6]" colSpan={8}>
                         No class rows found for this range.
                       </td>
                     </tr>
                   )
                 ) : (
                   <tr>
-                    <td className="px-4 py-4 text-rose-600" colSpan={8}>
+                    <td className="px-4 py-4 text-rose-200" colSpan={8}>
                       {(weekly as any).error || "Failed to load weekly totals."}
                     </td>
                   </tr>
@@ -848,15 +857,15 @@ export default function HeadteacherDashboardClient() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className={panelClass("p-4")}>
             <div>
-              <p className="text-sm font-semibold text-slate-900">Pending lesson notes</p>
-              <p className="text-xs text-slate-600">Clear these quickly. This is one of the main headteacher bottlenecks.</p>
+              <p className="text-sm font-semibold text-[#F7F4ED]">Pending lesson notes</p>
+              <p className="text-xs leading-6 text-[#C9CDD6]">Clear these quickly. This is one of the main headteacher bottlenecks.</p>
             </div>
 
             <div className="mt-4">
               {!pendingNotes ? (
-                <p className="text-sm text-slate-600">Loading…</p>
+                <p className="text-sm text-[#C9CDD6]">Loading…</p>
               ) : pendingNotesOk ? (
                 <>
                   <div className="grid gap-3 sm:grid-cols-3">
@@ -875,66 +884,66 @@ export default function HeadteacherDashboardClient() {
                             key={it.id}
                             type="button"
                             onClick={() => router.push(`/headteacher/lesson-notes/${encodeURIComponent(it.id)}`)}
-                            className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-left hover:bg-slate-50"
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:bg-white/8"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-slate-900">
+                                <p className="truncate text-sm font-semibold text-[#F7F4ED]">
                                   {(it.subject ?? "Subject —")} • {(it.term ?? "Term —")} • {(it.academicYear ?? "Year —")}
                                 </p>
-                                <p className="text-[11px] text-slate-600">
+                                <p className="text-[11px] text-[#C9CDD6]">
                                   {it.weekNumber != null ? `Week ${it.weekNumber}` : "Week —"} • Updated:{" "}
                                   {formatDateShort(it.updatedAt)}
                                 </p>
-                                <p className="text-[11px] text-slate-500">
-                                  Teacher: <span className="font-medium">{teacherLabel}</span>
+                                <p className="text-[11px] text-[#8F98A8]">
+                                  Teacher: <span className="font-medium text-[#F7F4ED]">{teacherLabel}</span>
                                 </p>
                               </div>
 
-                              <span className="font-mono text-[11px] text-slate-500">{String(it.id).slice(0, 8)}…</span>
+                              <span className="font-mono text-[11px] text-[#8F98A8]">{String(it.id).slice(0, 8)}…</span>
                             </div>
                           </button>
                         );
                       })}
                     </div>
                   ) : (
-                    <p className="mt-4 text-sm text-slate-700">No submitted lesson notes right now.</p>
+                    <p className="mt-4 text-sm text-[#C9CDD6]">No submitted lesson notes right now.</p>
                   )}
                 </>
               ) : (
-                <p className="text-sm text-rose-600">{(pendingNotes as any).error || "Failed to load pending lesson notes."}</p>
+                <p className="text-sm text-rose-200">{(pendingNotes as any).error || "Failed to load pending lesson notes."}</p>
               )}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className={panelClass("p-4")}>
             <div>
-              <p className="text-sm font-semibold text-slate-900">Pending attendance certifications</p>
-              <p className="text-xs text-slate-600">Only closed sessions should be certified.</p>
+              <p className="text-sm font-semibold text-[#F7F4ED]">Pending attendance certifications</p>
+              <p className="text-xs leading-6 text-[#C9CDD6]">Only closed sessions should be certified.</p>
             </div>
 
             <div className="mt-4">
               {!pending ? (
-                <p className="text-sm text-slate-600">Loading…</p>
+                <p className="text-sm text-[#C9CDD6]">Loading…</p>
               ) : pendingOk ? (
                 (pending as any).items.length ? (
                   <div className="space-y-3">
                     {(pending as any).items.map((it: any) => (
-                      <div key={it.id} className="rounded-2xl border border-slate-200 p-3">
-                        <p className="text-sm font-semibold text-slate-900">
-                          {it.classLabel} <span className="font-normal text-slate-500">· {it.date}</span>
+                      <div key={it.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                        <p className="text-sm font-semibold text-[#F7F4ED]">
+                          {it.classLabel} <span className="font-normal text-[#8F98A8]">· {it.date}</span>
                         </p>
 
                         <div className="mt-3 flex flex-col gap-2">
                           <input
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                            className="w-full rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-2 text-sm text-[#F7F4ED] outline-none focus:border-[#E8C96A]/35"
                             placeholder="Optional certification note"
                             value={noteBySessionId[it.id] ?? ""}
                             onChange={(e) => setNoteBySessionId((m) => ({ ...m, [it.id]: e.target.value }))}
                           />
 
                           <button
-                            className="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-60 sm:w-auto"
+                            className="w-full rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] sm:w-auto"
                             onClick={() => void certify(it.id)}
                             disabled={busyCertifyId === it.id}
                           >
@@ -945,10 +954,10 @@ export default function HeadteacherDashboardClient() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-700">No pending certifications for this range.</p>
+                  <p className="text-sm text-[#C9CDD6]">No pending certifications for this range.</p>
                 )
               ) : (
-                <p className="text-sm text-rose-600">{(pending as any).error || "Failed to load pending sessions."}</p>
+                <p className="text-sm text-rose-200">{(pending as any).error || "Failed to load pending sessions."}</p>
               )}
             </div>
           </div>
@@ -956,37 +965,37 @@ export default function HeadteacherDashboardClient() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className={panelClass("p-4")}>
           <div>
-            <p className="text-sm font-semibold text-slate-900">Weekly explanation</p>
-            <p className="text-xs text-slate-600">Server-trusted summary from the attendance data.</p>
+            <p className="text-sm font-semibold text-[#F7F4ED]">Weekly explanation</p>
+            <p className="text-xs leading-6 text-[#C9CDD6]">Server-trusted summary from the attendance data.</p>
           </div>
 
           <div className="mt-4">
             {!explain ? (
-              <p className="text-sm text-slate-600">Loading…</p>
+              <p className="text-sm text-[#C9CDD6]">Loading…</p>
             ) : explainOk ? (
               <div className="space-y-3">
-                <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-800">
+                <pre className="whitespace-pre-wrap text-sm leading-7 text-[#E5E8EF]">
                   {(explain as any).summary}
                 </pre>
                 {(explain as any).suggestions ? (
-                  <pre className="whitespace-pre-wrap border-t border-slate-200 pt-3 text-sm leading-6 text-slate-800">
+                  <pre className="whitespace-pre-wrap border-t border-white/10 pt-3 text-sm leading-7 text-[#E5E8EF]">
                     {(explain as any).suggestions}
                   </pre>
                 ) : null}
               </div>
             ) : (
-              <p className="text-sm text-rose-600">{(explain as any).error || "Failed to load explanation."}</p>
+              <p className="text-sm text-rose-200">{(explain as any).error || "Failed to load explanation."}</p>
             )}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className={panelClass("p-4")}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-slate-900">Governance copilot</p>
-              <p className="text-xs text-slate-600">
+              <p className="text-sm font-semibold text-[#F7F4ED]">Governance copilot</p>
+              <p className="text-xs leading-6 text-[#C9CDD6]">
                 Measures whether school leadership is enforcing the chain:
                 approved note → delivered lesson → linked assessment → scored assessment.
               </p>
@@ -1002,7 +1011,7 @@ export default function HeadteacherDashboardClient() {
 
           <div className="mt-4">
             {!governance ? (
-              <p className="text-sm text-slate-600">Loading…</p>
+              <p className="text-sm text-[#C9CDD6]">Loading…</p>
             ) : governanceOk ? (
               <div className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1024,47 +1033,47 @@ export default function HeadteacherDashboardClient() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs">
-                    <div className="text-slate-500">Approved not delivered</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900">
+                  <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
+                    <div className="text-[#8F98A8]">Approved not delivered</div>
+                    <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
                       {(governance as any).anomalies.approvedNotDelivered.length}
                     </div>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs">
-                    <div className="text-slate-500">Delivered not assessed</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900">
+                  <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
+                    <div className="text-[#8F98A8]">Delivered not assessed</div>
+                    <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
                       {(governance as any).anomalies.deliveredNotAssessed.length}
                     </div>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs">
-                    <div className="text-slate-500">Assessed not linked</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900">
+                  <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
+                    <div className="text-[#8F98A8]">Assessed not linked</div>
+                    <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
                       {(governance as any).anomalies.assessedNotLinked.length}
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-slate-900">Priority actions</p>
+                  <p className="text-xs font-semibold text-[#F7F4ED]">Priority actions</p>
                   {(governance as any).actions.length ? (
                     (governance as any).actions.map((a: any) => (
-                      <div key={a.code} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                      <div key={a.code} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-slate-900">{a.code}</p>
+                          <p className="text-xs font-semibold text-[#F7F4ED]">{a.code}</p>
                           {priorityChip(a.priority)}
                         </div>
-                        <p className="mt-1 text-xs leading-5 text-slate-700">{a.message}</p>
+                        <p className="mt-1 text-xs leading-5 text-[#C9CDD6]">{a.message}</p>
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-xs text-emerald-900">
+                    <div className="rounded-2xl border border-emerald-300/25 bg-emerald-400/12 px-3 py-3 text-xs text-emerald-100">
                       Governance is stable in this range. Keep the same discipline.
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-rose-600">{(governance as any).error || "Failed to load governance insights."}</p>
+              <p className="text-sm text-rose-200">{(governance as any).error || "Failed to load governance insights."}</p>
             )}
           </div>
         </div>
