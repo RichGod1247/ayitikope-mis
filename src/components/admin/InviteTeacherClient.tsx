@@ -28,9 +28,19 @@ function cleanEmail(v: string) {
 }
 
 function cleanPhoneLoose(v: string) {
-  // user can type 024..., +233..., 233...
   return String(v ?? "").trim();
 }
+
+const shellCard =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+const btnBase =
+  "inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm transition disabled:opacity-50 disabled:cursor-not-allowed";
+const btnPrimary =
+  `${btnBase} border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] hover:brightness-105`;
+const btnOutline =
+  `${btnBase} border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10`;
+const inputClass =
+  "mt-1 w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20";
 
 export default function InviteTeacherClient() {
   const router = useRouter();
@@ -66,7 +76,6 @@ export default function InviteTeacherClient() {
         email: cleanEmail(email),
         roleName,
         redirectTo: "/app",
-        // ✅ for SMS delivery
         deliverToPhone: cleanPhoneLoose(phone),
         deliverToName: cleanStr(name),
         brand: "AYITIADMIN",
@@ -123,64 +132,64 @@ export default function InviteTeacherClient() {
   const expiresLabel = created ? new Date(created.expiresAt).toLocaleString() : "";
 
   return (
-    <div className="rounded-2xl border bg-white p-6 space-y-4">
+    <div className={shellCard}>
       <div>
-        <p className="text-sm font-semibold text-zinc-900">Invite Staff</p>
-        <p className="text-sm text-zinc-600 mt-1">
-          Sends an invite link by <span className="font-medium">email + SMS</span> (expires in{" "}
-          <span className="font-medium">15 minutes</span>).
+        <p className="text-sm font-semibold text-[#F7F4ED]">Invite Staff</p>
+        <p className="mt-1 text-sm text-[#C9CDD6]">
+          Sends an invite link by <span className="font-medium text-[#F7F4ED]">email + SMS</span> and expires in{" "}
+          <span className="font-medium text-[#F7F4ED]">15 minutes</span>.
         </p>
       </div>
 
       {topError ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-3 py-2 text-xs text-amber-100">
           {topError}
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <label className="text-sm text-zinc-700">Role</label>
+          <label className="text-sm text-[#C9CDD6]">Role</label>
           <select
             value={roleName}
             onChange={(e) => setRoleName(e.target.value as any)}
-            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm bg-white"
+            className={inputClass}
           >
-            <option value="TEACHER">Teacher</option>
-            <option value="HEADTEACHER">Headteacher</option>
+            <option value="TEACHER" className="bg-[#05070B] text-[#F7F4ED]">Teacher</option>
+            <option value="HEADTEACHER" className="bg-[#05070B] text-[#F7F4ED]">Headteacher</option>
           </select>
         </div>
 
         <div>
-          <label className="text-sm text-zinc-700">Name (optional)</label>
+          <label className="text-sm text-[#C9CDD6]">Name (optional)</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+            className={inputClass}
             placeholder="e.g. Mr. Mensah"
           />
         </div>
 
         <div>
-          <label className="text-sm text-zinc-700">Email</label>
+          <label className="text-sm text-[#C9CDD6]">Email</label>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+            className={inputClass}
             placeholder="teacher@school.com"
           />
-          {fieldErrors.email ? <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p> : null}
+          {fieldErrors.email ? <p className="mt-1 text-xs text-rose-200">{fieldErrors.email}</p> : null}
         </div>
 
         <div>
-          <label className="text-sm text-zinc-700">Phone (for SMS)</label>
+          <label className="text-sm text-[#C9CDD6]">Phone (for SMS)</label>
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+            className={inputClass}
             placeholder="024xxxxxxx or +23324xxxxxxx"
           />
-          <p className="mt-1 text-[11px] text-zinc-500">
+          <p className="mt-1 text-[11px] text-[#8F98A8]">
             This is the number that will receive the invite SMS.
           </p>
         </div>
@@ -190,7 +199,7 @@ export default function InviteTeacherClient() {
             type="button"
             onClick={onCreate}
             disabled={!canSubmit}
-            className="w-full rounded-xl bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+            className={`${btnPrimary} w-full`}
           >
             {loading ? "Creating…" : "Create invite + send"}
           </button>
@@ -198,44 +207,50 @@ export default function InviteTeacherClient() {
       </div>
 
       {created ? (
-        <div className="rounded-xl border bg-zinc-50 p-4 space-y-3">
-          <p className="text-xs text-zinc-600">
-            Expires: <span className="font-medium">{expiresLabel}</span>
+        <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-4 space-y-3">
+          <p className="text-xs text-[#C9CDD6]">
+            Expires: <span className="font-medium text-[#F7F4ED]">{expiresLabel}</span>
           </p>
 
           <div className="flex items-center gap-2">
-            <input readOnly value={created.link} className="flex-1 rounded-lg border px-3 py-2 text-xs bg-white" />
-            <button onClick={copyLink} className="rounded-lg border px-3 py-2 text-xs hover:bg-white">
+            <input
+              readOnly
+              value={created.link}
+              className="flex-1 rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-xs text-[#F7F4ED]"
+            />
+            <button onClick={copyLink} className={btnOutline}>
               Copy
             </button>
           </div>
 
-          <div className="text-xs text-zinc-700 space-y-1">
+          <div className="space-y-1 text-xs text-[#C9CDD6]">
             <div>
               Email:{" "}
-              <span className={created.delivery?.email?.ok ? "text-emerald-700" : "text-amber-700"}>
+              <span className={created.delivery?.email?.ok ? "text-emerald-200" : "text-amber-200"}>
                 {created.delivery?.email?.ok ? "sent" : created.delivery?.email ? "failed" : "unknown"}
               </span>
               {created.delivery?.email?.error ? (
-                <span className="text-zinc-500"> ({created.delivery.email.error})</span>
+                <span className="text-[#8F98A8]"> ({created.delivery.email.error})</span>
               ) : null}
             </div>
 
             <div>
               SMS:{" "}
-              <span className={created.delivery?.sms?.ok ? "text-emerald-700" : "text-amber-700"}>
+              <span className={created.delivery?.sms?.ok ? "text-emerald-200" : "text-amber-200"}>
                 {created.delivery?.sms?.ok ? "sent" : created.delivery?.sms ? "failed" : "unknown"}
               </span>
-              {created.delivery?.sms?.to ? <span className="text-zinc-500"> (to {created.delivery.sms.to})</span> : null}
+              {created.delivery?.sms?.to ? (
+                <span className="text-[#8F98A8]"> (to {created.delivery.sms.to})</span>
+              ) : null}
               {created.delivery?.sms?.error ? (
-                <span className="text-zinc-500"> ({created.delivery.sms.error})</span>
+                <span className="text-[#8F98A8]"> ({created.delivery.sms.error})</span>
               ) : null}
             </div>
           </div>
 
-          <p className="text-xs text-zinc-500">
-            Note: if <span className="font-medium">EMAIL_TEST_MODE=true</span>, the email will go to{" "}
-            <span className="font-medium">EMAIL_TEST_TO</span>, not the invited email.
+          <p className="text-xs text-[#8F98A8]">
+            Note: if <span className="font-medium text-[#F7F4ED]">EMAIL_TEST_MODE=true</span>, the email goes to{" "}
+            <span className="font-medium text-[#F7F4ED]">EMAIL_TEST_TO</span>, not the invited email.
           </p>
         </div>
       ) : null}

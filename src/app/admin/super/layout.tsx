@@ -17,7 +17,6 @@ export default async function AdminSuperLayout({ children }: { children: React.R
 
   if (!ctx?.userId) redirect(toSignIn("/admin/super"));
 
-  // ✅ DB-truth: SUPERADMIN must exist as an ACTIVE membership in ANY tenant
   const mem = await prisma.membership.findFirst({
     where: {
       userId: ctx.userId,
@@ -29,7 +28,6 @@ export default async function AdminSuperLayout({ children }: { children: React.R
 
   if (!mem) redirect(toSignIn("/admin/super", "FORBIDDEN"));
 
-  // Optional: ensure they always have an active tenant in session UX
   if (!ctx.tenantId) {
     try {
       await prisma.user.update({
@@ -39,5 +37,9 @@ export default async function AdminSuperLayout({ children }: { children: React.R
     } catch {}
   }
 
-  return <div className="p-6 max-w-6xl mx-auto">{children}</div>;
+  return (
+    <main className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] text-[#F7F4ED]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+    </main>
+  );
 }

@@ -42,9 +42,29 @@ type LoadResp = {
   };
 };
 
-const inputBase = "w-full border rounded-xl p-2 h-10 bg-white";
-const labelBase = "block text-sm font-medium text-zinc-700 mb-1";
-const card = "border rounded-2xl p-4 bg-white shadow-sm";
+type SaveResp = {
+  ok?: boolean;
+  error?: string;
+  setupComplete?: boolean;
+  setupCompletedAt?: string | null;
+};
+
+type MsgTone = "ok" | "error" | "info";
+
+const shellCard =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+const sectionCard =
+  "rounded-[24px] border border-white/10 bg-[#07111F]/80 p-5 shadow-[0_12px_34px_rgba(0,0,0,0.18)]";
+const inputBase =
+  "h-10 w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20";
+const labelBase = "mb-1 block text-sm font-medium text-[#C9CDD6]";
+const helperBase = "mt-2 text-xs text-[#8F98A8]";
+const btnBase =
+  "inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary =
+  `${btnBase} border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] hover:brightness-105`;
+const btnOutline =
+  `${btnBase} border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10`;
 
 function toNumOrNull(v: string) {
   const s = String(v ?? "").trim();
@@ -53,7 +73,7 @@ function toNumOrNull(v: string) {
   return Number.isFinite(n) ? n : null;
 }
 
-function safeNextPath(raw: string | null, fallback = "/admin/dashboard") {
+function safeNextPath(raw: string | null, fallback = "/admin/setup") {
   const v = String(raw ?? "").trim();
   if (!v) return fallback;
   if (!v.startsWith("/")) return fallback;
@@ -62,16 +82,50 @@ function safeNextPath(raw: string | null, fallback = "/admin/dashboard") {
   return v;
 }
 
+function normalizeTerm(raw: string) {
+  const v = String(raw ?? "").trim().toLowerCase();
+  if (!v) return "";
+  if (v === "1st term" || v === "term 1" || v === "term1" || v === "1" || v === "first term") return "1st Term";
+  if (v === "2nd term" || v === "term 2" || v === "term2" || v === "2" || v === "second term") return "2nd Term";
+  if (v === "3rd term" || v === "term 3" || v === "term3" || v === "3" || v === "third term") return "3rd Term";
+  return raw.trim();
+}
+
+function msgClasses(tone: MsgTone) {
+  if (tone === "ok") return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+  if (tone === "error") return "border-rose-300/20 bg-rose-400/12 text-rose-100";
+  return "border-sky-300/20 bg-sky-400/12 text-sky-100";
+}
+
+function statusChip(label: string, tone: "ok" | "muted" = "muted") {
+  const cls =
+    tone === "ok"
+      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+      : "border-white/10 bg-white/5 text-[#D7DCE5]";
+
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
 export default function AdminSetupPage() {
   const sp = useSearchParams();
-  const next = useMemo(() => safeNextPath(sp.get("next"), "/admin/dashboard"), [sp]);
+
+  const next = useMemo(() => safeNextPath(sp.get("next"), "/admin/setup"), [sp]);
+  const explicitNext = useMemo(() => safeNextPath(sp.get("next"), ""), [sp]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [msg, setMsg] = useState<string | null>(null);
+  const [msgTone, setMsgTone] = useState<MsgTone>("info");
 
   const [tenantName, setTenantName] = useState("");
   const [schoolCode, setSchoolCode] = useState("");
+  const [setupCompletedAt, setSetupCompletedAt] = useState<string | null>(null);
+  const [setupComplete, setSetupComplete] = useState(false);
 
   const [currentAcademicYear, setCurrentAcademicYear] = useState("");
   const [currentTerm, setCurrentTerm] = useState("");
@@ -92,14 +146,18 @@ export default function AdminSetupPage() {
   async function load() {
     setLoading(true);
     setMsg(null);
+
     try {
-      const r = await fetch("/api/admin/setup/load", { cache: "no-store" });
+      const r = await fetch("/api/admin/setup/load", {
+        cache: "no-store",
+        credentials: "include",
+      });
+
       const j = (await r.json().catch(() => ({}))) as any;
 
-      // Accept both shapes:
-      // (A) { ok:true, tenant, settings }  OR (B) { tenant, settings }
       const ok = r.ok && (j?.ok === undefined ? true : Boolean(j?.ok));
       if (!ok || !j?.tenant || !j?.settings) {
+        setMsgTone("error");
         setMsg(j?.error || `Failed to load (${r.status})`);
         return;
       }
@@ -110,7 +168,7 @@ export default function AdminSetupPage() {
       setSchoolCode(data.tenant.schoolCode || "");
 
       setCurrentAcademicYear(data.settings.currentAcademicYear || "");
-      setCurrentTerm(data.settings.currentTerm || "");
+      setCurrentTerm(normalizeTerm(data.settings.currentTerm || ""));
 
       setTerm1Start(data.settings.term1Start || "");
       setTerm1End(data.settings.term1End || "");
@@ -123,6 +181,9 @@ export default function AdminSetupPage() {
       setAttendanceEndTime(data.settings.attendanceEndTime || "");
       setLateCutoffMinutes(data.settings.lateCutoffMinutes == null ? "" : String(data.settings.lateCutoffMinutes));
       setFeverThreshold(data.settings.feverThreshold == null ? "" : String(data.settings.feverThreshold));
+
+      setSetupCompletedAt(data.settings.setupCompletedAt ?? null);
+      setSetupComplete(Boolean(data.settings.setupComplete || data.settings.setupCompletedAt));
     } finally {
       setLoading(false);
     }
@@ -131,10 +192,11 @@ export default function AdminSetupPage() {
   async function save() {
     setSaving(true);
     setMsg(null);
+
     try {
       const payload = {
         currentAcademicYear: currentAcademicYear.trim(),
-        currentTerm: currentTerm.trim(),
+        currentTerm: normalizeTerm(currentTerm),
 
         term1Start: term1Start.trim(),
         term1End: term1End.trim(),
@@ -154,145 +216,261 @@ export default function AdminSetupPage() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
+        credentials: "include",
       });
 
-      const j: any = await r.json().catch(() => ({}));
+      const j = (await r.json().catch(() => ({}))) as SaveResp;
+
       if (!r.ok || !j?.ok) {
+        setMsgTone("error");
         setMsg(j?.error || `Failed to save (${r.status})`);
         return;
       }
 
-      if (j.setupComplete) {
-        setMsg("Setup complete ✅ Redirecting…");
-        window.location.href = next;
-      } else {
-        setMsg("Saved (draft). Setup is NOT complete yet — please finish required fields.");
+      const complete = Boolean(j.setupComplete);
+      setSetupComplete(complete);
+      if (j.setupCompletedAt !== undefined) setSetupCompletedAt(j.setupCompletedAt ?? null);
+
+      if (complete && explicitNext && explicitNext !== "/admin/setup") {
+        setMsgTone("ok");
+        setMsg("Academic settings saved. Redirecting…");
+        window.location.assign(next);
+        return;
       }
+
+      setMsgTone("ok");
+      setMsg(
+        complete
+          ? "Academic settings saved."
+          : "Saved as draft. Setup is not complete yet — finish required fields."
+      );
     } finally {
       setSaving(false);
     }
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Admin Setup</h1>
-        <p className="text-sm text-zinc-600">Fill this once per school. You can edit later.</p>
-        <p className="text-[11px] text-zinc-500 mt-1">
-          After completion you’ll be redirected to: <span className="font-mono">{next}</span>
-        </p>
-      </div>
+    <section className="space-y-6">
+      <header className={shellCard}>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {statusChip("EduLife OS · Admin · Academic Settings", "ok")}
+            {setupComplete ? statusChip("Setup completed", "ok") : statusChip("Setup in progress")}
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-semibold text-[#F7F4ED]">Academic Settings</h1>
+            <p className="mt-1 max-w-3xl text-sm text-[#C9CDD6]">
+              Configure the school year, term dates, attendance window, and fever threshold.
+              This is now a reusable settings page, not a one-time trapdoor.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3 text-[11px] text-[#8F98A8]">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+              Redirect target: <span className="font-mono text-[#D7DCE5]">{next}</span>
+            </span>
+            {setupCompletedAt ? (
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                Completed at: <span className="text-[#D7DCE5]">{new Date(setupCompletedAt).toLocaleString()}</span>
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      {msg ? (
+        <div className={`rounded-2xl border px-4 py-3 text-sm ${msgClasses(msgTone)}`}>
+          {msg}
+        </div>
+      ) : null}
 
       {loading ? (
-        <div className="text-sm text-zinc-600">Loading…</div>
+        <div className={`${sectionCard} text-sm text-[#C9CDD6]`}>Loading settings…</div>
       ) : (
         <>
-          <div className={card}>
-            <h2 className="text-lg font-semibold mb-3">School</h2>
-            <div className="grid md:grid-cols-2 gap-4">
+          <section className={sectionCard}>
+            <h2 className="mb-4 text-lg font-semibold text-[#F7F4ED]">School</h2>
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className={labelBase}>School Name (read-only for now)</label>
-                <input className={inputBase} value={tenantName} disabled />
+                <label className={labelBase}>School Name</label>
+                <input className={`${inputBase} opacity-80`} value={tenantName} disabled />
               </div>
               <div>
-                <label className={labelBase}>School Code (read-only)</label>
-                <input className={inputBase} value={schoolCode} disabled />
-              </div>
-            </div>
-          </div>
-
-          <div className={card}>
-            <h2 className="text-lg font-semibold mb-3">Academic</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className={labelBase}>Current Academic Year (e.g. 2025/2026)</label>
-                <input className={inputBase} value={currentAcademicYear} onChange={(e) => setCurrentAcademicYear(e.target.value)} placeholder="2025/2026" />
-              </div>
-              <div>
-                <label className={labelBase}>Current Term (e.g. Term 2)</label>
-                <input className={inputBase} value={currentTerm} onChange={(e) => setCurrentTerm(e.target.value)} placeholder="Term 1" />
+                <label className={labelBase}>School Code</label>
+                <input className={`${inputBase} opacity-80`} value={schoolCode} disabled />
               </div>
             </div>
+          </section>
 
-            <div className="mt-4 grid md:grid-cols-3 gap-4">
+          <section className={sectionCard}>
+            <h2 className="mb-4 text-lg font-semibold text-[#F7F4ED]">Academic</h2>
+
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <div className="font-medium text-sm mb-2">Term 1</div>
-                <label className={labelBase}>Start</label>
-                <input className={inputBase} value={term1Start} onChange={(e) => setTerm1Start(e.target.value)} placeholder="YYYY-MM-DD" />
-                <label className={labelBase + " mt-2"}>End</label>
-                <input className={inputBase} value={term1End} onChange={(e) => setTerm1End(e.target.value)} placeholder="YYYY-MM-DD" />
+                <label className={labelBase}>Current Academic Year</label>
+                <input
+                  className={inputBase}
+                  value={currentAcademicYear}
+                  onChange={(e) => setCurrentAcademicYear(e.target.value)}
+                  placeholder="2025/2026"
+                />
               </div>
+
               <div>
-                <div className="font-medium text-sm mb-2">Term 2</div>
-                <label className={labelBase}>Start</label>
-                <input className={inputBase} value={term2Start} onChange={(e) => setTerm2Start(e.target.value)} placeholder="YYYY-MM-DD" />
-                <label className={labelBase + " mt-2"}>End</label>
-                <input className={inputBase} value={term2End} onChange={(e) => setTerm2End(e.target.value)} placeholder="YYYY-MM-DD" />
-              </div>
-              <div>
-                <div className="font-medium text-sm mb-2">Term 3</div>
-                <label className={labelBase}>Start</label>
-                <input className={inputBase} value={term3Start} onChange={(e) => setTerm3Start(e.target.value)} placeholder="YYYY-MM-DD" />
-                <label className={labelBase + " mt-2"}>End</label>
-                <input className={inputBase} value={term3End} onChange={(e) => setTerm3End(e.target.value)} placeholder="YYYY-MM-DD" />
+                <label className={labelBase}>Current Term</label>
+                <select
+                  className={inputBase}
+                  value={currentTerm}
+                  onChange={(e) => setCurrentTerm(e.target.value)}
+                >
+                  <option value="" className="bg-[#05070B] text-[#F7F4ED]">
+                    — Select term —
+                  </option>
+                  <option value="1st Term" className="bg-[#05070B] text-[#F7F4ED]">
+                    1st Term
+                  </option>
+                  <option value="2nd Term" className="bg-[#05070B] text-[#F7FED]">
+                    2nd Term
+                  </option>
+                  <option value="3rd Term" className="bg-[#05070B] text-[#F7F4ED]">
+                    3rd Term
+                  </option>
+                </select>
               </div>
             </div>
-          </div>
 
-          <div className={card}>
-            <h2 className="text-lg font-semibold mb-3">Attendance</h2>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-[#05070B] p-4">
+                <div className="mb-3 text-sm font-semibold text-[#F7F4ED]">Term 1</div>
+                <label className={labelBase}>Start</label>
+                <input
+                  type="date"
+                  className={inputBase}
+                  value={term1Start}
+                  onChange={(e) => setTerm1Start(e.target.value)}
+                />
+                <label className={`${labelBase} mt-3`}>End</label>
+                <input
+                  type="date"
+                  className={inputBase}
+                  value={term1End}
+                  onChange={(e) => setTerm1End(e.target.value)}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-[#05070B] p-4">
+                <div className="mb-3 text-sm font-semibold text-[#F7F4ED]">Term 2</div>
+                <label className={labelBase}>Start</label>
+                <input
+                  type="date"
+                  className={inputBase}
+                  value={term2Start}
+                  onChange={(e) => setTerm2Start(e.target.value)}
+                />
+                <label className={`${labelBase} mt-3`}>End</label>
+                <input
+                  type="date"
+                  className={inputBase}
+                  value={term2End}
+                  onChange={(e) => setTerm2End(e.target.value)}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-[#05070B] p-4">
+                <div className="mb-3 text-sm font-semibold text-[#F7F4ED]">Term 3</div>
+                <label className={labelBase}>Start</label>
+                <input
+                  type="date"
+                  className={inputBase}
+                  value={term3Start}
+                  onChange={(e) => setTerm3Start(e.target.value)}
+                />
+                <label className={`${labelBase} mt-3`}>End</label>
+                <input
+                  type="date"
+                  className={inputBase}
+                  value={term3End}
+                  onChange={(e) => setTerm3End(e.target.value)}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className={sectionCard}>
+            <h2 className="mb-4 text-lg font-semibold text-[#F7F4ED]">Attendance</h2>
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <label className={labelBase}>Start Time (HH:MM)</label>
-                <input className={inputBase} value={attendanceStartTime} onChange={(e) => setAttendanceStartTime(e.target.value)} placeholder="07:30" />
+                <label className={labelBase}>Start Time</label>
+                <input
+                  type="time"
+                  className={inputBase}
+                  value={attendanceStartTime}
+                  onChange={(e) => setAttendanceStartTime(e.target.value)}
+                />
               </div>
               <div>
-                <label className={labelBase}>End Time (HH:MM)</label>
-                <input className={inputBase} value={attendanceEndTime} onChange={(e) => setAttendanceEndTime(e.target.value)} placeholder="14:30" />
+                <label className={labelBase}>End Time</label>
+                <input
+                  type="time"
+                  className={inputBase}
+                  value={attendanceEndTime}
+                  onChange={(e) => setAttendanceEndTime(e.target.value)}
+                />
               </div>
               <div>
                 <label className={labelBase}>Late Cutoff Minutes</label>
-                <input className={inputBase} value={lateCutoffMinutes} onChange={(e) => setLateCutoffMinutes(e.target.value)} placeholder="15" />
+                <input
+                  type="number"
+                  min={0}
+                  className={inputBase}
+                  value={lateCutoffMinutes}
+                  onChange={(e) => setLateCutoffMinutes(e.target.value)}
+                  placeholder="15"
+                />
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className={card}>
-            <h2 className="text-lg font-semibold mb-3">Health</h2>
-            <div className="grid md:grid-cols-2 gap-4">
+          <section className={sectionCard}>
+            <h2 className="mb-4 text-lg font-semibold text-[#F7F4ED]">Health</h2>
+            <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className={labelBase}>Fever Threshold (°C)</label>
-                <input className={inputBase} value={feverThreshold} onChange={(e) => setFeverThreshold(e.target.value)} placeholder="37.8" />
-                <p className="text-xs text-zinc-500 mt-2">Valid range: 30.0–45.0 (enforced server-side).</p>
+                <input
+                  type="number"
+                  step="0.1"
+                  min={30}
+                  max={45}
+                  className={inputBase}
+                  value={feverThreshold}
+                  onChange={(e) => setFeverThreshold(e.target.value)}
+                  placeholder="37.8"
+                />
+                <p className={helperBase}>Valid range: 30.0–45.0. Server still enforces the final rule.</p>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="flex gap-3 items-center">
-            <button
-              className="inline-flex items-center justify-center h-10 px-4 rounded-xl border shadow-sm bg-black text-white border-black hover:bg-zinc-800 disabled:opacity-50"
-              onClick={save}
-              disabled={saving}
-            >
-              {saving ? "Saving…" : "Save Setup"}
+          <div className="flex flex-wrap items-center gap-3">
+            <button className={btnPrimary} onClick={save} disabled={saving}>
+              {saving ? "Saving…" : "Save Settings"}
             </button>
 
-            <button
-              className="inline-flex items-center justify-center h-10 px-4 rounded-xl border shadow-sm bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
-              onClick={load}
-              disabled={saving}
-            >
+            <button className={btnOutline} onClick={load} disabled={saving}>
               Reload
             </button>
 
-            {msg && <div className="text-sm text-zinc-700">{msg}</div>}
+            <span className="text-xs text-[#8F98A8]">
+              This page remains editable after initial setup.
+            </span>
           </div>
         </>
       )}
-    </div>
+    </section>
   );
 }

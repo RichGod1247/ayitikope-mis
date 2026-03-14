@@ -9,7 +9,7 @@ type ClassroomOption = {
 };
 
 type StudentContact = {
-  id: string; // studentId
+  id: string;
   firstName: string;
   lastName: string;
   classLabel?: string | null;
@@ -21,7 +21,7 @@ type StudentContact = {
 
 type AttendanceItem = {
   id: string;
-  date: string; // ISO date string
+  date: string;
   classLabel?: string | null;
   status: "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
   note?: string | null;
@@ -29,7 +29,7 @@ type AttendanceItem = {
 
 type HealthItem = {
   id: string;
-  date: string; // ISO
+  date: string;
   temperatureC: number | null;
   symptoms: string | null;
   notes: string | null;
@@ -66,10 +66,21 @@ type ConsentTextResp =
   | { ok: true; text: string; link: string }
   | { ok: false; error: string };
 
+const shellCard =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+
+const innerCard =
+  "rounded-2xl border border-white/10 bg-[#07111F]/80";
+
 const btnBase =
-  "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-800`;
-const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50`;
+  "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs md:text-sm transition disabled:opacity-50 disabled:cursor-not-allowed";
+const btnPrimary =
+  `${btnBase} border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] hover:brightness-105`;
+const btnOutline =
+  `${btnBase} border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10`;
+
+const inputClass =
+  "h-10 w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20";
 
 function formatDateShort(iso: string) {
   if (!iso) return "Unknown date";
@@ -99,7 +110,6 @@ function safeText(v: unknown) {
 }
 
 async function copyToClipboard(text: string) {
-  // Clipboard API fails sometimes on non-HTTPS contexts; provide a fallback.
   try {
     await navigator.clipboard.writeText(text);
     return true;
@@ -122,52 +132,66 @@ async function copyToClipboard(text: string) {
   }
 }
 
+function StatusChip({
+  children,
+  tone = "muted",
+}: {
+  children: React.ReactNode;
+  tone?: "muted" | "ok" | "warn" | "bad" | "info";
+}) {
+  const cls =
+    tone === "ok"
+      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+      : tone === "warn"
+      ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
+      : tone === "bad"
+      ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
+      : tone === "info"
+      ? "border-sky-300/20 bg-sky-400/12 text-sky-100"
+      : "border-white/10 bg-white/5 text-[#D7DCE5]";
+
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
 export default function AdminStudentProfileClient({ tenantName }: { tenantName: string }) {
-  // Classrooms
   const [mode, setMode] = useState<"single" | "multi">("single");
   const [classOptions, setClassOptions] = useState<ClassroomOption[]>([]);
   const [classLoading, setClassLoading] = useState(false);
   const [classError, setClassError] = useState<string | null>(null);
   const [classroomId, setClassroomId] = useState<string>("");
 
-  // Students / contacts
   const [contacts, setContacts] = useState<StudentContact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [contactsError, setContactsError] = useState<string | null>(null);
 
-  // Which student is selected on the right panel
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-  // Attendance state (for selected student)
   const [attendanceItems, setAttendanceItems] = useState<AttendanceItem[]>([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
 
-  // Health state (for selected student)
   const [healthItems, setHealthItems] = useState<HealthItem[]>([]);
   const [healthLoading, setHealthLoading] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
 
-  // Health consent status
   const [consentAt, setConsentAt] = useState<string | null>(null);
   const [consentLoading, setConsentLoading] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
   const [consentOk, setConsentOk] = useState<string | null>(null);
 
-  // SMS opt-in status (informational)
   const [guardianSmsOptIn, setGuardianSmsOptIn] = useState<boolean | null>(null);
   const [guardianPhoneFromStatus, setGuardianPhoneFromStatus] = useState<string | null>(null);
 
-  // Consent SMS actions state
   const [sendLoading, setSendLoading] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendOk, setSendOk] = useState<string | null>(null);
   const [lastSendLink, setLastSendLink] = useState<string | null>(null);
   const [lastSendText, setLastSendText] = useState<string | null>(null);
 
-  // ---------------------------
-  // Classrooms (ADMIN scoped, session tenant)
-  // ---------------------------
   async function fetchClassOptions(m: "single" | "multi") {
     setClassLoading(true);
     setClassError(null);
@@ -205,9 +229,6 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
-  // ---------------------------
-  // Load contacts for selected class (ADMIN scoped)
-  // ---------------------------
   async function loadContacts() {
     if (!classroomId) return;
 
@@ -271,9 +292,6 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
     return found?.label ?? "";
   }, [classOptions, classroomId]);
 
-  // ---------------------------
-  // Load consent status
-  // ---------------------------
   async function loadConsentStatus() {
     if (!selectedStudentId) return;
 
@@ -298,7 +316,6 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
       setGuardianSmsOptIn(j.guardianSmsOptIn);
       setGuardianPhoneFromStatus(j.guardianPhone);
 
-      // Clear any prior “sent” preview when switching students
       setSendError(null);
       setSendOk(null);
       setLastSendLink(null);
@@ -349,7 +366,6 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
       setConsentAt(j.healthConsentAt);
       setConsentOk(j.healthConsentAt ? "Health consent granted." : "Health consent revoked.");
 
-      // refresh snapshot
       void loadConsentStatus();
     } catch (e: any) {
       setConsentError(safeText(e?.message) || "Failed to update health consent.");
@@ -358,9 +374,6 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
     }
   }
 
-  // ---------------------------
-  // Consent SMS actions
-  // ---------------------------
   async function sendConsentSms() {
     if (!selectedStudentId) return;
 
@@ -434,9 +447,6 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
     }
   }
 
-  // ---------------------------
-  // Load attendance (ADMIN scoped)
-  // ---------------------------
   async function loadAttendance() {
     if (!selectedStudentId) return;
 
@@ -470,9 +480,6 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
     }
   }
 
-  // ---------------------------
-  // Load health (ADMIN scoped)
-  // ---------------------------
   async function loadHealth() {
     if (!selectedStudentId) return;
 
@@ -506,38 +513,48 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
     }
   }
 
-  // ---------------------------
-  // UI
-  // ---------------------------
   return (
-    <main className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold">Student 360° Profile</h1>
-        <p className="text-sm text-zinc-600 max-w-3xl">
-          A single calm view where heads, SHEP, and class teachers can see a learner&apos;s{" "}
-          <span className="font-semibold">basic details, guardian contacts, attendance, and daily health</span>{" "}
-          — to support them early, not to punish.
-        </p>
-        <p className="text-xs text-zinc-500">
-          School: <span className="font-semibold">{tenantName}</span>
-        </p>
+    <section className="space-y-6">
+      <header className={shellCard}>
+        <div className="space-y-2">
+          <div className="inline-flex items-center rounded-full border border-emerald-300/20 bg-emerald-400/12 px-3 py-1 text-[11px] font-medium text-emerald-100">
+            EduLife OS · Admin · Student 360°
+          </div>
+          <h1 className="text-2xl font-semibold text-[#F7F4ED]">Student 360° Profile</h1>
+          <p className="max-w-3xl text-sm text-[#C9CDD6]">
+            A single calm view where heads, SHEP, and class teachers can see a learner&apos;s{" "}
+            <span className="font-semibold text-[#F7F4ED]">basic details, guardian contacts, attendance, and daily health</span>{" "}
+            to support early, not to punish.
+          </p>
+          <p className="text-xs text-[#8F98A8]">
+            School: <span className="font-semibold text-[#F7F4ED]">{tenantName}</span>
+          </p>
+        </div>
       </header>
 
-      <section className="border rounded-xl p-4 bg-white space-y-4">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+      <section className={shellCard}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
-            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Class Selection</div>
-            <p className="text-xs text-zinc-600 max-w-md">
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+              Class Selection
+            </div>
+            <p className="max-w-md text-xs text-[#C9CDD6]">
               Choose a class, load its learners, then pick any child on the left to see their profile on the right.
             </p>
           </div>
 
           <div className="space-y-2 text-sm">
-            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Mode</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+              Mode
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className={`${btnOutline} h-8 px-3 ${mode === "single" ? "ring-2 ring-zinc-800" : ""}`}
+                className={
+                  mode === "single"
+                    ? btnPrimary
+                    : btnOutline
+                }
                 onClick={() => setMode("single")}
                 disabled={classLoading}
               >
@@ -545,7 +562,11 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
               </button>
               <button
                 type="button"
-                className={`${btnOutline} h-8 px-3 ${mode === "multi" ? "ring-2 ring-zinc-800" : ""}`}
+                className={
+                  mode === "multi"
+                    ? btnPrimary
+                    : btnOutline
+                }
                 onClick={() => setMode("multi")}
                 disabled={classLoading}
               >
@@ -555,25 +576,25 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-3 pt-2">
+        <div className="grid gap-3 pt-2 md:grid-cols-3">
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 mb-1">Classroom</label>
+            <label className="mb-1 block text-xs font-semibold text-[#C9CDD6]">Classroom</label>
             {classLoading ? (
-              <div className="h-10 rounded-xl border bg-zinc-50 animate-pulse" />
+              <div className="h-10 rounded-xl border border-white/10 bg-white/5 animate-pulse" />
             ) : classOptions.length ? (
               <select
-                className="w-full border rounded-xl px-2 py-2 h-10 text-sm"
+                className={inputClass}
                 value={classroomId}
                 onChange={(e) => setClassroomId(e.target.value)}
               >
                 {classOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={c.id} className="bg-[#05070B] text-[#F7F4ED]">
                     {c.label}
                   </option>
                 ))}
               </select>
             ) : (
-              <div className="border rounded-xl p-3 text-sm text-zinc-700">
+              <div className={`${innerCard} px-3 py-3 text-sm text-[#D7DCE5]`}>
                 {classError || "No classrooms available yet."}
               </div>
             )}
@@ -582,7 +603,7 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
           <div className="flex items-end gap-2">
             <button
               type="button"
-              className={btnPrimary + " w-full"}
+              className={`${btnPrimary} w-full`}
               onClick={loadContacts}
               disabled={contactsLoading || !classroomId || classLoading}
             >
@@ -590,7 +611,7 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
             </button>
             <button
               type="button"
-              className={btnOutline + " w-full"}
+              className={`${btnOutline} w-full`}
               onClick={() => void fetchClassOptions(mode)}
               disabled={classLoading}
             >
@@ -598,42 +619,44 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
             </button>
           </div>
 
-          <div className="text-xs text-zinc-500 flex items-end">
+          <div className="flex items-end text-xs text-[#8F98A8]">
             Tip: Use this view during{" "}
-            <span className="font-semibold ml-1">welfare meetings, SHEP reviews, or PTA follow-ups</span>{" "}
-            to look at a learner&apos;s situation calmly and holistically.
+            <span className="ml-1 font-semibold text-[#F7F4ED]">welfare meetings, SHEP reviews, or PTA follow-ups</span>
+            {" "}to look at a learner&apos;s situation calmly and holistically.
           </div>
         </div>
 
-        {classError && (
-          <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+        {classError ? (
+          <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-xs text-rose-100">
             {classError}
           </div>
-        )}
+        ) : null}
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-1 border rounded-xl p-4 bg-white flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold">Learners in {classLabel || "selected class"}</h2>
-            {contactsLoading && <span className="text-[11px] text-zinc-500">Loading…</span>}
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className={`${shellCard} md:col-span-1 flex flex-col`}>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-[#F7F4ED]">
+              Learners in {classLabel || "selected class"}
+            </h2>
+            {contactsLoading ? <span className="text-[11px] text-[#8F98A8]">Loading…</span> : null}
           </div>
 
-          {contactsError && (
-            <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mb-2">
+          {contactsError ? (
+            <div className="mb-2 rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-xs text-rose-100">
               {contactsError}
             </div>
-          )}
+          ) : null}
 
-          {!contactsLoading && !contactsError && !contacts.length && (
-            <p className="text-xs text-zinc-600">
+          {!contactsLoading && !contactsError && !contacts.length ? (
+            <p className="text-xs text-[#C9CDD6]">
               No learners are loaded yet. Choose a class above and click{" "}
-              <span className="font-semibold">Load learners</span>.
+              <span className="font-semibold text-[#F7F4ED]">Load learners</span>.
             </p>
-          )}
+          ) : null}
 
-          {contacts.length > 0 && (
-            <ul className="mt-1 space-y-1 max-h-[500px] overflow-y-auto pr-1">
+          {contacts.length > 0 ? (
+            <ul className="mt-1 max-h-[500px] space-y-2 overflow-y-auto pr-1">
               {contacts.map((c) => {
                 const fullName = [c.firstName, c.lastName].filter(Boolean).join(" ") || "Unnamed learner";
                 const isSelected = selectedStudentId === c.id;
@@ -642,11 +665,12 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
                   <li key={c.id}>
                     <button
                       type="button"
-                      className={`w-full text-left rounded-lg px-3 py-2 text-xs border ${
+                      className={[
+                        "w-full rounded-2xl border px-3 py-3 text-left text-xs transition",
                         isSelected
-                          ? "bg-zinc-900 text-white border-zinc-900"
-                          : "bg-white text-zinc-800 border-zinc-300 hover:bg-zinc-50"
-                      }`}
+                          ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D]"
+                          : "border-white/10 bg-[#07111F]/80 text-[#F7F4ED] hover:bg-white/10",
+                      ].join(" ")}
                       onClick={() => {
                         setSelectedStudentId(c.id);
                         setConsentAt(null);
@@ -654,107 +678,122 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
                         setConsentOk(null);
                         setGuardianSmsOptIn(null);
                         setGuardianPhoneFromStatus(null);
-
                         setSendError(null);
                         setSendOk(null);
                         setLastSendLink(null);
                         setLastSendText(null);
                       }}
                     >
-                      <div className="font-semibold truncate">{fullName}</div>
-                      <div className="text-[11px] opacity-80">{c.classLabel || classLabel || "Class not set"}</div>
-                      {c.guardianName && (
-                        <div className="text-[11px] opacity-80 mt-0.5 truncate">Guardian: {c.guardianName}</div>
-                      )}
+                      <div className="truncate font-semibold">{fullName}</div>
+                      <div className="mt-1 text-[11px] opacity-80">
+                        {c.classLabel || classLabel || "Class not set"}
+                      </div>
+                      {c.guardianName ? (
+                        <div className="mt-1 truncate text-[11px] opacity-80">
+                          Guardian: {c.guardianName}
+                        </div>
+                      ) : null}
                     </button>
                   </li>
                 );
               })}
             </ul>
-          )}
+          ) : null}
         </div>
 
-        <div className="md:col-span-2 space-y-4">
-          {!selectedStudent && (
-            <div className="border rounded-xl p-4 bg-zinc-50">
-              <h2 className="text-sm font-semibold mb-1">Select a learner on the left</h2>
-              <p className="text-xs text-zinc-600 max-w-lg">
+        <div className="space-y-4 md:col-span-2">
+          {!selectedStudent ? (
+            <div className={shellCard}>
+              <h2 className="mb-1 text-sm font-semibold text-[#F7F4ED]">Select a learner on the left</h2>
+              <p className="max-w-lg text-xs text-[#C9CDD6]">
                 When you click on a learner, their{" "}
-                <span className="font-semibold">basic details, guardian contacts, attendance, and health history</span>{" "}
+                <span className="font-semibold text-[#F7F4ED]">basic details, guardian contacts, attendance, and health history</span>{" "}
                 will appear here.
               </p>
             </div>
-          )}
+          ) : null}
 
-          {selectedStudent && (
+          {selectedStudent ? (
             <>
-              <div className="border rounded-xl p-4 bg-white space-y-2">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <div className={shellCard}>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-1">
-                    <h2 className="text-base font-semibold">
+                    <h2 className="text-base font-semibold text-[#F7F4ED]">
                       {[selectedStudent.firstName, selectedStudent.lastName].filter(Boolean).join(" ") || "Unnamed learner"}
                     </h2>
-                    <div className="text-xs text-zinc-600">
+                    <div className="text-xs text-[#C9CDD6]">
                       Class:{" "}
-                      <span className="font-semibold">{selectedStudent.classLabel || classLabel || "Unknown"}</span>
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {selectedStudent.classLabel || classLabel || "Unknown"}
+                      </span>
                     </div>
-                    {selectedStudent.relationship && (
-                      <div className="text-xs text-zinc-600">
-                        Relationship: <span className="font-semibold">{selectedStudent.relationship}</span>
+                    {selectedStudent.relationship ? (
+                      <div className="text-xs text-[#C9CDD6]">
+                        Relationship:{" "}
+                        <span className="font-semibold text-[#F7F4ED]">{selectedStudent.relationship}</span>
                       </div>
-                    )}
-                    {selectedStudent.notes && (
-                      <div className="text-[11px] text-zinc-600 mt-1 max-w-lg">School note: {selectedStudent.notes}</div>
-                    )}
+                    ) : null}
+                    {selectedStudent.notes ? (
+                      <div className="mt-1 max-w-lg text-[11px] text-[#C9CDD6]">
+                        School note: {selectedStudent.notes}
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div className="space-y-2 text-xs">
-                    <div className="font-semibold text-zinc-700">Primary contact</div>
+                  <div className={`${innerCard} space-y-2 px-4 py-3 text-xs`}>
+                    <div className="font-semibold text-[#F7F4ED]">Primary contact</div>
 
-                    {selectedStudent.guardianName && (
-                      <div className="text-zinc-600">
-                        Name: <span className="font-semibold">{selectedStudent.guardianName}</span>
+                    {selectedStudent.guardianName ? (
+                      <div className="text-[#C9CDD6]">
+                        Name: <span className="font-semibold text-[#F7F4ED]">{selectedStudent.guardianName}</span>
                       </div>
-                    )}
+                    ) : null}
 
                     {selectedStudent.guardianPhone ? (
-                      <div className="text-zinc-600">
+                      <div className="text-[#C9CDD6]">
                         Phone:{" "}
-                        <a href={`tel:${selectedStudent.guardianPhone}`} className="font-semibold underline underline-offset-2">
+                        <a
+                          href={`tel:${selectedStudent.guardianPhone}`}
+                          className="font-semibold text-[#F7F4ED] underline underline-offset-2"
+                        >
                           {selectedStudent.guardianPhone}
                         </a>
                       </div>
                     ) : (
-                      <div className="text-zinc-500">No guardian phone number on record.</div>
+                      <div className="text-[#8F98A8]">No guardian phone number on record.</div>
                     )}
 
-                    <div className="pt-2 border-t">
-                      <div className="text-[11px] text-zinc-500">
+                    <div className="border-t border-white/10 pt-2">
+                      <div className="text-[11px] text-[#8F98A8]">
                         Guardian SMS:{" "}
-                        <span className="font-semibold">
+                        <span className="font-semibold text-[#F7F4ED]">
                           {guardianSmsOptIn === null ? "—" : guardianSmsOptIn ? "ON" : "OFF"}
                         </span>
                         {guardianPhoneFromStatus ? (
-                          <span className="ml-2 text-zinc-400">({guardianPhoneFromStatus})</span>
+                          <span className="ml-2 text-[#738095]">({guardianPhoneFromStatus})</span>
                         ) : null}
                       </div>
 
-                      <div className="mt-1 text-[11px] text-zinc-500">
+                      <div className="mt-1 text-[11px] text-[#8F98A8]">
                         Health consent:{" "}
-                        <span className="font-semibold">{consentAt ? "GRANTED" : "NOT GRANTED"}</span>
-                        {consentAt ? <span className="ml-2 text-zinc-400">{formatDateTime(consentAt)}</span> : null}
+                        <span className="font-semibold text-[#F7F4ED]">
+                          {consentAt ? "GRANTED" : "NOT GRANTED"}
+                        </span>
+                        {consentAt ? (
+                          <span className="ml-2 text-[#738095]">{formatDateTime(consentAt)}</span>
+                        ) : null}
                       </div>
 
-                      {consentError && (
-                        <div className="mt-2 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+                      {consentError ? (
+                        <div className="mt-2 rounded-xl border border-rose-300/20 bg-rose-400/12 px-2 py-1 text-[11px] text-rose-100">
                           {consentError}
                         </div>
-                      )}
-                      {consentOk && (
-                        <div className="mt-2 text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
+                      ) : null}
+                      {consentOk ? (
+                        <div className="mt-2 rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-2 py-1 text-[11px] text-emerald-100">
                           {consentOk}
                         </div>
-                      )}
+                      ) : null}
 
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
@@ -777,21 +816,21 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
                         </button>
                       </div>
 
-                      <div className="mt-3 border-t pt-3 space-y-2">
-                        <div className="text-[11px] font-semibold text-zinc-600 uppercase tracking-wide">
+                      <div className="mt-3 space-y-2 border-t border-white/10 pt-3">
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-[#E8C96A]">
                           Request guardian consent
                         </div>
 
-                        {sendError && (
-                          <div className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+                        {sendError ? (
+                          <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-2 py-1 text-[11px] text-rose-100">
                             {sendError}
                           </div>
-                        )}
-                        {sendOk && (
-                          <div className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
+                        ) : null}
+                        {sendOk ? (
+                          <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-2 py-1 text-[11px] text-emerald-100">
                             {sendOk}
                           </div>
-                        )}
+                        ) : null}
 
                         <div className="flex flex-wrap gap-2">
                           <button
@@ -816,12 +855,19 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
                         </div>
 
                         {lastSendText ? (
-                          <div className="rounded-xl border bg-zinc-50 p-3">
-                            <div className="text-[11px] text-zinc-500 mb-1">Message preview</div>
-                            <pre className="whitespace-pre-wrap text-[11px] text-zinc-800">{lastSendText}</pre>
+                          <div className="rounded-2xl border border-white/10 bg-[#05070B] p-3">
+                            <div className="mb-1 text-[11px] text-[#8F98A8]">Message preview</div>
+                            <pre className="whitespace-pre-wrap text-[11px] text-[#F7F4ED]">
+                              {lastSendText}
+                            </pre>
                             {lastSendLink ? (
                               <div className="mt-2">
-                                <a className="text-[11px] underline" href={lastSendLink} target="_blank" rel="noreferrer">
+                                <a
+                                  className="text-[11px] text-[#F7F4ED] underline"
+                                  href={lastSendLink}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
                                   Open consent link (preview)
                                 </a>
                               </div>
@@ -829,28 +875,28 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
                           </div>
                         ) : null}
 
-                        <p className="text-[11px] text-zinc-500 max-w-sm">
-                          Fever alerts require <span className="font-semibold">Health consent</span> +{" "}
-                          <span className="font-semibold">Guardian SMS ON</span> + a guardian phone number.
+                        <p className="max-w-sm text-[11px] text-[#8F98A8]">
+                          Fever alerts require <span className="font-semibold text-[#F7F4ED]">Health consent</span> +{" "}
+                          <span className="font-semibold text-[#F7F4ED]">Guardian SMS ON</span> + a guardian phone number.
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-[11px] text-zinc-500 max-w-lg">
-                  Use this profile as a <span className="font-semibold">care lens</span> — for example, before calling home,
+                <p className="max-w-lg text-[11px] text-[#8F98A8]">
+                  Use this profile as a <span className="font-semibold text-[#F7F4ED]">care lens</span> for example, before calling home,
                   during SHEP or welfare meetings, or when planning support for a learner at risk.
                 </p>
               </div>
 
-              <div className="border rounded-xl p-4 bg-white space-y-2">
+              <div className={shellCard}>
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <h3 className="text-xs font-semibold text-zinc-700 uppercase tracking-wide">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-[#E8C96A]">
                       Recent attendance (last 20 records)
                     </h3>
-                    <p className="text-[11px] text-zinc-500 max-w-md">
+                    <p className="max-w-md text-[11px] text-[#8F98A8]">
                       Shows how often this learner has been present, absent, late, or excused in recent days.
                     </p>
                   </div>
@@ -864,67 +910,70 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
                   </button>
                 </div>
 
-                {attendanceError && (
-                  <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                {attendanceError ? (
+                  <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-xs text-rose-100">
                     {attendanceError}
                   </div>
-                )}
+                ) : null}
 
-                {!attendanceError && !attendanceLoading && !attendanceItems.length && (
-                  <p className="text-xs text-zinc-600">
+                {!attendanceError && !attendanceLoading && !attendanceItems.length ? (
+                  <p className="text-xs text-[#C9CDD6]">
                     No recent attendance records found yet for this learner. Records will appear here as teachers take attendance.
                   </p>
-                )}
+                ) : null}
 
-                {!!attendanceItems.length && (
-                  <ul className="space-y-1.5 text-xs mt-1">
+                {!!attendanceItems.length ? (
+                  <ul className="mt-1 space-y-2 text-xs">
                     {attendanceItems.map((item) => {
                       const dateLabel = formatDateShort(item.date);
-                      let badgeText = "";
-                      let badgeClasses = "inline-flex px-2 py-0.5 rounded-full border text-[11px]";
+                      let tone: "ok" | "bad" | "warn" | "info" = "ok";
+                      let badgeText = "Present";
 
-                      if (item.status === "PRESENT") {
-                        badgeText = "Present";
-                        badgeClasses += " bg-emerald-50 border-emerald-200 text-emerald-800";
-                      } else if (item.status === "ABSENT") {
+                      if (item.status === "ABSENT") {
+                        tone = "bad";
                         badgeText = "Absent";
-                        badgeClasses += " bg-red-50 border-red-200 text-red-800";
                       } else if (item.status === "LATE") {
+                        tone = "warn";
                         badgeText = "Late";
-                        badgeClasses += " bg-amber-50 border-amber-200 text-amber-800";
                       } else if (item.status === "EXCUSED") {
+                        tone = "info";
                         badgeText = "Excused";
-                        badgeClasses += " bg-blue-50 border-blue-200 text-blue-800";
                       }
 
                       return (
-                        <li key={item.id} className="flex items-start justify-between gap-2 border-b last:border-b-0 pb-1.5">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{dateLabel}</span>
-                              <span className={badgeClasses}>{badgeText}</span>
+                        <li key={item.id} className={`${innerCard} px-3 py-3`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-[#F7F4ED]">{dateLabel}</span>
+                                <StatusChip tone={tone}>{badgeText}</StatusChip>
+                              </div>
+                              <div className="mt-1 text-[11px] text-[#C9CDD6]">
+                                Class: {item.classLabel || "—"}
+                              </div>
+                              {item.note ? (
+                                <div className="mt-1 text-[11px] text-[#C9CDD6]">Note: {item.note}</div>
+                              ) : null}
                             </div>
-                            <div className="text-[11px] text-zinc-600">Class: {item.classLabel || "—"}</div>
-                            {item.note && <div className="text-[11px] text-zinc-600 mt-0.5">Note: {item.note}</div>}
                           </div>
                         </li>
                       );
                     })}
                   </ul>
-                )}
+                ) : null}
 
-                <p className="text-[11px] text-zinc-500 mt-1">
-                  Attendance is shared to help <span className="font-semibold">notice patterns and support early</span>, not to blame families.
+                <p className="mt-1 text-[11px] text-[#8F98A8]">
+                  Attendance is shared to help <span className="font-semibold text-[#F7F4ED]">notice patterns and support early</span>, not to blame families.
                 </p>
               </div>
 
-              <div className="border rounded-xl p-4 bg-white space-y-2">
+              <div className={shellCard}>
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <h3 className="text-xs font-semibold text-zinc-700 uppercase tracking-wide">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-[#E8C96A]">
                       Recent health & temperature checks
                     </h3>
-                    <p className="text-[11px] text-zinc-500 max-w-md">
+                    <p className="max-w-md text-[11px] text-[#8F98A8]">
                       Shows temperature readings and any recorded symptoms when school checked on this learner.
                     </p>
                   </div>
@@ -938,58 +987,60 @@ export default function AdminStudentProfileClient({ tenantName }: { tenantName: 
                   </button>
                 </div>
 
-                {healthError && (
-                  <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                {healthError ? (
+                  <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-xs text-rose-100">
                     {healthError}
                   </div>
-                )}
+                ) : null}
 
-                {!healthError && !healthLoading && !healthItems.length && (
-                  <p className="text-xs text-zinc-600">
-                    No health or temperature records found yet for this learner. When we check temperatures or record symptoms at school, they&apos;ll appear here.
+                {!healthError && !healthLoading && !healthItems.length ? (
+                  <p className="text-xs text-[#C9CDD6]">
+                    No health or temperature records found yet for this learner. When temperatures or symptoms are recorded at school, they will appear here.
                   </p>
-                )}
+                ) : null}
 
-                {!!healthItems.length && (
-                  <ul className="space-y-1.5 text-xs mt-1">
+                {!!healthItems.length ? (
+                  <ul className="mt-1 space-y-2 text-xs">
                     {healthItems.map((h) => {
                       const dateLabel = formatDateShort(h.date);
                       const hasTemp = h.temperatureC !== null && typeof h.temperatureC === "number";
                       const tempLabel = hasTemp ? `${h.temperatureC!.toFixed(1)} °C` : "Not recorded";
 
-                      const badgeClasses = h.isFever
-                        ? "inline-flex px-2 py-0.5 rounded-full border text-[11px] bg-red-50 border-red-200 text-red-800"
-                        : "inline-flex px-2 py-0.5 rounded-full border text-[11px] bg-emerald-50 border-emerald-200 text-emerald-800";
-
-                      const badgeText = h.isFever ? "Fever alert" : "Within range";
-
                       return (
-                        <li key={h.id} className="flex items-start justify-between gap-2 border-b last:border-b-0 pb-1.5">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{dateLabel}</span>
-                              <span className={badgeClasses}>{badgeText}</span>
+                        <li key={h.id} className={`${innerCard} px-3 py-3`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-[#F7F4ED]">{dateLabel}</span>
+                                <StatusChip tone={h.isFever ? "bad" : "ok"}>
+                                  {h.isFever ? "Fever alert" : "Within range"}
+                                </StatusChip>
+                              </div>
+                              <div className="mt-1 text-[11px] text-[#C9CDD6]">
+                                Temperature: <span className="font-semibold text-[#F7F4ED]">{tempLabel}</span>
+                              </div>
+                              {h.symptoms ? (
+                                <div className="mt-1 text-[11px] text-[#C9CDD6]">Symptoms: {h.symptoms}</div>
+                              ) : null}
+                              {h.notes ? (
+                                <div className="mt-1 text-[11px] text-[#C9CDD6]">Note: {h.notes}</div>
+                              ) : null}
                             </div>
-                            <div className="text-[11px] text-zinc-600">
-                              Temperature: <span className="font-semibold">{tempLabel}</span>
-                            </div>
-                            {h.symptoms && <div className="text-[11px] text-zinc-600 mt-0.5">Symptoms: {h.symptoms}</div>}
-                            {h.notes && <div className="text-[11px] text-zinc-600 mt-0.5">Note: {h.notes}</div>}
                           </div>
                         </li>
                       );
                     })}
                   </ul>
-                )}
+                ) : null}
 
-                <p className="text-[11px] text-zinc-500 mt-1">
-                  Health data is shared to help you <span className="font-semibold">check on a child early</span> if patterns appear. It does not replace a hospital visit where needed.
+                <p className="mt-1 text-[11px] text-[#8F98A8]">
+                  Health data is shared to help you <span className="font-semibold text-[#F7F4ED]">check on a child early</span> if patterns appear. It does not replace a hospital visit where needed.
                 </p>
               </div>
             </>
-          )}
+          ) : null}
         </div>
       </section>
-    </main>
+    </section>
   );
 }

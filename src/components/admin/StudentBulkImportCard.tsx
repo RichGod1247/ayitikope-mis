@@ -1,3 +1,4 @@
+//src/components/admin/StudentBulkImportCard.tsx
 "use client";
 
 import { useMemo, useRef, useState } from "react";
@@ -51,7 +52,6 @@ function normalizeCsvText(raw: string): string {
   const text = String(raw ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   if (!text.trim()) return "";
 
-  // Decide whether we should normalize ; or \t to commas.
   const firstLine = text.split("\n")[0] ?? "";
   const likelySemicolon = firstLine.includes(";") && !firstLine.includes(",");
   const likelyTab = firstLine.includes("\t") && !firstLine.includes(",");
@@ -66,7 +66,6 @@ function normalizeCsvText(raw: string): string {
     const ch = text[i];
 
     if (ch === '"') {
-      // Handle escaped quotes ("")
       const next = text[i + 1];
       if (inQuotes && next === '"') {
         out += '""';
@@ -106,6 +105,22 @@ function classLabelHuman(c: ClassroomLite) {
   return parts.join(" · ");
 }
 
+function inputClass() {
+  return "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
+}
+
+function selectClass() {
+  return "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
+}
+
+function outlineBtnClass() {
+  return "rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-60";
+}
+
+function primaryBtnClass() {
+  return "rounded-xl border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105 disabled:opacity-60";
+}
+
 export default function StudentBulkImportCard({ classes }: { classes: ClassroomLite[] }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -114,20 +129,16 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
   const [fileName, setFileName] = useState<string | null>(null);
   const [showPaste, setShowPaste] = useState(false);
 
-  const [defaultClassLabel, setDefaultClassLabel] = useState<string>(""); // optional
+  const [defaultClassLabel, setDefaultClassLabel] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult>(null);
 
   const preview = useMemo(() => previewBulkStudentImport(csvText, classes), [csvText, classes]);
 
-  const canImport =
-    !submitting &&
-    !preview.headerError &&
-    preview.totalRows > 0; // allow partial import; server will validate again
+  const canImport = !submitting && !preview.headerError && preview.totalRows > 0;
 
   function buildTemplateCsv() {
-    // Keep it dead simple: required headers first; Excel-friendly.
     return normalizeCsvText(
       [
         "firstName,lastName,class,guardianName,guardianPhone,gender,note",
@@ -172,7 +183,6 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
     setResult(null);
 
     try {
-      // IMPORTANT: We still send rows (not raw CSV), because server must re-validate.
       const rowsToSend = rowsWithDefaults(preview.rows);
 
       const res = await fetch("/api/admin/students/bulk-import", {
@@ -210,28 +220,23 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
   const topIssues: PreviewIssue[] = preview.issues.slice(0, 20);
 
   return (
-    <div className="rounded-2xl border bg-white p-6 space-y-4">
+    <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl space-y-4 text-[#F7F4ED]">
       <div>
-        <h2 className="text-sm font-semibold text-zinc-900">Bulk Import (Excel-friendly)</h2>
-        <p className="text-sm text-zinc-600 mt-1">
+        <h2 className="text-sm font-semibold text-[#F7F4ED]">Bulk Import (Excel-friendly)</h2>
+        <p className="mt-1 text-sm text-[#C9CDD6]">
           1) Download template → 2) Fill in Excel → 3) Upload → Import.
         </p>
       </div>
 
-      {/* STEP ACTIONS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={onDownloadTemplate}
-          className="rounded-xl bg-black text-white px-4 py-2 text-sm"
-        >
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+        <button type="button" onClick={onDownloadTemplate} className={primaryBtnClass()}>
           Download template
         </button>
 
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="rounded-xl border px-4 py-2 text-sm"
+          className={outlineBtnClass()}
           disabled={submitting}
         >
           Upload filled CSV
@@ -247,7 +252,7 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
             setDefaultClassLabel("");
             if (fileRef.current) fileRef.current.value = "";
           }}
-          className="rounded-xl border px-4 py-2 text-sm"
+          className={outlineBtnClass()}
           disabled={submitting}
         >
           Reset
@@ -263,26 +268,25 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
       />
 
       {fileName ? (
-        <div className="text-xs text-zinc-600">
+        <div className="text-xs text-[#C9CDD6]">
           File loaded: <span className="font-mono">{fileName}</span>
         </div>
       ) : (
-        <div className="text-xs text-zinc-500">
-          Tip: In Excel, use <b>Save As → CSV (Comma delimited)</b>, then upload that file.
+        <div className="text-xs text-[#8F98A8]">
+          Tip: In Excel, use <b className="text-[#F7F4ED]">Save As → CSV (Comma delimited)</b>, then upload that file.
         </div>
       )}
 
-      {/* OPTIONAL DEFAULT CLASS */}
-      <div className="rounded-xl border bg-zinc-50 p-4 space-y-2">
-        <div className="text-xs font-semibold text-zinc-700">Optional: assign a default class</div>
-        <p className="text-[11px] text-zinc-600">
-          If some rows have an empty <b>class</b> cell, we can apply one class to all of them during import.
+      <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-4 space-y-2">
+        <div className="text-xs font-semibold text-[#F7F4ED]">Optional: assign a default class</div>
+        <p className="text-[11px] text-[#C9CDD6]">
+          If some rows have an empty <b className="text-[#F7F4ED]">class</b> cell, we can apply one class to all of them during import.
         </p>
 
         <select
           value={defaultClassLabel}
           onChange={(e) => setDefaultClassLabel(e.target.value)}
-          className="w-full rounded-xl border px-3 py-2 text-sm bg-white"
+          className={selectClass()}
           disabled={submitting}
         >
           <option value="">— No default class —</option>
@@ -294,20 +298,19 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
         </select>
       </div>
 
-      {/* ADVANCED: paste area */}
-      <div className="rounded-xl border p-4">
+      <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-4">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-semibold text-zinc-900">Preview</p>
-            <p className="text-[11px] text-zinc-500">
-              We validate here, then the server validates again (bank-grade).
+            <p className="text-sm font-semibold text-[#F7F4ED]">Preview</p>
+            <p className="text-[11px] text-[#8F98A8]">
+              We validate here, then the server validates again.
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => setShowPaste((v) => !v)}
-            className="text-xs underline text-zinc-600"
+            className="text-xs text-[#C9CDD6] underline underline-offset-4"
           >
             {showPaste ? "Hide paste box" : "Show paste box"}
           </button>
@@ -318,48 +321,48 @@ export default function StudentBulkImportCard({ classes }: { classes: ClassroomL
             value={csvText}
             onChange={(e) => setCsvText(normalizeCsvText(e.target.value))}
             rows={10}
-            className="mt-3 w-full rounded-xl border px-3 py-2 text-sm font-mono"
+            className="mt-3 w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 font-mono text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25"
             placeholder={`firstName,lastName,class,guardianName,guardianPhone,gender,note
 Ama,Mensah,B1 A,Esi Mensah,0241234567,Female,New learner`}
           />
         ) : null}
 
         {preview.headerError ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          <div className="mt-3 rounded-xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
             {preview.headerError}
           </div>
         ) : null}
 
-        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-          <div className="rounded-xl border bg-white px-3 py-2">
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[#D7DCE5]">
             Total rows: <b>{preview.totalRows}</b>
           </div>
-          <div className="rounded-xl border bg-white px-3 py-2">
+          <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-3 py-2 text-emerald-100">
             Valid: <b>{preview.validCount}</b>
           </div>
-          <div className="rounded-xl border bg-white px-3 py-2">
+          <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-rose-100">
             Invalid: <b>{preview.invalidCount}</b>
           </div>
-          <div className="rounded-xl border bg-white px-3 py-2">
+          <div className="rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-2 text-amber-100">
             Duplicates (batch): <b>{preview.duplicateCount}</b>
           </div>
         </div>
 
         {topIssues.length > 0 ? (
-          <div className="mt-3 rounded-xl border p-4">
-            <p className="text-sm font-semibold text-zinc-900">Issues to fix</p>
-            <div className="mt-2 max-h-56 overflow-auto space-y-2">
+          <div className="mt-3 rounded-2xl border border-white/10 bg-[#05070B] p-4">
+            <p className="text-sm font-semibold text-[#F7F4ED]">Issues to fix</p>
+            <div className="mt-2 max-h-56 space-y-2 overflow-auto">
               {topIssues.map((issue) => (
                 <div
                   key={`${issue.rowNumber}-${issue.reasons.join("-")}`}
-                  className="text-xs text-zinc-700 border rounded-lg p-2"
+                  className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-[#D7DCE5]"
                 >
-                  <b>Row {issue.rowNumber}</b>:{" "}
+                  <b className="text-[#F7F4ED]">Row {issue.rowNumber}</b>:{" "}
                   {issue.reasons.map((r) => friendlyReason(r)).join(" ")}
                 </div>
               ))}
               {preview.issues.length > 20 ? (
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[#8F98A8]">
                   Showing first 20 issues out of {preview.issues.length}.
                 </p>
               ) : null}
@@ -368,28 +371,23 @@ Ama,Mensah,B1 A,Esi Mensah,0241234567,Female,New learner`}
         ) : null}
 
         <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onImport}
-            disabled={!canImport}
-            className="rounded-xl bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
-          >
+          <button type="button" onClick={onImport} disabled={!canImport} className={primaryBtnClass()}>
             {submitting ? "Importing..." : "Import"}
           </button>
 
-          <p className="text-[11px] text-zinc-500">
+          <p className="text-[11px] text-[#8F98A8]">
             You can import even if some rows are invalid — the server will skip bad rows and report them.
           </p>
         </div>
 
         {serverError ? (
-          <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          <div className="mt-3 rounded-xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
             {serverError}
           </div>
         ) : null}
 
         {result ? (
-          <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 space-y-1">
+          <div className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100 space-y-1">
             <div>
               Imported <b>{result.importedCount}</b> of <b>{result.totalRows}</b> row(s).
             </div>
@@ -397,7 +395,7 @@ Ama,Mensah,B1 A,Esi Mensah,0241234567,Female,New learner`}
               Invalid: <b>{result.invalidCount}</b> · Duplicates blocked: <b>{result.duplicateCount}</b>
             </div>
             {result.errors.length ? (
-              <div className="pt-1 text-xs text-emerald-950">
+              <div className="pt-1 text-xs text-emerald-50">
                 First errors:{" "}
                 {result.errors
                   .slice(0, 8)

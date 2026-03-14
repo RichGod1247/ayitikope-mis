@@ -10,6 +10,26 @@ type SeedState =
   | { kind: "success"; mode: string; created: number; skipped: number; total: number }
   | { kind: "error"; message: string };
 
+function shellCardClass() {
+  return "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl space-y-4";
+}
+
+function primaryBtnClass(disabled: boolean) {
+  return [
+    "w-full rounded-xl border border-transparent px-4 py-2 text-sm font-semibold transition",
+    "bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)]",
+    disabled ? "opacity-60 cursor-not-allowed" : "hover:brightness-105",
+  ].join(" ");
+}
+
+function outlineBtnClass(disabled: boolean) {
+  return [
+    "w-full rounded-xl border px-4 py-2 text-sm transition",
+    "border-white/10 bg-white/5 text-[#F7F4ED]",
+    disabled ? "opacity-60 cursor-not-allowed" : "hover:bg-white/10",
+  ].join(" ");
+}
+
 export default function CanonicalClassSeedCard() {
   const router = useRouter();
   const [state, setState] = useState<SeedState>({ kind: "idle" });
@@ -57,10 +77,12 @@ export default function CanonicalClassSeedCard() {
   const busy = state.kind === "loading";
 
   return (
-    <div className="rounded-2xl border bg-white p-6 space-y-4">
+    <div className={shellCardClass()}>
       <div>
-        <h2 className="text-sm font-semibold text-zinc-900">Canonical class seeding</h2>
-        <p className="text-sm text-zinc-600 mt-1">
+        <h2 className="text-sm font-semibold text-[#F7F4ED]">
+          Canonical class seeding
+        </h2>
+        <p className="mt-1 text-sm text-[#C9CDD6]">
           One click creates the standard Ghana structure from KG1 to JHS3.
         </p>
       </div>
@@ -70,7 +92,7 @@ export default function CanonicalClassSeedCard() {
           type="button"
           onClick={() => run("single")}
           disabled={busy}
-          className="rounded-xl bg-black text-white px-4 py-2 text-sm disabled:opacity-60"
+          className={primaryBtnClass(busy)}
         >
           {busy && state.kind === "loading" && state.mode === "single"
             ? "Seeding single-stream..."
@@ -81,7 +103,7 @@ export default function CanonicalClassSeedCard() {
           type="button"
           onClick={() => run("multi")}
           disabled={busy}
-          className="rounded-xl border px-4 py-2 text-sm disabled:opacity-60"
+          className={outlineBtnClass(busy)}
         >
           {busy && state.kind === "loading" && state.mode === "multi"
             ? "Seeding multi-stream..."
@@ -89,20 +111,24 @@ export default function CanonicalClassSeedCard() {
         </button>
       </div>
 
-      <p className="text-xs text-zinc-500">
-        Safe behavior only: this creates missing normalized class identities and skips existing ones.
-        It does <b>not</b> auto-delete or auto-convert opposite stream structures.
-      </p>
+      <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 px-4 py-3">
+        <p className="text-xs leading-5 text-[#C9CDD6]">
+          Safe behavior only: this creates missing normalized class identities
+          and skips existing ones. It does{" "}
+          <span className="font-semibold text-[#F7FED]">not</span> auto-delete or
+          auto-convert opposite stream structures.
+        </p>
+      </div>
 
       {state.kind === "success" ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          Seeded <b>{state.mode}</b>: created <b>{state.created}</b>, skipped <b>{state.skipped}</b>, total{" "}
-          <b>{state.total}</b>.
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
+          Seeded <b>{state.mode}</b>: created <b>{state.created}</b>, skipped{" "}
+          <b>{state.skipped}</b>, total <b>{state.total}</b>.
         </div>
       ) : null}
 
       {state.kind === "error" ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
           {state.message}
         </div>
       ) : null}

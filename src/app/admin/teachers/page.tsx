@@ -9,6 +9,17 @@ export const runtime = "nodejs";
 
 type SP = Record<string, string | string[] | undefined>;
 
+const shellCard =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+const innerCard =
+  "rounded-2xl border border-white/10 bg-[#07111F]/80";
+const inputClass =
+  "h-10 w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20";
+const submitBtn =
+  "inline-flex items-center justify-center rounded-xl border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] hover:brightness-105";
+const outlineBtn =
+  "inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10";
+
 async function setPrimaryClass(formData: FormData) {
   "use server";
 
@@ -44,6 +55,21 @@ async function setPrimaryClass(formData: FormData) {
   });
 
   redirect("/admin/teachers?saved=1");
+}
+
+function statusChip(label: string, tone: "ok" | "warn" | "muted" = "muted") {
+  const cls =
+    tone === "ok"
+      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+      : tone === "warn"
+      ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
+      : "border-white/10 bg-white/5 text-[#D7DCE5]";
+
+  return (
+    <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}>
+      {label}
+    </span>
+  );
 }
 
 export default async function AdminTeachersPage(props: { searchParams?: SP | Promise<SP> }) {
@@ -101,36 +127,44 @@ export default async function AdminTeachersPage(props: { searchParams?: SP | Pro
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-zinc-900">Teachers</h1>
-        <p className="text-sm text-zinc-600 mt-1">
-          Invite teachers, assign their primary class (Option A), and track onboarding.
-        </p>
-      </div>
+    <section className="space-y-6">
+      <header className={shellCard}>
+        <div className="space-y-2">
+          <div className="inline-flex items-center rounded-full border border-emerald-300/20 bg-emerald-400/12 px-3 py-1 text-[11px] font-medium text-emerald-100">
+            EduLife OS · Admin · Teachers
+          </div>
+          <h1 className="text-2xl font-semibold text-[#F7F4ED]">Teachers</h1>
+          <p className="max-w-3xl text-sm text-[#C9CDD6]">
+            Invite teachers, assign their <span className="font-semibold text-[#F7F4ED]">primary class</span>,
+            and track onboarding without exposing tenant drift.
+          </p>
+        </div>
+      </header>
 
       {saved ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
           Saved.
         </div>
       ) : null}
 
       {err ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
           Error: {err}
         </div>
       ) : null}
 
       <InviteTeacherClient />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <section className="rounded-2xl border bg-white p-6">
-          <h2 className="text-sm font-semibold text-zinc-900">Active Teachers</h2>
-          <p className="text-sm text-zinc-600 mt-1">{profiles.length} teacher profile(s)</p>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className={shellCard}>
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-[#F7F4ED]">Active Teachers</h2>
+            <p className="mt-1 text-sm text-[#C9CDD6]">{profiles.length} teacher profile(s)</p>
+          </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="space-y-3">
             {profiles.length === 0 ? (
-              <p className="text-sm text-zinc-500">No teachers yet.</p>
+              <p className="text-sm text-[#8F98A8]">No teachers yet.</p>
             ) : (
               profiles.map((p) => {
                 const m = staffByUser.get(p.userId);
@@ -139,64 +173,70 @@ export default async function AdminTeachersPage(props: { searchParams?: SP | Pro
                   : "Unassigned";
 
                 return (
-                  <div key={p.userId} className="rounded-xl border p-4 space-y-3">
+                  <div key={p.userId} className={`${innerCard} space-y-3 p-4`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-zinc-900 truncate">
+                        <p className="truncate text-sm font-semibold text-[#F7F4ED]">
                           {p.user?.name ?? "Unnamed"}
                         </p>
-                        <p className="text-xs text-zinc-600 truncate">{p.user?.email}</p>
+                        <p className="truncate text-xs text-[#C9CDD6]">{p.user?.email}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-zinc-500">Staff ID</p>
-                        <p className="text-sm font-medium">{m?.staffId ?? "—"}</p>
+                        <p className="text-xs text-[#8F98A8]">Staff ID</p>
+                        <p className="text-sm font-medium text-[#F7F4ED]">{m?.staffId ?? "—"}</p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs text-zinc-700">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-[#C9CDD6]">
                       <div>
-                        <span className="text-zinc-500">Role:</span> {m?.role?.name ?? "—"}
+                        <span className="text-[#8F98A8]">Role:</span> {m?.role?.name ?? "—"}
                       </div>
                       <div>
-                        <span className="text-zinc-500">Phase:</span> {p.phase}
+                        <span className="text-[#8F98A8]">Phase:</span> {p.phase}
                       </div>
                       <div>
-                        <span className="text-zinc-500">Class:</span> {p.classLevel ?? "—"}
+                        <span className="text-[#8F98A8]">Class:</span> {p.classLevel ?? "—"}
                       </div>
                       <div>
-                        <span className="text-zinc-500">Phone:</span> {p.phone}
+                        <span className="text-[#8F98A8]">Phone:</span> {p.phone}
                       </div>
                     </div>
 
-                    <div className="rounded-xl border bg-zinc-50 p-3">
-                      <p className="text-xs text-zinc-500">Primary class (Option A)</p>
-                      <p className="text-sm font-medium text-zinc-900 mt-1">{primaryLabel}</p>
+                    {p.additionalDuties ? (
+                      <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-[#C9CDD6]">
+                        <span className="text-[#8F98A8]">Additional duties:</span> {p.additionalDuties}
+                      </div>
+                    ) : null}
+
+                    <div className="rounded-2xl border border-white/10 bg-[#05070B] p-3">
+                      <p className="text-xs text-[#8F98A8]">Primary class (Option A)</p>
+                      <p className="mt-1 text-sm font-medium text-[#F7F4ED]">{primaryLabel}</p>
 
                       <form action={setPrimaryClass} className="mt-3 flex items-center gap-2">
                         <input type="hidden" name="userId" value={p.userId} />
                         <select
                           name="primaryClassroomId"
                           defaultValue={p.primaryClassroomId ?? ""}
-                          className="w-full rounded-xl border px-3 py-2 text-sm bg-white"
+                          className={inputClass}
                         >
-                          <option value="">Unassigned</option>
+                          <option value="" className="bg-[#05070B] text-[#F7F4ED]">
+                            Unassigned
+                          </option>
                           {classrooms.map((c) => {
                             const label = `${c.name}${c.arm ? ` · Arm ${c.arm}` : ""}`;
                             return (
-                              <option key={c.id} value={c.id}>
+                              <option key={c.id} value={c.id} className="bg-[#05070B] text-[#F7F4ED]">
                                 {label}
                               </option>
                             );
                           })}
                         </select>
 
-                        <button className="rounded-xl bg-black text-white px-3 py-2 text-sm whitespace-nowrap">
-                          Save
-                        </button>
+                        <button className={submitBtn}>Save</button>
                       </form>
 
-                      <p className="text-xs text-zinc-500 mt-2">
-                        Attendance (Day 4) will use this primary class to keep the system shippable.
+                      <p className="mt-2 text-xs text-[#8F98A8]">
+                        Attendance uses this primary class to keep the system deterministic and shippable.
                       </p>
                     </div>
                   </div>
@@ -206,24 +246,37 @@ export default async function AdminTeachersPage(props: { searchParams?: SP | Pro
           </div>
         </section>
 
-        <section className="rounded-2xl border bg-white p-6">
-          <h2 className="text-sm font-semibold text-zinc-900">Pending Invites</h2>
-          <p className="text-sm text-zinc-600 mt-1">Unused, non-expired invites</p>
+        <section className={shellCard}>
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-[#F7F4ED]">Pending Invites</h2>
+            <p className="mt-1 text-sm text-[#C9CDD6]">Unused, non-expired invites</p>
+          </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="space-y-3">
             {invites.length === 0 ? (
-              <p className="text-sm text-zinc-500">No pending invites.</p>
+              <p className="text-sm text-[#8F98A8]">No pending invites.</p>
             ) : (
               invites.map((inv) => (
-                <div key={inv.token} className="rounded-xl border p-4">
-                  <p className="text-sm font-medium text-zinc-900">{inv.email}</p>
-                  <p className="text-xs text-zinc-600 mt-1">Expires: {inv.expiresAt.toISOString()}</p>
+                <div key={inv.token} className={`${innerCard} p-4`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[#F7F4ED]">{inv.email}</p>
+                      <p className="mt-1 text-xs text-[#8F98A8]">
+                        Created: {inv.createdAt.toLocaleString()}
+                      </p>
+                    </div>
+                    {statusChip("Pending", "warn")}
+                  </div>
+
+                  <p className="mt-2 text-xs text-[#C9CDD6]">
+                    Expires: <span className="font-medium text-[#F7F4ED]">{inv.expiresAt.toLocaleString()}</span>
+                  </p>
                 </div>
               ))
             )}
           </div>
         </section>
       </div>
-    </div>
+    </section>
   );
 }

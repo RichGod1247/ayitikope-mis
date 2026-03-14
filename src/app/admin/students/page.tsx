@@ -41,6 +41,26 @@ function buildHref(base: string, params: Record<string, string | null | undefine
   return `${base}${qs ? `?${qs}` : ""}`;
 }
 
+function shellCardClass() {
+  return "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+}
+
+function inputClass() {
+  return "mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
+}
+
+function selectClass() {
+  return "mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
+}
+
+function outlineBtnClass() {
+  return "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] transition hover:bg-white/10";
+}
+
+function primaryBtnClass() {
+  return "rounded-xl border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105";
+}
+
 async function createStudent(formData: FormData) {
   "use server";
 
@@ -299,8 +319,8 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
 
   const statusPill = (s: StudentStatus) =>
     s === StudentStatus.ACTIVE
-      ? "inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800"
-      : "inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[11px] font-semibold text-zinc-700";
+      ? "inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/12 px-2 py-0.5 text-[11px] font-semibold text-emerald-100"
+      : "inline-flex rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-[#D7DCE5]";
 
   const topHref = (nextShow: "active" | "archived") =>
     buildHref("/admin/students", {
@@ -312,23 +332,23 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
   const clearFiltersHref = buildHref("/admin/students", { show: showArchived ? "archived" : "active" });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="space-y-6 text-[#F7F4ED]">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Students</h1>
-          <p className="text-sm text-zinc-600 mt-1">
-            Create learners, assign classes, enable guardian SMS, and set health consent.{" "}
-            <span className="font-medium">Archive removes the learner from attendance rosters.</span>
+          <h1 className="text-2xl font-semibold text-[#F7F4ED]">Students</h1>
+          <p className="mt-1 max-w-3xl text-sm text-[#C9CDD6]">
+            Create learners, assign classes, enable guardian SMS, and set health consent.
+            <span className="font-medium text-[#F7F4ED]"> Archive removes the learner from attendance rosters.</span>
           </p>
 
-          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-zinc-600">
-            <span className="rounded-full border bg-white px-3 py-1">
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#D7DCE5]">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Active: <b>{activeCount}</b>
             </span>
-            <span className="rounded-full border bg-white px-3 py-1">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Archived: <b>{archivedCount}</b>
             </span>
-            <span className="rounded-full border bg-white px-3 py-1">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Showing: <b>{students.length}</b>
             </span>
           </div>
@@ -336,13 +356,21 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
 
         <div className="flex items-center gap-2">
           <a
-            className={`rounded-xl border px-3 py-2 text-sm ${!showArchived ? "bg-black text-white border-black" : "bg-white"}`}
+            className={`rounded-xl border px-3 py-2 text-sm transition ${
+              !showArchived
+                ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D]"
+                : "border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10"
+            }`}
             href={topHref("active")}
           >
             Active
           </a>
           <a
-            className={`rounded-xl border px-3 py-2 text-sm ${showArchived ? "bg-black text-white border-black" : "bg-white"}`}
+            className={`rounded-xl border px-3 py-2 text-sm transition ${
+              showArchived
+                ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D]"
+                : "border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10"
+            }`}
             href={topHref("archived")}
           >
             Archived
@@ -351,56 +379,56 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
       </div>
 
       {created ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
           Student created{note === "DUPLICATE_BLOCKED" ? " (duplicate blocked)" : ""}.
         </div>
       ) : null}
 
       {archived ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
           Student archived (removed from roster + attendance).
         </div>
       ) : null}
 
       {restored ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
           Student restored (now ACTIVE). Reassign a class if needed.
         </div>
       ) : null}
 
       {saved ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
           Saved.
         </div>
       ) : null}
 
       {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
           Error: {error}
         </div>
       ) : null}
 
-      <div className="rounded-2xl border bg-white p-5">
+      <div className={`${shellCardClass()} p-5`}>
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <form className="flex flex-col gap-3 md:flex-row md:items-end" action="/admin/students" method="get">
             <input type="hidden" name="show" value={showArchived ? "archived" : "active"} />
 
             <div>
-              <label className="text-sm text-zinc-700">Search</label>
+              <label className="text-sm text-[#C9CDD6]">Search</label>
               <input
                 name="q"
                 defaultValue={q}
-                className="mt-1 w-full md:w-72 rounded-xl border px-3 py-2 text-sm"
+                className={`${inputClass()} md:w-72`}
                 placeholder="Name, guardian, phone…"
               />
             </div>
 
             <div>
-              <label className="text-sm text-zinc-700">Class</label>
+              <label className="text-sm text-[#C9CDD6]">Class</label>
               <select
                 name="classroomId"
                 defaultValue={classroomIdFilter}
-                className="mt-1 w-full md:w-72 rounded-xl border px-3 py-2 text-sm bg-white"
+                className={`${selectClass()} md:w-72`}
               >
                 <option value="">All classes</option>
                 {classes.map((c) => (
@@ -411,16 +439,15 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
               </select>
             </div>
 
-            <button className="rounded-xl bg-black text-white px-4 py-2 text-sm">Apply</button>
+            <button className={primaryBtnClass()}>Apply</button>
           </form>
 
-          <a className="text-sm text-zinc-600 underline" href={clearFiltersHref}>
+          <a className="text-sm text-[#C9CDD6] underline underline-offset-4" href={clearFiltersHref}>
             Clear filters
           </a>
         </div>
       </div>
 
-      {/* Bulk Import should appear only in Active view */}
       {!showArchived ? (
         <StudentBulkImportCard
           classes={classes.map((c) => ({
@@ -433,37 +460,37 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
       ) : null}
 
       {!showArchived ? (
-        <form action={createStudent} className="rounded-2xl border bg-white p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-zinc-900">Add student</h2>
+        <form action={createStudent} className={`${shellCardClass()} p-6 space-y-4`}>
+          <h2 className="text-sm font-semibold text-[#F7F4ED]">Add student</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div>
-              <label className="text-sm text-zinc-700">First name</label>
-              <input name="firstName" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" required />
+              <label className="text-sm text-[#C9CDD6]">First name</label>
+              <input name="firstName" className={inputClass()} required />
             </div>
             <div>
-              <label className="text-sm text-zinc-700">Last name</label>
-              <input name="lastName" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" required />
+              <label className="text-sm text-[#C9CDD6]">Last name</label>
+              <input name="lastName" className={inputClass()} required />
             </div>
             <div>
-              <label className="text-sm text-zinc-700">Guardian name</label>
-              <input name="guardianName" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
+              <label className="text-sm text-[#C9CDD6]">Guardian name</label>
+              <input name="guardianName" className={inputClass()} />
             </div>
             <div>
-              <label className="text-sm text-zinc-700">Guardian phone (GH)</label>
+              <label className="text-sm text-[#C9CDD6]">Guardian phone (GH)</label>
               <input
                 name="guardianPhone"
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass()}
                 placeholder="e.g. 0241234567"
               />
-              <p className="mt-1 text-[11px] text-zinc-500">If entered, it must normalize to +233…</p>
+              <p className="mt-1 text-[11px] text-[#8F98A8]">If entered, it must normalize to +233…</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div>
-              <label className="text-sm text-zinc-700">Class (optional)</label>
-              <select name="classroomId" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm bg-white">
+              <label className="text-sm text-[#C9CDD6]">Class (optional)</label>
+              <select name="classroomId" className={selectClass()}>
                 <option value="">— Unassigned —</option>
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -474,8 +501,8 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
             </div>
 
             <div>
-              <label className="text-sm text-zinc-700">Gender (optional)</label>
-              <select name="gender" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm bg-white">
+              <label className="text-sm text-[#C9CDD6]">Gender (optional)</label>
+              <select name="gender" className={selectClass()}>
                 <option value="">—</option>
                 <option value="Female">Female</option>
                 <option value="Male">Male</option>
@@ -483,28 +510,28 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
             </div>
 
             <div className="md:col-span-2">
-              <label className="text-sm text-zinc-700">Note (optional)</label>
-              <input name="note" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" />
+              <label className="text-sm text-[#C9CDD6]">Note (optional)</label>
+              <input name="note" className={inputClass()} />
             </div>
           </div>
 
-          <button className="rounded-xl bg-black text-white px-4 py-2 text-sm">Create</button>
+          <button className={primaryBtnClass()}>Create</button>
         </form>
       ) : (
-        <div className="rounded-2xl border bg-white p-6 text-sm text-zinc-700">
-          You’re viewing archived students. Switch to <b>Active</b> to create new learners.
+        <div className={`${shellCardClass()} p-6 text-sm text-[#D7DCE5]`}>
+          You’re viewing archived students. Switch to <b className="text-[#F7F4ED]">Active</b> to create new learners.
         </div>
       )}
 
-      <section className="rounded-2xl border bg-white p-6">
-        <h2 className="text-sm font-semibold text-zinc-900">Student list</h2>
-        <p className="text-sm text-zinc-600 mt-1">
+      <section className={`${shellCardClass()} p-6`}>
+        <h2 className="text-sm font-semibold text-[#F7F4ED]">Student list</h2>
+        <p className="mt-1 text-sm text-[#C9CDD6]">
           {students.length} student(s){q || classroomIdFilter ? " (filtered)" : ""}.
         </p>
 
         <div className="mt-4 space-y-3">
           {students.length === 0 ? (
-            <p className="text-sm text-zinc-500">No students found.</p>
+            <p className="text-sm text-[#8F98A8]">No students found.</p>
           ) : (
             students.map((s) => {
               const fullName = `${s.firstName ?? ""} ${s.lastName ?? ""}`.trim();
@@ -514,48 +541,50 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
               const needsPhoneNorm = !!s.guardianPhone && !s.guardianPhoneNorm;
 
               return (
-                <div key={s.id} className="rounded-xl border p-4">
+                <div key={s.id} className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-zinc-900 truncate">{fullName || "Unnamed"}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-[#F7F4ED]">{fullName || "Unnamed"}</p>
                         <span className={statusPill(s.status)}>{s.status}</span>
                         {needsPhoneNorm ? (
-                          <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                          <span className="inline-flex rounded-full border border-amber-300/20 bg-amber-400/12 px-2 py-0.5 text-[11px] font-semibold text-amber-100">
                             Phone not normalized
                           </span>
                         ) : null}
                       </div>
 
-                      <p className="text-xs text-zinc-600 truncate">
-                        Class: <span className="font-medium">{classText}</span>
+                      <p className="mt-1 truncate text-xs text-[#C9CDD6]">
+                        Class: <span className="font-medium text-[#F7F4ED]">{classText}</span>
                       </p>
 
-                      <p className="text-xs text-zinc-500 mt-1 truncate">
+                      <p className="mt-1 truncate text-xs text-[#8F98A8]">
                         Guardian: {s.guardianName ?? "—"} · {s.guardianPhone ?? "—"}
                         {s.guardianPhoneNorm ? ` · ${s.guardianPhoneNorm}` : ""}
                       </p>
 
-                      <p className="text-[11px] text-zinc-400 mt-1 font-mono truncate">ID: {s.id}</p>
+                      <p className="mt-1 truncate font-mono text-[11px] text-[#738095]">ID: {s.id}</p>
 
                       {s.status === StudentStatus.ARCHIVED && s.archivedAt ? (
-                        <p className="text-[11px] text-zinc-500 mt-1">Archived at: {new Date(s.archivedAt).toLocaleString()}</p>
+                        <p className="mt-1 text-[11px] text-[#8F98A8]">
+                          Archived at: {new Date(s.archivedAt).toLocaleString()}
+                        </p>
                       ) : null}
                     </div>
 
-                    <div className="text-right space-y-1">
+                    <div className="space-y-1 text-right">
                       <div>
-                        <p className="text-xs text-zinc-500">SMS</p>
-                        <p className="text-sm font-medium">{s.guardianSmsOptIn ? "ON" : "OFF"}</p>
+                        <p className="text-xs text-[#8F98A8]">SMS</p>
+                        <p className="text-sm font-medium text-[#F7F4ED]">{s.guardianSmsOptIn ? "ON" : "OFF"}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-zinc-500">Health consent</p>
-                        <p className="text-sm font-medium">{s.healthConsentAt ? "ON" : "OFF"}</p>
+                        <p className="text-xs text-[#8F98A8]">Health consent</p>
+                        <p className="text-sm font-medium text-[#F7F4ED]">{s.healthConsentAt ? "ON" : "OFF"}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-2">
+                  <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-4">
                     {!showArchived ? (
                       <>
                         <form action={updateStudentClass} className="flex items-center gap-2 md:col-span-2">
@@ -563,7 +592,7 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
                           <select
                             name="classroomId"
                             defaultValue={s.classroomId ?? ""}
-                            className="w-full rounded-xl border px-3 py-2 text-sm bg-white"
+                            className="w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED]"
                             disabled={s.status === StudentStatus.ARCHIVED}
                           >
                             <option value="">— Unassigned —</option>
@@ -573,21 +602,21 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
                               </option>
                             ))}
                           </select>
-                          <button className="rounded-xl border px-3 py-2 text-sm" disabled={s.status === StudentStatus.ARCHIVED}>
+                          <button className={outlineBtnClass()} disabled={s.status === StudentStatus.ARCHIVED}>
                             Save
                           </button>
                         </form>
 
                         <form action={toggleGuardianSms}>
                           <input type="hidden" name="studentId" value={s.id} />
-                          <button className="w-full rounded-xl border px-3 py-2 text-sm" disabled={s.status === StudentStatus.ARCHIVED}>
+                          <button className={`w-full ${outlineBtnClass()}`} disabled={s.status === StudentStatus.ARCHIVED}>
                             Toggle SMS
                           </button>
                         </form>
 
                         <form action={toggleHealthConsent}>
                           <input type="hidden" name="studentId" value={s.id} />
-                          <button className="w-full rounded-xl border px-3 py-2 text-sm" disabled={s.status === StudentStatus.ARCHIVED}>
+                          <button className={`w-full ${outlineBtnClass()}`} disabled={s.status === StudentStatus.ARCHIVED}>
                             Toggle Health Consent
                           </button>
                         </form>
@@ -595,7 +624,7 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
                         <form action={archiveStudent} className="md:col-span-4">
                           <input type="hidden" name="studentId" value={s.id} />
                           <button
-                            className="w-full rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 hover:bg-rose-100"
+                            className="w-full rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-sm text-rose-100 transition hover:bg-rose-400/18"
                             disabled={s.status === StudentStatus.ARCHIVED}
                           >
                             Archive (removes from attendance)
@@ -605,11 +634,11 @@ export default async function AdminStudentsPage(props: { searchParams?: SP | Pro
                     ) : (
                       <form action={restoreStudent} className="md:col-span-4">
                         <input type="hidden" name="studentId" value={s.id} />
-                        <button className="w-full rounded-xl border px-3 py-2 text-sm hover:bg-zinc-50">Restore to ACTIVE</button>
+                        <button className={`w-full ${outlineBtnClass()}`}>Restore to ACTIVE</button>
                       </form>
                     )}
 
-                    <div className="md:col-span-4 text-xs text-zinc-500 flex items-center">
+                    <div className="md:col-span-4 flex items-center text-xs text-[#8F98A8]">
                       Attendance rosters exclude ARCHIVED learners. Archive also clears class assignment to prevent stale rosters.
                     </div>
                   </div>

@@ -10,11 +10,9 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   const ctx = await requireServerUserContext({
     redirectTo: "/admin/dashboard",
     requireTenant: true,
-    requireRoleNames: ["SCHOOL_ADMIN"],
+    requireRoleNames: ["SCHOOL_ADMIN", "SUPERADMIN", "HEADTEACHER"],
   });
 
-  // If a SUPERADMIN somehow hits /admin/dashboard, send them where they belong.
-  // (This is a safety net; requireRoleNames above already blocks it.)
   const roleName = String((ctx as any).roleName ?? "");
   if (roleName === "SUPERADMIN") redirect("/admin/super");
 

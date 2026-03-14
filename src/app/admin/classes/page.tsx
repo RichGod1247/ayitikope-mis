@@ -11,6 +11,22 @@ export const runtime = "nodejs";
 
 type SP = Record<string, string | string[] | undefined>;
 
+function shellCardClass() {
+  return "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+}
+
+function inputClass() {
+  return "mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25";
+}
+
+function primaryBtnClass() {
+  return "rounded-xl border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105";
+}
+
+function outlineBtnClass() {
+  return "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] transition hover:bg-white/10";
+}
+
 async function createClass(formData: FormData) {
   "use server";
 
@@ -109,106 +125,136 @@ export default async function AdminClassesPage(props: { searchParams?: SP | Prom
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
+    <div className="space-y-6 text-[#F7F4ED]">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-zinc-900">Classes</h1>
-          <p className="text-sm text-zinc-600 mt-1">Create and manage classrooms for this tenant.</p>
+          <h1 className="text-2xl font-semibold text-[#F7F4ED]">Classes</h1>
+          <p className="mt-1 text-sm text-[#C9CDD6]">
+            Create and manage classrooms for this tenant.
+          </p>
 
-          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-zinc-600">
-            <span className="rounded-full border bg-white px-3 py-1">
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#D7DCE5]">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Active: <b>{activeCount}</b>
             </span>
-            <span className="rounded-full border bg-white px-3 py-1">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Archived: <b>{archivedCount}</b>
             </span>
-            <span className="rounded-full border bg-white px-3 py-1">
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
               Showing: <b>{classrooms.length}</b>
             </span>
           </div>
         </div>
 
-        <a className="rounded-xl border px-3 py-2 text-sm bg-white" href={toggleArchivedHref}>
+        <a className={outlineBtnClass()} href={toggleArchivedHref}>
           {includeArchived ? "Hide archived" : "Include archived"}
         </a>
       </div>
 
       {created ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
           Class created.
         </div>
       ) : null}
 
       {error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
           Error: {error}
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-6">
-        <form action={createClass} className="rounded-2xl border bg-white p-6 space-y-4">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <form action={createClass} className={`${shellCardClass()} p-6 space-y-4`}>
           <div>
-            <h2 className="text-sm font-semibold text-zinc-900">Create class</h2>
-            <p className="text-sm text-zinc-600 mt-1">Manual creation stays available for exceptions and cleanup.</p>
+            <h2 className="text-sm font-semibold text-[#F7F4ED]">Create class</h2>
+            <p className="mt-1 text-sm text-[#C9CDD6]">
+              Manual creation stays available for exceptions and cleanup.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div className="md:col-span-2">
-              <label className="text-sm text-zinc-700">Class name</label>
+              <label className="text-sm text-[#C9CDD6]">Class name</label>
               <input
                 name="name"
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass()}
                 placeholder="e.g. KG 1"
                 required
               />
             </div>
 
             <div>
-              <label className="text-sm text-zinc-700">Grade (optional)</label>
-              <input name="grade" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" placeholder="e.g. KG1" />
+              <label className="text-sm text-[#C9CDD6]">Grade (optional)</label>
+              <input
+                name="grade"
+                className={inputClass()}
+                placeholder="e.g. KG1"
+              />
             </div>
 
             <div>
-              <label className="text-sm text-zinc-700">Arm (optional)</label>
-              <input name="arm" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" placeholder="e.g. A" />
+              <label className="text-sm text-[#C9CDD6]">Arm (optional)</label>
+              <input
+                name="arm"
+                className={inputClass()}
+                placeholder="e.g. A"
+              />
             </div>
           </div>
 
           <div>
-            <label className="text-sm text-zinc-700">Note (optional)</label>
-            <input name="note" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" placeholder="Any internal note" />
+            <label className="text-sm text-[#C9CDD6]">Note (optional)</label>
+            <input
+              name="note"
+              className={inputClass()}
+              placeholder="Any internal note"
+            />
           </div>
 
-          <button className="rounded-xl bg-black text-white px-4 py-2 text-sm">Create class</button>
+          <button className={primaryBtnClass()}>Create class</button>
 
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[#8F98A8]">
             Rule: linking uses IDs only. Display names can vary; relations must not.
           </p>
         </form>
 
-        {/* Canonical seeding controls (single/multi) */}
         <CanonicalClassSeedCard />
       </div>
 
-      <section className="rounded-2xl border bg-white p-6">
-        <h2 className="text-sm font-semibold text-zinc-900">Existing classes</h2>
-        <p className="text-sm text-zinc-600 mt-1">{classrooms.length} class(es)</p>
+      <section className={`${shellCardClass()} p-6`}>
+        <h2 className="text-sm font-semibold text-[#F7F4ED]">Existing classes</h2>
+        <p className="mt-1 text-sm text-[#C9CDD6]">{classrooms.length} class(es)</p>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           {classrooms.length === 0 ? (
-            <p className="text-sm text-zinc-500">No classes yet.</p>
+            <p className="text-sm text-[#8F98A8]">No classes yet.</p>
           ) : (
             classrooms.map((c) => (
-              <div key={c.id} className="rounded-xl border p-4 flex items-start justify-between gap-3">
+              <div
+                key={c.id}
+                className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-4 flex items-start justify-between gap-3"
+              >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900 truncate">
+                  <p className="truncate text-sm font-semibold text-[#F7F4ED]">
                     {c.name}{" "}
-                    {c.status === ClassroomStatus.ARCHIVED ? <span className="text-xs text-zinc-500">· Archived</span> : null}
+                    {c.status === ClassroomStatus.ARCHIVED ? (
+                      <span className="text-xs text-[#8F98A8]">· Archived</span>
+                    ) : null}
                   </p>
-                  <p className="text-xs text-zinc-600">
-                    {c.grade ?? "—"} {c.arm ? ` · Arm ${c.arm}` : ""}
+
+                  <p className="mt-1 text-xs text-[#C9CDD6]">
+                    {c.grade ?? "—"}
+                    {c.arm ? ` · Arm ${c.arm}` : ""}
+                    {typeof c.capacity === "number" ? ` · Capacity ${c.capacity}` : ""}
                   </p>
-                  {c.note ? <p className="text-xs text-zinc-500 mt-1">{c.note}</p> : null}
+
+                  {c.note ? (
+                    <p className="mt-1 text-xs text-[#8F98A8]">{c.note}</p>
+                  ) : null}
+
+                  <p className="mt-1 text-[11px] text-[#738095]">
+                    Created: {new Date(c.createdAt).toLocaleString()}
+                  </p>
                 </div>
               </div>
             ))
