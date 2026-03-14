@@ -2,11 +2,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Contact • Ayitikope M/A Basic School",
-  description: "Reach the Head Teacher and Assistant Heads. Send a message or WhatsApp us directly.",
+  title: "Contact & Deployment • EduLife OS",
+  description:
+    "Speak with the EduLife OS team about school demos, pilot rollout, implementation, and partnership.",
 };
 
-// ✅ Default export must be a React component that returns children
 export default function ContactLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

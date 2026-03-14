@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState, type FormEvent } from "react";
 import { buildAppCallbackUrl, safeInternalPath } from "@/lib/roleRouting";
+import FormLogo from "@/components/FormLogo";
 
 function minutesFromSeconds(secs: number) {
   const s = Number.isFinite(secs) ? secs : 60;
@@ -20,12 +21,9 @@ function mapError(raw: string | null): string | null {
   const e = String(raw ?? "").trim();
   if (!e) return null;
 
-  // Server-auth redirect errors
   if (e === "NO_ACTIVE_TENANT") return "Select your school (School Code) to continue.";
   if (e === "FORBIDDEN") return "You don’t have access to this school workspace.";
   if (e === "UNAUTHORIZED") return "Please sign in to continue.";
-
-  // NextAuth generic
   if (e === "CredentialsSignin") return "Invalid Staff ID/email or password.";
 
   return null;
@@ -33,20 +31,16 @@ function mapError(raw: string | null): string | null {
 
 function SignInSkeleton() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white">
-      <div className="mx-auto max-w-md px-4 py-10 space-y-6">
-        <header className="space-y-2 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-sky-600">EduLife OS · Sign In</p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-sky-950">Welcome back.</h1>
-          <p className="text-sm text-slate-600">Loading…</p>
-        </header>
-
-        <section className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
-          <div className="h-10 rounded-xl bg-slate-100 animate-pulse" />
-          <div className="mt-3 h-10 rounded-xl bg-slate-100 animate-pulse" />
-          <div className="mt-3 h-10 rounded-xl bg-slate-100 animate-pulse" />
-          <div className="mt-3 h-10 rounded-xl bg-slate-100 animate-pulse" />
-          <div className="mt-4 h-10 rounded-xl bg-slate-200 animate-pulse" />
+    <main className="os-auth-shell flex items-center justify-center px-4 py-10">
+      <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="os-auth-brand hidden rounded-[32px] p-8 lg:block" />
+        <section className="os-auth-card rounded-[32px] p-6 sm:p-8">
+          <div className="os-skeleton-line h-6 w-36" />
+          <div className="os-skeleton-line mt-4 h-12 w-full" />
+          <div className="os-skeleton-line mt-3 h-12 w-full" />
+          <div className="os-skeleton-line mt-3 h-12 w-full" />
+          <div className="os-skeleton-line mt-3 h-12 w-full" />
+          <div className="os-skeleton-line mt-5 h-12 w-full" />
         </section>
       </div>
     </main>
@@ -60,10 +54,7 @@ function SignInInner() {
   const rawCb =
     sp.get("callbackUrl") || sp.get("redirect") || sp.get("redirectTo") || "/app";
 
-  // Always sanitize
   const safeCb = safeInternalPath(rawCb, "/app");
-
-  // ✅ Always route through /app gateway unless it's already /app
   const callbackUrl = safeCb.startsWith("/app") ? safeCb : buildAppCallbackUrl(safeCb);
 
   const tenantPrefill = (sp.get("tenant") || sp.get("tenantId") || sp.get("school") || "").trim();
@@ -92,7 +83,7 @@ function SignInInner() {
       identifier: identifier.trim(),
       password,
       otp: otp.trim() || undefined,
-      callbackUrl, // ✅ always /app?next=...
+      callbackUrl,
     });
 
     setLoading(false);
@@ -126,58 +117,85 @@ function SignInInner() {
       return setErr("Invalid Staff ID/email or password.");
     }
 
-    // Single gateway: /app will route by role + tenant safely.
     router.replace(callbackUrl || "/app");
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white">
-      <div className="mx-auto max-w-md px-4 py-10 space-y-6">
-        <header className="space-y-2 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-sky-600">EduLife OS · Sign In</p>
-          <h1 className="text-2xl font-extrabold tracking-tight text-sky-950">Welcome back.</h1>
-          <p className="text-sm text-slate-600">Sign in to access your workspace.</p>
-        </header>
+    <main className="os-auth-shell px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+        <section className="os-auth-brand hidden rounded-[32px] p-8 lg:flex lg:flex-col lg:justify-between">
+          <div>
+            <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-white/6 px-4 py-2 text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
+              Secure Staff Access
+            </div>
 
-        <section className="rounded-3xl border border-sky-100 bg-white p-6 shadow-sm">
+            <h1 className="mt-8 text-4xl font-semibold leading-tight text-[#F7F4ED]">
+              Enter your protected EduLife OS workspace.
+            </h1>
+
+            <p className="mt-5 max-w-lg text-sm leading-8 text-[#C9CDD6]">
+              Sign in to access teaching workflows, leadership controls, school operations,
+              and role-scoped portals designed for disciplined execution.
+            </p>
+          </div>
+
+          <div className="grid gap-3">
+            {[
+              "Tenant-scoped school access",
+              "Role-based workspace routing",
+              "OTP-ready secure sign-in",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#E5E8EF]"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="os-auth-card rounded-[32px] p-6 sm:p-8">
+          <FormLogo subtitle="Sign in to continue into your school workspace." />
+
           {err ? (
-            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <div className="os-error-banner mb-4 rounded-2xl px-4 py-3 text-sm">
               {err}
             </div>
           ) : null}
 
-          <form onSubmit={onSubmit} className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">
-                School Code <span className="text-slate-400">(required for Staff ID or multi-school accounts)</span>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label className="os-label">
+                School Code <span className="os-helper">(required for Staff ID or multi-school accounts)</span>
               </label>
               <input
                 value={tenant}
                 onChange={(e) => setTenant(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-200"
+                className="os-input"
                 placeholder="e.g. SCH-AC4633 or ayitikope-basic"
                 autoComplete="organization"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">Staff ID or Email</label>
+            <div className="space-y-2">
+              <label className="os-label">Staff ID or Email</label>
               <input
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-200"
+                className="os-input"
                 placeholder="e.g. AYI-TCH-001 or name@school.com"
                 autoComplete="username"
                 required
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">Password</label>
+            <div className="space-y-2">
+              <label className="os-label">Password</label>
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-200"
+                className="os-input"
                 placeholder="Your password"
                 type="password"
                 autoComplete="current-password"
@@ -185,14 +203,14 @@ function SignInInner() {
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-700">
-                One-Time Code (OTP) <span className="text-slate-400">(only if enabled)</span>
+            <div className="space-y-2">
+              <label className="os-label">
+                One-Time Code (OTP) <span className="os-helper">(only if enabled)</span>
               </label>
               <input
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-200"
+                className="os-input"
                 placeholder="123456"
                 inputMode="numeric"
                 autoComplete="one-time-code"
@@ -202,16 +220,16 @@ function SignInInner() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="w-full rounded-xl bg-sky-700 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-800 disabled:opacity-50"
+              className="os-btn-primary w-full px-4 py-3 text-sm"
             >
               {loading ? "Signing in..." : "Sign in"}
             </button>
 
-            <div className="pt-2 text-center text-xs text-slate-600">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs leading-6 text-[#C9CDD6]">
               New teacher?{" "}
               <Link
                 href={`/auth/signup?redirectTo=${encodeURIComponent(callbackUrl || "/app")}`}
-                className="font-semibold text-sky-700 hover:underline"
+                className="font-semibold text-[#E8C96A] hover:text-white"
               >
                 Create account
               </Link>

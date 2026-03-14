@@ -4,6 +4,7 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import FormLogo from "@/components/FormLogo";
 
 type Phase = "KG" | "PRIMARY" | "JHS";
 type AccessMethod = "INVITE" | "INVITE_CODE" | "ONBOARDING";
@@ -107,15 +108,15 @@ function sortByName(items: SubjectOption[]) {
 
 function SignupSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow p-6 space-y-4">
-        <div className="h-7 w-56 bg-gray-200 rounded animate-pulse" />
-        <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
-        <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
-        <div className="h-64 w-full bg-gray-100 rounded-xl border animate-pulse" />
-        <div className="h-10 w-40 bg-gray-200 rounded animate-pulse" />
+    <main className="os-auth-shell flex items-center justify-center px-4 py-10">
+      <div className="os-auth-card mx-auto w-full max-w-3xl rounded-[32px] p-6">
+        <div className="os-skeleton-line h-6 w-40" />
+        <div className="os-skeleton-line mt-4 h-10 w-full" />
+        <div className="os-skeleton-line mt-3 h-10 w-full" />
+        <div className="os-skeleton-line mt-3 h-10 w-full" />
+        <div className="os-skeleton-line mt-3 h-40 w-full" />
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -153,7 +154,6 @@ function SignupInner() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
-  // NEW: role + teaching toggle (UI only; server still decides role from code)
   const [rolePick, setRolePick] = useState<RolePick>("TEACHER");
   const [headteacherTeaches, setHeadteacherTeaches] = useState(false);
 
@@ -185,13 +185,11 @@ function SignupInner() {
   const [inspectLoading, setInspectLoading] = useState(false);
   const [inspect, setInspect] = useState<InspectOk | InspectFail | null>(null);
 
-  // show teaching scope?
   const showTeachingScope = useMemo(() => {
     if (rolePick === "TEACHER") return true;
     return headteacherTeaches;
   }, [rolePick, headteacherTeaches]);
 
-  // Load JHS subject options when needed
   useEffect(() => {
     if (phase !== "JHS") return;
 
@@ -241,7 +239,6 @@ function SignupInner() {
     return () => ctrl.abort();
   }, [phase]);
 
-  // Inspect invite code to show tenant + role
   useEffect(() => {
     if (accessMethod !== "INVITE_CODE") return;
 
@@ -277,7 +274,6 @@ function SignupInner() {
     return () => ctrl.abort();
   }, [accessMethod, inviteCode]);
 
-  // NEW: if invite-code inspect proves a role, lock the role picker to that (prevents confusion)
   useEffect(() => {
     if (accessMethod !== "INVITE_CODE") return;
     const ok = inspect && (inspect as any).ok === true ? (inspect as InspectOk) : null;
@@ -289,7 +285,7 @@ function SignupInner() {
       setHeadteacherTeaches(false);
     } else if (rn === "HEADTEACHER") {
       setRolePick("HEADTEACHER");
-      setHeadteacherTeaches(false); // default: headteacher does NOT teach
+      setHeadteacherTeaches(false);
     }
   }, [accessMethod, inspect]);
 
@@ -316,7 +312,6 @@ function SignupInner() {
     if (!cleanStr(password)) fe.password = "Password is required.";
     if (cleanStr(password).length > 0 && cleanStr(password).length < 8) fe.password = "Password must be at least 8 characters.";
 
-    // Access method basics
     if (accessMethod === "INVITE") {
       if (!cleanStr(inviteToken)) fe.inviteToken = "Invite token is required.";
     } else if (accessMethod === "INVITE_CODE") {
@@ -324,7 +319,6 @@ function SignupInner() {
       if (inspect && (inspect as any).ok === false) fe.inviteCode = "Invalid or expired onboarding code.";
       if (!inspect) fe.inviteCode = "Enter a code to validate.";
 
-      // block parent codes on staff signup page (teacher/headteacher)
       const ok = inspect && (inspect as any).ok === true ? (inspect as InspectOk) : null;
       if (ok && String(ok.roleName).toUpperCase() === "PARENT") {
         fe.inviteCode = "This code is for Parent onboarding. Use the Parent signup flow.";
@@ -335,7 +329,6 @@ function SignupInner() {
       if (rolePick !== "TEACHER") fe.rolePick = "Tenant + Code onboarding is teacher-only.";
     }
 
-    // Teaching scope only if needed
     if (showTeachingScope) {
       if (!phase) fe.phase = "Phase is required.";
 
@@ -385,11 +378,9 @@ function SignupInner() {
       password: cleanStr(password),
       additionalDuties: parseCommaList(additionalDutiesText),
       redirectTo,
-      // NEW: tells server if headteacher actually teaches. Server will ignore this for TEACHER role.
       teaches: rolePick === "HEADTEACHER" ? !!headteacherTeaches : true,
     };
 
-    // only attach scope if UI says they teach
     if (showTeachingScope) {
       payload.phase = phase;
       if (phase === "KG" || phase === "PRIMARY") payload.classLevel = normalizeClassLevel(classLevel);
@@ -473,371 +464,446 @@ function SignupInner() {
   }, [jhsRows]);
 
   const inspectOk = inspect && (inspect as any).ok === true ? (inspect as InspectOk) : null;
-
-  // lock role picker if invite-code tells us the role
   const roleLockedByCode = accessMethod === "INVITE_CODE" && !!inspectOk;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow p-6">
-        <div className="flex items-start justify-between gap-4">
+    <main className="os-auth-shell px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[0.82fr_1.18fr]">
+        <section className="os-auth-brand hidden rounded-[32px] p-8 lg:flex lg:flex-col lg:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Staff Signup</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Create your staff account. Teaching scope is only required if you teach.
+            <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-white/6 px-4 py-2 text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
+              Staff Onboarding
+            </div>
+
+            <h1 className="mt-8 text-4xl font-semibold leading-tight text-[#F7F4ED]">
+              Create your EduLife OS account with the right school access.
+            </h1>
+
+            <p className="mt-5 max-w-lg text-sm leading-8 text-[#C9CDD6]">
+              Use your invite, onboarding code, or teacher onboarding path to enter the platform
+              with the correct role, school scope, and teaching assignment.
             </p>
           </div>
-          <Link
-            href={`/auth/signin?callbackUrl=${encodeURIComponent(redirectTo)}`}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Already have an account? Sign in
-          </Link>
-        </div>
 
-        {topError ? (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {topError}
+          <div className="grid gap-3">
+            {[
+              "Role-aware onboarding",
+              "School-scoped staff identity",
+              "Teaching scope where required",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#E5E8EF]"
+              >
+                {item}
+              </div>
+            ))}
           </div>
-        ) : null}
+        </section>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-6">
-          {/* Identity */}
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-gray-800">Identity</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-gray-700">First Name</label>
-                <input
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="e.g. Kwame"
-                />
-                {fieldErrors.firstName ? <p className="mt-1 text-xs text-red-600">{fieldErrors.firstName}</p> : null}
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-700">Last Name</label>
-                <input
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="e.g. Mensah"
-                />
-                {fieldErrors.lastName ? <p className="mt-1 text-xs text-red-600">{fieldErrors.lastName}</p> : null}
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-700">Staff ID (School-scoped)</label>
-                <input
-                  value={staffId}
-                  onChange={(e) => setStaffId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="e.g. AYI-0142"
-                />
-                {fieldErrors.staffId ? <p className="mt-1 text-xs text-red-600">{fieldErrors.staffId}</p> : null}
-                <p className="mt-1 text-xs text-gray-500">This ID is unique within your school (tenant).</p>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-700">Email</label>
-                <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="name@school.com"
-                />
-                {fieldErrors.email ? <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p> : null}
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-700">Phone</label>
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="+233..."
-                />
-                {fieldErrors.phone ? <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p> : null}
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-700">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="Minimum 8 characters"
-                />
-                {fieldErrors.password ? <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p> : null}
-              </div>
+        <section className="os-auth-card rounded-[32px] p-6 sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <FormLogo subtitle="Create your staff account and continue into your school workspace." />
             </div>
-          </section>
 
-          {/* Role + Teaching toggle */}
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-gray-800">Role</h2>
+            <Link
+              href={`/auth/signin?callbackUrl=${encodeURIComponent(redirectTo)}`}
+              className="os-btn-secondary inline-flex items-center justify-center px-4 py-2 text-sm"
+            >
+              Already have an account? Sign in
+            </Link>
+          </div>
 
-            <div className="rounded-lg border p-4 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm text-gray-700">What’s your role?</label>
+          {topError ? (
+            <div className="os-error-banner mt-2 rounded-2xl px-4 py-3 text-sm">
+              {topError}
+            </div>
+          ) : null}
+
+          <form onSubmit={onSubmit} className="mt-6 space-y-6">
+            <section className="os-section-card rounded-[24px] p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                Identity
+              </h2>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="os-label">First Name</label>
+                  <input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="os-input"
+                    placeholder="e.g. Kwame"
+                  />
+                  {fieldErrors.firstName ? <p className="text-xs text-red-300">{fieldErrors.firstName}</p> : null}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="os-label">Last Name</label>
+                  <input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="os-input"
+                    placeholder="e.g. Mensah"
+                  />
+                  {fieldErrors.lastName ? <p className="text-xs text-red-300">{fieldErrors.lastName}</p> : null}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="os-label">Staff ID (School-scoped)</label>
+                  <input
+                    value={staffId}
+                    onChange={(e) => setStaffId(e.target.value)}
+                    className="os-input"
+                    placeholder="e.g. AYI-0142"
+                  />
+                  {fieldErrors.staffId ? <p className="text-xs text-red-300">{fieldErrors.staffId}</p> : null}
+                  <p className="os-helper">This ID is unique within your school tenant.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="os-label">Email</label>
+                  <input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="os-input"
+                    placeholder="name@school.com"
+                  />
+                  {fieldErrors.email ? <p className="text-xs text-red-300">{fieldErrors.email}</p> : null}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="os-label">Phone</label>
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="os-input"
+                    placeholder="+233..."
+                  />
+                  {fieldErrors.phone ? <p className="text-xs text-red-300">{fieldErrors.phone}</p> : null}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="os-label">Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="os-input"
+                    placeholder="Minimum 8 characters"
+                  />
+                  {fieldErrors.password ? <p className="text-xs text-red-300">{fieldErrors.password}</p> : null}
+                </div>
+              </div>
+            </section>
+
+            <section className="os-section-card rounded-[24px] p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                Role
+              </h2>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="os-label">What’s your role?</label>
                   <select
                     value={rolePick}
                     onChange={(e) => setRolePick(e.target.value as RolePick)}
                     disabled={roleLockedByCode}
-                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white disabled:opacity-60"
+                    className="os-input"
                   >
                     <option value="TEACHER">Teacher</option>
                     <option value="HEADTEACHER">Headteacher</option>
                   </select>
-                  {fieldErrors.rolePick ? <p className="mt-1 text-xs text-red-600">{fieldErrors.rolePick}</p> : null}
-                  {roleLockedByCode ? (
-                    <p className="mt-1 text-xs text-gray-500">Locked by onboarding code role.</p>
-                  ) : (
-                    <p className="mt-1 text-xs text-gray-500">Role is ultimately enforced server-side by the code/invite.</p>
-                  )}
+                  {fieldErrors.rolePick ? <p className="text-xs text-red-300">{fieldErrors.rolePick}</p> : null}
+                  <p className="os-helper">
+                    {roleLockedByCode
+                      ? "Locked by onboarding code role."
+                      : "Role is enforced server-side by the invite or onboarding code."}
+                  </p>
                 </div>
 
                 {rolePick === "HEADTEACHER" ? (
                   <div className="flex items-end">
-                    <label className="flex items-center gap-2 text-sm text-gray-800">
+                    <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#E5E8EF]">
                       <input
                         type="checkbox"
                         checked={headteacherTeaches}
                         onChange={(e) => setHeadteacherTeaches(e.target.checked)}
+                        className="os-check"
                       />
-                      Do you teach? (If yes, you must set teaching scope)
+                      <span>Do you teach? If yes, set teaching scope below.</span>
                     </label>
                   </div>
                 ) : null}
               </div>
-            </div>
-          </section>
+            </section>
 
-          {/* Access Method */}
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-gray-800">Access Method</h2>
+            <section className="os-section-card rounded-[24px] p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                Access Method
+              </h2>
 
-            <div className="rounded-lg border p-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <label className="flex items-center gap-2 text-sm text-gray-800">
-                  <input type="radio" name="accessMethod" checked={accessMethod === "INVITE"} onChange={() => setMethod("INVITE")} />
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#E5E8EF]">
+                  <input
+                    type="radio"
+                    name="accessMethod"
+                    checked={accessMethod === "INVITE"}
+                    onChange={() => setMethod("INVITE")}
+                    className="os-radio"
+                  />
                   Invite Link
                 </label>
-                <label className="flex items-center gap-2 text-sm text-gray-800">
-                  <input type="radio" name="accessMethod" checked={accessMethod === "INVITE_CODE"} onChange={() => setMethod("INVITE_CODE")} />
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#E5E8EF]">
+                  <input
+                    type="radio"
+                    name="accessMethod"
+                    checked={accessMethod === "INVITE_CODE"}
+                    onChange={() => setMethod("INVITE_CODE")}
+                    className="os-radio"
+                  />
                   Onboarding Code
                 </label>
-                <label className="flex items-center gap-2 text-sm text-gray-800">
-                  <input type="radio" name="accessMethod" checked={accessMethod === "ONBOARDING"} onChange={() => setMethod("ONBOARDING")} />
+                <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#E5E8EF]">
+                  <input
+                    type="radio"
+                    name="accessMethod"
+                    checked={accessMethod === "ONBOARDING"}
+                    onChange={() => setMethod("ONBOARDING")}
+                    className="os-radio"
+                  />
                   Tenant + Code
                 </label>
               </div>
 
-              {accessMethod === "INVITE" ? (
-                <div>
-                  <label className="text-sm text-gray-700">Invite Token / Link</label>
-                  <input
-                    value={inviteToken}
-                    onChange={(e) => setInviteToken(e.target.value)}
-                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    placeholder="Paste invite link or token"
-                  />
-                  {fieldErrors.inviteToken ? <p className="mt-1 text-xs text-red-600">{fieldErrors.inviteToken}</p> : null}
-                </div>
-              ) : accessMethod === "INVITE_CODE" ? (
-                <div>
-                  <label className="text-sm text-gray-700">Onboarding Code</label>
-                  <input
-                    value={inviteCode}
-                    onChange={(e) => setInviteCode(e.target.value)}
-                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                    placeholder="HT-.... / TC-...."
-                  />
-                  {fieldErrors.inviteCode ? <p className="mt-1 text-xs text-red-600">{fieldErrors.inviteCode}</p> : null}
-
-                  <div className="mt-2 text-xs text-gray-600">
-                    {inspectLoading ? (
-                      <span>Validating code…</span>
-                    ) : inspectOk ? (
-                      <span>
-                        School: <span className="font-medium">{inspectOk.tenant.name}</span>{" "}
-                        <span className="text-gray-500">({inspectOk.tenant.schoolCode || "—"})</span> • Role:{" "}
-                        <span className="font-medium">{inspectOk.roleName}</span> • Remaining uses:{" "}
-                        <span className="font-medium">{inspectOk.remaining}</span>
-                      </span>
-                    ) : inspect && (inspect as any).ok === false ? (
-                      <span className="text-red-600">Invalid / expired code.</span>
-                    ) : (
-                      <span>Enter a code to validate.</span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm text-gray-700">School Code / Tenant</label>
+              <div className="mt-4">
+                {accessMethod === "INVITE" ? (
+                  <div className="space-y-2">
+                    <label className="os-label">Invite Token / Link</label>
                     <input
-                      value={tenantId}
-                      onChange={(e) => setTenantId(e.target.value)}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      placeholder="Tenant ID or school slug/code"
+                      value={inviteToken}
+                      onChange={(e) => setInviteToken(e.target.value)}
+                      className="os-input"
+                      placeholder="Paste invite link or token"
                     />
-                    {fieldErrors.tenantId ? <p className="mt-1 text-xs text-red-600">{fieldErrors.tenantId}</p> : null}
+                    {fieldErrors.inviteToken ? <p className="text-xs text-red-300">{fieldErrors.inviteToken}</p> : null}
                   </div>
-
-                  <div>
-                    <label className="text-sm text-gray-700">Onboarding Code</label>
+                ) : accessMethod === "INVITE_CODE" ? (
+                  <div className="space-y-2">
+                    <label className="os-label">Onboarding Code</label>
                     <input
-                      value={onboardingCode}
-                      onChange={(e) => setOnboardingCode(e.target.value)}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
-                      placeholder="TCH-XXXXXXX"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value)}
+                      className="os-input"
+                      placeholder="HT-.... / TC-...."
                     />
-                    {fieldErrors.onboardingCode ? <p className="mt-1 text-xs text-red-600">{fieldErrors.onboardingCode}</p> : null}
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
+                    {fieldErrors.inviteCode ? <p className="text-xs text-red-300">{fieldErrors.inviteCode}</p> : null}
 
-          {/* Teaching Scope (only when needed) */}
-          {showTeachingScope ? (
-            <section className="space-y-3">
-              <h2 className="text-sm font-semibold text-gray-800">Teaching Scope</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm text-gray-700">Phase</label>
-                  <select
-                    value={phase}
-                    onChange={(e) => setPhase(e.target.value as Phase)}
-                    className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white"
-                  >
-                    <option value="KG">KG</option>
-                    <option value="PRIMARY">PRIMARY</option>
-                    <option value="JHS">JHS</option>
-                  </select>
-                  {fieldErrors.phase ? <p className="mt-1 text-xs text-red-600">{fieldErrors.phase}</p> : null}
-                </div>
-
-                {phase === "KG" || phase === "PRIMARY" ? (
-                  <div>
-                    <label className="text-sm text-gray-700">Class Level</label>
-                    <select
-                      value={classLevel}
-                      onChange={(e) => setClassLevel(e.target.value)}
-                      className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white"
-                    >
-                      {KG_PRIMARY_LEVELS.map((lvl) => (
-                        <option key={lvl} value={lvl}>
-                          {lvl}
-                        </option>
-                      ))}
-                    </select>
-                    {fieldErrors.classLevel ? <p className="mt-1 text-xs text-red-600">{fieldErrors.classLevel}</p> : null}
-                  </div>
-                ) : null}
-              </div>
-
-              {phase === "JHS" ? (
-                <div className="rounded-lg border p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700 font-medium">JHS Subject Assignments</p>
-                      <p className="text-xs text-gray-500">
-                        Select subjects from a canonical list (no typing).
-                        {subjectsLoadedFromDb ? " (Loaded from DB)" : " (Using safe fallback list)"}
-                      </p>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs leading-6 text-[#C9CDD6]">
+                      {inspectLoading ? (
+                        <span>Validating code…</span>
+                      ) : inspectOk ? (
+                        <span>
+                          School: <span className="font-semibold text-[#F7F4ED]">{inspectOk.tenant.name}</span>{" "}
+                          <span className="text-[#AEB6C4]">({inspectOk.tenant.schoolCode || "—"})</span> • Role:{" "}
+                          <span className="font-semibold text-[#F7F4ED]">{inspectOk.roleName}</span> • Remaining uses:{" "}
+                          <span className="font-semibold text-[#F7F4ED]">{inspectOk.remaining}</span>
+                        </span>
+                      ) : inspect && (inspect as any).ok === false ? (
+                        <span className="text-red-300">Invalid or expired code.</span>
+                      ) : (
+                        <span>Enter a code to validate.</span>
+                      )}
                     </div>
-                    <button type="button" onClick={addJhsRow} className="text-sm rounded-lg border px-3 py-1.5 hover:bg-gray-50">
-                      + Add Subject
-                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="os-label">School Code / Tenant</label>
+                      <input
+                        value={tenantId}
+                        onChange={(e) => setTenantId(e.target.value)}
+                        className="os-input"
+                        placeholder="Tenant ID or school slug/code"
+                      />
+                      {fieldErrors.tenantId ? <p className="text-xs text-red-300">{fieldErrors.tenantId}</p> : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="os-label">Onboarding Code</label>
+                      <input
+                        value={onboardingCode}
+                        onChange={(e) => setOnboardingCode(e.target.value)}
+                        className="os-input"
+                        placeholder="TCH-XXXXXXX"
+                      />
+                      {fieldErrors.onboardingCode ? <p className="text-xs text-red-300">{fieldErrors.onboardingCode}</p> : null}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {showTeachingScope ? (
+              <section className="os-section-card rounded-[24px] p-5">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                  Teaching Scope
+                </h2>
+
+                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="os-label">Phase</label>
+                    <select
+                      value={phase}
+                      onChange={(e) => setPhase(e.target.value as Phase)}
+                      className="os-input"
+                    >
+                      <option value="KG">KG</option>
+                      <option value="PRIMARY">PRIMARY</option>
+                      <option value="JHS">JHS</option>
+                    </select>
+                    {fieldErrors.phase ? <p className="text-xs text-red-300">{fieldErrors.phase}</p> : null}
                   </div>
 
-                  {fieldErrors.jhsAssignments ? <p className="text-xs text-red-600">{fieldErrors.jhsAssignments}</p> : null}
+                  {phase === "KG" || phase === "PRIMARY" ? (
+                    <div className="space-y-2">
+                      <label className="os-label">Class Level</label>
+                      <select
+                        value={classLevel}
+                        onChange={(e) => setClassLevel(e.target.value)}
+                        className="os-input"
+                      >
+                        {KG_PRIMARY_LEVELS.map((lvl) => (
+                          <option key={lvl} value={lvl}>
+                            {lvl}
+                          </option>
+                        ))}
+                      </select>
+                      {fieldErrors.classLevel ? <p className="text-xs text-red-300">{fieldErrors.classLevel}</p> : null}
+                    </div>
+                  ) : null}
+                </div>
 
-                  <div className="space-y-3">
-                    {jhsRows.map((row, idx) => {
-                      const current = cleanStr(row.subject).toLowerCase();
-                      return (
-                        <div key={idx} className="rounded-lg border p-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex-1">
-                              <label className="text-xs text-gray-600">Subject</label>
-                              <select
-                                value={row.subject}
-                                onChange={(e) => updateJhsSubject(idx, e.target.value)}
-                                className="mt-1 w-full rounded-lg border px-3 py-2 text-sm bg-white"
+                {phase === "JHS" ? (
+                  <div className="mt-5 rounded-[22px] border border-white/10 bg-white/5 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-[#F7F4ED]">JHS Subject Assignments</p>
+                        <p className="os-helper">
+                          Select subjects from the canonical list.
+                          {subjectsLoadedFromDb ? " Loaded from DB." : " Using safe fallback list."}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={addJhsRow}
+                        className="os-btn-secondary px-4 py-2 text-sm"
+                      >
+                        + Add Subject
+                      </button>
+                    </div>
+
+                    {fieldErrors.jhsAssignments ? (
+                      <p className="mt-3 text-xs text-red-300">{fieldErrors.jhsAssignments}</p>
+                    ) : null}
+
+                    <div className="mt-4 space-y-3">
+                      {jhsRows.map((row, idx) => {
+                        const current = cleanStr(row.subject).toLowerCase();
+
+                        return (
+                          <div key={idx} className="rounded-[22px] border border-white/10 bg-[#0C1730] p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <label className="os-label">Subject</label>
+                                <select
+                                  value={row.subject}
+                                  onChange={(e) => updateJhsSubject(idx, e.target.value)}
+                                  className="os-input"
+                                >
+                                  <option value="">Select subject…</option>
+                                  {jhsSubjectOptions.map((s) => {
+                                    const key = s.name.toLowerCase();
+                                    const alreadyPicked = selectedSubjects.has(key) && key !== current;
+                                    return (
+                                      <option key={s.name} value={s.name} disabled={alreadyPicked}>
+                                        {s.name}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                                {fieldErrors[`jhsSubject_${idx}`] ? (
+                                  <p className="text-xs text-red-300">{fieldErrors[`jhsSubject_${idx}`]}</p>
+                                ) : null}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => removeJhsRow(idx)}
+                                disabled={jhsRows.length <= 1}
+                                className="os-btn-secondary px-4 py-2 text-xs disabled:opacity-50"
                               >
-                                <option value="">Select subject…</option>
-                                {jhsSubjectOptions.map((s) => {
-                                  const key = s.name.toLowerCase();
-                                  const alreadyPicked = selectedSubjects.has(key) && key !== current;
-                                  return (
-                                    <option key={s.name} value={s.name} disabled={alreadyPicked}>
-                                      {s.name}
-                                    </option>
-                                  );
-                                })}
-                              </select>
-                              {fieldErrors[`jhsSubject_${idx}`] ? (
-                                <p className="mt-1 text-xs text-red-600">{fieldErrors[`jhsSubject_${idx}`]}</p>
-                              ) : null}
+                                Remove
+                              </button>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => removeJhsRow(idx)}
-                              disabled={jhsRows.length <= 1}
-                              className="text-xs rounded-lg border px-3 py-2 hover:bg-gray-50 disabled:opacity-50"
-                            >
-                              Remove
-                            </button>
+                            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                              {(["JHS 1", "JHS 2", "JHS 3"] as const).map((c) => (
+                                <label
+                                  key={c}
+                                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#E5E8EF]"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={row.classes[c]}
+                                    onChange={() => toggleJhsClass(idx, c)}
+                                    className="os-check"
+                                  />
+                                  {c}
+                                </label>
+                              ))}
+                            </div>
                           </div>
-
-                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            {(["JHS 1", "JHS 2", "JHS 3"] as const).map((c) => (
-                              <label key={c} className="flex items-center gap-2 text-sm text-gray-700">
-                                <input type="checkbox" checked={row.classes[c]} onChange={() => toggleJhsClass(idx, c)} />
-                                {c}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
+              </section>
+            ) : null}
+
+            <section className="os-section-card rounded-[24px] p-5">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
+                Additional Duties
+              </h2>
+              <div className="mt-4 space-y-2">
+                <label className="os-label">Optional</label>
+                <textarea
+                  value={additionalDutiesText}
+                  onChange={(e) => setAdditionalDutiesText(e.target.value)}
+                  className="os-input min-h-[110px] resize-y"
+                  placeholder="e.g. Sports Master, ICT Coordinator (separate with commas or new lines)"
+                />
+              </div>
             </section>
-          ) : null}
 
-          {/* Additional duties */}
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-gray-800">Additional Duties (optional)</h2>
-            <textarea
-              value={additionalDutiesText}
-              onChange={(e) => setAdditionalDutiesText(e.target.value)}
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-              rows={3}
-              placeholder="e.g. Sports Master, ICT Coordinator (separate with commas or new lines)"
-            />
-          </section>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="os-helper">After signup you’ll be redirected to sign in.</p>
 
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-gray-500">After signup you’ll be redirected to sign in.</p>
-            <button type="submit" disabled={submitting} className="rounded-lg bg-black text-white px-4 py-2 text-sm disabled:opacity-60">
-              {submitting ? "Creating account..." : "Create Account"}
-            </button>
-          </div>
-        </form>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="os-btn-primary px-6 py-3 text-sm"
+              >
+                {submitting ? "Creating account..." : "Create Account"}
+              </button>
+            </div>
+          </form>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
 

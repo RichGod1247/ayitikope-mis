@@ -28,9 +28,8 @@ function maskPhone(e164: string | null, suffix9: string) {
 }
 
 function isValidSuffixForLookup(suffix: string) {
-  // Bank-grade safety: prevent endsWith("") / very short suffix scans.
   const s = digitsOnly(suffix);
-  return s.length >= 7; // 7 is a safe minimum for MVP; Ghana suffix9 is typically 9
+  return s.length >= 7;
 }
 
 export default async function ParentPortalPage() {
@@ -52,26 +51,22 @@ export default async function ParentPortalPage() {
   const suffix9 = digitsOnly(sess.payload.guardianSuffix9 ?? "");
   const e164 = sess.payload.guardianPhoneE164;
 
-  // Hard guard: if session has a bad phone footprint, force re-login.
   if (!isValidSuffixForLookup(suffix9) && !digitsOnly(e164 ?? "")) {
     redirect(`/parent/login?next=${encodeURIComponent("/parent-portal")}`);
   }
 
   const or: any[] = [];
   if (e164) {
-    // preferred (indexed)
     or.push({ guardianPhoneNorm: e164 });
   }
 
   if (isValidSuffixForLookup(suffix9)) {
-    // fallback for older data
     or.push({ guardianPhoneNorm: { endsWith: suffix9 } });
     or.push({ guardianPhone: { endsWith: suffix9 } });
   }
 
   let safeStudents: SafeStudent[] = [];
 
-  // If OR is empty, we must not query with OR: [] (Prisma throws).
   if (or.length > 0) {
     const students = await prisma.student.findMany({
       where: {
@@ -92,38 +87,46 @@ export default async function ParentPortalPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8 space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-800">
-              EduLife OS · Parent Portal
+    <main className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] text-[#F7F4ED]">
+      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:py-8">
+        <header className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.9),rgba(7,17,31,0.94))] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:p-6">
+          <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+          <div className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-[#1B66D1]/18 blur-3xl" />
+          <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-[#D4AF37]/12 blur-3xl" />
+
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-white/6 px-3 py-1 text-[11px] font-medium text-[#E8C96A]">
+                EduLife OS · Parent Portal
+              </div>
+              <h1 className="mt-3 text-xl font-semibold text-[#F7F4ED] sm:text-2xl">
+                {tenant.name} – your child&apos;s progress
+              </h1>
+              <p className="mt-2 max-w-2xl text-xs leading-6 text-[#C9CDD6] sm:text-sm">
+                View a simple <span className="font-semibold text-[#F7F4ED]">fees and attendance summary</span> for each learner.
+              </p>
             </div>
-            <h1 className="mt-2 text-xl font-semibold text-slate-900 sm:text-2xl">
-              {tenant.name} – your child&apos;s progress
-            </h1>
-            <p className="mt-1 max-w-2xl text-xs text-slate-600 sm:text-sm">
-              View a simple <span className="font-semibold">fees and attendance summary</span> for each learner.
-            </p>
-          </div>
 
-          <div className="text-xs text-right text-slate-500 space-y-2">
-            <p>
-              Signed in as <span className="font-semibold">{maskPhone(e164, suffix9)}</span>
-            </p>
-            <p className="text-[11px]">
-              Learners linked: <span className="font-semibold">{safeStudents.length}</span>
-            </p>
+            <div className="space-y-2 text-left text-xs text-[#C9CDD6] sm:text-right">
+              <p>
+                Signed in as <span className="font-semibold text-[#F7F4ED]">{maskPhone(e164, suffix9)}</span>
+              </p>
+              <p className="text-[11px]">
+                Learners linked: <span className="font-semibold text-[#F7F4ED]">{safeStudents.length}</span>
+              </p>
 
-            <form action="/api/parent/logout" method="post">
-              <button className="rounded-xl border px-3 py-2 text-xs bg-white hover:bg-slate-50">
-                Sign out
-              </button>
-            </form>
+              <form action="/api/parent/logout" method="post">
+                <button className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10">
+                  Sign out
+                </button>
+              </form>
+            </div>
           </div>
         </header>
 
-        <ParentPortalClient initialStudents={safeStudents} />
+        <section className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3 shadow-[0_20px_70px_rgba(0,0,0,0.20)] sm:p-4">
+          <ParentPortalClient initialStudents={safeStudents} />
+        </section>
       </div>
     </main>
   );
