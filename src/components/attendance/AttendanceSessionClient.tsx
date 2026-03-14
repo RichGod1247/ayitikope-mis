@@ -12,7 +12,7 @@ type SessionDTO = {
   id: string;
   tenantId: string;
   classroomId: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   isClosed: boolean;
   closedAt: string | null;
   certifiedAt: string | null;
@@ -67,6 +67,20 @@ type NotifyResponse = NotifyOk | ApiErr;
 
 const FEVER_THRESHOLD = 37.8;
 
+const shellCard =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+const innerCard = "rounded-[22px] border border-white/10 bg-[#07111F]/80";
+const fieldClass =
+  "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 disabled:opacity-60";
+const tinyFieldClass =
+  "w-full rounded-lg border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 disabled:opacity-60";
+const labelClass = "block text-[11px] font-medium text-[#C9CDD6]";
+const subtleText = "text-[11px] text-[#AEB6C4]";
+const primaryBtn =
+  "inline-flex items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60";
+const ghostBtn =
+  "inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60";
+
 function safeText(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
@@ -83,6 +97,31 @@ function fullName(s: { firstName: string; lastName: string }) {
 
 type MarkState = { status: AttendanceStatus; note: string | null };
 type HealthState = { temperatureC: number | null; symptoms: string | null; notes: string | null };
+
+function Banner(props: { tone: "ok" | "error" | "info"; children: React.ReactNode }) {
+  const cls =
+    props.tone === "ok"
+      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+      : props.tone === "error"
+      ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
+      : "border-white/10 bg-white/5 text-[#D7DCE5]";
+
+  return <div className={`rounded-2xl border px-4 py-3 text-sm ${cls}`}>{props.children}</div>;
+}
+
+function CountChip(props: { label: string; value: number; tone?: "neutral" | "good" | "warn" | "bad" }) {
+  let cls = "border-white/10 bg-white/5 text-[#D7DCE5]";
+  if (props.tone === "good") cls = "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+  if (props.tone === "warn") cls = "border-amber-300/20 bg-amber-400/12 text-amber-100";
+  if (props.tone === "bad") cls = "border-rose-300/20 bg-rose-400/12 text-rose-100";
+
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] ${cls}`}>
+      <span>{props.label}:</span>
+      <span className="font-semibold">{props.value}</span>
+    </span>
+  );
+}
 
 export default function AttendanceSessionClient(props: {
   tenantId: string;
@@ -106,7 +145,6 @@ export default function AttendanceSessionClient(props: {
   const [marks, setMarks] = useState<Record<string, MarkState>>({});
   const [health, setHealth] = useState<Record<string, HealthState>>({});
 
-  // Baseline snapshots from last successful load (server truth)
   const baselineMarksRef = useRef<Record<string, MarkState>>({});
   const baselineHealthRef = useRef<Record<string, HealthState>>({});
 
@@ -165,8 +203,6 @@ export default function AttendanceSessionClient(props: {
 
       setMarks(nextMarks);
       setHealth(nextHealth);
-
-      // Update baselines (server truth snapshot)
       baselineMarksRef.current = nextMarks;
       baselineHealthRef.current = nextHealth;
 
@@ -205,11 +241,11 @@ export default function AttendanceSessionClient(props: {
       const ha = health[id] || { temperatureC: null, symptoms: null, notes: null };
       const hb = bh[id] || { temperatureC: null, symptoms: null, notes: null };
 
-      // Health may be blocked by consent server-side; we still treat edits as dirty
       if ((ha.temperatureC ?? null) !== (hb.temperatureC ?? null)) return true;
       if ((ha.symptoms ?? "") !== (hb.symptoms ?? "")) return true;
       if ((ha.notes ?? "") !== (hb.notes ?? "")) return true;
     }
+
     return false;
   }, [students, marks, health]);
 
@@ -223,8 +259,6 @@ export default function AttendanceSessionClient(props: {
   }, [students, marks]);
 
   const alertPreview = useMemo(() => {
-    // Preview is based on current UI state.
-    // Server still enforces opt-in + consent; this is only a preview.
     const absentees = students.filter((s) => (marks[s.id]?.status || "PRESENT") === "ABSENT");
 
     const fever = students.filter((s) => {
@@ -239,8 +273,6 @@ export default function AttendanceSessionClient(props: {
 
   const canSave = !!session && !loading && !saving && !locked && dirty;
 
-  // Production-grade gating:
-  // - If dirty or last save failed, prevent Close/Certify/Notify from becoming a trap.
   const canClose =
     !!session && !loading && !mutating && !saving && !isCertified && !isClosed && !dirty && !saveErr;
 
@@ -248,7 +280,7 @@ export default function AttendanceSessionClient(props: {
     !!session && !loading && !mutating && !saving && !isCertified && isClosed && !dirty && !saveErr;
 
   const canReopen =
-    !!session && !loading && !mutating && !saving && !isCertified && isClosed; // reopen is allowed
+    !!session && !loading && !mutating && !saving && !isCertified && isClosed;
 
   const canNotify =
     !!session &&
@@ -274,8 +306,8 @@ export default function AttendanceSessionClient(props: {
     return null;
   }
 
-  async function saveAll() {
-    if (!session) return;
+  async function saveAll(): Promise<boolean> {
+    if (!session) return false;
 
     setSaving(true);
     setSaveMsg(null);
@@ -284,7 +316,6 @@ export default function AttendanceSessionClient(props: {
     try {
       if (locked) throw new Error("Session is locked (closed/certified).");
 
-      // Use current UI state
       const markItems = students.map((s) => ({
         studentId: s.id,
         status: (marks[s.id]?.status || "PRESENT") as AttendanceStatus,
@@ -332,31 +363,31 @@ export default function AttendanceSessionClient(props: {
           : "Saved."
       );
 
-      // Reload from server to reset baseline and remove dirty
       await load();
+      return true;
     } catch (e: unknown) {
       const msg = safeText((e as { message?: unknown })?.message) || "Save failed.";
       setSaveErr(msg);
       setSaveMsg(null);
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
-  async function mutate(action: "close" | "certify" | "reopen") {
-    if (!session) return;
+  async function mutate(action: "close" | "certify" | "reopen"): Promise<boolean> {
+    if (!session) return false;
 
     setMutating(true);
     setMutMsg(null);
     setMutErr(null);
 
     try {
-      // Guardrails: prevent "close after failed save" confusion
       if ((action === "close" || action === "certify") && dirty) {
         throw new Error("You have unsaved changes. Save before closing/certifying.");
       }
       if ((action === "close" || action === "certify") && saveErr) {
-        throw new Error("Last save failed. Fix save first (do not close/certify).");
+        throw new Error("Last save failed. Fix save first.");
       }
 
       const r = await fetch(`/api/teacher/attendance/sessions/${action}`, {
@@ -378,48 +409,26 @@ export default function AttendanceSessionClient(props: {
       );
 
       await load();
+      return true;
     } catch (e: unknown) {
       setMutErr(safeText((e as { message?: unknown })?.message) || "Action failed.");
+      return false;
     } finally {
       setMutating(false);
     }
   }
 
-  async function closeThenNotify() {
-    // One click: Save -> Close -> Notify (with guardrails)
-    if (!session) return;
-
-    setMutErr(null);
-    setNotifyErr(null);
-    setNotifyMsg(null);
-
-    // Must not be locked
-    if (locked) {
-      setMutErr("Session is locked (closed/certified).");
-      return;
-    }
-
-    // If dirty, save first
-    if (dirty) {
-      await saveAll();
-      // if save failed, saveErr will be set and load() not reset baseline
-      if (saveErr) return;
-    }
-    // Close
-    await mutate("close");
-    // Notify
-    await notifyParents();
-  }
-
-  async function notifyParents() {
-    if (!session) return;
+  async function notifyParents(): Promise<boolean> {
+    if (!session) return false;
 
     setNotifying(true);
     setNotifyMsg(null);
     setNotifyErr(null);
 
     try {
-      if (!isClosed && !isCertified) throw new Error("Close or certify the session before notifications.");
+      if (!session.isClosed && !session.certifiedAt) {
+        throw new Error("Close or certify the session before notifications.");
+      }
       if (dirty) throw new Error("You have unsaved changes. Save first.");
       if (saveErr) throw new Error("Last save failed. Fix save first.");
       if (alertPreview.total === 0) throw new Error("No absentees or fever cases to notify.");
@@ -444,245 +453,247 @@ export default function AttendanceSessionClient(props: {
       );
 
       await load();
+      return true;
     } catch (e: unknown) {
       setNotifyErr(safeText((e as { message?: unknown })?.message) || "Notify failed.");
+      return false;
     } finally {
       setNotifying(false);
     }
   }
 
+  async function closeThenNotify() {
+    if (!session) return;
+
+    setMutErr(null);
+    setNotifyErr(null);
+    setNotifyMsg(null);
+    setSaveErr(null);
+
+    if (locked) {
+      setMutErr("Session is locked (closed/certified).");
+      return;
+    }
+
+    let ok = true;
+
+    if (dirty) {
+      ok = await saveAll();
+    }
+
+    if (!ok) return;
+
+    ok = await mutate("close");
+    if (!ok) return;
+
+    await notifyParents();
+  }
+
   function statusPill() {
-    const base = "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold";
-    if (isCertified) return `${base} border-indigo-200 bg-indigo-50 text-indigo-800`;
-    if (isClosed) return `${base} border-rose-200 bg-rose-50 text-rose-800`;
-    return `${base} border-amber-200 bg-amber-50 text-amber-800`;
+    const base = "inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold";
+    if (isCertified) return `${base} border-indigo-300/20 bg-indigo-400/12 text-indigo-100`;
+    if (isClosed) return `${base} border-rose-300/20 bg-rose-400/12 text-rose-100`;
+    return `${base} border-amber-300/20 bg-amber-400/12 text-amber-100`;
   }
 
   const backHref = `/teacher/attendance?brand=${encodeURIComponent((brand || "EDULIFE").trim() || "EDULIFE")}`;
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 md:py-8 space-y-6">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Attendance Session</h1>
-              <p className="text-sm text-slate-600">
-                Mark attendance & daily health. <b>Save</b> first. Then <b>Close</b> to lock. <b>Certify</b> to finalize.
-              </p>
-
-              {session ? (
-                <p className="mt-2 text-sm text-slate-700">
-                  <span className="font-semibold">{classLabel}</span> • {session.date}{" "}
-                  <span className={statusPill()}>{isCertified ? "CERTIFIED" : isClosed ? "CLOSED" : "OPEN"}</span>
-                  {dirty ? <span className="ml-2 text-[11px] text-amber-700">• Unsaved changes</span> : null}
-                  {lastSaveAt ? <span className="ml-2 text-[11px] text-slate-500">• Last save: {lastSaveAt}</span> : null}
-                </p>
-              ) : null}
-
-              <p className="text-[11px] text-slate-500 font-mono">
-                Session: {sessionId} • Teacher: {teacherUserId.slice(0, 8)}… • Tenant: {tenantId.slice(0, 8)}…
-              </p>
+    <section className="space-y-6">
+      <section className={`${shellCard} p-5 md:p-6`}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-[#D4AF37]/10 px-3 py-1 text-[11px] font-medium text-[#E8C96A]">
+              EduLife OS · Attendance Session
             </div>
 
-            <div className="flex flex-wrap gap-2 md:justify-end">
-              <Link
-                href={backHref}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] hover:bg-slate-50"
-              >
-                Back
-              </Link>
-
-              <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1">
-                <span className="text-[11px] text-slate-600">Sender</span>
-                <input
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  disabled={loading}
-                  className="w-32 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px]"
-                  placeholder="EDULIFE"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void saveAll()}
-                disabled={!canSave}
-                className="rounded-md bg-sky-700 px-3 py-2 text-[11px] font-semibold text-white hover:bg-sky-800 disabled:opacity-60"
-                title={
-                  locked
-                    ? "Session is locked."
-                    : !dirty
-                    ? "No changes to save."
-                    : saveErr
-                    ? "Fix the save error and try again."
-                    : "Save changes"
-                }
-              >
-                {saving ? "Saving…" : "Save"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void mutate("close")}
-                disabled={!canClose}
-                className="rounded-md bg-rose-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
-                title={
-                  locked
-                    ? "Session is locked."
-                    : dirty
-                    ? "Save changes first."
-                    : saveErr
-                    ? "Last save failed."
-                    : "Close session"
-                }
-              >
-                Close
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void mutate("certify")}
-                disabled={!canCertify}
-                className="rounded-md bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                title={
-                  isCertified
-                    ? "Already certified."
-                    : !isClosed
-                    ? "Close first."
-                    : dirty
-                    ? "Save changes first."
-                    : saveErr
-                    ? "Last save failed."
-                    : "Certify session"
-                }
-              >
-                Certify
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void mutate("reopen")}
-                disabled={!canReopen}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] hover:bg-slate-50 disabled:opacity-60"
-                title={isCertified ? "Cannot reopen a certified session." : "Reopen session"}
-              >
-                Reopen
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void closeThenNotify()}
-                disabled={loading || !session || saving || mutating || notifying || isCertified || isClosed ? true : false}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] hover:bg-slate-50 disabled:opacity-60"
-                title="Save, close, and notify in one click (only works while OPEN)"
-              >
-                Close + Notify
-              </button>
-            </div>
-          </div>
-
-          {err ? (
-            <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{err}</div>
-          ) : null}
-
-          {saveErr ? (
-            <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-              <b>Save failed:</b> {saveErr}
-              <div className="mt-1 text-[11px] text-rose-700">
-                Fix this before closing/certifying — otherwise the server won’t have your marks and Notify will do nothing.
-              </div>
-            </div>
-          ) : null}
-
-          {saveMsg ? (
-            <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              {saveMsg}
-            </div>
-          ) : null}
-
-          {mutErr ? (
-            <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{mutErr}</div>
-          ) : null}
-
-          {mutMsg ? (
-            <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              {mutMsg}
-            </div>
-          ) : null}
-
-          {notifyErr ? (
-            <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-              {notifyErr}
-            </div>
-          ) : null}
-
-          {notifyMsg ? (
-            <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              {notifyMsg}
-            </div>
-          ) : null}
-
-          <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
-            <span className="rounded-full border bg-white px-3 py-1 text-slate-700">
-              Total: <b>{counts.total}</b>
-            </span>
-            <span className="rounded-full border bg-emerald-50 px-3 py-1 text-emerald-800">
-              Present: <b>{counts.present}</b>
-            </span>
-            <span className="rounded-full border bg-amber-50 px-3 py-1 text-amber-800">
-              Late: <b>{counts.late}</b>
-            </span>
-            <span className="rounded-full border bg-rose-50 px-3 py-1 text-rose-800">
-              Absent: <b>{counts.absent}</b>
-            </span>
-            <span className="rounded-full border bg-slate-50 px-3 py-1 text-slate-700">
-              Excused: <b>{counts.excused}</b>
-            </span>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-sm font-semibold text-slate-900">Notification preview</div>
-              <div className="text-[11px] text-slate-600">
-                Absentees: <b>{alertPreview.absentees.length}</b> • Fever: <b>{alertPreview.fever.length}</b>
-                <span className="ml-2 text-[11px] text-slate-500">• (Preview only; server enforces opt-in + consent)</span>
-              </div>
+              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED]">
+                Attendance Session
+              </h1>
+              <p className="mt-1 text-sm text-[#C9CDD6]">
+                Mark attendance and daily health. Save first. Then close to lock. Certify only when final.
+              </p>
+            </div>
+
+            {session ? (
+              <p className="text-sm text-[#D7DCE5]">
+                <span className="font-semibold text-[#F7F4ED]">{classLabel}</span> • {session.date}{" "}
+                <span className={statusPill()}>{isCertified ? "CERTIFIED" : isClosed ? "CLOSED" : "OPEN"}</span>
+                {dirty ? <span className="ml-2 text-[11px] text-amber-200">• Unsaved changes</span> : null}
+                {lastSaveAt ? <span className="ml-2 text-[11px] text-[#8F98A8]">• Last save: {lastSaveAt}</span> : null}
+              </p>
+            ) : null}
+
+            <p className="text-[11px] font-mono text-[#8F98A8]">
+              Session: {sessionId} • Teacher: {teacherUserId.slice(0, 8)}… • Tenant: {tenantId.slice(0, 8)}…
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 md:justify-end">
+            <Link href={backHref} className={ghostBtn}>
+              Back
+            </Link>
+
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1">
+              <span className="text-[11px] text-[#C9CDD6]">Sender</span>
+              <input
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                disabled={loading}
+                className="w-32 rounded-lg border border-white/10 bg-[#07111F] px-2 py-1 text-[11px] text-[#F7F4ED]"
+                placeholder="EDULIFE"
+              />
             </div>
 
             <button
               type="button"
-              onClick={() => void notifyParents()}
-              disabled={!canNotify}
-              className="rounded-md bg-slate-900 px-4 py-2 text-[11px] font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-              title={notifyDisabledReason() ?? "Notify eligible parents"}
+              onClick={() => void saveAll()}
+              disabled={!canSave}
+              className={primaryBtn}
+              title={
+                locked
+                  ? "Session is locked."
+                  : !dirty
+                  ? "No changes to save."
+                  : saveErr
+                  ? "Fix the save error and try again."
+                  : "Save changes"
+              }
             >
-              {notifying ? "Processing…" : "Notify parents"}
+              {saving ? "Saving…" : "Save"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void mutate("close")}
+              disabled={!canClose}
+              className={ghostBtn}
+              title={
+                locked
+                  ? "Session is locked."
+                  : dirty
+                  ? "Save changes first."
+                  : saveErr
+                  ? "Last save failed."
+                  : "Close session"
+              }
+            >
+              Close
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void mutate("certify")}
+              disabled={!canCertify}
+              className={ghostBtn}
+              title={
+                isCertified
+                  ? "Already certified."
+                  : !isClosed
+                  ? "Close first."
+                  : dirty
+                  ? "Save changes first."
+                  : saveErr
+                  ? "Last save failed."
+                  : "Certify session"
+              }
+            >
+              Certify
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void mutate("reopen")}
+              disabled={!canReopen}
+              className={ghostBtn}
+              title={isCertified ? "Cannot reopen a certified session." : "Reopen session"}
+            >
+              Reopen
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void closeThenNotify()}
+              disabled={loading || !session || saving || mutating || notifying || isCertified || isClosed}
+              className={ghostBtn}
+              title="Save, close, and notify in one click while session is OPEN"
+            >
+              Close + Notify
             </button>
           </div>
+        </div>
+      </section>
 
-          {!canNotify ? (
-            <div className="mt-3 text-[11px] text-slate-600">
-              <span className="font-semibold">Why disabled:</span> {notifyDisabledReason() || "—"}
-            </div>
-          ) : null}
+      {err ? <Banner tone="error">{err}</Banner> : null}
 
-          <div className="mt-3 text-[11px] text-slate-600">
-            Notifications require guardian phone + SMS opt-in. Health alerts also require recorded consent.
+      {saveErr ? (
+        <Banner tone="error">
+          <b>Save failed:</b> {saveErr}
+          <div className="mt-1 text-[11px] text-rose-200">
+            Fix this before closing or certifying. Otherwise the server will not have your latest marks and health data.
           </div>
-        </section>
+        </Banner>
+      ) : null}
 
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
-          {loading ? (
-            <div className="p-4 text-sm text-slate-600">Loading learners…</div>
-          ) : students.length === 0 ? (
-            <div className="p-4 text-sm text-slate-600">No learners found for this classroom.</div>
-          ) : (
+      {saveMsg ? <Banner tone="ok">{saveMsg}</Banner> : null}
+      {mutErr ? <Banner tone="error">{mutErr}</Banner> : null}
+      {mutMsg ? <Banner tone="info">{mutMsg}</Banner> : null}
+      {notifyErr ? <Banner tone="error">{notifyErr}</Banner> : null}
+      {notifyMsg ? <Banner tone="info">{notifyMsg}</Banner> : null}
+
+      <section className={`${shellCard} p-5 md:p-6`}>
+        <div className="flex flex-wrap gap-2 text-[11px]">
+          <CountChip label="Total" value={counts.total} />
+          <CountChip label="Present" value={counts.present} tone="good" />
+          <CountChip label="Late" value={counts.late} tone="warn" />
+          <CountChip label="Absent" value={counts.absent} tone="bad" />
+          <CountChip label="Excused" value={counts.excused} />
+        </div>
+      </section>
+
+      <section className={`${shellCard} p-5 md:p-6`}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">Notification preview</div>
+            <div className="text-[11px] text-[#C9CDD6]">
+              Absentees: <b>{alertPreview.absentees.length}</b> • Fever: <b>{alertPreview.fever.length}</b>
+              <span className="ml-2 text-[#8F98A8]">• Preview only; server still enforces opt-in and consent.</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void notifyParents()}
+            disabled={!canNotify}
+            className={primaryBtn}
+            title={notifyDisabledReason() ?? "Notify eligible parents"}
+          >
+            {notifying ? "Processing…" : "Notify parents"}
+          </button>
+        </div>
+
+        {!canNotify ? (
+          <div className="mt-3 text-[11px] text-[#AEB6C4]">
+            <span className="font-semibold text-[#F7F4ED]">Why disabled:</span> {notifyDisabledReason() || "—"}
+          </div>
+        ) : null}
+
+        <div className="mt-3 text-[11px] text-[#AEB6C4]">
+          Notifications require guardian phone and SMS opt-in. Health alerts also require recorded consent.
+        </div>
+      </section>
+
+      <section className={`${shellCard} overflow-hidden`}>
+        {loading ? (
+          <div className="p-4 text-sm text-[#C9CDD6]">Loading learners…</div>
+        ) : students.length === 0 ? (
+          <div className="p-4 text-sm text-[#C9CDD6]">No learners found for this classroom.</div>
+        ) : (
+          <div className="overflow-x-auto">
             <table className="min-w-[1200px] w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:text-left [&>th]:text-[11px] [&>th]:font-semibold text-slate-700">
+              <thead className="bg-white/5">
+                <tr className="[&>th]:px-3 [&>th]:py-3 [&>th]:text-left [&>th]:text-[11px] [&>th]:font-semibold text-[#C9CDD6]">
                   <th>Learner</th>
                   <th>Status</th>
                   <th>Mark note</th>
@@ -692,7 +703,7 @@ export default function AttendanceSessionClient(props: {
                 </tr>
               </thead>
 
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-white/10">
                 {students.map((s) => {
                   const m = marks[s.id] || { status: "PRESENT" as AttendanceStatus, note: null };
                   const h = health[s.id] || { temperatureC: null, symptoms: null, notes: null };
@@ -701,17 +712,17 @@ export default function AttendanceSessionClient(props: {
                   const fever = typeof h.temperatureC === "number" && h.temperatureC >= FEVER_THRESHOLD;
 
                   return (
-                    <tr key={s.id} className="[&>td]:px-3 [&>td]:py-2 align-top">
+                    <tr key={s.id} className="[&>td]:px-3 [&>td]:py-3 align-top odd:bg-transparent even:bg-white/[0.02]">
                       <td>
-                        <div className="font-medium text-slate-900">{fullName(s)}</div>
-                        <div className="text-[11px] text-slate-500">
+                        <div className="font-medium text-[#F7F4ED]">{fullName(s)}</div>
+                        <div className="text-[11px] text-[#8F98A8]">
                           {s.guardianName || "—"} • {s.guardianPhone || "—"}
                           {s.guardianSmsOptIn ? "" : " • (no SMS opt-in)"}
                           {hasConsent ? "" : " • (no health consent)"}
                         </div>
 
                         {fever ? (
-                          <div className="mt-1 inline-flex rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] text-rose-800">
+                          <div className="mt-1 inline-flex rounded-lg border border-rose-300/20 bg-rose-400/12 px-2 py-0.5 text-[11px] text-rose-100">
                             Fever ≥ {FEVER_THRESHOLD}°C
                           </div>
                         ) : null}
@@ -731,16 +742,16 @@ export default function AttendanceSessionClient(props: {
                                 }))
                               }
                               className={[
-                                "rounded-full border px-3 py-1 text-[11px] font-semibold",
+                                "rounded-full border px-3 py-1 text-[11px] font-semibold transition disabled:opacity-60",
                                 m.status === opt
                                   ? opt === "PRESENT"
-                                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                    ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
                                     : opt === "LATE"
-                                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                                    ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
                                     : opt === "ABSENT"
-                                    ? "border-rose-200 bg-rose-50 text-rose-800"
-                                    : "border-slate-200 bg-slate-50 text-slate-700"
-                                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                                    ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
+                                    : "border-white/10 bg-white/10 text-[#F7F4ED]"
+                                  : "border-white/10 bg-white/5 text-[#D7DCE5] hover:bg-white/10",
                               ].join(" ")}
                             >
                               {opt}
@@ -753,7 +764,7 @@ export default function AttendanceSessionClient(props: {
                         <input
                           type="text"
                           disabled={locked}
-                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-50"
+                          className={tinyFieldClass}
                           value={m.note ?? ""}
                           onChange={(e) =>
                             setMarks((prev) => ({
@@ -772,7 +783,7 @@ export default function AttendanceSessionClient(props: {
                           step="0.1"
                           min={34}
                           max={42}
-                          className="w-28 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-50"
+                          className="w-28 rounded-lg border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] disabled:opacity-60"
                           value={typeof h.temperatureC === "number" ? h.temperatureC : ""}
                           onChange={(e) => {
                             const v = e.target.value;
@@ -793,7 +804,7 @@ export default function AttendanceSessionClient(props: {
                         <input
                           type="text"
                           disabled={locked || !hasConsent}
-                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-50"
+                          className={tinyFieldClass}
                           value={h.symptoms ?? ""}
                           onChange={(e) =>
                             setHealth((prev) => ({
@@ -809,7 +820,7 @@ export default function AttendanceSessionClient(props: {
                         <input
                           type="text"
                           disabled={locked || !hasConsent}
-                          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-50"
+                          className={tinyFieldClass}
                           value={h.notes ?? ""}
                           onChange={(e) =>
                             setHealth((prev) => ({
@@ -825,9 +836,9 @@ export default function AttendanceSessionClient(props: {
                 })}
               </tbody>
             </table>
-          )}
-        </section>
-      </div>
-    </main>
+          </div>
+        )}
+      </section>
+    </section>
   );
 }

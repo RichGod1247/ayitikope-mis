@@ -1,3 +1,4 @@
+//src/components/teacher/AssessmentInsightsPanel.tsx
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -93,6 +94,15 @@ type StudentInsightResponse =
     }
   | { ok: false; error: string };
 
+const panelShell =
+  "space-y-4 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-3 text-xs shadow-[0_18px_60px_rgba(0,0,0,0.16)] backdrop-blur-xl";
+
+const innerCard = "rounded-2xl border border-white/10 bg-[#08111C]/85";
+const softCard = "rounded-xl border border-white/10 bg-white/[0.04]";
+const mutedText = "text-[#AEB6C4]";
+const bodyText = "text-[#C9CDD6]";
+const strongText = "text-[#F7F4ED]";
+
 function pct(v: number | null | undefined) {
   if (v == null || !Number.isFinite(v)) return "—";
   return `${v.toFixed(1)}%`;
@@ -101,10 +111,10 @@ function pct(v: number | null | undefined) {
 function priorityChip(priority: "HIGH" | "MEDIUM" | "LOW") {
   const cls =
     priority === "HIGH"
-      ? "border-rose-200 bg-rose-50 text-rose-700"
+      ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
       : priority === "MEDIUM"
-        ? "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-slate-200 bg-slate-50 text-slate-700";
+        ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
+        : "border-white/10 bg-white/[0.04] text-[#C9CDD6]";
 
   return (
     <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${cls}`}>
@@ -215,28 +225,28 @@ export default function AssessmentInsightsPanel({
   );
 
   return (
-    <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-3 text-xs">
+    <div className={panelShell}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="text-sm font-semibold text-slate-900">AI co-tutor insights</div>
-          <div className="text-[11px] text-slate-500">
+          <div className={`text-sm font-semibold ${strongText}`}>AI co-tutor insights</div>
+          <div className={`text-[11px] ${mutedText}`}>
             Uses performance, missing scores, attendance, and health signals to guide next action.
           </div>
         </div>
 
         {(classData as any)?.ok ? (
-          <div className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+          <div className="rounded-full border border-indigo-300/20 bg-indigo-400/12 px-3 py-1 text-[11px] font-semibold text-indigo-100">
             Teacher effectiveness: {pct((classData as any).metrics.teacherEffectivenessIndex)}
           </div>
         ) : null}
       </div>
 
       {classLoading ? (
-        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-slate-600">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[#C9CDD6]">
           Loading class insights…
         </div>
       ) : classData && !classData.ok ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-3 text-amber-800">
+        <div className="rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-3 text-amber-100">
           {classData.error}
         </div>
       ) : classData && classData.ok ? (
@@ -256,16 +266,21 @@ export default function AssessmentInsightsPanel({
               <Section title="Priority teaching actions">
                 {classData.actions.length ? (
                   classData.actions.map((a) => (
-                    <div key={a.code} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <div key={a.code} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold text-slate-900">{a.code}</p>
+                        <p className={`text-xs font-semibold ${strongText}`}>{a.code}</p>
                         {priorityChip(a.priority)}
                       </div>
-                      <p className="mt-1 text-[11px] leading-5 text-slate-700">{a.message}</p>
+                      <p className={`mt-1 text-[11px] leading-5 ${bodyText}`}>{a.message}</p>
+                      {a.because?.length ? (
+                        <div className={`mt-2 text-[10px] ${mutedText}`}>
+                          {a.because.join(" • ")}
+                        </div>
+                      ) : null}
                     </div>
                   ))
                 ) : (
-                  <p className="text-[11px] text-slate-600">No urgent actions right now.</p>
+                  <p className={`text-[11px] ${bodyText}`}>No urgent actions right now.</p>
                 )}
               </Section>
 
@@ -273,19 +288,19 @@ export default function AssessmentInsightsPanel({
                 {classData.metrics.weakIndicators.length ? (
                   <div className="space-y-2">
                     {classData.metrics.weakIndicators.slice(0, 5).map((w) => (
-                      <div key={w.indicatorCode} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div key={w.indicatorCode} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-slate-900">{w.indicatorCode}</span>
-                          <span className="text-[11px] text-slate-700">{pct(w.averagePercent)}</span>
+                          <span className={`font-semibold ${strongText}`}>{w.indicatorCode}</span>
+                          <span className={`text-[11px] ${bodyText}`}>{pct(w.averagePercent)}</span>
                         </div>
-                        <div className="mt-1 text-[11px] text-slate-500">
+                        <div className={`mt-1 text-[11px] ${mutedText}`}>
                           {w.scoredRows} scored rows • {w.linkedAssessments} linked assessments
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-600">
+                  <p className={`text-[11px] ${bodyText}`}>
                     No weak indicator signal yet. Link assessments to delivered lessons to activate this fully.
                   </p>
                 )}
@@ -295,16 +310,16 @@ export default function AssessmentInsightsPanel({
                 {classData.metrics.subjectAverages.length ? (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {classData.metrics.subjectAverages.slice(0, 6).map((s) => (
-                      <div key={s.subject} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                        <div className="font-semibold text-slate-900">{s.subject}</div>
-                        <div className="mt-1 text-[11px] text-slate-700">
+                      <div key={s.subject} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                        <div className={`font-semibold ${strongText}`}>{s.subject}</div>
+                        <div className={`mt-1 text-[11px] ${bodyText}`}>
                           Average: {pct(s.averagePercent)}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-600">No subject distribution yet.</p>
+                  <p className={`text-[11px] ${bodyText}`}>No subject distribution yet.</p>
                 )}
               </Section>
             </div>
@@ -314,16 +329,16 @@ export default function AssessmentInsightsPanel({
                 {classData.metrics.topMissingScores.length ? (
                   <div className="space-y-2">
                     {classData.metrics.topMissingScores.slice(0, 5).map((x) => (
-                      <div key={x.studentId} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                        <div className="font-semibold text-slate-900">{x.studentName}</div>
-                        <div className="mt-1 text-[11px] text-slate-600">
+                      <div key={x.studentId} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                        <div className={`font-semibold ${strongText}`}>{x.studentName}</div>
+                        <div className={`mt-1 text-[11px] ${bodyText}`}>
                           Missing {x.missingCount} of {x.expectedCount} expected scored items
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-600">No missing-score risk detected.</p>
+                  <p className={`text-[11px] ${bodyText}`}>No missing-score risk detected.</p>
                 )}
               </Section>
 
@@ -331,16 +346,16 @@ export default function AssessmentInsightsPanel({
                 {classData.metrics.topAbsentees.length ? (
                   <div className="space-y-2">
                     {classData.metrics.topAbsentees.slice(0, 5).map((x) => (
-                      <div key={x.studentId} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                        <div className="font-semibold text-slate-900">{x.studentName}</div>
-                        <div className="mt-1 text-[11px] text-slate-600">
+                      <div key={x.studentId} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                        <div className={`font-semibold ${strongText}`}>{x.studentName}</div>
+                        <div className={`mt-1 text-[11px] ${bodyText}`}>
                           Absent {x.absentCount} • Late {x.lateCount} • Attendance {pct(x.attendancePercent)}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-600">No attendance risk signal yet.</p>
+                  <p className={`text-[11px] ${bodyText}`}>No attendance risk signal yet.</p>
                 )}
               </Section>
 
@@ -348,16 +363,16 @@ export default function AssessmentInsightsPanel({
                 {classData.metrics.topHealthFlags.length ? (
                   <div className="space-y-2">
                     {classData.metrics.topHealthFlags.slice(0, 5).map((x) => (
-                      <div key={x.studentId} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                        <div className="font-semibold text-slate-900">{x.studentName}</div>
-                        <div className="mt-1 text-[11px] text-slate-600">
+                      <div key={x.studentId} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                        <div className={`font-semibold ${strongText}`}>{x.studentName}</div>
+                        <div className={`mt-1 text-[11px] ${bodyText}`}>
                           Health records {x.healthRecords} • Fever flags {x.feverFlags}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-600">No repeated health flag signal yet.</p>
+                  <p className={`text-[11px] ${bodyText}`}>No repeated health flag signal yet.</p>
                 )}
               </Section>
             </div>
@@ -365,11 +380,11 @@ export default function AssessmentInsightsPanel({
         </>
       ) : null}
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+      <div className={innerCard + " px-3 py-3"}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="text-sm font-semibold text-slate-900">Learner SWOT</div>
-            <div className="text-[11px] text-slate-500">
+            <div className={`text-sm font-semibold ${strongText}`}>Learner SWOT</div>
+            <div className={`text-[11px] ${mutedText}`}>
               Individual learner diagnosis from the same class signals.
             </div>
           </div>
@@ -378,7 +393,7 @@ export default function AssessmentInsightsPanel({
             <select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs"
+              className="w-full rounded-lg border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-emerald-400/20"
             >
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -391,9 +406,9 @@ export default function AssessmentInsightsPanel({
 
         <div className="mt-3">
           {studentLoading ? (
-            <div className="text-[11px] text-slate-600">Loading SWOT for {selectedStudentName}…</div>
+            <div className={`text-[11px] ${bodyText}`}>Loading SWOT for {selectedStudentName}…</div>
           ) : studentData && !studentData.ok ? (
-            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-3 text-amber-800">
+            <div className="rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-3 text-amber-100">
               {studentData.error}
             </div>
           ) : studentData && studentData.ok ? (
@@ -430,17 +445,17 @@ export default function AssessmentInsightsPanel({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-      <div className="text-[11px] text-slate-500">{label}</div>
-      <div className="mt-1 text-lg font-semibold text-slate-900">{value}</div>
+    <div className={softCard + " px-3 py-3"}>
+      <div className="text-[11px] text-[#AEB6C4]">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">{value}</div>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <div className="text-xs font-semibold text-slate-900">{title}</div>
+    <div className={innerCard + " p-3"}>
+      <div className="text-xs font-semibold text-[#F7F4ED]">{title}</div>
       <div className="mt-2">{children}</div>
     </div>
   );
@@ -457,17 +472,17 @@ function SwotBox({
 }) {
   const toneClass =
     tone === "emerald"
-      ? "border-emerald-200 bg-emerald-50"
+      ? "border-emerald-300/20 bg-emerald-400/12"
       : tone === "rose"
-        ? "border-rose-200 bg-rose-50"
+        ? "border-rose-300/20 bg-rose-400/12"
         : tone === "sky"
-          ? "border-sky-200 bg-sky-50"
-          : "border-amber-200 bg-amber-50";
+          ? "border-sky-300/20 bg-sky-400/12"
+          : "border-amber-300/20 bg-amber-400/12";
 
   return (
     <div className={`rounded-xl border px-3 py-3 ${toneClass}`}>
-      <div className="text-xs font-semibold text-slate-900">{title}</div>
-      <ul className="mt-2 space-y-1 text-[11px] text-slate-700">
+      <div className="text-xs font-semibold text-[#F7F4ED]">{title}</div>
+      <ul className="mt-2 space-y-1 text-[11px] text-[#D7DCE5]">
         {items.length ? (
           items.map((x, i) => <li key={`${title}-${i}`}>• {x}</li>)
         ) : (

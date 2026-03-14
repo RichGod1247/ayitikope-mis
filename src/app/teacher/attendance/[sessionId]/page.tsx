@@ -1,3 +1,4 @@
+// src/app/teacher/attendance/[sessionId]/page.tsx
 import { requireServerUserContext } from "@/lib/serverAuth";
 import AttendanceSessionClient from "@/components/attendance/AttendanceSessionClient";
 

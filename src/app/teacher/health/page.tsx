@@ -35,7 +35,7 @@ type ApiOk = {
 type ApiResp = ApiOk | ApiErr;
 
 type Draft = {
-  temperatureC: string; // keep as string for input
+  temperatureC: string;
   symptoms: string;
   notes: string;
 };
@@ -67,10 +67,57 @@ function formatDT(iso: string) {
   });
 }
 
+const shellCard =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+const innerCard = "rounded-[22px] border border-white/10 bg-[#07111F]/80";
+const fieldClass =
+  "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 disabled:opacity-60";
+const tinyText = "text-[11px] text-[#AEB6C4]";
+const labelClass = "block text-[11px] font-medium text-[#C9CDD6]";
+
 const btnBase =
-  "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-800`;
-const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50`;
+  "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs md:text-sm shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed";
+const btnPrimary =
+  `${btnBase} border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] hover:brightness-105`;
+const btnOutline =
+  `${btnBase} border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10`;
+
+function Pill({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "ok" | "warn" | "bad" | "muted";
+}) {
+  const base = "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold";
+  const cls =
+    tone === "ok"
+      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+      : tone === "warn"
+        ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
+        : tone === "bad"
+          ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
+          : "border-white/10 bg-white/5 text-[#D7DCE5]";
+
+  return <span className={`${base} ${cls}`}>{label}</span>;
+}
+
+function Banner({
+  tone,
+  children,
+}: {
+  tone: "ok" | "error" | "info";
+  children: React.ReactNode;
+}) {
+  const cls =
+    tone === "ok"
+      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+      : tone === "error"
+        ? "border-rose-300/20 bg-rose-400/12 text-rose-100"
+        : "border-white/10 bg-white/5 text-[#D7DCE5]";
+
+  return <section className={`rounded-2xl border p-4 text-sm ${cls}`}>{children}</section>;
+}
 
 export default function TeacherHealthDailyPage() {
   const [dateISO, setDateISO] = useState<string>(isoToday());
@@ -144,29 +191,21 @@ export default function TeacherHealthDailyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateISO]);
 
-  function pill(label: string, tone: "ok" | "warn" | "bad" | "muted") {
-    const base = "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold";
-    if (tone === "ok") return <span className={`${base} bg-emerald-50 border-emerald-200 text-emerald-800`}>{label}</span>;
-    if (tone === "warn") return <span className={`${base} bg-amber-50 border-amber-200 text-amber-800`}>{label}</span>;
-    if (tone === "bad") return <span className={`${base} bg-rose-50 border-rose-200 text-rose-800`}>{label}</span>;
-    return <span className={`${base} bg-zinc-50 border-zinc-200 text-zinc-700`}>{label}</span>;
-  }
-
   function rowStatus(it: Item) {
     const consent = !!it.healthConsentAt;
-    const sms = !!it.guardianSmsOptIn;
-    const phone = !!(it.guardianPhone && it.guardianPhone.trim());
 
-    const fever = it.isFever;
-    if (fever && consent) return pill("FEVER", "bad");
-    if (fever && !consent) return pill("FEVER (no consent)", "warn");
-    return pill("OK", "ok");
+    if (it.isFever && consent) return <Pill label="FEVER" tone="bad" />;
+    if (it.isFever && !consent) return <Pill label="FEVER (no consent)" tone="warn" />;
+    return <Pill label="OK" tone="ok" />;
   }
 
   function updateDraft(studentId: string, patch: Partial<Draft>) {
     setDrafts((prev) => ({
       ...prev,
-      [studentId]: { ...(prev[studentId] ?? { temperatureC: "", symptoms: "", notes: "" }), ...patch },
+      [studentId]: {
+        ...(prev[studentId] ?? { temperatureC: "", symptoms: "", notes: "" }),
+        ...patch,
+      },
     }));
   }
 
@@ -184,10 +223,10 @@ export default function TeacherHealthDailyPage() {
     return (t ?? null) !== (oT ?? null) || nS !== oS || nN !== oN;
   }
 
-  async function saveOne(studentId: string) {
+  async function saveOne(studentId: string): Promise<boolean> {
     const it = items.find((x) => x.studentId === studentId);
     const d = drafts[studentId];
-    if (!it || !d) return;
+    if (!it || !d) return false;
 
     setRowError((p) => ({ ...p, [studentId]: null }));
     setRowOk((p) => ({ ...p, [studentId]: null }));
@@ -213,10 +252,13 @@ export default function TeacherHealthDailyPage() {
         body: JSON.stringify(body),
       });
 
-      const j: any = await r.json().catch(() => ({ ok: false, error: "Failed to parse save response." }));
+      const j: any = await r.json().catch(() => ({
+        ok: false,
+        error: "Failed to parse save response.",
+      }));
+
       if (!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);
 
-      // update local item row
       setItems((prev) =>
         prev.map((x) =>
           x.studentId !== studentId
@@ -232,8 +274,10 @@ export default function TeacherHealthDailyPage() {
       );
 
       setRowOk((p) => ({ ...p, [studentId]: "Saved." }));
+      return true;
     } catch (e: any) {
       setRowError((p) => ({ ...p, [studentId]: safeText(e?.message) || "Save failed." }));
+      return false;
     } finally {
       setSaving((p) => ({ ...p, [studentId]: false }));
     }
@@ -253,7 +297,11 @@ export default function TeacherHealthDailyPage() {
         body: JSON.stringify({ studentId, dateISO, clear: true }),
       });
 
-      const j: any = await r.json().catch(() => ({ ok: false, error: "Failed to parse clear response." }));
+      const j: any = await r.json().catch(() => ({
+        ok: false,
+        error: "Failed to parse clear response.",
+      }));
+
       if (!r.ok || !j?.ok) throw new Error(j?.error || `HTTP ${r.status}`);
 
       setItems((prev) =>
@@ -288,213 +336,232 @@ export default function TeacherHealthDailyPage() {
         return;
       }
 
+      let successCount = 0;
       for (const it of changed) {
-        // sequential saves to keep it simple + avoid rate limits
-        // (and because class size is small in pilots)
         // eslint-disable-next-line no-await-in-loop
-        await saveOne(it.studentId);
+        const ok = await saveOne(it.studentId);
+        if (ok) successCount += 1;
       }
 
-      setSaveAllMsg(`Saved ${changed.length} change(s).`);
+      setSaveAllMsg(
+        successCount === changed.length
+          ? `Saved ${successCount} change(s).`
+          : `Saved ${successCount} of ${changed.length} change(s). Check rows with errors.`
+      );
     } finally {
       setSaveAllLoading(false);
     }
   }
 
   const helper = useMemo(() => {
-    return `Fever threshold: ${feverThreshold.toFixed(1)}°C. Fever SMS requires: health consent + guardian SMS ON + guardian phone.`;
+    return `Fever threshold: ${feverThreshold.toFixed(
+      1
+    )}°C. Fever SMS requires health consent, guardian SMS ON, and guardian phone.`;
   }, [feverThreshold]);
 
   return (
-    <main className="min-h-screen bg-zinc-50">
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 md:py-8 space-y-5">
-        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900">Health checks</h1>
-              <p className="mt-1 text-sm text-zinc-600">
-                Record temperature and symptoms for your primary class (Option A).
-              </p>
-              <p className="mt-1 text-[11px] text-zinc-500">{helper}</p>
+    <section className="space-y-5">
+      <section className={`${shellCard} p-5 md:p-6`}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-[#D4AF37]/10 px-3 py-1 text-[11px] font-medium text-[#E8C96A]">
+              EduLife OS · Teacher Health
             </div>
 
-            <div className="flex gap-2">
-              <Link
-                href="/teacher/dashboard"
-                className={`${btnOutline} h-9`}
-              >
-                Back
-              </Link>
-            </div>
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[#F7F4ED]">
+              Health checks
+            </h1>
+
+            <p className="mt-1 text-sm text-[#C9CDD6]">
+              Record temperature and symptoms for your class.
+            </p>
+
+            <p className="mt-1 text-[11px] text-[#AEB6C4]">{helper}</p>
           </div>
-        </section>
 
-        {err ? (
-          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-            {err}
-          </section>
+          <div className="flex gap-2">
+            <Link href="/teacher/dashboard" className={btnOutline}>
+              Back
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {err ? <Banner tone="error">{err}</Banner> : null}
+
+      <section className={`${shellCard} p-5 md:p-6 space-y-4`}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-1">
+            <label className={labelClass}>Date</label>
+            <input
+              type="date"
+              value={dateISO}
+              onChange={(e) => setDateISO(e.target.value)}
+              className={`${fieldClass} md:w-[220px]`}
+            />
+          </div>
+
+          <div className="text-sm">
+            <div className="text-[11px] text-[#AEB6C4]">Class</div>
+            <div className="font-semibold text-[#F7F4ED]">{loading ? "Loading..." : classLabel}</div>
+          </div>
+
+          <div className="flex gap-2">
+            <button type="button" className={btnOutline} onClick={() => void load()} disabled={loading}>
+              Refresh
+            </button>
+            <button
+              type="button"
+              className={btnPrimary}
+              onClick={() => void saveAll()}
+              disabled={saveAllLoading || loading || !hasItems}
+            >
+              {saveAllLoading ? "Saving..." : "Save all changes"}
+            </button>
+          </div>
+        </div>
+
+        {saveAllMsg ? <Banner tone="info">{saveAllMsg}</Banner> : null}
+
+        {!loading && !items.length ? (
+          <Banner tone="info">
+            No learners found for your primary class. Add learners in <b>Admin → Students</b>.
+          </Banner>
         ) : null}
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-zinc-700">Date</label>
-              <input
-                type="date"
-                value={dateISO}
-                onChange={(e) => setDateISO(e.target.value)}
-                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm"
-              />
-            </div>
+        {items.length ? (
+          <div className={`${innerCard} overflow-x-auto`}>
+            <table className="w-full min-w-[1200px] text-sm">
+              <thead className="bg-white/5 text-left text-[11px] uppercase tracking-wide text-[#AEB6C4]">
+                <tr className="border-b border-white/10">
+                  <th className="py-3 pr-3 pl-4">Learner</th>
+                  <th className="py-3 pr-3">Status</th>
+                  <th className="py-3 pr-3">Temp (°C)</th>
+                  <th className="py-3 pr-3">Symptoms</th>
+                  <th className="py-3 pr-3">Notes</th>
+                  <th className="py-3 pr-4">Actions</th>
+                </tr>
+              </thead>
 
-            <div className="text-sm text-zinc-700">
-              <div className="text-[11px] text-zinc-500">Class</div>
-              <div className="font-semibold">{loading ? "Loading..." : classLabel}</div>
-            </div>
+              <tbody className="divide-y divide-white/10">
+                {items.map((it, idx) => {
+                  const d = drafts[it.studentId] ?? { temperatureC: "", symptoms: "", notes: "" };
+                  const changed = hasChanged(it);
 
-            <div className="flex gap-2">
-              <button type="button" className={btnOutline} onClick={() => void load()} disabled={loading}>
-                Refresh
-              </button>
-              <button type="button" className={btnPrimary} onClick={() => void saveAll()} disabled={saveAllLoading || loading || !hasItems}>
-                {saveAllLoading ? "Saving..." : "Save all changes"}
-              </button>
-            </div>
+                  const consent = !!it.healthConsentAt;
+                  const sms = !!it.guardianSmsOptIn;
+                  const phone = !!(it.guardianPhone && it.guardianPhone.trim());
+
+                  return (
+                    <tr key={it.studentId} className={idx % 2 ? "bg-white/[0.02]" : "bg-transparent"}>
+                      <td className="py-3 pr-3 pl-4 align-top min-w-[240px]">
+                        <div className="font-semibold text-[#F7F4ED]">{it.name}</div>
+
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <Pill label={consent ? "CONSENT" : "NO CONSENT"} tone={consent ? "ok" : "muted"} />
+                          <Pill label={sms ? "SMS ON" : "SMS OFF"} tone={sms ? "ok" : "muted"} />
+                          <Pill label={phone ? "PHONE" : "NO PHONE"} tone={phone ? "ok" : "warn"} />
+                        </div>
+
+                        <div className="mt-2 text-[11px] text-[#8F98A8]">
+                          Guardian: {it.guardianName || "—"} • {it.guardianPhone || "—"}
+                        </div>
+
+                        {it.healthConsentAt ? (
+                          <div className="mt-1 text-[11px] text-[#8F98A8]">
+                            Consent: {formatDT(it.healthConsentAt)}
+                          </div>
+                        ) : null}
+                      </td>
+
+                      <td className="py-3 pr-3 align-top min-w-[180px]">
+                        <div>{rowStatus(it)}</div>
+
+                        {changed ? (
+                          <div className="mt-2 text-[11px] text-amber-200">Unsaved changes</div>
+                        ) : null}
+
+                        {rowError[it.studentId] ? (
+                          <div className="mt-2 text-[11px] text-rose-200">{rowError[it.studentId]}</div>
+                        ) : null}
+
+                        {rowOk[it.studentId] ? (
+                          <div className="mt-2 text-[11px] text-emerald-200">{rowOk[it.studentId]}</div>
+                        ) : null}
+                      </td>
+
+                      <td className="py-3 pr-3 align-top min-w-[130px]">
+                        <input
+                          inputMode="decimal"
+                          placeholder="e.g. 37.5"
+                          value={d.temperatureC}
+                          onChange={(e) => updateDraft(it.studentId, { temperatureC: e.target.value })}
+                          className={fieldClass}
+                        />
+                        <div className="mt-1 text-[11px] text-[#8F98A8]">Blank = not recorded</div>
+                      </td>
+
+                      <td className="py-3 pr-3 align-top min-w-[240px]">
+                        <input
+                          placeholder="e.g. cough, headache"
+                          value={d.symptoms}
+                          onChange={(e) => updateDraft(it.studentId, { symptoms: e.target.value })}
+                          className={fieldClass}
+                          maxLength={240}
+                        />
+                      </td>
+
+                      <td className="py-3 pr-3 align-top min-w-[260px]">
+                        <input
+                          placeholder="optional note"
+                          value={d.notes}
+                          onChange={(e) => updateDraft(it.studentId, { notes: e.target.value })}
+                          className={fieldClass}
+                          maxLength={500}
+                        />
+                      </td>
+
+                      <td className="py-3 pr-4 align-top min-w-[210px]">
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            className={btnPrimary}
+                            onClick={() => void saveOne(it.studentId)}
+                            disabled={!!saving[it.studentId] || loading}
+                          >
+                            {saving[it.studentId] ? "Saving..." : "Save"}
+                          </button>
+
+                          <button
+                            type="button"
+                            className={btnOutline}
+                            onClick={() => void clearOne(it.studentId)}
+                            disabled={!!saving[it.studentId] || loading}
+                          >
+                            Clear today
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+        ) : null}
+      </section>
 
-          {saveAllMsg ? (
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-800">
-              {saveAllMsg}
-            </div>
-          ) : null}
+      <section className={`${shellCard} p-5 md:p-6`}>
+        <h2 className="text-sm font-semibold text-[#F7F4ED]">How to test fever SMS end-to-end</h2>
 
-          {!loading && !items.length ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              No learners found for your primary class. Add learners in <b>Admin - Students</b>.
-            </div>
-          ) : null}
-
-          {items.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-left text-[11px] uppercase tracking-wide text-zinc-500">
-                  <tr className="border-b">
-                    <th className="py-2 pr-3">Learner</th>
-                    <th className="py-2 pr-3">Status</th>
-                    <th className="py-2 pr-3">Temp (C)</th>
-                    <th className="py-2 pr-3">Symptoms</th>
-                    <th className="py-2 pr-3">Notes</th>
-                    <th className="py-2 pr-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {items.map((it) => {
-                    const d = drafts[it.studentId] ?? { temperatureC: "", symptoms: "", notes: "" };
-                    const changed = hasChanged(it);
-
-                    const consent = !!it.healthConsentAt;
-                    const sms = !!it.guardianSmsOptIn;
-                    const phone = !!(it.guardianPhone && it.guardianPhone.trim());
-
-                    return (
-                      <tr key={it.studentId} className="align-top">
-                        <td className="py-3 pr-3 min-w-[220px]">
-                          <div className="font-semibold text-zinc-900">{it.name}</div>
-                          <div className="mt-1 text-[11px] text-zinc-600">
-                            {pill(consent ? "CONSENT" : "NO CONSENT", consent ? "ok" : "muted")}{" "}
-                            {pill(sms ? "SMS ON" : "SMS OFF", sms ? "ok" : "muted")}{" "}
-                            {pill(phone ? "PHONE" : "NO PHONE", phone ? "ok" : "warn")}
-                          </div>
-                          {it.healthConsentAt ? (
-                            <div className="mt-1 text-[11px] text-zinc-500">
-                              Consent: {formatDT(it.healthConsentAt)}
-                            </div>
-                          ) : null}
-                        </td>
-
-                        <td className="py-3 pr-3 min-w-[160px]">
-                          <div>{rowStatus(it)}</div>
-                          {changed ? <div className="mt-1 text-[11px] text-amber-700">Unsaved changes</div> : null}
-                          {rowError[it.studentId] ? (
-                            <div className="mt-1 text-[11px] text-rose-700">{rowError[it.studentId]}</div>
-                          ) : null}
-                          {rowOk[it.studentId] ? (
-                            <div className="mt-1 text-[11px] text-emerald-700">{rowOk[it.studentId]}</div>
-                          ) : null}
-                        </td>
-
-                        <td className="py-3 pr-3 min-w-[120px]">
-                          <input
-                            inputMode="decimal"
-                            placeholder="e.g. 37.5"
-                            value={d.temperatureC}
-                            onChange={(e) => updateDraft(it.studentId, { temperatureC: e.target.value })}
-                            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm"
-                          />
-                          <div className="mt-1 text-[11px] text-zinc-500">Blank = not recorded</div>
-                        </td>
-
-                        <td className="py-3 pr-3 min-w-[220px]">
-                          <input
-                            placeholder="e.g. cough, headache"
-                            value={d.symptoms}
-                            onChange={(e) => updateDraft(it.studentId, { symptoms: e.target.value })}
-                            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm"
-                            maxLength={240}
-                          />
-                        </td>
-
-                        <td className="py-3 pr-3 min-w-[240px]">
-                          <input
-                            placeholder="optional note"
-                            value={d.notes}
-                            onChange={(e) => updateDraft(it.studentId, { notes: e.target.value })}
-                            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm"
-                            maxLength={500}
-                          />
-                        </td>
-
-                        <td className="py-3 pr-3 min-w-[210px]">
-                          <div className="flex flex-col gap-2">
-                            <button
-                              type="button"
-                              className={btnPrimary}
-                              onClick={() => void saveOne(it.studentId)}
-                              disabled={!!saving[it.studentId] || loading}
-                            >
-                              {saving[it.studentId] ? "Saving..." : "Save"}
-                            </button>
-
-                            <button
-                              type="button"
-                              className={btnOutline}
-                              onClick={() => void clearOne(it.studentId)}
-                              disabled={!!saving[it.studentId] || loading}
-                            >
-                              Clear today
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-        </section>
-
-        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-zinc-900">How to test Fever SMS end-to-end</h2>
-          <ol className="mt-2 list-decimal pl-5 text-sm text-zinc-700 space-y-1">
-            <li>Admin - Students - toggle Guardian SMS ON for a learner (and ensure they have a phone).</li>
-            <li>Admin - Student 360 - grant Health consent for that learner.</li>
-            <li>Teacher - Health checks - record temperature at or above the threshold.</li>
-            <li>Teacher - Attendance - mark ABSENT (optional) and close the session.</li>
-            <li>Trigger notify: POST /api/teacher/attendance/notify-parents with the sessionId.</li>
-          </ol>
-        </section>
-      </div>
-    </main>
+        <ol className="mt-3 list-decimal pl-5 text-sm text-[#D7DCE5] space-y-1.5">
+          <li>Admin → Students → turn Guardian SMS ON for a learner and make sure they have a phone.</li>
+          <li>Admin → Student 360 → grant Health consent for that learner.</li>
+          <li>Teacher → Health checks → record temperature at or above the threshold.</li>
+          <li>Teacher → Attendance → mark ABSENT if needed and close the session.</li>
+          <li>Trigger notify with the attendance session.</li>
+        </ol>
+      </section>
+    </section>
   );
 }

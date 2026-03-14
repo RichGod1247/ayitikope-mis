@@ -1,3 +1,4 @@
+// src/components/teacher/TeacherAttendanceClient.tsx
 "use client";
 
 import Link from "next/link";
@@ -16,7 +17,7 @@ type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED";
 type Summary = {
   state: SummaryState;
   sessionId?: string | null;
-  dateISO: string; // YYYY-MM-DD
+  dateISO: string;
   classroomId: string;
   totals: {
     students: number;
@@ -34,7 +35,6 @@ type ListClassroomsResponse = ApiOk<{ classrooms: Classroom[] }> | ApiErr;
 type SummaryResponse = ApiOk<{ summary: Summary }> | ApiErr;
 type OpenResponse = ApiOk<{ sessionId: string }> | ApiErr;
 
-// close route returns session
 type CloseResponse =
   | ApiOk<{
       session: {
@@ -47,10 +47,21 @@ type CloseResponse =
     }>
   | ApiErr;
 
-// notify-parents returns counts
 type NotifyResponse =
   | ApiOk<{ total: number; successCount: number; brand?: string; testMode?: boolean; note?: string }>
   | ApiErr;
+
+const shellCard =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+const innerCard = "rounded-[22px] border border-white/10 bg-[#07111F]/80";
+const fieldClass =
+  "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20";
+const labelClass = "block text-[11px] font-medium text-[#C9CDD6]";
+const subtleText = "text-[11px] text-[#AEB6C4]";
+const primaryBtn =
+  "inline-flex items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60";
+const ghostBtn =
+  "inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60";
 
 function todayISO(): string {
   const d = new Date();
@@ -66,6 +77,25 @@ function safeText(v: unknown): string {
 
 function safeNum(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
+function buildClassLabel(c: Classroom | null | undefined): string {
+  if (!c) return "";
+  return [c.name, c.grade, c.arm].filter(Boolean).join(" • ");
+}
+
+function StatChip(props: { label: string; value: number; tone?: "neutral" | "good" | "warn" | "bad" }) {
+  let cls = "border-white/10 bg-white/5 text-[#D7DCE5]";
+  if (props.tone === "good") cls = "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+  if (props.tone === "warn") cls = "border-amber-300/20 bg-amber-400/12 text-amber-100";
+  if (props.tone === "bad") cls = "border-rose-300/20 bg-rose-400/12 text-rose-100";
+
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] ${cls}`}>
+      <span>{props.label}:</span>
+      <span className="font-semibold">{props.value}</span>
+    </span>
+  );
 }
 
 export default function TeacherAttendanceClient({
@@ -100,11 +130,12 @@ export default function TeacherAttendanceClient({
   const [notifyErr, setNotifyErr] = useState<string | null>(null);
   const [notifyOk, setNotifyOk] = useState<string | null>(null);
 
-  const classLabel = useMemo(() => {
-    const c = classrooms.find((x) => x.id === classroomId);
-    if (!c) return "";
-    return [c.name, c.grade, c.arm].filter(Boolean).join(" • ");
-  }, [classrooms, classroomId]);
+  const selectedClassroom = useMemo(
+    () => classrooms.find((x) => x.id === classroomId) ?? null,
+    [classrooms, classroomId]
+  );
+
+  const classLabel = useMemo(() => buildClassLabel(selectedClassroom), [selectedClassroom]);
 
   const hasAssignment = classrooms.length > 0 && !!classroomId;
   const canChooseClassroom = classrooms.length > 1;
@@ -112,12 +143,14 @@ export default function TeacherAttendanceClient({
   async function loadClassrooms() {
     setLoading(true);
     setErr(null);
+
     try {
-      const r = await fetch(`/api/teacher/classrooms/list`, { cache: "no-store" });
+      const r = await fetch("/api/teacher/classrooms/list", { cache: "no-store" });
       const j: ListClassroomsResponse = await r.json().catch(() => ({
         ok: false,
         error: "Failed to parse classrooms response.",
       }));
+
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
 
       const list = Array.isArray(j.classrooms) ? j.classrooms : [];
@@ -154,6 +187,7 @@ export default function TeacherAttendanceClient({
         ok: false,
         error: "Failed to parse summary response.",
       }));
+
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
 
       setSummary(j.summary);
@@ -185,7 +219,7 @@ export default function TeacherAttendanceClient({
         return;
       }
 
-      const r = await fetch(`/api/teacher/attendance/sessions/open`, {
+      const r = await fetch("/api/teacher/attendance/sessions/open", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ classroomId, dateISO }),
@@ -195,6 +229,7 @@ export default function TeacherAttendanceClient({
         ok: false,
         error: "Failed to parse open response.",
       }));
+
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
 
       router.push(sessionHref(j.sessionId));
@@ -214,7 +249,7 @@ export default function TeacherAttendanceClient({
       const sessionId = summary?.sessionId ? String(summary.sessionId) : "";
       if (!sessionId) throw new Error("No session to notify.");
 
-      const r = await fetch(`/api/teacher/attendance/notify-parents`, {
+      const r = await fetch("/api/teacher/attendance/notify-parents", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ sessionId, brand }),
@@ -255,8 +290,7 @@ export default function TeacherAttendanceClient({
       const sessionId = summary?.sessionId ? String(summary.sessionId) : "";
       if (!sessionId) throw new Error("No session to close.");
 
-      // close
-      const r1 = await fetch(`/api/teacher/attendance/sessions/close`, {
+      const r1 = await fetch("/api/teacher/attendance/sessions/close", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ sessionId }),
@@ -266,17 +300,39 @@ export default function TeacherAttendanceClient({
         ok: false,
         error: "Failed to parse close response.",
       }));
+
       if (!r1.ok || !j1.ok) throw new Error(j1.ok ? `HTTP ${r1.status}` : j1.error);
 
       setCloseOk("Closed.");
 
-      // notify
-      await notifyOnly();
+      const r2 = await fetch("/api/teacher/attendance/notify-parents", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId, brand }),
+      });
+
+      const j2: NotifyResponse = await r2.json().catch(() => ({
+        ok: false,
+        error: "Failed to parse notify response.",
+      }));
+
+      if (!r2.ok || !j2.ok) {
+        throw new Error(j2.ok ? `Notify failed (HTTP ${r2.status}).` : j2.error);
+      }
+
+      setNotifyOk(
+        `Notifications: ${safeNum(j2.successCount)}/${safeNum(j2.total)}${j2.testMode ? " (TEST MODE)" : ""}${
+          j2.note ? ` — ${j2.note}` : ""
+        }`
+      );
+
+      await loadSummary();
     } catch (e: any) {
-      setCloseErr(safeText(e?.message) || "Failed to close session.");
+      setCloseErr(safeText(e?.message) || "Failed to close and notify.");
       await loadSummary().catch(() => null);
     } finally {
       setClosing(false);
+      setNotifying(false);
     }
   }
 
@@ -292,211 +348,216 @@ export default function TeacherAttendanceClient({
   }, [classroomId, dateISO]);
 
   function statePill(state: SummaryState) {
-    const base = "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold";
-    if (state === "CERTIFIED") return `${base} border-indigo-200 bg-indigo-50 text-indigo-800`;
-    if (state === "CLOSED") return `${base} border-rose-200 bg-rose-50 text-rose-800`;
-    if (state === "OPEN") return `${base} border-amber-200 bg-amber-50 text-amber-800`;
-    return `${base} border-slate-200 bg-slate-50 text-slate-700`;
+    const base = "inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold";
+    if (state === "CERTIFIED") return `${base} border-indigo-300/20 bg-indigo-400/12 text-indigo-100`;
+    if (state === "CLOSED") return `${base} border-rose-300/20 bg-rose-400/12 text-rose-100`;
+    if (state === "OPEN") return `${base} border-amber-300/20 bg-amber-400/12 text-amber-100`;
+    return `${base} border-white/10 bg-white/5 text-[#D7DCE5]`;
   }
 
   const canNotifyUi =
     !!summary?.sessionId && (summary.state === "CLOSED" || summary.state === "CERTIFIED") && !closing && !notifying;
 
-  const canCloseAndNotifyUi = !!summary?.sessionId && summary.state === "OPEN" && !closing && !notifying;
+  const canCloseAndNotifyUi =
+    !!summary?.sessionId && summary.state === "OPEN" && !closing && !notifying;
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 md:py-8 space-y-6">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+    <section className="space-y-6">
+      <section className={`${shellCard} p-5 md:p-6`}>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-[#D4AF37]/10 px-3 py-1 text-[11px] font-medium text-[#E8C96A]">
+              EduLife OS · Teacher Attendance
+            </div>
+
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Attendance</h1>
-              <p className="mt-1 text-sm text-slate-600">
-                Open a session, mark attendance/health, close/certify to lock, then notify parents.
+              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED]">
+                Attendance
+              </h1>
+              <p className="mt-1 text-sm text-[#C9CDD6]">
+                Open a session, mark attendance and health, close or certify it, then notify parents.
               </p>
-              {teacherUserId ? (
-                <p className="mt-1 text-[11px] text-slate-500 font-mono">Teacher: {teacherUserId.slice(0, 8)}…</p>
-              ) : null}
             </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => void loadClassrooms()}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-[11px] hover:bg-slate-50"
-                disabled={loading}
-              >
-                Refresh
-              </button>
-              <Link
-                href="/teacher/dashboard"
-                className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-[11px] text-sky-800 hover:bg-sky-100"
-              >
-                Back
-              </Link>
-            </div>
+            {teacherUserId ? (
+              <p className="text-[11px] font-mono text-[#8F98A8]">
+                Teacher: {teacherUserId.slice(0, 8)}…
+              </p>
+            ) : null}
           </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void loadClassrooms()}
+              className={ghostBtn}
+              disabled={loading}
+            >
+              Refresh
+            </button>
+
+            <Link href="/teacher/dashboard" className={ghostBtn}>
+              Back
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {err ? (
+        <section className="rounded-2xl border border-rose-300/20 bg-rose-400/12 p-4 text-sm text-rose-100">
+          {err}
         </section>
+      ) : null}
 
-        {err ? (
-          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{err}</section>
-        ) : null}
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-slate-700">Date</label>
-              <input
-                type="date"
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                value={dateISO}
-                onChange={(e) => setDateISO(e.target.value)}
-                disabled={loading || !hasAssignment}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-slate-700">Classroom</label>
-              <select
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                value={classroomId}
-                onChange={(e) => setClassroomId(e.target.value)}
-                disabled={loading || !hasAssignment || !canChooseClassroom}
-              >
-                {hasAssignment ? (
-                  classrooms.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {[c.name, c.grade, c.arm].filter(Boolean).join(" • ")}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No assigned classroom</option>
-                )}
-              </select>
-              {!canChooseClassroom && hasAssignment ? (
-                <div className="text-[10px] text-slate-500">Assigned classroom locked (only one).</div>
-              ) : null}
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-slate-700">Brand (Sender ID)</label>
-              <input
-                type="text"
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder="EDULIFE"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="flex items-end gap-2">
-              <button
-                type="button"
-                onClick={() => void openOrGo()}
-                disabled={opening || summaryLoading || !hasAssignment}
-                className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {opening ? "Working…" : summary?.sessionId ? "Go to session" : "Open session"}
-              </button>
-            </div>
+      <section className={`${shellCard} p-5 md:p-6 space-y-5`}>
+        <div className="grid gap-4 md:grid-cols-4">
+          <div className="space-y-1">
+            <label className={labelClass}>Date</label>
+            <input
+              type="date"
+              className={fieldClass}
+              value={dateISO}
+              onChange={(e) => setDateISO(e.target.value)}
+              disabled={loading || !hasAssignment}
+            />
           </div>
 
-          {openErr ? (
-            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{openErr}</div>
-          ) : null}
-
-          {closeErr ? (
-            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{closeErr}</div>
-          ) : null}
-
-          {notifyErr ? (
-            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
-              {notifyErr}
-            </div>
-          ) : null}
-
-          {closeOk ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              {closeOk}
-            </div>
-          ) : null}
-
-          {notifyOk ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              {notifyOk}
-            </div>
-          ) : null}
-
-          <div className="rounded-lg border border-slate-100 p-4">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="text-sm">
-                <div className="text-slate-900 font-semibold">{classLabel || "Unassigned"}</div>
-                <div className="text-[11px] text-slate-600">{dateISO}</div>
-              </div>
-
-              {summaryLoading ? (
-                <div className="text-sm text-slate-600">Loading summary…</div>
-              ) : summaryErr ? (
-                <div className="text-sm text-rose-800">{summaryErr}</div>
-              ) : summary ? (
-                <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                  <span className={statePill(summary.state)}>{summary.state}</span>
-
-                  <span className="rounded-full border bg-white px-3 py-1 text-slate-700">
-                    Total: <b>{summary.totals.students}</b>
-                  </span>
-                  <span className="rounded-full border bg-emerald-50 px-3 py-1 text-emerald-800">
-                    Present: <b>{summary.totals.present}</b>
-                  </span>
-                  <span className="rounded-full border bg-amber-50 px-3 py-1 text-amber-800">
-                    Late: <b>{summary.totals.late}</b>
-                  </span>
-                  <span className="rounded-full border bg-rose-50 px-3 py-1 text-rose-800">
-                    Absent: <b>{summary.totals.absent}</b>
-                  </span>
-                  <span className="rounded-full border bg-slate-50 px-3 py-1 text-slate-700">
-                    Excused: <b>{summary.totals.excused}</b>
-                  </span>
-
-                  {/* ✅ OPEN: allow one-click close + notify */}
-                  {canCloseAndNotifyUi ? (
-                    <button
-                      type="button"
-                      onClick={() => void closeThenNotify()}
-                      disabled={!canCloseAndNotifyUi}
-                      className="ml-2 rounded-md border border-slate-300 bg-white px-3 py-1 text-[11px] hover:bg-slate-50 disabled:opacity-60"
-                    >
-                      {closing ? "Closing…" : "Close + Notify parents"}
-                    </button>
-                  ) : null}
-
-                  {/* ✅ CLOSED/CERTIFIED: allow notify-only */}
-                  {summary.sessionId && (summary.state === "CLOSED" || summary.state === "CERTIFIED") ? (
-                    <button
-                      type="button"
-                      onClick={() => void notifyOnly()}
-                      disabled={!canNotifyUi}
-                      className="ml-2 rounded-md border border-slate-300 bg-white px-3 py-1 text-[11px] hover:bg-slate-50 disabled:opacity-60"
-                      title="Notify parents after the session has been closed or certified"
-                    >
-                      {notifying ? "Notifying…" : "Notify parents"}
-                    </button>
-                  ) : null}
-                </div>
+          <div className="space-y-1">
+            <label className={labelClass}>Classroom</label>
+            <select
+              className={fieldClass}
+              value={classroomId}
+              onChange={(e) => setClassroomId(e.target.value)}
+              disabled={loading || !hasAssignment || !canChooseClassroom}
+            >
+              {hasAssignment ? (
+                classrooms.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {[c.name, c.grade, c.arm].filter(Boolean).join(" • ")}
+                  </option>
+                ))
               ) : (
-                <div className="text-sm text-slate-600">—</div>
+                <option value="">No assigned classroom</option>
               )}
-            </div>
-          </div>
-        </section>
+            </select>
 
-        {!hasAssignment ? (
-          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            You don’t have a class assigned. Ask the admin to assign you in <b>Admin → Teachers</b>.
-          </section>
+            {!canChooseClassroom && hasAssignment ? (
+              <div className={subtleText}>Assigned classroom locked because only one class is available.</div>
+            ) : null}
+          </div>
+
+          <div className="space-y-1">
+            <label className={labelClass}>Brand (Sender ID)</label>
+            <input
+              type="text"
+              className={fieldClass}
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="EDULIFE"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={() => void openOrGo()}
+              disabled={opening || summaryLoading || !hasAssignment}
+              className={`${primaryBtn} w-full`}
+            >
+              {opening ? "Working…" : summary?.sessionId ? "Go to session" : "Open session"}
+            </button>
+          </div>
+        </div>
+
+        {openErr ? (
+          <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
+            {openErr}
+          </div>
         ) : null}
-      </div>
-    </main>
+
+        {closeErr ? (
+          <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
+            {closeErr}
+          </div>
+        ) : null}
+
+        {notifyErr ? (
+          <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm text-rose-100">
+            {notifyErr}
+          </div>
+        ) : null}
+
+        {closeOk ? (
+          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
+            {closeOk}
+          </div>
+        ) : null}
+
+        {notifyOk ? (
+          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100">
+            {notifyOk}
+          </div>
+        ) : null}
+
+        <div className={`${innerCard} p-4`}>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-[#F7F4ED]">
+                {classLabel || "Unassigned"}
+              </div>
+              <div className="text-[11px] text-[#AEB6C4]">{dateISO}</div>
+            </div>
+
+            {summaryLoading ? (
+              <div className="text-sm text-[#C9CDD6]">Loading summary…</div>
+            ) : summaryErr ? (
+              <div className="text-sm text-rose-200">{summaryErr}</div>
+            ) : summary ? (
+              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <span className={statePill(summary.state)}>{summary.state}</span>
+
+                <StatChip label="Total" value={summary.totals.students} />
+                <StatChip label="Present" value={summary.totals.present} tone="good" />
+                <StatChip label="Late" value={summary.totals.late} tone="warn" />
+                <StatChip label="Absent" value={summary.totals.absent} tone="bad" />
+                <StatChip label="Excused" value={summary.totals.excused} />
+
+                {canCloseAndNotifyUi ? (
+                  <button
+                    type="button"
+                    onClick={() => void closeThenNotify()}
+                    disabled={!canCloseAndNotifyUi}
+                    className={`${ghostBtn} h-auto px-3 py-1.5 text-[11px]`}
+                  >
+                    {closing ? "Closing…" : "Close + Notify parents"}
+                  </button>
+                ) : null}
+
+                {summary.sessionId && (summary.state === "CLOSED" || summary.state === "CERTIFIED") ? (
+                  <button
+                    type="button"
+                    onClick={() => void notifyOnly()}
+                    disabled={!canNotifyUi}
+                    className={`${ghostBtn} h-auto px-3 py-1.5 text-[11px]`}
+                    title="Notify parents after the session has been closed or certified"
+                  >
+                    {notifying ? "Notifying…" : "Notify parents"}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="text-sm text-[#C9CDD6]">—</div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {!hasAssignment ? (
+        <section className="rounded-2xl border border-amber-300/20 bg-amber-400/12 p-4 text-sm text-amber-100">
+          You don’t have a class assigned. Ask the admin to assign you in <b>Admin → Teachers</b>.
+        </section>
+      ) : null}
+    </section>
   );
 }

@@ -109,8 +109,6 @@ type SchemeSummary = {
   term: string;
   academicYear: string;
   classroomId: string | null;
-
-  // API may use either name; we support both.
   itemCount?: number;
   totalItems?: number;
 };
@@ -124,15 +122,42 @@ type SchemesListResponse = {
 
 type Notice = { tone: "ok" | "error" | "info"; text: string };
 
-const pillBase = "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium border";
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+const pillBase =
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium";
+
+const cardShell =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+
+const sectionTitle = "text-sm font-semibold text-[#F7F4ED]";
+const labelCls = "block text-[11px] font-medium text-[#C9CDD6] mb-1";
+const helperCls = "mt-1 text-[10px] text-[#8F98A8]";
+const inputBase =
+  "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs md:text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#1B66D1]/35 focus:border-[#1B66D1]/40 disabled:cursor-not-allowed disabled:opacity-60";
+const selectBase =
+  "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs md:text-sm text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#1B66D1]/35 focus:border-[#1B66D1]/40 disabled:cursor-not-allowed disabled:opacity-60";
 const btnBase =
   "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-const btnOutline = btnBase + " bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50";
-const btnPrimary = btnBase + " bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700";
-const inputBase =
-  "w-full rounded-xl border border-zinc-300 bg-white px-2 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black";
-const selectBase =
-  "w-full rounded-xl border border-zinc-300 bg-white px-2 py-1.5 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black";
+const btnOutline =
+  `${btnBase} border-white/10 bg-white/5 text-[#F7F4ED] hover:bg-white/10`;
+const btnPrimary =
+  `${btnBase} border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] hover:brightness-105`;
+const btnSoftInfo =
+  `${btnBase} border-cyan-300/20 bg-cyan-400/12 text-cyan-100 hover:bg-cyan-400/18`;
+const btnSoftSuccess =
+  `${btnBase} border-emerald-300/20 bg-emerald-400/12 text-emerald-100 hover:bg-emerald-400/18`;
+
+const ACADEMIC_YEAR_OPTIONS = Array.from({ length: 6 }, (_, index) => {
+  const start = 2025 + index;
+  const end = start + 1;
+  return {
+    value: `${start}/${end}`,
+    label: `${start}/${String(end).slice(-2)}`,
+  };
+});
 
 function normalizeTermClient(raw: unknown): "" | "1st Term" | "2nd Term" | "3rd Term" {
   const v = String(raw ?? "").trim().toLowerCase();
@@ -149,10 +174,30 @@ function normalizeTermClient(raw: unknown): "" | "1st Term" | "2nd Term" | "3rd 
 function normalizeAcademicYearClient(raw: unknown): string {
   const v = String(raw ?? "").trim();
   if (!v) return "";
-  const dash = v.match(/^(\d{4})-(\d{4})$/);
-  if (dash) return `${dash[1]}/${dash[2]}`;
-  if (/^\d{4}\/\d{4}$/.test(v)) return v;
-  return v; // keep typed
+
+  const fullSlash = v.match(/^(\d{4})\/(\d{4})$/);
+  if (fullSlash) return `${fullSlash[1]}/${fullSlash[2]}`;
+
+  const fullDash = v.match(/^(\d{4})-(\d{4})$/);
+  if (fullDash) return `${fullDash[1]}/${fullDash[2]}`;
+
+  const shortSlash = v.match(/^(\d{4})\/(\d{2})$/);
+  if (shortSlash) {
+    const start = Number(shortSlash[1]);
+    const end2 = Number(shortSlash[2]);
+    const century = Math.floor(start / 100) * 100;
+    return `${start}/${century + end2}`;
+  }
+
+  const shortDash = v.match(/^(\d{4})-(\d{2})$/);
+  if (shortDash) {
+    const start = Number(shortDash[1]);
+    const end2 = Number(shortDash[2]);
+    const century = Math.floor(start / 100) * 100;
+    return `${start}/${century + end2}`;
+  }
+
+  return v;
 }
 
 function handleAuthFailure() {
@@ -202,6 +247,16 @@ function getSchemeCount(s: SchemeSummary): number {
   return Number.isFinite(v) ? v : 0;
 }
 
+function toneNoticeClass(tone: Notice["tone"]) {
+  if (tone === "ok") {
+    return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+  }
+  if (tone === "info") {
+    return "border-sky-300/20 bg-sky-400/12 text-sky-100";
+  }
+  return "border-rose-300/20 bg-rose-400/12 text-rose-100";
+}
+
 export default function TeacherCurriculumExplorerClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -213,42 +268,31 @@ export default function TeacherCurriculumExplorerClient() {
   const urlAcademicYear = (searchParams.get("academicYear") ?? "").trim();
   const urlReturn = searchParams.get("return");
 
-  // -----------------------------
-  // Scheme builder (mode=scheme)
-  // -----------------------------
   const [schemeTerm, setSchemeTerm] = useState<string>("");
   const [schemeAcademicYear, setSchemeAcademicYear] = useState<string>("");
   const [schemeWeekNumber, setSchemeWeekNumber] = useState<string>("1");
   const [schemeNotice, setSchemeNotice] = useState<Notice | null>(null);
 
-  // Summary (across all subjects) to decide if "Return" should unlock
   const [schemeSummary, setSchemeSummary] = useState<SchemeSummary[]>([]);
   const [schemeSummaryLoading, setSchemeSummaryLoading] = useState(false);
   const [schemeSummaryError, setSchemeSummaryError] = useState<string | null>(null);
 
-  // -----------------------------
-  // 1. Load available subjects
-  // -----------------------------
   const [subjects, setSubjects] = useState<CurriculumSubjectSummary[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
   const [subjectsError, setSubjectsError] = useState<string | null>(null);
 
-  // Filters
   const [selectedPhase, setSelectedPhase] = useState<string>("");
   const [selectedLevel, setSelectedLevel] = useState<string>("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
 
-  // Curriculum tree
   const [curriculumLoading, setCurriculumLoading] = useState(false);
   const [curriculumError, setCurriculumError] = useState<string | null>(null);
   const [curriculum, setCurriculum] = useState<CurriculumHierarchy | null>(null);
 
-  // Selection inside the tree
   const [selectedStrandId, setSelectedStrandId] = useState<string | null>(null);
   const [selectedSubStrandId, setSelectedSubStrandId] = useState<string | null>(null);
   const [selectedIndicatorId, setSelectedIndicatorId] = useState<string | null>(null);
 
-  // Schemes (subject scoped) — used ONLY by scheme builder mode
   const [schemes, setSchemes] = useState<SchemeSummary[]>([]);
   const [schemesLoading, setSchemesLoading] = useState(false);
   const [schemesError, setSchemesError] = useState<string | null>(null);
@@ -267,7 +311,6 @@ export default function TeacherCurriculumExplorerClient() {
     return safeClientInternalPath(urlReturn, fallback);
   }, [urlReturn, schemeTerm, schemeAcademicYear]);
 
-  // Sync scheme term/year from URL when in scheme mode (NORMALIZE)
   useEffect(() => {
     if (!schemeMode) return;
 
@@ -279,10 +322,8 @@ export default function TeacherCurriculumExplorerClient() {
       const y = normalizeAcademicYearClient(urlAcademicYear);
       setSchemeAcademicYear(y);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schemeMode, urlTerm, urlAcademicYear]);
 
-  // Load tenant current term/year as fallback (only if missing) (NORMALIZE)
   useEffect(() => {
     if (!schemeMode) return;
 
@@ -323,12 +364,8 @@ export default function TeacherCurriculumExplorerClient() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schemeMode]);
+  }, [schemeMode, schemeTerm, schemeAcademicYear]);
 
-  // -----------------------------
-  // Load subjects once
-  // -----------------------------
   useEffect(() => {
     let cancelled = false;
 
@@ -383,9 +420,6 @@ export default function TeacherCurriculumExplorerClient() {
     };
   }, []);
 
-  // -----------------------------
-  // Derived lists for dropdowns
-  // -----------------------------
   const phases = useMemo(() => {
     const all = Array.from(new Set(subjects.map((s) => s.phase || "").filter((p) => p.trim().length > 0)));
     return all.sort();
@@ -411,9 +445,6 @@ export default function TeacherCurriculumExplorerClient() {
 
   const selectedSubject = useMemo(() => subjects.find((s) => s.id === selectedSubjectId) ?? null, [subjects, selectedSubjectId]);
 
-  // -----------------------------
-  // Load curriculum tree
-  // -----------------------------
   useEffect(() => {
     let cancelled = false;
 
@@ -431,7 +462,6 @@ export default function TeacherCurriculumExplorerClient() {
       setSelectedSubStrandId(null);
       setSelectedIndicatorId(null);
 
-      // reset scheme UI for new subject selection
       setSchemes([]);
       setSchemesError(null);
       setSelectedSchemeIdForAdd("");
@@ -500,9 +530,6 @@ export default function TeacherCurriculumExplorerClient() {
     };
   }, [selectedSubject, selectedPhase, selectedLevel]);
 
-  // -----------------------------
-  // Helpers to find selected pieces
-  // -----------------------------
   const selectedStrand = useMemo(() => {
     if (!curriculum || !selectedStrandId) return null;
     return curriculum.strands.find((st) => st.id === selectedStrandId) ?? null;
@@ -557,9 +584,6 @@ export default function TeacherCurriculumExplorerClient() {
 
   const hasCurriculum = !!curriculum;
 
-  // -----------------------------
-  // Scheme loads (schemeMode only)
-  // -----------------------------
   async function loadSchemeSummary() {
     setSchemeSummaryLoading(true);
     setSchemeSummaryError(null);
@@ -606,7 +630,6 @@ export default function TeacherCurriculumExplorerClient() {
     try {
       const params = new URLSearchParams();
 
-      // ✅ slug-first (stable), name fallback
       if (curriculum.slug) params.set("subjectSlug", curriculum.slug);
       params.set("subject", curriculum.name);
 
@@ -651,14 +674,12 @@ export default function TeacherCurriculumExplorerClient() {
   useEffect(() => {
     if (!schemeMode) return;
     void loadSchemeSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schemeMode]);
 
   useEffect(() => {
     if (!schemeMode) return;
     if (!curriculum) return;
     void loadSchemesForSubject();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schemeMode, curriculum, schemeTerm, schemeAcademicYear]);
 
   const canReturnToLessonNotes = useMemo(() => {
@@ -682,7 +703,7 @@ export default function TeacherCurriculumExplorerClient() {
 
     const week = Number.parseInt(schemeWeekNumber, 10);
     if (!Number.isFinite(week) || week <= 0) {
-      setSchemeNotice({ tone: "error", text: "Enter a valid week number (1, 2, 3…)."} );
+      setSchemeNotice({ tone: "error", text: "Enter a valid week number (1, 2, 3…)." });
       return;
     }
 
@@ -703,18 +724,14 @@ export default function TeacherCurriculumExplorerClient() {
         credentials: "include",
         body: JSON.stringify({
           classroomId: null,
-
-          // ✅ future-proof: send both name and slug at top-level
           subject: curriculum.name,
           subjectSlug: curriculum.slug ?? null,
-
           term: schemeTerm,
           academicYear: schemeAcademicYear,
           title: `${curriculum.name} – ${schemeTerm} (${schemeAcademicYear})`,
           notes: null,
           weekNumber: week,
           schemeId,
-
           indicatorSlice: {
             indicatorId: selectedIndicator.id,
             indicatorCode: selectedIndicator.code,
@@ -780,54 +797,68 @@ export default function TeacherCurriculumExplorerClient() {
     router.replace(`/teacher/curriculum?${p.toString()}`);
   }
 
-  // -----------------------------
-  // Render
-  // -----------------------------
   return (
-    <main className="min-h-screen bg-zinc-50">
-      <div className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-5">
-        <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={`${pillBase} border-sky-200 bg-sky-50 text-sky-800`}>EduLife OS · Curriculum Explorer</span>
-              {schemeMode ? (
-                <span className={`${pillBase} border-emerald-200 bg-emerald-50 text-emerald-800`}>Mode: Scheme Builder</span>
-              ) : (
-                <span className="text-[11px] text-zinc-500">NaCCA KG–JHS curriculum · read-only, trusted source</span>
-              )}
-            </div>
-            <h1 className="text-xl md:text-2xl font-semibold tracking-tight">Teacher Curriculum Explorer</h1>
-            <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
-              Choose a <span className="font-semibold">phase, level</span> and{" "}
-              <span className="font-semibold">subject</span>. EduLife OS will load the official NaCCA structure for that subject:
-              strands, sub-strands, content standards, indicators and exemplars.
-            </p>
-          </div>
+    <main className="min-h-screen bg-transparent">
+      <div className="mx-auto max-w-6xl space-y-5 px-0 py-0 md:space-y-6">
+        <header className={cx(cardShell, "relative overflow-hidden p-5 md:p-6")}>
+          <div className="pointer-events-none absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+          <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-[#D4AF37]/14 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
 
-          <div className="text-[11px] text-zinc-500 max-w-xs md:text-right">
-            <p>
-              This page is the <span className="font-semibold">single source of truth</span> for your curriculum tree. Lesson notes
-              and Scheme of Work tools all read from here.
-            </p>
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`${pillBase} border-cyan-300/20 bg-cyan-400/12 text-cyan-100`}>
+                  EduLife OS · Curriculum Explorer
+                </span>
+                {schemeMode ? (
+                  <span className={`${pillBase} border-emerald-300/20 bg-emerald-400/12 text-emerald-100`}>
+                    Mode: Scheme Builder
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-[#AEB6C4]">
+                    NaCCA KG–JHS curriculum · read-only, trusted source
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-xl font-semibold tracking-tight text-[#F7F4ED] md:text-2xl">
+                Teacher Curriculum Explorer
+              </h1>
+
+              <p className="max-w-2xl text-xs text-[#C9CDD6] md:text-sm">
+                Choose a <span className="font-semibold text-[#F7F4ED]">phase, level</span> and{" "}
+                <span className="font-semibold text-[#F7F4ED]">subject</span>. EduLife OS will load the official NaCCA
+                structure for that subject: strands, sub-strands, content standards, indicators and exemplars.
+              </p>
+            </div>
+
+            <div className="max-w-xs text-[11px] text-[#AEB6C4] md:text-right">
+              <p>
+                This page is the <span className="font-semibold text-[#F7F4ED]">single source of truth</span> for your
+                curriculum tree. Lesson notes and Scheme of Work tools all read from here.
+              </p>
+            </div>
           </div>
         </header>
 
         {subjectsError && (
-          <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">{subjectsError}</div>
+          <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-sm text-rose-100">
+            {subjectsError}
+          </div>
         )}
 
-        <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1.4fr)] gap-4 md:gap-6">
-          {/* LEFT */}
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1.4fr)] md:gap-6">
           <div className="space-y-4">
-            <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
+            <div className={cx(cardShell, "p-4 md:p-5")}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-zinc-900">1 · Choose phase, level &amp; subject</h2>
-                {subjectsLoading && <span className="text-[11px] text-zinc-500">Loading subjects…</span>}
+                <h2 className={sectionTitle}>1 · Choose phase, level &amp; subject</h2>
+                {subjectsLoading && <span className="text-[11px] text-[#8F98A8]">Loading subjects…</span>}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-700 mb-1">Phase</label>
+                  <label className={labelCls}>Phase</label>
                   <select
                     className={selectBase}
                     value={selectedPhase}
@@ -846,11 +877,11 @@ export default function TeacherCurriculumExplorerClient() {
                       </option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-zinc-500 mt-1">Examples: KG, Lower Primary, Upper Primary, JHS…</p>
+                  <p className={helperCls}>Examples: KG, Lower Primary, Upper Primary, JHS…</p>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-700 mb-1">Level / Class</label>
+                  <label className={labelCls}>Level / Class</label>
                   <select
                     className={selectBase}
                     value={selectedLevel}
@@ -869,11 +900,11 @@ export default function TeacherCurriculumExplorerClient() {
                       </option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-zinc-500 mt-1">Examples: KG1, KG2, B1… JHS1…</p>
+                  <p className={helperCls}>Examples: KG1, KG2, B1… JHS1…</p>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-700 mb-1">Subject</label>
+                  <label className={labelCls}>Subject</label>
                   <select
                     className={selectBase}
                     value={selectedSubjectId}
@@ -891,126 +922,144 @@ export default function TeacherCurriculumExplorerClient() {
                       </option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-zinc-500 mt-1">Real subjects from your seeded NaCCA data only.</p>
+                  <p className={helperCls}>Real subjects from your seeded NaCCA data only.</p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <p className="text-[11px] text-zinc-500 max-w-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-4">
+                <p className="max-w-sm text-[11px] text-[#8F98A8]">
                   As soon as you pick a subject, EduLife OS will automatically load the{" "}
-                  <span className="font-semibold">full curriculum tree</span>.
+                  <span className="font-semibold text-[#F7F4ED]">full curriculum tree</span>.
                 </p>
-                <div className="text-[11px] text-zinc-500">
-                  Status: {curriculumLoading ? "Loading curriculum…" : hasCurriculum ? "Curriculum loaded" : "No curriculum loaded yet"}
+                <div className="text-[11px] text-[#8F98A8]">
+                  Status:{" "}
+                  {curriculumLoading ? "Loading curriculum…" : hasCurriculum ? "Curriculum loaded" : "No curriculum loaded yet"}
                 </div>
               </div>
             </div>
 
             {curriculumError && (
-              <div className="border border-red-200 bg-red-50 text-red-800 rounded-2xl px-3 py-2 text-sm">{curriculumError}</div>
+              <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-sm text-rose-100">
+                {curriculumError}
+              </div>
             )}
 
-            <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
+            <div className={cx(cardShell, "p-4 md:p-5")}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-zinc-900">2 · Curriculum tree (NaCCA)</h2>
-                {curriculumLoading && <span className="text-[11px] text-zinc-500">Loading…</span>}
+                <h2 className={sectionTitle}>2 · Curriculum tree (NaCCA)</h2>
+                {curriculumLoading && <span className="text-[11px] text-[#8F98A8]">Loading…</span>}
               </div>
 
               {!curriculumLoading && !hasCurriculum && (
-                <p className="text-xs text-zinc-500">
+                <p className="mt-3 text-xs text-[#8F98A8]">
                   Select a phase, level and subject above to see strands, sub-strands, standards and indicators.
                 </p>
               )}
 
               {hasCurriculum && curriculum && (
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] text-zinc-700 space-y-0.5">
-                    <p className="font-semibold text-[12px]">{curriculum.name}</p>
-                    <p>
-                      Phase: <span className="font-semibold">{curriculum.phase ?? "—"}</span> • Level:{" "}
-                      <span className="font-semibold">{curriculum.level ?? "—"}</span>
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 px-3 py-3 text-[11px] text-[#C9CDD6]">
+                    <p className="text-[12px] font-semibold text-[#F7F4ED]">{curriculum.name}</p>
+                    <p className="mt-1">
+                      Phase: <span className="font-semibold text-[#F7F4ED]">{curriculum.phase ?? "—"}</span> • Level:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">{curriculum.level ?? "—"}</span>
                     </p>
-                    {curriculum.description && <p className="text-[10px] text-zinc-500">{curriculum.description}</p>}
+                    {curriculum.description && <p className="mt-1 text-[10px] text-[#8F98A8]">{curriculum.description}</p>}
                   </div>
 
-                  <div className="space-y-2 max-h-[520px] overflow-auto pr-1">
+                  <div className="max-h-[520px] space-y-2 overflow-auto pr-1">
                     {curriculum.strands.map((strand) => {
                       const isStrandSelected = strand.id === selectedStrandId;
                       return (
-                        <div key={strand.id} className="border border-zinc-200 rounded-xl">
+                        <div key={strand.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#07111F]/70">
                           <button
                             type="button"
-                            className={`w-full flex items-start justify-between gap-2 px-3 py-2 text-left ${
-                              isStrandSelected ? "bg-zinc-900 text-white" : "bg-white text-zinc-900 hover:bg-zinc-50"
-                            }`}
+                            className={cx(
+                              "w-full px-3 py-3 text-left transition",
+                              isStrandSelected
+                                ? "bg-[linear-gradient(135deg,#0C1730,#10244A)] text-[#F7F4ED]"
+                                : "bg-transparent text-[#F7F4ED] hover:bg-white/[0.04]"
+                            )}
                             onClick={() => {
                               setSelectedStrandId(strand.id);
                               setSelectedSubStrandId(null);
                               setSelectedIndicatorId(null);
                             }}
                           >
-                            <div className="space-y-0.5">
-                              <div className="text-[12px] font-semibold">
-                                {strand.code ? `${strand.code} · ` : ""}
-                                {strand.title || "Strand"}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-0.5">
+                                <div className="text-[12px] font-semibold">
+                                  {strand.code ? `${strand.code} · ` : ""}
+                                  {strand.title || "Strand"}
+                                </div>
+                                {strand.description && (
+                                  <div className="line-clamp-2 text-[11px] text-[#C9CDD6]">{strand.description}</div>
+                                )}
                               </div>
-                              {strand.description && <div className="text-[11px] opacity-80 line-clamp-2">{strand.description}</div>}
+                              <span className="text-[10px] text-[#AEB6C4]">
+                                {strand.subStrands.length} sub-strand{strand.subStrands.length === 1 ? "" : "s"}
+                              </span>
                             </div>
-                            <span className="text-[10px] opacity-70">
-                              {strand.subStrands.length} sub-strand{strand.subStrands.length === 1 ? "" : "s"}
-                            </span>
                           </button>
 
                           {isStrandSelected && strand.subStrands.length > 0 && (
-                            <div className="border-t border-zinc-200 bg-zinc-50 px-3 py-2 space-y-1.5">
+                            <div className="space-y-2 border-t border-white/10 bg-[#05070B]/40 px-3 py-3">
                               {strand.subStrands.map((sub) => {
                                 const isSubSelected = sub.id === selectedSubStrandId;
                                 return (
-                                  <div key={sub.id} className="border border-zinc-200 rounded-lg bg-white">
+                                  <div key={sub.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
                                     <button
                                       type="button"
-                                      className={`w-full flex items-start justify-between gap-2 px-2.5 py-1.5 text-left ${
-                                        isSubSelected ? "bg-zinc-900 text-white" : "bg-white text-zinc-900 hover:bg-zinc-50"
-                                      }`}
+                                      className={cx(
+                                        "w-full px-3 py-2 text-left transition",
+                                        isSubSelected
+                                          ? "bg-[linear-gradient(135deg,#1A1034,#231A4B)] text-[#F7F4ED]"
+                                          : "bg-transparent text-[#F7F4ED] hover:bg-white/[0.04]"
+                                      )}
                                       onClick={() => {
                                         setSelectedSubStrandId(sub.id);
                                         setSelectedIndicatorId(null);
                                       }}
                                     >
-                                      <div className="space-y-0.5">
-                                        <div className="text-[11px] font-medium">
-                                          {sub.code ? `${sub.code} · ` : ""}
-                                          {sub.title || "Sub-strand"}
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="space-y-0.5">
+                                          <div className="text-[11px] font-medium">
+                                            {sub.code ? `${sub.code} · ` : ""}
+                                            {sub.title || "Sub-strand"}
+                                          </div>
+                                          {sub.description && (
+                                            <div className="line-clamp-2 text-[10px] text-[#C9CDD6]">{sub.description}</div>
+                                          )}
                                         </div>
-                                        {sub.description && <div className="text-[10px] opacity-80 line-clamp-2">{sub.description}</div>}
+                                        <span className="text-[10px] text-[#AEB6C4]">
+                                          {sub.contentStandards.length} standard{sub.contentStandards.length === 1 ? "" : "s"}
+                                        </span>
                                       </div>
-                                      <span className="text-[10px] opacity-70">
-                                        {sub.contentStandards.length} standard{sub.contentStandards.length === 1 ? "" : "s"}
-                                      </span>
                                     </button>
 
                                     {isSubSelected && sub.contentStandards.length > 0 && (
-                                      <div className="border-t border-zinc-200 bg-zinc-50 px-2.5 py-1.5 space-y-1.5">
+                                      <div className="space-y-2 border-t border-white/10 bg-[#07111F]/55 px-3 py-2">
                                         {sub.contentStandards.map((cs) => (
-                                          <div key={cs.id} className="border border-zinc-200 rounded-md bg-white px-2 py-1.5 space-y-1">
-                                            <div className="text-[10px] font-semibold text-zinc-800">
+                                          <div key={cs.id} className="rounded-lg border border-white/10 bg-[#05070B]/50 px-2.5 py-2">
+                                            <div className="text-[10px] font-semibold text-[#E8C96A]">
                                               {cs.code ? `${cs.code} · ` : ""}
                                               {cs.description || "Content standard"}
                                             </div>
 
                                             {cs.indicators.length > 0 && (
-                                              <div className="space-y-0.5">
+                                              <div className="mt-2 space-y-1">
                                                 {cs.indicators.map((ind) => {
                                                   const isIndSelected = ind.id === selectedIndicatorId;
                                                   return (
                                                     <button
                                                       key={ind.id}
                                                       type="button"
-                                                      className={`w-full text-left text-[10px] px-2 py-1 rounded-md border ${
+                                                      className={cx(
+                                                        "w-full rounded-lg border px-2 py-1.5 text-left text-[10px] transition",
                                                         isIndSelected
-                                                          ? "bg-emerald-600 text-white border-emerald-700"
-                                                          : "bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100"
-                                                      }`}
+                                                          ? "border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] text-[#071A3D]"
+                                                          : "border-emerald-300/20 bg-emerald-400/12 text-emerald-100 hover:bg-emerald-400/18"
+                                                      )}
                                                       onClick={() => setSelectedIndicatorId(ind.id)}
                                                     >
                                                       <span className="font-semibold">{ind.code ? `${ind.code} · ` : ""}</span>
@@ -1038,16 +1087,15 @@ export default function TeacherCurriculumExplorerClient() {
             </div>
           </div>
 
-          {/* RIGHT */}
           <aside className="space-y-4">
             {schemeMode && (
-              <div className="border rounded-2xl bg-gradient-to-br from-emerald-50 via-white to-sky-50 border-emerald-100 p-4 md:p-5 space-y-3">
+              <div className={cx(cardShell, "p-4 md:p-5")}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h2 className="text-sm font-semibold text-zinc-900">Scheme Builder</h2>
-                    <p className="text-[11px] text-zinc-600">
-                      Build your Scheme of Work for <span className="font-semibold">{schemeTerm || "—"}</span>{" "}
-                      <span className="font-semibold">{schemeAcademicYear || ""}</span>. Add indicators week-by-week.
+                    <h2 className={sectionTitle}>Scheme Builder</h2>
+                    <p className="mt-1 text-[11px] text-[#C9CDD6]">
+                      Build your Scheme of Work for <span className="font-semibold text-[#F7F4ED]">{schemeTerm || "—"}</span>{" "}
+                      <span className="font-semibold text-[#F7F4ED]">{schemeAcademicYear || ""}</span>. Add indicators week-by-week.
                     </p>
                   </div>
 
@@ -1062,9 +1110,9 @@ export default function TeacherCurriculumExplorerClient() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] font-medium text-zinc-700 mb-1">Term</label>
+                    <label className={labelCls}>Term</label>
                     <select
                       className={selectBase}
                       value={schemeTerm}
@@ -1078,19 +1126,25 @@ export default function TeacherCurriculumExplorerClient() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-medium text-zinc-700 mb-1">Academic year</label>
-                    <input
-                      className={inputBase}
+                    <label className={labelCls}>Academic year</label>
+                    <select
+                      className={selectBase}
                       value={schemeAcademicYear}
                       onChange={(e) => setSchemeAcademicYear(normalizeAcademicYearClient(e.target.value))}
-                      placeholder="2025/2026"
-                    />
+                    >
+                      <option value="">— Select academic year —</option>
+                      {ACADEMIC_YEAR_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 items-end">
+                <div className="mt-3 grid grid-cols-3 items-end gap-2">
                   <div>
-                    <label className="block text-[11px] font-medium text-zinc-700 mb-1">Week</label>
+                    <label className={labelCls}>Week</label>
                     <input
                       type="number"
                       min={1}
@@ -1116,19 +1170,20 @@ export default function TeacherCurriculumExplorerClient() {
                   </div>
                 </div>
 
-                {schemesLoading && <p className="text-[11px] text-zinc-500">Loading schemes for this subject…</p>}
-                {schemesError && <p className="text-[11px] text-red-600">{schemesError}</p>}
+                {schemesLoading && <p className="mt-3 text-[11px] text-[#8F98A8]">Loading schemes for this subject…</p>}
+                {schemesError && <p className="mt-3 text-[11px] text-rose-200">{schemesError}</p>}
 
                 {!schemesLoading && !schemesError && curriculum && (
-                  <div className="text-[11px] text-zinc-600 border border-zinc-200 bg-white rounded-xl px-3 py-2">
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-[#07111F]/80 px-3 py-3 text-[11px] text-[#C9CDD6]">
                     <div className="flex items-center justify-between gap-2">
                       <span>
                         Subject schemes ({schemeTerm} {schemeAcademicYear}):{" "}
-                        <span className="font-semibold">{schemes.length}</span>
+                        <span className="font-semibold text-[#F7F4ED]">{schemes.length}</span>
                       </span>
+
                       {schemes.length > 0 && (
                         <select
-                          className="rounded-lg border border-zinc-300 bg-white px-2 py-1 text-[11px]"
+                          className="rounded-lg border border-white/10 bg-[#05070B] px-2 py-1 text-[11px] text-[#F7F4ED]"
                           value={selectedSchemeIdForAdd}
                           onChange={(e) => setSelectedSchemeIdForAdd(e.target.value)}
                         >
@@ -1145,45 +1200,34 @@ export default function TeacherCurriculumExplorerClient() {
                       <span>
                         Return status:{" "}
                         {schemeSummaryLoading ? (
-                          <span className="font-semibold">Checking…</span>
+                          <span className="font-semibold text-[#F7F4ED]">Checking…</span>
                         ) : canReturnToLessonNotes ? (
-                          <span className="font-semibold text-emerald-700">READY</span>
+                          <span className="font-semibold text-emerald-100">READY</span>
                         ) : (
-                          <span className="font-semibold text-amber-700">NOT READY</span>
+                          <span className="font-semibold text-amber-100">NOT READY</span>
                         )}
                       </span>
-                      {schemeSummaryError && <span className="text-red-600">{schemeSummaryError}</span>}
+                      {schemeSummaryError && <span className="text-rose-200">{schemeSummaryError}</span>}
                     </div>
                   </div>
                 )}
 
                 {schemeNotice && (
-                  <p
-                    className={[
-                      "text-[11px] rounded-xl px-3 py-1.5 border",
-                      schemeNotice.tone === "ok"
-                        ? "text-emerald-800 bg-emerald-50 border-emerald-200"
-                        : schemeNotice.tone === "info"
-                          ? "text-sky-800 bg-sky-50 border-sky-200"
-                          : "text-red-800 bg-red-50 border-red-200",
-                    ].join(" ")}
-                  >
+                  <p className={cx("mt-3 rounded-xl border px-3 py-1.5 text-[11px]", toneNoticeClass(schemeNotice.tone))}>
                     {schemeNotice.text}
                   </p>
                 )}
               </div>
             )}
 
-            <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
+            <div className={cx(cardShell, "p-4 md:p-5")}>
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-zinc-900">3 · Focus indicator &amp; details</h2>
+                <h2 className={sectionTitle}>3 · Focus indicator &amp; details</h2>
 
-                {/* ✅ IMPORTANT: Remove legacy non-scheme "Add to Scheme of Work" button.
-                    Only schemeMode is canonical + working. */}
                 {selectedIndicator && schemeMode && (
                   <button
                     type="button"
-                    className={btnPrimary + " text-[11px] h-8"}
+                    className={btnPrimary + " h-8 text-[11px]"}
                     onClick={handleAddSelectedIndicatorToScheme}
                     disabled={addToSchemeSaving || !schemeTerm || !schemeAcademicYear}
                   >
@@ -1193,23 +1237,23 @@ export default function TeacherCurriculumExplorerClient() {
               </div>
 
               {!selectedIndicator && (
-                <p className="text-xs text-zinc-500">
-                  Click any <span className="font-semibold">indicator</span> on the left to see details here.
+                <p className="mt-3 text-xs text-[#8F98A8]">
+                  Click any <span className="font-semibold text-[#F7F4ED]">indicator</span> on the left to see details here.
                 </p>
               )}
 
               {selectedIndicator && selectedSubStrand && (
-                <div className="space-y-3 text-xs text-zinc-700">
+                <div className="mt-4 space-y-3 text-xs text-[#C9CDD6]">
                   <div className="space-y-1.5">
-                    <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Indicator</div>
-                    <p className="text-[13px] font-semibold">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-[#E8C96A]">Indicator</div>
+                    <p className="text-[13px] font-semibold text-[#F7F4ED]">
                       {selectedIndicator.code && <span>{selectedIndicator.code} · </span>}
                       {selectedIndicator.description}
                     </p>
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Content standard</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-[#E8C96A]">Content standard</div>
                     <p>
                       {(() => {
                         if (!contentStandardForSelectedIndicator) return "Content standard not located for this indicator.";
@@ -1220,18 +1264,18 @@ export default function TeacherCurriculumExplorerClient() {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Strand &amp; Sub-strand</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-[#E8C96A]">Strand &amp; Sub-strand</div>
                     <p>
                       {selectedStrand && (
                         <span>
-                          <span className="font-semibold">
+                          <span className="font-semibold text-[#F7F4ED]">
                             {selectedStrand.code ? `${selectedStrand.code} · ` : ""}
                             {selectedStrand.title}
                           </span>
                           {" · "}
                         </span>
                       )}
-                      <span className="font-semibold">
+                      <span className="font-semibold text-[#F7F4ED]">
                         {selectedSubStrand.code ? `${selectedSubStrand.code} · ` : ""}
                         {selectedSubStrand.title}
                       </span>
@@ -1239,20 +1283,25 @@ export default function TeacherCurriculumExplorerClient() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Exemplars (from curriculum)</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-[#E8C96A]">Exemplars (from curriculum)</div>
 
                     {selectedIndicator.exemplars.length === 0 && (
-                      <p className="text-[11px] text-zinc-500">No exemplars were attached to this indicator in the seed data yet.</p>
+                      <p className="text-[11px] text-[#8F98A8]">
+                        No exemplars were attached to this indicator in the seed data yet.
+                      </p>
                     )}
 
                     {selectedIndicator.exemplars.length > 0 && (
                       <ul className="space-y-1.5">
                         {selectedIndicator.exemplars.map((ex) => (
-                          <li key={ex.id} className="border border-zinc-200 rounded-lg px-2.5 py-1.5 bg-zinc-50">
-                            {ex.title && <p className="font-semibold mb-0.5">{ex.title}</p>}
-                            {ex.description && <p className="text-[11px]">{ex.description}</p>}
+                          <li
+                            key={ex.id}
+                            className="rounded-xl border border-white/10 bg-[#07111F]/80 px-3 py-2"
+                          >
+                            {ex.title && <p className="mb-0.5 font-semibold text-[#F7F4ED]">{ex.title}</p>}
+                            {ex.description && <p className="text-[11px] text-[#C9CDD6]">{ex.description}</p>}
                             {ex.assessmentNotes && (
-                              <p className="text-[10px] text-zinc-500 mt-0.5">Assessment notes: {ex.assessmentNotes}</p>
+                              <p className="mt-0.5 text-[10px] text-[#8F98A8]">Assessment notes: {ex.assessmentNotes}</p>
                             )}
                           </li>
                         ))}
@@ -1260,45 +1309,56 @@ export default function TeacherCurriculumExplorerClient() {
                     )}
                   </div>
 
-                  <div className="mt-2 border-t border-dashed border-zinc-200 pt-2 text-[11px] text-zinc-600">
-                    Use <span className="font-semibold">Scheme Builder</span> to attach this indicator to a week.
+                  <div className="border-t border-dashed border-white/10 pt-2 text-[11px] text-[#AEB6C4]">
+                    Use <span className="font-semibold text-[#F7F4ED]">Scheme Builder</span> to attach this indicator to a week.
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-2 text-xs text-zinc-600">
-              <h3 className="text-xs font-semibold text-zinc-800">Curriculum Trust &amp; Source</h3>
+            <div className={cx(cardShell, "p-4 md:p-5 text-xs text-[#C9CDD6]")}>
+              <h3 className="text-xs font-semibold text-[#F7F4ED]">Curriculum Trust &amp; Source</h3>
 
-              {!curriculum && <p className="text-[11px] text-zinc-500">Select a subject to see framework and source information.</p>}
+              {!curriculum && (
+                <p className="mt-2 text-[11px] text-[#8F98A8]">
+                  Select a subject to see framework and source information.
+                </p>
+              )}
 
               {curriculum && (
-                <>
+                <div className="mt-2 space-y-2">
                   <p className="text-[11px]">
-                    Framework: <span className="font-semibold">{curriculum.curriculumFramework ?? "NaCCA Curriculum (default)"}</span>
+                    Framework:{" "}
+                    <span className="font-semibold text-[#F7F4ED]">
+                      {curriculum.curriculumFramework ?? "NaCCA Curriculum (default)"}
+                    </span>
                     {curriculum.frameworkVersion && <> · Version {curriculum.frameworkVersion}</>}
                   </p>
 
                   <p className="text-[11px]">
-                    Country: <span className="font-semibold">{curriculum.countryCode ?? "GH"}</span> · Subject:{" "}
-                    <span className="font-semibold">{curriculum.name}</span> · Phase/Level:{" "}
-                    <span className="font-semibold">
+                    Country: <span className="font-semibold text-[#F7F4ED]">{curriculum.countryCode ?? "GH"}</span> · Subject:{" "}
+                    <span className="font-semibold text-[#F7F4ED]">{curriculum.name}</span> · Phase/Level:{" "}
+                    <span className="font-semibold text-[#F7F4ED]">
                       {curriculum.phase ?? "—"} / {curriculum.level ?? "—"}
                     </span>
                   </p>
 
                   <p className="text-[11px]">
-                    Source document: <span className="font-semibold">{curriculum.sourceDocumentTitle ?? "Official NaCCA PDF"}</span>
+                    Source document:{" "}
+                    <span className="font-semibold text-[#F7F4ED]">
+                      {curriculum.sourceDocumentTitle ?? "Official NaCCA PDF"}
+                    </span>
                     {curriculum.sourceDocumentYear && <> ({curriculum.sourceDocumentYear})</>}
                   </p>
 
                   {selectedIndicator && (
                     <p className="text-[11px]">
-                      Current focus: <span className="font-semibold">Indicator {selectedIndicator.code ?? "—"}</span>
+                      Current focus:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">Indicator {selectedIndicator.code ?? "—"}</span>
                       {pageRangeForSelectedIndicator ? (
                         <>
                           {" "}· Pages in PDF:{" "}
-                          <span className="font-semibold">
+                          <span className="font-semibold text-[#F7F4ED]">
                             {pageRangeForSelectedIndicator.from === pageRangeForSelectedIndicator.to
                               ? `p. ${pageRangeForSelectedIndicator.from}`
                               : `pp. ${pageRangeForSelectedIndicator.from}–${pageRangeForSelectedIndicator.to}`}
@@ -1311,23 +1371,26 @@ export default function TeacherCurriculumExplorerClient() {
                   )}
 
                   {curriculum.lastVerifiedAt && (
-                    <p className="text-[10px] text-zinc-500">Last verified: {new Date(curriculum.lastVerifiedAt).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-[#8F98A8]">
+                      Last verified: {new Date(curriculum.lastVerifiedAt).toLocaleDateString()}
+                    </p>
                   )}
-                </>
+                </div>
               )}
             </div>
 
-            <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-2 text-xs text-zinc-600">
-              <h3 className="text-xs font-semibold text-zinc-800">How this connects to Lesson Notes</h3>
-              <p>
-                This page is <span className="font-semibold">read-only</span> for curriculum editing, but active for schemes + lesson notes.
+            <div className={cx(cardShell, "p-4 md:p-5 text-xs text-[#C9CDD6]")}>
+              <h3 className="text-xs font-semibold text-[#F7F4ED]">How this connects to Lesson Notes</h3>
+              <p className="mt-2">
+                This page is <span className="font-semibold text-[#F7F4ED]">read-only</span> for curriculum editing, but active for
+                schemes + lesson notes.
               </p>
-              <ul className="list-disc list-inside space-y-0.5">
+              <ul className="mt-2 list-inside list-disc space-y-0.5 text-[#C9CDD6]">
                 <li>
-                  Attaching indicators to weekly <span className="font-semibold">Schemes of Work</span>.
+                  Attaching indicators to weekly <span className="font-semibold text-[#F7F4ED]">Schemes of Work</span>.
                 </li>
                 <li>
-                  Generating NaCCA-aligned <span className="font-semibold">Lesson Notes</span>.
+                  Generating NaCCA-aligned <span className="font-semibold text-[#F7F4ED]">Lesson Notes</span>.
                 </li>
               </ul>
             </div>

@@ -12,6 +12,14 @@ export const runtime = "nodejs";
 // Effective roles (ADMIN already maps to SCHOOL_ADMIN in serverAuth)
 const ALLOWED_TEACHER_ROLES = new Set(["TEACHER", "HEADTEACHER", "SCHOOL_ADMIN"]);
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function navLinkClass() {
+  return "rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-[#C9CDD6] transition hover:bg-white/10 hover:text-[#F7F4ED]";
+}
+
 export default async function TeacherLayout({ children }: { children: ReactNode }) {
   const ctx = await getServerUserContextOrNull({ requireTenant: true });
 
@@ -30,36 +38,43 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
   if (!tenant || tenant.status !== "ACTIVE") redirect("/pending");
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">EduLife OS · Teacher</p>
-            <p className="text-sm font-semibold text-zinc-900 truncate">
-              {tenant.name} <span className="text-zinc-400">({tenant.schoolCode})</span>
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#05070B] text-[#F7F4ED]">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(5,7,11,0.88)] backdrop-blur-xl">
+        <div className="relative mx-auto max-w-6xl overflow-hidden px-4 py-4">
+          <div className="pointer-events-none absolute -left-12 top-0 h-28 w-28 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+          <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-[#D4AF37]/14 blur-3xl" />
 
-          <div className="flex items-center gap-3">
-            <nav className="flex items-center gap-3 text-sm">
-              <Link className="hover:underline" href="/teacher/dashboard">
-                Dashboard
-              </Link>
-              <Link className="hover:underline" href="/teacher/attendance">
-                Attendance
-              </Link>
-              <Link className="hover:underline" href="/teacher/health">
-                Health
-              </Link>
+          <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
+                EduLife OS · Teacher
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold text-[#F7F4ED]">
+                {tenant.name} <span className="text-[#8F98A8]">({tenant.schoolCode})</span>
+              </p>
+            </div>
 
-              {role === "SCHOOL_ADMIN" || role === "HEADTEACHER" ? (
-                <Link className="hover:underline text-zinc-600" href="/admin/dashboard">
-                  Admin
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+              <nav className="flex flex-wrap items-center gap-2">
+                <Link className={navLinkClass()} href="/teacher/dashboard">
+                  Dashboard
                 </Link>
-              ) : null}
-            </nav>
+                <Link className={navLinkClass()} href="/teacher/attendance">
+                  Attendance
+                </Link>
+                <Link className={navLinkClass()} href="/teacher/health">
+                  Health
+                </Link>
 
-            <LogoutButton className="rounded-xl border px-3 py-2 text-sm hover:bg-zinc-50" />
+                {role === "SCHOOL_ADMIN" || role === "HEADTEACHER" ? (
+                  <Link className={navLinkClass()} href="/admin/dashboard">
+                    Admin
+                  </Link>
+                ) : null}
+              </nav>
+
+              <LogoutButton className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10" />
+            </div>
           </div>
         </div>
       </header>

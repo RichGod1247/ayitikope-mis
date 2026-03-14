@@ -221,6 +221,23 @@ const ASSESSMENT_TYPES: { value: string; label: string }[] = [
   { value: "OTHER", label: "Other" },
 ];
 
+const shellCard =
+  "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+const panelCard = "rounded-2xl border border-white/10 bg-[#08111C]/85";
+const softPanel = "rounded-2xl border border-white/10 bg-white/[0.04]";
+const darkInput =
+  "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[12px] text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:bg-white/[0.05] disabled:text-[#8F98A8]";
+const darkTextarea =
+  "w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[12px] text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:bg-white/[0.05] disabled:text-[#8F98A8]";
+const darkButton =
+  "inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-semibold text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50";
+const goldButton =
+  "inline-flex items-center rounded-xl border border-transparent bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-[12px] font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
+const emeraldButton =
+  "inline-flex items-center rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2 text-[12px] font-semibold text-emerald-100 transition hover:bg-emerald-400/18 disabled:cursor-not-allowed disabled:opacity-50";
+const indigoButton =
+  "inline-flex items-center rounded-xl border border-indigo-300/20 bg-indigo-400/12 px-4 py-2 text-[12px] font-semibold text-indigo-100 transition hover:bg-indigo-400/18 disabled:cursor-not-allowed disabled:opacity-50";
+
 function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
@@ -452,20 +469,20 @@ function itemStateChip(item: AssessmentItem) {
   if (status === "LOCKED" || item.lockedAt) {
     return {
       label: "Locked",
-      className: "border-rose-200 bg-rose-50 text-rose-700",
+      className: "border-rose-300/20 bg-rose-400/12 text-rose-100",
     };
   }
 
   if (status === "PUBLISHED" || item.publishedAt) {
     return {
       label: "Published",
-      className: "border-amber-200 bg-amber-50 text-amber-700",
+      className: "border-amber-300/20 bg-amber-400/12 text-amber-100",
     };
   }
 
   return {
     label: "Draft",
-    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    className: "border-emerald-300/20 bg-emerald-400/12 text-emerald-100",
   };
 }
 
@@ -519,12 +536,12 @@ function TabButton(props: {
       className={[
         "flex-1 rounded-xl border px-3 py-2 text-left text-[12px] transition",
         props.active
-          ? "border-indigo-300 bg-indigo-50 text-indigo-900"
-          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+          ? "border-[#E8C96A]/35 bg-[linear-gradient(135deg,rgba(212,175,55,0.10),rgba(27,102,209,0.08))] text-[#F7F4ED]"
+          : "border-white/10 bg-white/[0.04] text-[#C9CDD6] hover:bg-white/[0.08]",
       ].join(" ")}
     >
       <div className="font-semibold">{props.label}</div>
-      {props.hint ? <div className="text-[10px] text-slate-500">{props.hint}</div> : null}
+      {props.hint ? <div className="text-[10px] text-[#8F98A8]">{props.hint}</div> : null}
     </button>
   );
 }
@@ -536,12 +553,12 @@ function SectionCard(props: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white">
-      <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
+    <div className={shellCard}>
+      <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
         <div>
-          <div className="text-sm font-semibold text-slate-900">{props.title}</div>
+          <div className="text-sm font-semibold text-[#F7F4ED]">{props.title}</div>
           {props.subtitle ? (
-            <div className="mt-0.5 text-[11px] text-slate-600">{props.subtitle}</div>
+            <div className="mt-0.5 text-[11px] text-[#AEB6C4]">{props.subtitle}</div>
           ) : null}
         </div>
         {props.right ? <div className="shrink-0">{props.right}</div> : null}
@@ -552,7 +569,6 @@ function SectionCard(props: {
 }
 
 export default function TeacherAssessmentClient() {
-  // ---------- Context bootstrap ----------
   const [ctxLoading, setCtxLoading] = useState(true);
   const [ctxError, setCtxError] = useState<string | null>(null);
 
@@ -564,7 +580,6 @@ export default function TeacherAssessmentClient() {
   const [term, setTerm] = useState<string>("1st Term");
   const [academicYear, setAcademicYear] = useState<string>("2025/2026");
 
-  // ---------- Overview ----------
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
@@ -573,18 +588,15 @@ export default function TeacherAssessmentClient() {
   const [items, setItems] = useState<AssessmentItem[]>([]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  // ---------- Subject options ----------
   const [subjectOptions, setSubjectOptions] = useState<string[]>([]);
   const [subjectOptionsLoading, setSubjectOptionsLoading] = useState(false);
   const [subjectOptionsError, setSubjectOptionsError] = useState<string | null>(null);
 
-  // ---------- Lesson deliveries ----------
   const [lessonDeliveries, setLessonDeliveries] = useState<LessonDeliveryItem[]>([]);
   const [lessonDeliveriesLoading, setLessonDeliveriesLoading] = useState(false);
   const [lessonDeliveriesError, setLessonDeliveriesError] = useState<string | null>(null);
   const [lessonDeliveryId, setLessonDeliveryId] = useState<string>("");
 
-  // ---------- Item form ----------
   const [subject, setSubject] = useState("");
   const [type, setType] = useState("CLASS_TEST");
   const [title, setTitle] = useState("");
@@ -593,25 +605,21 @@ export default function TeacherAssessmentClient() {
   const [weighting, setWeighting] = useState<string>("10");
   const [date, setDate] = useState<string>("");
 
-  // ---------- Scores ----------
   const [scoreDraft, setScoreDraft] = useState<Record<string, { score: string; comment: string }>>({});
 
   const [savingItemState, setSavingItemState] = useState<SaveState>("idle");
   const [savingScoresState, setSavingScoresState] = useState<SaveState>("idle");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // ---------- Summary ----------
   const [classAverage, setClassAverage] = useState<ClassAverageOk | null>(null);
   const [remarkSummary, setRemarkSummary] = useState<RemarkSummaryOk | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  // ---------- Pipeline analytics ----------
   const [pipeline, setPipeline] = useState<PipelineAnalyticsOk | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
 
-  // ---------- UI-only ----------
   const [tab, setTab] = useState<MobileTab>("scores");
   const [itemFormOpen, setItemFormOpen] = useState<boolean>(true);
   const [learnerQuery, setLearnerQuery] = useState<string>("");
@@ -713,7 +721,6 @@ export default function TeacherAssessmentClient() {
     }
   }
 
-  // 1) Context bootstrap (session-scoped)
   useEffect(() => {
     const boot = async () => {
       try {
@@ -760,7 +767,6 @@ export default function TeacherAssessmentClient() {
     boot();
   }, []);
 
-  // Keep selected class valid when switching between single-stream and multi-stream display
   useEffect(() => {
     if (visibleClassrooms.length === 0) {
       if (classroomId) setClassroomId("");
@@ -783,7 +789,6 @@ export default function TeacherAssessmentClient() {
     setClassroomId(visibleClassrooms[0].id);
   }, [visibleClassrooms, classrooms, classroomId]);
 
-  // 2) Load overview whenever class/term/year changes
   useEffect(() => {
     const load = async () => {
       if (!classroomId) {
@@ -842,7 +847,6 @@ export default function TeacherAssessmentClient() {
     load();
   }, [classroomId, term, academicYear]);
 
-  // 2a) Load subject options whenever classroom changes
   useEffect(() => {
     const loadSubjects = async () => {
       if (!classroomId) {
@@ -885,7 +889,6 @@ export default function TeacherAssessmentClient() {
     loadSubjects();
   }, [classroomId]);
 
-  // 2b) Load lesson deliveries whenever class/term/year changes
   useEffect(() => {
     const loadLessonDeliveries = async () => {
       if (!classroomId) {
@@ -920,7 +923,6 @@ export default function TeacherAssessmentClient() {
     loadLessonDeliveries();
   }, [classroomId, term, academicYear]);
 
-  // 3) Load summary insights
   useEffect(() => {
     const loadSummary = async () => {
       if (!classroomId) return;
@@ -972,7 +974,6 @@ export default function TeacherAssessmentClient() {
     loadSummary();
   }, [classroomId, term, academicYear]);
 
-  // 4) Load pipeline analytics
   useEffect(() => {
     const loadPipeline = async () => {
       if (!classroomId) {
@@ -1007,7 +1008,6 @@ export default function TeacherAssessmentClient() {
     loadPipeline();
   }, [classroomId, term, academicYear]);
 
-  // Sync form with selected item
   useEffect(() => {
     if (!selectedItem) {
       setSubject(subjectOptions[0] || "");
@@ -1034,7 +1034,7 @@ export default function TeacherAssessmentClient() {
   async function handleSelectItem(itemId: string) {
     setActionError(null);
     setSelectedItemId(itemId);
-    setItemFormOpen(false); // on mobile: focus scores next
+    setItemFormOpen(false);
     await loadScoresForItem(itemId, students);
     setTab("scores");
   }
@@ -1173,7 +1173,6 @@ export default function TeacherAssessmentClient() {
       setSavingItemState("saved");
       setTimeout(() => setSavingItemState("idle"), 900);
 
-      // after saving item, push teacher to Scores
       setTab("scores");
       setItemFormOpen(false);
     } catch {
@@ -1241,29 +1240,28 @@ export default function TeacherAssessmentClient() {
     return students.filter((s) => cleanStr(s.name).toLowerCase().includes(q));
   }, [students, learnerQuery]);
 
-  // ---------- Render ----------
   if (ctxLoading) {
-    return <div className="p-6 text-sm text-slate-600">Loading assessment context…</div>;
+    return <div className="p-6 text-sm text-[#C9CDD6]">Loading assessment context…</div>;
   }
 
   if (ctxError) {
     return (
-      <div className="p-6 text-sm text-red-600">
+      <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 p-6 text-sm text-rose-100">
         {ctxError}
-        <div className="mt-2 text-xs text-slate-600">
-          If this says <span className="font-semibold">NO_PRIMARY_CLASSROOM</span>, assign the teacher a primary class.
+        <div className="mt-2 text-xs text-[#C9CDD6]">
+          If this says <span className="font-semibold text-[#F7F4ED]">NO_PRIMARY_CLASSROOM</span>, assign the teacher a primary class.
         </div>
       </div>
     );
   }
 
   if (loading) {
-    return <div className="p-6 text-sm text-slate-600">Loading assessment overview…</div>;
+    return <div className="p-6 text-sm text-[#C9CDD6]">Loading assessment overview…</div>;
   }
 
   if (loadingError) {
     return (
-      <div className="p-6 text-sm text-red-600">
+      <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 p-6 text-sm text-rose-100">
         {loadingError} Please refresh the page or contact the office.
       </div>
     );
@@ -1272,64 +1270,56 @@ export default function TeacherAssessmentClient() {
   const selectedChip = selectedItem ? itemStateChip(selectedItem) : null;
 
   return (
-    <div className="space-y-4 p-4 sm:p-6 pb-24 md:pb-6">
-      {/* Top context strip */}
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+    <div className="space-y-4 pb-24 md:pb-6">
+      <div className={shellCard + " px-4 py-4"}>
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
               Teacher • Assessment Entry
             </div>
-            <div className="text-lg font-semibold text-slate-900">
+            <div className="text-lg font-semibold text-[#F7F4ED]">
               {classroom?.name || "Classroom"}
             </div>
-            <div className="text-[12px] text-slate-600">
-              Term: <span className="font-semibold">{term}</span> • Academic Year:{" "}
-              <span className="font-semibold">{academicYear}</span>
+            <div className="text-[12px] text-[#C9CDD6]">
+              Term: <span className="font-semibold text-[#F7F4ED]">{term}</span> • Academic Year:{" "}
+              <span className="font-semibold text-[#F7F4ED]">{academicYear}</span>
             </div>
 
             <div className="mt-2 flex flex-wrap gap-2">
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700">
-                Learners: <span className="font-semibold">{students.length}</span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
+                Learners: <span className="font-semibold text-[#F7F4ED]">{students.length}</span>
               </span>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700">
-                Items: <span className="font-semibold">{items.length}</span>
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
+                Items: <span className="font-semibold text-[#F7F4ED]">{items.length}</span>
               </span>
               {selectedItem ? (
                 <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${selectedChip?.className ?? ""}`}>
                   Selected: {selectedChip?.label}
                 </span>
               ) : (
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700">
-                  Selected: <span className="font-semibold">None</span>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
+                  Selected: <span className="font-semibold text-[#F7F4ED]">None</span>
                 </span>
               )}
             </div>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Link
-              href={lessonDeliveriesPageHref}
-              className="inline-flex items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-[12px] font-semibold text-emerald-800 hover:bg-emerald-100"
-            >
+            <Link href={lessonDeliveriesPageHref} className={emeraldButton}>
               Record lesson delivery
             </Link>
 
-            <Link
-              href={termDashboardHref}
-              className="inline-flex items-center justify-center rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-2 text-[12px] font-semibold text-indigo-800 hover:bg-indigo-100"
-            >
+            <Link href={termDashboardHref} className={indigoButton}>
               View term dashboard
             </Link>
           </div>
         </div>
 
-        {/* Controls */}
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-slate-700">Class</label>
+            <label className="block text-[11px] font-medium text-[#C9CDD6]">Class</label>
             <select
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px]"
+              className={darkInput}
               value={classroomId}
               onChange={(e) => setClassroomId(e.target.value)}
             >
@@ -1345,7 +1335,7 @@ export default function TeacherAssessmentClient() {
             </select>
 
             {canToggleMultiStream ? (
-              <label className="mt-1 inline-flex items-center gap-2 text-[11px] text-slate-600">
+              <label className="mt-1 inline-flex items-center gap-2 text-[11px] text-[#C9CDD6]">
                 <input
                   type="checkbox"
                   checked={showMultiStream}
@@ -1356,23 +1346,23 @@ export default function TeacherAssessmentClient() {
             ) : null}
 
             {canToggleMultiStream && !showMultiStream ? (
-              <p className="text-[10px] text-slate-500">{streamModeHelp}</p>
+              <p className="text-[10px] text-[#8F98A8]">{streamModeHelp}</p>
             ) : null}
           </div>
 
           <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-slate-700">Term</label>
+            <label className="block text-[11px] font-medium text-[#C9CDD6]">Term</label>
             <input
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px]"
+              className={darkInput}
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />
           </div>
 
           <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-slate-700">Academic year</label>
+            <label className="block text-[11px] font-medium text-[#C9CDD6]">Academic year</label>
             <input
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px]"
+              className={darkInput}
               value={academicYear}
               onChange={(e) => setAcademicYear(e.target.value)}
             />
@@ -1380,20 +1370,18 @@ export default function TeacherAssessmentClient() {
         </div>
       </div>
 
-      {/* Alerts */}
       {actionError ? (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-[12px] text-amber-900">
+        <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-[12px] text-amber-100">
           {actionError}
         </div>
       ) : null}
 
       {selectedItemReadOnlyReason ? (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-[12px] text-amber-900">
+        <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-[12px] text-amber-100">
           {selectedItemReadOnlyReason}
         </div>
       ) : null}
 
-      {/* Mobile tabs */}
       <div className="md:hidden">
         <div className="grid grid-cols-4 gap-2">
           <TabButton
@@ -1423,31 +1411,29 @@ export default function TeacherAssessmentClient() {
         </div>
       </div>
 
-      {/* Desktop layout: two columns; Mobile: tabbed */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        {/* LEFT column (desktop) / tab content */}
         <div className={["space-y-4", "md:block", tab === "pipeline" ? "hidden md:block" : ""].join(" ")}>
-          {/* Insights */}
           <div className={tab !== "insights" ? "hidden md:block" : ""}>
             <SectionCard
               title="Insights"
               subtitle="Quick signals to help you teach better, not to punish you."
               right={
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-700">
-                  Class: <span className="font-semibold">{classroom?.name || "—"}</span>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
+                  Class: <span className="font-semibold text-[#F7F4ED]">{classroom?.name || "—"}</span>
                 </span>
               }
             >
-              <AssessmentInsightsPanel
-                classroomId={classroomId}
-                term={term}
-                academicYear={academicYear}
-                students={students.map((s) => ({ id: s.id, name: s.name }))}
-              />
+              <div className={panelCard + " p-3"}>
+                <AssessmentInsightsPanel
+                  classroomId={classroomId}
+                  term={term}
+                  academicYear={academicYear}
+                  students={students.map((s) => ({ id: s.id, name: s.name }))}
+                />
+              </div>
             </SectionCard>
           </div>
 
-          {/* Items + form */}
           <div className={tab !== "items" ? "hidden md:block" : ""}>
             <SectionCard
               title="Assessment items"
@@ -1457,7 +1443,7 @@ export default function TeacherAssessmentClient() {
                   <button
                     type="button"
                     onClick={handleNewItem}
-                    className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
+                    className={darkButton}
                   >
                     + New item
                   </button>
@@ -1466,24 +1452,23 @@ export default function TeacherAssessmentClient() {
                     type="button"
                     onClick={handleDeleteSelectedItem}
                     disabled={!selectedItem || !!selectedItemReadOnlyReason}
-                    className="inline-flex items-center rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[12px] font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[12px] font-semibold text-rose-100 transition hover:bg-rose-400/18 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Delete
                   </button>
                 </div>
               }
             >
-              {/* Items list */}
               <div className="space-y-2">
                 {items.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-[12px] text-slate-700">
+                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-4 text-[12px] text-[#C9CDD6]">
                     No assessment items yet for this class/term/year.
-                    <div className="mt-1 text-[11px] text-slate-600">
-                      Tap <span className="font-semibold">New item</span> to create one.
+                    <div className="mt-1 text-[11px] text-[#8F98A8]">
+                      Tap <span className="font-semibold text-[#F7F4ED]">New item</span> to create one.
                     </div>
                   </div>
                 ) : (
-                  <div className="max-h-[320px] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  <div className={panelCard + " max-h-[320px] overflow-auto p-2"}>
                     <ul className="space-y-2">
                       {items.map((item) => {
                         const chip = itemStateChip(item);
@@ -1497,33 +1482,33 @@ export default function TeacherAssessmentClient() {
                               className={[
                                 "w-full rounded-xl border px-3 py-3 text-left transition",
                                 selected
-                                  ? "border-indigo-400 bg-indigo-50"
-                                  : "border-slate-200 bg-white hover:border-indigo-200 hover:bg-indigo-50/30",
+                                  ? "border-[#E8C96A]/35 bg-[linear-gradient(135deg,rgba(212,175,55,0.10),rgba(27,102,209,0.08))]"
+                                  : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
                               ].join(" ")}
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <div className="truncate text-sm font-semibold text-slate-900">
+                                    <div className="truncate text-sm font-semibold text-[#F7F4ED]">
                                       {item.title}
                                     </div>
                                     <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${chip.className}`}>
                                       {chip.label}
                                     </span>
                                     {item.lessonDeliveryId ? (
-                                      <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                                      <span className="inline-flex rounded-full border border-indigo-300/20 bg-indigo-400/12 px-2 py-0.5 text-[10px] font-semibold text-indigo-100">
                                         Linked lesson
                                       </span>
                                     ) : null}
                                   </div>
-                                  <div className="mt-1 text-[11px] text-slate-600">
+                                  <div className="mt-1 text-[11px] text-[#C9CDD6]">
                                     {item.subject} • {item.type} • Max: {item.maxScore}
                                     {item.weighting != null ? ` • Weight: ${item.weighting}%` : ""}
                                   </div>
                                 </div>
 
                                 {item.date ? (
-                                  <div className="shrink-0 text-[11px] text-slate-500">
+                                  <div className="shrink-0 text-[11px] text-[#8F98A8]">
                                     {formatDateForInput(item.date)}
                                   </div>
                                 ) : null}
@@ -1536,42 +1521,41 @@ export default function TeacherAssessmentClient() {
                   </div>
                 )}
 
-                {/* Item form toggle (mobile friendly) */}
                 <div className="flex items-center justify-between">
                   <button
                     type="button"
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12px] font-semibold text-slate-800 hover:bg-slate-50"
+                    className={darkButton}
                     onClick={() => setItemFormOpen((v) => !v)}
                   >
                     {itemFormOpen ? "Hide item form" : selectedItem ? "Edit selected item" : "Show item form"}
                   </button>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[11px] text-[#8F98A8]">
                     {selectedItem ? "Update details & link lesson" : "Create item"}
                   </div>
                 </div>
 
                 {itemFormOpen ? (
-                  <form onSubmit={handleSaveItem} className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <form onSubmit={handleSaveItem} className={panelCard + " p-4"}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <div className="text-sm font-semibold text-slate-900">
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
                           {selectedItem ? "Update assessment item" : "Create new assessment item"}
                         </div>
-                        <div className="text-[11px] text-slate-600">
-                          Fill the details, then save. After that, go to <span className="font-semibold">Scores</span>.
+                        <div className="text-[11px] text-[#AEB6C4]">
+                          Fill the details, then save. After that, go to <span className="font-semibold text-[#F7F4ED]">Scores</span>.
                         </div>
                       </div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] text-[#8F98A8]">
                         {selectedItem ? `ID: ${selectedItem.id.slice(0, 8)}…` : ""}
                       </div>
                     </div>
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1">
-                        <label className="block text-[11px] font-medium text-slate-700">Subject</label>
+                        <label className="block text-[11px] font-medium text-[#C9CDD6]">Subject</label>
                         <select
                           disabled={!!selectedItemReadOnlyReason || subjectOptionsLoading || subjectOptions.length === 0}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] disabled:bg-slate-100"
+                          className={darkInput}
                           value={subject}
                           onChange={(e) => setSubject(e.target.value)}
                         >
@@ -1586,20 +1570,20 @@ export default function TeacherAssessmentClient() {
                           )}
                         </select>
 
-                        {subjectOptionsLoading ? <p className="text-[10px] text-slate-500">Loading allowed subjects…</p> : null}
-                        {!subjectOptionsLoading && subjectOptionsError ? <p className="text-[10px] text-amber-700">{subjectOptionsError}</p> : null}
+                        {subjectOptionsLoading ? <p className="text-[10px] text-[#8F98A8]">Loading allowed subjects…</p> : null}
+                        {!subjectOptionsLoading && subjectOptionsError ? <p className="text-[10px] text-amber-100">{subjectOptionsError}</p> : null}
                         {!subjectOptionsLoading && !subjectOptionsError ? (
-                          <p className="text-[10px] text-slate-500">
+                          <p className="text-[10px] text-[#8F98A8]">
                             You can only create assessments for subjects you are allowed to teach.
                           </p>
                         ) : null}
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block text-[11px] font-medium text-slate-700">Type</label>
+                        <label className="block text-[11px] font-medium text-[#C9CDD6]">Type</label>
                         <select
                           disabled={!!selectedItemReadOnlyReason}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] disabled:bg-slate-100"
+                          className={darkInput}
                           value={type}
                           onChange={(e) => setType(e.target.value)}
                         >
@@ -1612,10 +1596,10 @@ export default function TeacherAssessmentClient() {
                       </div>
 
                       <div className="space-y-1 sm:col-span-2">
-                        <label className="block text-[11px] font-medium text-slate-700">Title</label>
+                        <label className="block text-[11px] font-medium text-[#C9CDD6]">Title</label>
                         <input
                           disabled={!!selectedItemReadOnlyReason}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] disabled:bg-slate-100"
+                          className={darkInput}
                           value={title}
                           onChange={(e) => setTitle(e.target.value)}
                           required
@@ -1623,10 +1607,10 @@ export default function TeacherAssessmentClient() {
                       </div>
 
                       <div className="space-y-1 sm:col-span-2">
-                        <label className="block text-[11px] font-medium text-slate-700">Short description (optional)</label>
+                        <label className="block text-[11px] font-medium text-[#C9CDD6]">Short description (optional)</label>
                         <textarea
                           disabled={!!selectedItemReadOnlyReason}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] disabled:bg-slate-100"
+                          className={darkTextarea}
                           rows={2}
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
@@ -1634,45 +1618,45 @@ export default function TeacherAssessmentClient() {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block text-[11px] font-medium text-slate-700">Max score</label>
+                        <label className="block text-[11px] font-medium text-[#C9CDD6]">Max score</label>
                         <input
                           type="number"
                           min={0}
                           disabled={!!selectedItemReadOnlyReason}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] disabled:bg-slate-100"
+                          className={darkInput}
                           value={maxScore}
                           onChange={(e) => setMaxScore(e.target.value)}
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block text-[11px] font-medium text-slate-700">Weight (%) (optional)</label>
+                        <label className="block text-[11px] font-medium text-[#C9CDD6]">Weight (%) (optional)</label>
                         <input
                           type="number"
                           min={0}
                           disabled={!!selectedItemReadOnlyReason}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] disabled:bg-slate-100"
+                          className={darkInput}
                           value={weighting}
                           onChange={(e) => setWeighting(e.target.value)}
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block text-[11px] font-medium text-slate-700">Date (optional)</label>
+                        <label className="block text-[11px] font-medium text-[#C9CDD6]">Date (optional)</label>
                         <input
                           type="date"
                           disabled={!!selectedItemReadOnlyReason}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] disabled:bg-slate-100"
+                          className={darkInput}
                           value={date}
                           onChange={(e) => setDate(e.target.value)}
                         />
                       </div>
 
                       <div className="space-y-1 sm:col-span-2">
-                        <label className="block text-[11px] font-medium text-slate-700">Link lesson delivered (optional)</label>
+                        <label className="block text-[11px] font-medium text-[#C9CDD6]">Link lesson delivered (optional)</label>
                         <select
                           disabled={!!selectedItemReadOnlyReason || lessonDeliveriesLoading}
-                          className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] disabled:bg-slate-100"
+                          className={darkInput}
                           value={lessonDeliveryId}
                           onChange={(e) => setLessonDeliveryId(e.target.value)}
                         >
@@ -1684,13 +1668,13 @@ export default function TeacherAssessmentClient() {
                           ))}
                         </select>
 
-                        {lessonDeliveriesLoading ? <p className="text-[10px] text-slate-500">Loading lesson deliveries…</p> : null}
-                        {!lessonDeliveriesLoading && lessonDeliveriesError ? <p className="text-[10px] text-amber-700">{lessonDeliveriesError}</p> : null}
+                        {lessonDeliveriesLoading ? <p className="text-[10px] text-[#8F98A8]">Loading lesson deliveries…</p> : null}
+                        {!lessonDeliveriesLoading && lessonDeliveriesError ? <p className="text-[10px] text-amber-100">{lessonDeliveriesError}</p> : null}
 
                         {!lessonDeliveriesLoading && !lessonDeliveriesError && lessonDeliveries.length === 0 ? (
-                          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
+                          <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-3 py-3 text-[11px] text-[#C9CDD6]">
                             No lesson deliveries recorded yet for this class/term/year.{" "}
-                            <Link href={lessonDeliveriesPageHref} className="font-semibold text-emerald-700 underline">
+                            <Link href={lessonDeliveriesPageHref} className="font-semibold text-emerald-100 underline">
                               Record a lesson delivery first
                             </Link>
                             .
@@ -1698,17 +1682,17 @@ export default function TeacherAssessmentClient() {
                         ) : null}
 
                         {selectedLessonDelivery ? (
-                          <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] text-indigo-900">
+                          <div className="rounded-xl border border-indigo-300/20 bg-indigo-400/12 px-3 py-2 text-[11px] text-indigo-100">
                             Linked delivery:{" "}
                             <span className="font-semibold">{formatLessonDeliveryLabel(selectedLessonDelivery)}</span>
                             {selectedLessonDelivery.curriculumUnitId ? (
-                              <span className="ml-2 text-indigo-700">• Curriculum unit attached</span>
+                              <span className="ml-2 text-indigo-200">• Curriculum unit attached</span>
                             ) : null}
                           </div>
                         ) : null}
 
                         {selectedLessonDeliverySubjectMismatch ? (
-                          <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                          <div className="rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-2 text-[11px] text-amber-100">
                             Subject mismatch: selected delivery subject does not match this assessment subject. Save will be blocked.
                           </div>
                         ) : null}
@@ -1719,18 +1703,18 @@ export default function TeacherAssessmentClient() {
                       <button
                         type="submit"
                         disabled={savingItemState === "saving" || !!selectedItemReadOnlyReason || !cleanStr(subject)}
-                        className="inline-flex items-center rounded-xl bg-indigo-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                        className={goldButton}
                       >
                         {savingItemState === "saving" ? "Saving..." : selectedItem ? "Update item" : "Create item"}
                       </button>
 
                       <div className="text-[11px]">
                         {savingItemState === "error" ? (
-                          <span className="text-rose-700">Failed to save. Try again.</span>
+                          <span className="text-rose-100">Failed to save. Try again.</span>
                         ) : savingItemState === "saved" ? (
-                          <span className="text-emerald-700">Saved.</span>
+                          <span className="text-emerald-100">Saved.</span>
                         ) : (
-                          <span className="text-slate-500">Then enter scores.</span>
+                          <span className="text-[#8F98A8]">Then enter scores.</span>
                         )}
                       </div>
                     </div>
@@ -1741,23 +1725,21 @@ export default function TeacherAssessmentClient() {
           </div>
         </div>
 
-        {/* RIGHT column (desktop) / tab content */}
         <div className={["space-y-4", tab === "items" ? "hidden md:block" : ""].join(" ")}>
-          {/* Pipeline + Snapshot */}
           <div className={tab !== "pipeline" ? "hidden md:block" : ""}>
             <SectionCard
               title="Teaching pipeline health"
               subtitle="Approved note → delivered lesson → linked assessment → scored assessment"
-              right={pipelineLoading ? <span className="text-[11px] text-slate-500">Loading…</span> : null}
+              right={pipelineLoading ? <span className="text-[11px] text-[#8F98A8]">Loading…</span> : null}
             >
               {pipelineError ? (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                <div className="rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-2 text-[12px] text-amber-100">
                   {pipelineError}
                 </div>
               ) : null}
 
               {selectedClassMayBeRepresentative ? (
-                <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                <div className="mt-2 rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-2 text-[12px] text-amber-100">
                   You are viewing a <span className="font-semibold">single-stream representative</span> class. This is not an aggregate across A/B/C/D.
                   For strict testing, turn on <span className="font-semibold">Show multi-stream classes</span> and pick the exact stream.
                 </div>
@@ -1785,14 +1767,14 @@ export default function TeacherAssessmentClient() {
                   </div>
 
                   {pipeline.scope.allowedSubjects?.length ? (
-                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-700">
-                      Subject scope: <span className="font-semibold">{pipeline.scope.allowedSubjects.join(", ")}</span>
+                    <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]">
+                      Subject scope: <span className="font-semibold text-[#F7F4ED]">{pipeline.scope.allowedSubjects.join(", ")}</span>
                     </div>
                   ) : null}
 
                   {zeroPipeline ? (
-                    <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-[11px] text-slate-700">
-                      No pipeline activity found in this exact scope. Usually the <span className="font-semibold">term/classroom</span> is wrong,
+                    <div className="mt-3 rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-3 py-3 text-[11px] text-[#C9CDD6]">
+                      No pipeline activity found in this exact scope. Usually the <span className="font-semibold text-[#F7F4ED]">term/classroom</span> is wrong,
                       or the work was recorded under a different stream classroom (e.g. JHS 3 A/B/C/D).
                     </div>
                   ) : null}
@@ -1842,27 +1824,27 @@ export default function TeacherAssessmentClient() {
             <SectionCard
               title="Class performance snapshot"
               subtitle="Quick view of average and remark bands"
-              right={summaryLoading ? <span className="text-[11px] text-slate-500">Loading…</span> : null}
+              right={summaryLoading ? <span className="text-[11px] text-[#8F98A8]">Loading…</span> : null}
             >
               {summaryError ? (
-                <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                <div className="rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-2 text-[12px] text-amber-100">
                   {summaryError}
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="text-[11px] font-semibold text-slate-700">Overall average</div>
-                    <div className="mt-1 text-2xl font-semibold text-slate-900">
+                  <div className={panelCard + " p-3"}>
+                    <div className="text-[11px] font-semibold text-[#C9CDD6]">Overall average</div>
+                    <div className="mt-1 text-2xl font-semibold text-[#F7F4ED]">
                       {formatPercent(classAverage?.averagePercent ?? null)}
                     </div>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                      <div> Learners: <span className="font-semibold">{classAverage?.learnersCount ?? 0}</span></div>
-                      <div> Items: <span className="font-semibold">{classAverage?.itemsCount ?? 0}</span></div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-[#AEB6C4]">
+                      <div> Learners: <span className="font-semibold text-[#F7F4ED]">{classAverage?.learnersCount ?? 0}</span></div>
+                      <div> Items: <span className="font-semibold text-[#F7F4ED]">{classAverage?.itemsCount ?? 0}</span></div>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="text-[11px] font-semibold text-slate-700">Performance bands</div>
+                  <div className={panelCard + " p-3"}>
+                    <div className="text-[11px] font-semibold text-[#C9CDD6]">Performance bands</div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {(remarkSummary?.bands || [])
                         .filter((b) => (b.learnersCount ?? 0) > 0)
@@ -1870,22 +1852,22 @@ export default function TeacherAssessmentClient() {
                         .map((band) => (
                           <span
                             key={band.grade}
-                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700"
+                            className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-[#C9CDD6]"
                           >
-                            <span className="min-w-6 text-center text-[10px] font-semibold text-slate-900">
+                            <span className="min-w-6 text-center text-[10px] font-semibold text-[#F7F4ED]">
                               {band.grade}
                             </span>
                             <span className="text-[10px]">{band.label} ({band.learnersCount})</span>
                           </span>
                         ))}
                       {remarkSummary && (remarkSummary.bands || []).every((b) => (b.learnersCount ?? 0) === 0) ? (
-                        <span className="text-[11px] text-slate-600">No band distribution yet.</span>
+                        <span className="text-[11px] text-[#8F98A8]">No band distribution yet.</span>
                       ) : null}
                     </div>
 
                     {remarkSummary ? (
-                      <div className="mt-2 text-[11px] text-slate-600">
-                        Learners evaluated: <span className="font-semibold">{remarkSummary.totalLearnersEvaluated ?? 0}</span>
+                      <div className="mt-2 text-[11px] text-[#AEB6C4]">
+                        Learners evaluated: <span className="font-semibold text-[#F7F4ED]">{remarkSummary.totalLearnersEvaluated ?? 0}</span>
                       </div>
                     ) : null}
                   </div>
@@ -1894,7 +1876,6 @@ export default function TeacherAssessmentClient() {
             </SectionCard>
           </div>
 
-          {/* Scores */}
           <div className={tab !== "scores" ? "hidden md:block" : ""}>
             <SectionCard
               title="Learner scores"
@@ -1908,73 +1889,70 @@ export default function TeacherAssessmentClient() {
               }
             >
               {!selectedItem ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-[12px] text-slate-700">
+                <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-6 text-center text-[12px] text-[#C9CDD6]">
                   Select an item (or create one), then record scores.
                 </div>
               ) : (
                 <>
-                  {/* Selected item summary */}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className={panelCard + " px-4 py-3"}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <div className="text-sm font-semibold text-slate-900">{selectedItem.title}</div>
-                        <div className="mt-1 text-[11px] text-slate-600">
+                        <div className="text-sm font-semibold text-[#F7F4ED]">{selectedItem.title}</div>
+                        <div className="mt-1 text-[11px] text-[#C9CDD6]">
                           {selectedItem.subject} • {selectedItem.type} • Max: {selectedItem.maxScore}
                           {selectedItem.weighting != null ? ` • Weight: ${selectedItem.weighting}%` : ""}
                           {selectedItem.date ? ` • Date: ${formatDateForInput(selectedItem.date)}` : ""}
                         </div>
                       </div>
                       {selectedItem.lessonDeliveryId ? (
-                        <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-800">
+                        <span className="inline-flex rounded-full border border-indigo-300/20 bg-indigo-400/12 px-3 py-1 text-[11px] font-semibold text-indigo-100">
                           Linked lesson
                         </span>
                       ) : null}
                     </div>
                   </div>
 
-                  {/* Search */}
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-[11px] text-slate-600">
-                      Showing <span className="font-semibold">{filteredStudents.length}</span> of{" "}
-                      <span className="font-semibold">{students.length}</span> learners
+                    <div className="text-[11px] text-[#C9CDD6]">
+                      Showing <span className="font-semibold text-[#F7F4ED]">{filteredStudents.length}</span> of{" "}
+                      <span className="font-semibold text-[#F7F4ED]">{students.length}</span> learners
                     </div>
                     <input
                       value={learnerQuery}
                       onChange={(e) => setLearnerQuery(e.target.value)}
                       placeholder="Search learner name…"
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-[12px] sm:w-72"
+                      className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[12px] text-[#F7F4ED] placeholder:text-[#738095] sm:w-72"
                     />
                   </div>
 
-                  {/* Mobile: cards; Desktop: table */}
-                  <div className="mt-4 md:hidden space-y-3">
+                  <div className="mt-4 space-y-3 md:hidden">
                     {filteredStudents.map((s) => {
                       const row = scoreDraft[s.id] ?? { score: "", comment: "" };
 
                       return (
-                        <div key={s.id} className="rounded-2xl border border-slate-200 bg-white p-3">
+                        <div key={s.id} className={panelCard + " p-3"}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <div className="truncate text-sm font-semibold text-slate-900">{s.name}</div>
-                              <div className="mt-0.5 text-[11px] text-slate-600">
+                              <div className="truncate text-sm font-semibold text-[#F7F4ED]">{s.name}</div>
+                              <div className="mt-0.5 text-[11px] text-[#C9CDD6]">
                                 {s.guardianName || ""} {s.guardianPhone ? `• ${s.guardianPhone}` : ""}
                               </div>
                             </div>
                             <div className="shrink-0 text-right">
-                              <div className="text-[10px] text-slate-500">Max</div>
-                              <div className="text-sm font-semibold text-slate-900">{selectedItem.maxScore}</div>
+                              <div className="text-[10px] text-[#8F98A8]">Max</div>
+                              <div className="text-sm font-semibold text-[#F7F4ED]">{selectedItem.maxScore}</div>
                             </div>
                           </div>
 
                           <div className="mt-3 grid grid-cols-2 gap-2">
                             <div>
-                              <div className="text-[11px] font-semibold text-slate-700">Score</div>
+                              <div className="text-[11px] font-semibold text-[#C9CDD6]">Score</div>
                               <input
                                 type="number"
                                 min={0}
                                 max={selectedItem.maxScore}
                                 disabled={!!selectedItemReadOnlyReason}
-                                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-[12px] disabled:bg-slate-100"
+                                className={darkInput + " mt-1"}
                                 value={row.score}
                                 onChange={(e) =>
                                   setScoreDraft((prev) => ({
@@ -1985,11 +1963,11 @@ export default function TeacherAssessmentClient() {
                               />
                             </div>
                             <div>
-                              <div className="text-[11px] font-semibold text-slate-700">Comment</div>
+                              <div className="text-[11px] font-semibold text-[#C9CDD6]">Comment</div>
                               <input
                                 type="text"
                                 disabled={!!selectedItemReadOnlyReason}
-                                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-[12px] disabled:bg-slate-100"
+                                className={darkInput + " mt-1"}
                                 value={row.comment}
                                 onChange={(e) =>
                                   setScoreDraft((prev) => ({
@@ -2005,35 +1983,35 @@ export default function TeacherAssessmentClient() {
                     })}
                   </div>
 
-                  <div className="mt-4 hidden md:block rounded-2xl border border-slate-200 bg-white">
+                  <div className={"mt-4 hidden md:block " + panelCard}>
                     <div className="max-h-[420px] overflow-auto">
                       <table className="min-w-full text-sm">
-                        <thead className="sticky top-0 bg-slate-50 text-slate-700">
+                        <thead className="sticky top-0 bg-white/[0.04] text-[#C9CDD6]">
                           <tr>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-semibold">Learner</th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-semibold">Score</th>
-                            <th className="border-b border-slate-200 px-4 py-3 text-left font-semibold">Comment (optional)</th>
+                            <th className="border-b border-white/10 px-4 py-3 text-left font-semibold">Learner</th>
+                            <th className="border-b border-white/10 px-4 py-3 text-left font-semibold">Score</th>
+                            <th className="border-b border-white/10 px-4 py-3 text-left font-semibold">Comment (optional)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredStudents.map((s, idx) => {
                             const row = scoreDraft[s.id] ?? { score: "", comment: "" };
-                            const zebra = idx % 2 ? "bg-slate-50/60" : "bg-white";
+                            const zebra = idx % 2 ? "bg-white/[0.03]" : "bg-transparent";
                             return (
                               <tr key={s.id} className={zebra}>
-                                <td className="border-b border-slate-100 px-4 py-3 align-top">
-                                  <div className="font-semibold text-slate-900">{s.name}</div>
-                                  <div className="text-[12px] text-slate-500">
+                                <td className="border-b border-white/10 px-4 py-3 align-top">
+                                  <div className="font-semibold text-[#F7F4ED]">{s.name}</div>
+                                  <div className="text-[12px] text-[#8F98A8]">
                                     {s.guardianName || ""} {s.guardianPhone ? `• ${s.guardianPhone}` : ""}
                                   </div>
                                 </td>
-                                <td className="border-b border-slate-100 px-4 py-3 align-top">
+                                <td className="border-b border-white/10 px-4 py-3 align-top">
                                   <input
                                     type="number"
                                     min={0}
                                     max={selectedItem.maxScore}
                                     disabled={!!selectedItemReadOnlyReason}
-                                    className="w-28 rounded-xl border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                                    className="w-28 rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] disabled:bg-white/[0.05]"
                                     value={row.score}
                                     onChange={(e) =>
                                       setScoreDraft((prev) => ({
@@ -2043,11 +2021,11 @@ export default function TeacherAssessmentClient() {
                                     }
                                   />
                                 </td>
-                                <td className="border-b border-slate-100 px-4 py-3 align-top">
+                                <td className="border-b border-white/10 px-4 py-3 align-top">
                                   <input
                                     type="text"
                                     disabled={!!selectedItemReadOnlyReason}
-                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-100"
+                                    className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] disabled:bg-white/[0.05]"
                                     value={row.comment}
                                     onChange={(e) =>
                                       setScoreDraft((prev) => ({
@@ -2065,24 +2043,23 @@ export default function TeacherAssessmentClient() {
                     </div>
                   </div>
 
-                  {/* Desktop button row (mobile gets sticky) */}
-                  <div className="mt-4 hidden md:flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className={"mt-4 hidden md:flex items-center justify-between gap-3 " + panelCard + " px-4 py-3"}>
                     <button
                       type="button"
                       onClick={handleSaveScores}
                       disabled={savingScoresState === "saving" || !!selectedItemReadOnlyReason}
-                      className="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                      className={goldButton}
                     >
                       {savingScoresState === "saving" ? "Saving…" : "Save scores"}
                     </button>
 
                     <div className="text-[11px]">
                       {savingScoresState === "error" ? (
-                        <span className="text-rose-700">Failed to save scores.</span>
+                        <span className="text-rose-100">Failed to save scores.</span>
                       ) : savingScoresState === "saved" ? (
-                        <span className="text-emerald-700">Scores saved.</span>
+                        <span className="text-emerald-100">Scores saved.</span>
                       ) : (
-                        <span className="text-slate-600">Save after entering marks.</span>
+                        <span className="text-[#8F98A8]">Save after entering marks.</span>
                       )}
                     </div>
                   </div>
@@ -2093,15 +2070,14 @@ export default function TeacherAssessmentClient() {
         </div>
       </div>
 
-      {/* Mobile sticky save bar (Scores tab) */}
       {tab === "scores" && selectedItem ? (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-3">
-          <div className="mx-auto max-w-6xl flex items-center justify-between gap-3 px-1">
+        <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-[rgba(5,7,11,0.92)] p-3 backdrop-blur-xl md:hidden">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-1">
             <div className="min-w-0">
-              <div className="truncate text-[12px] font-semibold text-slate-900">
+              <div className="truncate text-[12px] font-semibold text-[#F7F4ED]">
                 {selectedItem.title}
               </div>
-              <div className="text-[11px] text-slate-600">
+              <div className="text-[11px] text-[#C9CDD6]">
                 Max {selectedItem.maxScore} • {selectedChip?.label}
               </div>
             </div>
@@ -2110,7 +2086,7 @@ export default function TeacherAssessmentClient() {
               type="button"
               onClick={handleSaveScores}
               disabled={savingScoresState === "saving" || !!selectedItemReadOnlyReason}
-              className="shrink-0 inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              className={goldButton + " shrink-0"}
             >
               {savingScoresState === "saving" ? "Saving…" : "Save"}
             </button>
@@ -2118,13 +2094,13 @@ export default function TeacherAssessmentClient() {
 
           <div className="mt-2 text-center text-[11px]">
             {selectedItemReadOnlyReason ? (
-              <span className="text-amber-800">{selectedItemReadOnlyReason}</span>
+              <span className="text-amber-100">{selectedItemReadOnlyReason}</span>
             ) : savingScoresState === "error" ? (
-              <span className="text-rose-700">Failed to save scores.</span>
+              <span className="text-rose-100">Failed to save scores.</span>
             ) : savingScoresState === "saved" ? (
-              <span className="text-emerald-700">Saved.</span>
+              <span className="text-emerald-100">Saved.</span>
             ) : (
-              <span className="text-slate-600">Enter marks, then tap Save.</span>
+              <span className="text-[#8F98A8]">Enter marks, then tap Save.</span>
             )}
           </div>
         </div>
@@ -2135,40 +2111,40 @@ export default function TeacherAssessmentClient() {
 
 function MiniStat(props: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
-      <div className="text-[11px] font-semibold text-slate-600">{props.label}</div>
-      <div className="mt-1 text-xl font-semibold text-slate-900">{props.value}</div>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3">
+      <div className="text-[11px] font-semibold text-[#C9CDD6]">{props.label}</div>
+      <div className="mt-1 text-xl font-semibold text-[#F7F4ED]">{props.value}</div>
     </div>
   );
 }
 
 function MiniPct(props: { label: string; value: number | null | undefined }) {
   return (
-    <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-3">
-      <div className="text-[11px] font-semibold text-indigo-700">{props.label}</div>
-      <div className="mt-1 text-sm font-semibold text-indigo-900">{formatPercent(props.value)}</div>
+    <div className="rounded-2xl border border-indigo-300/20 bg-indigo-400/12 px-3 py-3">
+      <div className="text-[11px] font-semibold text-indigo-100">{props.label}</div>
+      <div className="mt-1 text-sm font-semibold text-[#F7F4ED]">{formatPercent(props.value)}</div>
     </div>
   );
 }
 
 function MiniWarn(props: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3">
-      <div className="text-[11px] font-semibold text-amber-700">{props.label}</div>
-      <div className="mt-1 text-sm font-semibold text-amber-900">{props.value}</div>
+    <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-3 py-3">
+      <div className="text-[11px] font-semibold text-amber-100">{props.label}</div>
+      <div className="mt-1 text-sm font-semibold text-[#F7F4ED]">{props.value}</div>
     </div>
   );
 }
 
 function SampleList(props: { title: string; rows: Array<{ k: string; a: string; b: string }> }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-      <div className="text-[12px] font-semibold text-slate-900">{props.title}</div>
+    <div className={panelCard + " p-3"}>
+      <div className="text-[12px] font-semibold text-[#F7F4ED]">{props.title}</div>
       <div className="mt-2 space-y-2">
         {props.rows.map((r) => (
-          <div key={r.k} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-700">
-            <div className="font-semibold text-slate-900">{r.a}</div>
-            <div className="text-[11px] text-slate-600">{r.b}</div>
+          <div key={r.k} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] text-[#C9CDD6]">
+            <div className="font-semibold text-[#F7F4ED]">{r.a}</div>
+            <div className="text-[11px] text-[#8F98A8]">{r.b}</div>
           </div>
         ))}
       </div>
