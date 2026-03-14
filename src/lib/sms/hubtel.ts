@@ -4,7 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
-export const BrandName = ["AYITIKOPJHS", "AYITIKPRIM", "AYITIADMIN"] as const;
+export const BrandName = ["EDULIFEOS", "AYITIKOPJHS", "AYITIKPRIM", "AYITIADMIN"] as const;
 export type BrandName = (typeof BrandName)[number];
 
 export type HubtelSendParams = {
@@ -23,7 +23,6 @@ export type HubtelSendResult = {
   to: string;
   testMode: boolean;
   providerResponse: unknown;
-  // extra debug fields (safe): may be used in dev logs
   httpStatus?: number;
   providerStatus?: number | null;
   providerStatusDescription?: string | null;
@@ -41,7 +40,25 @@ const HUBTEL_BASE_URL = process.env.HUBTEL_BASE_URL ?? "https://smsc.hubtel.com"
 
 const SMS_TEST_MODE = (process.env.SMS_TEST_MODE ?? "false").toLowerCase() === "true";
 const TEST_SMS_TO = process.env.TEST_SMS_TO ?? "";
-const DEFAULT_BRAND: BrandName = "AYITIADMIN";
+
+function normalizeBrandName(raw?: string | null): BrandName | null {
+  const v = String(raw ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (!v) return null;
+
+  if (v === "EDULIFEOS" || v === "EDULIFE") return "EDULIFEOS";
+  if (v === "AYITIKOPJHS") return "AYITIKOPJHS";
+  if (v === "AYITIKPRIM") return "AYITIKPRIM";
+  if (v === "AYITIADMIN") return "AYITIADMIN";
+
+  return null;
+}
+
+const DEFAULT_BRAND: BrandName =
+  normalizeBrandName(process.env.HUBTEL_DEFAULT_BRAND) ?? "EDULIFEOS";
 
 function normalizeGhanaPhone(raw: string): string {
   const digits = (raw || "").trim().replace(/[^\d]/g, "");
@@ -54,33 +71,52 @@ function normalizeGhanaPhone(raw: string): string {
   return digits;
 }
 
-function getBrandConfig(brand?: string): HubtelBrandConfig {
-  const b = (brand ?? DEFAULT_BRAND).toUpperCase();
+function getBrandConfig(brand?: string): { brand: BrandName; config: HubtelBrandConfig } {
+  const resolvedBrand = normalizeBrandName(brand) ?? DEFAULT_BRAND;
 
-  if (b === "AYITIKOPJHS") {
+  if (resolvedBrand === "EDULIFEOS") {
     return {
-      clientId: process.env.HUBTEL_AYITIKOPJHS_CLIENT_ID ?? "",
-      clientSecret: process.env.HUBTEL_AYITIKOPJHS_CLIENT_SECRET ?? "",
-      from: process.env.HUBTEL_AYITIKOPJHS_FROM ?? "AyitikopJHS",
+      brand: resolvedBrand,
+      config: {
+        clientId: process.env.HUBTEL_EDULIFEOS_CLIENT_ID ?? "",
+        clientSecret: process.env.HUBTEL_EDULIFEOS_CLIENT_SECRET ?? "",
+        from: process.env.HUBTEL_EDULIFEOS_FROM ?? "EduLifeOS",
+      },
     };
   }
 
-  if (b === "AYITIKPRIM") {
+  if (resolvedBrand === "AYITIKOPJHS") {
     return {
-      clientId: process.env.HUBTEL_AYITIKPRIM_CLIENT_ID ?? "",
-      clientSecret: process.env.HUBTEL_AYITIKPRIM_CLIENT_SECRET ?? "",
-      from: process.env.HUBTEL_AYITIKPRIM_FROM ?? "AyitikPRIM",
+      brand: resolvedBrand,
+      config: {
+        clientId: process.env.HUBTEL_AYITIKOPJHS_CLIENT_ID ?? "",
+        clientSecret: process.env.HUBTEL_AYITIKOPJHS_CLIENT_SECRET ?? "",
+        from: process.env.HUBTEL_AYITIKOPJHS_FROM ?? "AyitikopJHS",
+      },
+    };
+  }
+
+  if (resolvedBrand === "AYITIKPRIM") {
+    return {
+      brand: resolvedBrand,
+      config: {
+        clientId: process.env.HUBTEL_AYITIKPRIM_CLIENT_ID ?? "",
+        clientSecret: process.env.HUBTEL_AYITIKPRIM_CLIENT_SECRET ?? "",
+        from: process.env.HUBTEL_AYITIKPRIM_FROM ?? "AyitikPRIM",
+      },
     };
   }
 
   return {
-    clientId: process.env.HUBTEL_AYITIADMIN_CLIENT_ID ?? "",
-    clientSecret: process.env.HUBTEL_AYITIADMIN_CLIENT_SECRET ?? "",
-    from: process.env.HUBTEL_AYITIADMIN_FROM ?? "AyitiAdmin",
+    brand: "AYITIADMIN",
+    config: {
+      clientId: process.env.HUBTEL_AYITIADMIN_CLIENT_ID ?? "",
+      clientSecret: process.env.HUBTEL_AYITIADMIN_CLIENT_SECRET ?? "",
+      from: process.env.HUBTEL_AYITIADMIN_FROM ?? "AyitiAdmin",
+    },
   };
 }
 
-// Safer JSON storage for Prisma Json columns
 function toJsonValue(value: unknown): Prisma.InputJsonValue | null {
   if (value === undefined) return null;
   try {
@@ -101,7 +137,7 @@ function isObj(v: unknown): v is Record<string, unknown> {
 function pickString(data: unknown, keys: string[]): string | null {
   if (!isObj(data)) return null;
   for (const k of keys) {
-    const v = (data as any)[k];
+    const v = (data as Record<string, unknown>)[k];
     if (typeof v === "string" && v.trim()) return v.trim();
   }
   return null;
@@ -110,16 +146,12 @@ function pickString(data: unknown, keys: string[]): string | null {
 function pickNumber(data: unknown, keys: string[]): number | null {
   if (!isObj(data)) return null;
   for (const k of keys) {
-    const v = (data as any)[k];
+    const v = (data as Record<string, unknown>)[k];
     if (typeof v === "number" && Number.isFinite(v)) return v;
   }
   return null;
 }
 
-/**
- * Log SMS attempt into SmsLog table.
- * Never throws; on error it only logs to console.
- */
 async function logSmsAttempt(args: {
   to: string;
   from: string | null;
@@ -160,23 +192,25 @@ async function logSmsAttempt(args: {
   }
 }
 
-/**
- * Main SMS sender using Hubtel query-string API.
- * IMPORTANT: Always logs httpStatus even if provider payload parsing is weird.
- */
 export async function sendViaHubtel(params: HubtelSendParams): Promise<HubtelSendResult> {
   if (SMS_PROVIDER.toUpperCase() !== "HUBTEL") {
     throw new Error(`SMS_PROVIDER is set to '${SMS_PROVIDER}', but sendViaHubtel was called.`);
   }
-  if (!HUBTEL_BASE_URL) throw new Error("Hubtel base URL missing in environment.");
+  if (!HUBTEL_BASE_URL) {
+    throw new Error("Hubtel base URL missing in environment.");
+  }
 
-  const brand = (params.brand ?? DEFAULT_BRAND).toString();
-  const { clientId, clientSecret, from } = getBrandConfig(brand);
+  const { brand, config } = getBrandConfig(params.brand);
+  const { clientId, clientSecret, from } = config;
 
-  if (!clientId || !clientSecret) throw new Error(`Missing Hubtel credentials for brand ${brand}`);
+  if (!clientId || !clientSecret) {
+    throw new Error(`Missing Hubtel credentials for brand ${brand}`);
+  }
 
   const logicalTo = normalizeGhanaPhone(params.to);
-  if (!logicalTo) throw new Error("Invalid 'to' phone number.");
+  if (!logicalTo) {
+    throw new Error("Invalid 'to' phone number.");
+  }
 
   let actualTo = logicalTo;
   const testMode = SMS_TEST_MODE;
@@ -196,7 +230,7 @@ export async function sendViaHubtel(params: HubtelSendParams): Promise<HubtelSen
   let data: unknown = null;
 
   try {
-    const res = await fetch(url.toString(), { method: "GET" });
+    const res = await fetch(url.toString(), { method: "GET", cache: "no-store" });
     const httpStatus = res.status;
 
     const text = await res.text();
@@ -206,7 +240,6 @@ export async function sendViaHubtel(params: HubtelSendParams): Promise<HubtelSen
       data = text || null;
     }
 
-    // Hubtel responses vary; try multiple key variants
     const providerStatus =
       pickNumber(data, ["status", "Status", "code", "Code"]) ?? null;
 
@@ -225,7 +258,6 @@ export async function sendViaHubtel(params: HubtelSendParams): Promise<HubtelSen
       tenantId: params.tenantId,
       actorId: params.actorId,
       providerMessageId,
-      // IMPORTANT: always store HTTP status if providerStatus missing
       providerStatus: providerStatus ?? httpStatus,
       providerStatusDescription,
       providerRaw: {
@@ -254,7 +286,8 @@ export async function sendViaHubtel(params: HubtelSendParams): Promise<HubtelSen
       providerMessageId,
     };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : typeof err === "string" ? err : "Unknown error";
+    const msg =
+      err instanceof Error ? err.message : typeof err === "string" ? err : "Unknown error";
 
     await logSmsAttempt({
       to: actualTo,

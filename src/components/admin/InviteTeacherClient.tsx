@@ -31,6 +31,8 @@ function cleanPhoneLoose(v: string) {
   return String(v ?? "").trim();
 }
 
+const DEFAULT_INVITE_BRAND = "EDULIFEOS" as const;
+
 const shellCard =
   "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
 const btnBase =
@@ -78,7 +80,7 @@ export default function InviteTeacherClient() {
         redirectTo: "/app",
         deliverToPhone: cleanPhoneLoose(phone),
         deliverToName: cleanStr(name),
-        brand: "AYITIADMIN",
+        brand: DEFAULT_INVITE_BRAND,
       };
 
       const res = await fetch("/api/admin/invite-teacher", {
@@ -124,9 +126,7 @@ export default function InviteTeacherClient() {
     if (!created) return;
     try {
       await navigator.clipboard.writeText(created.link);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
   const expiresLabel = created ? new Date(created.expiresAt).toLocaleString() : "";

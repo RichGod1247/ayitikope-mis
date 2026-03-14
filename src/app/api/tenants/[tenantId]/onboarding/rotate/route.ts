@@ -12,6 +12,8 @@ import { sendEmail } from "@/lib/email/sendEmail";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const ONBOARDING_BRAND = "EDULIFEOS" as const;
+
 function json(status: number, payload: any) {
   return NextResponse.json(payload, {
     status,
@@ -36,11 +38,6 @@ function clampInt(n: unknown, def: number, min: number, max: number) {
   return Math.min(max, Math.max(min, Math.trunc(x)));
 }
 
-/**
- * ✅ Bank-grade base URL
- * - Production: ENV ONLY
- * - Dev/Preview: header-derived origin, fallback to 127.0.0.1 (not localhost)
- */
 function getBaseUrl(req: Request) {
   const envBase =
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -173,6 +170,7 @@ export async function POST(req: Request, { params }: { params: { tenantId: strin
                   expiresAt: expiresAt.toISOString(),
                   ttlMinutes,
                   link: link || null,
+                  brand: ONBOARDING_BRAND,
                 },
               },
             });
@@ -181,7 +179,7 @@ export async function POST(req: Request, { params }: { params: { tenantId: strin
           await sendViaHubtel({
             to: phoneNorm,
             body: smsText,
-            brand: "AYITIADMIN",
+            brand: ONBOARDING_BRAND,
             tenantId: ctx.tenantId,
             actorId: ctx.userId,
             meta: {
@@ -192,16 +190,16 @@ export async function POST(req: Request, { params }: { params: { tenantId: strin
             },
           });
 
-          deliveries.push({ contactId: c.id, name: c.name, sms: { ok: true, to: phoneNorm } });
+          deliveries.push({ contactId: c.id, name: c.name, sms: { ok: true, to: phoneNorm, brand: ONBOARDING_BRAND } });
         } catch (e: any) {
           deliveries.push({
             contactId: c.id,
             name: c.name,
-            sms: { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED") },
+            sms: { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED"), brand: ONBOARDING_BRAND },
           });
         }
       } else {
-        deliveries.push({ contactId: c.id, name: c.name, sms: { ok: false, error: "BAD_PHONE" } });
+        deliveries.push({ contactId: c.id, name: c.name, sms: { ok: false, error: "BAD_PHONE", brand: ONBOARDING_BRAND } });
       }
 
       const email = String(c.email ?? "").trim();
@@ -221,6 +219,7 @@ export async function POST(req: Request, { params }: { params: { tenantId: strin
       code,
       expiresAt,
       ttlMinutes,
+      brand: ONBOARDING_BRAND,
       contactsCount: contacts.length,
       deliveredToCount: deliveries.filter((d) => d?.sms?.ok || d?.email?.ok).length,
       deliveries,

@@ -11,7 +11,7 @@ import {
   rateLimitRecord,
 } from "@/lib/rateLimit";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
-import { sendViaHubtel } from "@/lib/sms/hubtel";
+import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
 import { sendEmail } from "@/lib/email/sendEmail";
 
 export const runtime = "nodejs";
@@ -74,7 +74,7 @@ function effectiveRole(v: unknown) {
 function safeInternalPath(raw: unknown, fallback = "/app") {
   const v = String(raw ?? "").trim();
   if (!v) return fallback;
-  if (v.startsWith("//") || v.startsWith("\\") || v.startsWith("\\\\")) return fallback;
+  if (v.startsWith("//") || v.startsWith("\\" ) || v.startsWith("\\\\")) return fallback;
   if (v.startsWith("/")) return v;
   try {
     const u = new URL(v);
@@ -84,6 +84,20 @@ function safeInternalPath(raw: unknown, fallback = "/app") {
   } catch {
     return fallback;
   }
+}
+
+function resolveBrand(input?: string): (typeof BrandName)[number] {
+  const raw = String(input ?? process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (raw === "EDULIFE") return "EDULIFEOS";
+  if (BrandName.includes(raw as (typeof BrandName)[number])) {
+    return raw as (typeof BrandName)[number];
+  }
+
+  return "EDULIFEOS";
 }
 
 /**
@@ -157,10 +171,10 @@ export async function POST(req: Request) {
   const targetRoleName = effectiveRole(bodyRaw.roleName ?? "TEACHER");
   const redirectTo = safeInternalPath(bodyRaw.redirectTo ?? "/app", "/app");
 
-  // ✅ NEW (optional): SMS phone for invite link delivery
+  // ✅ Optional: SMS phone for invite link delivery
   const deliverToPhoneRaw = cleanStr((bodyRaw as any).deliverToPhone ?? "");
   const deliverToName = cleanStr((bodyRaw as any).deliverToName ?? "");
-  const brand = cleanStr((bodyRaw as any).brand ?? "AYITIADMIN") || "AYITIADMIN";
+  const brand = resolveBrand((bodyRaw as any).brand);
 
   const fe: FieldErrors = {};
   if (!email || !email.includes("@")) fe.email = "Valid email is required.";
@@ -297,11 +311,11 @@ export async function POST(req: Request) {
         resourceId: existingInvite.id,
         ip,
         userAgent,
-        metadata: { email, roleName: targetRoleName, ttlMinutes } as any,
+        metadata: { email, roleName: targetRoleName, ttlMinutes, brand } as any,
       },
     });
 
-    // ✅ Phase 7 delivery (best-effort): email always, SMS if phone present
+    // ✅ delivery (best-effort): email always, SMS if phone present
     const emailResult = await sendEmail({
       to: email,
       subject: `${schoolName}: Your EduLife OS invite link`,
@@ -311,7 +325,7 @@ export async function POST(req: Request) {
         `If you did not expect this, ignore this email.`,
     });
 
-    let smsResult: any = { ok: false, error: "PHONE_REQUIRED_FOR_SMS" };
+    let smsResult: any = { ok: false, error: "PHONE_REQUIRED_FOR_SMS", brand };
     const phoneNorm = normalizeGhPhoneE164(deliverToPhoneRaw);
     if (phoneNorm) {
       const exp = existingInvite.expiresAt.toISOString().slice(0, 16).replace("T", " ");
@@ -335,6 +349,7 @@ export async function POST(req: Request) {
               expiresAt: existingInvite.expiresAt.toISOString(),
               redirectTo,
               inviteUrl,
+              brand,
             },
           },
         });
@@ -349,9 +364,9 @@ export async function POST(req: Request) {
           actorId: userId,
           meta: { category: "STAFF_INVITE_LINK", inviteId: existingInvite.id, expiresAt: existingInvite.expiresAt.toISOString() },
         });
-        smsResult = { ok: true, to: phoneNorm };
+        smsResult = { ok: true, to: phoneNorm, brand };
       } catch (e: any) {
-        smsResult = { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED") };
+        smsResult = { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED"), brand };
       }
     }
 
@@ -390,7 +405,7 @@ export async function POST(req: Request) {
       resourceId: created.id,
       ip,
       userAgent,
-      metadata: { email, roleName: targetRoleName, ttlMinutes } as any,
+      metadata: { email, roleName: targetRoleName, ttlMinutes, brand } as any,
     },
   });
 
@@ -398,7 +413,7 @@ export async function POST(req: Request) {
     redirectTo
   )}`;
 
-  // ✅ Phase 7 delivery (best-effort)
+  // ✅ delivery (best-effort)
   const emailResult = await sendEmail({
     to: email,
     subject: `${schoolName}: Your EduLife OS invite link`,
@@ -408,7 +423,7 @@ export async function POST(req: Request) {
       `If you did not expect this, ignore this email.`,
   });
 
-  let smsResult: any = { ok: false, error: "PHONE_REQUIRED_FOR_SMS" };
+  let smsResult: any = { ok: false, error: "PHONE_REQUIRED_FOR_SMS", brand };
   const phoneNorm = normalizeGhPhoneE164(deliverToPhoneRaw);
   if (phoneNorm) {
     const exp = created.expiresAt.toISOString().slice(0, 16).replace("T", " ");
@@ -432,6 +447,7 @@ export async function POST(req: Request) {
             expiresAt: created.expiresAt.toISOString(),
             redirectTo,
             inviteUrl,
+            brand,
           },
         },
       });
@@ -446,9 +462,9 @@ export async function POST(req: Request) {
         actorId: userId,
         meta: { category: "STAFF_INVITE_LINK", inviteId: created.id, expiresAt: created.expiresAt.toISOString() },
       });
-      smsResult = { ok: true, to: phoneNorm };
+      smsResult = { ok: true, to: phoneNorm, brand };
     } catch (e: any) {
-      smsResult = { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED") };
+      smsResult = { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED"), brand };
     }
   }
 

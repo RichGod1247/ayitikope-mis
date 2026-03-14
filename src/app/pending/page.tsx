@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const AUTO_ACTIVATE_HOURS = Number(process.env.TENANT_AUTO_ACTIVATE_AFTER_HOURS || 12) || 12;
+const ACTIVATION_SMS_BRAND = "EDULIFEOS" as const;
 
 function asObj(v: unknown): Record<string, any> {
   return v && typeof v === "object" ? (v as any) : {};
@@ -54,7 +55,6 @@ function buildActivationSmsText(args: { schoolCode: string }) {
 export default async function PendingPage() {
   const ctx = await getServerUserContextOrNull({ requireTenant: false });
 
-  // Not signed in: generic message
   if (!ctx?.userId) {
     return (
       <main className="min-h-screen bg-slate-50">
@@ -74,7 +74,6 @@ export default async function PendingPage() {
     );
   }
 
-  // Find newest SCHOOL_ADMIN membership tenant
   const mem = await prisma.membership.findFirst({
     where: { userId: ctx.userId, status: "ACTIVE", role: { name: "SCHOOL_ADMIN" } },
     orderBy: { createdAt: "desc" },
@@ -107,7 +106,6 @@ export default async function PendingPage() {
 
   const tenant = mem.tenant;
 
-  // Already active -> go
   if (tenant.status === "ACTIVE") {
     redirect("/admin/dashboard");
   }
@@ -115,7 +113,6 @@ export default async function PendingPage() {
   const settings = asObj(tenant.settingsJson);
   const reject = getRejectInfo(settings);
 
-  // Rejected: do NOT auto-activate
   if (reject.isRejected) {
     return (
       <main className="min-h-screen bg-slate-50">
@@ -161,11 +158,9 @@ export default async function PendingPage() {
   const submittedAt = getBootstrapSubmittedAt(settings, tenant.createdAt);
   const autoActivateAt = new Date(submittedAt.getTime() + AUTO_ACTIVATE_HOURS * 60 * 60 * 1000);
 
-  // ✅ Auto-activate path (touch-based) + notify once + audit
   if (Date.now() >= autoActivateAt.getTime()) {
     const nowIso = new Date().toISOString();
 
-    // Do the activation in a transaction, and only ONE request will win (idempotent).
     const activated = await prisma.$transaction(async (tx) => {
       const current = await tx.tenant.findUnique({
         where: { id: tenant.id },
@@ -182,12 +177,9 @@ export default async function PendingPage() {
       });
 
       if (!current) return { ok: false as const, reason: "NOT_FOUND" };
-
       if (current.status === "ACTIVE") return { ok: false as const, reason: "ALREADY_ACTIVE" };
 
       const s = asObj(current.settingsJson);
-
-      // If rejected at any point, never auto-activate
       const rj = getRejectInfo(s);
       if (rj.isRejected) return { ok: false as const, reason: "REJECTED" };
 
@@ -195,19 +187,16 @@ export default async function PendingPage() {
       const dueAt = new Date(subAt.getTime() + AUTO_ACTIVATE_HOURS * 60 * 60 * 1000);
       if (Date.now() < dueAt.getTime()) return { ok: false as const, reason: "NOT_DUE" };
 
-      // If this marker exists, consider it already processed (extra safety)
       if (typeof s.bootstrapAutoActivatedAt === "string" && s.bootstrapAutoActivatedAt.trim()) {
         return { ok: false as const, reason: "ALREADY_MARKED" };
       }
 
       const nextSettings = { ...s };
 
-      // Clear any reject keys (defensive)
       delete nextSettings.bootstrapRejectedAt;
       delete nextSettings.bootstrapRejectedByUserId;
       delete nextSettings.bootstrapRejectReason;
 
-      // Mark auto-activation + notification marker (so refresh never re-sends)
       nextSettings.bootstrapAutoActivatedAt = nowIso;
       nextSettings.bootstrapAutoActivatedBy = "SYSTEM";
       nextSettings.bootstrapAutoActivatedReason = `AUTO_AFTER_${AUTO_ACTIVATE_HOURS}_H`;
@@ -220,7 +209,6 @@ export default async function PendingPage() {
 
       if (upd.count !== 1) return { ok: false as const, reason: "RACE_LOST" };
 
-      // Audit (best-effort)
       try {
         await tx.auditLog.create({
           data: {
@@ -252,7 +240,6 @@ export default async function PendingPage() {
       };
     });
 
-    // If we activated, send notifications best-effort (do NOT block activation).
     if (activated.ok) {
       const delivery: any = { email: null, sms: null };
 
@@ -272,7 +259,7 @@ export default async function PendingPage() {
           await sendViaHubtel({
             to: activated.contactPhoneNorm,
             body: buildActivationSmsText({ schoolCode: activated.schoolCode }),
-            brand: "AYITIADMIN",
+            brand: ACTIVATION_SMS_BRAND,
             tenantId: undefined,
             actorId: ctx.userId,
             meta: {
@@ -287,7 +274,6 @@ export default async function PendingPage() {
         }
       }
 
-      // Optional: record delivery snapshot (best-effort; never blocks)
       try {
         await prisma.auditLog.create({
           data: {
@@ -304,7 +290,6 @@ export default async function PendingPage() {
       } catch {}
     }
 
-    // Regardless of who “won”, if now active redirect to dashboard.
     redirect("/admin/dashboard");
   }
 

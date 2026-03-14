@@ -76,7 +76,6 @@ export async function POST(req: NextRequest) {
     } catch {}
   });
 
-  // Best-effort notifications (do not block)
   const delivery: any = { email: null, sms: null };
 
   if (t.contactEmail) {
@@ -101,14 +100,14 @@ export async function POST(req: NextRequest) {
           `School APPROVED\n` +
           `Code: ${t.schoolCode}\n` +
           `You can sign in now.`,
-        brand: "AYITIADMIN",
+        brand: "EDULIFEOS",
         tenantId: undefined,
         actorId: auth.ctx.userId,
         meta: { category: "TENANT_APPROVED", tenantId, schoolCode: t.schoolCode },
       });
-      delivery.sms = { ok: true, to: t.contactPhoneNorm };
+      delivery.sms = { ok: true, to: t.contactPhoneNorm, brand: "EDULIFEOS" };
     } catch (e: any) {
-      delivery.sms = { ok: false, to: t.contactPhoneNorm, error: String(e?.message || "SMS_FAILED") };
+      delivery.sms = { ok: false, to: t.contactPhoneNorm, error: String(e?.message || "SMS_FAILED"), brand: "EDULIFEOS" };
     }
   }
 

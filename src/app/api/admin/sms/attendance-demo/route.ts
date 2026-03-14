@@ -69,11 +69,18 @@ async function requireAdmin(req: NextRequest) {
   }
 }
 
-function resolveBrand(input?: string): string {
-  if (!input) return "AYITIADMIN";
-  const upper = input.toUpperCase();
-  if (BrandName.includes(upper as (typeof BrandName)[number])) return upper;
-  return "AYITIADMIN";
+function resolveBrand(input?: string): (typeof BrandName)[number] {
+  const raw = String(input ?? process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (raw === "EDULIFE") return "EDULIFEOS";
+  if (BrandName.includes(raw as (typeof BrandName)[number])) {
+    return raw as (typeof BrandName)[number];
+  }
+
+  return "EDULIFEOS";
 }
 
 function buildMessage(opts: { studentName: string; className: string; dateLabel: string }) {
@@ -143,7 +150,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return json(200, { ok: true, mode: "demo" as Mode, brand, className, date: dateLabel, count: students.length, successCount, results });
+    return json(200, {
+      ok: true,
+      mode: "demo" as Mode,
+      brand,
+      className,
+      date: dateLabel,
+      count: students.length,
+      successCount,
+      results,
+    });
   } catch (err: any) {
     console.error("[SMS_ATTENDANCE_DEMO_FATAL]", err);
     return json(500, { ok: false, error: err?.message ?? "Unexpected error while sending attendance demo SMS alerts." });

@@ -1,14 +1,24 @@
+//src/app/admin/platform/invite-school/invite-school-client.tsx
 "use client";
 
 import { useMemo, useState } from "react";
 
 type Resp =
-  | { ok: true; reservedSchoolCode: string; reservedSlug: string; expiresAt: string; inviteUrl: string | null; inviteToken: string | null; delivery: any }
+  | {
+      ok: true;
+      reservedSchoolCode: string;
+      reservedSlug: string;
+      expiresAt: string;
+      inviteUrl: string | null;
+      inviteToken: string | null;
+      delivery: any;
+    }
   | { ok: false; error: string };
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
 }
+
 function cleanEmail(v: unknown) {
   return String(v ?? "").toLowerCase().trim();
 }
@@ -34,7 +44,7 @@ export default function InviteSchoolClient() {
       schoolName: clean(schoolName) || undefined,
       contactEmail: cleanEmail(contactEmail),
       contactPhone: clean(contactPhone) || undefined,
-      brand: "AYITIADMIN",
+      brand: "EDULIFEOS",
     };
 
     setLoading(true);
@@ -83,17 +93,33 @@ export default function InviteSchoolClient() {
       <div className="grid md:grid-cols-2 gap-3">
         <div>
           <label className="text-sm text-zinc-700">School name (optional)</label>
-          <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+            value={schoolName}
+            onChange={(e) => setSchoolName(e.target.value)}
+          />
         </div>
 
         <div>
           <label className="text-sm text-zinc-700">School contact email</label>
-          <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="school@example.com" />
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            placeholder="school@example.com"
+          />
         </div>
 
         <div>
-          <label className="text-sm text-zinc-700">School contact phone (optional but recommended)</label>
-          <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0553690424" />
+          <label className="text-sm text-zinc-700">
+            School contact phone (optional but recommended)
+          </label>
+          <input
+            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+            placeholder="0553690424"
+          />
         </div>
 
         <div className="flex items-end">
@@ -113,20 +139,37 @@ export default function InviteSchoolClient() {
             Invite sent for <span className="font-mono">{created.reservedSchoolCode}</span>
           </div>
           <div className="text-xs text-zinc-600">
-            Expires: <span className="font-medium">{new Date(created.expiresAt).toLocaleString()}</span>
+            Expires:{" "}
+            <span className="font-medium">
+              {new Date(created.expiresAt).toLocaleString()}
+            </span>
           </div>
 
           {created.inviteUrl ? (
             <div className="flex items-center gap-2">
-              <input readOnly value={created.inviteUrl} className="flex-1 rounded-lg border px-3 py-2 text-xs bg-white" />
-              <button onClick={() => copy(created.inviteUrl!)} className="rounded-lg border px-3 py-2 text-xs hover:bg-white">
+              <input
+                readOnly
+                value={created.inviteUrl}
+                className="flex-1 rounded-lg border px-3 py-2 text-xs bg-white"
+              />
+              <button
+                onClick={() => copy(created.inviteUrl!)}
+                className="rounded-lg border px-3 py-2 text-xs hover:bg-white"
+              >
                 Copy link
               </button>
             </div>
           ) : created.inviteToken ? (
             <div className="flex items-center gap-2">
-              <input readOnly value={created.inviteToken} className="flex-1 rounded-lg border px-3 py-2 text-xs bg-white" />
-              <button onClick={() => copy(created.inviteToken!)} className="rounded-lg border px-3 py-2 text-xs hover:bg-white">
+              <input
+                readOnly
+                value={created.inviteToken}
+                className="flex-1 rounded-lg border px-3 py-2 text-xs bg-white"
+              />
+              <button
+                onClick={() => copy(created.inviteToken!)}
+                className="rounded-lg border px-3 py-2 text-xs hover:bg-white"
+              >
                 Copy token
               </button>
             </div>

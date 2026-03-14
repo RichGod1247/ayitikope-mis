@@ -24,11 +24,18 @@ function resolveMode(input?: string): Mode {
   return input === "full" ? "full" : "initial";
 }
 
-function resolveBrand(input?: string): string {
-  if (!input) return "AYITIADMIN";
-  const upper = input.toUpperCase();
-  if (BrandName.includes(upper as (typeof BrandName)[number])) return upper;
-  return "AYITIADMIN";
+function resolveBrand(input?: string): (typeof BrandName)[number] {
+  const raw = String(input ?? process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (raw === "EDULIFE") return "EDULIFEOS";
+  if (BrandName.includes(raw as (typeof BrandName)[number])) {
+    return raw as (typeof BrandName)[number];
+  }
+
+  return "EDULIFEOS";
 }
 
 function normalizeRoleName(role: unknown) {

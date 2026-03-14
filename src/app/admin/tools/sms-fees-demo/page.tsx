@@ -2,9 +2,10 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 
 type Mode = "demo";
+type UiBrand = "EDULIFEOS" | "AYITIKOPJHS" | "AYITIKPRIM";
 
 type ApiResult = {
   ok: boolean;
@@ -29,13 +30,19 @@ type ParsedStudent = {
   amount: string;
 };
 
+function normalizeUiBrand(v: unknown): UiBrand {
+  const raw = String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  if (raw === "AYITIKOPJHS") return "AYITIKOPJHS";
+  if (raw === "AYITIKPRIM") return "AYITIKPRIM";
+  return "EDULIFEOS";
+}
+
 function parseStudents(input: string): ParsedStudent[] {
   return input
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .map((line) => {
-      // Format: Name - Phone - Amount
       const parts = line.split("-").map((p) => p.trim());
       const namePart = parts[0] ?? "";
       const phonePart = parts[1] ?? "";
@@ -58,7 +65,7 @@ function parseStudents(input: string): ParsedStudent[] {
 export default function SmsFeesDemoPage() {
   const [termOrPeriod, setTermOrPeriod] = useState("Current Term");
   const [className, setClassName] = useState("JHS 1");
-  const [brand, setBrand] = useState<string>("AYITIADMIN");
+  const [brand, setBrand] = useState<UiBrand>("EDULIFEOS");
   const [rawStudents, setRawStudents] = useState(
     [
       "Demo Student 1 - 0242914353 - 150",
@@ -164,9 +171,9 @@ export default function SmsFeesDemoPage() {
               <select
                 className="border border-slate-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                 value={brand}
-                onChange={(e) => setBrand(e.target.value)}
+                onChange={(e) => setBrand(normalizeUiBrand(e.target.value))}
               >
-                <option value="AYITIADMIN">AyitiAdmin (Admin)</option>
+                <option value="EDULIFEOS">EduLifeOS (Default)</option>
                 <option value="AYITIKOPJHS">AyitikopJHS (JHS)</option>
                 <option value="AYITIKPRIM">AyitikPRIM (Primary)</option>
               </select>
@@ -301,8 +308,8 @@ export default function SmsFeesDemoPage() {
         <div className="mt-4 text-xs text-slate-500">
           <p>
             All these messages are also logged into <code>SmsLog</code> and
-            visible at <code>/admin/tools/sms-logs</code>. Later, this page
-            can be driven directly by your fees/arrears data with filters and
+            visible at <code>/admin/tools/sms-logs</code>. Later, this page can
+            be driven directly by your fees/arrears data with filters and
             automatic selection of owing students.
           </p>
         </div>

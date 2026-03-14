@@ -15,7 +15,6 @@ function parseModeFromRequest(request: Request): Mode {
 export async function POST(request: Request) {
   const mode = parseModeFromRequest(request);
 
-  // This returns our active notification contacts
   const recipients = await getSmsRecipients(mode);
 
   const results: {
@@ -40,9 +39,9 @@ export async function POST(request: Request) {
 
     try {
       const res = await sendViaHubtel({
-        to: rawPhone, // we now correctly use the phone field
+        to: rawPhone,
         body: `[EduLife OS] Debug SMS test to ${r.name} (${mode})`,
-        brand: "AYITIADMIN",
+        brand: "EDULIFEOS",
         meta: {
           purpose: "debug-sms-test",
           recipientId: (r as any).id ?? null,
@@ -53,7 +52,7 @@ export async function POST(request: Request) {
 
       results.push({
         recipient: r.name,
-        to: res.to, // final normalized/test-rerouted number
+        to: res.to,
         ok: true,
       });
     } catch (err: any) {
@@ -69,12 +68,12 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     mode,
+    brand: "EDULIFEOS",
     count: recipients.length,
     results,
   });
 }
 
-// Allow GET from browser (`/debug/sms-test` page calls this)
 export async function GET(request: Request) {
   return POST(request);
 }

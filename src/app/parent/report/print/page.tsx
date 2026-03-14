@@ -73,8 +73,17 @@ type ParentTermReportResponse = {
     term: string;
     academicYear: string;
   };
-  student?: any;
-  classroom?: any;
+  student?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    sex?: string | null;
+    guardianName?: string | null;
+    guardianPhone?: string | null;
+  } | null;
+  classroom?: {
+    name?: string | null;
+    arm?: string | null;
+  } | null;
   termSummary?: TermSummary;
 };
 
@@ -169,7 +178,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
   const fullName = `${student?.lastName ?? ""} ${student?.firstName ?? ""}`.trim();
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm print:shadow-none">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border print:border-slate-300 print:shadow-none">
       <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -515,8 +524,22 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
 
 function PrintShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-100 py-4 print:bg-white print:py-0">
-      <div className="mx-auto max-w-4xl px-3 pb-4 print:max-w-full print:px-0">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] py-4 text-[#F7F4ED] print:bg-white print:py-0 print:text-black">
+      <div className="mx-auto max-w-5xl px-3 pb-4 print:max-w-full print:px-0">
+        <div className="print:hidden">
+          <div className="mb-4 overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.90),rgba(7,17,31,0.94))] px-4 py-3 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#E8C96A]">
+                  EduLife OS • Parent Report
+                </div>
+                <div className="mt-1 text-[11px] text-[#C9CDD6]">
+                  Print-ready BECE-style term report
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         {children}
       </div>
     </div>
@@ -526,7 +549,7 @@ function PrintShell({ children }: { children: React.ReactNode }) {
 function PrintFallback() {
   return (
     <PrintShell>
-      <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
+      <div className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-6 text-center text-[11px] text-[#C9CDD6] print:rounded-xl print:border-slate-200 print:bg-white print:text-slate-600">
         Loading report for printing…
       </div>
     </PrintShell>
@@ -622,12 +645,12 @@ function ParentReportPrintClient() {
 
   return (
     <PrintShell>
-      <div className="mb-3 flex items-center justify-between gap-2 text-xs text-slate-600 print:hidden">
+      <div className="mb-3 flex items-center justify-between gap-2 text-xs text-[#C9CDD6] print:hidden">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#E8C96A]">
             EduLife OS • Parent Report
           </div>
-          <div className="text-[11px] text-slate-600">
+          <div className="text-[11px] text-[#C9CDD6]">
             This view is optimised for A4 printing.
           </div>
         </div>
@@ -635,22 +658,22 @@ function ParentReportPrintClient() {
           type="button"
           onClick={() => window.print()}
           disabled={loading || !!error || !report}
-          className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-[#F7F4ED] shadow-sm transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Print now
         </button>
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
+        <div className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-6 text-center text-[11px] text-[#C9CDD6] print:rounded-xl print:border-slate-200 print:bg-white print:text-slate-600">
           Loading report for printing…
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-6 text-center text-[11px] text-rose-700">
+        <div className="rounded-[24px] border border-rose-300/20 bg-rose-400/12 px-4 py-6 text-center text-[11px] text-rose-100 print:rounded-xl print:border-rose-200 print:bg-rose-50 print:text-rose-700">
           {error}
         </div>
       ) : !report ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
+        <div className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-6 text-center text-[11px] text-[#C9CDD6] print:rounded-xl print:border-slate-200 print:bg-white print:text-slate-600">
           No report data available to print.
         </div>
       ) : (

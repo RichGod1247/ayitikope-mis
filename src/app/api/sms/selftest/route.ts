@@ -9,12 +9,13 @@ type SelfTestOptions = {
 };
 
 function resolveBrand(input?: string): string {
-  if (!input) return "AYITIADMIN";
-  const upper = input.toUpperCase();
+  const upper = String(input ?? "").trim().toUpperCase();
+  if (!upper) return "EDULIFEOS";
+  if (upper === "EDULIFE") return "EDULIFEOS";
   if (BrandName.includes(upper as (typeof BrandName)[number])) {
     return upper;
   }
-  return "AYITIADMIN";
+  return "EDULIFEOS";
 }
 
 async function runSelfTest(opts: SelfTestOptions) {
@@ -48,7 +49,6 @@ async function runSelfTest(opts: SelfTestOptions) {
   };
 }
 
-// Allow testing via browser (GET)
 export async function GET() {
   try {
     const payload = await runSelfTest({});
@@ -65,7 +65,6 @@ export async function GET() {
   }
 }
 
-// Allow testing via tools like Thunder Client / POST with JSON body
 export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => ({}))) as {

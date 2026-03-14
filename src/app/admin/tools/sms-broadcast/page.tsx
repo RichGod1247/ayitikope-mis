@@ -5,6 +5,7 @@
 import { useState } from "react";
 
 type Mode = "initial" | "full";
+type UiBrand = "EDULIFEOS" | "AYITIKOPJHS" | "AYITIKPRIM";
 
 type BroadcastResult = {
   ok: boolean;
@@ -21,12 +22,19 @@ type BroadcastResult = {
   error?: string;
 };
 
+function normalizeUiBrand(v: unknown): UiBrand {
+  const raw = String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  if (raw === "AYITIKOPJHS") return "AYITIKOPJHS";
+  if (raw === "AYITIKPRIM") return "AYITIKPRIM";
+  return "EDULIFEOS";
+}
+
 export default function SmsBroadcastPage() {
   const [message, setMessage] = useState(
     "[EduLife OS] This is a test broadcast from Ayitikope M/A Basic School."
   );
   const [mode, setMode] = useState<Mode>("initial");
-  const [brand, setBrand] = useState<string>("AYITIADMIN");
+  const [brand, setBrand] = useState<UiBrand>("EDULIFEOS");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BroadcastResult | null>(null);
 
@@ -39,11 +47,7 @@ export default function SmsBroadcastPage() {
       const res = await fetch("/api/admin/sms/broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message,
-          mode,
-          brand,
-        }),
+        body: JSON.stringify({ message, mode, brand }),
       });
 
       const data = (await res.json()) as BroadcastResult;
@@ -126,9 +130,9 @@ export default function SmsBroadcastPage() {
               <select
                 className="border border-slate-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                 value={brand}
-                onChange={(e) => setBrand(e.target.value)}
+                onChange={(e) => setBrand(normalizeUiBrand(e.target.value))}
               >
-                <option value="AYITIADMIN">AyitiAdmin (Admin)</option>
+                <option value="EDULIFEOS">EduLifeOS (Default)</option>
                 <option value="AYITIKOPJHS">AyitikopJHS (JHS)</option>
                 <option value="AYITIKPRIM">AyitikPRIM (Primary)</option>
               </select>
@@ -230,10 +234,9 @@ export default function SmsBroadcastPage() {
 
         <div className="mt-4 text-xs text-slate-500">
           <p>
-            All messages sent here are also logged in{" "}
-            <code>SmsLog</code> and visible in{" "}
-            <code>/admin/tools/sms-logs</code>. In future sprints we can
-            add templates, segments (parents vs teachers), and scheduling.
+            All messages sent here are also logged in <code>SmsLog</code> and
+            visible in <code>/admin/tools/sms-logs</code>. In future sprints we
+            can add templates, segments (parents vs teachers), and scheduling.
           </p>
         </div>
       </div>

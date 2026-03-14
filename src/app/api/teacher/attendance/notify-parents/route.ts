@@ -54,13 +54,13 @@ function normalizePhone(input: string | null | undefined): string | null {
 }
 
 function resolveBrand(input?: string) {
-  const s = (input ?? "").trim();
-  if (!s) return "AYITIADMIN" as (typeof BrandName)[number];
-  const upper = s.toUpperCase();
-  if (BrandName.includes(upper as (typeof BrandName)[number])) {
-    return upper as (typeof BrandName)[number];
+  const s = String(input ?? "").trim().toUpperCase();
+  if (!s) return "EDULIFEOS" as (typeof BrandName)[number];
+  if (s === "EDULIFE") return "EDULIFEOS" as (typeof BrandName)[number];
+  if (BrandName.includes(s as (typeof BrandName)[number])) {
+    return s as (typeof BrandName)[number];
   }
-  return "AYITIADMIN" as (typeof BrandName)[number];
+  return "EDULIFEOS" as (typeof BrandName)[number];
 }
 
 function toNumber(v: unknown): number | null {
@@ -87,7 +87,6 @@ function formatTempC(n: number | null) {
   return `${Math.round(n * 10) / 10}C`;
 }
 
-// Optional JHS fallback match
 function normalizeKey(s: string) {
   return String(s ?? "").trim().toUpperCase();
 }
@@ -111,7 +110,6 @@ function parseJhsAssignmentRows(j: any): JhsAssignmentRow[] {
 }
 
 export async function POST(req: NextRequest) {
-  // ✅ API auth (never redirects)
   const auth = await requireApiUserContext(req, { requireTenant: true });
   if (!auth.ok) return auth.res;
 
@@ -234,7 +232,6 @@ export async function POST(req: NextRequest) {
     return json(200, { ok: true, alreadyNotified: true, notifiedAt: session.notifiedAt, brand });
   }
 
-  // ---- Idempotency lock claim (with TTL) ----
   const now = new Date();
   const lockCutoff = new Date(now.getTime() - LOCK_TTL_MINUTES * 60 * 1000);
 

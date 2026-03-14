@@ -6,7 +6,7 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 import { codeHint, generateInviteCode, hashInviteCode } from "@/lib/inviteCodes";
 import { safeInternalPath } from "@/lib/roleRouting";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
-import { sendViaHubtel } from "@/lib/sms/hubtel";
+import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
 import { sendEmail } from "@/lib/email/sendEmail";
 import {
   getIpFromHeaders,
@@ -83,6 +83,20 @@ function prefixForRole(roleName: string) {
   if (roleName === "TEACHER") return "TC";
   if (roleName === "PARENT") return "PR";
   return "INV";
+}
+
+function resolveBrand(input?: string): (typeof BrandName)[number] {
+  const raw = String(input ?? process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (raw === "EDULIFE") return "EDULIFEOS";
+  if (BrandName.includes(raw as (typeof BrandName)[number])) {
+    return raw as (typeof BrandName)[number];
+  }
+
+  return "EDULIFEOS";
 }
 
 /**
@@ -233,7 +247,7 @@ export async function POST(req: NextRequest) {
   const deliverToName = cleanStr(body.deliverToName || "");
 
   const redirectTo = safeInternalPath(body.redirectTo ?? "/app", "/app");
-  const brand = cleanStr(body.brand ?? "AYITIADMIN") || "AYITIADMIN";
+  const brand = resolveBrand(body.brand);
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
@@ -276,6 +290,7 @@ export async function POST(req: NextRequest) {
               expiresAt: created.expiresAt.toISOString(),
               maxUses: created.maxUses,
               delivery: { wantSms, wantEmail },
+              brand,
             } as any,
           },
         });
@@ -361,6 +376,7 @@ export async function POST(req: NextRequest) {
                   expiresAt: created.expiresAt.toISOString(),
                   redirectTo,
                   link: link || null,
+                  brand,
                 },
               },
             });
@@ -380,9 +396,9 @@ export async function POST(req: NextRequest) {
                 expiresAt: created.expiresAt.toISOString(),
               },
             });
-            sms = { ok: true, to: phoneNorm };
+            sms = { ok: true, to: phoneNorm, brand };
           } catch (e: any) {
-            sms = { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED") };
+            sms = { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED"), brand };
           }
 
           try {
@@ -395,7 +411,7 @@ export async function POST(req: NextRequest) {
                 resourceId: created.id,
                 ip,
                 userAgent,
-                metadata: { to: phoneNorm, error: sms?.error ?? null } as any,
+                metadata: { to: phoneNorm, brand, error: sms?.error ?? null } as any,
               },
             });
           } catch {}

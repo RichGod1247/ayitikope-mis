@@ -26,7 +26,7 @@ type CreateResp =
       maxUses: number;
       link?: string | null;
       delivery?: { sms?: any; email?: any };
-      sms?: any; // legacy
+      sms?: any;
     }
   | { ok: false; error?: string; retryAfterSeconds?: number };
 
@@ -46,22 +46,18 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
 
   const [roleName, setRoleName] = useState("TEACHER");
 
-  // legacy days (parent)
   const [expiresInDays, setExpiresInDays] = useState("7");
-
-  // staff minutes (teacher/headteacher)
   const [expiresInMinutes, setExpiresInMinutes] = useState("15");
 
   const [maxUses, setMaxUses] = useState("1");
   const [includeRevoked, setIncludeRevoked] = useState(false);
 
-  // delivery fields
   const [sendSms, setSendSms] = useState(true);
   const [sendEmail, setSendEmail] = useState(true);
   const [deliverToPhone, setDeliverToPhone] = useState("");
   const [deliverToEmail, setDeliverToEmail] = useState("");
   const [deliverToName, setDeliverToName] = useState("");
-  const [brand, setBrand] = useState("AYITIADMIN");
+  const [brand, setBrand] = useState("EDULIFEOS");
 
   const [newCode, setNewCode] = useState<string | null>(null);
   const [lastDelivery, setLastDelivery] = useState<any>(null);
@@ -110,14 +106,12 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
     const payload: any = {
       roleName,
       maxUses: safeNum(maxUses, 1),
-
-      // delivery
       sendSms,
       sendEmail,
       deliverToPhone: clean(deliverToPhone),
       deliverToEmail: clean(deliverToEmail),
       deliverToName: clean(deliverToName),
-      brand: clean(brand) || "AYITIADMIN",
+      brand: clean(brand) || "EDULIFEOS",
       redirectTo: defaultRedirectTo,
     };
 
@@ -164,7 +158,8 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
         <div>
           <h1 className="text-2xl font-bold text-zinc-900">Staff Onboarding</h1>
           <p className="text-sm text-zinc-600 mt-1">
-            Generate onboarding codes. For TEACHER/HEADTEACHER: expires in minutes. For PARENT: expires in days.
+            Generate onboarding codes. For TEACHER/HEADTEACHER: expires in minutes. For
+            PARENT: expires in days.
           </p>
         </div>
       )}
@@ -186,7 +181,9 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
 
           {isStaffRole ? (
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Expires (minutes)</label>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                Expires (minutes)
+              </label>
               <input
                 className="w-full border rounded-xl p-2 h-10"
                 value={expiresInMinutes}
@@ -197,7 +194,9 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Expires (days)</label>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                Expires (days)
+              </label>
               <input
                 className="w-full border rounded-xl p-2 h-10"
                 value={expiresInDays}
@@ -231,22 +230,31 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
           </div>
         </div>
 
-        {/* Delivery */}
         <div className="border rounded-2xl p-4 bg-zinc-50 space-y-3">
           <div className="flex flex-wrap gap-4">
             <label className="inline-flex items-center gap-2 text-sm text-zinc-800">
-              <input type="checkbox" checked={sendSms} onChange={(e) => setSendSms(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={sendSms}
+                onChange={(e) => setSendSms(e.target.checked)}
+              />
               Send SMS
             </label>
             <label className="inline-flex items-center gap-2 text-sm text-zinc-800">
-              <input type="checkbox" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={sendEmail}
+                onChange={(e) => setSendEmail(e.target.checked)}
+              />
               Send Email
             </label>
           </div>
 
           <div className="grid md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Recipient name (optional)</label>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                Recipient name (optional)
+              </label>
               <input
                 className="w-full border rounded-xl p-2 h-10"
                 value={deliverToName}
@@ -256,7 +264,9 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Recipient phone (for SMS)</label>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                Recipient phone (for SMS)
+              </label>
               <input
                 className="w-full border rounded-xl p-2 h-10"
                 value={deliverToPhone}
@@ -267,7 +277,9 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Recipient email (for Email)</label>
+              <label className="block text-sm font-medium text-zinc-700 mb-1">
+                Recipient email (for Email)
+              </label>
               <input
                 className="w-full border rounded-xl p-2 h-10"
                 value={deliverToEmail}
@@ -284,7 +296,7 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
                 className="w-full border rounded-xl p-2 h-10"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                placeholder="AYITIADMIN"
+                placeholder="EDULIFEOS"
               />
             </div>
           </div>
@@ -313,7 +325,9 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
 
             <div className="text-xs text-zinc-600">
               Canonical signup link to share:
-              <div className="mt-1 font-mono break-all text-zinc-900">{buildSignupLink(newCode)}</div>
+              <div className="mt-1 font-mono break-all text-zinc-900">
+                {buildSignupLink(newCode)}
+              </div>
             </div>
 
             {lastDelivery ? (
@@ -331,7 +345,10 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
       <div className="border rounded-2xl p-4 bg-white shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Codes</h2>
-          <a className="text-xs text-zinc-600 hover:underline" href="/api/admin/invite-codes/list?debug=1">
+          <a
+            className="text-xs text-zinc-600 hover:underline"
+            href="/api/admin/invite-codes/list?debug=1"
+          >
             Debug counts
           </a>
         </div>
@@ -343,7 +360,10 @@ export default function StaffOnboardingClient({ embedded = false }: { embedded?:
         ) : (
           <div className="space-y-2 mt-3">
             {items.map((x) => (
-              <div key={x.id} className="border rounded-xl p-3 flex items-center justify-between gap-3">
+              <div
+                key={x.id}
+                className="border rounded-xl p-3 flex items-center justify-between gap-3"
+              >
                 <div className="min-w-0">
                   <div className="font-medium text-zinc-900">
                     {x.roleName}{" "}

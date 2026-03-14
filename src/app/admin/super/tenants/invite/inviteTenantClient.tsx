@@ -1,3 +1,4 @@
+//src/app/admin/super/tenants/invite/inviteTenantClient.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -10,8 +11,8 @@ export default function InviteTenantClient() {
   const [sendEmail, setSendEmail] = useState(true);
   const [sendSms, setSendSms] = useState(true);
 
-  const [ttlMinutes, setTtlMinutes] = useState("1440"); // 24h
-  const [brand, setBrand] = useState("AYITIADMIN");
+  const [ttlMinutes, setTtlMinutes] = useState("1440");
+  const [brand, setBrand] = useState("EDULIFEOS");
 
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export default function InviteTenantClient() {
           sendEmail,
           sendSms,
           ttlMinutes: Number(ttlMinutes || "1440"),
-          brand: brand.trim() || "AYITIADMIN",
+          brand: brand.trim() || "EDULIFEOS",
         }),
       });
 
@@ -71,7 +72,9 @@ export default function InviteTenantClient() {
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">School name (optional)</label>
+          <label className="block text-sm font-medium text-zinc-700 mb-1">
+            School name (optional)
+          </label>
           <input
             className="w-full border rounded-xl p-2 h-10"
             value={schoolName}
@@ -80,7 +83,9 @@ export default function InviteTenantClient() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Contact email</label>
+          <label className="block text-sm font-medium text-zinc-700 mb-1">
+            Contact email
+          </label>
           <input
             className="w-full border rounded-xl p-2 h-10"
             value={contactEmail}
@@ -89,7 +94,9 @@ export default function InviteTenantClient() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 mb-1">Contact phone (Ghana)</label>
+          <label className="block text-sm font-medium text-zinc-700 mb-1">
+            Contact phone (Ghana)
+          </label>
           <input
             className="w-full border rounded-xl p-2 h-10"
             value={contactPhone}
@@ -99,7 +106,9 @@ export default function InviteTenantClient() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">Invite TTL (minutes)</label>
+            <label className="block text-sm font-medium text-zinc-700 mb-1">
+              Invite TTL (minutes)
+            </label>
             <input
               className="w-full border rounded-xl p-2 h-10"
               value={ttlMinutes}
@@ -109,8 +118,15 @@ export default function InviteTenantClient() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">SMS brand</label>
-            <input className="w-full border rounded-xl p-2 h-10" value={brand} onChange={(e) => setBrand(e.target.value)} />
+            <label className="block text-sm font-medium text-zinc-700 mb-1">
+              SMS brand
+            </label>
+            <input
+              className="w-full border rounded-xl p-2 h-10"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="EDULIFEOS"
+            />
           </div>
         </div>
       </div>

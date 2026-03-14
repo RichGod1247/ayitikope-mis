@@ -3,6 +3,8 @@
 
 import { useState } from "react";
 
+type UiBrand = "EDULIFEOS" | "AYITIKOPJHS" | "AYITIKPRIM";
+
 type ArrearRow = {
   id: number;
   studentId?: string;
@@ -16,7 +18,7 @@ type ArrearRow = {
 type Props = {
   initialTerm: string;
   initialClassName: string;
-  initialDueDate: string; // yyyy-mm-dd
+  initialDueDate: string;
   initialBrand?: string;
 };
 
@@ -38,16 +40,23 @@ type FeesResult = {
   }[];
 };
 
+function normalizeUiBrand(v: unknown): UiBrand {
+  const raw = String(v ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  if (raw === "AYITIKOPJHS") return "AYITIKOPJHS";
+  if (raw === "AYITIKPRIM") return "AYITIKPRIM";
+  return "EDULIFEOS";
+}
+
 export default function FeesArrearsClient({
   initialTerm,
   initialClassName,
   initialDueDate,
-  initialBrand = "AYITIADMIN",
+  initialBrand = "EDULIFEOS",
 }: Props) {
   const [term, setTerm] = useState(initialTerm);
   const [className, setClassName] = useState(initialClassName);
   const [dueDate, setDueDate] = useState(initialDueDate);
-  const [brand, setBrand] = useState(initialBrand);
+  const [brand, setBrand] = useState<UiBrand>(normalizeUiBrand(initialBrand));
 
   const [rows, setRows] = useState<ArrearRow[]>([
     {
@@ -121,7 +130,6 @@ export default function FeesArrearsClient({
       amountDue: r.amountDue,
     }));
 
-    // Quick validation
     const invalid = arrears.find(
       (a) => !a.studentName || !a.guardianPhone || !a.amountDue
     );
@@ -132,7 +140,6 @@ export default function FeesArrearsClient({
       return;
     }
 
-    // Format due date as dd/mm/yyyy for message, but send raw as string
     let dueLabel: string | undefined = undefined;
     if (dueDate) {
       try {
@@ -160,8 +167,7 @@ export default function FeesArrearsClient({
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         throw new Error(
-          body?.error ||
-            `Failed to send fees reminders (status ${res.status})`
+          body?.error || `Failed to send fees reminders (status ${res.status})`
         );
       }
 
@@ -185,13 +191,11 @@ export default function FeesArrearsClient({
           </p>
           <p className="text-xs text-slate-500">
             This page uses the <code>/api/fees/notify-arrears</code> endpoint
-            and logs all messages in{" "}
-            <code>/admin/tools/sms-logs</code> with purpose{" "}
-            <code>fees-reminder-auto</code>.
+            and logs all messages in <code>/admin/tools/sms-logs</code> with
+            purpose <code>fees-reminder-auto</code>.
           </p>
         </header>
 
-        {/* Filters / meta */}
         <section className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm">
           <div className="sm:col-span-2">
             <label className="block text-slate-700 mb-1">Term</label>
@@ -223,16 +227,15 @@ export default function FeesArrearsClient({
             <select
               className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
               value={brand}
-              onChange={(e) => setBrand(e.target.value)}
+              onChange={(e) => setBrand(normalizeUiBrand(e.target.value))}
             >
-              <option value="AYITIADMIN">AYITIADMIN (Admin Wallet)</option>
+              <option value="EDULIFEOS">EDULIFEOS (Default)</option>
               <option value="AYITIKOPJHS">AYITIKOPJHS (JHS Wallet)</option>
               <option value="AYITIKPRIM">AYITIKPRIM (Primary Wallet)</option>
             </select>
           </div>
         </section>
 
-        {/* Table */}
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-800">
@@ -352,7 +355,6 @@ export default function FeesArrearsClient({
           </div>
         </section>
 
-        {/* Actions */}
         <section className="space-y-3">
           <button
             type="button"

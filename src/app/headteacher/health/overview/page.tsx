@@ -1,3 +1,4 @@
+//src/app/headteacher/health/overview/page.tsx
 import type { Metadata } from "next";
 import HeadteacherHealthOverviewClient from "@/components/HeadteacherHealthOverviewClient";
 import { requireHeadteacherContext } from "@/lib/headteacherAuth";

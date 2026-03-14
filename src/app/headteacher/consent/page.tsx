@@ -1,7 +1,7 @@
 // src/app/headteacher/consent/page.tsx
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 type StudentRow = {
@@ -11,7 +11,7 @@ type StudentRow = {
   guardianName: string | null
   guardianPhone: string | null
   healthConsentAt: string | null
-  smsOptIn: boolean // from guardianSmsOptIn
+  smsOptIn: boolean
 }
 
 type TeacherRow = {
@@ -34,7 +34,9 @@ type Me = {
   memberships?: Array<{ tenantId?: string | null; tenant?: { id?: string; name?: string; slug?: string | null } | null }> | null
 }
 
-type BrandName = 'AyitikopJHS' | 'AyitikPRIM' | 'AyitiAdmin'
+type BrandName = 'EDULIFEOS' | 'AYITIKOPJHS' | 'AYITIKPRIM'
+
+type Toast = { id: number; text: string; tone?: 'default' | 'success' | 'error' }
 
 function cx(...classes: (string | undefined | false)[]) {
   return classes.filter(Boolean).join(' ')
@@ -70,8 +72,13 @@ function pickTenantFromMe(me: Me | null): { id: string; name?: string; slug?: st
   return { id: tid.trim(), name, slug }
 }
 
-/** Tiny toast */
-type Toast = { id: number; text: string; tone?: 'default' | 'success' | 'error' }
+function normalizeConsentBrand(raw: unknown): BrandName {
+  const v = String(raw ?? '').trim().toUpperCase().replace(/\s+/g, '')
+  if (v === 'AYITIKOPJHS') return 'AYITIKOPJHS'
+  if (v === 'AYITIKPRIM') return 'AYITIKPRIM'
+  return 'EDULIFEOS'
+}
+
 function ToastHost({ items, remove }: { items: Toast[]; remove: (id: number) => void }) {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
@@ -96,29 +103,22 @@ function ToastHost({ items, remove }: { items: Toast[]; remove: (id: number) => 
 }
 
 export default function ConsentPage() {
-  const [tenantId, setTenantId] = useState<string>('') // still used by teacher endpoints + campaign until we fix them
   const [tenantName, setTenantName] = useState<string>('')
+  const [tenantDisplayId, setTenantDisplayId] = useState<string>('')
   const [activeTab, setActiveTab] = useState<'students' | 'teachers'>('students')
-
-  // brand selector
-  const [brand, setBrand] = useState<BrandName>('AyitiAdmin')
-
-  // current user
+  const [brand, setBrand] = useState<BrandName>('EDULIFEOS')
   const [me, setMe] = useState<Me | null>(null)
 
-  // Students
   const [students, setStudents] = useState<StudentRow[]>([])
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [savingStudentId, setSavingStudentId] = useState<string | null>(null)
   const [studentError, setStudentError] = useState<string | null>(null)
 
-  // Teachers
   const [teachers, setTeachers] = useState<TeacherRow[]>([])
   const [loadingTeachers, setLoadingTeachers] = useState(false)
   const [savingTeacherId, setSavingTeacherId] = useState<string | null>(null)
   const [teacherError, setTeacherError] = useState<string | null>(null)
 
-  // Toasts
   const [toasts, setToasts] = useState<Toast[]>([])
   const pushToast = (text: string, tone?: Toast['tone']) => {
     const id = Date.now() + Math.floor(Math.random() * 1000)
@@ -127,22 +127,21 @@ export default function ConsentPage() {
   }
   const removeToast = (id: number) => setToasts((prev) => prev.filter((t) => t.id !== id))
 
-  // Load brand from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('consent.brand')
-      if (saved === 'AyitikopJHS' || saved === 'AyitikPRIM' || saved === 'AyitiAdmin') {
-        setBrand(saved)
-      }
-    } catch {}
+      setBrand(normalizeConsentBrand(saved))
+    } catch {
+      setBrand('EDULIFEOS')
+    }
   }, [])
+
   useEffect(() => {
     try {
       localStorage.setItem('consent.brand', brand)
     } catch {}
   }, [brand])
 
-  // Load me -> derive tenantId (still needed for teacher endpoints + campaign until we fix them)
   useEffect(() => {
     ;(async () => {
       try {
@@ -152,13 +151,13 @@ export default function ConsentPage() {
 
         const t = pickTenantFromMe(meData)
         if (!t?.id) {
-          setTenantId('')
+          setTenantDisplayId('')
           setTenantName('')
           pushToast('No active tenant found for this account. Please sign in as a staff member of a school.', 'error')
           return
         }
 
-        setTenantId(t.id)
+        setTenantDisplayId(t.id)
         setTenantName(t.name || '')
       } catch {
         pushToast('Failed to load session', 'error')
@@ -167,18 +166,16 @@ export default function ConsentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Load lists whenever tenant/tab changes
   useEffect(() => {
     if (activeTab === 'students') loadStudents()
     else loadTeachers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId, activeTab])
+  }, [activeTab])
 
   async function loadStudents() {
     setLoadingStudents(true)
     setStudentError(null)
     try {
-      // ✅ session-tenant; NO tenantId in query
       const res = await fetch(`/api/consent/students/list`, { cache: 'no-store' })
       const data = await res.json().catch(() => ({} as any))
       if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Failed to load students')
@@ -202,17 +199,16 @@ export default function ConsentPage() {
   }
 
   async function loadTeachers() {
-    if (!tenantId) return
     setLoadingTeachers(true)
     setTeacherError(null)
     try {
-      // (unchanged for now until you paste teacher consent routes)
-      const res = await fetch(`/api/consent/teachers/list?tenantId=${encodeURIComponent(tenantId)}`, {
+      const res = await fetch(`/api/consent/teachers/list`, {
         cache: 'no-store',
       })
-      if (!res.ok) throw new Error('Failed to load teachers')
-      const data = await res.json().catch(() => ({}))
-      const rows: TeacherRow[] = (data?.items ?? []).map((u: any) => ({
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Failed to load teachers')
+
+      const rows: TeacherRow[] = (Array.isArray(data?.items) ? data.items : []).map((u: any) => ({
         id: String(u.id),
         name: u.name ?? null,
         email: u.email ?? null,
@@ -226,7 +222,6 @@ export default function ConsentPage() {
     }
   }
 
-  // Save student row (consent + sms)
   async function saveStudent(row: StudentRow) {
     try {
       setSavingStudentId(row.id)
@@ -254,14 +249,12 @@ export default function ConsentPage() {
     }
   }
 
-  // “Set Consent Now”
   async function setStudentConsentNow(id: string) {
     const target = students.find((s) => s.id === id)
     if (!target) return
     await saveStudent({ ...target, healthConsentAt: new Date().toISOString() })
   }
 
-  // Save teacher row (sms)
   async function saveTeacher(row: TeacherRow) {
     try {
       setSavingTeacherId(row.id)
@@ -272,7 +265,9 @@ export default function ConsentPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error('Failed to update teacher consent')
+      const data = await res.json().catch(() => ({} as any))
+      if (!res.ok || data?.ok === false) throw new Error(data?.error || 'Failed to update teacher consent')
+
       pushToast('Teacher saved', 'success')
       await loadTeachers()
     } catch (e: any) {
@@ -284,40 +279,33 @@ export default function ConsentPage() {
   }
 
   async function sendCampaign() {
-    if (!tenantId) return
     try {
       pushToast('Sending campaign…')
       const res = await fetch('/api/consent/campaign/send', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          tenantId,
           brand,
-          limit: 25,
+          mode: 'initial',
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
+      if (!res.ok || data?.ok === false) {
         pushToast(`Campaign failed: ${data?.error || res.statusText}`, 'error')
         return
       }
       const cnt = data?.count ?? 0
-      pushToast(`Campaign queued (${cnt} guardians)`, 'success')
+      pushToast(`Campaign sent (${cnt} recipients processed)`, 'success')
     } catch {
       pushToast('Campaign error', 'error')
     }
   }
 
-  // ✅ Canonical, session-tenant export
   const studentsCsvHref = `/api/consent/students/export/csv`
-
-  // (unchanged until teacher routes are fixed)
-  const teachersCsvHref =
-    tenantId ? `/api/consent/teachers/csv?tenantId=${encodeURIComponent(tenantId)}` : '#'
+  const teachersCsvHref = `/api/consent/teachers/csv`
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header + toolbar */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -325,9 +313,9 @@ export default function ConsentPage() {
             <p className="text-sm text-gray-500">
               Privacy-first controls for guardians and staff (opt-in, consent, audit, exports, campaigns).
             </p>
-            {tenantId && (
+            {tenantDisplayId && (
               <p className="text-xs text-gray-400 mt-1">
-                Tenant: <span className="font-medium">{tenantName || tenantId}</span>
+                Tenant: <span className="font-medium">{tenantName || tenantDisplayId}</span>
               </p>
             )}
           </div>
@@ -336,12 +324,12 @@ export default function ConsentPage() {
             <select
               className="border rounded-lg px-3 py-2 text-sm"
               value={brand}
-              onChange={(e) => setBrand(e.target.value as BrandName)}
+              onChange={(e) => setBrand(normalizeConsentBrand(e.target.value))}
               title="SMS Brand / Sender ID"
             >
-              <option value="AyitikopJHS">AyitikopJHS</option>
-              <option value="AyitikPRIM">AyitikPRIM</option>
-              <option value="AyitiAdmin">AyitiAdmin</option>
+              <option value="EDULIFEOS">EduLifeOS</option>
+              <option value="AYITIKOPJHS">AyitikopJHS</option>
+              <option value="AYITIKPRIM">AyitikPRIM</option>
             </select>
 
             <Link href="/headteacher/consent/audit" className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">
@@ -360,7 +348,7 @@ export default function ConsentPage() {
 
             <a
               href={teachersCsvHref}
-              className={cx('rounded-xl border px-3 py-2 text-sm hover:bg-gray-50', !tenantId && 'pointer-events-none opacity-50')}
+              className={cx('rounded-xl border px-3 py-2 text-sm hover:bg-gray-50')}
               target="_blank"
               rel="noreferrer"
               title="Download Teachers CSV"
@@ -370,8 +358,7 @@ export default function ConsentPage() {
 
             <button
               onClick={sendCampaign}
-              className="rounded-xl bg-blue-600 text-white px-3 py-2 text-sm hover:bg-blue-700 disabled:opacity-50"
-              disabled={!tenantId}
+              className="rounded-xl bg-blue-600 text-white px-3 py-2 text-sm hover:bg-blue-700"
               title="Send consent campaign SMS to a small batch"
             >
               Send Campaign
@@ -379,7 +366,6 @@ export default function ConsentPage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 border-b">
           <button
             className={cx(
@@ -402,7 +388,6 @@ export default function ConsentPage() {
         </div>
       </div>
 
-      {/* Content */}
       {activeTab === 'students' ? (
         <div className="space-y-3">
           {studentError && (
@@ -515,7 +500,7 @@ export default function ConsentPage() {
               <button
                 onClick={loadTeachers}
                 className="rounded-xl border px-3 py-1.5 text-sm hover:bg-gray-50"
-                disabled={loadingTeachers || !tenantId}
+                disabled={loadingTeachers}
               >
                 {loadingTeachers ? 'Loading…' : 'Refresh'}
               </button>

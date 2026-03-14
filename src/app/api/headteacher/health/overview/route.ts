@@ -1,215 +1,294 @@
-// src/app/api/fees/notify-arrears/route.ts
+// src/app/api/headteacher/health/overview/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
-import { requireServerUserContext } from "@/lib/serverAuth";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { effectiveRole } from "@/lib/roleRouting";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_FEES_ARREARS_TEMPLATE = [
-  "Dear Parent/Guardian of {{studentName}},",
-  "",
-  "Our records show that fees of GHS {{amountDue}} for {{className}} ({{term}})",
-  "are still outstanding as of {{dueDate}}.",
-  "",
-  "If you have already paid, kindly disregard this message.",
-  "Otherwise, we encourage you to settle at your earliest convenience.",
-  "",
-  "Thank you,",
-  "{{schoolName}}",
-].join("\n");
+const DEFAULT_FEVER_THRESHOLD_C = 37.8;
+const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
 
-type ArrearsItem = {
-  studentId?: string;
-  studentName: string;
-  guardianPhone: string;
-  className?: string;
-  term?: string;
-  amountDue?: string | number;
-  dueDate?: string;
+type ClassroomSummary = {
+  classroomId: string | null;
+  classroomName: string;
+  totalRecords: number;
+  feverCount: number;
+  maxTemp: number | null;
 };
 
-// Brand type derived from BrandName tuple in sms/hubtel.ts
-type Brand = (typeof BrandName)[number];
+type SampleRow = {
+  studentName: string;
+  classroomName: string;
+  temperatureC: number | null;
+  symptoms: string | null;
+  notes: string | null;
+  isFever: boolean;
+};
 
-// For fees reminders we send via the admin brand
-const FEES_BRAND: Brand = "AYITIADMIN";
-
-function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
-    ...init,
+    status,
     headers: {
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
-      ...(init?.headers ?? {}),
     },
   });
 }
 
-// Simple template renderer for {{placeholders}}
-function renderTemplate(template: string, ctx: Record<string, string>): string {
-  let body = template;
-  for (const [key, value] of Object.entries(ctx)) {
-    const re = new RegExp(`{{\\s*${key}\\s*}}`, "g");
-    body = body.replace(re, value);
+function cleanStr(v: unknown): string {
+  return String(v ?? "").trim();
+}
+
+function isIsoDateOnly(v: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(v);
+}
+
+function utcDateOnlyFromIso(iso: string): Date {
+  const y = Number(iso.slice(0, 4));
+  const m = Number(iso.slice(5, 7));
+  const d = Number(iso.slice(8, 10));
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function roleUpper(v: unknown): string {
+  return effectiveRole(v).trim().toUpperCase();
+}
+
+function decimalToNumber(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v === "string") {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
   }
-  return body;
+  if (typeof v === "object" && v && typeof (v as any).toNumber === "function") {
+    const n = (v as any).toNumber();
+    return typeof n === "number" && Number.isFinite(n) ? n : null;
+  }
+  const n = Number(v as any);
+  return Number.isFinite(n) ? n : null;
 }
 
-function safeMoney(v: unknown): string {
-  if (typeof v === "number" && Number.isFinite(v)) return v.toFixed(2);
-  if (typeof v === "string" && v.trim()) return v.trim();
-  return "0.00";
+function displayStudentName(firstName?: string | null, lastName?: string | null): string {
+  const name = [cleanStr(firstName), cleanStr(lastName)].filter(Boolean).join(" ").trim();
+  return name || "Learner";
 }
 
-async function requireAdminLike(tenantId: string, userId: string) {
-  const membership = await prisma.membership.findFirst({
-    where: { tenantId, userId, status: "ACTIVE" },
-    include: { role: true },
+function displayClassroomName(
+  classroomName?: string | null,
+  grade?: string | null,
+  arm?: string | null
+): string {
+  const direct = cleanStr(classroomName);
+  if (direct) return direct;
+
+  const gradePart = cleanStr(grade);
+  const armPart = cleanStr(arm);
+  const merged = [gradePart, armPart].filter(Boolean).join(" ").trim();
+
+  return merged || "Unassigned class";
+}
+
+export async function GET(req: NextRequest) {
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
   });
-  if (!membership) return { ok: false as const, status: 403, error: "Forbidden." };
-  const roleName = String(membership.role?.name ?? "").toUpperCase();
-  const isAdminLike = roleName.includes("ADMIN") || roleName.includes("HEAD");
-  if (!isAdminLike) return { ok: false as const, status: 403, error: "Forbidden." };
-  return { ok: true as const };
-}
+  if (!auth.ok) return auth.res;
 
-export async function POST(req: NextRequest) {
-  // Auth + tenant
-  let ctx: { tenantId: string; userId: string };
-  try {
-    const c = await requireServerUserContext({
-      redirectTo: "/auth/signin",
-      requireTenant: true,
-    });
-    ctx = { tenantId: c.tenantId, userId: c.userId };
-  } catch {
-    return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
+  const ctx = auth.ctx;
+
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_tenantId: {
+        userId: ctx.userId,
+        tenantId: ctx.tenantId,
+      },
+    },
+    select: {
+      status: true,
+      role: { select: { name: true } },
+    },
+  });
+
+  if (!membership || membership.status !== "ACTIVE") {
+    return json(403, { ok: false, error: "FORBIDDEN" });
   }
 
-  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
-  if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, { status: roleOk.status });
-
-  const ct = req.headers.get("content-type") || "";
-  if (!ct.toLowerCase().includes("application/json")) {
-    return jsonNoStore({ ok: false, error: "Content-Type must be application/json." }, { status: 415 });
+  const roleName = roleUpper(membership.role?.name ?? ctx.roleName);
+  if (!ALLOWED_ROLES.has(roleName)) {
+    return json(403, { ok: false, error: "FORBIDDEN" });
   }
 
-  try {
-    const body = await req.json().catch(() => null);
-    if (!body || typeof body !== "object") {
-      return jsonNoStore({ ok: false, error: "Invalid JSON body." }, { status: 400 });
-    }
+  const { searchParams } = new URL(req.url);
 
-    const { tenantId: tenantIdRaw, arrears } = body as { tenantId?: string; arrears?: ArrearsItem[] };
+  const suppliedTenantId = cleanStr(searchParams.get("tenantId"));
+  const dateRaw = cleanStr(searchParams.get("date"));
 
-    const tenantId = (tenantIdRaw ?? "").trim() || ctx.tenantId;
-    if (tenantId !== ctx.tenantId) {
-      return jsonNoStore({ ok: false, error: "Forbidden." }, { status: 403 });
-    }
+  if (suppliedTenantId && suppliedTenantId !== ctx.tenantId) {
+    return json(403, { ok: false, error: "FORBIDDEN_TENANT_MISMATCH" });
+  }
 
-    if (!Array.isArray(arrears) || arrears.length === 0) {
-      return jsonNoStore({ ok: false, error: "Payload must include a non-empty 'arrears' array." }, { status: 400 });
-    }
+  if (!dateRaw) {
+    return json(400, { ok: false, error: "DATE_REQUIRED" });
+  }
 
-    // Load tenant + template
-    const tenant = await prisma.tenant.findUnique({
+  if (!isIsoDateOnly(dateRaw)) {
+    return json(400, { ok: false, error: "INVALID_DATE_FORMAT" });
+  }
+
+  const targetDate = utcDateOnlyFromIso(dateRaw);
+
+  const [tenant, settings, rows] = await Promise.all([
+    prisma.tenant.findUnique({
       where: { id: ctx.tenantId },
-      select: { id: true, name: true, settingsJson: true },
-    });
-
-    const schoolName = (tenant?.name ?? "").trim() || "your ward's school";
-
-    const settings = (tenant?.settingsJson as any) || {};
-    const smsTemplates = (settings.smsTemplates as any) || {};
-    const storedTemplate = smsTemplates.feesArrears;
-
-    const template =
-      typeof storedTemplate === "string" && storedTemplate.trim().length > 0
-        ? storedTemplate
-        : DEFAULT_FEES_ARREARS_TEMPLATE;
-
-    let successCount = 0;
-    const results: any[] = [];
-
-    for (const item of arrears) {
-      const guardianPhone = (item.guardianPhone || "").trim();
-      if (!guardianPhone) {
-        results.push({
-          studentName: item.studentName,
-          guardianPhone,
-          ok: false,
-          error: "No guardian phone; skipped.",
-          to: "",
-        });
-        continue;
-      }
-
-      const amountStr = safeMoney(item.amountDue);
-
-      const ctxTpl = {
-        studentName: (item.studentName || "your ward").trim(),
-        amountDue: amountStr,
-        className: (item.className || "").trim(),
-        term: (item.term || "").trim(),
-        dueDate: (item.dueDate || "").trim(),
-        schoolName,
-      };
-
-      const smsBody = renderTemplate(template, ctxTpl);
-
-      try {
-        const sendResult = await sendViaHubtel({
-          to: guardianPhone,
-          body: smsBody,
-          brand: FEES_BRAND,
-          meta: {
-            kind: "fees-arrears",
-            tenantId: ctx.tenantId,
-            studentId: item.studentId ?? null,
-            className: item.className ?? null,
-            term: item.term ?? null,
-            amountDue: amountStr,
+      select: { id: true, name: true },
+    }),
+    prisma.tenantSettings.findUnique({
+      where: { tenantId: ctx.tenantId },
+      select: { feverThreshold: true },
+    }),
+    prisma.studentHealthDaily.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        date: targetDate,
+      },
+      select: {
+        id: true,
+        classroomId: true,
+        temperatureC: true,
+        symptoms: true,
+        notes: true,
+        Student: {
+          select: {
+            firstName: true,
+            lastName: true,
+            status: true,
           },
-        });
+        },
+        Classroom: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            arm: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: [
+        { classroomId: "asc" },
+        { createdAt: "desc" },
+      ],
+    }),
+  ]);
 
-        if (sendResult.ok) successCount++;
+  if (!tenant) {
+    return json(404, { ok: false, error: "TENANT_NOT_FOUND" });
+  }
 
-        results.push({
-          studentName: item.studentName,
-          guardianPhone,
-          amountDue: amountStr,
-          ok: sendResult.ok,
-          to: (sendResult as any).to ?? guardianPhone,
-          providerResponse: (sendResult as any).providerResponse ?? null,
-        });
-      } catch (err: any) {
-        console.error("[FEES_NOTIFY_ARREARS_ERROR]", err);
-        results.push({
-          studentName: item.studentName,
-          guardianPhone,
-          amountDue: amountStr,
-          ok: false,
-          error: err?.message || "Failed to send SMS",
-          to: "",
-        });
-      }
+  const feverThresholdC =
+    decimalToNumber(settings?.feverThreshold) ?? DEFAULT_FEVER_THRESHOLD_C;
+
+  const normalizedRows = rows.map((row) => {
+    const temperatureC = decimalToNumber(row.temperatureC);
+    const classroomName = displayClassroomName(
+      row.Classroom?.name,
+      row.Classroom?.grade,
+      row.Classroom?.arm
+    );
+    const studentName = displayStudentName(
+      row.Student?.firstName,
+      row.Student?.lastName
+    );
+    const isFever =
+      typeof temperatureC === "number" && temperatureC >= feverThresholdC;
+
+    return {
+      classroomId: row.classroomId ?? null,
+      classroomName,
+      studentName,
+      temperatureC,
+      symptoms: cleanStr(row.symptoms) || null,
+      notes: cleanStr(row.notes) || null,
+      isFever,
+    };
+  });
+
+  const totalRecords = normalizedRows.length;
+  const feverCount = normalizedRows.filter((r) => r.isFever).length;
+
+  const classroomMap = new Map<string, ClassroomSummary>();
+
+  for (const row of normalizedRows) {
+    const key = row.classroomId ?? `__none__:${row.classroomName}`;
+    const existing = classroomMap.get(key);
+
+    if (!existing) {
+      classroomMap.set(key, {
+        classroomId: row.classroomId,
+        classroomName: row.classroomName,
+        totalRecords: 1,
+        feverCount: row.isFever ? 1 : 0,
+        maxTemp: row.temperatureC,
+      });
+      continue;
     }
 
-    const first = arrears[0] ?? {};
-    return jsonNoStore({
-      ok: true,
-      total: arrears.length,
-      successCount,
-      brand: FEES_BRAND,
-      className: first.className ?? "",
-      term: first.term ?? "",
-      dueDate: first.dueDate ?? "",
-      results,
-    });
-  } catch (err) {
-    console.error("[FEES_NOTIFY_ARREARS_FATAL]", err);
-    return jsonNoStore({ ok: false, error: "Internal error while sending fee reminders." }, { status: 500 });
+    existing.totalRecords += 1;
+    if (row.isFever) existing.feverCount += 1;
+
+    if (typeof row.temperatureC === "number") {
+      existing.maxTemp =
+        typeof existing.maxTemp === "number"
+          ? Math.max(existing.maxTemp, row.temperatureC)
+          : row.temperatureC;
+    }
   }
+
+  const byClassroom = Array.from(classroomMap.values()).sort((a, b) => {
+    if (b.feverCount !== a.feverCount) return b.feverCount - a.feverCount;
+    if (b.totalRecords !== a.totalRecords) return b.totalRecords - a.totalRecords;
+    return a.classroomName.localeCompare(b.classroomName);
+  });
+
+  const samples: SampleRow[] = normalizedRows
+    .slice()
+    .sort((a, b) => {
+      if (Number(b.isFever) !== Number(a.isFever)) {
+        return Number(b.isFever) - Number(a.isFever);
+      }
+
+      const bt = typeof b.temperatureC === "number" ? b.temperatureC : -Infinity;
+      const at = typeof a.temperatureC === "number" ? a.temperatureC : -Infinity;
+      if (bt !== at) return bt - at;
+
+      const c = a.classroomName.localeCompare(b.classroomName);
+      if (c !== 0) return c;
+
+      return a.studentName.localeCompare(b.studentName);
+    })
+    .slice(0, 40)
+    .map((row) => ({
+      studentName: row.studentName,
+      classroomName: row.classroomName,
+      temperatureC: row.temperatureC,
+      symptoms: row.symptoms,
+      notes: row.notes,
+      isFever: row.isFever,
+    }));
+
+  return json(200, {
+    ok: true,
+    tenantId: tenant.id,
+    tenantName: tenant.name,
+    date: dateRaw,
+    feverThresholdC,
+    totalRecords,
+    feverCount,
+    byClassroom,
+    samples,
+  });
 }

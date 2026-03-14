@@ -262,6 +262,16 @@ async function readJsonResponse<T>(res: Response): Promise<{
   }
 }
 
+function shellCardClass() {
+  return "rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)]";
+}
+
+function darkInnerCardClass(active = false) {
+  return active
+    ? "rounded-2xl border border-[#D4AF37]/35 bg-[#D4AF37]/12"
+    : "rounded-2xl border border-white/10 bg-[#07111F]/70";
+}
+
 /**
  * AI-style Parent Results Coach – speaks to the guardian using the same data.
  */
@@ -380,12 +390,12 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
           {overallPercent == null
             ? "building a learning foundation. Not all subjects have scores yet."
             : overallPercent >= 85
-            ? "performing at a very strong level. The key now is consistency and emotional balance – not pressure."
-            : overallPercent >= 70
-            ? "doing well, with clear room to move from ‘good’ to ‘excellent’ in a few subjects."
-            : overallPercent >= 55
-            ? "in a normal growth phase. There are gaps to close, but this is a workable starting point."
-            : "still forming a basic foundation. The report is not a verdict, it is a map – we are seeing where to strengthen next."}
+              ? "performing at a very strong level. The key now is consistency and emotional balance – not pressure."
+              : overallPercent >= 70
+                ? "doing well, with clear room to move from ‘good’ to ‘excellent’ in a few subjects."
+                : overallPercent >= 55
+                  ? "in a normal growth phase. There are gaps to close, but this is a workable starting point."
+                  : "still forming a basic foundation. The report is not a verdict, it is a map – we are seeing where to strengthen next."}
         </p>
       </div>
 
@@ -441,8 +451,8 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
               {attendance.daysAbsent === 0
                 ? "Excellent consistency – keep protecting school days as much as possible."
                 : attendance.daysAbsent <= 3
-                ? "Absences are low. Continue monitoring reasons (sickness, family duties) so they don’t quietly increase."
-                : "There were several absences. It may help to quietly explore with your child what made those days difficult."}
+                  ? "Absences are low. Continue monitoring reasons (sickness, family duties) so they don’t quietly increase."
+                  : "There were several absences. It may help to quietly explore with your child what made those days difficult."}
             </p>
           ) : (
             <p className="text-[11px] text-indigo-600/80">
@@ -691,8 +701,8 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                       subj.totalScore != null
                         ? subj.totalScore
                         : subj.percentage != null
-                        ? subj.percentage
-                        : null;
+                          ? subj.percentage
+                          : null;
 
                     return (
                       <tr key={`${subj.subject}-${idx}`} className={rowBg}>
@@ -907,7 +917,7 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
             </div>
           </div>
         </div>
-      </div>
+      </div> 
     </div>
   );
 }
@@ -1131,21 +1141,21 @@ const ParentReportPage: React.FC = () => {
 
   if (sessionExpired) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="container mx-auto px-4 py-10">
-          <div className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h1 className="text-base font-semibold text-slate-900">
+      <div className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] text-[#F7F4ED]">
+        <div className="mx-auto max-w-md px-4 py-10">
+          <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
+            <h1 className="text-base font-semibold text-[#F7F4ED]">
               Parent session required
             </h1>
-            <p className="mt-2 text-xs text-slate-600">
+            <p className="mt-2 text-xs leading-6 text-[#C9CDD6]">
               Your parent session has expired or is missing. Please log in again
               to continue.
             </p>
 
             <div className="mt-4">
               <a
-                href="/parent/login?next=/parent/report"
-                className="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-blue-700"
+                href="/parent/login?next=/parent-portal"
+                className="inline-flex w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-xs font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105"
               >
                 Go to parent login
               </a>
@@ -1157,90 +1167,98 @@ const ParentReportPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto space-y-5 px-4 py-6">
-        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Parent Portal
-            </div>
-            <div className="text-sm font-semibold text-slate-900">
-              BECE-Style Term Report &amp; Health-Aware Summary
-            </div>
-            <div className="text-[11px] text-slate-600">
-              Phone:{" "}
-              <span className="font-medium">{guardianPhone || "Signed in"}</span>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] text-[#F7F4ED]">
+      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6">
+        <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.9),rgba(7,17,31,0.94))] px-4 py-3 text-xs shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:px-5">
+          <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+          <div className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-[#1B66D1]/18 blur-3xl" />
+          <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-[#D4AF37]/12 blur-3xl" />
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 text-[11px] text-slate-600">
-              <div className="space-y-1">
-                <label className="block text-[10px] font-medium text-slate-500">
-                  Term
-                </label>
-                <select
-                  className="rounded-md border border-slate-300 px-2 py-1 text-[11px]"
-                  value={term}
-                  onChange={(e) => setTerm(e.target.value)}
-                >
-                  <option value="1st Term">1st Term</option>
-                  <option value="2nd Term">2nd Term</option>
-                  <option value="3rd Term">3rd Term</option>
-                </select>
+          <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">
+                Parent Portal
               </div>
-              <div className="space-y-1">
-                <label className="block text-[10px] font-medium text-slate-500">
-                  Academic Year
-                </label>
-                <input
-                  className="w-28 rounded-md border border-slate-300 px-2 py-1 text-[11px]"
-                  value={academicYear}
-                  onChange={(e) => setAcademicYear(e.target.value)}
-                  placeholder="2025/2026"
-                />
+              <div className="text-sm font-semibold text-[#F7F4ED]">
+                BECE-Style Term Report &amp; Health-Aware Summary
+              </div>
+              <div className="text-[11px] text-[#C9CDD6]">
+                Phone:{" "}
+                <span className="font-medium text-[#F7F4ED]">
+                  {guardianPhone || "Signed in"}
+                </span>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => loadChildrenAndOverview(term, academicYear)}
-              className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Refresh data
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 text-[11px] text-[#C9CDD6]">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-medium text-[#AEB6C4]">
+                    Term
+                  </label>
+                  <select
+                    className="rounded-xl border border-white/10 bg-[#07111F] px-2 py-1 text-[11px] text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25"
+                    value={term}
+                    onChange={(e) => setTerm(e.target.value)}
+                  >
+                    <option value="1st Term">1st Term</option>
+                    <option value="2nd Term">2nd Term</option>
+                    <option value="3rd Term">3rd Term</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-medium text-[#AEB6C4]">
+                    Academic Year
+                  </label>
+                  <input
+                    className="w-28 rounded-xl border border-white/10 bg-[#07111F] px-2 py-1 text-[11px] text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25"
+                    value={academicYear}
+                    onChange={(e) => setAcademicYear(e.target.value)}
+                    placeholder="2025/2026"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => loadChildrenAndOverview(term, academicYear)}
+                className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-[#F7F4ED] transition hover:bg-white/10"
+              >
+                Refresh data
+              </button>
+            </div>
           </div>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.7fr)]">
           <div className="space-y-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs">
+            <div className={`${shellCardClass()} p-3 text-xs`}>
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-xs font-semibold text-slate-900">
+                  <h2 className="text-xs font-semibold text-[#F7F4ED]">
                     Your children this term
                   </h2>
-                  <p className="text-[11px] text-slate-600">
+                  <p className="text-[11px] text-[#C9CDD6]">
                     Select a child to view detailed report, fees, and health
                     summary.
                   </p>
                 </div>
-                <span className="min-w-8 rounded-full bg-slate-100 px-2 py-0.5 text-center text-[10px] font-medium text-slate-700">
+                <span className="min-w-8 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-center text-[10px] font-medium text-[#F7F4ED]">
                   {children.length} child
                   {children.length === 1 ? "" : "ren"}
                 </span>
               </div>
 
               {childrenLoading ? (
-                <div className="py-4 text-center text-[11px] text-slate-500">
+                <div className="py-4 text-center text-[11px] text-[#C9CDD6]">
                   Loading children…
                 </div>
               ) : childrenError ? (
-                <div className="rounded-md bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
+                <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
                   {childrenError}
                 </div>
               ) : children.length === 0 ? (
-                <div className="py-4 text-center text-[11px] text-slate-500">
+                <div className="py-4 text-center text-[11px] text-[#C9CDD6]">
                   No children found for this parent session yet.
                 </div>
               ) : (
@@ -1257,22 +1275,19 @@ const ParentReportPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedChildId(child.id)}
-                          className={[
-                            "flex w-full items-start justify-between rounded-lg border px-3 py-2 text-left transition",
-                            isSelected
-                              ? "border-blue-500 bg-blue-50/80"
-                              : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40",
-                          ].join(" ")}
+                          className={`flex w-full items-start justify-between px-3 py-2 text-left transition ${
+                            darkInnerCardClass(isSelected)
+                          }`}
                         >
                           <div className="space-y-0.5">
-                            <div className="text-xs font-semibold text-slate-900">
+                            <div className="text-xs font-semibold text-[#F7F4ED]">
                               {child.name}
                             </div>
-                            <div className="text-[11px] text-slate-600">
+                            <div className="text-[11px] text-[#C9CDD6]">
                               Class: {child.classroom?.name || "—"}
                             </div>
                             <div className="flex flex-wrap gap-1 text-[10px]">
-                              <span className="rounded-full bg-white px-2 py-0.5 text-slate-600">
+                              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[#D7DCE5]">
                                 Fees:{" "}
                                 {outstanding > 0
                                   ? `Outstanding GHS ${formatMoneyFromPesewas(
@@ -1281,7 +1296,7 @@ const ParentReportPage: React.FC = () => {
                                   : "Up to date"}
                               </span>
                               {healthLast?.lastDate && (
-                                <span className="rounded-full bg-white px-2 py-0.5 text-slate-600">
+                                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[#D7DCE5]">
                                   Health: Last screened{" "}
                                   {formatDateNice(healthLast.lastDate)}
                                 </span>
@@ -1296,25 +1311,25 @@ const ParentReportPage: React.FC = () => {
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs">
+            <div className={`${shellCardClass()} p-3 text-xs`}>
               <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="text-xs font-semibold text-slate-900">
+                <h2 className="text-xs font-semibold text-[#F7F4ED]">
                   Term overview snapshot
                 </h2>
-                <span className="text-[10px] text-slate-500">
+                <span className="text-[10px] text-[#AEB6C4]">
                   Term: {term} • Year: {academicYear}
                 </span>
               </div>
               {overviewLoading ? (
-                <div className="py-3 text-center text-[11px] text-slate-500">
+                <div className="py-3 text-center text-[11px] text-[#C9CDD6]">
                   Loading overview…
                 </div>
               ) : overviewError ? (
-                <div className="rounded-md bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
+                <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
                   {overviewError}
                 </div>
               ) : !overview || overview.students.length === 0 ? (
-                <div className="py-3 text-[11px] text-slate-500">
+                <div className="py-3 text-[11px] text-[#C9CDD6]">
                   Overview will appear here once assessment, fees and health
                   records are captured for this term.
                 </div>
@@ -1323,18 +1338,18 @@ const ParentReportPage: React.FC = () => {
                   {overview.students.map((s) => (
                     <div
                       key={s.id}
-                      className="rounded-md bg-slate-50 px-3 py-2 text-[11px]"
+                      className="rounded-2xl border border-white/10 bg-[#07111F]/70 px-3 py-2 text-[11px]"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="font-semibold text-slate-900">
+                        <div className="font-semibold text-[#F7F4ED]">
                           {s.name}
                         </div>
-                        <div className="text-[10px] text-slate-500">
+                        <div className="text-[10px] text-[#AEB6C4]">
                           Class: {s.classroomName ?? "—"}
                         </div>
                       </div>
-                      <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-slate-600">
-                        <span className="rounded-full bg-white px-2 py-0.5">
+                      <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-[#C9CDD6]">
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
                           Fees outstanding:{" "}
                           <span className="font-medium">
                             GHS{" "}
@@ -1344,7 +1359,7 @@ const ParentReportPage: React.FC = () => {
                           </span>
                         </span>
                         {s.health?.lastDate && (
-                          <span className="rounded-full bg-white px-2 py-0.5">
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
                             Last health check: {formatDateNice(s.health.lastDate)}
                           </span>
                         )}
@@ -1358,7 +1373,7 @@ const ParentReportPage: React.FC = () => {
 
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-xs font-semibold text-slate-900">
+              <h2 className="text-xs font-semibold text-[#F7F4ED]">
                 Detailed BECE-Style Term Report
               </h2>
               <div className="flex items-center gap-2">
@@ -1366,7 +1381,7 @@ const ParentReportPage: React.FC = () => {
                   type="button"
                   onClick={handlePrintCurrent}
                   disabled={!report}
-                  className="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-[#F7F4ED] shadow-sm transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Print this report
                 </button>
@@ -1374,20 +1389,20 @@ const ParentReportPage: React.FC = () => {
             </div>
 
             {!selectedChildId ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-[11px] text-slate-600">
+              <div className="rounded-[24px] border border-dashed border-white/15 bg-white/5 px-4 py-6 text-center text-[11px] text-[#C9CDD6]">
                 Please select a child from the left to view the full term
                 report.
               </div>
             ) : reportLoading ? (
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-center text-[11px] text-slate-600">
+              <div className={`${shellCardClass()} px-4 py-6 text-center text-[11px] text-[#C9CDD6]`}>
                 Loading term report…
               </div>
             ) : reportError ? (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[11px] text-rose-700">
+              <div className="rounded-[24px] border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-[11px] text-rose-100">
                 {reportError}
               </div>
             ) : !report ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-[11px] text-slate-600">
+              <div className="rounded-[24px] border border-dashed border-white/15 bg-white/5 px-4 py-6 text-center text-[11px] text-[#C9CDD6]">
                 No report data available yet for this term.
               </div>
             ) : (

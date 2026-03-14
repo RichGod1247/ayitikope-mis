@@ -8,6 +8,8 @@ import { sendViaHubtel } from "@/lib/sms/hubtel";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const RESULTS_RELEASE_BRAND = "EDULIFEOS" as const;
+
 function noStoreJson(status: number, payload: any) {
   return NextResponse.json(payload, {
     status,
@@ -85,7 +87,6 @@ export async function POST(req: NextRequest) {
     classroomIdToStore = classroomId;
   }
 
-  // Must be released first
   const release = await prisma.resultsRelease.findFirst({
     where: { tenantId: ctx.tenantId, term, academicYear, scopeKey },
     select: { id: true },
@@ -99,7 +100,6 @@ export async function POST(req: NextRequest) {
     select: { name: true },
   });
 
-  // Upsert job by unique key
   const jobId = crypto.randomBytes(16).toString("hex");
 
   const existing = await prisma.resultsReleaseNotifyJob.findFirst({
@@ -132,7 +132,6 @@ export async function POST(req: NextRequest) {
         },
       });
 
-  // Seed recipients once (only if none exist for this job)
   const existingRecipientsCount = await prisma.resultsReleaseNotifyRecipient.count({
     where: { jobId: job.id },
   });
@@ -172,7 +171,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Mark running
   await prisma.resultsReleaseNotifyJob.update({
     where: { id: job.id },
     data: {
@@ -207,7 +205,6 @@ export async function POST(req: NextRequest) {
   const baseUrl = getBaseUrl(req);
   const schoolName = tenant?.name ?? "Your school";
 
-  // Keep it short to reduce spam flags
   const text =
     `${schoolName}: Results for ${term} ${academicYear} are now available on EduLife OS Parent Portal.` +
     ` Open: ${baseUrl}/parent-portal`;
@@ -220,7 +217,7 @@ export async function POST(req: NextRequest) {
       const out = await sendViaHubtel({
         to: r.guardianPhoneNorm,
         body: text,
-        brand: "AYITIADMIN",
+        brand: RESULTS_RELEASE_BRAND,
         tenantId: ctx.tenantId,
         actorId: ctx.userId,
         meta: { category: "RESULTS_RELEASE_NOTIFY", term, academicYear, scope, scopeKey },
@@ -249,7 +246,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Update counts
   const remaining = await prisma.resultsReleaseNotifyRecipient.count({
     where: { jobId: job.id, status: "PENDING" },
   });
@@ -270,6 +266,7 @@ export async function POST(req: NextRequest) {
     batch: { sent, failed },
     remaining,
     done: remaining === 0,
+    brand: RESULTS_RELEASE_BRAND,
   });
 }
 

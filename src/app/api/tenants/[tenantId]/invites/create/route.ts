@@ -5,7 +5,7 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 import { effectiveRole, safeInternalPath } from "@/lib/roleRouting";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
-import { sendViaHubtel } from "@/lib/sms/hubtel";
+import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { randomBytes } from "crypto";
 
@@ -56,11 +56,20 @@ function clampInt(n: unknown, def: number, min: number, max: number) {
   return Math.min(max, Math.max(min, Math.trunc(x)));
 }
 
-/**
- * ✅ Bank-grade base URL
- * - Production: ENV ONLY (no localhost fallback, no header poisoning)
- * - Dev/Preview: derive from request headers, fallback to 127.0.0.1 (not localhost)
- */
+function resolveBrand(input?: string): (typeof BrandName)[number] {
+  const raw = String(input ?? process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (!raw) return "EDULIFEOS";
+  if (raw === "EDULIFE") return "EDULIFEOS";
+  if (BrandName.includes(raw as (typeof BrandName)[number])) {
+    return raw as (typeof BrandName)[number];
+  }
+  return "EDULIFEOS";
+}
+
 function getPublicBaseUrl(req: Request): string | null {
   const envBase =
     process.env.NEXT_PUBLIC_APP_URL ||
@@ -79,7 +88,6 @@ function getPublicBaseUrl(req: Request): string | null {
 
   if (host) return `${proto}://${host}`.replace(/\/+$/, "");
 
-  // Dev-only fallback (keeps grep clean)
   return "http://127.0.0.1:3000";
 }
 
@@ -91,7 +99,8 @@ export async function POST(req: Request, { params }: { params: { tenantId: strin
   if (!auth.ok) return auth.res;
   const ctx = auth.ctx;
 
-  const tenantCheck = assertNoTenantOverride(params?.tenantId, ctx.tenantId);
+  const paramTenantId = String(params?.tenantId ?? "").trim();
+  const tenantCheck = assertNoTenantOverride(paramTenantId, ctx.tenantId);
   if (!tenantCheck.ok) {
     return json(tenantCheck.status, { ok: false, error: "FORBIDDEN_TENANT_MISMATCH" });
   }
@@ -186,12 +195,12 @@ export async function POST(req: Request, { params }: { params: { tenantId: strin
   const wantSms = body.sendSms === true;
   const deliverToPhoneRaw = cleanStr(body.deliverToPhone || "");
   const deliverToName = cleanStr(body.deliverToName || "");
-  const brand = String(body.brand || "AYITIADMIN").trim() || "AYITIADMIN";
+  const brand = resolveBrand(body.brand);
 
   if (wantSms) {
     const phoneNorm = normalizeGhPhoneE164(deliverToPhoneRaw);
     if (!phoneNorm) {
-      sms = { ok: false, error: "BAD_PHONE" };
+      sms = { ok: false, error: "BAD_PHONE", brand };
     } else {
       const exp = invite.expiresAt.toISOString().slice(0, 16).replace("T", " ");
 
@@ -218,6 +227,7 @@ export async function POST(req: Request, { params }: { params: { tenantId: strin
                 redirectTo,
                 inviteUrl,
                 token: invite.token,
+                brand,
               },
             },
           });
@@ -237,10 +247,10 @@ export async function POST(req: Request, { params }: { params: { tenantId: strin
           },
         });
 
-        sms = { ok: true, to: phoneNorm };
+        sms = { ok: true, to: phoneNorm, brand };
       } catch (e: any) {
         console.error("[INVITE_LINK_SMS_ERROR]", e);
-        sms = { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED") };
+        sms = { ok: false, to: phoneNorm, error: String(e?.message || "SMS_FAILED"), brand };
       }
     }
   }

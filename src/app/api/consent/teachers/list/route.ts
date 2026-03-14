@@ -1,105 +1,108 @@
 // src/app/api/consent/teachers/list/route.ts
-import { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { effectiveRole } from "@/lib/roleRouting";
 
-/**
- * RBAC rule:
- * - If `userId` is provided, the caller must have CONSENT_VIEW (or EDIT/EXPORT) in this tenant.
- * - If `userId` is omitted, we allow (soft dev fallback) so the UI keeps working while wiring auth.
- */
-async function ensureConsentViewIfUserProvided(tenantId: string, maybeUserId?: string | null) {
-  const userId = (maybeUserId || '').trim()
-  if (!userId) return true // soft dev fallback
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-  const m = await prisma.membership.findFirst({
-    where: { tenantId, userId, status: 'ACTIVE' },
-    select: {
-      role: {
-        select: {
-          rolePerms: { select: { permission: { select: { name: true } } } },
-        },
-      },
+const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
+
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
     },
-  })
-  if (!m?.role) return false
-  const names = new Set(m.role.rolePerms.map(rp => rp.permission.name))
-  return (
-    names.has('CONSENT_VIEW') ||
-    names.has('CONSENT_EDIT') ||
-    names.has('CONSENT_EXPORT')
-  )
+  });
+}
+
+function roleUpper(v: unknown): string {
+  return effectiveRole(v).trim().toUpperCase();
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
+
+  const ctx = auth.ctx;
+
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_tenantId: {
+        userId: ctx.userId,
+        tenantId: ctx.tenantId,
+      },
+    },
+    select: {
+      status: true,
+      role: { select: { name: true } },
+    },
+  });
+
+  if (!membership || membership.status !== "ACTIVE") {
+    return json(403, { ok: false, error: "FORBIDDEN" });
+  }
+
+  const roleName = roleUpper(membership.role?.name ?? ctx.roleName);
+  if (!ALLOWED_ROLES.has(roleName)) {
+    return json(403, { ok: false, error: "FORBIDDEN_ROLE" });
+  }
+
   try {
-    const { searchParams } = new URL(req.url)
-    const tenantId = searchParams.get('tenantId')?.trim()
-    const userId = searchParams.get('userId')?.trim() || null // optional (soft dev)
-
-    if (!tenantId) {
-      return new Response(JSON.stringify({ error: 'tenantId is required' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    const ok = await ensureConsentViewIfUserProvided(tenantId, userId)
-    if (!ok) {
-      return new Response(JSON.stringify({ error: 'Forbidden: missing CONSENT_VIEW' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' },
-      })
-    }
-
-    // Pull active members in this tenant and project their users.
-    // (This avoids earlier RAW SQL typing issues.)
     const memberships = await prisma.membership.findMany({
-      where: { tenantId, status: 'ACTIVE' },
+      where: {
+        tenantId: ctx.tenantId,
+        status: "ACTIVE",
+      },
       select: {
         user: {
           select: {
             id: true,
             name: true,
             email: true,
-            smsOptIn: true, // from User model
+            smsOptIn: true,
           },
         },
       },
       take: 2000,
-    })
+    });
 
-    // De-dup users in case a person holds multiple roles (defensive)
-    const dedup = new Map<string, { id: string; name: string | null; email: string | null; smsOptIn: boolean }>()
+    const dedup = new Map<
+      string,
+      { id: string; name: string | null; email: string | null; smsOptIn: boolean }
+    >();
+
     for (const m of memberships) {
-      if (!m.user) continue
+      if (!m.user) continue;
       dedup.set(m.user.id, {
         id: m.user.id,
         name: m.user.name ?? null,
         email: m.user.email ?? null,
         smsOptIn: !!m.user.smsOptIn,
-      })
+      });
     }
 
-    // Sort by name then email for stable UI
     const items = Array.from(dedup.values()).sort((a, b) => {
-      const an = (a.name || '').toLowerCase()
-      const bn = (b.name || '').toLowerCase()
-      if (an !== bn) return an < bn ? -1 : 1
-      const ae = (a.email || '').toLowerCase()
-      const be = (b.email || '').toLowerCase()
-      if (ae !== be) return ae < be ? -1 : 1
-      return 0
-    })
+      const an = (a.name || "").toLowerCase();
+      const bn = (b.name || "").toLowerCase();
+      if (an !== bn) return an < bn ? -1 : 1;
 
-    return new Response(JSON.stringify({ items }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    })
+      const ae = (a.email || "").toLowerCase();
+      const be = (b.email || "").toLowerCase();
+      if (ae !== be) return ae < be ? -1 : 1;
+
+      return 0;
+    });
+
+    return json(200, { ok: true, items });
   } catch (err) {
-    console.error('consent/teachers/list error:', err)
-    return new Response(JSON.stringify({ error: 'Failed to list teachers' }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' },
-    })
+    console.error("[CONSENT_TEACHERS_LIST_ERROR]", err);
+    return json(500, { ok: false, error: "Failed to list teachers." });
   }
 }

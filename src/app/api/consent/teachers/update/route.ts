@@ -1,88 +1,155 @@
 // src/app/api/consent/teachers/update/route.ts
-import type { NextRequest } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
+import { effectiveRole } from "@/lib/roleRouting";
 
-/**
- * POST /api/consent/teachers/update?actorId=USER_ID (actorId optional; can also be in body.actorId)
- * Body:
- * {
- *   userId: string,
- *   smsOptIn: boolean,
- *   actorId?: string
- * }
- *
- * - Updates User.smsOptIn
- * - Writes AuditLog with before/after (action: CONSENT_TEACHER_UPDATE)
- */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
+
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function roleUpper(v: unknown): string {
+  return effectiveRole(v).trim().toUpperCase();
+}
+
 export async function POST(req: NextRequest) {
-  try {
-    const url = new URL(req.url)
-    const actorIdFromQuery = url.searchParams.get('actorId')?.trim() || undefined
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+  if (!auth.ok) return auth.res;
 
-    const body = await req.json().catch(() => ({} as any))
-    const userId: string | undefined = typeof body?.userId === 'string' ? body.userId.trim() : undefined
-    const hasSmsOptIn = typeof body?.smsOptIn === 'boolean'
-    const smsOptIn: boolean | undefined = hasSmsOptIn ? Boolean(body.smsOptIn) : undefined
-    const actorId: string | undefined =
-      (typeof body?.actorId === 'string' ? body.actorId.trim() : undefined) || actorIdFromQuery
+  const ctx = auth.ctx;
+
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_tenantId: {
+        userId: ctx.userId,
+        tenantId: ctx.tenantId,
+      },
+    },
+    select: {
+      status: true,
+      role: { select: { name: true } },
+    },
+  });
+
+  if (!membership || membership.status !== "ACTIVE") {
+    return json(403, { ok: false, error: "FORBIDDEN" });
+  }
+
+  const roleName = roleUpper(membership.role?.name ?? ctx.roleName);
+  if (!ALLOWED_ROLES.has(roleName)) {
+    return json(403, { ok: false, error: "FORBIDDEN_ROLE" });
+  }
+
+  try {
+    const body = await req.json().catch(() => ({} as any));
+
+    const userId = cleanStr(body?.userId);
+    const hasSmsOptIn = typeof body?.smsOptIn === "boolean";
+    const smsOptIn = hasSmsOptIn ? Boolean(body.smsOptIn) : false;
 
     if (!userId) {
-      return new Response(JSON.stringify({ error: 'userId is required' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
+      return json(400, { ok: false, error: "userId is required" });
     }
+
     if (!hasSmsOptIn) {
-      return new Response(JSON.stringify({ error: 'smsOptIn (boolean) is required' }), {
-        status: 400, headers: { 'content-type': 'application/json' },
-      })
+      return json(400, { ok: false, error: "smsOptIn (boolean) is required" });
     }
 
-    const current = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, smsOptIn: true, name: true, email: true },
-    })
-    if (!current) {
-      return new Response(JSON.stringify({ error: 'Teacher not found' }), {
-        status: 404, headers: { 'content-type': 'application/json' },
-      })
+    const targetMembership = await prisma.membership.findFirst({
+      where: {
+        tenantId: ctx.tenantId,
+        userId,
+        status: "ACTIVE",
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    if (!targetMembership) {
+      return json(404, { ok: false, error: "Teacher not found in this tenant" });
     }
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { smsOptIn },
-      select: { id: true, smsOptIn: true, name: true, email: true },
-    })
-
-    // Best-effort audit
-    try {
-      await prisma.auditLog.create({
-        data: {
-          // teacher belongs to a tenant via Membership, but we may not have tenantId here;
-          // leave null to keep schema happy, or extend to look it up if you prefer.
-          tenantId: null,
-          userId: actorId || null,
-          action: 'CONSENT_TEACHER_UPDATE',
-          resource: 'User',
-          resourceId: updated.id,
-          metadata: {
-            actorId: actorId || null,
-            teacher: { id: updated.id, name: updated.name, email: updated.email },
-            before: { smsOptIn: current.smsOptIn },
-            after:  { smsOptIn: updated.smsOptIn },
-          } as any,
+    const result = await prisma.$transaction(async (tx) => {
+      const current = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          smsOptIn: true,
         },
-      })
-    } catch (e) {
-      console.warn('audit write failed (non-fatal):', e)
+      });
+
+      if (!current) {
+        return { ok: false as const, error: "Teacher not found" };
+      }
+
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: { smsOptIn },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          smsOptIn: true,
+        },
+      });
+
+      try {
+        await tx.auditLog.create({
+          data: {
+            tenantId: ctx.tenantId,
+            userId: ctx.userId,
+            action: "CONSENT_TEACHER_UPDATE",
+            resource: "User",
+            resourceId: updated.id,
+            ip: null,
+            userAgent: null,
+            metadata: {
+              actorId: ctx.userId,
+              teacher: {
+                id: updated.id,
+                name: updated.name,
+                email: updated.email,
+              },
+              before: { smsOptIn: current.smsOptIn },
+              after: { smsOptIn: updated.smsOptIn },
+            } as any,
+          },
+        });
+      } catch (e) {
+        console.warn("[CONSENT_TEACHER_UPDATE_AUDIT_WARN]", e);
+      }
+
+      return { ok: true as const, user: updated };
+    });
+
+    if (!result.ok) {
+      return json(404, { ok: false, error: result.error });
     }
 
-    return new Response(JSON.stringify({ ok: true, user: updated }), {
-      status: 200, headers: { 'content-type': 'application/json' },
-    })
+    return json(200, { ok: true, user: result.user });
   } catch (err) {
-    console.error('consent/teachers/update error:', err)
-    return new Response(JSON.stringify({ error: 'Failed to update teacher consent' }), {
-      status: 500, headers: { 'content-type': 'application/json' },
-    })
+    console.error("[CONSENT_TEACHERS_UPDATE_ERROR]", err);
+    return json(500, { ok: false, error: "Failed to update teacher consent" });
   }
 }

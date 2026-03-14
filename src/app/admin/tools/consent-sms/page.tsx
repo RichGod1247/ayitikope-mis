@@ -1,3 +1,4 @@
+//src/app/admin/tools/consent-sms/page.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -24,7 +25,7 @@ export default function TeacherConsentSmsPage() {
   );
   const [mode, setMode] = useState<"initial" | "full">("initial");
   const [tenantId, setTenantId] = useState("AYITIKOPE-DEV");
-  const [brand, setBrand] = useState("AYITIADMIN");
+  const [brand, setBrand] = useState("EDULIFEOS");
   const [actorId, setActorId] = useState("heh-richgod");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<CampaignResponse | null>(null);
@@ -53,9 +54,7 @@ export default function TeacherConsentSmsPage() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(
-          `Request failed with status ${res.status}: ${text.slice(0, 200)}`
-        );
+        throw new Error(`Request failed with status ${res.status}: ${text.slice(0, 200)}`);
       }
 
       const data = (await res.json()) as CampaignResponse;
@@ -71,28 +70,22 @@ export default function TeacherConsentSmsPage() {
   return (
     <main className="min-h-screen flex justify-center bg-slate-50 py-8 px-4">
       <div className="w-full max-w-3xl bg-white shadow-md rounded-xl p-6 border border-slate-200">
-        <h1 className="text-2xl font-bold mb-1">
-          EduLife OS – Teacher Consent SMS
-        </h1>
+        <h1 className="text-2xl font-bold mb-1">EduLife OS – Teacher Consent SMS</h1>
         <p className="text-sm text-slate-600 mb-4">
-          Send a consent/announcement SMS to your seeded teacher contacts using
-          the Hubtel integration.
+          Send a consent/announcement SMS to your seeded teacher contacts using the Hubtel
+          integration.
           <br />
-          In <code>SMS_TEST_MODE=true</code>, all messages are actually routed
-          only to your <code>TEST_SMS_TO</code> number for safety.
+          In <code>SMS_TEST_MODE=true</code>, all messages are actually routed only to your{" "}
+          <code>TEST_SMS_TO</code> number for safety.
         </p>
 
         <form onSubmit={handleSend} className="space-y-4">
           <div className="grid md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-semibold mb-1">
-                Mode
-              </label>
+              <label className="block text-xs font-semibold mb-1">Mode</label>
               <select
                 value={mode}
-                onChange={(e) =>
-                  setMode(e.target.value as "initial" | "full")
-                }
+                onChange={(e) => setMode(e.target.value as "initial" | "full")}
                 className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
               >
                 <option value="initial">Initial (first 5)</option>
@@ -101,9 +94,7 @@ export default function TeacherConsentSmsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1">
-                Tenant ID
-              </label>
+              <label className="block text-xs font-semibold mb-1">Tenant ID</label>
               <input
                 value={tenantId}
                 onChange={(e) => setTenantId(e.target.value)}
@@ -112,13 +103,12 @@ export default function TeacherConsentSmsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold mb-1">
-                Brand
-              </label>
+              <label className="block text-xs font-semibold mb-1">Brand</label>
               <input
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                placeholder="EDULIFEOS"
               />
             </div>
           </div>
@@ -137,9 +127,7 @@ export default function TeacherConsentSmsPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold mb-1">
-              SMS Message
-            </label>
+            <label className="block text-xs font-semibold mb-1">SMS Message</label>
             <textarea
               className="w-full min-h-[110px] border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
               value={message}
@@ -171,14 +159,11 @@ export default function TeacherConsentSmsPage() {
                   Teacher Consent SMS Result
                 </div>
                 <div className="text-xs text-emerald-700">
-                  Mode: <code>{response.mode}</code> • Recipients:{" "}
-                  <code>{response.count}</code> • Success:{" "}
-                  <code>{response.successCount}</code>
+                  Mode: <code>{response.mode}</code> • Recipients: <code>{response.count}</code> •
+                  Success: <code>{response.successCount}</code>
                 </div>
                 {response.note && (
-                  <div className="text-[11px] text-emerald-700 mt-1">
-                    Note: {response.note}
-                  </div>
+                  <div className="text-[11px] text-emerald-700 mt-1">Note: {response.note}</div>
                 )}
               </div>
             </div>

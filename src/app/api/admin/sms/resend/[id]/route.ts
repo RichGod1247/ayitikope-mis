@@ -60,11 +60,18 @@ async function requireAdmin(req: NextRequest) {
   }
 }
 
-function resolveBrandFromLog(logBrand?: string | null): string {
-  if (!logBrand) return "AYITIADMIN";
-  const upper = logBrand.toUpperCase();
-  if (BrandName.includes(upper as (typeof BrandName)[number])) return upper;
-  return "AYITIADMIN";
+function resolveBrandFromLog(logBrand?: string | null): (typeof BrandName)[number] {
+  const raw = String(logBrand ?? process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (raw === "EDULIFE") return "EDULIFEOS";
+  if (BrandName.includes(raw as (typeof BrandName)[number])) {
+    return raw as (typeof BrandName)[number];
+  }
+
+  return "EDULIFEOS";
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {

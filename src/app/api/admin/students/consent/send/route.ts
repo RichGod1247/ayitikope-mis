@@ -45,7 +45,9 @@ export async function POST(req: NextRequest) {
     where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
     select: { status: true, role: { select: { name: true } } },
   });
-  if (!membership || membership.status !== "ACTIVE") return json(403, { ok: false, error: "FORBIDDEN" });
+  if (!membership || membership.status !== "ACTIVE") {
+    return json(403, { ok: false, error: "FORBIDDEN" });
+  }
 
   const roleName = effectiveRole(membership.role?.name ?? ctx.roleName);
 
@@ -69,7 +71,9 @@ export async function POST(req: NextRequest) {
     },
   });
   if (!student) return json(404, { ok: false, error: "NOT_FOUND" });
-  if (student.status === StudentStatus.ARCHIVED) return json(409, { ok: false, error: "ARCHIVED_IMMUTABLE" });
+  if (student.status === StudentStatus.ARCHIVED) {
+    return json(409, { ok: false, error: "ARCHIVED_IMMUTABLE" });
+  }
 
   // Teachers may send only for their classroom
   if (roleName === "TEACHER") {
@@ -112,7 +116,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Record rate-limit attempt (counts as an attempt whether provider succeeds or not)
+  // Record rate-limit attempt
   await rateLimitRecord({
     action: "CONSENT_SMS_SEND",
     key: `student:${ctx.tenantId}:${studentId}`,
@@ -143,7 +147,6 @@ export async function POST(req: NextRequest) {
   const ttlDays = Math.min(Math.max(parseInt(process.env.CONSENT_TOKEN_TTL_DAYS || "14", 10) || 14, 1), 90);
   const token = signStudentConsentToken(student.id, ttlDays);
 
-  // Guardian lands on a page and explicitly confirms (POST)
   const link = `${origin}/api/consent/optin/student/link?token=${encodeURIComponent(token)}`;
 
   const child = [student.firstName, student.lastName].filter(Boolean).join(" ").trim() || "your child";
@@ -153,11 +156,10 @@ export async function POST(req: NextRequest) {
 Please confirm health & SMS consent for ${child}.
 Open: ${link}`;
 
-  // Send SMS
   const sms = await sendViaHubtel({
     to: student.guardianPhone,
     body: text,
-    brand: "AYITIADMIN",
+    brand: "EDULIFEOS",
     tenantId: ctx.tenantId,
     actorId: ctx.userId,
     meta: {
@@ -168,7 +170,6 @@ Open: ${link}`;
     },
   });
 
-  // High-level audit for quick reporting (separate from SmsLog)
   try {
     await prisma.sMSSendAudit.create({
       data: {
@@ -180,12 +181,12 @@ Open: ${link}`;
           link,
           actorId: ctx.userId,
           role: roleName,
+          brand: "EDULIFEOS",
         } as any,
       },
     });
   } catch {}
 
-  // AuditLog for staff action
   try {
     await prisma.auditLog.create({
       data: {
@@ -198,6 +199,7 @@ Open: ${link}`;
         userAgent: ua,
         metadata: {
           to: sms.to,
+          brand: "EDULIFEOS",
           guardianSmsOptIn: student.guardianSmsOptIn,
           healthConsentAt: student.healthConsentAt ? student.healthConsentAt.toISOString() : null,
         } as any,
@@ -205,5 +207,5 @@ Open: ${link}`;
     });
   } catch {}
 
-  return json(200, { ok: true, studentId, to: sms.to, link, text });
+  return json(200, { ok: true, studentId, to: sms.to, link, text, brand: "EDULIFEOS" });
 }

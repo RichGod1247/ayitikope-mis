@@ -22,12 +22,12 @@ const DEFAULT_FEES_ARREARS_TEMPLATE = [
 ].join("\n");
 
 type Brand = (typeof BrandName)[number];
-const FEES_BRAND: Brand = "AYITIADMIN";
+const FEES_BRAND: Brand = "EDULIFEOS";
 
 const ItemSchema = z.object({
   studentId: z.string().min(5).optional(),
   studentName: z.string().optional(),
-  guardianPhone: z.string().optional(), // legacy; DB is preferred when studentId provided
+  guardianPhone: z.string().optional(),
   className: z.string().optional(),
   term: z.string().optional(),
   amountDue: z.union([z.string(), z.number()]).optional(),
@@ -71,13 +71,10 @@ function clean(v: unknown) {
 function normalizePhoneGhana(raw: string): string {
   const s = clean(raw);
   if (!s) return "";
-  // Accept: 0XXXXXXXXX (10 digits) -> 233XXXXXXXXX
   if (/^0\d{9}$/.test(s)) return `233${s.slice(1)}`;
-  // Accept: +233XXXXXXXXX -> 233XXXXXXXXX
   if (/^\+233\d{9}$/.test(s)) return s.slice(1);
-  // Accept: 233XXXXXXXXX
   if (/^233\d{9}$/.test(s)) return s;
-  return s; // fallback (don’t over-break)
+  return s;
 }
 
 async function requireAdminLike(tenantId: string, userId: string) {
@@ -147,7 +144,6 @@ export async function POST(req: NextRequest) {
   for (const item of arrears) {
     const sid = clean(item.studentId);
 
-    // ✅ Prefer verified DB phone + opt-in when studentId present
     if (sid) {
       const s = studentMap.get(sid);
       if (!s) {
@@ -197,6 +193,7 @@ export async function POST(req: NextRequest) {
           studentName,
           to,
           ok: sendResult.ok,
+          brand: FEES_BRAND,
           providerResponse: (sendResult as any).providerResponse ?? null,
         });
       } catch (err: any) {
@@ -207,7 +204,6 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // Legacy/unverified payload (no studentId) -> skip (production-grade safety)
     results.push({
       ok: false,
       error: "Missing studentId; skipped (unverified target).",

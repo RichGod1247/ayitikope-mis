@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
-import { sendViaHubtel } from "@/lib/sms/hubtel";
+import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { getIpFromHeaders, getUserAgentFromHeaders, rateLimitCheck, rateLimitRecord } from "@/lib/rateLimit";
 
@@ -16,8 +16,6 @@ type Body = {
   contactEmail: string;
   contactPhone?: string;
   brand?: string;
-
-  // NEW (optional) — UI sends these
   sendEmail?: boolean;
   sendSms?: boolean;
   ttlMinutes?: number;
@@ -77,6 +75,20 @@ function makeSchoolCode() {
   return `SCH-${randomCode(6)}`;
 }
 
+function resolveBrand(input?: string): (typeof BrandName)[number] {
+  const raw = String(input ?? process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (raw === "EDULIFE") return "EDULIFEOS";
+  if (BrandName.includes(raw as (typeof BrandName)[number])) {
+    return raw as (typeof BrandName)[number];
+  }
+
+  return "EDULIFEOS";
+}
+
 /**
  * ✅ Bank-grade base URL:
  * - prod: env only
@@ -101,31 +113,40 @@ export async function POST(req: NextRequest) {
   const actorId = auth.ctx.userId;
 
   const ct = (req.headers.get("content-type") || "").toLowerCase();
-  if (!ct.includes("application/json")) return json({ ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" }, 415);
+  if (!ct.includes("application/json")) {
+    return json({ ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" }, 415);
+  }
 
   const body = (await req.json().catch(() => ({}))) as Body;
 
   const schoolName = cleanStr(body.schoolName);
   const contactEmail = cleanEmail(body.contactEmail);
   const contactPhoneRaw = cleanStr(body.contactPhone);
-  const brand = cleanStr(body.brand || "AYITIADMIN") || "AYITIADMIN";
+  const brand = resolveBrand(body.brand);
 
-  const sendEmailFlag = body.sendEmail !== false; // default true
-  const sendSmsFlag = body.sendSms !== false; // default true
+  const sendEmailFlag = body.sendEmail !== false;
+  const sendSmsFlag = body.sendSms !== false;
 
-  if (!contactEmail || !contactEmail.includes("@")) return json({ ok: false, error: "CONTACT_EMAIL_REQUIRED" }, 400);
+  if (!contactEmail || !contactEmail.includes("@")) {
+    return json({ ok: false, error: "CONTACT_EMAIL_REQUIRED" }, 400);
+  }
 
   const contactPhoneNorm = contactPhoneRaw ? normalizeGhPhoneE164(contactPhoneRaw) : null;
-  if (contactPhoneRaw && !contactPhoneNorm) return json({ ok: false, error: "BAD_PHONE" }, 400);
+  if (contactPhoneRaw && !contactPhoneNorm) {
+    return json({ ok: false, error: "BAD_PHONE" }, 400);
+  }
 
-  // TTL: default 24h unless you override
-  const ttlMinutes = clampInt(body.ttlMinutes ?? process.env.TENANT_BOOTSTRAP_INVITE_TTL_MINUTES ?? 1440, 1440, 5, 7 * 24 * 60);
+  const ttlMinutes = clampInt(
+    body.ttlMinutes ?? process.env.TENANT_BOOTSTRAP_INVITE_TTL_MINUTES ?? 1440,
+    1440,
+    5,
+    7 * 24 * 60
+  );
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
 
   const ip = getIpFromHeaders(req.headers);
   const userAgent = getUserAgentFromHeaders(req.headers);
 
-  // Rate limit (attempt-based)
   const key = `tenantBootstrapInviteCreate:user:${actorId}`;
   const lim = await rateLimitCheck({
     action: RL_ACTION,
@@ -138,9 +159,16 @@ export async function POST(req: NextRequest) {
       "Retry-After": String(lim.retryAfterSeconds),
     });
   }
-  await rateLimitRecord({ action: RL_ACTION, key, userId: actorId, ip, userAgent, metadata: { contactEmail } as any });
 
-  // Reserve slug
+  await rateLimitRecord({
+    action: RL_ACTION,
+    key,
+    userId: actorId,
+    ip,
+    userAgent,
+    metadata: { contactEmail } as any,
+  });
+
   const baseSlug = schoolName ? slugify(schoolName) : `school-${randomCode(6).toLowerCase()}`;
   let reservedSlug = baseSlug;
   for (let i = 0; i < 6; i++) {
@@ -149,7 +177,6 @@ export async function POST(req: NextRequest) {
     reservedSlug = `${baseSlug}-${randomCode(4).toLowerCase()}`;
   }
 
-  // Reserve schoolCode
   let reservedSchoolCode = makeSchoolCode();
   for (let i = 0; i < 8; i++) {
     const exists = await prisma.tenant.findFirst({ where: { schoolCode: reservedSchoolCode }, select: { id: true } });
@@ -157,7 +184,6 @@ export async function POST(req: NextRequest) {
     reservedSchoolCode = makeSchoolCode();
   }
 
-  // Token (store hash only)
   const token = crypto.randomBytes(24).toString("base64url");
   const tokenHash = sha256Hex(token);
 
@@ -178,10 +204,8 @@ export async function POST(req: NextRequest) {
 
   const base = getBaseUrl(req);
   const link = base ? `${base}/tenant/enroll?token=${encodeURIComponent(token)}` : "";
-
   const exp = expiresAt.toISOString().slice(0, 16).replace("T", " ");
 
-  // Email (best-effort)
   const emailText =
     `Hello,\n\n` +
     `You have been invited to onboard your school on EduLife OS.\n\n` +
@@ -200,10 +224,9 @@ export async function POST(req: NextRequest) {
       })
     : { ok: false, provider: "DISABLED" as const, to: contactEmail, testMode: false, error: "EMAIL_DISABLED_BY_REQUEST" };
 
-  // SMS (best-effort)
   let sms: any = null;
   if (!sendSmsFlag) {
-    sms = { ok: false, error: "SMS_DISABLED_BY_REQUEST" };
+    sms = { ok: false, error: "SMS_DISABLED_BY_REQUEST", brand };
   } else if (contactPhoneNorm) {
     const smsText =
       `EduLifeOS\n` +
@@ -219,7 +242,7 @@ export async function POST(req: NextRequest) {
             tenantId: auth.ctx.tenantId ?? null,
             toPhone: contactPhoneNorm,
             template: "TENANT_BOOTSTRAP_INVITE",
-            payload: { reservedSchoolCode, expiresAt: expiresAt.toISOString() },
+            payload: { reservedSchoolCode, expiresAt: expiresAt.toISOString(), brand },
           },
         });
       } catch {}
@@ -233,15 +256,14 @@ export async function POST(req: NextRequest) {
         meta: { category: "TENANT_BOOTSTRAP_INVITE", reservedSchoolCode, expiresAt: expiresAt.toISOString() },
       });
 
-      sms = { ok: true, to: contactPhoneNorm };
+      sms = { ok: true, to: contactPhoneNorm, brand };
     } catch (e: any) {
-      sms = { ok: false, to: contactPhoneNorm, error: String(e?.message || "SMS_FAILED") };
+      sms = { ok: false, to: contactPhoneNorm, error: String(e?.message || "SMS_FAILED"), brand };
     }
   } else {
-    sms = { ok: false, error: "PHONE_NOT_PROVIDED" };
+    sms = { ok: false, error: "PHONE_NOT_PROVIDED", brand };
   }
 
-  // Audit
   try {
     await prisma.auditLog.create({
       data: {
@@ -260,6 +282,7 @@ export async function POST(req: NextRequest) {
           ttlMinutes,
           sendEmail: sendEmailFlag,
           sendSms: sendSmsFlag,
+          brand,
         } as any,
       },
     });

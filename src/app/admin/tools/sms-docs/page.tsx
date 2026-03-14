@@ -64,7 +64,6 @@ export default function SmsDocsPage() {
           </div>
         </header>
 
-        {/* Section: Architecture */}
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-slate-800">
             1. High-level architecture
@@ -78,46 +77,87 @@ export default function SmsDocsPage() {
               <code className="bg-slate-100 px-1 rounded">
                 src/lib/sms/hubtel.ts
               </code>{" "}
-              – responsible for normalizing Ghana phone numbers, building
-              Hubtel URLs, sending via Hubtel, and writing{" "}
-              <code>SmsLog</code> entries.
+              — normalizes Ghana phone numbers, resolves sender brand, sends
+              via Hubtel, and writes <code>SmsLog</code> entries.
             </li>
             <li>
-              <span className="font-semibold">APIs:</span> endpoints under{" "}
-              <code>/api/sms/*</code> and <code>/api/admin/sms/*</code> that
-              call the engine for tests, broadcasts, attendance alerts, fees
-              reminders, and resends.
+              <span className="font-semibold">Wrapper:</span>{" "}
+              <code className="bg-slate-100 px-1 rounded">
+                src/lib/sms.ts
+              </code>{" "}
+              — generic helper for app-level SMS sending, auditing, and safe
+              brand inference.
             </li>
             <li>
-              <span className="font-semibold">Admin tools:</span> pages under{" "}
-              <code>/admin/tools</code> that let you manage contacts, run
-              broadcasts, demos, and inspect logs without touching code.
+              <span className="font-semibold">APIs + Admin tools:</span>{" "}
+              endpoints under <code>/api/sms/*</code>,{" "}
+              <code>/api/admin/sms/*</code>, and pages under{" "}
+              <code>/admin/tools</code> for broadcasts, demos, logs, and
+              diagnostics.
             </li>
           </ol>
         </section>
 
-        {/* Section: Environment */}
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-slate-800">
-            2. Environment configuration (env.local)
+            2. Brand model and default behavior
+          </h2>
+          <div className="text-sm text-slate-600 space-y-2">
+            <p>The system supports these sender brands:</p>
+            <ul className="list-disc ml-5 space-y-1">
+              <li>
+                <code>EDULIFEOS</code> — the canonical default brand for generic
+                platform SMS
+              </li>
+              <li>
+                <code>AYITIKOPJHS</code> — JHS-specific wallet / sender
+              </li>
+              <li>
+                <code>AYITIKPRIM</code> — Primary-specific wallet / sender
+              </li>
+              <li>
+                <code>AYITIADMIN</code> — legacy backward-compatible brand,
+                supported only where older flows still reference it
+              </li>
+            </ul>
+            <p>
+              Current recommended default: <code>EDULIFEOS</code>.
+            </p>
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold text-slate-800">
+            3. Environment configuration (env.local)
           </h2>
           <p className="text-sm text-slate-600">
-            These variables control which provider is used and which Hubtel
-            wallets/brands are active:
+            These variables control provider selection, default brand behavior,
+            and Hubtel credentials:
           </p>
           <ul className="list-disc ml-5 text-sm text-slate-600 space-y-1">
             <li>
-              <code>SMS_PROVIDER</code> and{" "}
-              <code>HARBOR_SMS_PROVIDER</code>: should be set to{" "}
-              <code>HUBTEL</code>.
+              <code>SMS_PROVIDER</code>: should be set to <code>HUBTEL</code>.
             </li>
             <li>
               <code>HUBTEL_BASE_URL</code>: usually{" "}
               <code>https://smsc.hubtel.com</code>.
             </li>
             <li>
-              Brand credentials:
+              <code>HUBTEL_DEFAULT_BRAND</code>: recommended default is{" "}
+              <code>EDULIFEOS</code>.
+            </li>
+            <li>
+              <code>HUBTEL_SENDER_ID</code>: generic sender fallback.
+              Recommended value: <code>EduLifeOS</code>.
+            </li>
+            <li>
+              Brand-specific credentials:
               <ul className="list-disc ml-5 space-y-1">
+                <li>
+                  <code>HUBTEL_EDULIFEOS_CLIENT_ID</code>,{" "}
+                  <code>HUBTEL_EDULIFEOS_CLIENT_SECRET</code>,{" "}
+                  <code>HUBTEL_EDULIFEOS_FROM</code>
+                </li>
                 <li>
                   <code>HUBTEL_AYITIKOPJHS_CLIENT_ID</code>,{" "}
                   <code>HUBTEL_AYITIKOPJHS_CLIENT_SECRET</code>,{" "}
@@ -131,21 +171,21 @@ export default function SmsDocsPage() {
                 <li>
                   <code>HUBTEL_AYITIADMIN_CLIENT_ID</code>,{" "}
                   <code>HUBTEL_AYITIADMIN_CLIENT_SECRET</code>,{" "}
-                  <code>HUBTEL_AYITIADMIN_FROM</code>
+                  <code>HUBTEL_AYITIADMIN_FROM</code> (legacy support only)
                 </li>
               </ul>
             </li>
             <li>
-              <code>EDULIFE_SMS_SENDER</code>: default brand/sender used by
-              generic tools (e.g. <code>AyitiAdmin</code>).
+              <code>EDULIFE_SMS_SENDER</code>: optional backward-compatible
+              sender setting. If present, keep it aligned with{" "}
+              <code>EduLifeOS</code>.
             </li>
             <li>
-              <code>TEST_SMS_TO</code>: phone number used by some test
-              endpoints when no other number is provided.
+              <code>TEST_SMS_TO</code>: phone number used by some test flows.
             </li>
             <li>
-              <code>SMS_TEST_MODE</code>: when <code>true</code>, some tools
-              can override the actual destination for safe testing.
+              <code>SMS_TEST_MODE</code>: when <code>true</code>, the engine can
+              reroute live sends to the configured test number for safe testing.
             </li>
           </ul>
           <p className="text-xs text-slate-500">
@@ -154,15 +194,14 @@ export default function SmsDocsPage() {
           </p>
         </section>
 
-        {/* Section: Key admin pages */}
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-slate-800">
-            3. Key admin tools & typical flows
+            4. Key admin tools and typical flows
           </h2>
           <div className="space-y-3 text-sm text-slate-600">
             <div>
               <h3 className="font-semibold text-slate-800">
-                3.1 Notification Contacts
+                4.1 Notification Contacts
               </h3>
               <p>
                 <Link
@@ -174,19 +213,17 @@ export default function SmsDocsPage() {
               </p>
               <p>
                 Manage the list of people who can receive SMS from EduLife OS
-                (teachers, admins, etc.). You can:
+                (teachers, admins, etc.).
               </p>
               <ul className="list-disc ml-5">
                 <li>Add, edit, and deactivate contacts.</li>
-                <li>
-                  Only active contacts are used by broadcast and debug tools.
-                </li>
+                <li>Only active contacts are used by broadcast/debug tools.</li>
               </ul>
             </div>
 
             <div>
               <h3 className="font-semibold text-slate-800">
-                3.2 SMS Broadcast Console
+                4.2 SMS Broadcast Console
               </h3>
               <p>
                 <Link
@@ -196,25 +233,21 @@ export default function SmsDocsPage() {
                   /admin/tools/sms-broadcast
                 </Link>
               </p>
-              <p>
-                Compose one-time messages (announcements, reminders) and send
-                to:
-              </p>
               <ul className="list-disc ml-5">
-                <li>Pilot group (first 5 contacts) or all active contacts.</li>
+                <li>Send to pilot group or all active contacts.</li>
                 <li>
-                  Choose which brand/wallet to use (Admin, JHS, Primary).
+                  Use <code>EDULIFEOS</code> as the normal default sender.
                 </li>
                 <li>
-                  Each send is logged in <code>SmsLog</code> with purpose{" "}
-                  <code>admin-broadcast</code>.
+                  JHS/Primary brands remain available where school-specific
+                  routing is needed.
                 </li>
               </ul>
             </div>
 
             <div>
               <h3 className="font-semibold text-slate-800">
-                3.3 Attendance Alerts Demo
+                4.3 Attendance Alerts Demo
               </h3>
               <p>
                 <Link
@@ -224,26 +257,15 @@ export default function SmsDocsPage() {
                   /admin/tools/sms-attendance-demo
                 </Link>
               </p>
-              <p>
-                Prototype sending attendance alerts to parents/guardians. Right
-                now, you:
-              </p>
               <ul className="list-disc ml-5">
-                <li>Paste students and guardian numbers manually.</li>
-                <li>
-                  Send alerts with purpose{" "}
-                  <code>attendance-alert-demo</code>.
-                </li>
-                <li>
-                  Each SMS is logged and visible in{" "}
-                  <code>/admin/tools/sms-logs</code>.
-                </li>
+                <li>Manual student and guardian entry for prototype testing.</li>
+                <li>Logs each send into <code>SmsLog</code>.</li>
               </ul>
             </div>
 
             <div>
               <h3 className="font-semibold text-slate-800">
-                3.4 Fees Reminder Demo
+                4.4 Fees Reminder Demo
               </h3>
               <p>
                 <Link
@@ -253,24 +275,14 @@ export default function SmsDocsPage() {
                   /admin/tools/sms-fees-demo
                 </Link>
               </p>
-              <p>
-                Prototype sending fees/arrears reminders. You:
-              </p>
               <ul className="list-disc ml-5">
-                <li>Specify term/period and class/form.</li>
-                <li>
-                  Paste lines like:{" "}
-                  <code>John Doe - 024XXXXXXX - 150</code>.
-                </li>
-                <li>
-                  Each SMS is logged with purpose{" "}
-                  <code>fees-reminder-demo</code>.
-                </li>
+                <li>Manual arrears testing flow.</li>
+                <li>Logs each send into <code>SmsLog</code>.</li>
               </ul>
             </div>
 
             <div>
-              <h3 className="font-semibold text-slate-800">3.5 SMS Logs</h3>
+              <h3 className="font-semibold text-slate-800">4.5 SMS Logs</h3>
               <p>
                 <Link
                   href="/admin/tools/sms-logs"
@@ -279,28 +291,22 @@ export default function SmsDocsPage() {
                   /admin/tools/sms-logs
                 </Link>
               </p>
-              <p>Shows the last 100 SMS entries with:</p>
               <ul className="list-disc ml-5">
-                <li>Brand, to, purpose, status, rate, test/live flag.</li>
+                <li>Shows brand, recipient, status, and message snippet.</li>
                 <li>
-                  Snippet of the message body for quick scanning.
-                </li>
-                <li>
-                  <strong>Resend</strong> button for failed messages, which uses{" "}
-                  <code>/api/admin/sms/resend/[id]</code> and logs with purpose{" "}
-                  <code>resend-from-log</code>.
+                  Failed sends can be retried through{" "}
+                  <code>/api/admin/sms/resend/[id]</code>.
                 </li>
               </ul>
             </div>
 
             <div>
               <h3 className="font-semibold text-slate-800">
-                3.6 Diagnostics & Self-test
+                4.6 Diagnostics and Self-test
               </h3>
               <ul className="list-disc ml-5">
                 <li>
-                  <code>/api/sms/selftest</code> – quick engine self-test to a
-                  single number (often <code>TEST_SMS_TO</code>).
+                  <code>/api/sms/selftest</code> — quick engine test.
                 </li>
                 <li>
                   <Link
@@ -309,87 +315,70 @@ export default function SmsDocsPage() {
                   >
                     /debug/sms-test
                   </Link>{" "}
-                  – debug page that can send to the configured teacher contacts
-                  and show a JSON result.
+                  — debug page for test sends and JSON inspection.
                 </li>
               </ul>
             </div>
           </div>
         </section>
 
-        {/* Section: Error handling */}
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-slate-800">
-            4. Common errors & how to respond
+            5. Common errors and how to respond
           </h2>
           <div className="space-y-2 text-sm text-slate-600">
             <div>
               <p className="font-semibold text-slate-800">
-                4.1 Invalid SenderId
+                5.1 Invalid SenderId
               </p>
               <ul className="list-disc ml-5">
                 <li>
-                  Hubtel returns this if the <code>FROM</code> name is not
-                  approved or doesn&apos;t match the configured account.
+                  Hubtel returns this if the sender name is not approved or does
+                  not match the wallet credentials.
                 </li>
                 <li>
-                  Check <code>HUBTEL_*_FROM</code> values and ensure they
-                  match what Hubtel has approved.
+                  Check the corresponding <code>HUBTEL_*_FROM</code> value.
                 </li>
                 <li>
-                  Verify you used the correct brand (Admin, JHS, Primary) for
-                  that wallet.
+                  Confirm the chosen brand matches the wallet you intended to
+                  use.
                 </li>
               </ul>
             </div>
 
             <div>
               <p className="font-semibold text-slate-800">
-                4.2 Insufficient balance
+                5.2 Insufficient balance
               </p>
               <ul className="list-disc ml-5">
-                <li>
-                  Means the chosen Hubtel wallet doesn&apos;t have enough
-                  funds.
-                </li>
-                <li>
-                  Top up the appropriate wallet (Admin/JHS/Primary) in Hubtel,
-                  then resend from logs or re-run the campaign.
-                </li>
+                <li>Means the selected wallet does not have enough funds.</li>
+                <li>Top up the correct Hubtel wallet, then resend.</li>
               </ul>
             </div>
 
             <div>
               <p className="font-semibold text-slate-800">
-                4.3 Invalid &apos;to&apos; phone number
+                5.3 Invalid phone number
               </p>
               <ul className="list-disc ml-5">
                 <li>
-                  Occurs when numbers are empty, malformed, or not valid Ghana
+                  Happens when numbers are empty, malformed, or not valid Ghana
                   mobile patterns.
                 </li>
                 <li>
-                  Check the source (notification contacts, attendance demo,
-                  fees demo) and correct any numbers that don&apos;t start
-                  with <code>0</code> or <code>233</code>.
-                </li>
-                <li>
-                  The engine normalizes numbers like <code>024...</code> into{" "}
-                  <code>23324...</code>, but completely invalid strings
-                  will still fail.
+                  The engine can normalize common Ghana formats, but completely
+                  invalid strings will still fail.
                 </li>
               </ul>
             </div>
 
             <div>
               <p className="font-semibold text-slate-800">
-                4.4 Missing environment variables
+                5.4 Missing environment variables
               </p>
               <ul className="list-disc ml-5">
                 <li>
-                  If you see logs like{" "}
-                  <code>[HUBTEL] One or more env vars are missing</code>,
-                  verify all required <code>HUBTEL_*</code> variables in{" "}
+                  Verify required <code>HUBTEL_*</code> values in{" "}
                   <code>.env.local</code>.
                 </li>
                 <li>Restart the dev server after fixing env values.</li>
@@ -398,38 +387,32 @@ export default function SmsDocsPage() {
           </div>
         </section>
 
-        {/* Section: Roadmap */}
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-slate-800">
-            5. Roadmap – connecting to real data
+            6. Roadmap – connecting to real data
           </h2>
           <p className="text-sm text-slate-600">
             The current tools already support real SMS sending via Hubtel and
-            logging, but some flows still use manual data entry (attendance
-            and fees demos). Next steps in future sprints:
+            logging, but some flows still use manual data entry. Next steps:
           </p>
           <ul className="list-disc ml-5 text-sm text-slate-600 space-y-1">
+            <li>Wire attendance alerts directly into the attendance records.</li>
             <li>
-              Wire attendance alerts directly to the attendance records in
-              the MIS (daily parent alerts).
+              Introduce structured fees/arrears campaigns from real billing
+              data.
             </li>
             <li>
-              Introduce a structured fees/arrears data model and generate
-              reminder campaigns automatically.
-            </li>
-            <li>
-              Add analytics on top of <code>SmsLog</code> (volume, cost per
-              brand, success rate per purpose).
+              Add analytics on top of <code>SmsLog</code> for volume, cost, and
+              success rate by brand/purpose.
             </li>
           </ul>
         </section>
 
-        {/* Footer */}
         <footer className="pt-2 border-t border-slate-200 mt-4 text-xs text-slate-500">
           <p>
-            This page is part of EduLife OS&apos;s internal documentation. As
-            the system grows, update it so future staff and developers can
-            understand and operate the SMS engine confidently.
+            This page is part of EduLife OS internal documentation. Keep it
+            aligned with the actual engine so future staff and developers do not
+            inherit outdated operational assumptions.
           </p>
         </footer>
       </div>

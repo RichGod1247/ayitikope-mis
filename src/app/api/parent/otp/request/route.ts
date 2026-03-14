@@ -228,12 +228,12 @@ export async function POST(req: NextRequest) {
       } catch {}
 
       const r = await sendViaHubtel({
-        to: phoneNorm,
-        body: smsText,
-        brand: "AYITIADMIN",
-        tenantId: tenant.id,
-        meta: { category: "PARENT_OTP", expiresAt },
-      });
+  to: phoneNorm,
+  body: smsText,
+  brand: process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS",
+  tenantId: tenant.id,
+  meta: { category: "PARENT_OTP", expiresAt },
+});
 
       smsOk = true;
       smsRoutedTo = r.to ?? null;

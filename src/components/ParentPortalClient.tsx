@@ -1,7 +1,7 @@
-//src/components/ParentPortalClient.tsx
+// src/components/ParentPortalClient.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 type SafeStudent = {
   id: string;
@@ -37,7 +37,6 @@ type ParentChildInsightsOk = {
     classroomId: string | null;
   };
 
-  // ✅ tells portal whether report/performance is unlocked
   report: ResultsReleaseInfo;
 
   attendance: {
@@ -56,7 +55,6 @@ type ParentChildInsightsOk = {
     feverThreshold: number;
   };
 
-  // When not released, server returns safe empty values.
   performance: {
     overallPercent: number | null;
     subjects: Array<{ subject: string; percent: number | null }>;
@@ -93,6 +91,14 @@ function buildPrintHref(args: { studentId: string; term: string; academicYear: s
     academicYear: args.academicYear,
   });
   return `/parent/report/print?${sp.toString()}`;
+}
+
+function shellCardClass() {
+  return "rounded-[26px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
+}
+
+function innerPanelClass() {
+  return "rounded-2xl border border-white/10 bg-[#07111F]/80";
 }
 
 export function ParentPortalClient({ initialStudents }: Props) {
@@ -161,13 +167,13 @@ export function ParentPortalClient({ initialStudents }: Props) {
   }, [data, reportReleased]);
 
   return (
-    <section className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm space-y-3">
+    <section className="space-y-4 text-[#F7F4ED]">
+      <div className={`${shellCardClass()} space-y-3 px-4 py-4 sm:px-5`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-slate-900">Choose learner</h2>
-            <p className="text-[11px] text-slate-500 max-w-xl">
-              Parent copilot uses attendance + health + (released) performance together — not scores alone.
+            <h2 className="text-sm font-semibold text-[#F7F4ED]">Choose learner</h2>
+            <p className="max-w-xl text-[11px] leading-5 text-[#AEB6C4]">
+              Parent copilot uses attendance, health, and released performance together — not scores alone.
             </p>
           </div>
 
@@ -175,7 +181,7 @@ export function ParentPortalClient({ initialStudents }: Props) {
             <select
               value={selectedId}
               onChange={(e) => setSelectedId(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:w-64"
+              className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25 sm:w-64"
               aria-label="Select learner"
               disabled={students.length === 0}
             >
@@ -193,22 +199,21 @@ export function ParentPortalClient({ initialStudents }: Props) {
         </div>
 
         {students.length === 0 ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+          <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-3 py-3 text-[11px] text-amber-100">
             No learners are linked to this phone number in the school records yet.
           </div>
         ) : (
-          <p className="text-[11px] text-slate-500">
-            Viewing: <span className="font-semibold">{selectedLabel}</span>
+          <p className="text-[11px] text-[#8F98A8]">
+            Viewing: <span className="font-semibold text-[#F7F4ED]">{selectedLabel}</span>
           </p>
         )}
 
-        {/* Term report / print gate */}
         {data?.ok ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+          <div className={`${innerPanelClass()} px-3 py-3`}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-[11px] font-semibold text-slate-900">Term report</div>
-                <div className="text-[11px] text-slate-600">
+                <div className="text-[11px] font-semibold text-[#F7F4ED]">Term report</div>
+                <div className="text-[11px] text-[#AEB6C4]">
                   {(data as ParentChildInsightsOk).term} • {(data as ParentChildInsightsOk).academicYear}
                 </div>
               </div>
@@ -217,8 +222,8 @@ export function ParentPortalClient({ initialStudents }: Props) {
                 <span
                   className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                     reportReleased
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                      : "border-amber-200 bg-amber-50 text-amber-800"
+                      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+                      : "border-amber-300/20 bg-amber-400/12 text-amber-100"
                   }`}
                 >
                   {reportReleased ? "Released" : "Locked"}
@@ -226,10 +231,10 @@ export function ParentPortalClient({ initialStudents }: Props) {
 
                 <a
                   href={printHref}
-                  className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-[11px] font-semibold ${
+                  className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-[11px] font-semibold transition ${
                     reportReleased
-                      ? "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-                      : "border-slate-300 text-slate-400 pointer-events-none"
+                      ? "border-[#D4AF37]/30 bg-[#D4AF37]/12 text-[#F7F4ED] hover:bg-[#D4AF37]/18"
+                      : "pointer-events-none border-white/10 bg-white/5 text-[#738095]"
                   }`}
                 >
                   Open report / Print
@@ -238,13 +243,13 @@ export function ParentPortalClient({ initialStudents }: Props) {
             </div>
 
             {!reportReleased ? (
-              <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+              <div className="mt-2 rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-2 text-[11px] text-amber-100">
                 Report is not released yet by the headteacher. Attendance and health remain visible, but performance stays locked.
               </div>
             ) : (data as ParentChildInsightsOk).report?.releasedAt ? (
-              <div className="mt-2 text-[11px] text-slate-600">
+              <div className="mt-2 text-[11px] text-[#AEB6C4]">
                 Released at:{" "}
-                <span className="font-semibold">
+                <span className="font-semibold text-[#F7F4ED]">
                   {new Date((data as ParentChildInsightsOk).report.releasedAt as string).toLocaleString()}
                 </span>
               </div>
@@ -254,26 +259,26 @@ export function ParentPortalClient({ initialStudents }: Props) {
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-[11px] text-emerald-900 shadow-sm">
+        <div className="rounded-2xl border border-[#1B66D1]/20 bg-[#1B66D1]/12 px-4 py-3 text-[11px] text-sky-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
           Loading child insights…
         </div>
       ) : data && !data.ok ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50/70 px-4 py-3 text-[11px] text-red-900 shadow-sm">
+        <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-[11px] text-rose-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
           {data.error}
         </div>
       ) : data && data.ok ? (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className={`${shellCardClass()} px-4 py-4`}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">Selected learner</p>
-                <p className="mt-1 text-lg font-semibold text-slate-900">{data.selected.name}</p>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#AEB6C4]">Selected learner</p>
+                <p className="mt-1 text-lg font-semibold text-[#F7F4ED]">{data.selected.name}</p>
+                <p className="mt-1 text-[11px] text-[#8F98A8]">
                   {data.term} • {data.academicYear}
                 </p>
               </div>
 
-              <div className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+              <div className="rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/12 px-3 py-1 text-[11px] font-semibold text-[#F7F4ED]">
                 Overall performance: {reportReleased ? pct(data.performance.overallPercent) : "Locked"}
               </div>
             </div>
@@ -281,15 +286,15 @@ export function ParentPortalClient({ initialStudents }: Props) {
 
           <div className="grid gap-4 md:grid-cols-3">
             <Card title="Attendance" tone="sky">
-              <p className="text-sm font-semibold text-slate-900">{pct(data.attendance.attendancePercent)}</p>
-              <p className="mt-1 text-[11px] text-slate-600">
+              <p className="text-sm font-semibold text-[#F7F4ED]">{pct(data.attendance.attendancePercent)}</p>
+              <p className="mt-1 text-[11px] text-[#C9CDD6]">
                 Present {data.attendance.present} • Absent {data.attendance.absent} • Late {data.attendance.late}
               </p>
             </Card>
 
             <Card title="Health" tone="amber">
-              <p className="text-sm font-semibold text-slate-900">{data.health.healthRecords} records</p>
-              <p className="mt-1 text-[11px] text-slate-600">
+              <p className="text-sm font-semibold text-[#F7F4ED]">{data.health.healthRecords} records</p>
+              <p className="mt-1 text-[11px] text-[#C9CDD6]">
                 Fever flags {data.health.feverFlags} • Threshold {data.health.feverThreshold}°C
               </p>
             </Card>
@@ -297,39 +302,41 @@ export function ParentPortalClient({ initialStudents }: Props) {
             <Card title="Assessment coverage" tone="emerald">
               {reportReleased ? (
                 <>
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-sm font-semibold text-[#F7F4ED]">
                     {data.performance.scoredAssessmentsCount} / {data.performance.expectedAssessmentsCount}
                   </p>
-                  <p className="mt-1 text-[11px] text-slate-600">Missing assessments {data.performance.missingAssessmentsCount}</p>
+                  <p className="mt-1 text-[11px] text-[#C9CDD6]">
+                    Missing assessments {data.performance.missingAssessmentsCount}
+                  </p>
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-semibold text-slate-900">Locked</p>
-                  <p className="mt-1 text-[11px] text-slate-600">Visible after results are released.</p>
+                  <p className="text-sm font-semibold text-[#F7F4ED]">Locked</p>
+                  <p className="mt-1 text-[11px] text-[#C9CDD6]">Visible after results are released.</p>
                 </>
               )}
             </Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">Subject performance</p>
+            <div className={`${shellCardClass()} px-4 py-4`}>
+              <p className="text-sm font-semibold text-[#F7F4ED]">Subject performance</p>
               <div className="mt-3 space-y-2">
                 {!reportReleased ? (
-                  <p className="text-[11px] text-slate-600">
+                  <p className="text-[11px] text-[#AEB6C4]">
                     Performance is locked until the headteacher releases results for this term.
                   </p>
                 ) : data.performance.subjects.length ? (
                   data.performance.subjects.map((s) => (
-                    <div key={s.subject} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div key={s.subject} className={`${innerPanelClass()} px-3 py-2`}>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-slate-900">{s.subject}</span>
-                        <span className="text-[11px] text-slate-700">{pct(s.percent)}</span>
+                        <span className="font-medium text-[#F7F4ED]">{s.subject}</span>
+                        <span className="text-[11px] text-[#C9CDD6]">{pct(s.percent)}</span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-[11px] text-slate-600">No subject performance signal yet.</p>
+                  <p className="text-[11px] text-[#AEB6C4]">No subject performance signal yet.</p>
                 )}
               </div>
             </div>
@@ -341,9 +348,9 @@ export function ParentPortalClient({ initialStudents }: Props) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-4 shadow-sm">
-            <p className="text-sm font-semibold text-indigo-900">Parent action focus</p>
-            <p className="mt-2 text-sm text-indigo-950">
+          <div className="rounded-2xl border border-[#1B66D1]/20 bg-[#1B66D1]/12 px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
+            <p className="text-sm font-semibold text-[#F7F4ED]">Parent action focus</p>
+            <p className="mt-2 text-sm leading-7 text-[#D7DCE5]">
               {reportReleased
                 ? data.insights.improvementFocus
                 : "Results are not released yet. For now: protect attendance, sleep, and daily revision habits. When released, use the report to target weak subjects calmly."}
@@ -351,7 +358,7 @@ export function ParentPortalClient({ initialStudents }: Props) {
           </div>
 
           {data.message ? (
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[11px] text-slate-600 shadow-sm">
+            <div className={`${shellCardClass()} px-4 py-3 text-[11px] text-[#C9CDD6]`}>
               {data.message}
             </div>
           ) : null}
@@ -368,18 +375,18 @@ function Card({
 }: {
   title: string;
   tone: "sky" | "amber" | "emerald";
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const cls =
     tone === "sky"
-      ? "border-sky-200 bg-sky-50/70"
+      ? "border-sky-300/20 bg-sky-400/12"
       : tone === "amber"
-      ? "border-amber-200 bg-amber-50/70"
-      : "border-emerald-200 bg-emerald-50/70";
+      ? "border-amber-300/20 bg-amber-400/12"
+      : "border-emerald-300/20 bg-emerald-400/12";
 
   return (
-    <div className={`rounded-2xl border px-4 py-4 shadow-sm ${cls}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-700">{title}</p>
+    <div className={`rounded-2xl border px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.16)] ${cls}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#D7DCE5]">{title}</p>
       <div className="mt-2">{children}</div>
     </div>
   );
@@ -398,15 +405,15 @@ function SwotCard({
 }) {
   const cls =
     tone === "emerald"
-      ? "border-emerald-200 bg-emerald-50/70"
+      ? "border-emerald-300/20 bg-emerald-400/12"
       : tone === "rose"
-      ? "border-rose-200 bg-rose-50/70"
-      : "border-amber-200 bg-amber-50/70";
+      ? "border-rose-300/20 bg-rose-400/12"
+      : "border-amber-300/20 bg-amber-400/12";
 
   return (
-    <div className={`rounded-2xl border px-4 py-4 shadow-sm ${cls}`}>
-      <p className="text-sm font-semibold text-slate-900">{title}</p>
-      <ul className="mt-2 space-y-1 text-[11px] text-slate-700">
+    <div className={`rounded-2xl border px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.16)] ${cls}`}>
+      <p className="text-sm font-semibold text-[#F7F4ED]">{title}</p>
+      <ul className="mt-2 space-y-1 text-[11px] leading-5 text-[#D7DCE5]">
         {locked ? (
           <li>• Locked until results are released.</li>
         ) : items.length ? (
