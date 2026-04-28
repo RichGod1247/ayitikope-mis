@@ -14,67 +14,79 @@ datasource db {
 /// * Core Identity
 /// * =======================
 model User {
-  id                              String                   @id @default(cuid())
-  email                           String                   @unique
-  passwordHash                    String?
-  name                            String?
-  locale                          String?                  @default("en")
-  timezone                        String?                  @default("Africa/Accra")
-  image                           String?
-  createdAt                       DateTime                 @default(now())
-  updatedAt                       DateTime                 @updatedAt
-  smsOptIn                        Boolean                  @default(true)
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  name         String?
+  locale       String?  @default("en")
+  timezone     String?  @default("Africa/Accra")
+  image        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  smsOptIn     Boolean  @default(true)
+
   /// ⚠️ LEGACY (do not use for auth going forward).
   /// Staff IDs must be tenant-scoped and live on Membership.staffId(+Norm).
-  staffId                         String?
-  firstName                       String?
-  lastName                        String?
-  failedLoginCount                Int                      @default(0)
-  lockedUntil                     DateTime?                @db.Timestamptz(6)
-  twoFactorEnabled                Boolean                  @default(false)
-  twoFactorSecretCiphertext       String?
-  twoFactorSecretKeyCiphertext    String?
-  twoFactorSecretIv               String?
-  twoFactorSecretTag              String?
-  twoFactorSetupAt                DateTime?                @db.Timestamptz(6)
-  failedOtpCount                  Int                      @default(0)
-  otpLockedUntil                  DateTime?                @db.Timestamptz(6)
-  lastActiveTenantId              String?
-  /// ✅ GLOBAL PHONE IDENTITY (bank-grade)
-  /// Store normalized E.164 in phoneNorm (unique). phone can be same for now.
-  phone                           String?
-  phoneNorm                       String?                  @unique
-  accounts                        Account[]
-  announcementsCreated            Announcement[]           @relation("AnnouncementCreatedBy")
-  Assessment                      Assessment[]
-  assessmentItemsCreated          AssessmentItem[]         @relation("AssessmentItemCreatedBy")
-  assessmentItemsPublished        AssessmentItem[]         @relation("AssessmentItemPublishedBy")
-  assessmentItemsLocked           AssessmentItem[]         @relation("AssessmentItemLockedBy")
-  tenantBootstrapInvitesCreated   TenantBootstrapInvite[]  @relation("TenantBootstrapInviteCreatedBy")
-  AttendanceSession               AttendanceSession[]
-  auditLogs                       AuditLog[]
-  invitesSent                     Invite[]                 @relation("UserInvites")
-  lessonNotesAsHeadteacher        LessonNote[]             @relation("LessonNoteHeadteacher")
-  lessonNotesAsTeacher            LessonNote[]             @relation("LessonNoteTeacher")
-  lessonDeliveriesAsTeacher       LessonDelivery[]         @relation("LessonDeliveryTeacher")
-  memberships                     Membership[]
-  sessions                        Session[]
-  teacherHealthWeekly             TeacherHealthWeekly[]
-  teacherProfiles                 TeacherProfile[]         @relation("UserTeacherProfiles")
-  lastActiveTenant                Tenant?                  @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
-  inviteCodes                     InviteCode[]
-  inviteCodeUses                  InviteCodeUse[]
-  resultsReleasesCreated          ResultsRelease[]         @relation("ResultsReleaseCreatedBy")
-  scholarshipApplicationsReviewed ScholarshipApplication[] @relation("ScholarshipApplicationReviewer")
-  scholarshipAwardsApproved       ScholarshipAward[]       @relation("ScholarshipAwardApprovedBy")
-  feeAdjustmentsCreated           FeeAdjustment[]          @relation("FeeAdjustmentCreatedBy")
-  ledgerEntriesCreated            LedgerEntry[]            @relation("LedgerEntryCreatedBy")
-  receiptsIssued                  Receipt[]                @relation("ReceiptIssuedBy")
+  staffId   String?
+  firstName String?
+  lastName  String?
 
-  /// ✅ Headteacher signature store (tenant-scoped, reusable)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime? @db.Timestamptz(6)
+
+  twoFactorEnabled             Boolean   @default(false)
+  twoFactorSecretCiphertext    String?
+  twoFactorSecretKeyCiphertext String?
+  twoFactorSecretIv            String?
+  twoFactorSecretTag           String?
+  twoFactorSetupAt             DateTime? @db.Timestamptz(6)
+
+  failedOtpCount Int       @default(0)
+  otpLockedUntil DateTime? @db.Timestamptz(6)
+
+  lastActiveTenantId String?
+
+  /// ✅ GLOBAL PHONE IDENTITY
+  phone     String?
+  phoneNorm String? @unique
+
+  accounts                      Account[]
+  announcementsCreated          Announcement[]          @relation("AnnouncementCreatedBy")
+  Assessment                    Assessment[]
+  assessmentItemsCreated        AssessmentItem[]        @relation("AssessmentItemCreatedBy")
+  assessmentItemsPublished      AssessmentItem[]        @relation("AssessmentItemPublishedBy")
+  assessmentItemsLocked         AssessmentItem[]        @relation("AssessmentItemLockedBy")
+  tenantBootstrapInvitesCreated TenantBootstrapInvite[] @relation("TenantBootstrapInviteCreatedBy")
+  AttendanceSession             AttendanceSession[]
+  auditLogs                     AuditLog[]
+  invitesSent                   Invite[]                @relation("UserInvites")
+  lessonNotesAsHeadteacher      LessonNote[]            @relation("LessonNoteHeadteacher")
+  lessonNotesAsTeacher          LessonNote[]            @relation("LessonNoteTeacher")
+  lessonDeliveriesAsTeacher     LessonDelivery[]        @relation("LessonDeliveryTeacher")
+  memberships                   Membership[]
+  sessions                      Session[]
+  teacherHealthWeekly           TeacherHealthWeekly[]
+  teacherProfiles               TeacherProfile[]        @relation("UserTeacherProfiles")
+  lastActiveTenant              Tenant?                 @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
+  inviteCodes                   InviteCode[]
+  inviteCodeUses                InviteCodeUse[]
+  resultsReleasesCreated        ResultsRelease[]        @relation("ResultsReleaseCreatedBy")
+
+  /// ✅ Sprint 9 / Phase 1 — finance, scholarships, receipts, reconciliation
+  scholarshipApplicationsReviewed  ScholarshipApplication[]  @relation("ScholarshipApplicationReviewer")
+  scholarshipAwardsApproved        ScholarshipAward[]        @relation("ScholarshipAwardApprovedBy")
+  feeAdjustmentsCreated            FeeAdjustment[]           @relation("FeeAdjustmentCreatedBy")
+  ledgerEntriesCreated             LedgerEntry[]             @relation("LedgerEntryCreatedBy")
+  receiptsIssued                   Receipt[]                 @relation("ReceiptIssuedBy")
+  paymentIntentsCreated            PaymentIntent[]           @relation("PaymentIntentCreatedBy")
+  paymentTransactionsCreated       PaymentTransaction[]      @relation("PaymentTransactionCreatedBy")
+  reconciliationBatchesCreated     ReconciliationBatch[]     @relation("ReconciliationBatchCreatedBy")
+  reconciliationExceptionsResolved ReconciliationException[] @relation("ReconciliationExceptionResolvedBy")
+
+  /// ✅ Headteacher signature store
   headteacherSignatures HeadteacherSignature[]
 
-  // Sprint 10: GES officer profile (null for school staff)
+  /// Sprint 10 placeholder — keep only because current schema already has GES models.
   gesOfficer GesOfficer?
 
   @@index([twoFactorEnabled])
@@ -98,19 +110,22 @@ model Tenant {
   circuit      String?
   region       String?
 
-  // Sprint 10: link to GES zone hierarchy
+  /// Sprint 10 placeholder — keep because current schema already has AdminZone.
   zoneId String?
   zone   AdminZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 
-  announcements              Announcement[]          @relation("TenantAnnouncements")
-  Assessment                 Assessment[]
-  assessmentItems            AssessmentItem[]
-  AttendanceSession          AttendanceSession[]
-  auditLogs                  AuditLog[]
-  curriculumUnits            CurriculumUnit[]
-  feeInvoices                FeeInvoice[]            @relation("TenantFeeInvoices")
-  feePayments                FeePayment[]            @relation("TenantFeePayments")
-  feeStructures              FeeStructure[]          @relation("TenantFeeStructures")
+  announcements     Announcement[]      @relation("TenantAnnouncements")
+  Assessment        Assessment[]
+  assessmentItems   AssessmentItem[]
+  AttendanceSession AttendanceSession[]
+  auditLogs         AuditLog[]
+  curriculumUnits   CurriculumUnit[]
+
+  /// ✅ Existing finance relations
+  feeInvoices   FeeInvoice[]   @relation("TenantFeeInvoices")
+  feePayments   FeePayment[]   @relation("TenantFeePayments")
+  feeStructures FeeStructure[] @relation("TenantFeeStructures")
+
   invites                    Invite[]
   lessonNotes                LessonNote[]
   lessonDeliveries           LessonDelivery[]
@@ -128,26 +143,37 @@ model Tenant {
   tenantBootstrapInvitesUsed TenantBootstrapInvite[] @relation("TenantBootstrapInviteUsedTenant")
   resultsReleases            ResultsRelease[]
 
-  /// ✅ Headteacher signature store (tenant-scoped, reusable)
+  /// ✅ Headteacher signature store
   headteacherSignatures HeadteacherSignature[]
 
-  /// ✅ School contact points (used for tenant bootstrap + support)
+  /// ✅ School contact points
   contactEmail     String? @db.VarChar(320)
   contactPhone     String? @db.VarChar(32)
   contactPhoneNorm String? @db.VarChar(16)
 
-  scholarshipApplications ScholarshipApplication[]
-  sponsorProfiles         SponsorProfile[]
-  scholarshipAwards       ScholarshipAward[]
-  feeAdjustments          FeeAdjustment[]
-  ledgerEntries           LedgerEntry[]
-  receipts                Receipt[]                @relation("TenantReceipts")
-  riskSnapshots           SchoolRiskSnapshot[]
+  /// ✅ Sprint 9 / Phase 1 — finance truth spine
+  feeInvoiceLines          FeeInvoiceLine[]
+  paymentIntents           PaymentIntent[]
+  paymentProviderEvents    PaymentProviderEvent[]
+  paymentTransactions      PaymentTransaction[]
+  paymentAllocations       PaymentAllocation[]
+  sponsorProfiles          SponsorProfile[]
+  scholarshipApplications  ScholarshipApplication[]
+  scholarshipAwards        ScholarshipAward[]
+  feeAdjustments           FeeAdjustment[]
+  ledgerEntries            LedgerEntry[]
+  receipts                 Receipt[]                 @relation("TenantReceipts")
+  reconciliationBatches    ReconciliationBatch[]
+  reconciliationExceptions ReconciliationException[]
+
+  /// Sprint 10 placeholder — keep because current schema already has SchoolRiskSnapshot.
+  riskSnapshots SchoolRiskSnapshot[]
 
   @@index([status])
   @@index([schoolCode])
   @@index([contactPhoneNorm])
   @@index([contactEmail])
+  @@index([zoneId])
 }
 
 /// *
@@ -555,7 +581,7 @@ model Student {
   id       String @id @default(cuid())
   tenantId String
 
-  // ✅ Soft-delete lifecycle
+  /// ✅ Soft-delete lifecycle
   status     StudentStatus @default(ACTIVE)
   archivedAt DateTime?     @db.Timestamptz(6)
 
@@ -578,15 +604,19 @@ model Student {
 
   note String?
 
-  // Sprint 10: student portal PIN (bcrypt hash)
+  /// Sprint 10 placeholder — keep because current schema already has student portal planning.
   pin String?
 
-  assessmentScores  AssessmentScore[]
-  AttendanceMark    AttendanceMark[]
-  feeInvoices       FeeInvoice[]       @relation("StudentFeeInvoices")
-  scholarshipAwards ScholarshipAward[]
-  feeAdjustments    FeeAdjustment[]
-  ledgerEntries     LedgerEntry[]
+  assessmentScores AssessmentScore[]
+  AttendanceMark   AttendanceMark[]
+
+  /// ✅ Sprint 9 / Phase 1 — student finance links
+  feeInvoices        FeeInvoice[]        @relation("StudentFeeInvoices")
+  paymentIntents     PaymentIntent[]
+  paymentAllocations PaymentAllocation[]
+  scholarshipAwards  ScholarshipAward[]
+  feeAdjustments     FeeAdjustment[]
+  ledgerEntries      LedgerEntry[]
 
   classroom          Classroom?           @relation(fields: [classroomId], references: [id], onUpdate: NoAction)
   tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -595,7 +625,6 @@ model Student {
   @@index([tenantId])
   @@index([classroomId])
   @@index([tenantId, guardianPhoneNorm], map: "Student_tenant_guardianPhoneNorm_idx")
-  // ✅ Performance for attendance queries
   @@index([tenantId, classroomId, status], map: "Student_tenant_classroom_status_idx")
   @@index([tenantId, status], map: "Student_tenant_status_idx")
 }
@@ -747,86 +776,251 @@ model SmsLog {
   @@map("SmsLog")
 }
 
-/// High-level definition of a fee item (e.g. "Term 1 PTA Levy", "Feeding Fee")
+/// *
+/// * =======================
+/// * Finance & Trust Spine — Sprint 9 / Phase 1
+/// * =======================
+
 model FeeStructure {
-  id            String   @id @default(cuid())
-  tenantId      String
-  name          String
-  description   String?
-  term          String
-  academicYear  String
-  amountPesewas Int
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  tenant        Tenant   @relation("TenantFeeStructures", fields: [tenantId], references: [id])
+  id               String            @id @default(cuid())
+  tenantId         String
+  name             String
+  description      String?
+  category         String            @default("GENERAL")
+  scope            FeeStructureScope @default(SCHOOL)
+  classroomId      String?
+  studentId        String?
+  term             String
+  academicYear     String
+  amountPesewas    Int
+  isRequired       Boolean           @default(true)
+  isRecurring      Boolean           @default(false)
+  isActive         Boolean           @default(true)
+  approvedByUserId String?
+  approvedAt       DateTime?         @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime          @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant       Tenant           @relation("TenantFeeStructures", fields: [tenantId], references: [id], onDelete: Cascade)
+  invoiceLines FeeInvoiceLine[]
+
+  @@index([tenantId, term, academicYear])
+  @@index([tenantId, scope])
+  @@index([tenantId, classroomId])
+  @@index([tenantId, studentId])
+  @@index([tenantId, isActive])
 }
 
 model FeeInvoice {
-  id                 String          @id @default(cuid())
+  id                 String           @id @default(cuid())
   tenantId           String
   studentId          String
   term               String
   academicYear       String
-  totalBilledPesewas Int
-  totalWaivedPesewas Int             @default(0)
+  status             FeeInvoiceStatus @default(OPEN)
+  totalBilledPesewas Int              @default(0)
+  totalWaivedPesewas Int              @default(0)
+  totalPaidPesewas   Int              @default(0)
+  balancePesewas     Int              @default(0)
+  dueDate            DateTime?        @db.Date
+  issuedAt           DateTime         @default(now()) @db.Timestamptz(6)
+  closedAt           DateTime?        @db.Timestamptz(6)
   note               String?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  student            Student         @relation("StudentFeeInvoices", fields: [studentId], references: [id])
-  tenant             Tenant          @relation("TenantFeeInvoices", fields: [tenantId], references: [id])
-  payments           FeePayment[]    @relation("InvoiceFeePayments")
-  adjustments        FeeAdjustment[]
-  ledgerEntries      LedgerEntry[]
-  receipts           Receipt[]       @relation("InvoiceReceipts")
+  createdAt          DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+
+  student Student @relation("StudentFeeInvoices", fields: [studentId], references: [id], onDelete: Restrict)
+  tenant  Tenant  @relation("TenantFeeInvoices", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  lines                    FeeInvoiceLine[]
+  payments                 FeePayment[]              @relation("InvoiceFeePayments")
+  adjustments              FeeAdjustment[]
+  ledgerEntries            LedgerEntry[]
+  receipts                 Receipt[]                 @relation("InvoiceReceipts")
+  paymentIntents           PaymentIntent[]
+  paymentAllocations       PaymentAllocation[]
+  reconciliationExceptions ReconciliationException[]
 
   @@unique([tenantId, studentId, term, academicYear], name: "FeeInvoice_unique_tenant_student_term_year", map: "FeeInvoice_unique_tenant_student_term_year")
   @@index([tenantId, term, academicYear], map: "FeeInvoice_tenant_term_year_idx")
   @@index([tenantId, studentId], map: "FeeInvoice_tenant_student_idx")
+  @@index([tenantId, status])
 }
 
-/// A payment made against a fee invoice
+model FeeInvoiceLine {
+  id             String   @id @default(cuid())
+  tenantId       String
+  invoiceId      String
+  feeStructureId String?
+  category       String   @default("GENERAL")
+  description    String
+  amountPesewas  Int
+  waivedPesewas  Int      @default(0)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice      FeeInvoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  feeStructure FeeStructure? @relation(fields: [feeStructureId], references: [id], onDelete: SetNull)
+
+  ledgerEntries LedgerEntry[]
+
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, feeStructureId])
+}
+
 model FeePayment {
-  id            String     @id @default(cuid())
+  id            String @id @default(cuid())
   tenantId      String
   invoiceId     String
   amountPesewas Int
-  method        String
-  reference     String?
-  channel       String?
-  paidAt        DateTime   @default(now())
-  createdAt     DateTime   @default(now())
-  invoice       FeeInvoice @relation("InvoiceFeePayments", fields: [invoiceId], references: [id])
-  tenant        Tenant     @relation("TenantFeePayments", fields: [tenantId], references: [id])
-  receipt       Receipt?   @relation("PaymentReceipt")
+
+  /// Keep as String for compatibility with existing routes using "cash", "momo", "paystack".
+  method String
+
+  reference String?       @db.VarChar(120)
+  channel   String?
+  status    PaymentStatus @default(SUCCESS)
+  paidAt    DateTime      @default(now()) @db.Timestamptz(6)
+  createdAt DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime      @default(now()) @updatedAt @db.Timestamptz(6)
+
+  invoice FeeInvoice @relation("InvoiceFeePayments", fields: [invoiceId], references: [id], onDelete: Restrict)
+  tenant  Tenant     @relation("TenantFeePayments", fields: [tenantId], references: [id], onDelete: Cascade)
+
+  receipt            Receipt?            @relation("PaymentReceipt")
+  ledgerEntries      LedgerEntry[]
+  paymentAllocations PaymentAllocation[]
+  paymentTransaction PaymentTransaction?
 
   @@index([tenantId, invoiceId], map: "FeePayment_tenant_invoice_idx")
   @@index([tenantId, paidAt], map: "FeePayment_tenant_paidAt_idx")
+  @@index([tenantId, reference])
+  @@index([tenantId, status])
 }
 
-/// Immutable paper trail for every payment — one Receipt per FeePayment
+model PaymentIntent {
+  id                String              @id @default(cuid())
+  tenantId          String
+  studentId         String
+  invoiceId         String
+  provider          PaymentProvider     @default(PAYSTACK)
+  providerReference String              @db.VarChar(120)
+  amountPesewas     Int
+  currency          String              @default("GHS") @db.VarChar(8)
+  status            PaymentIntentStatus @default(PENDING)
+  checkoutUrl       String?
+  accessCode        String?
+  metadata          Json                @default("{}")
+  expiresAt         DateTime?           @db.Timestamptz(6)
+  createdByUserId   String?
+  createdAt         DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student   Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  invoice   FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  createdBy User?      @relation("PaymentIntentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  transactions PaymentTransaction[]
+
+  @@unique([tenantId, provider, providerReference], map: "PaymentIntent_tenant_provider_ref_unique")
+  @@index([tenantId, studentId])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, status])
+}
+
+model PaymentProviderEvent {
+  id                String              @id @default(cuid())
+  tenantId          String?
+  provider          PaymentProvider     @default(PAYSTACK)
+  eventType         String
+  providerReference String?             @db.VarChar(120)
+  signature         String?
+  rawPayload        Json
+  receivedAt        DateTime            @default(now()) @db.Timestamptz(6)
+  processedAt       DateTime?           @db.Timestamptz(6)
+  processingStatus  ProviderEventStatus @default(RECEIVED)
+  processingError   String?
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([provider, providerReference])
+  @@index([processingStatus])
+  @@index([receivedAt])
+}
+
+model PaymentTransaction {
+  id                    String          @id @default(cuid())
+  tenantId              String
+  paymentIntentId       String?
+  feePaymentId          String?         @unique
+  provider              PaymentProvider @default(PAYSTACK)
+  providerReference     String          @db.VarChar(120)
+  providerTransactionId String?
+  amountPesewas         Int
+  currency              String          @default("GHS") @db.VarChar(8)
+  status                PaymentStatus   @default(SUCCESS)
+  channel               String?
+  providerPaidAt        DateTime?       @db.Timestamptz(6)
+  providerRaw           Json?
+  createdByUserId       String?
+  createdAt             DateTime        @default(now()) @db.Timestamptz(6)
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  paymentIntent PaymentIntent? @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
+  feePayment    FeePayment?    @relation(fields: [feePaymentId], references: [id], onDelete: SetNull)
+  createdBy     User?          @relation("PaymentTransactionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, provider, providerReference], map: "PaymentTransaction_tenant_provider_ref_unique")
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model PaymentAllocation {
+  id             String   @id @default(cuid())
+  tenantId       String
+  studentId      String
+  invoiceId      String
+  feePaymentId   String
+  amountPesewas  Int
+  allocationType String   @default("INVOICE_PAYMENT")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  invoice    FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  feePayment FeePayment @relation(fields: [feePaymentId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, studentId])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, feePaymentId])
+}
+
 model Receipt {
   id             String   @id @default(cuid())
   tenantId       String
   invoiceId      String
   feePaymentId   String   @unique
-  receiptNumber  String   @unique
+  receiptNumber  String   @db.VarChar(64)
   issuedAt       DateTime @default(now()) @db.Timestamptz(6)
   issuedToName   String?
-  issuedToPhone  String?
+  issuedToPhone  String?  @db.VarChar(32)
   issuedByUserId String?
   note           String?
   createdAt      DateTime @default(now()) @db.Timestamptz(6)
 
-  tenant        Tenant        @relation("TenantReceipts", fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice       FeeInvoice    @relation("InvoiceReceipts", fields: [invoiceId], references: [id], onDelete: Restrict)
-  feePayment    FeePayment    @relation("PaymentReceipt", fields: [feePaymentId], references: [id], onDelete: Restrict)
-  issuedBy      User?         @relation("ReceiptIssuedBy", fields: [issuedByUserId], references: [id], onDelete: SetNull)
-  ledgerEntries LedgerEntry[] @relation("ReceiptLedgerEntries")
+  tenant     Tenant     @relation("TenantReceipts", fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice    FeeInvoice @relation("InvoiceReceipts", fields: [invoiceId], references: [id], onDelete: Restrict)
+  feePayment FeePayment @relation("PaymentReceipt", fields: [feePaymentId], references: [id], onDelete: Restrict)
+  issuedBy   User?      @relation("ReceiptIssuedBy", fields: [issuedByUserId], references: [id], onDelete: SetNull)
 
+  ledgerEntries LedgerEntry[]
+
+  @@unique([tenantId, receiptNumber], map: "Receipt_tenant_receiptNumber_unique")
   @@index([tenantId, invoiceId])
   @@index([tenantId, issuedAt])
-  @@index([tenantId, receiptNumber])
 }
 
 model SponsorProfile {
@@ -835,12 +1029,41 @@ model SponsorProfile {
   name         String
   contactEmail String?  @db.VarChar(320)
   contactPhone String?  @db.VarChar(32)
+  notes        String?
   createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   scholarshipAwards ScholarshipAward[]
 
   @@index([tenantId])
+}
+
+model ScholarshipApplication {
+  id               String                       @id @default(cuid())
+  tenantId         String
+  studentName      String
+  dateOfBirth      DateTime?                    @db.Date
+  level            String
+  scholarshipType  String
+  guardianName     String
+  guardianPhone    String
+  whatsappNumber   String?
+  achievements     String?                      @db.Text
+  needStatement    String?                      @db.Text
+  status           ScholarshipApplicationStatus @default(PENDING)
+  reviewNote       String?                      @db.Text
+  reviewedAt       DateTime?                    @db.Timestamptz(6)
+  reviewedByUserId String?
+  submittedAt      DateTime                     @default(now()) @db.Timestamptz(6)
+  createdAt        DateTime                     @default(now()) @db.Timestamptz(6)
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reviewedBy User?              @relation("ScholarshipApplicationReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  awards     ScholarshipAward[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, submittedAt])
 }
 
 model ScholarshipAward {
@@ -856,15 +1079,17 @@ model ScholarshipAward {
   applicableTerm         String
   applicableAcademicYear String
   status                 ScholarshipAwardStatus @default(ACTIVE)
-  approvedAt             DateTime               @db.Timestamptz(6)
+  approvedAt             DateTime               @default(now()) @db.Timestamptz(6)
   approvedByUserId       String
   createdAt              DateTime               @default(now()) @db.Timestamptz(6)
+  revokedAt              DateTime?              @db.Timestamptz(6)
 
   tenant         Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   application    ScholarshipApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
   student        Student                 @relation(fields: [studentId], references: [id], onDelete: Restrict)
   approvedBy     User                    @relation("ScholarshipAwardApprovedBy", fields: [approvedByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sponsorProfile SponsorProfile?         @relation(fields: [sponsorProfileId], references: [id], onDelete: SetNull)
+
   feeAdjustments FeeAdjustment[]
 
   @@index([tenantId, studentId])
@@ -873,23 +1098,29 @@ model ScholarshipAward {
 }
 
 model FeeAdjustment {
-  id                 String   @id @default(cuid())
+  id                 String  @id @default(cuid())
   tenantId           String
   invoiceId          String
   studentId          String
   scholarshipAwardId String?
-  kind               String
-  amountPesewas      Int
-  reason             String?  @db.Text
-  createdByUserId    String?
-  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+
+  /// Keep as String for current route compatibility.
+  kind String
+
+  amountPesewas   Int
+  reason          String?   @db.Text
+  createdByUserId String?
+  createdAt       DateTime  @default(now()) @db.Timestamptz(6)
+  reversedAt      DateTime? @db.Timestamptz(6)
+  reversalReason  String?
 
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   invoice          FeeInvoice        @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   student          Student           @relation(fields: [studentId], references: [id], onDelete: Restrict)
   scholarshipAward ScholarshipAward? @relation(fields: [scholarshipAwardId], references: [id], onDelete: SetNull)
   createdBy        User?             @relation("FeeAdjustmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  ledgerEntries    LedgerEntry[]
+
+  ledgerEntries LedgerEntry[]
 
   @@index([tenantId, invoiceId])
   @@index([tenantId, studentId])
@@ -900,28 +1131,84 @@ model LedgerEntry {
   id              String          @id @default(cuid())
   tenantId        String
   invoiceId       String?
+  invoiceLineId   String?
   studentId       String?
   feePaymentId    String?
   feeAdjustmentId String?
   receiptId       String?
   entryType       LedgerEntryType
   amountPesewas   Int
+  direction       LedgerDirection @default(CREDIT)
   description     String?
+  journalRef      String?         @db.VarChar(80)
   createdByUserId String?
   createdAt       DateTime        @default(now()) @db.Timestamptz(6)
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice       FeeInvoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  student       Student?       @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  feeAdjustment FeeAdjustment? @relation(fields: [feeAdjustmentId], references: [id], onDelete: SetNull)
-  createdBy     User?          @relation("LedgerEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  receipt       Receipt?       @relation("ReceiptLedgerEntries", fields: [receiptId], references: [id], onDelete: SetNull)
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice       FeeInvoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  invoiceLine   FeeInvoiceLine? @relation(fields: [invoiceLineId], references: [id], onDelete: SetNull)
+  student       Student?        @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  feePayment    FeePayment?     @relation(fields: [feePaymentId], references: [id], onDelete: SetNull)
+  feeAdjustment FeeAdjustment?  @relation(fields: [feeAdjustmentId], references: [id], onDelete: SetNull)
+  receipt       Receipt?        @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+  createdBy     User?           @relation("LedgerEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, invoiceId])
   @@index([tenantId, studentId])
   @@index([tenantId, entryType])
   @@index([tenantId, createdAt])
   @@index([receiptId])
+  @@index([journalRef])
+}
+
+model ReconciliationBatch {
+  id              String               @id @default(cuid())
+  tenantId        String
+  provider        PaymentProvider?
+  batchDate       DateTime             @db.Date
+  status          ReconciliationStatus @default(OPEN)
+  expectedPesewas Int                  @default(0)
+  actualPesewas   Int                  @default(0)
+  deltaPesewas    Int                  @default(0)
+  notes           String?
+  createdByUserId String?
+  createdAt       DateTime             @default(now()) @db.Timestamptz(6)
+  closedAt        DateTime?            @db.Timestamptz(6)
+
+  tenant     Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy  User?                     @relation("ReconciliationBatchCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  exceptions ReconciliationException[]
+
+  @@index([tenantId, status])
+}
+
+model ReconciliationException {
+  id                String                        @id @default(cuid())
+  tenantId          String
+  batchId           String?
+  invoiceId         String?
+  providerReference String?
+  kind              ReconciliationExceptionKind
+  severity          ReconciliationSeverity        @default(MEDIUM)
+  status            ReconciliationExceptionStatus @default(OPEN)
+  expectedPesewas   Int?
+  actualPesewas     Int?
+  deltaPesewas      Int?
+  description       String
+  resolutionNote    String?
+  resolvedByUserId  String?
+  resolvedAt        DateTime?                     @db.Timestamptz(6)
+  createdAt         DateTime                      @default(now()) @db.Timestamptz(6)
+
+  tenant     Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  batch      ReconciliationBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  invoice    FeeInvoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  resolvedBy User?                @relation("ReconciliationExceptionResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([tenantId, kind])
+  @@index([tenantId, invoiceId])
+  @@index([providerReference])
 }
 
 model LessonNote {
@@ -1436,9 +1723,9 @@ model InviteCodeUse {
 // Flexible country-agnostic zone type (Circuit, District, Region, LGA, etc.)
 model AdminZoneType {
   id          String      @id @default(cuid())
-  countryCode String      // "GH", "NG", "KE" etc.
-  level       Int         // 1=lowest (circuit), 2=district, 3=region, 4=national
-  name        String      // "Circuit", "District", "Region", "LGA", "County" etc.
+  countryCode String // "GH", "NG", "KE" etc.
+  level       Int // 1=lowest (circuit), 2=district, 3=region, 4=national
+  name        String // "Circuit", "District", "Region", "LGA", "County" etc.
   zones       AdminZone[]
 
   @@unique([countryCode, level], map: "AdminZoneType_country_level_unique")
@@ -1467,7 +1754,7 @@ model GesOfficer {
   user       User      @relation(fields: [userId], references: [id])
   zoneId     String
   zone       AdminZone @relation(fields: [zoneId], references: [id])
-  title      String    // "SISO", "District Director", "Regional Director", "Director-General"
+  title      String // "SISO", "District Director", "Regional Director", "Director-General"
   phone      String?
   notifMuted Boolean   @default(false)
   createdAt  DateTime  @default(now())
@@ -1485,9 +1772,9 @@ model SchoolRiskSnapshot {
   assessmentAvg         Float
   lessonNoteRate        Float
   healthFlagCount       Int
-  riskScore             Int      // 0-100, higher = more at risk
+  riskScore             Int // 0-100, higher = more at risk
   riskLevel             String   @default("LOW") // LOW | MEDIUM | HIGH | CRITICAL
-  becePassRatePredicted Float?   // null if no JHS3 (BS11) students
+  becePassRatePredicted Float? // null if no JHS3 (BS11) students
   alerts                Json     @default("[]")
   createdAt             DateTime @default(now())
 
@@ -1543,6 +1830,68 @@ enum AssessmentItemStatus {
   LOCKED
 }
 
+/// *
+/// * =======================
+/// * Sprint 9 / Phase 1 Finance Enums
+/// * =======================
+
+enum FeeStructureScope {
+  SCHOOL
+  CLASSROOM
+  STUDENT
+}
+
+enum FeeInvoiceStatus {
+  OPEN
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+  WRITTEN_OFF
+}
+
+enum PaymentProvider {
+  PAYSTACK
+  MANUAL
+}
+
+enum PaymentIntentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REVERSED
+  REFUNDED
+}
+
+enum ProviderEventStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+enum LedgerEntryType {
+  INVOICE_DEBIT
+  PAYMENT_CREDIT
+  ADJUSTMENT_CREDIT
+  REVERSAL_DEBIT
+  REVERSAL_CREDIT
+  CORRECTION
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
 enum ScholarshipApplicationStatus {
   PENDING
   REVIEWED
@@ -1555,36 +1904,34 @@ enum ScholarshipAwardStatus {
   REVOKED
 }
 
-enum LedgerEntryType {
-  INVOICE_DEBIT
-  PAYMENT_CREDIT
-  ADJUSTMENT_CREDIT
-  CORRECTION
+enum ReconciliationStatus {
+  OPEN
+  CLEAN
+  HAS_EXCEPTIONS
+  CLOSED
 }
 
-model ScholarshipApplication {
-  id               String                       @id @default(cuid())
-  tenantId         String
-  studentName      String
-  dateOfBirth      DateTime?                    @db.Date
-  level            String
-  scholarshipType  String
-  guardianName     String
-  guardianPhone    String
-  whatsappNumber   String?
-  achievements     String?                      @db.Text
-  needStatement    String?                      @db.Text
-  status           ScholarshipApplicationStatus @default(PENDING)
-  reviewNote       String?                      @db.Text
-  reviewedAt       DateTime?                    @db.Timestamptz(6)
-  reviewedByUserId String?
-  submittedAt      DateTime                     @default(now()) @db.Timestamptz(6)
-  createdAt        DateTime                     @default(now()) @db.Timestamptz(6)
+enum ReconciliationExceptionKind {
+  MISSING_LEDGER_ENTRY
+  PAYMENT_WITHOUT_RECEIPT
+  RECEIPT_WITHOUT_PAYMENT
+  DUPLICATE_PROVIDER_REFERENCE
+  AMOUNT_MISMATCH
+  UNMATCHED_PROVIDER_EVENT
+  OVERPAYMENT
+  UNKNOWN
+}
 
-  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  reviewedBy User?              @relation("ScholarshipApplicationReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  awards     ScholarshipAward[]
+enum ReconciliationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
 
-  @@index([tenantId, status])
-  @@index([tenantId, submittedAt])
+enum ReconciliationExceptionStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
 }
