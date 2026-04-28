@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "src/app/api/headteacher/reports/student-term-report/pdf/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/parent/report/term/pdf/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/consent/letters/student/[studentId]/pdf/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

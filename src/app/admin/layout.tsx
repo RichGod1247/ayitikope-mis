@@ -9,8 +9,52 @@ import LogoutButton from "@/components/LogoutButton";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function navLinkClass() {
-  return "rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-[#C9CDD6] transition hover:bg-white/10 hover:text-[#F7F4ED]";
+type NavItem = { label: string; href: string };
+type NavSection = { title: string; items: NavItem[] };
+
+const mainNav: NavItem[] = [
+  { label: "Dashboard", href: "/admin/dashboard" },
+  { label: "Academic Settings", href: "/admin/setup" },
+  { label: "Classes", href: "/admin/classes" },
+  { label: "Students", href: "/admin/students" },
+  { label: "Student 360°", href: "/admin/students/profile" },
+  { label: "Teachers", href: "/admin/teachers" },
+  { label: "Attendance", href: "/admin/attendance" },
+  { label: "Assessments", href: "/admin/assessments" },
+];
+
+const scholarshipNav: NavItem[] = [
+  { label: "Applications", href: "/admin/scholarships" },
+  { label: "Award Support", href: "/admin/scholarships/award" },
+];
+
+const financeNav: NavItem[] = [
+  { label: "Finance Overview", href: "/admin/fees/overview" },
+  { label: "Finance Summary", href: "/admin/fees/summary" },
+  { label: "Fee Structures", href: "/admin/fees/structures" },
+  { label: "Invoices & Payments", href: "/admin/fees/invoices" },
+  { label: "Receipts", href: "/admin/fees/receipts" },
+  { label: "Ledger Trail", href: "/admin/fees/ledger" },
+  { label: "Reconciliation", href: "/admin/fees/reconciliation" },
+  { label: "Disputes", href: "/admin/fees/disputes" },
+  { label: "Arrears", href: "/admin/fees/arrears" },
+];
+
+const navSections: NavSection[] = [
+  { title: "School", items: mainNav },
+  { title: "Scholarships", items: scholarshipNav },
+  { title: "Finance", items: financeNav },
+];
+
+function SidebarLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-xl px-3 py-2 text-sm font-medium text-[#C9CDD6] transition-colors hover:bg-white/8 hover:text-[#F7F4ED]"
+    >
+      {label}
+    </Link>
+  );
 }
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -28,55 +72,113 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   if (!tenant) redirect("/auth/signin?error=TENANT_NOT_FOUND&callbackUrl=/app");
   if (tenant.status !== "ACTIVE") redirect("/pending");
 
+  const isSuper = String((safe as any).roleName ?? "").toUpperCase() === "SUPERADMIN";
+
   return (
     <div className="min-h-screen bg-[#05070B] text-[#F7F4ED]">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[rgba(5,7,11,0.88)] backdrop-blur-xl">
-        <div className="relative mx-auto max-w-6xl overflow-hidden px-4 py-4">
-          <div className="pointer-events-none absolute -left-12 top-0 h-28 w-28 rounded-full bg-[#1B66D1]/20 blur-3xl" />
-          <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-[#D4AF37]/14 blur-3xl" />
+      {/* Ambient background */}
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(27,102,209,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(212,175,55,0.06),transparent_22%)]" />
+        <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:56px_56px]" />
+      </div>
 
-          <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
-                EduLife OS · Admin
-              </p>
-              <p className="mt-1 truncate text-sm font-semibold text-[#F7F4ED]">
-                {tenant.name} <span className="text-[#8F98A8]">({tenant.schoolCode})</span>
-              </p>
-            </div>
+      {/* Top header */}
+      <header className="relative z-40 border-b border-white/10 bg-[rgba(5,7,11,0.90)] backdrop-blur-xl">
+        <div className="flex items-center justify-between px-4 py-3 md:px-6">
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#E8C96A]">
+              EduLife OS · Admin
+            </p>
+            <p className="mt-0.5 truncate text-sm font-semibold text-[#F7F4ED]">
+              {tenant.name}{" "}
+              <span className="text-[#8F98A8]">({tenant.schoolCode})</span>
+            </p>
+          </div>
 
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-              <nav className="flex flex-wrap items-center gap-2">
-                <Link className={navLinkClass()} href="/admin/dashboard">
-                  Dashboard
-                </Link>
-                <Link className={navLinkClass()} href="/admin/settings">
-                  Settings
-                </Link>
-                <Link className={navLinkClass()} href="/admin/classes">
-                  Classes
-                </Link>
-                <Link className={navLinkClass()} href="/admin/teachers">
-                  Teachers
-                </Link>
-                <Link className={navLinkClass()} href="/admin/students">
-                  Students
-                </Link>
-                <Link className={navLinkClass()} href="/admin/students/profile">
-                  Student 360
-                </Link>
-                <Link className={navLinkClass()} href="/app">
-                  Portal
-                </Link>
-              </nav>
-
-              <LogoutButton className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10" />
-            </div>
+          <div className="flex items-center gap-3">
+            {isSuper && (
+              <Link
+                href="/admin/super"
+                className="rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-xs font-semibold text-[#071A3D]"
+              >
+                Super Admin
+              </Link>
+            )}
+            <Link
+              href="/app"
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]"
+            >
+              Portal
+            </Link>
+            <LogoutButton className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10" />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      {/* Body: sidebar + content */}
+      <div className="relative flex min-h-[calc(100vh-56px)]">
+        {/* Sidebar */}
+        <aside className="hidden w-56 shrink-0 border-r border-white/8 bg-[rgba(7,17,31,0.60)] backdrop-blur-md lg:block">
+          <nav className="sticky top-0 max-h-screen overflow-y-auto flex flex-col gap-6 px-3 py-6 scrollbar-none">
+            {navSections.map((section) => (
+              <div key={section.title}>
+                <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#E8C96A]">
+                  {section.title}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {section.items.map((item) => (
+                    <SidebarLink key={item.href} href={item.href} label={item.label} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        {/* Mobile horizontal nav (shown when sidebar is hidden) */}
+        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[rgba(5,7,11,0.95)] backdrop-blur-xl lg:hidden">
+          <div className="flex items-center gap-1 overflow-x-auto px-3 py-2 scrollbar-none">
+            <Link href="/admin/dashboard" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Dashboard
+            </Link>
+            <Link href="/admin/students" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Students
+            </Link>
+            <Link href="/admin/fees/invoices" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Invoices
+            </Link>
+            <Link href="/admin/fees/receipts" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Receipts
+            </Link>
+            <Link href="/admin/fees/structures" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Structures
+            </Link>
+            <Link href="/admin/fees/overview" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Overview
+            </Link>
+            <Link href="/admin/fees/ledger" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Ledger
+            </Link>
+            <Link href="/admin/fees/reconciliation" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Reconciliation
+            </Link>
+            <Link href="/admin/fees/disputes" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Disputes
+            </Link>
+            <Link href="/admin/scholarships" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Scholarships
+            </Link>
+            <Link href="/admin/teachers" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
+              Teachers
+            </Link>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <main className="relative min-w-0 flex-1 px-4 py-8 pb-20 md:px-6 lg:pb-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

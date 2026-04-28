@@ -170,30 +170,26 @@ export default function AdminFeesOverviewPage() {
     <main className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-bold">Fees &amp; Billing — Overview</h1>
-        <p className="text-sm text-zinc-600 max-w-3xl">
+        <p className="text-sm text-[#C9CDD6] max-w-3xl">
           A calm, high-level view of <span className="font-semibold">billed amounts, payments, and balances</span> per learner.
         </p>
 
         {tenant && (
-          <p className="text-xs text-zinc-500">
-            School: <span className="font-semibold">{tenant.name}</span>
+          <p className="text-xs text-[#8F98A8]">
+            School: <span className="font-semibold text-[#C9CDD6]">{tenant.name}</span>
           </p>
         )}
-        {tenantLoading && <p className="text-xs text-zinc-500">Loading school information…</p>}
+        {tenantLoading && <p className="text-xs text-[#8F98A8]">Loading school information…</p>}
         {tenantError && (
-          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{tenantError}</p>
+          <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded-xl px-3 py-2">{tenantError}</p>
         )}
-
-        <p className="text-[11px] text-zinc-500 max-w-3xl">
-          <span className="font-semibold">Phase 0 note:</span> This screen still uses <span className="font-semibold">mock/demo data</span>. Later it should read from invoices + payments.
-        </p>
       </header>
 
       <section className="border rounded-xl p-4 bg-white space-y-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="space-y-2">
-            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Filters</div>
-            <p className="text-xs text-zinc-600 max-w-md">
+            <div className="text-xs font-semibold text-zinc-700 uppercase tracking-wide">Filters</div>
+            <p className="text-xs text-zinc-700 max-w-md">
               Narrow down by <span className="font-semibold">term, year, class, or name</span>.
             </p>
           </div>
@@ -215,8 +211,8 @@ export default function AdminFeesOverviewPage() {
 
         <div className="grid md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 mb-1">Term</label>
-            <select className="w-full border rounded-xl px-2 py-2 h-10 text-sm" value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)}>
+            <label className="block text-xs font-semibold text-zinc-900 mb-1">Term</label>
+            <select className="w-full border border-zinc-300 rounded-xl px-2 py-2 h-10 text-sm text-zinc-900 bg-white" value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)}>
               {termOptions.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -226,8 +222,8 @@ export default function AdminFeesOverviewPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 mb-1">Academic Year</label>
-            <select className="w-full border rounded-xl px-2 py-2 h-10 text-sm" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
+            <label className="block text-xs font-semibold text-zinc-900 mb-1">Academic Year</label>
+            <select className="w-full border border-zinc-300 rounded-xl px-2 py-2 h-10 text-sm text-zinc-900 bg-white" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
               {yearOptions.map((y) => (
                 <option key={y} value={y}>
                   {y}
@@ -237,8 +233,8 @@ export default function AdminFeesOverviewPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 mb-1">Class</label>
-            <select className="w-full border rounded-xl px-2 py-2 h-10 text-sm" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
+            <label className="block text-xs font-semibold text-zinc-900 mb-1">Class</label>
+            <select className="w-full border border-zinc-300 rounded-xl px-2 py-2 h-10 text-sm text-zinc-900 bg-white" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
               {classOptions.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -248,9 +244,9 @@ export default function AdminFeesOverviewPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-zinc-600 mb-1">Search learner / guardian / phone</label>
+            <label className="block text-xs font-semibold text-zinc-900 mb-1">Search learner / guardian / phone</label>
             <input
-              className="w-full border rounded-xl px-3 py-2 h-10 text-sm"
+              className="w-full border border-zinc-300 rounded-xl px-3 py-2 h-10 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
               placeholder="e.g. Ama, Mensah, 024..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -261,27 +257,27 @@ export default function AdminFeesOverviewPage() {
 
       <section className="grid md:grid-cols-4 gap-3">
         <div className="border rounded-xl p-3 bg-white">
-          <div className="text-[11px] text-zinc-500">Learners in view</div>
-          <div className="text-xl font-bold">{summary.count}</div>
-          <div className="text-[11px] text-zinc-500 mt-1">After applying filters</div>
+          <div className="text-[11px] text-zinc-700">Learners in view</div>
+          <div className="text-xl font-bold text-zinc-900">{summary.count}</div>
+          <div className="text-[11px] text-zinc-700 mt-1">After applying filters</div>
         </div>
 
         <div className="border rounded-xl p-3 bg-white">
-          <div className="text-[11px] text-zinc-500">Total billed</div>
-          <div className="text-xl font-bold">{formatCurrency(summary.totalBilled)}</div>
-          <div className="text-[11px] text-zinc-500 mt-1">For selected term/year</div>
+          <div className="text-[11px] text-zinc-700">Total billed</div>
+          <div className="text-xl font-bold text-zinc-900">{formatCurrency(summary.totalBilled)}</div>
+          <div className="text-[11px] text-zinc-700 mt-1">For selected term/year</div>
         </div>
 
         <div className="border rounded-xl p-3 bg-white">
-          <div className="text-[11px] text-zinc-500">Total paid</div>
-          <div className="text-xl font-bold">{formatCurrency(summary.totalPaid)}</div>
-          <div className="text-[11px] text-zinc-500 mt-1">Mock: cash + digital (later)</div>
+          <div className="text-[11px] text-zinc-700">Total paid</div>
+          <div className="text-xl font-bold text-emerald-700">{formatCurrency(summary.totalPaid)}</div>
+          <div className="text-[11px] text-zinc-700 mt-1">Cash + digital</div>
         </div>
 
         <div className="border rounded-xl p-3 bg-white">
-          <div className="text-[11px] text-zinc-500">Outstanding balance</div>
-          <div className="text-xl font-bold">{formatCurrency(summary.totalOwed)}</div>
-          <div className="text-[11px] text-zinc-500 mt-1">
+          <div className="text-[11px] text-zinc-700">Outstanding balance</div>
+          <div className="text-xl font-bold text-amber-700">{formatCurrency(summary.totalOwed)}</div>
+          <div className="text-[11px] text-zinc-700 mt-1">
             {summary.partialOrUnpaidCount} learner{summary.partialOrUnpaidCount === 1 ? "" : "s"} with{" "}
             <span className="font-semibold">partial or unpaid</span> fees
           </div>
@@ -290,7 +286,7 @@ export default function AdminFeesOverviewPage() {
 
       <section className="border rounded-xl p-4 bg-white">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">
+          <h2 className="text-sm font-semibold text-zinc-900">
             Fees for {selectedTerm}, {selectedYear}
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -304,11 +300,11 @@ export default function AdminFeesOverviewPage() {
         </div>
 
         {filteredRows.length === 0 ? (
-          <p className="text-xs text-zinc-600">No learners match these filters yet.</p>
+          <p className="text-xs text-zinc-700">No learners match these filters yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-xs border rounded-xl overflow-hidden">
-              <thead className="bg-zinc-50 text-zinc-600">
+            <table className="min-w-full text-xs border rounded-xl overflow-hidden text-zinc-900">
+              <thead className="bg-zinc-50 text-zinc-700">
                 <tr>
                   <th className="px-3 py-2 text-left border-b">Learner</th>
                   <th className="px-3 py-2 text-left border-b">Class</th>
@@ -366,7 +362,7 @@ export default function AdminFeesOverviewPage() {
           </div>
         )}
 
-        <p className="mt-3 text-[11px] text-zinc-500 max-w-3xl">
+        <p className="mt-3 text-[11px] text-zinc-700 max-w-3xl">
           This overview is for planning and gentle follow-up. Real data should come from invoices + payments.
         </p>
       </section>

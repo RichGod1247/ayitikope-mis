@@ -240,53 +240,53 @@ export default function AdminFeeStructuresPage() {
     <main className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-bold">Fees &amp; Billing — Structures</h1>
-        <p className="text-sm text-zinc-600 max-w-3xl">
-          Define high-level <span className="font-semibold">fee structures</span> such as “Term 1 School Fees”
+        <p className="text-sm text-[#C9CDD6] max-w-3xl">
+          Define high-level <span className="font-semibold">fee structures</span> such as "Term 1 School Fees"
           per academic year.
         </p>
 
         {tenant && (
-          <p className="text-xs text-zinc-500">
-            School: <span className="font-semibold">{tenant.name}</span>
+          <p className="text-xs text-[#8F98A8]">
+            School: <span className="font-semibold text-[#C9CDD6]">{tenant.name}</span>
           </p>
         )}
-        {tenantLoading && <p className="text-xs text-zinc-500">Loading school information…</p>}
+        {tenantLoading && <p className="text-xs text-[#8F98A8]">Loading school information…</p>}
         {tenantError && (
-          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{tenantError}</p>
+          <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded-xl px-3 py-2">{tenantError}</p>
         )}
       </header>
 
       <section className="border rounded-xl p-4 bg-white space-y-3">
-        <h2 className="text-sm font-semibold">Create a new fee structure</h2>
+        <h2 className="text-sm font-semibold text-zinc-900">Create a new fee structure</h2>
         <p className="text-xs text-zinc-500 max-w-2xl">
           Amounts are stored in <span className="font-semibold">pesewas</span> for correct rounding.
         </p>
 
         <form className="grid md:grid-cols-2 gap-3 mt-2" onSubmit={handleCreateStructure}>
           <div className="space-y-1">
-            <label className="block text-xs font-medium">
+            <label className="block text-xs font-medium text-zinc-900">
               Name<span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              className="w-full border rounded-xl px-3 py-2 text-sm"
+              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
               placeholder="e.g. Term 1 School Fees"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               required
-              disabled={!tenant?.id}
+              disabled={formLoading}
             />
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-medium">
+            <label className="block text-xs font-medium text-zinc-900">
               Term<span className="text-red-500">*</span>
             </label>
             <select
-              className="w-full border rounded-xl px-3 py-2 text-sm"
+              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
               value={formTerm}
               onChange={(e) => setFormTerm(e.target.value as any)}
-              disabled={!tenant?.id}
+              disabled={formLoading}
             >
               {TERM_OPTIONS.map((t) => (
                 <option key={t} value={t}>
@@ -297,22 +297,22 @@ export default function AdminFeeStructuresPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-medium">
+            <label className="block text-xs font-medium text-zinc-900">
               Academic year<span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              className="w-full border rounded-xl px-3 py-2 text-sm"
+              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
               placeholder="e.g. 2025/2026"
               value={formAcademicYear}
               onChange={(e) => setFormAcademicYear(e.target.value)}
               required
-              disabled={!tenant?.id}
+              disabled={formLoading}
             />
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-medium">
+            <label className="block text-xs font-medium text-zinc-900">
               Amount (GHS)<span className="text-red-500">*</span>
             </label>
             <input
@@ -320,33 +320,33 @@ export default function AdminFeeStructuresPage() {
               inputMode="decimal"
               step="0.01"
               min={0}
-              className="w-full border rounded-xl px-3 py-2 text-sm"
+              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
               placeholder="e.g. 150.00"
               value={formAmountCedis}
               onChange={(e) => setFormAmountCedis(e.target.value)}
               required
-              disabled={!tenant?.id}
+              disabled={formLoading}
             />
           </div>
 
           <div className="space-y-1 md:col-span-2">
-            <label className="block text-xs font-medium">Description (optional)</label>
+            <label className="block text-xs font-medium text-zinc-900">Description (optional)</label>
             <textarea
-              className="w-full border rounded-xl px-3 py-2 text-sm min-h-[60px]"
+              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400 min-h-[60px]"
               placeholder="Optional note for admins."
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
-              disabled={!tenant?.id}
+              disabled={formLoading}
             />
           </div>
 
           <div className="flex items-center gap-2 md:col-span-2">
-            <label className="inline-flex items-center gap-2 text-xs">
+            <label className="inline-flex items-center gap-2 text-xs text-zinc-900">
               <input
                 type="checkbox"
                 checked={formIsActive}
                 onChange={(e) => setFormIsActive(e.target.checked)}
-                disabled={!tenant?.id}
+                disabled={formLoading}
               />
               Active for billing
             </label>
@@ -356,7 +356,7 @@ export default function AdminFeeStructuresPage() {
             <button type="submit" className={btnPrimary} disabled={!canSubmit}>
               {formLoading ? "Saving…" : "Save fee structure"}
             </button>
-            <button type="button" className={btnOutline} onClick={loadStructures} disabled={listLoading || !tenant?.id}>
+            <button type="button" className={btnOutline} onClick={loadStructures} disabled={listLoading}>
               {listLoading ? "Refreshing…" : "Reload list"}
             </button>
           </div>
@@ -374,7 +374,7 @@ export default function AdminFeeStructuresPage() {
 
       <section className="border rounded-xl p-4 bg-white space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Existing structures</h2>
+          <h2 className="text-sm font-semibold text-zinc-900">Existing structures</h2>
           {listLoading && <span className="text-xs text-zinc-500">Loading…</span>}
         </div>
 
@@ -383,8 +383,8 @@ export default function AdminFeeStructuresPage() {
         )}
 
         <div className="overflow-x-auto mt-2">
-          <table className="min-w-full text-xs border rounded-xl overflow-hidden">
-            <thead className="bg-zinc-50 text-zinc-600">
+          <table className="min-w-full text-xs border rounded-xl overflow-hidden text-zinc-900">
+            <thead className="bg-zinc-50 text-zinc-700">
               <tr>
                 <th className="px-3 py-2 text-left border-b">Name</th>
                 <th className="px-3 py-2 text-left border-b">Term</th>

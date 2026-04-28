@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".ts-seed-out"
+  },
+  "include": ["prisma/**/*.ts", "scripts/**/*.ts", "src/lib/password.ts"],
+  "exclude": ["node_modules", ".next"]
+}

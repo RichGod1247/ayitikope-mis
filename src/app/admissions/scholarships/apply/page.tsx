@@ -4,27 +4,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { supabase } from "@/lib/supabaseClient";
 
 type Level = "KG" | "Lower Primary" | "Upper Primary" | "JHS";
 type SchType = "Merit" | "Need-Based" | "STEM" | "Sports/Arts";
 
-export default function ScholarshipApplyPage() {
-  const [form, setForm] = useState({
-    student_name: "",
-    date_of_birth: "",
-    level: "" as Level | "",
-    scholarship_type: "" as SchType | "",
-    guardian_name: "",
-    guardian_phone: "",
-    whatsapp_number: "",
-    achievements: "",
-    need_statement: "",
-  });
+const EMPTY_FORM = {
+  studentName: "",
+  dateOfBirth: "",
+  level: "" as Level | "",
+  scholarshipType: "" as SchType | "",
+  guardianName: "",
+  guardianPhone: "",
+  whatsappNumber: "",
+  achievements: "",
+  needStatement: "",
+};
 
+export default function ScholarshipApplyPage() {
+  const [form, setForm] = useState(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-  const [debug, setDebug] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   function onChange<K extends keyof typeof form>(key: K, v: string) {
     setForm((s) => ({ ...s, [key]: v }));
@@ -33,57 +32,46 @@ export default function ScholarshipApplyPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus(null);
-    setDebug(null);
 
-    // Minimal required validation
     if (
-      !form.student_name.trim() ||
-      !form.date_of_birth ||
+      !form.studentName.trim() ||
       !form.level ||
-      !form.scholarship_type ||
-      !form.guardian_name.trim() ||
-      !form.guardian_phone.trim()
+      !form.scholarshipType ||
+      !form.guardianName.trim() ||
+      !form.guardianPhone.trim()
     ) {
-      setStatus("Please fill all required fields.");
+      setStatus({ ok: false, message: "Please fill all required fields." });
       return;
     }
 
     setBusy(true);
     try {
-      const { error } = await supabase.from("scholarship_applications").insert([
-        {
-          student_name: form.student_name.trim(),
-          date_of_birth: form.date_of_birth,
+      const res = await fetch("/api/admissions/scholarships/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentName: form.studentName.trim(),
+          dateOfBirth: form.dateOfBirth || null,
           level: form.level,
-          scholarship_type: form.scholarship_type,
-          guardian_name: form.guardian_name.trim(),
-          guardian_phone: form.guardian_phone.trim(),
-          whatsapp_number: form.whatsapp_number.trim() || null,
+          scholarshipType: form.scholarshipType,
+          guardianName: form.guardianName.trim(),
+          guardianPhone: form.guardianPhone.trim(),
+          whatsappNumber: form.whatsappNumber.trim() || null,
           achievements: form.achievements.trim() || null,
-          need_statement: form.need_statement.trim() || null,
-        },
-      ]);
+          needStatement: form.needStatement.trim() || null,
+        }),
+      });
 
-      if (error) {
-        setStatus("⚠️ Submission failed. Please try again.");
-        setDebug(JSON.stringify(error, null, 2));
+      const data = await res.json();
+
+      if (data.ok) {
+        setStatus({ ok: true, message: "Application submitted successfully. We will contact you if shortlisted." });
+        setForm(EMPTY_FORM);
       } else {
-        setStatus("✅ Application submitted successfully.");
-        setForm({
-          student_name: "",
-          date_of_birth: "",
-          level: "",
-          scholarship_type: "",
-          guardian_name: "",
-          guardian_phone: "",
-          whatsapp_number: "",
-          achievements: "",
-          need_statement: "",
-        });
+        setStatus({ ok: false, message: data.error ?? "Submission failed. Please try again." });
       }
-    } catch (err: any) {
-      setStatus("⚠️ Network or setup error.");
-      setDebug(String(err?.message || err));
+    } catch {
+      setStatus({ ok: false, message: "Network error. Please check your connection and try again." });
     } finally {
       setBusy(false);
     }
@@ -110,7 +98,7 @@ export default function ScholarshipApplyPage() {
               Scholarship Application
             </h1>
             <p className="mt-2 max-w-3xl text-gray-700">
-              Fill the form below. We’ll review and contact you via WhatsApp if shortlisted.
+              Fill the form below. We&apos;ll review and contact you via WhatsApp if shortlisted.
             </p>
             <div className="mt-4 flex gap-3">
               <Link
@@ -131,19 +119,19 @@ export default function ScholarshipApplyPage() {
       >
         {/* Row: name + dob */}
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Student’s Full Name *">
+          <Field label="Student's Full Name *">
             <input
-              value={form.student_name}
-              onChange={(e) => onChange("student_name", e.target.value)}
+              value={form.studentName}
+              onChange={(e) => onChange("studentName", e.target.value)}
               placeholder="e.g., Ama K. Mensah"
               className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
             />
           </Field>
-          <Field label="Date of Birth *">
+          <Field label="Date of Birth">
             <input
               type="date"
-              value={form.date_of_birth}
-              onChange={(e) => onChange("date_of_birth", e.target.value)}
+              value={form.dateOfBirth}
+              onChange={(e) => onChange("dateOfBirth", e.target.value)}
               className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
             />
           </Field>
@@ -167,15 +155,15 @@ export default function ScholarshipApplyPage() {
 
           <Field label="Scholarship Type *">
             <select
-              value={form.scholarship_type}
-              onChange={(e) => onChange("scholarship_type", e.target.value)}
+              value={form.scholarshipType}
+              onChange={(e) => onChange("scholarshipType", e.target.value)}
               className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600 bg-white"
             >
               <option value="">Select type</option>
               <option value="Merit">Merit</option>
               <option value="Need-Based">Need-Based</option>
               <option value="STEM">STEM</option>
-              <option value="Sports/Arts">Sports & Arts</option>
+              <option value="Sports/Arts">Sports &amp; Arts</option>
             </select>
           </Field>
         </div>
@@ -184,24 +172,24 @@ export default function ScholarshipApplyPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Parent/Guardian Name *">
             <input
-              value={form.guardian_name}
-              onChange={(e) => onChange("guardian_name", e.target.value)}
+              value={form.guardianName}
+              onChange={(e) => onChange("guardianName", e.target.value)}
               placeholder="e.g., Mr./Mrs. Doe"
               className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
             />
           </Field>
           <Field label="Parent/Guardian Phone *">
             <input
-              value={form.guardian_phone}
-              onChange={(e) => onChange("guardian_phone", e.target.value)}
+              value={form.guardianPhone}
+              onChange={(e) => onChange("guardianPhone", e.target.value)}
               placeholder="024..."
               className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
             />
           </Field>
           <Field label="WhatsApp Number (optional)">
             <input
-              value={form.whatsapp_number}
-              onChange={(e) => onChange("whatsapp_number", e.target.value)}
+              value={form.whatsappNumber}
+              onChange={(e) => onChange("whatsappNumber", e.target.value)}
               placeholder="23324..."
               className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
             />
@@ -211,14 +199,14 @@ export default function ScholarshipApplyPage() {
         {/* Conditional guidance */}
         <div className="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-900">
           Tip:
-          {form.scholarship_type === "Need-Based" ? (
+          {form.scholarshipType === "Need-Based" ? (
             <span> briefly explain your financial need below.</span>
-          ) : form.scholarship_type === "STEM" ? (
+          ) : form.scholarshipType === "STEM" ? (
             <span> list STEM projects/competitions or strong results.</span>
-          ) : form.scholarship_type === "Sports/Arts" ? (
+          ) : form.scholarshipType === "Sports/Arts" ? (
             <span> list awards, performances, or teams you play for.</span>
           ) : (
-            <span> share achievements or reasons you’re a great fit.</span>
+            <span> share achievements or reasons you&apos;re a great fit.</span>
           )}
         </div>
 
@@ -235,8 +223,8 @@ export default function ScholarshipApplyPage() {
 
         <Field label="Financial Need (optional)">
           <textarea
-            value={form.need_statement}
-            onChange={(e) => onChange("need_statement", e.target.value)}
+            value={form.needStatement}
+            onChange={(e) => onChange("needStatement", e.target.value)}
             rows={4}
             placeholder="If applying for Need-Based support, briefly explain the situation."
             className="w-full rounded-md border px-3 py-2 outline-none focus:border-blue-600"
@@ -251,11 +239,10 @@ export default function ScholarshipApplyPage() {
           {busy ? "Submitting..." : "Submit Application"}
         </button>
 
-        {status && <p className="text-sm whitespace-pre-wrap">{status}</p>}
-        {debug && (
-          <pre className="mt-2 rounded-md bg-gray-900 text-gray-100 text-xs p-3 overflow-auto">
-            {debug}
-          </pre>
+        {status && (
+          <p className={`text-sm ${status.ok ? "text-green-700" : "text-red-600"}`}>
+            {status.ok ? "✓ " : "⚠ "}{status.message}
+          </p>
         )}
       </form>
     </main>

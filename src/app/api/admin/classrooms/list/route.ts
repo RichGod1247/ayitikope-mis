@@ -65,7 +65,15 @@ export async function GET(req: NextRequest) {
   const classrooms = await prisma.classroom.findMany({
     where: {
       tenantId: auth.ctx.tenantId,
-      ...(includeArchived ? {} : { status: ClassroomStatus.ACTIVE }),
+      ...(includeArchived
+        ? {}
+        : {
+            // Treat null status as ACTIVE to handle rows created before enum was added
+            OR: [
+              { status: ClassroomStatus.ACTIVE },
+              { status: null as unknown as ClassroomStatus },
+            ],
+          }),
     },
     select: { id: true, name: true, grade: true, arm: true, status: true },
     orderBy: [{ status: "asc" }, { grade: "asc" }, { name: "asc" }, { arm: "asc" }],

@@ -269,7 +269,7 @@ function ParentAttendanceInner() {
         <section className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-4 md:px-5 md:py-5 shadow-sm space-y-4">
           <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,0.8fr))]">
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-zinc-700">
+              <label className="text-[11px] font-medium text-zinc-900">
                 Guardian / parent phone
               </label>
               <input
@@ -277,7 +277,7 @@ function ParentAttendanceInner() {
                 value={guardianPhone}
                 onChange={(e) => setGuardianPhone(e.target.value)}
                 placeholder="e.g. 0241234567"
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
               <p className="text-[10px] text-zinc-500">
                 This should be the number captured in the school records.
@@ -285,11 +285,11 @@ function ParentAttendanceInner() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-zinc-700">Term</label>
+              <label className="text-[11px] font-medium text-zinc-900">Term</label>
               <select
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="1st Term">1st Term</option>
                 <option value="2nd Term">2nd Term</option>
@@ -298,7 +298,7 @@ function ParentAttendanceInner() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-zinc-700">
+              <label className="text-[11px] font-medium text-zinc-900">
                 Academic year
               </label>
               <input
@@ -306,7 +306,7 @@ function ParentAttendanceInner() {
                 value={academicYear}
                 onChange={(e) => setAcademicYear(e.target.value)}
                 placeholder="e.g. 2025/2026"
-                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+                className="rounded-xl border border-zinc-300 bg-white px-3 py-2 text-xs md:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
           </div>

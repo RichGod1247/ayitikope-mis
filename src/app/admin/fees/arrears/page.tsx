@@ -275,7 +275,7 @@ export default function FeesArrearsPage() {
     <main className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-bold">Fees – Gentle Arrears Reminder Centre</h1>
-        <p className="text-sm text-zinc-600 max-w-3xl">
+        <p className="text-sm text-[#C9CDD6] max-w-3xl">
           Send kind, respectful reminders to families who are behind on fees. Clarity, not shame.
         </p>
       </header>
@@ -328,7 +328,7 @@ export default function FeesArrearsPage() {
               )}
             </div>
             <p className="text-xs text-zinc-500 max-w-xl">
-              Use “Refresh from DB” for real invoices. Sample is safe for testing without contacting parents.
+              Use "Refresh from DB" for real invoices. Sample is safe for testing without contacting parents.
             </p>
           </div>
 
@@ -368,8 +368,8 @@ export default function FeesArrearsPage() {
         </div>
 
         <div className="overflow-x-auto mt-3">
-          <table className="min-w-full text-sm border rounded-xl overflow-hidden">
-            <thead className="bg-zinc-50 text-xs text-zinc-600">
+          <table className="min-w-full text-sm border rounded-xl overflow-hidden text-zinc-900">
+            <thead className="bg-zinc-50 text-xs text-zinc-700">
               <tr>
                 <th className="px-3 py-2 text-left border-b">Select</th>
                 <th className="px-3 py-2 text-left border-b">Student</th>
@@ -458,7 +458,7 @@ export default function FeesArrearsPage() {
       {confirmOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-4">
-            <h2 className="text-lg font-semibold">{confirmSimulateOnly ? "Run a simulation only?" : "Confirm sending SMS reminders?"}</h2>
+            <h2 className="text-lg font-semibold text-zinc-900">{confirmSimulateOnly ? "Run a simulation only?" : "Confirm sending SMS reminders?"}</h2>
 
             <p className="text-sm text-zinc-600 break-words">
               You are about to{" "}

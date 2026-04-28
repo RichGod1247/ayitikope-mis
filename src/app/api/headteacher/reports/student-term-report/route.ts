@@ -196,6 +196,18 @@ export async function GET(req: NextRequest) {
     const subjects = Array.from(subjectsMap.values()).sort((a, b) => a.subject.localeCompare(b.subject));
     const overallPercentage = overallMax > 0 ? overallTotal / overallMax : null;
 
+    let headteacherSignature: string | null = null;
+    try {
+      const sig = await prisma.headteacherSignature.findFirst({
+        where: { tenantId: ctx.tenantId },
+        select: { signatureSvg: true },
+        orderBy: { updatedAt: "desc" },
+      });
+      headteacherSignature = sig?.signatureSvg ?? null;
+    } catch {
+      // non-fatal — signature is optional
+    }
+
     return jsonNoStore(
       {
         ok: true,
@@ -211,6 +223,7 @@ export async function GET(req: NextRequest) {
         academicYear,
         subjects,
         overall: { totalScore: overallTotal, maxTotalScore: overallMax, percentage: overallPercentage },
+        headteacherSignature,
       },
       200
     );

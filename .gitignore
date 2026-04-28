@@ -111,3 +111,10 @@ supabase/.config/
 # Local backups (do not commit)
 working_version_backup.zip
 
+
+.claude/settings.local.json
+
+CLAUDE.md
+CLAUDE_old.md
+PROGRESS.md
+SPRINT10_INSTRUCTION.md

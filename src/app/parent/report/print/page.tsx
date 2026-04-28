@@ -176,349 +176,256 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
   const behaviour = termSummary.behaviour;
 
   const fullName = `${student?.lastName ?? ""} ${student?.firstName ?? ""}`.trim();
+  const classLabel = `${classroom?.name ?? "—"}${classroom?.arm ? ` (${classroom.arm})` : ""}`;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border print:border-slate-300 print:shadow-none">
-      <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              School Terminal Report
-            </div>
-            <div className="text-lg font-bold text-slate-900">
-              BECE-Style Terminal Report
-            </div>
-            <div className="mt-0.5 text-[11px] text-slate-500">
-              “Knowledge • Character • Service.”
+    <div className="bg-white text-[#111] print:shadow-none" style={{ fontFamily: "’Helvetica Neue’, Arial, sans-serif" }}>
+
+      {/* === BRANDED HEADER === */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", borderBottom: "3px solid #071A3D", paddingBottom: "10px", marginBottom: "12px", gap: "8px" }}>
+        {/* Logo + title */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "7px", marginBottom: "6px" }}>
+            <div style={{ width: "28px", height: "28px", background: "#071A3D", borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", color: "#D4AF37", fontWeight: 900, fontSize: "14pt", flexShrink: 0, lineHeight: 1 }}>E</div>
+            <div>
+              <div style={{ fontSize: "7.5pt", fontWeight: 700, color: "#D4AF37", textTransform: "uppercase", letterSpacing: "0.1em" }}>EduLife OS</div>
+              <div style={{ fontSize: "7pt", color: "#666" }}>Ghana Basic Education</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[10px] text-slate-500">
-              <span className="mb-1 text-[11px] font-semibold text-slate-600">
-                Passport Photograph
-              </span>
-              <div className="h-20 w-16 rounded border border-slate-300 bg-slate-100" />
-              <span className="mt-1">Attach here</span>
-            </div>
+          <div style={{ fontSize: "10pt", fontWeight: 800, color: "#071A3D", textTransform: "uppercase", letterSpacing: "0.04em" }}>School Terminal Report Card</div>
+          <div style={{ fontSize: "7.5pt", color: "#555", marginTop: "2px" }}>
+            NaCCA Curriculum · <span style={{ fontWeight: 600 }}>{termSummary.term}</span> · Academic Year <span style={{ fontWeight: 600 }}>{termSummary.academicYear}</span>
           </div>
         </div>
 
-        <div className="grid gap-2 rounded-md bg-slate-50 p-3 text-[11px] text-slate-700 md:grid-cols-3">
-          <div className="space-y-1">
-            <div>
-              <span className="font-semibold">Name:</span>{" "}
-              <span>{fullName || "—"}</span>
+        {/* Overall score badge */}
+        <div style={{ textAlign: "center", border: "2px solid #071A3D", borderRadius: "6px", padding: "6px 12px", background: "#f0f4ff", flexShrink: 0 }}>
+          <div style={{ fontSize: "18pt", fontWeight: 800, color: "#071A3D", lineHeight: 1 }}>
+            {overallPercent != null ? `${overallPercent.toFixed(1)}%` : "—"}
+          </div>
+          <div style={{ fontSize: "7pt", color: "#555", marginTop: "2px" }}>Overall Score</div>
+          {overallPosition != null && classSize != null && (
+            <div style={{ fontSize: "7pt", color: "#D4AF37", fontWeight: 700, marginTop: "1px" }}>
+              {overallPosition} of {classSize}
             </div>
-            <div>
-              <span className="font-semibold">Sex:</span>{" "}
-              <span>{student?.sex || "—"}</span>
+          )}
+        </div>
+
+        {/* Photo placeholder */}
+        <div style={{ border: "2px solid #D4AF37", width: "72px", height: "90px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, borderRadius: "3px", background: "#faf8f0" }}>
+          <div style={{ fontSize: "6pt", color: "#bbb", textAlign: "center", lineHeight: 1.6 }}>Passport<br />Photo</div>
+        </div>
+      </div>
+
+      {/* === STUDENT INFO === */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "10px" }}>
+        <div style={{ border: "1px solid #ddd", borderRadius: "3px", padding: "6px 8px", fontSize: "9pt" }}>
+          <InfoRow label="Name" value={fullName || "—"} />
+          <InfoRow label="Sex" value={student?.sex || "—"} />
+          <InfoRow label="Class" value={classLabel} />
+        </div>
+        <div style={{ border: "1px solid #ddd", borderRadius: "3px", padding: "6px 8px", fontSize: "9pt" }}>
+          <InfoRow label="Guardian" value={student?.guardianName || "—"} />
+          <InfoRow label="Phone" value={student?.guardianPhone || "—"} />
+          <InfoRow label="Term" value={termSummary.term} />
+        </div>
+        <div style={{ border: "1px solid #ddd", borderRadius: "3px", padding: "6px 8px", fontSize: "9pt" }}>
+          <InfoRow label="Acad. Year" value={termSummary.academicYear} />
+          <InfoRow label="Overall %" value={percentageDisplay(overallPercent)} />
+          <InfoRow label="Position" value={overallPosition != null && classSize != null ? `${overallPosition} of ${classSize}` : "—"} />
+        </div>
+      </div>
+
+      {/* === SUBJECT TABLE === */}
+      <div style={{ marginBottom: "10px" }}>
+        <SectionLabel>Subject Performance (Class &amp; Exam Scores)</SectionLabel>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9.5pt" }}>
+            <thead>
+              <tr style={{ background: "#071A3D", color: "#F7F4ED" }}>
+                {["Subject", "Class Score", "Exam Score", "Total", "%", "Grade", "Position", "Remarks"].map((h) => (
+                  <th key={h} style={{ padding: "4px 6px", border: "1px solid #34568b", fontWeight: 700, fontSize: "8pt", textAlign: h === "Subject" || h === "Remarks" ? "left" : "center" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {subjects.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: "12px 6px", textAlign: "center", color: "#999", border: "1px solid #ccd" }}>
+                    No subject scores recorded yet for this term.
+                  </td>
+                </tr>
+              ) : (
+                subjects.map((subj, idx) => {
+                  const rowBg = idx % 2 === 1 ? "#fafafa" : "#fff";
+                  const total = subj.totalScore != null ? subj.totalScore : null;
+                  const gradeColor = subj.grade === "7" ? "#b71c1c" : subj.grade === "6" ? "#e65100" : "#1b5e20";
+                  const gradeBg = subj.grade === "7" ? "#ffebee" : subj.grade === "6" ? "#fff3e0" : "#e8f5e9";
+                  return (
+                    <tr key={`${subj.subject}-${idx}`} style={{ background: rowBg }}>
+                      <td style={{ padding: "4px 6px", border: "1px solid #ccd", fontWeight: 600 }}>{subj.subject}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #ccd", textAlign: "center" }}>{subj.classScore != null ? subj.classScore : "—"}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #ccd", textAlign: "center" }}>{subj.examScore != null ? subj.examScore : "—"}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #ccd", textAlign: "center" }}>
+                        {total != null ? total : "—"}
+                        {subj.maxScore != null && <span style={{ fontSize: "8pt", color: "#999" }}>{` /${subj.maxScore}`}</span>}
+                      </td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #ccd", textAlign: "center" }}>{percentageDisplay(subj.percentage)}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #ccd", textAlign: "center" }}>
+                        {subj.grade ? <span style={{ background: gradeBg, color: gradeColor, borderRadius: "3px", padding: "1px 5px", fontWeight: 700 }}>{subj.grade}</span> : "—"}
+                      </td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #ccd", textAlign: "center" }}>{subj.position != null ? subj.position : "—"}</td>
+                      <td style={{ padding: "4px 6px", border: "1px solid #ccd" }}>{subj.remark || "—"}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* === ATTENDANCE / FEES / HEALTH === */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "10px" }}>
+        {/* Attendance */}
+        <div>
+          <SectionLabel>Attendance</SectionLabel>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9pt" }}>
+            <tbody>
+              {attendance ? (
+                <>
+                  <TableRow label="Days Present" value={String(attendance.daysPresent)} />
+                  <TableRow label="Days Absent" value={String(attendance.daysAbsent)} shaded />
+                  <TableRow label="Days Late" value={String(attendance.daysLate)} />
+                  <TableRow label="Total School Days" value={String(attendance.totalSchoolDays)} shaded />
+                </>
+              ) : (
+                <tr><td colSpan={2} style={{ padding: "8px 6px", color: "#999", border: "1px solid #ccd", fontSize: "8.5pt" }}>No data yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Fees */}
+        <div>
+          <SectionLabel>Fees Summary</SectionLabel>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9pt" }}>
+            <tbody>
+              {fees ? (
+                <>
+                  <TableRow label="Total Billed" value={`GHS ${formatMoneyFromPesewas(fees.totalBilledPesewas)}`} />
+                  <TableRow label="Total Paid" value={`GHS ${formatMoneyFromPesewas(fees.totalPaidPesewas)}`} shaded />
+                  <TableRow label="Waived" value={`GHS ${formatMoneyFromPesewas(fees.totalWaivedPesewas)}`} />
+                  <TableRow label="Outstanding" value={`GHS ${formatMoneyFromPesewas(fees.outstandingPesewas)}`} shaded highlight={fees.outstandingPesewas > 0} />
+                </>
+              ) : (
+                <tr><td colSpan={2} style={{ padding: "8px 6px", color: "#999", border: "1px solid #ccd", fontSize: "8.5pt" }}>No fees data.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Health */}
+        <div>
+          <SectionLabel>Health</SectionLabel>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9pt" }}>
+            <tbody>
+              {health ? (
+                <>
+                  <TableRow label="Screenings" value={String(health.totalScreenings)} />
+                  <TableRow label="Fever Episodes" value={String(health.feverCount)} shaded />
+                  <TableRow label="Symptoms" value={String(health.symptomsCount)} />
+                  <TableRow label="Last Screened" value={formatDateNice(health.lastScreenedAt)} shaded />
+                </>
+              ) : (
+                <tr><td colSpan={2} style={{ padding: "8px 6px", color: "#999", border: "1px solid #ccd", fontSize: "8.5pt" }}>No health data.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* === REMARKS / SIGNATURES === */}
+      <div style={{ marginBottom: "10px" }}>
+        <SectionLabel>Conduct &amp; Remarks</SectionLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+          <div style={{ border: "1px solid #ddd", borderRadius: "3px", padding: "8px", fontSize: "9pt" }}>
+            <div style={{ fontWeight: 600, marginBottom: "4px" }}>Class Teacher&apos;s Remark</div>
+            <div style={{ minHeight: "28px", color: "#aaa" }}>
+              {behaviour?.classTeacherRemark || "................................................................"}
             </div>
-            <div>
-              <span className="font-semibold">Class:</span>{" "}
-              <span>
-                {classroom?.name ?? "—"}
-                {classroom?.arm ? ` (${classroom.arm})` : ""}
-              </span>
+            <div style={{ borderTop: "1px solid #aaa", marginTop: "6px", paddingTop: "3px", fontSize: "8pt", color: "#555" }}>
+              Signature: ______________________
             </div>
           </div>
-          <div className="space-y-1">
-            <div>
-              <span className="font-semibold">Guardian:</span>{" "}
-              <span>{student?.guardianName || "—"}</span>
+          <div style={{ border: "1px solid #ddd", borderRadius: "3px", padding: "8px", fontSize: "9pt" }}>
+            <div style={{ fontWeight: 600, marginBottom: "4px" }}>Headteacher&apos;s Remark</div>
+            <div style={{ minHeight: "28px", color: "#aaa" }}>
+              {behaviour?.headTeacherRemark || "................................................................"}
             </div>
-            <div>
-              <span className="font-semibold">Guardian Phone:</span>{" "}
-              <span>{student?.guardianPhone || "—"}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Term:</span>{" "}
-              <span>{termSummary.term}</span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div>
-              <span className="font-semibold">Academic Year:</span>{" "}
-              <span>{termSummary.academicYear}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Overall %:</span>{" "}
-              <span>{percentageDisplay(overallPercent)}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Position in Class:</span>{" "}
-              <span>
-                {overallPosition != null && classSize != null
-                  ? `${overallPosition} of ${classSize}`
-                  : "—"}
-              </span>
+            <div style={{ borderTop: "1px solid #aaa", marginTop: "6px", paddingTop: "3px", fontSize: "8pt", color: "#555" }}>
+              Signature &amp; Stamp: ______________________
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1.2fr)]">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-              Subject Performance (Class &amp; Exam Scores)
-            </h3>
-            <span className="text-[10px] text-slate-500">
-              In line with BECE grading style
+      {/* === NEXT TERM + GUARDIAN === */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+        <div style={{ border: "1px solid #ddd", borderRadius: "3px", padding: "6px 8px", fontSize: "9pt" }}>
+          <InfoRow label="Guardian" value={student?.guardianName || "—"} />
+          <div style={{ marginTop: "8px", fontSize: "8.5pt", color: "#555" }}>Parent / Guardian Signature: __________________</div>
+        </div>
+        <div style={{ border: "1px solid #ddd", borderRadius: "3px", padding: "6px 8px", fontSize: "9pt" }}>
+          <div style={{ marginBottom: "4px" }}>
+            <span style={{ fontWeight: 600 }}>Next Term Begins:</span>{" "}
+            <span style={{ fontStyle: "italic", color: "#888" }}>
+              {termSummary.nextTermBegins ? formatDateNice(termSummary.nextTermBegins) : "To be announced"}
             </span>
           </div>
-
-          <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
-            <table className="min-w-full border-separate border-spacing-0 text-[11px]">
-              <thead>
-                <tr className="bg-slate-50">
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-left font-semibold text-slate-700">
-                    Subject
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Class Score
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Exam Score
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Total
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    %
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Grade
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Position
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-left font-semibold text-slate-700">
-                    Remarks
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {subjects.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-3 py-4 text-center text-[11px] text-slate-500"
-                    >
-                      No subject scores recorded yet for this term.
-                    </td>
-                  </tr>
-                ) : (
-                  subjects.map((subj, idx) => {
-                    const rowBg = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
-                    const total =
-                      subj.totalScore != null ? subj.totalScore : null;
-
-                    return (
-                      <tr key={`${subj.subject}-${idx}`} className={rowBg}>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-left font-medium text-slate-800">
-                          {subj.subject}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {subj.classScore != null ? subj.classScore : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {subj.examScore != null ? subj.examScore : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {total != null ? total : "—"}
-                          {subj.maxScore != null ? (
-                            <span className="text-[9px] text-slate-400">{` / ${subj.maxScore}`}</span>
-                          ) : null}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {percentageDisplay(subj.percentage)}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {subj.grade || "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {subj.position != null ? subj.position : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-left text-slate-700">
-                          {subj.remark || "—"}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+          <div>
+            <span style={{ fontWeight: 600 }}>Promoted to:</span>{" "}
+            <span>{termSummary.promotedTo ?? "—"}</span>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-              Attendance, Fees &amp; Health Summary
-            </h3>
-
-            <div className="grid gap-2 text-[11px] lg:grid-cols-1">
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">Attendance</span>
-                </div>
-                {attendance ? (
-                  <div className="grid grid-cols-2 gap-1 text-slate-700">
-                    <div>
-                      <span className="font-semibold">Days Present:</span>{" "}
-                      <span>{attendance.daysPresent}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Days Absent:</span>{" "}
-                      <span>{attendance.daysAbsent}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Days Late:</span>{" "}
-                      <span>{attendance.daysLate}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Total School Days:</span>{" "}
-                      <span>{attendance.totalSchoolDays}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500">
-                    No attendance data recorded yet for this term.
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">Fees</span>
-                </div>
-                {fees ? (
-                  <div className="grid grid-cols-2 gap-1 text-slate-700">
-                    <div>
-                      <span className="font-semibold">Total Billed:</span>{" "}
-                      <span>GHS {formatMoneyFromPesewas(fees.totalBilledPesewas)}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Total Paid:</span>{" "}
-                      <span>GHS {formatMoneyFromPesewas(fees.totalPaidPesewas)}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Waived:</span>{" "}
-                      <span>GHS {formatMoneyFromPesewas(fees.totalWaivedPesewas)}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Outstanding:</span>{" "}
-                      <span className="font-semibold text-rose-700">
-                        GHS {formatMoneyFromPesewas(fees.outstandingPesewas)}
-                      </span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="font-semibold">Last Payment:</span>{" "}
-                      <span>{formatDateNice(fees.lastPaymentDate)}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500">
-                    No fees record yet for this term.
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">Health</span>
-                </div>
-                {health ? (
-                  <div className="grid grid-cols-2 gap-1 text-slate-700">
-                    <div>
-                      <span className="font-semibold">Screenings:</span>{" "}
-                      <span>{health.totalScreenings}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Fever Episodes:</span>{" "}
-                      <span>{health.feverCount}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Symptoms Logged:</span>{" "}
-                      <span>{health.symptomsCount}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Last Screened:</span>{" "}
-                      <span>{formatDateNice(health.lastScreenedAt)}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="font-semibold">Health Flag:</span>{" "}
-                      <span>{health.overallFlag || "—"}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500">
-                    No health screening data recorded yet for this term.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-              Behaviour &amp; Remarks
-            </h3>
-            <div className="space-y-2 text-[11px] text-slate-700">
-              <div className="rounded-md border border-slate-200 bg-white p-2.5">
-                <div className="mb-1 font-semibold text-slate-800">
-                  Conduct / Attitude / Interest
-                </div>
-                <p className="text-[11px] text-slate-700">
-                  {behaviour?.conduct ||
-                    behaviour?.attitude ||
-                    behaviour?.interest ||
-                    "Teacher’s notes on conduct, attitude to work, and interest in school activities will appear here."}
-                </p>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="rounded-md border border-slate-200 bg-white p-2.5">
-                  <div className="mb-1 font-semibold text-slate-800">
-                    Class Teacher’s Remark
-                  </div>
-                  <p className="min-h-10 text-[11px] text-slate-700">
-                    {behaviour?.classTeacherRemark ||
-                      "…………........................................................................................................................"}
-                  </p>
-                  <div className="mt-1 text-[10px] text-slate-500">
-                    Signature: ______________________
-                  </div>
-                </div>
-                <div className="rounded-md border border-slate-200 bg-white p-2.5">
-                  <div className="mb-1 font-semibold text-slate-800">
-                    Headteacher’s Remark
-                  </div>
-                  <p className="min-h-10 text-[11px] text-slate-700">
-                    {behaviour?.headTeacherRemark ||
-                      "…………........................................................................................................................"}
-                  </p>
-                  <div className="mt-1 text-[10px] text-slate-500">
-                    Signature &amp; Stamp: ______________________
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">
-                    Next Term Begins:
-                  </span>
-                  <span className="text-[11px] text-slate-700">
-                    {termSummary.nextTermBegins
-                      ? formatDateNice(termSummary.nextTermBegins)
-                      : "To be announced"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* === FOOTER === */}
+      <div style={{ borderTop: "2px solid #071A3D", paddingTop: "4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <div style={{ width: "14px", height: "14px", background: "#071A3D", borderRadius: "2px", display: "flex", alignItems: "center", justifyContent: "center", color: "#D4AF37", fontWeight: 900, fontSize: "8pt" }}>E</div>
+          <span style={{ fontSize: "7pt", fontWeight: 700, color: "#071A3D" }}>EduLife OS</span>
         </div>
-      </div> 
+        <span style={{ fontSize: "7pt", color: "#D4AF37", fontWeight: 700 }}>NaCCA Compliant · Ghana Basic Education</span>
+        <span style={{ fontSize: "7pt", color: "#999" }}>Parent Report Card</span>
+      </div>
     </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "flex", gap: "4px", marginBottom: "2px" }}>
+      <span style={{ fontWeight: 600, minWidth: "72px", color: "#444", flexShrink: 0 }}>{label}:</span>
+      <span>{value}</span>
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: "7pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#071A3D", marginBottom: "4px", paddingLeft: "5px", borderLeft: "3px solid #D4AF37" }}>
+      {children}
+    </div>
+  );
+}
+
+function TableRow({ label, value, shaded, highlight }: { label: string; value: string; shaded?: boolean; highlight?: boolean }) {
+  return (
+    <tr style={{ background: shaded ? "#fafafa" : "#fff" }}>
+      <td style={{ padding: "3px 6px", border: "1px solid #ccd" }}>{label}</td>
+      <td style={{ padding: "3px 6px", border: "1px solid #ccd", textAlign: "right", fontWeight: highlight ? 700 : undefined, color: highlight ? "#b71c1c" : undefined }}>{value}</td>
+    </tr>
   );
 }
 

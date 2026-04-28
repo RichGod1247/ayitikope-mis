@@ -202,7 +202,7 @@ export default function AdminFeesInvoicesPage() {
         if (!alive) return;
 
         if (!setup.ok) {
-          // Keep UI defaults; show a soft hint only (don’t block page)
+          // Keep UI defaults; show a soft hint only (don't block page)
           setSetupComplete(null);
           return;
         }
@@ -596,24 +596,24 @@ export default function AdminFeesInvoicesPage() {
     <main className="min-h-screen p-6 max-w-7xl mx-auto space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-bold">Fees — Invoices &amp; Payments</h1>
-        <p className="text-sm text-zinc-600 max-w-3xl">
+        <p className="text-sm text-[#C9CDD6] max-w-3xl">
           Create and manage per-learner invoices, track payments, and see clear balances — calm and transparent.
         </p>
 
         {tenant && (
-          <p className="text-xs text-zinc-500">
-            School: <span className="font-semibold">{tenant.name}</span>
+          <p className="text-xs text-[#8F98A8]">
+            School: <span className="font-semibold text-[#C9CDD6]">{tenant.name}</span>
           </p>
         )}
 
-        {tenantLoading && <p className="text-xs text-zinc-500">Loading school context…</p>}
+        {tenantLoading && <p className="text-xs text-[#8F98A8]">Loading school context…</p>}
 
         {tenantError && (
-          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{tenantError}</p>
+          <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded-xl px-3 py-2">{tenantError}</p>
         )}
 
         {setupComplete === false && (
-          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <p className="text-xs text-amber-300 bg-amber-900/20 border border-amber-500/30 rounded-xl px-3 py-2">
             Admin setup is not completed yet. Term/academic year defaults may be wrong. Complete Admin → Setup to lock
             them properly.
           </p>
@@ -626,9 +626,9 @@ export default function AdminFeesInvoicesPage() {
             <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Term &amp; Academic Year</div>
             <div className="flex flex-wrap gap-3 text-sm">
               <div>
-                <label className="block text-xs font-medium mb-1">Term</label>
+                <label className="block text-xs font-medium text-zinc-900 mb-1">Term</label>
                 <select
-                  className="border rounded-xl h-9 px-2 text-sm"
+                  className="border border-zinc-300 rounded-xl h-9 px-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
                   value={term}
                   onChange={(e) => setTerm(e.target.value)}
                 >
@@ -638,10 +638,10 @@ export default function AdminFeesInvoicesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">Academic year</label>
+                <label className="block text-xs font-medium text-zinc-900 mb-1">Academic year</label>
                 <input
                   type="text"
-                  className="border rounded-xl h-9 px-2 text-sm"
+                  className="border border-zinc-300 rounded-xl h-9 px-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
                   value={academicYear}
                   onChange={(e) => setAcademicYear(e.target.value)}
                   placeholder="e.g. 2025/2026"
@@ -676,12 +676,12 @@ export default function AdminFeesInvoicesPage() {
 
             <div className="grid md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1">Classroom</label>
+                <label className="block text-xs font-medium text-zinc-900 mb-1">Classroom</label>
                 {classLoading ? (
                   <div className="h-9 rounded-xl border bg-zinc-50 animate-pulse" />
                 ) : classOptions.length ? (
                   <select
-                    className="w-full border rounded-xl h-9 px-2 text-sm"
+                    className="w-full border border-zinc-300 rounded-xl h-9 px-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
                     value={classroomId}
                     onChange={(e) => setClassroomId(e.target.value)}
                   >
@@ -749,7 +749,7 @@ export default function AdminFeesInvoicesPage() {
             {structuresLoading && <span className="text-xs text-zinc-500">Loading fee structures…</span>}
 
             {!structuresLoading && !structures.length && !structuresError && (
-              <p className="text-xs text-zinc-600">
+              <p className="text-xs text-zinc-900">
                 No fee structures found yet for{" "}
                 <span className="font-semibold">
                   {term}, {academicYear}
@@ -784,7 +784,7 @@ export default function AdminFeesInvoicesPage() {
 
       <section className="border rounded-xl p-4 bg-white space-y-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="space-y-1 text-sm">
+          <div className="space-y-1 text-sm text-zinc-900">
             <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Invoice Summary</div>
             <div>
               Total invoices in view: <span className="font-semibold">{summary.totalInvoices}</span>
@@ -848,7 +848,7 @@ export default function AdminFeesInvoicesPage() {
 
       <section className="border rounded-xl p-4 bg-white">
         <div className="flex items-center justify-between gap-2 mb-3">
-          <h2 className="text-sm font-semibold">
+          <h2 className="text-sm font-semibold text-zinc-900">
             Invoices for <span className="font-semibold">{term}, {academicYear}</span> —{" "}
             {classOptions.find((c) => c.id === classroomId)?.label || "selected class"}
           </h2>
@@ -856,8 +856,8 @@ export default function AdminFeesInvoicesPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full text-xs md:text-sm border rounded-xl overflow-hidden">
-            <thead className="bg-zinc-50 text-[11px] md:text-xs text-zinc-600">
+          <table className="min-w-full text-xs md:text-sm border rounded-xl overflow-hidden text-zinc-900">
+            <thead className="bg-zinc-50 text-[11px] md:text-xs text-zinc-700">
               <tr>
                 <th className="px-3 py-2 text-left border-b">Learner</th>
                 <th className="px-3 py-2 text-left border-b">Class</th>
@@ -887,8 +887,8 @@ export default function AdminFeesInvoicesPage() {
                     <td className="px-3 py-2 align-top">
                       <div className="font-semibold">{inv.studentName || "Unnamed learner"}</div>
                     </td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-700">{inv.classLabel || "—"}</td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-700">
+                    <td className="px-3 py-2 align-top text-xs text-zinc-900">{inv.classLabel || "—"}</td>
+                    <td className="px-3 py-2 align-top text-xs text-zinc-900">
                       {inv.term}, {inv.academicYear}
                     </td>
                     <td className="px-3 py-2 align-top text-right">{formatMoneyFromPesewas(inv.amountBilledPesewas)}</td>
@@ -904,7 +904,7 @@ export default function AdminFeesInvoicesPage() {
                         {formatMoneyFromPesewas(inv.balancePesewas)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-700">{formatDateShort(inv.lastPaymentAt)}</td>
+                    <td className="px-3 py-2 align-top text-xs text-zinc-900">{formatDateShort(inv.lastPaymentAt)}</td>
                     <td className="px-3 py-2 align-top">
                       <span className={statusClasses}>{statusLabel}</span>
                     </td>
@@ -942,14 +942,14 @@ export default function AdminFeesInvoicesPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Record payment — {paymentModal.studentName}</h2>
+              <h2 className="text-sm font-semibold text-zinc-900">Record payment — {paymentModal.studentName}</h2>
               <button className={btnOutline} onClick={closePaymentModal} disabled={paymentLoading} type="button">
                 Close
               </button>
             </div>
 
             {paymentModal.classLabel && (
-              <p className="text-xs text-zinc-600">
+              <p className="text-xs text-zinc-900">
                 Class: <span className="font-semibold">{paymentModal.classLabel}</span>
               </p>
             )}
@@ -961,13 +961,13 @@ export default function AdminFeesInvoicesPage() {
 
             <div className="grid gap-3 text-sm">
               <div>
-                <label className="block text-xs font-medium mb-1">Amount (GH₵)</label>
+                <label className="block text-xs font-medium text-zinc-900 mb-1">Amount (GH₵)</label>
                 <input
                   type="number"
                   inputMode="decimal"
                   step="0.01"
                   min={0}
-                  className="w-full border rounded-xl h-9 px-2 text-sm"
+                  className="w-full border border-zinc-300 rounded-xl h-9 px-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
                   placeholder="e.g. 150.00"
@@ -976,9 +976,9 @@ export default function AdminFeesInvoicesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1">Method</label>
+                <label className="block text-xs font-medium text-zinc-900 mb-1">Method</label>
                 <select
-                  className="w-full border rounded-xl h-9 px-2 text-sm"
+                  className="w-full border border-zinc-300 rounded-xl h-9 px-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   disabled={paymentLoading}
@@ -992,10 +992,10 @@ export default function AdminFeesInvoicesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1">Reference / receipt (optional)</label>
+                <label className="block text-xs font-medium text-zinc-900 mb-1">Reference / receipt (optional)</label>
                 <input
                   type="text"
-                  className="w-full border rounded-xl h-9 px-2 text-sm"
+                  className="w-full border border-zinc-300 rounded-xl h-9 px-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
                   value={paymentReference}
                   onChange={(e) => setPaymentReference(e.target.value)}
                   disabled={paymentLoading}
@@ -1004,9 +1004,9 @@ export default function AdminFeesInvoicesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium mb-1">Channel</label>
+                <label className="block text-xs font-medium text-zinc-900 mb-1">Channel</label>
                 <select
-                  className="w-full border rounded-xl h-9 px-2 text-sm"
+                  className="w-full border border-zinc-300 rounded-xl h-9 px-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
                   value={paymentChannel}
                   onChange={(e) => setPaymentChannel(e.target.value)}
                   disabled={paymentLoading}

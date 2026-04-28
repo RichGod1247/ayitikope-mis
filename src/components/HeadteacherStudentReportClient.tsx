@@ -117,6 +117,7 @@ export function HeadteacherStudentReportClient({
   const [academicYear, setAcademicYear] = useState<string>(defaultAcademicYear);
 
   const [state, setState] = useState<ReportState>({ status: "idle" });
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const prefilledFromUrlRef = useRef(false);
   const autoLoadedRef = useRef(false);
@@ -213,6 +214,43 @@ export function HeadteacherStudentReportClient({
     window.print();
   }
 
+  async function handleDownloadPdf() {
+    if (state.status !== "ready") return;
+    const sid = studentId.trim();
+    const tm = term.trim();
+    const yr = academicYear.trim();
+    if (!sid || !tm || !yr) return;
+
+    setPdfLoading(true);
+    try {
+      const params = new URLSearchParams({ studentId: sid, term: tm, academicYear: yr });
+      const res = await fetch(`/api/headteacher/reports/student-term-report/pdf?${params}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setState({ status: "error", message: json.error || "PDF generation failed. Please try again." });
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-card-${sid.slice(0, 8)}-${tm.replace(/\s+/g, "-")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setState({ status: "error", message: "Network error while generating PDF. Please try again." });
+    } finally {
+      setPdfLoading(false);
+    }
+  }
+
   const canPrint = state.status === "ready";
 
   return (
@@ -282,6 +320,15 @@ export function HeadteacherStudentReportClient({
             className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
           >
             Print / Save as PDF
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleDownloadPdf()}
+            disabled={!canPrint || pdfLoading}
+            className="inline-flex items-center rounded-xl bg-[linear-gradient(135deg,#1B66D1,#2E7CE6)] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_8px_24px_rgba(27,102,209,0.28)] disabled:opacity-60"
+          >
+            {pdfLoading ? "Generating PDF…" : "Download Report Card"}
           </button>
 
           {state.status === "error" ? (

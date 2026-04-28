@@ -190,6 +190,7 @@ type ParentTermReportResponse = {
   attendanceSummary: AttendanceSummary;
   feesSummary: FeesSummary;
   healthSummary: HealthSummary;
+  headteacherSignature?: string | null;
 };
 
 const DEFAULT_TERM = "1st Term";
@@ -544,7 +545,7 @@ function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
  * BECE-style report card
  */
 function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
-  const { student, classroom, termSummary } = report;
+  const { student, classroom, termSummary, headteacherSignature } = report;
 
   const subjects = termSummary.subjects ?? [];
   const overallPercent = termSummary.overallPercentage;
@@ -898,7 +899,14 @@ function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
                       "…………........................................................................................................................"}
                   </p>
                   <div className="mt-1 text-[10px] text-slate-500">
-                    Signature &amp; Stamp: ______________________
+                    {headteacherSignature ? (
+                      <span
+                        className="inline-block max-h-10 max-w-[160px] align-middle"
+                        dangerouslySetInnerHTML={{ __html: headteacherSignature }}
+                      />
+                    ) : (
+                      <span>Signature &amp; Stamp: ______________________</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -942,6 +950,7 @@ const ParentReportPage: React.FC = () => {
   const [report, setReport] = useState<ParentTermReportResponse | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const overviewByStudentId = useMemo(() => {
     const map = new Map<string, ParentOverviewStudent>();
@@ -1137,6 +1146,41 @@ const ParentReportPage: React.FC = () => {
     });
 
     window.open(`/parent/report/print?${params.toString()}`, "_blank");
+  }
+
+  async function handleDownloadPdf() {
+    if (!report?.context) return;
+    const { studentId, term: t, academicYear: yr } = report.context;
+
+    setPdfLoading(true);
+    try {
+      const params = new URLSearchParams({ studentId, term: t, academicYear: yr });
+      const res = await fetch(`/api/parent/report/term/pdf?${params}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setReportError(json.error || "PDF generation failed. Please try again.");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-card-${studentId.slice(0, 8)}-${t.replace(/\s+/g, "-")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setReportError("Network error while generating PDF. Please try again.");
+    } finally {
+      setPdfLoading(false);
+    }
   }
 
   if (sessionExpired) {
@@ -1408,6 +1452,16 @@ const ParentReportPage: React.FC = () => {
             ) : (
               <>
                 <BeceReportCard report={report} />
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void handleDownloadPdf()}
+                    disabled={pdfLoading}
+                    className="inline-flex items-center rounded-xl bg-[linear-gradient(135deg,#1B66D1,#2E7CE6)] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_8px_24px_rgba(27,102,209,0.28)] disabled:opacity-60"
+                  >
+                    {pdfLoading ? "Generating PDF…" : "Download Report Card (PDF)"}
+                  </button>
+                </div>
                 <div className="mt-3">
                   <ParentResultsCoach report={report} />
                 </div>

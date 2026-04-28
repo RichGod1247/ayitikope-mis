@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
+import { StudentStatus } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,18 +82,13 @@ export async function GET(req: Request) {
     const tenantId = ctx.tenantId;
 
     // 1) Students (optional classroom filter)
-    const studentWhere: any = { tenantId };
-    if (classroomId) studentWhere.classroomId = classroomId;
-
     const students = await prisma.student.findMany({
-      where: studentWhere,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        classroomId: true,
-        guardianPhone: true,
+      where: {
+        tenantId,
+        classroomId: classroomId || undefined,
+        status: { in: [StudentStatus.ACTIVE] },
       },
+      select: { id: true, firstName: true, lastName: true, classroomId: true, guardianPhone: true },
       take: 8000,
     });
 
