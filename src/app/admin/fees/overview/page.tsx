@@ -1,371 +1,611 @@
 // src/app/admin/fees/overview/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
-type Tenant = {
-  id: string;
-  name: string;
-  slug?: string | null;
+type Summary = {
+  invoiceCount: number;
+  learnerCount: number;
+  totalBilledPesewas: number;
+  totalWaivedPesewas: number;
+  totalPaidPesewas: number;
+  outstandingPesewas: number;
+  todayCollectedPesewas: number;
+  receiptCount: number;
+  clearedCount: number;
+  partialCount: number;
+  unpaidCount: number;
+  noChargeCount: number;
+  openExceptionCount: number;
+  collectionRateBps: number;
 };
 
 type FeeRow = {
-  id: string;
+  invoiceId: string;
+  studentId: string;
   studentName: string;
   classLabel: string;
-  guardianName?: string;
-  guardianPhone?: string;
+  classroomId: string | null;
+  guardianName: string | null;
+  guardianPhone: string | null;
   term: string;
   academicYear: string;
-  billed: number; // cedis (mock)
-  paid: number; // cedis (mock)
+  status: "cleared" | "partial" | "unpaid" | "no_charge";
+  storedInvoiceStatus: string;
+  issuedAt: string;
+  dueDate: string | null;
+  billedPesewas: number;
+  waivedPesewas: number;
+  paidPesewas: number;
+  outstandingPesewas: number;
+  paymentCount: number;
+  receiptCount: number;
+  latestPaymentAt: string | null;
+  storedMismatch: boolean;
 };
 
-type MeResponse =
-  | { ok: true; tenantId: string; tenant?: { name?: string | null; slug?: string | null } | null }
-  | { ok: false; error?: string };
+type ClassSummary = {
+  classroomId: string | null;
+  classLabel: string;
+  invoiceCount: number;
+  learnerCount: number;
+  billedPesewas: number;
+  paidPesewas: number;
+  outstandingPesewas: number;
+  clearedCount: number;
+  partialCount: number;
+  unpaidCount: number;
+  collectionRateBps: number;
+};
 
-const btnBase =
-  "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50`;
+type MethodSummary = {
+  method: string;
+  count: number;
+  amountPesewas: number;
+};
 
-const MOCK_ROWS: FeeRow[] = [
-  {
-    id: "s1",
-    studentName: "Ama Mensah",
-    classLabel: "P4 Green",
-    guardianName: "Mr. Mensah",
-    guardianPhone: "0240000001",
-    term: "1st Term",
-    academicYear: "2025/2026",
-    billed: 500,
-    paid: 350,
-  },
-  {
-    id: "s2",
-    studentName: "Kofi Adjei",
-    classLabel: "P4 Green",
-    guardianName: "Mrs. Adjei",
-    guardianPhone: "0240000002",
-    term: "1st Term",
-    academicYear: "2025/2026",
-    billed: 500,
-    paid: 500,
-  },
-  {
-    id: "s3",
-    studentName: "Akosua Owusu",
-    classLabel: "JHS1 A",
-    guardianName: "Mr. Owusu",
-    guardianPhone: "0240000003",
-    term: "1st Term",
-    academicYear: "2025/2026",
-    billed: 750,
-    paid: 400,
-  },
-  {
-    id: "s4",
-    studentName: "Yaw Tetteh",
-    classLabel: "JHS1 A",
-    guardianName: "Mad. Tetteh",
-    guardianPhone: "0240000004",
-    term: "1st Term",
-    academicYear: "2025/2026",
-    billed: 750,
-    paid: 0,
-  },
-];
+type ApiResponse = {
+  ok: boolean;
+  error?: string;
+  tenant?: {
+    id: string;
+    name: string;
+    slug: string | null;
+    schoolCode: string;
+  } | null;
+  summary?: Summary;
+  classSummaries?: ClassSummary[];
+  paymentMethodSummaries?: MethodSummary[];
+  rows?: FeeRow[];
+};
 
-function formatCurrency(amount: number) {
-  const n = Number.isFinite(amount) ? amount : 0;
-  return `GH₵ ${n.toFixed(2)}`;
+function formatCedis(pesewas: number | null | undefined) {
+  const value = typeof pesewas === "number" ? pesewas : 0;
+  return `GHS ${(value / 100).toFixed(2)}`;
+}
+
+function percentFromBps(bps: number | null | undefined) {
+  const value = typeof bps === "number" ? bps : 0;
+  return `${(value / 100).toFixed(1)}%`;
+}
+
+function statusLabel(status: FeeRow["status"]) {
+  if (status === "cleared") return "Cleared";
+  if (status === "partial") return "Partial";
+  if (status === "unpaid") return "Unpaid";
+  return "No charge";
+}
+
+function statusClass(status: FeeRow["status"]) {
+  if (status === "cleared") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  }
+
+  if (status === "partial") {
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  }
+
+  if (status === "unpaid") {
+    return "border-red-200 bg-red-50 text-red-800";
+  }
+
+  return "border-zinc-200 bg-zinc-50 text-zinc-700";
+}
+
+function methodLabel(method: string) {
+  const map: Record<string, string> = {
+    cash: "Cash",
+    momo: "Mobile money",
+    paystack: "Paystack",
+    bank_transfer: "Bank transfer",
+    other: "Other",
+    unknown: "Unknown",
+  };
+
+  return map[method] ?? method;
+}
+
+function humanDate(iso: string | null) {
+  if (!iso) return "None";
+
+  try {
+    return new Date(iso).toLocaleDateString("en-GH", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "None";
+  }
 }
 
 export default function AdminFeesOverviewPage() {
-  const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [tenantLoading, setTenantLoading] = useState(false);
-  const [tenantError, setTenantError] = useState<string | null>(null);
+  const [term, setTerm] = useState("1st Term");
+  const [academicYear, setAcademicYear] = useState("2025/2026");
+  const [classroomId, setClassroomId] = useState("");
+  const [q, setQ] = useState("");
 
-  const [selectedTerm, setSelectedTerm] = useState<string>("1st Term");
-  const [selectedYear, setSelectedYear] = useState<string>("2025/2026");
-  const [selectedClass, setSelectedClass] = useState<string>("All");
-  const [search, setSearch] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Bootstrap tenant from /api/me (session-scoped)
+  const [tenantName, setTenantName] = useState("School");
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [rows, setRows] = useState<FeeRow[]>([]);
+  const [classSummaries, setClassSummaries] = useState<ClassSummary[]>([]);
+  const [paymentMethodSummaries, setPaymentMethodSummaries] = useState<
+    MethodSummary[]
+  >([]);
+
+  async function load(e?: FormEvent) {
+    e?.preventDefault();
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const url = new URL("/api/admin/fees/overview", window.location.origin);
+
+      if (term) url.searchParams.set("term", term);
+      if (academicYear) url.searchParams.set("academicYear", academicYear);
+      if (classroomId) url.searchParams.set("classroomId", classroomId);
+      if (q.trim()) url.searchParams.set("q", q.trim());
+
+      const res = await fetch(url.toString(), {
+        cache: "no-store",
+      });
+
+      const json = (await res.json().catch(() => ({}))) as ApiResponse;
+
+      if (!res.ok || !json.ok || !json.summary) {
+        setError(json.error || "Failed to load finance overview.");
+        setSummary(null);
+        setRows([]);
+        setClassSummaries([]);
+        setPaymentMethodSummaries([]);
+        return;
+      }
+
+      setTenantName(json.tenant?.name || "School");
+      setSummary(json.summary);
+      setRows(Array.isArray(json.rows) ? json.rows : []);
+      setClassSummaries(
+        Array.isArray(json.classSummaries) ? json.classSummaries : []
+      );
+      setPaymentMethodSummaries(
+        Array.isArray(json.paymentMethodSummaries)
+          ? json.paymentMethodSummaries
+          : []
+      );
+    } catch {
+      setError("Network error loading finance overview.");
+      setSummary(null);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    const ac = new AbortController();
-
-    (async () => {
-      setTenantLoading(true);
-      setTenantError(null);
-
-      try {
-        const r = await fetch("/api/me", { cache: "no-store", signal: ac.signal });
-        const j = (await r.json().catch(() => ({}))) as MeResponse;
-
-        if (!r.ok || !j || (j as any).ok !== true) {
-          setTenantError("Failed to load school context. Please sign in again.");
-          return;
-        }
-
-        const ok = j as Extract<MeResponse, { ok: true }>;
-        setTenant({
-          id: ok.tenantId,
-          name: ok.tenant?.name || "School",
-          slug: ok.tenant?.slug ?? null,
-        });
-      } catch {
-        if (!ac.signal.aborted) setTenantError("Failed to load school context. Please check your connection.");
-      } finally {
-        if (!ac.signal.aborted) setTenantLoading(false);
-      }
-    })();
-
-    return () => ac.abort();
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const classOptions = useMemo(() => {
-    const set = new Set(MOCK_ROWS.map((r) => r.classLabel));
-    return ["All", ...Array.from(set)];
-  }, []);
+  const classroomOptions = useMemo(() => {
+    return classSummaries.filter((c) => c.classroomId);
+  }, [classSummaries]);
 
-  const termOptions = ["1st Term", "2nd Term", "3rd Term"];
-  const yearOptions = ["2025/2026", "2024/2025"];
+  const topDebtors = useMemo(() => {
+    return rows.filter((r) => r.outstandingPesewas > 0).slice(0, 10);
+  }, [rows]);
 
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return MOCK_ROWS.filter((row) => {
-      if (row.term !== selectedTerm) return false;
-      if (row.academicYear !== selectedYear) return false;
-      if (selectedClass !== "All" && row.classLabel !== selectedClass) return false;
-
-      if (q.length) {
-        const text = [row.studentName, row.classLabel, row.guardianName || "", row.guardianPhone || ""]
-          .join(" ")
-          .toLowerCase();
-        if (!text.includes(q)) return false;
-      }
-
-      return true;
-    });
-  }, [selectedTerm, selectedYear, selectedClass, search]);
-
-  const summary = useMemo(() => {
-    const totalBilled = filteredRows.reduce((sum, r) => sum + r.billed, 0);
-    const totalPaid = filteredRows.reduce((sum, r) => sum + r.paid, 0);
-    const totalOwed = totalBilled - totalPaid;
-    const fullyPaidCount = filteredRows.filter((r) => r.paid >= r.billed && r.billed > 0).length;
-
-    return {
-      count: filteredRows.length,
-      totalBilled,
-      totalPaid,
-      totalOwed,
-      fullyPaidCount,
-      partialOrUnpaidCount: filteredRows.length - fullyPaidCount,
-    };
-  }, [filteredRows]);
+  const mismatchCount = useMemo(() => {
+    return rows.filter((r) => r.storedMismatch).length;
+  }, [rows]);
 
   return (
-    <main className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold">Fees &amp; Billing — Overview</h1>
-        <p className="text-sm text-[#C9CDD6] max-w-3xl">
-          A calm, high-level view of <span className="font-semibold">billed amounts, payments, and balances</span> per learner.
-        </p>
-
-        {tenant && (
-          <p className="text-xs text-[#8F98A8]">
-            School: <span className="font-semibold text-[#C9CDD6]">{tenant.name}</span>
-          </p>
-        )}
-        {tenantLoading && <p className="text-xs text-[#8F98A8]">Loading school information…</p>}
-        {tenantError && (
-          <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded-xl px-3 py-2">{tenantError}</p>
-        )}
-      </header>
-
-      <section className="border rounded-xl p-4 bg-white space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <main className="min-h-screen bg-zinc-50">
+      <div className="mx-auto max-w-7xl px-4 py-6 md:py-8 space-y-6">
+        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
-            <div className="text-xs font-semibold text-zinc-700 uppercase tracking-wide">Filters</div>
-            <p className="text-xs text-zinc-700 max-w-md">
-              Narrow down by <span className="font-semibold">term, year, class, or name</span>.
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+              EduLife OS - Finance Command
+            </p>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-zinc-950">
+              School finance overview
+            </h1>
+            <p className="max-w-3xl text-sm text-zinc-600">
+              Real invoice, payment, receipt, and reconciliation signals for{" "}
+              <span className="font-semibold text-zinc-900">{tenantName}</span>.
+              No mock data. No guesswork.
             </p>
           </div>
+
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={btnOutline}
-              onClick={() => {
-                setSelectedTerm("1st Term");
-                setSelectedYear("2025/2026");
-                setSelectedClass("All");
-                setSearch("");
-              }}
+            <Link
+              href="/admin/fees/reconciliation"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
             >
-              Reset filters
+              Reconciliation
+            </Link>
+            <Link
+              href="/admin/fees/ledger"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
+            >
+              Ledger trail
+            </Link>
+            <Link
+              href="/admin/fees/receipts"
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-zinc-950 px-4 text-xs font-semibold text-white hover:bg-black"
+            >
+              Receipts
+            </Link>
+          </div>
+        </header>
+
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <form
+            onSubmit={load}
+            className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto]"
+          >
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-zinc-700">
+                Term
+              </label>
+              <select
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
+              >
+                <option value="">All terms</option>
+                <option>1st Term</option>
+                <option>2nd Term</option>
+                <option>3rd Term</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-zinc-700">
+                Academic year
+              </label>
+              <input
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+                placeholder="2025/2026"
+                className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-zinc-700">
+                Class
+              </label>
+              <select
+                value={classroomId}
+                onChange={(e) => setClassroomId(e.target.value)}
+                className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-900"
+              >
+                <option value="">All classes</option>
+                {classroomOptions.map((cls) => (
+                  <option key={cls.classroomId ?? cls.classLabel} value={cls.classroomId ?? ""}>
+                    {cls.classLabel}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-zinc-700">
+                Search learner / guardian / phone
+              </label>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="e.g. Ama, Mensah, 024..."
+                className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="h-10 self-end rounded-xl bg-zinc-950 px-5 text-sm font-semibold text-white hover:bg-black disabled:opacity-50"
+            >
+              {loading ? "Loading..." : "Apply"}
             </button>
-          </div>
-        </div>
+          </form>
 
-        <div className="grid md:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-900 mb-1">Term</label>
-            <select className="w-full border border-zinc-300 rounded-xl px-2 py-2 h-10 text-sm text-zinc-900 bg-white" value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)}>
-              {termOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
+          {error && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+              {error}
+            </div>
+          )}
+        </section>
 
-          <div>
-            <label className="block text-xs font-semibold text-zinc-900 mb-1">Academic Year</label>
-            <select className="w-full border border-zinc-300 rounded-xl px-2 py-2 h-10 text-sm text-zinc-900 bg-white" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
+        {summary && (
+          <>
+            <section className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <p className="text-[11px] font-medium text-zinc-500">
+                  Total billed
+                </p>
+                <p className="mt-1 text-xl font-bold text-zinc-950">
+                  {formatCedis(summary.totalBilledPesewas)}
+                </p>
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  {summary.invoiceCount} invoices / {summary.learnerCount} learners
+                </p>
+              </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-zinc-900 mb-1">Class</label>
-            <select className="w-full border border-zinc-300 rounded-xl px-2 py-2 h-10 text-sm text-zinc-900 bg-white" value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)}>
-              {classOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+                <p className="text-[11px] font-medium text-emerald-700">
+                  Total collected
+                </p>
+                <p className="mt-1 text-xl font-bold text-emerald-950">
+                  {formatCedis(summary.totalPaidPesewas)}
+                </p>
+                <p className="mt-1 text-[11px] text-emerald-800">
+                  {percentFromBps(summary.collectionRateBps)} collection rate
+                </p>
+              </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-zinc-900 mb-1">Search learner / guardian / phone</label>
-            <input
-              className="w-full border border-zinc-300 rounded-xl px-3 py-2 h-10 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
-              placeholder="e.g. Ama, Mensah, 024..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-      </section>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                <p className="text-[11px] font-medium text-amber-700">
+                  Outstanding
+                </p>
+                <p className="mt-1 text-xl font-bold text-amber-950">
+                  {formatCedis(summary.outstandingPesewas)}
+                </p>
+                <p className="mt-1 text-[11px] text-amber-800">
+                  {summary.partialCount + summary.unpaidCount} learners need follow-up
+                </p>
+              </div>
 
-      <section className="grid md:grid-cols-4 gap-3">
-        <div className="border rounded-xl p-3 bg-white">
-          <div className="text-[11px] text-zinc-700">Learners in view</div>
-          <div className="text-xl font-bold text-zinc-900">{summary.count}</div>
-          <div className="text-[11px] text-zinc-700 mt-1">After applying filters</div>
-        </div>
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                <p className="text-[11px] font-medium text-blue-700">
+                  Collected today
+                </p>
+                <p className="mt-1 text-xl font-bold text-blue-950">
+                  {formatCedis(summary.todayCollectedPesewas)}
+                </p>
+                <p className="mt-1 text-[11px] text-blue-800">
+                  {summary.receiptCount} receipts in view
+                </p>
+              </div>
+            </section>
 
-        <div className="border rounded-xl p-3 bg-white">
-          <div className="text-[11px] text-zinc-700">Total billed</div>
-          <div className="text-xl font-bold text-zinc-900">{formatCurrency(summary.totalBilled)}</div>
-          <div className="text-[11px] text-zinc-700 mt-1">For selected term/year</div>
-        </div>
+            <section className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                <p className="text-[11px] text-zinc-500">Cleared</p>
+                <p className="text-lg font-bold text-emerald-700">
+                  {summary.clearedCount}
+                </p>
+              </div>
 
-        <div className="border rounded-xl p-3 bg-white">
-          <div className="text-[11px] text-zinc-700">Total paid</div>
-          <div className="text-xl font-bold text-emerald-700">{formatCurrency(summary.totalPaid)}</div>
-          <div className="text-[11px] text-zinc-700 mt-1">Cash + digital</div>
-        </div>
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                <p className="text-[11px] text-zinc-500">Partial</p>
+                <p className="text-lg font-bold text-amber-700">
+                  {summary.partialCount}
+                </p>
+              </div>
 
-        <div className="border rounded-xl p-3 bg-white">
-          <div className="text-[11px] text-zinc-700">Outstanding balance</div>
-          <div className="text-xl font-bold text-amber-700">{formatCurrency(summary.totalOwed)}</div>
-          <div className="text-[11px] text-zinc-700 mt-1">
-            {summary.partialOrUnpaidCount} learner{summary.partialOrUnpaidCount === 1 ? "" : "s"} with{" "}
-            <span className="font-semibold">partial or unpaid</span> fees
-          </div>
-        </div>
-      </section>
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                <p className="text-[11px] text-zinc-500">Unpaid</p>
+                <p className="text-lg font-bold text-red-700">
+                  {summary.unpaidCount}
+                </p>
+              </div>
 
-      <section className="border rounded-xl p-4 bg-white">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-900">
-            Fees for {selectedTerm}, {selectedYear}
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className={btnOutline} disabled>
-              Export CSV (coming soon)
-            </button>
-            <button type="button" className={btnOutline} disabled>
-              Open detailed fees module (later)
-            </button>
-          </div>
-        </div>
+              <div
+                className={`rounded-2xl border p-4 ${
+                  summary.openExceptionCount > 0 || mismatchCount > 0
+                    ? "border-red-200 bg-red-50"
+                    : "border-emerald-200 bg-emerald-50"
+                }`}
+              >
+                <p className="text-[11px] text-zinc-600">Risk signals</p>
+                <p
+                  className={`text-lg font-bold ${
+                    summary.openExceptionCount > 0 || mismatchCount > 0
+                      ? "text-red-700"
+                      : "text-emerald-700"
+                  }`}
+                >
+                  {summary.openExceptionCount + mismatchCount}
+                </p>
+                <p className="text-[11px] text-zinc-600">
+                  Exceptions + stored mismatches
+                </p>
+              </div>
+            </section>
 
-        {filteredRows.length === 0 ? (
-          <p className="text-xs text-zinc-700">No learners match these filters yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-xs border rounded-xl overflow-hidden text-zinc-900">
-              <thead className="bg-zinc-50 text-zinc-700">
-                <tr>
-                  <th className="px-3 py-2 text-left border-b">Learner</th>
-                  <th className="px-3 py-2 text-left border-b">Class</th>
-                  <th className="px-3 py-2 text-left border-b">Guardian</th>
-                  <th className="px-3 py-2 text-left border-b">Phone</th>
-                  <th className="px-3 py-2 text-right border-b">Billed</th>
-                  <th className="px-3 py-2 text-right border-b">Paid</th>
-                  <th className="px-3 py-2 text-right border-b">Balance</th>
-                  <th className="px-3 py-2 text-left border-b">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row) => {
-                  const balance = row.billed - row.paid;
-                  const isCleared = balance <= 0 && row.billed > 0;
-                  const isPartial = balance > 0 && row.paid > 0;
-                  const isUnpaid = balance > 0 && row.paid === 0;
+            <section className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-zinc-900">
+                  Outstanding by class
+                </h2>
+                <div className="mt-3 space-y-2">
+                  {classSummaries.length === 0 ? (
+                    <p className="text-xs text-zinc-500">No class data found.</p>
+                  ) : (
+                    classSummaries.slice(0, 8).map((cls) => (
+                      <div
+                        key={cls.classroomId ?? cls.classLabel}
+                        className="rounded-xl border border-zinc-200 bg-zinc-50 p-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-zinc-900">
+                              {cls.classLabel}
+                            </p>
+                            <p className="text-[11px] text-zinc-500">
+                              {cls.learnerCount} learners /{" "}
+                              {percentFromBps(cls.collectionRateBps)} collected
+                            </p>
+                          </div>
+                          <p className="text-sm font-bold text-amber-700">
+                            {formatCedis(cls.outstandingPesewas)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
 
-                  const statusText = isCleared ? "Cleared" : isPartial ? "Partial" : isUnpaid ? "Unpaid" : "Not set";
-                  const statusClasses =
-                    "inline-flex px-2 py-0.5 rounded-full border text-[11px] " +
-                    (isCleared
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                      : isPartial
-                      ? "bg-amber-50 border-amber-200 text-amber-800"
-                      : isUnpaid
-                      ? "bg-red-50 border-red-200 text-red-800"
-                      : "bg-zinc-50 border-zinc-200 text-zinc-700");
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-zinc-900">
+                  Payment methods
+                </h2>
+                <div className="mt-3 space-y-2">
+                  {paymentMethodSummaries.length === 0 ? (
+                    <p className="text-xs text-zinc-500">No payments found.</p>
+                  ) : (
+                    paymentMethodSummaries.map((method) => (
+                      <div
+                        key={method.method}
+                        className="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm"
+                      >
+                        <div>
+                          <p className="font-semibold text-zinc-900">
+                            {methodLabel(method.method)}
+                          </p>
+                          <p className="text-[11px] text-zinc-500">
+                            {method.count} payment{method.count === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <p className="font-bold text-emerald-700">
+                          {formatCedis(method.amountPesewas)}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </section>
 
-                  return (
-                    <tr key={row.id} className="border-b last:border-b-0">
-                      <td className="px-3 py-2 align-top font-semibold">{row.studentName}</td>
-                      <td className="px-3 py-2 align-top">{row.classLabel}</td>
-                      <td className="px-3 py-2 align-top">{row.guardianName || "—"}</td>
-                      <td className="px-3 py-2 align-top">
-                        {row.guardianPhone ? (
-                          <a href={`tel:${row.guardianPhone}`} className="underline underline-offset-2">
-                            {row.guardianPhone}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-3 py-2 align-top text-right">{formatCurrency(row.billed)}</td>
-                      <td className="px-3 py-2 align-top text-right">{formatCurrency(row.paid)}</td>
-                      <td className="px-3 py-2 align-top text-right font-semibold">{formatCurrency(balance)}</td>
-                      <td className="px-3 py-2 align-top">
-                        <span className={statusClasses}>{statusText}</span>
-                      </td>
+            <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-zinc-900">
+                    Top balances requiring action
+                  </h2>
+                  <p className="text-xs text-zinc-500">
+                    Sorted by highest outstanding balance.
+                  </p>
+                </div>
+                <p className="text-xs text-zinc-500">
+                  Showing {topDebtors.length} of {rows.length} invoices
+                </p>
+              </div>
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-zinc-50 text-zinc-500">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Learner</th>
+                      <th className="px-3 py-2 text-left font-medium">Class</th>
+                      <th className="px-3 py-2 text-left font-medium">Guardian</th>
+                      <th className="px-3 py-2 text-right font-medium">Billed</th>
+                      <th className="px-3 py-2 text-right font-medium">Paid</th>
+                      <th className="px-3 py-2 text-right font-medium">Balance</th>
+                      <th className="px-3 py-2 text-left font-medium">Status</th>
+                      <th className="px-3 py-2 text-left font-medium">Risk</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100">
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-3 py-6 text-center text-zinc-500">
+                          No invoices found for these filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      topDebtors.map((row) => (
+                        <tr key={row.invoiceId}>
+                          <td className="px-3 py-2 font-semibold text-zinc-900">
+                            {row.studentName}
+                            <p className="text-[10px] font-normal text-zinc-500">
+                              {row.term}, {row.academicYear}
+                            </p>
+                          </td>
+                          <td className="px-3 py-2 text-zinc-700">
+                            {row.classLabel}
+                          </td>
+                          <td className="px-3 py-2 text-zinc-700">
+                            {row.guardianName || "Unknown"}
+                            {row.guardianPhone && (
+                              <p className="text-[10px] text-zinc-500">
+                                {row.guardianPhone}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right text-zinc-900">
+                            {formatCedis(row.billedPesewas)}
+                          </td>
+                          <td className="px-3 py-2 text-right text-emerald-700">
+                            {formatCedis(row.paidPesewas)}
+                          </td>
+                          <td className="px-3 py-2 text-right font-bold text-amber-700">
+                            {formatCedis(row.outstandingPesewas)}
+                          </td>
+                          <td className="px-3 py-2">
+                            <span
+                              className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusClass(
+                                row.status
+                              )}`}
+                            >
+                              {statusLabel(row.status)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            {row.storedMismatch ? (
+                              <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                                Stored mismatch
+                              </span>
+                            ) : (
+                              <span className="text-zinc-400">Clear</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
-        <p className="mt-3 text-[11px] text-zinc-700 max-w-3xl">
-          This overview is for planning and gentle follow-up. Real data should come from invoices + payments.
-        </p>
-      </section>
+            <section className="rounded-2xl border border-zinc-200 bg-white p-4 text-xs text-zinc-600">
+              <p className="font-semibold text-zinc-900">Decision rule</p>
+              <p className="mt-1">
+                Use this page to decide follow-up priorities, not to decorate the
+                product. Highest balances, open exceptions, and stored mismatches
+                must be handled before rollout.
+              </p>
+            </section>
+          </>
+        )}
+      </div>
     </main>
   );
 }

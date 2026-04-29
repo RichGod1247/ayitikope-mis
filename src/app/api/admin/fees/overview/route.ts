@@ -2,19 +2,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
+import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type InvoiceStatusLabel = "cleared" | "partial" | "unpaid" | "no_charge";
+
 function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
-    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }
 
-function cedis(pesewas: number) {
-  return Math.round(pesewas) / 100;
+function fullName(firstName?: string | null, lastName?: string | null) {
+  return [firstName, lastName].filter(Boolean).join(" ").trim() || "Unknown";
+}
+
+function classLabel(
+  classroom?: {
+    id: string;
+    name: string | null;
+    grade: string | null;
+    arm: string | null;
+  } | null
+) {
+  if (!classroom) return "Unassigned";
+  return classroom.name || [classroom.grade, classroom.arm].filter(Boolean).join(" ") || "Class";
+}
+
+function statusFromAmounts(input: {
+  billedPesewas: number;
+  paidPesewas: number;
+  outstandingPesewas: number;
+}): InvoiceStatusLabel {
+  if (input.billedPesewas <= 0) return "no_charge";
+  if (input.outstandingPesewas <= 0) return "cleared";
+  if (input.paidPesewas > 0) return "partial";
+  return "unpaid";
+}
+
+function nowStartOfDay() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 export async function GET(req: NextRequest) {
@@ -22,167 +57,371 @@ export async function GET(req: NextRequest) {
     requireTenant: true,
     requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "HEADTEACHER", "SUPERADMIN"],
   });
+
   if (!auth.ok) return auth.res;
 
-  const { tenantId } = auth.ctx;
+  const tenantId = auth.ctx.tenantId;
   const url = new URL(req.url);
+
   const term = url.searchParams.get("term")?.trim() || null;
   const academicYear = url.searchParams.get("academicYear")?.trim() || null;
   const classroomId = url.searchParams.get("classroomId")?.trim() || null;
+  const q = url.searchParams.get("q")?.trim() || null;
+  const takeRaw = Number(url.searchParams.get("take") ?? "2000");
+  const take = Math.min(5000, Math.max(1, Number.isFinite(takeRaw) ? takeRaw : 2000));
 
-  const invoiceWhere = {
-    tenantId,
-    ...(term ? { term } : {}),
-    ...(academicYear ? { academicYear } : {}),
-  };
-
-  // If classroomId filter: get student IDs in that class first
-  let studentIdFilter: string[] | null = null;
-  if (classroomId) {
-    const ss = await prisma.student.findMany({
-      where: { tenantId, classroomId },
-      select: { id: true },
-      take: 6000,
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true, name: true, slug: true, schoolCode: true },
     });
-    studentIdFilter = ss.map((s) => s.id);
-    if (studentIdFilter.length === 0) {
-      return json(200, { ok: true, tenantId, term, academicYear, summary: { count: 0, totalBilledPesewas: 0, totalWaivedPesewas: 0, totalPaidPesewas: 0, outstandingPesewas: 0, clearedCount: 0, partialCount: 0, unpaidCount: 0 }, rows: [] });
+
+    let studentIdFilter: string[] | null = null;
+
+    if (classroomId || q) {
+      const studentWhere: Prisma.StudentWhereInput = {
+        tenantId,
+        ...(classroomId ? { classroomId } : {}),
+        ...(q
+          ? {
+              OR: [
+                { firstName: { contains: q, mode: "insensitive" } },
+                { lastName: { contains: q, mode: "insensitive" } },
+                { guardianName: { contains: q, mode: "insensitive" } },
+                { guardianPhone: { contains: q, mode: "insensitive" } },
+                { guardianPhoneNorm: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      };
+
+      const students = await prisma.student.findMany({
+        where: studentWhere,
+        select: { id: true },
+        take: 6000,
+      });
+
+      studentIdFilter = students.map((s) => s.id);
+
+      if (studentIdFilter.length === 0) {
+        return json(200, {
+          ok: true,
+          tenant,
+          filters: { term, academicYear, classroomId, q },
+          summary: {
+            invoiceCount: 0,
+            learnerCount: 0,
+            totalBilledPesewas: 0,
+            totalWaivedPesewas: 0,
+            totalPaidPesewas: 0,
+            outstandingPesewas: 0,
+            todayCollectedPesewas: 0,
+            receiptCount: 0,
+            clearedCount: 0,
+            partialCount: 0,
+            unpaidCount: 0,
+            noChargeCount: 0,
+            openExceptionCount: 0,
+            collectionRateBps: 0,
+          },
+          classSummaries: [],
+          paymentMethodSummaries: [],
+          rows: [],
+        });
+      }
     }
-  }
 
-  const invoices = await prisma.feeInvoice.findMany({
-    where: {
-      ...invoiceWhere,
+    const invoiceWhere: Prisma.FeeInvoiceWhereInput = {
+      tenantId,
+      status: { notIn: ["CANCELLED", "WRITTEN_OFF"] },
+      ...(term ? { term } : {}),
+      ...(academicYear ? { academicYear } : {}),
       ...(studentIdFilter ? { studentId: { in: studentIdFilter } } : {}),
-    },
-    select: {
-      id: true,
-      studentId: true,
-      term: true,
-      academicYear: true,
-      totalBilledPesewas: true,
-      totalWaivedPesewas: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 2000,
-  });
+    };
 
-  if (invoices.length === 0) {
-    return json(200, { ok: true, tenantId, term, academicYear, summary: { count: 0, totalBilledPesewas: 0, totalWaivedPesewas: 0, totalPaidPesewas: 0, outstandingPesewas: 0, clearedCount: 0, partialCount: 0, unpaidCount: 0 }, rows: [] });
-  }
+    const invoices = await prisma.feeInvoice.findMany({
+      where: invoiceWhere,
+      select: {
+        id: true,
+        studentId: true,
+        term: true,
+        academicYear: true,
+        status: true,
+        issuedAt: true,
+        dueDate: true,
+        totalBilledPesewas: true,
+        totalWaivedPesewas: true,
+        totalPaidPesewas: true,
+        balancePesewas: true,
+        lines: {
+          select: {
+            amountPesewas: true,
+            waivedPesewas: true,
+          },
+        },
+        adjustments: {
+          where: { reversedAt: null },
+          select: {
+            amountPesewas: true,
+          },
+        },
+        payments: {
+          where: { status: "SUCCESS" },
+          select: {
+            id: true,
+            amountPesewas: true,
+            method: true,
+            paidAt: true,
+            reference: true,
+          },
+        },
+        receipts: {
+          select: { id: true },
+        },
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            guardianName: true,
+            guardianPhone: true,
+            classroom: {
+              select: {
+                id: true,
+                name: true,
+                grade: true,
+                arm: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ issuedAt: "desc" }, { createdAt: "desc" }],
+      take,
+    });
 
-  const invoiceIds = invoices.map((i) => i.id);
+    const todayStart = nowStartOfDay();
 
-  // Payments per invoice
-  const paymentGroups = await prisma.feePayment.groupBy({
-    by: ["invoiceId"],
-    where: { tenantId, invoiceId: { in: invoiceIds } },
-    _sum: { amountPesewas: true },
-  });
-  const paidByInvoice = new Map(paymentGroups.map((g) => [g.invoiceId, g._sum.amountPesewas ?? 0]));
+    let totalBilledPesewas = 0;
+    let totalWaivedPesewas = 0;
+    let totalPaidPesewas = 0;
+    let outstandingPesewas = 0;
+    let todayCollectedPesewas = 0;
+    let receiptCount = 0;
 
-  // Students + classrooms
-  const studentIds = [...new Set(invoices.map((i) => i.studentId))];
-  const students = await prisma.student.findMany({
-    where: { tenantId, id: { in: studentIds } },
-    select: { id: true, firstName: true, lastName: true, guardianName: true, guardianPhone: true, classroomId: true },
-    take: 6000,
-  });
-  const studentMap = new Map(students.map((s) => [s.id, s]));
+    let clearedCount = 0;
+    let partialCount = 0;
+    let unpaidCount = 0;
+    let noChargeCount = 0;
 
-  const classroomIds = [...new Set(students.map((s) => s.classroomId).filter(Boolean))] as string[];
-  const classrooms = classroomIds.length
-    ? await prisma.classroom.findMany({
-        where: { tenantId, id: { in: classroomIds } },
-        select: { id: true, name: true, grade: true, arm: true },
-      })
-    : [];
-  const classroomMap = new Map(classrooms.map((c) => [c.id, c]));
+    const learnerIds = new Set<string>();
+    const classMap = new Map<
+      string,
+      {
+        classroomId: string | null;
+        classLabel: string;
+        invoiceCount: number;
+        learnerIds: Set<string>;
+        billedPesewas: number;
+        paidPesewas: number;
+        outstandingPesewas: number;
+        clearedCount: number;
+        partialCount: number;
+        unpaidCount: number;
+      }
+    >();
 
-  type Row = {
-    invoiceId: string;
-    studentId: string;
-    studentName: string;
-    classLabel: string | null;
-    guardianName: string | null;
-    guardianPhone: string | null;
-    term: string;
-    academicYear: string;
-    billedPesewas: number;
-    waivedPesewas: number;
-    paidPesewas: number;
-    outstandingPesewas: number;
-    status: "cleared" | "partial" | "unpaid";
-  };
+    const paymentMethodMap = new Map<
+      string,
+      {
+        method: string;
+        count: number;
+        amountPesewas: number;
+      }
+    >();
 
-  const rows: Row[] = [];
-  let totalBilledPesewas = 0;
-  let totalWaivedPesewas = 0;
-  let totalPaidPesewas = 0;
-  let clearedCount = 0;
-  let partialCount = 0;
-  let unpaidCount = 0;
+    const rows = invoices.map((inv) => {
+      learnerIds.add(inv.studentId);
 
-  for (const inv of invoices) {
-    const billed = inv.totalBilledPesewas ?? 0;
-    const waived = inv.totalWaivedPesewas ?? 0;
-    const paid = paidByInvoice.get(inv.id) ?? 0;
-    const outstanding = Math.max(0, billed - waived - paid);
+      const lineBilled = inv.lines.reduce((sum, line) => sum + line.amountPesewas, 0);
+      const lineWaived = inv.lines.reduce((sum, line) => sum + line.waivedPesewas, 0);
+      const adjustmentWaived = inv.adjustments.reduce((sum, adj) => sum + adj.amountPesewas, 0);
 
-    totalBilledPesewas += billed;
-    totalWaivedPesewas += waived;
-    totalPaidPesewas += paid;
+      const billed = lineBilled > 0 ? lineBilled : inv.totalBilledPesewas ?? 0;
+      const waived = Math.max(0, lineWaived + adjustmentWaived);
+      const paid = inv.payments.reduce((sum, payment) => sum + payment.amountPesewas, 0);
+      const balance = Math.max(0, billed - waived - paid);
+      const status = statusFromAmounts({
+        billedPesewas: billed,
+        paidPesewas: paid,
+        outstandingPesewas: balance,
+      });
 
-    const status: "cleared" | "partial" | "unpaid" =
-      outstanding <= 0 && billed > 0 ? "cleared" : paid > 0 ? "partial" : "unpaid";
+      totalBilledPesewas += billed;
+      totalWaivedPesewas += waived;
+      totalPaidPesewas += paid;
+      outstandingPesewas += balance;
+      receiptCount += inv.receipts.length;
 
-    if (status === "cleared") clearedCount++;
-    else if (status === "partial") partialCount++;
-    else unpaidCount++;
+      if (status === "cleared") clearedCount++;
+      else if (status === "partial") partialCount++;
+      else if (status === "unpaid") unpaidCount++;
+      else noChargeCount++;
 
-    const s = inv.studentId ? studentMap.get(inv.studentId) : null;
-    const cls = s?.classroomId ? classroomMap.get(s.classroomId) : null;
-    const classLabel = cls?.name ?? (cls ? [cls.grade, cls.arm].filter(Boolean).join(" ") : null);
+      for (const payment of inv.payments) {
+        if (payment.paidAt >= todayStart) {
+          todayCollectedPesewas += payment.amountPesewas;
+        }
 
-    rows.push({
-      invoiceId: inv.id,
-      studentId: inv.studentId,
-      studentName: s ? [s.firstName, s.lastName].filter(Boolean).join(" ") || "—" : "—",
-      classLabel,
-      guardianName: s?.guardianName ?? null,
-      guardianPhone: s?.guardianPhone ?? null,
-      term: inv.term,
-      academicYear: inv.academicYear,
-      billedPesewas: billed,
-      waivedPesewas: waived,
-      paidPesewas: paid,
-      outstandingPesewas: outstanding,
-      status,
+        const method = String(payment.method ?? "unknown").toLowerCase();
+        const bucket = paymentMethodMap.get(method) ?? {
+          method,
+          count: 0,
+          amountPesewas: 0,
+        };
+
+        bucket.count += 1;
+        bucket.amountPesewas += payment.amountPesewas;
+        paymentMethodMap.set(method, bucket);
+      }
+
+      const cls = inv.student.classroom;
+      const clsLabel = classLabel(cls);
+      const clsKey = cls?.id ?? "unassigned";
+
+      const classBucket =
+        classMap.get(clsKey) ??
+        {
+          classroomId: cls?.id ?? null,
+          classLabel: clsLabel,
+          invoiceCount: 0,
+          learnerIds: new Set<string>(),
+          billedPesewas: 0,
+          paidPesewas: 0,
+          outstandingPesewas: 0,
+          clearedCount: 0,
+          partialCount: 0,
+          unpaidCount: 0,
+        };
+
+      classBucket.invoiceCount += 1;
+      classBucket.learnerIds.add(inv.studentId);
+      classBucket.billedPesewas += billed;
+      classBucket.paidPesewas += paid;
+      classBucket.outstandingPesewas += balance;
+
+      if (status === "cleared") classBucket.clearedCount++;
+      else if (status === "partial") classBucket.partialCount++;
+      else if (status === "unpaid") classBucket.unpaidCount++;
+
+      classMap.set(clsKey, classBucket);
+
+      const storedMismatch =
+        (inv.totalPaidPesewas ?? 0) !== paid ||
+        (inv.balancePesewas ?? 0) !== balance ||
+        (inv.totalBilledPesewas ?? 0) !== billed ||
+        (inv.totalWaivedPesewas ?? 0) !== waived;
+
+      return {
+        invoiceId: inv.id,
+        studentId: inv.studentId,
+        studentName: fullName(inv.student.firstName, inv.student.lastName),
+        classLabel: clsLabel,
+        classroomId: cls?.id ?? null,
+        guardianName: inv.student.guardianName ?? null,
+        guardianPhone: inv.student.guardianPhone ?? null,
+        term: inv.term,
+        academicYear: inv.academicYear,
+        status,
+        storedInvoiceStatus: inv.status,
+        issuedAt: inv.issuedAt.toISOString(),
+        dueDate: inv.dueDate ? inv.dueDate.toISOString() : null,
+        billedPesewas: billed,
+        waivedPesewas: waived,
+        paidPesewas: paid,
+        outstandingPesewas: balance,
+        paymentCount: inv.payments.length,
+        receiptCount: inv.receipts.length,
+        latestPaymentAt:
+          inv.payments
+            .map((p) => p.paidAt)
+            .sort((a, b) => b.getTime() - a.getTime())[0]
+            ?.toISOString() ?? null,
+        storedMismatch,
+      };
+    });
+
+    rows.sort((a, b) => b.outstandingPesewas - a.outstandingPesewas);
+
+    const invoiceIds = invoices.map((inv) => inv.id);
+
+    const openExceptionCount =
+      invoiceIds.length > 0
+        ? await prisma.reconciliationException.count({
+            where: {
+              tenantId,
+              status: { in: ["OPEN", "INVESTIGATING"] },
+              invoiceId: { in: invoiceIds },
+            },
+          })
+        : 0;
+
+    const classSummaries = Array.from(classMap.values())
+      .map((item) => ({
+        classroomId: item.classroomId,
+        classLabel: item.classLabel,
+        invoiceCount: item.invoiceCount,
+        learnerCount: item.learnerIds.size,
+        billedPesewas: item.billedPesewas,
+        paidPesewas: item.paidPesewas,
+        outstandingPesewas: item.outstandingPesewas,
+        clearedCount: item.clearedCount,
+        partialCount: item.partialCount,
+        unpaidCount: item.unpaidCount,
+        collectionRateBps:
+          item.billedPesewas > 0
+            ? Math.round((item.paidPesewas / item.billedPesewas) * 10000)
+            : 0,
+      }))
+      .sort((a, b) => b.outstandingPesewas - a.outstandingPesewas);
+
+    const paymentMethodSummaries = Array.from(paymentMethodMap.values()).sort(
+      (a, b) => b.amountPesewas - a.amountPesewas
+    );
+
+    return json(200, {
+      ok: true,
+      tenant,
+      filters: { term, academicYear, classroomId, q },
+      summary: {
+        invoiceCount: invoices.length,
+        learnerCount: learnerIds.size,
+        totalBilledPesewas,
+        totalWaivedPesewas,
+        totalPaidPesewas,
+        outstandingPesewas,
+        todayCollectedPesewas,
+        receiptCount,
+        clearedCount,
+        partialCount,
+        unpaidCount,
+        noChargeCount,
+        openExceptionCount,
+        collectionRateBps:
+          totalBilledPesewas > 0
+            ? Math.round((totalPaidPesewas / totalBilledPesewas) * 10000)
+            : 0,
+      },
+      classSummaries,
+      paymentMethodSummaries,
+      rows,
+    });
+  } catch (err) {
+    console.error("[ADMIN_FEES_OVERVIEW_ERROR]", err);
+
+    return json(500, {
+      ok: false,
+      error: "FAILED_TO_LOAD_FINANCE_OVERVIEW",
     });
   }
-
-  rows.sort((a, b) => (b.outstandingPesewas ?? 0) - (a.outstandingPesewas ?? 0));
-
-  return json(200, {
-    ok: true,
-    tenantId,
-    term,
-    academicYear,
-    summary: {
-      count: rows.length,
-      totalBilledPesewas,
-      totalWaivedPesewas,
-      totalPaidPesewas,
-      outstandingPesewas: Math.max(0, totalBilledPesewas - totalWaivedPesewas - totalPaidPesewas),
-      clearedCount,
-      partialCount,
-      unpaidCount,
-      // cedis convenience fields
-      totalBilledCedis: cedis(totalBilledPesewas),
-      totalWaivedCedis: cedis(totalWaivedPesewas),
-      totalPaidCedis: cedis(totalPaidPesewas),
-      outstandingCedis: cedis(Math.max(0, totalBilledPesewas - totalWaivedPesewas - totalPaidPesewas)),
-    },
-    rows,
-  });
 }
