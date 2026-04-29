@@ -6,11 +6,38 @@ import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function noStore(status: number, payload: any) {
+function noStore(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
-    headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" },
+    headers: {
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
   });
+}
+
+function fullName(firstName?: string | null, lastName?: string | null) {
+  return [firstName, lastName].filter(Boolean).join(" ").trim();
+}
+
+function parentOwnsStudent(input: {
+  parentE164: string;
+  parentSuffix9: string;
+  studentGuardianPhone?: string | null;
+  studentGuardianPhoneNorm?: string | null;
+}) {
+  const parentDigits = digitsOnly(input.parentE164);
+  const parentLast9 = parentDigits.slice(-9);
+  const suffix9 = digitsOnly(input.parentSuffix9);
+
+  const sNorm = digitsOnly(input.studentGuardianPhoneNorm ?? "");
+  const sRaw = digitsOnly(input.studentGuardianPhone ?? "");
+
+  return (
+    (parentLast9.length >= 7 &&
+      (sNorm.endsWith(parentLast9) || sRaw.endsWith(parentLast9))) ||
+    (suffix9.length >= 7 && (sNorm.endsWith(suffix9) || sRaw.endsWith(suffix9)))
+  );
 }
 
 export async function GET(
@@ -18,21 +45,31 @@ export async function GET(
   { params }: { params: Promise<{ receiptId: string }> }
 ) {
   try {
-    const gate = requireParentSession(req as any);
-    if (!gate.ok) return gate.res as any;
+    const gate = requireParentSession(
+      req as Parameters<typeof requireParentSession>[0]
+    );
+
+    if (!gate.ok) return gate.res as NextResponse;
 
     const sess = gate.session;
     const tenantId = sess.tenantId;
-    const e164 = String(sess.guardianPhoneE164 ?? "").trim();
-    const suffix9 = digitsOnly(sess.guardianSuffix9 ?? "");
 
     const { receiptId } = await params;
-    if (!receiptId) return noStore(400, { ok: false, error: "receiptId required." });
+
+    if (!receiptId?.trim()) {
+      return noStore(400, { ok: false, error: "RECEIPT_ID_REQUIRED" });
+    }
 
     const receipt = await prisma.receipt.findFirst({
-      where: { id: receiptId, tenantId },
+      where: {
+        id: receiptId,
+        tenantId,
+      },
       select: {
         id: true,
+        tenantId: true,
+        invoiceId: true,
+        feePaymentId: true,
         receiptNumber: true,
         issuedAt: true,
         issuedToName: true,
@@ -41,19 +78,42 @@ export async function GET(
         createdAt: true,
         feePayment: {
           select: {
+            id: true,
             amountPesewas: true,
             method: true,
             reference: true,
             channel: true,
             paidAt: true,
+            paymentTransaction: {
+              select: {
+                provider: true,
+                providerReference: true,
+                providerTransactionId: true,
+              },
+            },
           },
         },
         invoice: {
           select: {
+            id: true,
             term: true,
             academicYear: true,
+            status: true,
             totalBilledPesewas: true,
             totalWaivedPesewas: true,
+            totalPaidPesewas: true,
+            balancePesewas: true,
+            lines: {
+              select: {
+                id: true,
+                category: true,
+                description: true,
+                amountPesewas: true,
+                waivedPesewas: true,
+                sortOrder: true,
+              },
+              orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            },
             student: {
               select: {
                 id: true,
@@ -62,12 +122,24 @@ export async function GET(
                 guardianName: true,
                 guardianPhone: true,
                 guardianPhoneNorm: true,
-                classroom: { select: { name: true, grade: true, arm: true } },
+                classroom: {
+                  select: {
+                    name: true,
+                    grade: true,
+                    arm: true,
+                  },
+                },
               },
             },
           },
         },
-        issuedBy: { select: { name: true, firstName: true, lastName: true } },
+        issuedBy: {
+          select: {
+            name: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
         tenant: {
           select: {
             name: true,
@@ -79,54 +151,51 @@ export async function GET(
       },
     });
 
-    if (!receipt) return noStore(404, { ok: false, error: "Receipt not found." });
+    if (!receipt) {
+      return noStore(404, { ok: false, error: "RECEIPT_NOT_FOUND" });
+    }
 
-    // Verify this receipt belongs to one of this parent's students
-    const student = receipt.invoice?.student;
-    if (!student) return noStore(403, { ok: false, error: "Forbidden." });
+    const student = receipt.invoice.student;
 
-    const sNorm = digitsOnly(student.guardianPhoneNorm ?? student.guardianPhone ?? "");
-    const sRaw = digitsOnly(student.guardianPhone ?? "");
-    const parentE164Digits = digitsOnly(e164);
-    const matches =
-      (parentE164Digits && (sNorm.endsWith(parentE164Digits.slice(-9)) || sRaw.endsWith(parentE164Digits.slice(-9)))) ||
-      (suffix9.length >= 7 && (sNorm.endsWith(suffix9) || sRaw.endsWith(suffix9)));
-
-    if (!matches) return noStore(403, { ok: false, error: "Forbidden." });
-
-    // Compute aggregate paid + outstanding
-    const allPayments = await prisma.feePayment.aggregate({
-      where: { tenantId, invoiceId: receipt.invoice ? receipt.invoice.term ? undefined : undefined : undefined },
-      _sum: { amountPesewas: true },
+    const ownsStudent = parentOwnsStudent({
+      parentE164: String(sess.guardianPhoneE164 ?? ""),
+      parentSuffix9: String(sess.guardianSuffix9 ?? ""),
+      studentGuardianPhone: student.guardianPhone,
+      studentGuardianPhoneNorm: student.guardianPhoneNorm,
     });
 
-    const billed = receipt.invoice?.totalBilledPesewas ?? 0;
-    const waived = receipt.invoice?.totalWaivedPesewas ?? 0;
+    if (!ownsStudent) {
+      return noStore(403, { ok: false, error: "FORBIDDEN_RECEIPT" });
+    }
 
-    // Get total paid on this invoice
-    const invoiceId = await prisma.receipt
-      .findUnique({ where: { id: receiptId }, select: { invoiceId: true } })
-      .then((r) => r?.invoiceId);
+    const totalPaidAgg = await prisma.feePayment.aggregate({
+      where: {
+        tenantId,
+        invoiceId: receipt.invoiceId,
+        status: "SUCCESS",
+      },
+      _sum: {
+        amountPesewas: true,
+      },
+    });
 
-    const totalPaidAgg = invoiceId
-      ? await prisma.feePayment.aggregate({
-          where: { tenantId, invoiceId },
-          _sum: { amountPesewas: true },
-        })
-      : { _sum: { amountPesewas: 0 } };
+    const totalPaidPesewas = totalPaidAgg._sum.amountPesewas ?? 0;
+    const billed = receipt.invoice.totalBilledPesewas ?? 0;
+    const waived = receipt.invoice.totalWaivedPesewas ?? 0;
+    const outstandingPesewas = Math.max(0, billed - waived - totalPaidPesewas);
 
-    const totalPaid = totalPaidAgg._sum.amountPesewas ?? 0;
-    const outstandingPesewas = Math.max(0, billed - waived - totalPaid);
-
-    const issuedByName = receipt.issuedBy
-      ? [receipt.issuedBy.firstName, receipt.issuedBy.lastName].filter(Boolean).join(" ").trim() ||
-        receipt.issuedBy.name ||
-        "School Office"
-      : "School Office";
+    const issuedByName =
+      fullName(receipt.issuedBy?.firstName, receipt.issuedBy?.lastName) ||
+      receipt.issuedBy?.name ||
+      "School Office";
 
     const classLabel = student.classroom
-      ? [student.classroom.name || student.classroom.grade, student.classroom.arm].filter(Boolean).join(" ")
+      ? [student.classroom.name || student.classroom.grade, student.classroom.arm]
+          .filter(Boolean)
+          .join(" ")
       : null;
+
+    const learnerName = fullName(student.firstName, student.lastName) || "Student";
 
     return noStore(200, {
       ok: true,
@@ -138,37 +207,56 @@ export async function GET(
         issuedToPhone: receipt.issuedToPhone,
         note: receipt.note,
         payment: {
+          id: receipt.feePayment?.id ?? null,
           amountPesewas: receipt.feePayment?.amountPesewas ?? 0,
           method: receipt.feePayment?.method ?? null,
           reference: receipt.feePayment?.reference ?? null,
           channel: receipt.feePayment?.channel ?? null,
           paidAt: receipt.feePayment?.paidAt?.toISOString() ?? null,
+          provider: receipt.feePayment?.paymentTransaction?.provider ?? null,
+          providerReference:
+            receipt.feePayment?.paymentTransaction?.providerReference ?? null,
+          providerTransactionId:
+            receipt.feePayment?.paymentTransaction?.providerTransactionId ?? null,
         },
         invoice: {
-          term: receipt.invoice?.term ?? null,
-          academicYear: receipt.invoice?.academicYear ?? null,
+          id: receipt.invoice.id,
+          term: receipt.invoice.term,
+          academicYear: receipt.invoice.academicYear,
+          status: receipt.invoice.status,
           totalBilledPesewas: billed,
           totalWaivedPesewas: waived,
-          totalPaidPesewas: totalPaid,
+          totalPaidPesewas,
           outstandingPesewas,
+          lines: receipt.invoice.lines.map((line) => ({
+            id: line.id,
+            category: line.category,
+            description: line.description,
+            amountPesewas: line.amountPesewas,
+            waivedPesewas: line.waivedPesewas,
+          })),
         },
         student: {
           id: student.id,
-          name: [student.firstName, student.lastName].filter(Boolean).join(" ").trim() || "—",
+          name: learnerName,
           guardianName: student.guardianName ?? null,
           classLabel,
         },
         school: {
-          name: receipt.tenant?.name ?? "",
-          schoolCode: receipt.tenant?.schoolCode ?? "",
-          contactEmail: receipt.tenant?.contactEmail ?? null,
-          contactPhone: receipt.tenant?.contactPhone ?? null,
+          name: receipt.tenant.name,
+          schoolCode: receipt.tenant.schoolCode,
+          contactEmail: receipt.tenant.contactEmail,
+          contactPhone: receipt.tenant.contactPhone,
         },
         issuedByName,
       },
     });
   } catch (err) {
     console.error("[PARENT_RECEIPT_GET_ERROR]", err);
-    return noStore(500, { ok: false, error: "Failed to load receipt." });
+
+    return noStore(500, {
+      ok: false,
+      error: "FAILED_TO_LOAD_RECEIPT",
+    });
   }
 }
