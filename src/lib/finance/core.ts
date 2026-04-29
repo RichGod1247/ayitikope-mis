@@ -9,6 +9,8 @@ type DbClient = PrismaClient | TxClient;
 type FinanceErrorCode =
   | "TENANT_NOT_FOUND"
   | "CLASSROOM_NOT_FOUND"
+  | "STUDENT_NOT_FOUND"
+  | "FORBIDDEN_STUDENT"
   | "FEE_STRUCTURE_NOT_FOUND"
   | "FEE_STRUCTURE_INACTIVE"
   | "FEE_STRUCTURE_MISSING_TERM_OR_YEAR"
@@ -16,8 +18,15 @@ type FinanceErrorCode =
   | "NO_ACTIVE_STUDENTS"
   | "INVOICE_NOT_FOUND"
   | "INVOICE_ALREADY_CLEARED"
+  | "INVOICE_BALANCE_CHANGED"
+  | "PAYMENT_INTENT_NOT_FOUND"
+  | "PAYMENT_AMOUNT_INVALID"
+  | "PAYMENT_AMOUNT_MISMATCH"
   | "PAYMENT_EXCEEDS_BALANCE"
-  | "DUPLICATE_PAYMENT_REFERENCE";
+  | "PAYMENT_ALREADY_PROCESSED"
+  | "DUPLICATE_PAYMENT_REFERENCE"
+  | "PAYMENT_GATEWAY_FAILED"
+  | "PAYMENT_SERVICE_NOT_CONFIGURED";
 
 export class FinanceError extends Error {
   code: FinanceErrorCode;
@@ -53,9 +62,14 @@ function makeReceiptNumber(schoolCode: string): string {
   return `${schoolCode.toUpperCase()}-${yyyymmdd}-${rand}`;
 }
 
-async function createUniqueReceiptNumber(tx: TxClient, tenantId: string, schoolCode: string): Promise<string> {
+async function createUniqueReceiptNumber(
+  tx: TxClient,
+  tenantId: string,
+  schoolCode: string
+): Promise<string> {
   for (let i = 0; i < 8; i++) {
     const receiptNumber = makeReceiptNumber(schoolCode);
+
     const existing = await tx.receipt.findFirst({
       where: { tenantId, receiptNumber },
       select: { id: true },
@@ -64,7 +78,70 @@ async function createUniqueReceiptNumber(tx: TxClient, tenantId: string, schoolC
     if (!existing) return receiptNumber;
   }
 
-  throw new FinanceError("DUPLICATE_PAYMENT_REFERENCE", 409, "Unable to generate a unique receipt number.");
+  throw new FinanceError(
+    "DUPLICATE_PAYMENT_REFERENCE",
+    409,
+    "Unable to generate a unique receipt number."
+  );
+}
+
+function digitsOnlyFinance(value: string | null | undefined): string {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+function makePaystackReference(schoolCode: string): string {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rand = crypto.randomBytes(4).toString("hex").toUpperCase();
+  return `${schoolCode.toUpperCase()}-PAY-${ts}-${rand}`;
+}
+
+async function createUniquePaystackReference(
+  tx: TxClient,
+  tenantId: string,
+  schoolCode: string
+): Promise<string> {
+  for (let i = 0; i < 8; i++) {
+    const providerReference = makePaystackReference(schoolCode);
+
+    const existing = await tx.paymentIntent.findFirst({
+      where: {
+        tenantId,
+        provider: "PAYSTACK",
+        providerReference,
+      },
+      select: { id: true },
+    });
+
+    if (!existing) return providerReference;
+  }
+
+  throw new FinanceError(
+    "DUPLICATE_PAYMENT_REFERENCE",
+    409,
+    "Unable to generate a unique Paystack reference."
+  );
+}
+
+function toPrismaJson(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
+}
+
+function parseProviderPaidAt(value: unknown): Date | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function cleanProviderString(value: unknown): string | null {
+  const s = String(value ?? "").trim();
+  return s ? s : null;
+}
+
+function cleanProviderNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.floor(value)
+    : NaN;
 }
 
 export async function recalculateInvoiceTotals(
@@ -112,10 +189,14 @@ export async function recalculateInvoiceTotals(
   const balancePesewas = Math.max(0, netDue - totalPaidPesewas);
 
   let status: "OPEN" | "PARTIALLY_PAID" | "PAID" = "OPEN";
-  if (netDue > 0 && balancePesewas === 0) status = "PAID";
-  else if (totalPaidPesewas > 0) status = "PARTIALLY_PAID";
 
-  const updated = await tx.feeInvoice.update({
+  if (netDue > 0 && balancePesewas === 0) {
+    status = "PAID";
+  } else if (totalPaidPesewas > 0) {
+    status = "PARTIALLY_PAID";
+  }
+
+  return tx.feeInvoice.update({
     where: { id: invoiceId },
     data: {
       totalBilledPesewas,
@@ -138,8 +219,6 @@ export async function recalculateInvoiceTotals(
       balancePesewas: true,
     },
   });
-
-  return updated;
 }
 
 export async function getInvoiceBalance(
@@ -257,6 +336,7 @@ export async function generateInvoicesForClassroomFeeStructure(input: {
           },
           select: { id: true },
         });
+
         createdInvoices++;
       } else {
         existingInvoices++;
@@ -350,7 +430,11 @@ export async function recordManualPayment(input: {
   const cleanPaymentMethod = cleanMethod(method);
 
   if (!Number.isFinite(amountPesewas) || amountPesewas <= 0) {
-    throw new FinanceError("PAYMENT_EXCEEDS_BALANCE", 400, "amountPesewas must be positive.");
+    throw new FinanceError(
+      "PAYMENT_AMOUNT_INVALID",
+      400,
+      "amountPesewas must be positive."
+    );
   }
 
   return prisma.$transaction(async (tx) => {
@@ -429,13 +513,19 @@ export async function recordManualPayment(input: {
     });
 
     const studentName =
-      [invoice.student?.firstName, invoice.student?.lastName].filter(Boolean).join(" ").trim() ||
-      "Student";
+      [invoice.student?.firstName, invoice.student?.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || "Student";
 
     const guardianPhone =
       invoice.student?.guardianPhoneNorm || invoice.student?.guardianPhone || null;
 
-    const receiptNumber = await createUniqueReceiptNumber(tx, tenantId, tenant.schoolCode);
+    const receiptNumber = await createUniqueReceiptNumber(
+      tx,
+      tenantId,
+      tenant.schoolCode
+    );
 
     const receipt = await tx.receipt.create({
       data: {
@@ -480,6 +570,656 @@ export async function recordManualPayment(input: {
       term: invoice.term,
       academicYear: invoice.academicYear,
       outstandingPesewas: recalculatedAfter.balancePesewas,
+    };
+  });
+}
+
+export async function createParentPaymentIntent(input: {
+  tenantId: string;
+  studentId: string;
+  term: string;
+  academicYear: string;
+  amountPesewas: number;
+  guardianPhoneE164: string;
+  guardianSuffix9: string;
+}) {
+  const {
+    tenantId,
+    studentId,
+    term,
+    academicYear,
+    amountPesewas,
+    guardianPhoneE164,
+    guardianSuffix9,
+  } = input;
+
+  if (!Number.isFinite(amountPesewas) || amountPesewas < 100) {
+    throw new FinanceError(
+      "PAYMENT_AMOUNT_INVALID",
+      400,
+      "amountPesewas must be at least 100."
+    );
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const [tenant, student] = await Promise.all([
+      tx.tenant.findUnique({
+        where: { id: tenantId },
+        select: {
+          id: true,
+          name: true,
+          schoolCode: true,
+          contactEmail: true,
+        },
+      }),
+      tx.student.findFirst({
+        where: { id: studentId, tenantId, status: "ACTIVE" },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          guardianPhone: true,
+          guardianPhoneNorm: true,
+          guardianName: true,
+        },
+      }),
+    ]);
+
+    if (!tenant) throw new FinanceError("TENANT_NOT_FOUND", 404);
+    if (!student) throw new FinanceError("STUDENT_NOT_FOUND", 404);
+
+    const studentPhoneNorm = digitsOnlyFinance(
+      student.guardianPhoneNorm ?? student.guardianPhone
+    );
+    const studentPhoneRaw = digitsOnlyFinance(student.guardianPhone);
+    const parentDigits = digitsOnlyFinance(guardianPhoneE164);
+    const suffix9 = digitsOnlyFinance(guardianSuffix9);
+    const parentLast9 = parentDigits.slice(-9);
+
+    const ownsStudent =
+      (parentLast9.length >= 7 &&
+        (studentPhoneNorm.endsWith(parentLast9) ||
+          studentPhoneRaw.endsWith(parentLast9))) ||
+      (suffix9.length >= 7 &&
+        (studentPhoneNorm.endsWith(suffix9) || studentPhoneRaw.endsWith(suffix9)));
+
+    if (!ownsStudent) {
+      throw new FinanceError("FORBIDDEN_STUDENT", 403);
+    }
+
+    const invoices = await tx.feeInvoice.findMany({
+      where: {
+        tenantId,
+        studentId,
+        term,
+        academicYear,
+        status: { notIn: ["CANCELLED", "WRITTEN_OFF"] },
+      },
+      select: { id: true },
+      orderBy: { createdAt: "asc" },
+      take: 20,
+    });
+
+    if (invoices.length === 0) {
+      throw new FinanceError("INVOICE_NOT_FOUND", 404);
+    }
+
+    let targetInvoice:
+      | Awaited<ReturnType<typeof recalculateInvoiceTotals>>
+      | null = null;
+
+    let totalOutstandingPesewas = 0;
+
+    for (const inv of invoices) {
+      const recalculated = await recalculateInvoiceTotals(tx, tenantId, inv.id);
+
+      if (recalculated.balancePesewas > 0) {
+        if (!targetInvoice) targetInvoice = recalculated;
+        totalOutstandingPesewas += recalculated.balancePesewas;
+      }
+    }
+
+    if (!targetInvoice || totalOutstandingPesewas <= 0) {
+      throw new FinanceError("INVOICE_ALREADY_CLEARED", 400);
+    }
+
+    if (amountPesewas > targetInvoice.balancePesewas) {
+      throw new FinanceError(
+        "PAYMENT_EXCEEDS_BALANCE",
+        400,
+        "Amount exceeds the selected invoice balance."
+      );
+    }
+
+    const providerReference = await createUniquePaystackReference(
+      tx,
+      tenantId,
+      tenant.schoolCode
+    );
+
+    const studentName =
+      [student.firstName, student.lastName].filter(Boolean).join(" ").trim() ||
+      "Student";
+
+    const intent = await tx.paymentIntent.create({
+      data: {
+        tenantId,
+        studentId,
+        invoiceId: targetInvoice.id,
+        provider: "PAYSTACK",
+        providerReference,
+        amountPesewas,
+        currency: "GHS",
+        status: "PENDING",
+        metadata: {
+          studentName,
+          term,
+          academicYear,
+          source: "parent_portal",
+        },
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        studentId: true,
+        invoiceId: true,
+        providerReference: true,
+        amountPesewas: true,
+        currency: true,
+        status: true,
+      },
+    });
+
+    const email =
+      tenant.contactEmail?.trim() ||
+      `school-${tenantId.slice(0, 8)}@edulifeos.app`;
+
+    return {
+      ok: true,
+      tenant,
+      student,
+      studentName,
+      intent,
+      invoiceId: targetInvoice.id,
+      invoiceOutstandingPesewas: targetInvoice.balancePesewas,
+      totalOutstandingPesewas,
+      email,
+    };
+  });
+}
+
+export async function attachGatewayToPaymentIntent(input: {
+  tenantId: string;
+  providerReference: string;
+  checkoutUrl: string;
+  accessCode?: string | null;
+}) {
+  await prisma.paymentIntent.updateMany({
+    where: {
+      tenantId: input.tenantId,
+      provider: "PAYSTACK",
+      providerReference: input.providerReference,
+    },
+    data: {
+      checkoutUrl: input.checkoutUrl,
+      accessCode: input.accessCode ?? null,
+    },
+  });
+}
+
+export async function markPaymentIntentGatewayFailed(input: {
+  tenantId: string;
+  providerReference: string;
+  reason?: string;
+}) {
+  await prisma.paymentIntent.updateMany({
+    where: {
+      tenantId: input.tenantId,
+      provider: "PAYSTACK",
+      providerReference: input.providerReference,
+      status: "PENDING",
+    },
+    data: {
+      status: "FAILED",
+      metadata: {
+        gatewayFailureReason: input.reason ?? "PAYSTACK_INITIALIZATION_FAILED",
+      },
+    },
+  });
+}
+
+export async function recordProviderEventOnly(input: {
+  eventType: string;
+  providerReference?: string | null;
+  signature?: string | null;
+  rawPayload: unknown;
+  processingStatus?: "RECEIVED" | "PROCESSED" | "FAILED" | "IGNORED";
+  processingError?: string | null;
+}) {
+  return prisma.paymentProviderEvent.create({
+    data: {
+      provider: "PAYSTACK",
+      eventType: input.eventType,
+      providerReference: input.providerReference ?? null,
+      signature: input.signature ?? null,
+      rawPayload: toPrismaJson(input.rawPayload),
+      processingStatus: input.processingStatus ?? "IGNORED",
+      processingError: input.processingError ?? null,
+      processedAt: new Date(),
+    },
+  });
+}
+
+export async function finalizePaystackChargeSuccess(input: {
+  event: Record<string, unknown>;
+  signature?: string | null;
+}) {
+  const data = (input.event.data ?? {}) as Record<string, unknown>;
+
+  const reference = cleanProviderString(data.reference);
+  const amountPesewas = cleanProviderNumber(data.amount);
+  const currency = (cleanProviderString(data.currency) ?? "GHS").toUpperCase();
+  const channel = cleanProviderString(data.channel);
+  const providerTransactionId = cleanProviderString(data.id);
+  const providerPaidAt = parseProviderPaidAt(data.paid_at);
+
+  if (!reference || !Number.isFinite(amountPesewas) || amountPesewas <= 0) {
+    await recordProviderEventOnly({
+      eventType: String(input.event.event ?? "charge.success"),
+      providerReference: reference,
+      signature: input.signature,
+      rawPayload: input.event,
+      processingStatus: "FAILED",
+      processingError: "INVALID_REFERENCE_OR_AMOUNT",
+    });
+
+    return {
+      ok: true,
+      skipped: true,
+      reason: "INVALID_REFERENCE_OR_AMOUNT",
+    };
+  }
+
+  const intentLite = await prisma.paymentIntent.findFirst({
+    where: {
+      provider: "PAYSTACK",
+      providerReference: reference,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      invoiceId: true,
+      studentId: true,
+      amountPesewas: true,
+      status: true,
+    },
+  });
+
+  const providerEvent = await prisma.paymentProviderEvent.create({
+    data: {
+      tenantId: intentLite?.tenantId ?? null,
+      provider: "PAYSTACK",
+      eventType: String(input.event.event ?? "charge.success"),
+      providerReference: reference,
+      signature: input.signature ?? null,
+      rawPayload: toPrismaJson(input.event),
+      processingStatus: "RECEIVED",
+    },
+    select: { id: true },
+  });
+
+  if (!intentLite) {
+    await prisma.paymentProviderEvent.update({
+      where: { id: providerEvent.id },
+      data: {
+        processingStatus: "FAILED",
+        processingError: "PAYMENT_INTENT_NOT_FOUND",
+        processedAt: new Date(),
+      },
+    });
+
+    return {
+      ok: true,
+      skipped: true,
+      reason: "PAYMENT_INTENT_NOT_FOUND",
+    };
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const intent = await tx.paymentIntent.findFirst({
+      where: { id: intentLite.id },
+      select: {
+        id: true,
+        tenantId: true,
+        studentId: true,
+        invoiceId: true,
+        amountPesewas: true,
+        status: true,
+        providerReference: true,
+        invoice: {
+          select: {
+            id: true,
+            studentId: true,
+            term: true,
+            academicYear: true,
+            student: {
+              select: {
+                firstName: true,
+                lastName: true,
+                guardianPhone: true,
+                guardianPhoneNorm: true,
+              },
+            },
+          },
+        },
+        tenant: {
+          select: {
+            name: true,
+            schoolCode: true,
+          },
+        },
+      },
+    });
+
+    if (!intent) {
+      await tx.paymentProviderEvent.update({
+        where: { id: providerEvent.id },
+        data: {
+          processingStatus: "FAILED",
+          processingError: "PAYMENT_INTENT_NOT_FOUND",
+          processedAt: new Date(),
+        },
+      });
+
+      return {
+        ok: true,
+        skipped: true,
+        reason: "PAYMENT_INTENT_NOT_FOUND",
+      };
+    }
+
+    const existingTransaction = await tx.paymentTransaction.findFirst({
+      where: {
+        tenantId: intent.tenantId,
+        provider: "PAYSTACK",
+        providerReference: reference,
+      },
+      select: { id: true, feePaymentId: true },
+    });
+
+    if (existingTransaction) {
+      await tx.paymentIntent.update({
+        where: { id: intent.id },
+        data: { status: "PAID" },
+      });
+
+      await tx.paymentProviderEvent.update({
+        where: { id: providerEvent.id },
+        data: {
+          processingStatus: "PROCESSED",
+          processedAt: new Date(),
+        },
+      });
+
+      return {
+        ok: true,
+        alreadyProcessed: true,
+        paymentTransactionId: existingTransaction.id,
+      };
+    }
+
+    const existingPayment = await tx.feePayment.findFirst({
+      where: {
+        tenantId: intent.tenantId,
+        reference,
+      },
+      select: {
+        id: true,
+        amountPesewas: true,
+      },
+    });
+
+    if (existingPayment) {
+      const transaction = await tx.paymentTransaction.create({
+        data: {
+          tenantId: intent.tenantId,
+          paymentIntentId: intent.id,
+          feePaymentId: existingPayment.id,
+          provider: "PAYSTACK",
+          providerReference: reference,
+          providerTransactionId,
+          amountPesewas: existingPayment.amountPesewas,
+          currency,
+          status: "SUCCESS",
+          channel,
+          providerPaidAt,
+          providerRaw: toPrismaJson(input.event),
+        },
+        select: { id: true },
+      });
+
+      await tx.paymentIntent.update({
+        where: { id: intent.id },
+        data: { status: "PAID" },
+      });
+
+      await tx.paymentProviderEvent.update({
+        where: { id: providerEvent.id },
+        data: {
+          processingStatus: "PROCESSED",
+          processedAt: new Date(),
+        },
+      });
+
+      return {
+        ok: true,
+        alreadyProcessed: true,
+        paymentTransactionId: transaction.id,
+        legacyPaymentLinked: true,
+      };
+    }
+
+    if (amountPesewas !== intent.amountPesewas) {
+      await tx.reconciliationException.create({
+        data: {
+          tenantId: intent.tenantId,
+          invoiceId: intent.invoiceId,
+          providerReference: reference,
+          kind: "AMOUNT_MISMATCH",
+          severity: "CRITICAL",
+          status: "OPEN",
+          expectedPesewas: intent.amountPesewas,
+          actualPesewas: amountPesewas,
+          deltaPesewas: amountPesewas - intent.amountPesewas,
+          description:
+            "Paystack webhook amount does not match local PaymentIntent amount. Payment was not credited.",
+        },
+      });
+
+      await tx.paymentIntent.update({
+        where: { id: intent.id },
+        data: { status: "FAILED" },
+      });
+
+      await tx.paymentProviderEvent.update({
+        where: { id: providerEvent.id },
+        data: {
+          processingStatus: "FAILED",
+          processingError: "PAYMENT_AMOUNT_MISMATCH",
+          processedAt: new Date(),
+        },
+      });
+
+      return {
+        ok: true,
+        skipped: true,
+        reason: "PAYMENT_AMOUNT_MISMATCH",
+      };
+    }
+
+    const invoiceBefore = await recalculateInvoiceTotals(
+      tx,
+      intent.tenantId,
+      intent.invoiceId
+    );
+
+    if (invoiceBefore.balancePesewas < amountPesewas) {
+      await tx.reconciliationException.create({
+        data: {
+          tenantId: intent.tenantId,
+          invoiceId: intent.invoiceId,
+          providerReference: reference,
+          kind: "OVERPAYMENT",
+          severity: "HIGH",
+          status: "OPEN",
+          expectedPesewas: invoiceBefore.balancePesewas,
+          actualPesewas: amountPesewas,
+          deltaPesewas: amountPesewas - invoiceBefore.balancePesewas,
+          description:
+            "Paystack payment is greater than the current invoice balance. Payment was not credited automatically.",
+        },
+      });
+
+      await tx.paymentIntent.update({
+        where: { id: intent.id },
+        data: { status: "FAILED" },
+      });
+
+      await tx.paymentProviderEvent.update({
+        where: { id: providerEvent.id },
+        data: {
+          processingStatus: "FAILED",
+          processingError: "PAYMENT_EXCEEDS_BALANCE",
+          processedAt: new Date(),
+        },
+      });
+
+      return {
+        ok: true,
+        skipped: true,
+        reason: "PAYMENT_EXCEEDS_BALANCE",
+      };
+    }
+
+    const transaction = await tx.paymentTransaction.create({
+      data: {
+        tenantId: intent.tenantId,
+        paymentIntentId: intent.id,
+        provider: "PAYSTACK",
+        providerReference: reference,
+        providerTransactionId,
+        amountPesewas,
+        currency,
+        status: "SUCCESS",
+        channel,
+        providerPaidAt,
+        providerRaw: toPrismaJson(input.event),
+      },
+      select: { id: true },
+    });
+
+    const payment = await tx.feePayment.create({
+      data: {
+        tenantId: intent.tenantId,
+        invoiceId: intent.invoiceId,
+        amountPesewas,
+        method: "paystack",
+        reference,
+        channel,
+        status: "SUCCESS",
+      },
+      select: { id: true },
+    });
+
+    await tx.paymentTransaction.update({
+      where: { id: transaction.id },
+      data: { feePaymentId: payment.id },
+    });
+
+    await tx.paymentAllocation.create({
+      data: {
+        tenantId: intent.tenantId,
+        studentId: intent.studentId,
+        invoiceId: intent.invoiceId,
+        feePaymentId: payment.id,
+        amountPesewas,
+        allocationType: "INVOICE_PAYMENT",
+      },
+    });
+
+    const studentName =
+      [
+        intent.invoice.student?.firstName,
+        intent.invoice.student?.lastName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || "Student";
+
+    const guardianPhone =
+      intent.invoice.student?.guardianPhoneNorm ||
+      intent.invoice.student?.guardianPhone ||
+      null;
+
+    const receiptNumber = await createUniqueReceiptNumber(
+      tx,
+      intent.tenantId,
+      intent.tenant.schoolCode
+    );
+
+    const receipt = await tx.receipt.create({
+      data: {
+        tenantId: intent.tenantId,
+        invoiceId: intent.invoiceId,
+        feePaymentId: payment.id,
+        receiptNumber,
+        issuedToName: studentName,
+        issuedToPhone: guardianPhone,
+        note: `Paystack payment reference: ${reference}`,
+      },
+      select: { id: true, receiptNumber: true },
+    });
+
+    await tx.ledgerEntry.create({
+      data: {
+        tenantId: intent.tenantId,
+        invoiceId: intent.invoiceId,
+        studentId: intent.studentId,
+        feePaymentId: payment.id,
+        receiptId: receipt.id,
+        entryType: "PAYMENT_CREDIT",
+        direction: "CREDIT",
+        amountPesewas,
+        description: `Paystack online payment (ref: ${reference})`,
+        journalRef: makeJournalRef("PAY"),
+      },
+    });
+
+    const invoiceAfter = await recalculateInvoiceTotals(
+      tx,
+      intent.tenantId,
+      intent.invoiceId
+    );
+
+    await tx.paymentIntent.update({
+      where: { id: intent.id },
+      data: { status: "PAID" },
+    });
+
+    await tx.paymentProviderEvent.update({
+      where: { id: providerEvent.id },
+      data: {
+        processingStatus: "PROCESSED",
+        processedAt: new Date(),
+      },
+    });
+
+    return {
+      ok: true,
+      paymentId: payment.id,
+      paymentTransactionId: transaction.id,
+      receipt,
+      invoice: invoiceAfter,
     };
   });
 }
