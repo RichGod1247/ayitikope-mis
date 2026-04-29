@@ -1,0 +1,2 @@
+ALTER TABLE edulife_os."FeeStructure"
+ADD COLUMN IF NOT EXISTS "category" TEXT NOT NULL DEFAULT 'GENERAL';
