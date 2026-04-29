@@ -5,6 +5,24 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
+type ReceiptLine = {
+  id: string;
+  category: string;
+  description: string;
+  amountPesewas: number;
+  waivedPesewas: number;
+};
+
+type LedgerEntry = {
+  id: string;
+  entryType: string;
+  direction: "DEBIT" | "CREDIT";
+  amountPesewas: number;
+  description: string | null;
+  journalRef: string | null;
+  createdAt: string;
+};
+
 type ReceiptDetail = {
   id: string;
   receiptNumber: string;
@@ -18,22 +36,33 @@ type ReceiptDetail = {
     method: string | null;
     reference: string | null;
     channel: string | null;
+    status: string | null;
     paidAt: string | null;
+    provider: string | null;
+    providerReference: string | null;
+    providerTransactionId: string | null;
+    providerStatus: string | null;
+    providerCurrency: string | null;
+    providerPaidAt: string | null;
   };
   invoice: {
     id: string;
     term: string | null;
     academicYear: string | null;
+    status: string | null;
     totalBilledPesewas: number;
     totalWaivedPesewas: number;
     totalPaidPesewas: number;
     outstandingPesewas: number;
+    lines: ReceiptLine[];
+    ledgerEntries: LedgerEntry[];
   };
   student: {
     id: string | null;
     name: string;
     guardianName: string | null;
     guardianPhone: string | null;
+    guardianPhoneNorm: string | null;
     classLabel: string | null;
   };
   school: {
@@ -45,296 +74,511 @@ type ReceiptDetail = {
   issuedByName: string;
 };
 
-function formatCedis(p: number) {
-  return `GH₵ ${(p / 100).toFixed(2)}`;
+type ApiResponse = {
+  ok: boolean;
+  error?: string;
+  receipt?: ReceiptDetail;
+};
+
+function formatCedis(pesewas: number | null | undefined) {
+  const value = typeof pesewas === "number" ? pesewas : 0;
+  const sign = value < 0 ? "-" : "";
+  return `${sign}GHS ${(Math.abs(value) / 100).toFixed(2)}`;
 }
 
-function formatDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GH", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+function formatDate(iso: string | null | undefined) {
+  if (!iso) return "Unavailable";
+
+  try {
+    return new Date(iso).toLocaleDateString("en-GH", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return "Unavailable";
+  }
 }
 
-function formatDateTime(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-GH", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatDateTime(iso: string | null | undefined) {
+  if (!iso) return "Unavailable";
+
+  try {
+    return new Date(iso).toLocaleString("en-GH", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "Unavailable";
+  }
 }
 
-function methodLabel(m: string | null) {
+function methodLabel(method: string | null) {
   const map: Record<string, string> = {
     cash: "Cash",
-    paystack: "Paystack (Online)",
-    hubtel: "Hubtel Mobile Money",
-    bank: "Bank Transfer",
-    momo: "Mobile Money",
+    paystack: "Paystack online payment",
+    hubtel: "Hubtel mobile money",
+    bank: "Bank transfer",
+    bank_transfer: "Bank transfer",
+    momo: "Mobile money",
     other: "Other",
   };
-  return m ? (map[m.toLowerCase()] ?? m) : "—";
+
+  return method ? map[method.toLowerCase()] ?? method : "Payment";
+}
+
+function friendlyError(code?: string) {
+  const map: Record<string, string> = {
+    RECEIPT_ID_REQUIRED: "The receipt link is missing its receipt ID.",
+    RECEIPT_NOT_FOUND: "This receipt could not be found.",
+    FAILED_TO_LOAD_RECEIPT: "The receipt could not be loaded.",
+  };
+
+  return map[code ?? ""] ?? "The receipt could not be loaded.";
 }
 
 export default function AdminReceiptDetailPage() {
   const params = useParams<{ receiptId: string }>();
-  const receiptId = params?.receiptId ?? "";
+  const receiptId = String(params?.receiptId ?? "");
 
   const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  async function loadReceipt() {
+    if (!receiptId) {
+      setError("The receipt link is missing its receipt ID.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/admin/fees/receipts/${receiptId}`, {
+        cache: "no-store",
+      });
+
+      const json = (await res.json().catch(() => ({}))) as ApiResponse;
+
+      if (!res.ok || !json.ok || !json.receipt) {
+        setError(friendlyError(json.error));
+        setReceipt(null);
+        return;
+      }
+
+      setReceipt(json.receipt);
+    } catch {
+      setError("Network error loading receipt.");
+      setReceipt(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    if (!receiptId) return;
-    fetch(`/api/admin/fees/receipts/${receiptId}`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((j) => {
-        if (!j.ok) { setError(j.error || "Could not load receipt."); return; }
-        setReceipt(j.receipt);
-      })
-      .catch(() => setError("Network error loading receipt."))
-      .finally(() => setLoading(false));
+    void loadReceipt();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [receiptId]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-sm text-zinc-500">Loading receipt…</p>
-      </div>
+      <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
+        <p className="text-sm text-zinc-500">Loading receipt...</p>
+      </main>
     );
   }
 
   if (error || !receipt) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="space-y-3 text-center">
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+      <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
+        <div className="max-w-md rounded-2xl border border-red-200 bg-red-50 px-5 py-5 text-center">
+          <p className="text-sm font-semibold text-red-900">Receipt unavailable</p>
+          <p className="mt-1 text-xs text-red-800">
             {error ?? "Receipt not found."}
           </p>
-          <Link
-            href="/admin/fees/receipts"
-            className="inline-flex items-center text-xs text-zinc-600 hover:text-zinc-900 underline"
-          >
-            ← Back to receipts
-          </Link>
+          <div className="mt-4 flex justify-center gap-2">
+            <button
+              type="button"
+              onClick={loadReceipt}
+              className="rounded-xl bg-red-900 px-4 py-2 text-xs font-semibold text-white hover:bg-red-950"
+            >
+              Try again
+            </button>
+            <Link
+              href="/admin/fees/receipts"
+              className="rounded-xl border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-900"
+            >
+              Back to receipts
+            </Link>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
+
+  const netBilled = Math.max(
+    0,
+    receipt.invoice.totalBilledPesewas - receipt.invoice.totalWaivedPesewas
+  );
 
   return (
     <>
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { background: white; }
+          body { background: white !important; }
+          .receipt-shell { box-shadow: none !important; border: 1px solid #d4d4d8 !important; }
         }
       `}</style>
 
-      <main className="min-h-screen bg-zinc-50 p-6 max-w-4xl mx-auto space-y-6">
-        {/* Top nav */}
-        <div className="no-print flex items-center justify-between gap-4">
-          <Link
-            href="/admin/fees/receipts"
-            className="inline-flex items-center gap-1.5 text-sm text-zinc-600 hover:text-zinc-900"
-          >
-            ← All receipts
-          </Link>
-          <div className="flex items-center gap-2">
-            {receipt.student.id && (
-              <Link
-                href={`/admin/fees/invoices?studentId=${receipt.student.id}`}
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-900 shadow-sm hover:bg-zinc-50"
-              >
-                View invoices
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-zinc-900 px-4 text-xs font-medium text-white shadow-sm hover:bg-black"
+      <main className="min-h-screen bg-zinc-50 px-4 py-6 md:py-8">
+        <div className="no-print mx-auto mb-5 flex max-w-4xl flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/fees/receipts"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
             >
-              Print / Save PDF
-            </button>
+              Back to receipts
+            </Link>
+            <Link
+              href="/admin/fees/ledger"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
+            >
+              Ledger
+            </Link>
           </div>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white hover:bg-black"
+          >
+            Print / save PDF
+          </button>
         </div>
 
-        {/* Receipt card */}
-        <div className="w-full bg-white rounded-2xl shadow-lg border border-zinc-200 overflow-hidden">
-          {/* Header band */}
-          <div className="bg-zinc-900 px-8 py-6 text-white">
-            <div className="flex items-start justify-between gap-4">
+        <article className="receipt-shell mx-auto max-w-4xl overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lg">
+          <header className="bg-zinc-950 px-6 py-6 text-white md:px-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <p className="text-[11px] font-medium tracking-widest uppercase text-zinc-400">EduLife OS</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  EduLife OS
+                </p>
                 <h1 className="mt-1 text-xl font-bold">{receipt.school.name}</h1>
+                <p className="mt-1 text-xs text-zinc-400">
+                  School code: {receipt.school.schoolCode || "Unavailable"}
+                </p>
                 {receipt.school.contactPhone && (
-                  <p className="mt-0.5 text-xs text-zinc-400">{receipt.school.contactPhone}</p>
+                  <p className="text-xs text-zinc-400">
+                    {receipt.school.contactPhone}
+                  </p>
                 )}
                 {receipt.school.contactEmail && (
-                  <p className="text-xs text-zinc-400">{receipt.school.contactEmail}</p>
+                  <p className="text-xs text-zinc-400">
+                    {receipt.school.contactEmail}
+                  </p>
                 )}
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-[11px] font-medium tracking-widest uppercase text-zinc-400">Official Receipt</p>
-                <p className="mt-1 text-lg font-bold font-mono">{receipt.receiptNumber}</p>
-                <p className="mt-0.5 text-xs text-zinc-400">{formatDateTime(receipt.issuedAt)}</p>
+
+              <div className="md:text-right">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                  Official school receipt
+                </p>
+                <p className="mt-1 font-mono text-lg font-bold">
+                  {receipt.receiptNumber}
+                </p>
+                <p className="mt-1 text-xs text-zinc-400">
+                  {formatDateTime(receipt.issuedAt)}
+                </p>
               </div>
             </div>
-          </div>
+          </header>
 
-          {/* Body */}
-          <div className="px-8 py-6 space-y-6">
-            {/* Issued to + learner */}
-            <section className="grid grid-cols-2 gap-4 text-sm">
+          <section className="space-y-6 px-6 py-6 md:px-8">
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
-                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Issued to</p>
-                <p className="mt-1 font-semibold text-zinc-900">
-                  {receipt.issuedToName || receipt.student.guardianName || "—"}
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Learner
                 </p>
-                {receipt.issuedToPhone && (
-                  <p className="text-zinc-600 text-xs">{receipt.issuedToPhone}</p>
-                )}
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Learner</p>
-                <p className="mt-1 font-semibold text-zinc-900">{receipt.student.name}</p>
+                <p className="mt-1 font-semibold text-zinc-900">
+                  {receipt.student.name}
+                </p>
                 {receipt.student.classLabel && (
-                  <p className="text-zinc-600 text-xs">{receipt.student.classLabel}</p>
+                  <p className="text-xs text-zinc-600">
+                    {receipt.student.classLabel}
+                  </p>
                 )}
               </div>
-            </section>
 
-            <hr className="border-zinc-100" />
-
-            {/* Term + Year */}
-            <section className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Term</p>
-                <p className="mt-1 text-zinc-900">{receipt.invoice.term ?? "—"}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Guardian
+                </p>
+                <p className="mt-1 font-semibold text-zinc-900">
+                  {receipt.student.guardianName || receipt.issuedToName || "Unavailable"}
+                </p>
+                {receipt.student.guardianPhone && (
+                  <p className="text-xs text-zinc-600">
+                    {receipt.student.guardianPhone}
+                  </p>
+                )}
               </div>
+
               <div>
-                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Academic Year</p>
-                <p className="mt-1 text-zinc-900">{receipt.invoice.academicYear ?? "—"}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Issued by
+                </p>
+                <p className="mt-1 font-semibold text-zinc-900">
+                  {receipt.issuedByName}
+                </p>
+                <p className="text-xs text-zinc-600">
+                  {receipt.payment.method === "paystack"
+                    ? "System-confirmed online payment"
+                    : "School office receipt"}
+                </p>
               </div>
-            </section>
+            </div>
 
-            <hr className="border-zinc-100" />
+            <div className="grid gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-4">
+              <div>
+                <p className="text-[11px] font-medium text-zinc-500">
+                  Amount paid
+                </p>
+                <p className="mt-1 text-lg font-bold text-emerald-700">
+                  {formatCedis(receipt.payment.amountPesewas)}
+                </p>
+              </div>
 
-            {/* Payment details */}
-            <section className="space-y-3 text-sm">
-              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Payment Details</p>
-              <div className="rounded-xl border border-zinc-100 bg-zinc-50 overflow-hidden">
-                <table className="min-w-full text-sm text-zinc-900">
-                  <tbody>
-                    <tr className="border-b border-zinc-100">
-                      <td className="px-4 py-2.5 font-medium text-zinc-600 w-44">Amount Paid</td>
-                      <td className="px-4 py-2.5 font-bold text-emerald-700 text-base">
-                        {formatCedis(receipt.payment.amountPesewas)}
-                      </td>
+              <div>
+                <p className="text-[11px] font-medium text-zinc-500">
+                  Method
+                </p>
+                <p className="mt-1 text-sm font-semibold text-zinc-900">
+                  {methodLabel(receipt.payment.method)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-medium text-zinc-500">
+                  Payment status
+                </p>
+                <p className="mt-1 text-sm font-semibold text-zinc-900">
+                  {receipt.payment.status || receipt.payment.providerStatus || "SUCCESS"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-medium text-zinc-500">
+                  Payment date
+                </p>
+                <p className="mt-1 text-sm font-semibold text-zinc-900">
+                  {formatDate(receipt.payment.paidAt ?? receipt.issuedAt)}
+                </p>
+              </div>
+            </div>
+
+            {(receipt.payment.reference ||
+              receipt.payment.providerReference ||
+              receipt.payment.providerTransactionId) && (
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Transaction references
+                </p>
+
+                {receipt.payment.reference && (
+                  <p className="mt-2 break-all font-mono text-xs text-zinc-700">
+                    Payment reference: {receipt.payment.reference}
+                  </p>
+                )}
+
+                {receipt.payment.providerReference && (
+                  <p className="mt-1 break-all font-mono text-xs text-zinc-700">
+                    Provider reference: {receipt.payment.providerReference}
+                  </p>
+                )}
+
+                {receipt.payment.providerTransactionId && (
+                  <p className="mt-1 break-all font-mono text-xs text-zinc-700">
+                    Provider transaction ID: {receipt.payment.providerTransactionId}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Term
+                </p>
+                <p className="mt-1 text-sm text-zinc-900">
+                  {receipt.invoice.term || "Unavailable"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Academic year
+                </p>
+                <p className="mt-1 text-sm text-zinc-900">
+                  {receipt.invoice.academicYear || "Unavailable"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                  Invoice status
+                </p>
+                <p className="mt-1 text-sm text-zinc-900">
+                  {receipt.invoice.status || "Unavailable"}
+                </p>
+              </div>
+            </div>
+
+            {receipt.invoice.lines.length > 0 && (
+              <div className="overflow-hidden rounded-2xl border border-zinc-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50 text-zinc-500">
+                    <tr>
+                      <th className="px-3 py-2 font-semibold">Fee item</th>
+                      <th className="px-3 py-2 font-semibold">Category</th>
+                      <th className="px-3 py-2 text-right font-semibold">
+                        Amount
+                      </th>
+                      <th className="px-3 py-2 text-right font-semibold">
+                        Waived
+                      </th>
                     </tr>
-                    <tr className="border-b border-zinc-100">
-                      <td className="px-4 py-2.5 font-medium text-zinc-600">Payment Method</td>
-                      <td className="px-4 py-2.5">{methodLabel(receipt.payment.method)}</td>
-                    </tr>
-                    {receipt.payment.reference && (
-                      <tr className="border-b border-zinc-100">
-                        <td className="px-4 py-2.5 font-medium text-zinc-600">Reference</td>
-                        <td className="px-4 py-2.5 font-mono text-xs">{receipt.payment.reference}</td>
-                      </tr>
-                    )}
-                    {receipt.payment.channel && (
-                      <tr className="border-b border-zinc-100">
-                        <td className="px-4 py-2.5 font-medium text-zinc-600">Channel</td>
-                        <td className="px-4 py-2.5 capitalize">{receipt.payment.channel}</td>
-                      </tr>
-                    )}
-                    <tr className="border-b border-zinc-100">
-                      <td className="px-4 py-2.5 font-medium text-zinc-600">Payment Date</td>
-                      <td className="px-4 py-2.5">
-                        {formatDate(receipt.payment.paidAt ?? receipt.issuedAt)}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-zinc-100">
-                      <td className="px-4 py-2.5 font-medium text-zinc-600">Total Billed</td>
-                      <td className="px-4 py-2.5">{formatCedis(receipt.invoice.totalBilledPesewas)}</td>
-                    </tr>
-                    {receipt.invoice.totalWaivedPesewas > 0 && (
-                      <tr className="border-b border-zinc-100">
-                        <td className="px-4 py-2.5 font-medium text-zinc-600">Waivers / Adjustments</td>
-                        <td className="px-4 py-2.5 text-amber-700">
-                          − {formatCedis(receipt.invoice.totalWaivedPesewas)}
+                  </thead>
+
+                  <tbody className="divide-y divide-zinc-100">
+                    {receipt.invoice.lines.map((line) => (
+                      <tr key={line.id}>
+                        <td className="px-3 py-2 text-zinc-800">
+                          {line.description}
+                        </td>
+                        <td className="px-3 py-2 text-zinc-500">
+                          {line.category}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-zinc-900">
+                          {formatCedis(line.amountPesewas)}
+                        </td>
+                        <td className="px-3 py-2 text-right text-zinc-700">
+                          {formatCedis(line.waivedPesewas)}
                         </td>
                       </tr>
-                    )}
-                    <tr className="border-b border-zinc-100">
-                      <td className="px-4 py-2.5 font-medium text-zinc-600">Total Paid</td>
-                      <td className="px-4 py-2.5">{formatCedis(receipt.invoice.totalPaidPesewas)}</td>
-                    </tr>
-                    <tr>
-                      <td className="px-4 py-2.5 font-medium text-zinc-600">Balance Remaining</td>
-                      <td
-                        className={`px-4 py-2.5 font-bold ${
-                          receipt.invoice.outstandingPesewas > 0 ? "text-red-700" : "text-emerald-700"
-                        }`}
-                      >
-                        {formatCedis(receipt.invoice.outstandingPesewas)}
-                        {receipt.invoice.outstandingPesewas === 0 && (
-                          <span className="ml-2 text-[11px] font-normal bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                            Fully cleared
-                          </span>
-                        )}
-                      </td>
-                    </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-            </section>
-
-            {receipt.note && (
-              <p className="text-xs text-zinc-600 italic">{receipt.note}</p>
             )}
 
-            <hr className="border-zinc-100" />
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="grid gap-3 text-sm md:grid-cols-2">
+                <div className="flex justify-between gap-3">
+                  <span className="text-zinc-600">Total billed</span>
+                  <span className="font-semibold text-zinc-900">
+                    {formatCedis(receipt.invoice.totalBilledPesewas)}
+                  </span>
+                </div>
 
-            {/* Invoice link (admin only) */}
-            <div className="no-print flex items-center justify-between gap-4">
-              <Link
-                href={`/admin/fees/invoices?invoiceId=${receipt.invoice.id}`}
-                className="text-xs text-blue-700 hover:underline"
-              >
-                View full invoice → {receipt.invoice.id}
-              </Link>
-              <span className="text-[10px] text-zinc-400 font-mono">
-                Payment ID: {receipt.payment.id ?? "—"}
-              </span>
+                <div className="flex justify-between gap-3">
+                  <span className="text-zinc-600">Waived / support</span>
+                  <span className="font-semibold text-zinc-900">
+                    {formatCedis(receipt.invoice.totalWaivedPesewas)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-3">
+                  <span className="text-zinc-600">Net billed</span>
+                  <span className="font-semibold text-zinc-900">
+                    {formatCedis(netBilled)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-3">
+                  <span className="text-zinc-600">Total paid</span>
+                  <span className="font-semibold text-emerald-700">
+                    {formatCedis(receipt.invoice.totalPaidPesewas)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-3 md:col-span-2">
+                  <span className="text-zinc-700">Balance remaining</span>
+                  <span
+                    className={`font-bold ${
+                      receipt.invoice.outstandingPesewas > 0
+                        ? "text-red-700"
+                        : "text-emerald-700"
+                    }`}
+                  >
+                    {formatCedis(receipt.invoice.outstandingPesewas)}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <hr className="border-zinc-100" />
+            {receipt.invoice.ledgerEntries.length > 0 && (
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                <p className="text-sm font-semibold text-zinc-900">
+                  Invoice ledger trail
+                </p>
+                <div className="mt-3 space-y-2">
+                  {receipt.invoice.ledgerEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs md:flex-row md:items-center md:justify-between"
+                    >
+                      <div>
+                        <p className="font-semibold text-zinc-900">
+                          {entry.entryType} / {entry.direction}
+                        </p>
+                        <p className="text-zinc-500">
+                          {entry.description || "No description"}
+                        </p>
+                        {entry.journalRef && (
+                          <p className="font-mono text-[10px] text-zinc-500">
+                            {entry.journalRef}
+                          </p>
+                        )}
+                      </div>
+                      <p
+                        className={`font-mono font-bold ${
+                          entry.direction === "CREDIT"
+                            ? "text-emerald-700"
+                            : "text-red-700"
+                        }`}
+                      >
+                        {entry.direction === "CREDIT" ? "+" : "-"}
+                        {formatCedis(entry.amountPesewas)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            {/* Footer */}
-            <section className="flex items-end justify-between gap-4 text-xs text-zinc-500">
-              <div>
-                <p>
-                  Issued by:{" "}
-                  <span className="font-medium text-zinc-700">{receipt.issuedByName}</span>
-                </p>
-                <p className="mt-1">
-                  This is an official payment receipt from {receipt.school.name} via EduLife OS.
-                </p>
-                <p>Keep this as proof of payment.</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className="font-mono text-[11px]">{receipt.receiptNumber}</p>
-                <p>{formatDate(receipt.issuedAt)}</p>
-              </div>
-            </section>
-          </div>
-        </div>
+            {receipt.note && (
+              <p className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                {receipt.note}
+              </p>
+            )}
+
+            <footer className="border-t border-zinc-100 pt-4 text-xs text-zinc-500">
+              <p>
+                This is an official payment receipt from {receipt.school.name}
+                via EduLife OS. Keep this document as evidence of payment.
+              </p>
+              <p className="mt-2 font-mono text-[11px]">
+                Receipt: {receipt.receiptNumber}
+              </p>
+            </footer>
+          </section>
+        </article>
       </main>
     </>
   );
