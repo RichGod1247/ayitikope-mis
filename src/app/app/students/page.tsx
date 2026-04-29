@@ -1,6 +1,10 @@
 // src/app/app/students/page.tsx
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "@/lib/prisma";
 import StudentsClient from "./StudentsClient";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type ClassroomLite = { id: string; name: string };
 
@@ -8,14 +12,15 @@ async function getTenant() {
   const tenant = await prisma.tenant.findFirst({
     select: { id: true, name: true, slug: true },
   });
+
   if (!tenant) throw new Error("No tenant found");
   return tenant;
 }
 
 type StudentRow = {
   id: string;
-  firstName: string | null; // ✅ schema-aligned
-  lastName: string | null;  // ✅ schema-aligned
+  firstName: string | null;
+  lastName: string | null;
   sex: string | null;
   dob: Date | null;
   guardianName: string | null;
@@ -51,7 +56,6 @@ export default async function StudentsPage() {
     },
   });
 
-  // UI-normalized payload (never ship null names to client UI)
   const items = rows.map((s) => {
     const first = (s.firstName ?? "").trim();
     const last = (s.lastName ?? "").trim();
