@@ -82,6 +82,8 @@ model User {
   paymentTransactionsCreated       PaymentTransaction[]      @relation("PaymentTransactionCreatedBy")
   reconciliationBatchesCreated     ReconciliationBatch[]     @relation("ReconciliationBatchCreatedBy")
   reconciliationExceptionsResolved ReconciliationException[] @relation("ReconciliationExceptionResolvedBy")
+  settlementAccountsRequested      TenantSettlementAccount[] @relation("TenantSettlementRequestedBy")
+  settlementAccountsApproved       TenantSettlementAccount[] @relation("TenantSettlementApprovedBy")
 
   /// ✅ Headteacher signature store
   headteacherSignatures HeadteacherSignature[]
@@ -165,6 +167,9 @@ model Tenant {
   receipts                 Receipt[]                 @relation("TenantReceipts")
   reconciliationBatches    ReconciliationBatch[]
   reconciliationExceptions ReconciliationException[]
+
+  /// ✅ Settlement / payout governance
+  settlementAccounts TenantSettlementAccount[]
 
   /// Sprint 10 placeholder — keep because current schema already has SchoolRiskSnapshot.
   riskSnapshots SchoolRiskSnapshot[]
@@ -900,27 +905,29 @@ model FeePayment {
 }
 
 model PaymentIntent {
-  id                String              @id @default(cuid())
-  tenantId          String
-  studentId         String
-  invoiceId         String
-  provider          PaymentProvider     @default(PAYSTACK)
-  providerReference String              @db.VarChar(120)
-  amountPesewas     Int
-  currency          String              @default("GHS") @db.VarChar(8)
-  status            PaymentIntentStatus @default(PENDING)
-  checkoutUrl       String?
-  accessCode        String?
-  metadata          Json                @default("{}")
-  expiresAt         DateTime?           @db.Timestamptz(6)
-  createdByUserId   String?
-  createdAt         DateTime            @default(now()) @db.Timestamptz(6)
-  updatedAt         DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+  id                  String              @id @default(cuid())
+  tenantId            String
+  studentId           String
+  invoiceId           String
+  settlementAccountId String?
+  provider            PaymentProvider     @default(PAYSTACK)
+  providerReference   String              @db.VarChar(120)
+  amountPesewas       Int
+  currency            String              @default("GHS") @db.VarChar(8)
+  status              PaymentIntentStatus @default(PENDING)
+  checkoutUrl         String?
+  accessCode          String?
+  metadata            Json                @default("{}")
+  expiresAt           DateTime?           @db.Timestamptz(6)
+  createdByUserId     String?
+  createdAt           DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
 
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  student   Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  invoice   FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  createdBy User?      @relation("PaymentIntentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student           Student                  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  invoice           FeeInvoice               @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  settlementAccount TenantSettlementAccount? @relation(fields: [settlementAccountId], references: [id], onDelete: SetNull)
+  createdBy         User?                    @relation("PaymentIntentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   transactions PaymentTransaction[]
 
@@ -928,6 +935,7 @@ model PaymentIntent {
   @@index([tenantId, studentId])
   @@index([tenantId, invoiceId])
   @@index([tenantId, status])
+  @@index([tenantId, settlementAccountId])
 }
 
 model PaymentProviderEvent {
@@ -976,6 +984,53 @@ model PaymentTransaction {
   @@unique([tenantId, provider, providerReference], map: "PaymentTransaction_tenant_provider_ref_unique")
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+}
+
+model TenantSettlementAccount {
+  id       String @id @default(cuid())
+  tenantId String
+
+  provider PaymentProvider @default(PAYSTACK)
+
+  /// Paystack subaccount code, e.g. ACCT_xxxxx
+  providerSubaccountCode String? @db.VarChar(80)
+
+  /// Bank details. Never store full account number in plaintext long-term if avoidable.
+  bankCode               String? @db.VarChar(32)
+  bankName               String?
+  accountName            String?
+  accountNumberLast4     String? @db.VarChar(8)
+  accountNumberEncrypted String?
+
+  currency String @default("GHS") @db.VarChar(8)
+
+  status SettlementAccountStatus @default(PENDING)
+
+  isPrimary Boolean @default(false)
+
+  /// Compliance/admin approval trail
+  requestedByUserId String?
+  approvedByUserId  String?
+  approvedAt        DateTime? @db.Timestamptz(6)
+  disabledAt        DateTime? @db.Timestamptz(6)
+  disableReason     String?
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  requestedBy User? @relation("TenantSettlementRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  approvedBy  User? @relation("TenantSettlementApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  paymentIntents PaymentIntent[]
+
+  @@unique([tenantId, provider, providerSubaccountCode], map: "TenantSettlement_provider_subaccount_unique")
+  @@index([tenantId, status])
+  @@index([tenantId, isPrimary])
+  @@index([provider, providerSubaccountCode])
 }
 
 model PaymentAllocation {
@@ -1869,6 +1924,13 @@ enum PaymentStatus {
   FAILED
   REVERSED
   REFUNDED
+}
+
+enum SettlementAccountStatus {
+  PENDING
+  ACTIVE
+  DISABLED
+  FAILED
 }
 
 enum ProviderEventStatus {
