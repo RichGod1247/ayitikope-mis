@@ -43,10 +43,15 @@ function suffix9(v: unknown) {
 }
 
 function generateOtp(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
-function otpHash(code: string, tenantId: string, phoneDigits: string, expiresAt: number) {
+function otpHash(
+  code: string,
+  tenantId: string,
+  phoneDigits: string,
+  expiresAt: number
+) {
   return crypto
     .createHmac("sha256", secret())
     .update(`${tenantId}|${phoneDigits}|${expiresAt}|${code}`)
@@ -68,6 +73,34 @@ function safeInt(n: unknown, def: number) {
   return Number.isFinite(x) ? Math.trunc(x) : def;
 }
 
+async function getLastAcceptedOtpToken(input: {
+  tenantId: string;
+  phoneDigits: string;
+}) {
+  const auditKey = `parentOtp:${input.tenantId}:${input.phoneDigits}`;
+
+  const last = await prisma.auditLog.findFirst({
+    where: {
+      tenantId: input.tenantId,
+      action: "PARENT_OTP_REQUEST_ACCEPTED",
+      resource: "parent_otp",
+      resourceId: auditKey,
+    },
+    orderBy: { createdAt: "desc" },
+    select: { metadata: true },
+  });
+
+  const md = (last?.metadata as Record<string, unknown>) || {};
+  const token = typeof md.token === "string" ? md.token : null;
+  const expiresAt = safeInt(md.expiresAt, 0);
+
+  if (!token || expiresAt <= Date.now()) {
+    return { token: null, expiresAt: 0 };
+  }
+
+  return { token, expiresAt };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const ct = (req.headers.get("content-type") || "").toLowerCase();
@@ -85,7 +118,10 @@ export async function POST(req: NextRequest) {
     const guardianPhoneRaw = String(body.guardianPhone ?? "").trim();
 
     if (!schoolId) {
-      return noStoreJson(400, { ok: false, error: "Select your school first." });
+      return noStoreJson(400, {
+        ok: false,
+        error: "Select your school first.",
+      });
     }
 
     const tenant = await prisma.tenant.findFirst({
@@ -114,6 +150,7 @@ export async function POST(req: NextRequest) {
 
     const phoneDigits = digitsOnly(phoneNorm);
     const phoneLast9 = suffix9(phoneNorm);
+    const phoneLast4 = phoneDigits.slice(-4);
 
     const rlKey = `parentOtpSend:${tenant.id}:${phoneDigits}`;
 
@@ -125,29 +162,26 @@ export async function POST(req: NextRequest) {
     });
 
     if (!lim.ok) {
-      const auditKey = `parentOtp:${tenant.id}:${phoneDigits}`;
-
-      const last = await prisma.auditLog.findFirst({
-        where: {
-          tenantId: tenant.id,
-          action: "PARENT_OTP_REQUEST",
-          resource: "parent_otp",
-          resourceId: auditKey,
-        },
-        orderBy: { createdAt: "desc" },
-        select: { metadata: true },
+      const last = await getLastAcceptedOtpToken({
+        tenantId: tenant.id,
+        phoneDigits,
       });
 
-      const md = (last?.metadata as Record<string, unknown>) || {};
-      const lastToken = typeof md.token === "string" ? md.token : null;
-      const lastExpiresAt = safeInt(md.expiresAt, 0);
-      const stillValid = !!lastToken && lastExpiresAt > Date.now();
+      if (last.token) {
+        return noStoreJson(200, {
+          ok: true,
+          token: last.token,
+          validForMinutes: Math.round(OTP_TTL_MS / 60000),
+          message:
+            "A code was recently sent. Please wait before requesting another.",
+          cooldownSecondsRemaining: lim.retryAfterSeconds,
+        });
+      }
 
-      return noStoreJson(200, {
-        ok: true,
-        token: stillValid ? lastToken : null,
-        validForMinutes: Math.round(OTP_TTL_MS / 60000),
-        message: "A code was recently requested. Please wait before requesting another.",
+      return noStoreJson(429, {
+        ok: false,
+        error:
+          "Please wait briefly before requesting another login code.",
         cooldownSecondsRemaining: lim.retryAfterSeconds,
       });
     }
@@ -171,14 +205,14 @@ export async function POST(req: NextRequest) {
 
     if (!linkedStudent) {
       await rateLimitRecord({
-        action: "PARENT_OTP_SEND",
-        key: rlKey,
+        action: "PARENT_OTP_UNKNOWN_PHONE",
+        key: `parentOtpUnknown:${tenant.id}:${phoneDigits}`,
         tenantId: tenant.id,
         ip,
         userAgent,
         metadata: {
           kind: "PARENT_OTP_UNREGISTERED_PHONE",
-          phoneLast4: phoneDigits.slice(-4),
+          phoneLast4,
         } as any,
       });
 
@@ -188,18 +222,6 @@ export async function POST(req: NextRequest) {
           "This phone number is not linked to an active learner in this school. Please enter the guardian phone number recorded by the school, or contact the school office for help.",
       });
     }
-
-    await rateLimitRecord({
-      action: "PARENT_OTP_SEND",
-      key: rlKey,
-      tenantId: tenant.id,
-      ip,
-      userAgent,
-      metadata: {
-        kind: "PARENT_OTP_SEND",
-        phoneLast4: phoneDigits.slice(-4),
-      } as any,
-    });
 
     const otp = generateOtp();
     const expiresAt = Date.now() + OTP_TTL_MS;
@@ -215,28 +237,9 @@ export async function POST(req: NextRequest) {
 
     const token = createSignedToken(tokenPayload);
 
-    try {
-      const auditKey = `parentOtp:${tenant.id}:${phoneDigits}`;
-
-      await prisma.auditLog.create({
-        data: {
-          tenantId: tenant.id,
-          action: "PARENT_OTP_REQUEST",
-          resource: "parent_otp",
-          resourceId: auditKey,
-          metadata: {
-            phoneLast4: phoneDigits.slice(-4),
-            expiresAt,
-            token,
-            linkedStudentId: linkedStudent.id,
-          } as any,
-          ip,
-          userAgent,
-        },
-      });
-    } catch {}
-
-    const smsText = `${tenant.name}: Your EduLife OS login code is ${otp}. It expires in 5 minutes. If you did not request this, ignore this SMS.`;
+    const smsText =
+      `${tenant.name}: Your EduLife OS login code is ${otp}. ` +
+      "It expires in 5 minutes. If you did not request this, ignore this SMS.";
 
     const smsResult = await sendSms({
       tenantId: tenant.id,
@@ -246,7 +249,7 @@ export async function POST(req: NextRequest) {
       payload: {
         expiresAt,
         linkedStudentId: linkedStudent.id,
-        phoneLast4: phoneDigits.slice(-4),
+        phoneLast4,
       },
     });
 
@@ -258,6 +261,54 @@ export async function POST(req: NextRequest) {
         error:
           "We could not send the login code right now. Please try again shortly or contact the school office.",
       });
+    }
+
+    const auditKey = `parentOtp:${tenant.id}:${phoneDigits}`;
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          tenantId: tenant.id,
+          action: "PARENT_OTP_REQUEST_ACCEPTED",
+          resource: "parent_otp",
+          resourceId: auditKey,
+          metadata: {
+            phoneLast4,
+            expiresAt,
+            token,
+            linkedStudentId: linkedStudent.id,
+            providerMessageId: smsResult.providerMessageId ?? null,
+            providerStatusDescription:
+              smsResult.providerStatusDescription ?? null,
+            smsTestMode: smsResult.testMode ?? null,
+            smsTo: smsResult.to ?? null,
+            smsBrand: smsResult.brand ?? "EDULIFEOS",
+          } as any,
+          ip,
+          userAgent,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[PARENT_OTP_AUDIT_ERROR]", auditErr);
+    }
+
+    try {
+      await rateLimitRecord({
+        action: "PARENT_OTP_SEND",
+        key: rlKey,
+        tenantId: tenant.id,
+        ip,
+        userAgent,
+        metadata: {
+          kind: "PARENT_OTP_SEND_ACCEPTED",
+          phoneLast4,
+          providerMessageId: smsResult.providerMessageId ?? null,
+          providerStatusDescription:
+            smsResult.providerStatusDescription ?? null,
+        } as any,
+      });
+    } catch (rateErr) {
+      console.error("[PARENT_OTP_RATE_LIMIT_RECORD_ERROR]", rateErr);
     }
 
     return noStoreJson(200, {
