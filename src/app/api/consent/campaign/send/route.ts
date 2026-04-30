@@ -1,7 +1,7 @@
 // src/app/api/consent/campaign/send/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendViaHubtel, type BrandName } from "@/lib/sms/hubtel";
+import { sendSms } from "@/lib/sms";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { effectiveRole } from "@/lib/roleRouting";
 import {
@@ -14,13 +14,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ALLOWED_ROLES = new Set(["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"]);
+const MAX_RECIPIENTS_PER_REQUEST = 300;
 
 type RequestBody = {
   message?: string;
   mode?: SmsRecipientMode;
-  tenantId?: string; // legacy: ignored
-  brand?: string;
-  actorId?: string; // legacy: ignored
+  tenantId?: string; // legacy: ignored, session tenant wins
+  brand?: string; // legacy: ignored, EDULIFEOS wins
+  actorId?: string; // legacy: ignored, session user wins
 };
 
 function json(status: number, payload: unknown) {
@@ -41,12 +42,15 @@ function roleUpper(v: unknown): string {
   return effectiveRole(v).trim().toUpperCase();
 }
 
-function resolveBrand(v: unknown): BrandName {
-  const raw = cleanStr(v).toUpperCase().replace(/\s+/g, "");
-  if (raw === "AYITIKOPJHS") return "AYITIKOPJHS";
-  if (raw === "AYITIKPRIM") return "AYITIKPRIM";
-  if (raw === "AYITIADMIN") return "AYITIADMIN";
-  return "EDULIFEOS";
+function resolveMode(v: unknown): SmsRecipientMode {
+  const raw = cleanStr(v).toLowerCase();
+
+  if (raw === "all") return "all" as SmsRecipientMode;
+  if (raw === "initial") return "initial" as SmsRecipientMode;
+  if (raw === "pending") return "pending" as SmsRecipientMode;
+  if (raw === "reminder") return "reminder" as SmsRecipientMode;
+
+  return "initial" as SmsRecipientMode;
 }
 
 export async function POST(req: NextRequest) {
@@ -54,6 +58,7 @@ export async function POST(req: NextRequest) {
     requireTenant: true,
     requireRoleNames: ["HEADTEACHER", "SCHOOL_ADMIN", "SUPERADMIN"],
   });
+
   if (!auth.ok) return auth.res;
 
   const ctx = auth.ctx;
@@ -76,8 +81,17 @@ export async function POST(req: NextRequest) {
   }
 
   const roleName = roleUpper(membership.role?.name ?? ctx.roleName);
+
   if (!ALLOWED_ROLES.has(roleName)) {
     return json(403, { ok: false, error: "FORBIDDEN_ROLE" });
+  }
+
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return json(415, {
+      ok: false,
+      error: "CONTENT_TYPE_MUST_BE_JSON",
+    });
   }
 
   try {
@@ -88,39 +102,61 @@ export async function POST(req: NextRequest) {
       select: { name: true },
     });
 
-    const mode: SmsRecipientMode = body.mode ?? "initial";
-    const brand = resolveBrand(body.brand);
+    const mode = resolveMode(body.mode);
     const actorId = ctx.userId;
 
     const message =
       cleanStr(body.message) ||
-      `${tenant?.name ?? "School"} – EduLife OS consent campaign. Please reply 'OK' when you receive this message. – ICT Project Lead`;
+      `${tenant?.name ?? "School"}: EduLife OS consent campaign. Please reply OK when you receive this message.`;
 
-    const recipients: SmsRecipient[] = await (getSmsRecipients as any)(mode, ctx.tenantId);
+    if (message.length < 5) {
+      return json(400, {
+        ok: false,
+        error: "Message is too short.",
+      });
+    }
+
+    const recipients: SmsRecipient[] = await (
+  getSmsRecipients as unknown as (
+    mode: SmsRecipientMode,
+    tenantId: string
+  ) => Promise<SmsRecipient[]>
+)(mode, ctx.tenantId);
 
     if (!recipients.length) {
       return json(200, {
         ok: true,
-        brand,
+        brand: "EDULIFEOS",
         mode,
         count: 0,
         successCount: 0,
+        failedCount: 0,
         results: [],
         note: "No SMS recipients found for this tenant/mode.",
       });
     }
 
+    if (recipients.length > MAX_RECIPIENTS_PER_REQUEST) {
+      return json(400, {
+        ok: false,
+        error: `Too many recipients in one request. Maximum is ${MAX_RECIPIENTS_PER_REQUEST}.`,
+        count: recipients.length,
+      });
+    }
+
     const results: {
       recipient: string;
+      recipientId?: string;
       to: string;
       ok: boolean;
       error?: string;
     }[] = [];
 
-    for (const r of recipients) {
-      if (!r.phone) {
+    for (const recipient of recipients) {
+      if (!recipient.phone) {
         results.push({
-          recipient: r.name,
+          recipient: recipient.name,
+          recipientId: recipient.id,
           to: "",
           ok: false,
           error: "Recipient has no phone number.",
@@ -129,50 +165,60 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        const res = await sendViaHubtel({
-          to: r.phone,
-          body: message,
-          brand,
+        const smsResult = await sendSms({
           tenantId: ctx.tenantId,
           actorId,
-          meta: {
+          to: recipient.phone,
+          message,
+          template: "CONSENT_CAMPAIGN",
+          payload: {
             purpose: "consent-campaign",
-            recipientId: r.id,
-            recipientName: r.name,
+            recipientId: recipient.id,
+            recipientName: recipient.name,
             mode,
+            brand: "EDULIFEOS",
           },
         });
 
         results.push({
-          recipient: r.name,
-          to: res.to,
-          ok: true,
+          recipient: recipient.name,
+          recipientId: recipient.id,
+          to: smsResult.to ?? recipient.phone,
+          ok: smsResult.ok,
+          ...(smsResult.ok ? {} : { error: smsResult.error ?? "SMS was not accepted." }),
         });
-      } catch (err: any) {
+      } catch (err) {
         results.push({
-          recipient: r.name,
-          to: r.phone,
+          recipient: recipient.name,
+          recipientId: recipient.id,
+          to: recipient.phone,
           ok: false,
-          error: err?.message ?? "Unknown error",
+          error: err instanceof Error ? err.message : "Unknown send error",
         });
       }
     }
 
     const successCount = results.filter((r) => r.ok).length;
+    const failedCount = results.length - successCount;
 
     return json(200, {
-      ok: successCount === results.length,
-      brand,
+      ok: failedCount === 0,
+      brand: "EDULIFEOS",
       mode,
       count: results.length,
       successCount,
+      failedCount,
       results,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[CONSENT_CAMPAIGN_SMS_ERROR]", err);
+
     return json(500, {
       ok: false,
-      error: err?.message ?? "Failed to send consent campaign SMS.",
+      error:
+        err instanceof Error
+          ? err.message
+          : "Failed to send consent campaign SMS.",
     });
   }
 }

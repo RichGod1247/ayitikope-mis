@@ -1,16 +1,20 @@
 // src/lib/sms/hubtel.ts
-// Hubtel SMS helper + logging into SmsLog (bank-grade logging)
+// Bank-grade Hubtel SMS helper.
+// Single valid sender: EDULIFEOS.
+// Legacy sender names were revoked and must not be routed.
 
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
-export const BrandName = ["EDULIFEOS", "AYITIKOPJHS", "AYITIKPRIM", "AYITIADMIN"] as const;
+export const BrandName = ["EDULIFEOS"] as const;
 export type BrandName = (typeof BrandName)[number];
+
+export const HUBTEL_BRAND: BrandName = "EDULIFEOS";
 
 export type HubtelSendParams = {
   to: string;
   body: string;
-  brand?: BrandName | string;
+  brand?: BrandName | string | null; // Backward-compatible input; normalized to EDULIFEOS.
   tenantId?: string;
   actorId?: string;
   meta?: Record<string, unknown>;
@@ -18,7 +22,7 @@ export type HubtelSendParams = {
 
 export type HubtelSendResult = {
   ok: boolean;
-  brand: string;
+  brand: BrandName;
   from: string;
   to: string;
   testMode: boolean;
@@ -27,149 +31,180 @@ export type HubtelSendResult = {
   providerStatus?: number | null;
   providerStatusDescription?: string | null;
   providerMessageId?: string | null;
+  error?: string;
 };
-
-type HubtelBrandConfig = {
-  clientId: string;
-  clientSecret: string;
-  from: string;
-};
-
-const SMS_PROVIDER = process.env.SMS_PROVIDER ?? "HUBTEL";
-const HUBTEL_BASE_URL = process.env.HUBTEL_BASE_URL ?? "https://smsc.hubtel.com";
-
-const SMS_TEST_MODE = (process.env.SMS_TEST_MODE ?? "false").toLowerCase() === "true";
-const TEST_SMS_TO = process.env.TEST_SMS_TO ?? "";
-
-function normalizeBrandName(raw?: string | null): BrandName | null {
-  const v = String(raw ?? "")
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "");
-
-  if (!v) return null;
-
-  if (v === "EDULIFEOS" || v === "EDULIFE") return "EDULIFEOS";
-  if (v === "AYITIKOPJHS") return "AYITIKOPJHS";
-  if (v === "AYITIKPRIM") return "AYITIKPRIM";
-  if (v === "AYITIADMIN") return "AYITIADMIN";
-
-  return null;
-}
-
-const DEFAULT_BRAND: BrandName =
-  normalizeBrandName(process.env.HUBTEL_DEFAULT_BRAND) ?? "EDULIFEOS";
-
-function normalizeGhanaPhone(raw: string): string {
-  const digits = (raw || "").trim().replace(/[^\d]/g, "");
-  if (!digits) return "";
-
-  if (digits.startsWith("0")) return "233" + digits.slice(1);
-  if (digits.startsWith("233")) return digits;
-  if (digits.length === 9) return "233" + digits;
-
-  return digits;
-}
-
-function getBrandConfig(brand?: string): { brand: BrandName; config: HubtelBrandConfig } {
-  const resolvedBrand = normalizeBrandName(brand) ?? DEFAULT_BRAND;
-
-  if (resolvedBrand === "EDULIFEOS") {
-    return {
-      brand: resolvedBrand,
-      config: {
-        clientId: process.env.HUBTEL_EDULIFEOS_CLIENT_ID ?? "",
-        clientSecret: process.env.HUBTEL_EDULIFEOS_CLIENT_SECRET ?? "",
-        from: process.env.HUBTEL_EDULIFEOS_FROM ?? "EduLifeOS",
-      },
-    };
-  }
-
-  if (resolvedBrand === "AYITIKOPJHS") {
-    return {
-      brand: resolvedBrand,
-      config: {
-        clientId: process.env.HUBTEL_AYITIKOPJHS_CLIENT_ID ?? "",
-        clientSecret: process.env.HUBTEL_AYITIKOPJHS_CLIENT_SECRET ?? "",
-        from: process.env.HUBTEL_AYITIKOPJHS_FROM ?? "AyitikopJHS",
-      },
-    };
-  }
-
-  if (resolvedBrand === "AYITIKPRIM") {
-    return {
-      brand: resolvedBrand,
-      config: {
-        clientId: process.env.HUBTEL_AYITIKPRIM_CLIENT_ID ?? "",
-        clientSecret: process.env.HUBTEL_AYITIKPRIM_CLIENT_SECRET ?? "",
-        from: process.env.HUBTEL_AYITIKPRIM_FROM ?? "AyitikPRIM",
-      },
-    };
-  }
-
-  return {
-    brand: "AYITIADMIN",
-    config: {
-      clientId: process.env.HUBTEL_AYITIADMIN_CLIENT_ID ?? "",
-      clientSecret: process.env.HUBTEL_AYITIADMIN_CLIENT_SECRET ?? "",
-      from: process.env.HUBTEL_AYITIADMIN_FROM ?? "AyitiAdmin",
-    },
-  };
-}
-
-function toJsonValue(value: unknown): Prisma.InputJsonValue | null {
-  if (value === undefined) return null;
-  try {
-    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-  } catch {
-    return null;
-  }
-}
 
 type SmsLogModel = {
   create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
 };
 
+const SMS_PROVIDER = (process.env.SMS_PROVIDER ?? "HUBTEL").trim().toUpperCase();
+const HUBTEL_BASE_URL = process.env.HUBTEL_BASE_URL ?? "https://smsc.hubtel.com";
+const SMS_TEST_MODE =
+  (process.env.SMS_TEST_MODE ?? "false").trim().toLowerCase() === "true";
+const TEST_SMS_TO = process.env.TEST_SMS_TO ?? "";
+
+function normalizeGhanaPhone(raw: string): string {
+  const digits = String(raw ?? "").trim().replace(/[^\d]/g, "");
+  if (!digits) return "";
+
+  if (digits.startsWith("0") && digits.length === 10) {
+    return `233${digits.slice(1)}`;
+  }
+
+  if (digits.startsWith("233") && digits.length >= 12) return digits;
+  if (digits.length === 9) return `233${digits}`;
+
+  return digits;
+}
+
+function getEduLifeOsConfig() {
+  const clientId = process.env.HUBTEL_EDULIFEOS_CLIENT_ID ?? "";
+  const clientSecret = process.env.HUBTEL_EDULIFEOS_CLIENT_SECRET ?? "";
+  const from = process.env.HUBTEL_EDULIFEOS_FROM ?? "EduLifeOS";
+
+  return {
+    brand: HUBTEL_BRAND,
+    clientId,
+    clientSecret,
+    from,
+  };
+}
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue | undefined {
+  if (value === undefined) return undefined;
+
+  try {
+    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+  } catch {
+    return undefined;
+  }
+}
+
 function isObj(v: unknown): v is Record<string, unknown> {
-  return !!v && typeof v === "object";
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+function responseIsEmpty(data: unknown): boolean {
+  if (data === null || data === undefined) return true;
+  if (typeof data === "string") return data.trim().length === 0;
+  if (Array.isArray(data)) return data.length === 0;
+  if (isObj(data)) return Object.keys(data).length === 0;
+  return false;
+}
+
+function stringifyProvider(data: unknown): string {
+  try {
+    if (typeof data === "string") return data;
+    return JSON.stringify(data);
+  } catch {
+    return "";
+  }
 }
 
 function pickString(data: unknown, keys: string[]): string | null {
   if (!isObj(data)) return null;
-  for (const k of keys) {
-    const v = (data as Record<string, unknown>)[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
+
+  for (const key of keys) {
+    const value = data[key];
+
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
   }
+
   return null;
 }
 
 function pickNumber(data: unknown, keys: string[]): number | null {
   if (!isObj(data)) return null;
-  for (const k of keys) {
-    const v = (data as Record<string, unknown>)[k];
-    if (typeof v === "number" && Number.isFinite(v)) return v;
+
+  for (const key of keys) {
+    const value = data[key];
+
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+
+    if (typeof value === "string" && value.trim()) {
+      const n = Number(value);
+      if (Number.isFinite(n)) return n;
+    }
   }
+
   return null;
+}
+
+function providerAccepted(input: {
+  httpOk: boolean;
+  data: unknown;
+  providerStatus: number | null;
+  providerStatusDescription: string | null;
+  providerMessageId: string | null;
+}) {
+  if (!input.httpOk) return false;
+  if (responseIsEmpty(input.data)) return false;
+
+  const rawText = `${input.providerStatusDescription ?? ""} ${stringifyProvider(
+    input.data
+  )}`.toLowerCase();
+
+  const failureWords = [
+    "fail",
+    "failed",
+    "error",
+    "invalid",
+    "unauthor",
+    "forbid",
+    "insufficient",
+    "missing",
+    "blank",
+    "empty",
+    "rejected",
+    "denied",
+  ];
+
+  if (failureWords.some((word) => rawText.includes(word))) return false;
+
+  if (input.providerMessageId) return true;
+
+  if (typeof input.providerStatus === "number") {
+    if (input.providerStatus === 0) return true;
+    if (input.providerStatus >= 200 && input.providerStatus < 300) return true;
+    if (input.providerStatus >= 400) return false;
+  }
+
+  const successWords = [
+    "success",
+    "accepted",
+    "submitted",
+    "queued",
+    "sent",
+    "ok",
+    "delivered",
+  ];
+
+  if (successWords.some((word) => rawText.includes(word))) return true;
+
+  // Final controlled fallback: HTTP was OK and Hubtel returned non-empty data.
+  // This prevents blank dashboard rows from being treated as accepted.
+  return true;
 }
 
 async function logSmsAttempt(args: {
   to: string;
   from: string | null;
   body: string;
-  brand: string | null;
   tenantId?: string;
   actorId?: string;
   providerMessageId?: string | null;
   providerStatus?: number | null;
   providerStatusDescription?: string | null;
   providerRaw?: unknown;
-}): Promise<void> {
+}) {
   try {
     const client = prisma as unknown as { smsLog?: SmsLogModel };
     const smsLog = client.smsLog;
 
     if (!smsLog || typeof smsLog.create !== "function") {
-      console.warn("[SMS_LOG_WARN] prisma.smsLog.create is not available. Skipping log.");
+      console.warn("[SMS_LOG_WARN] prisma.smsLog.create is not available.");
       return;
     }
 
@@ -178,13 +213,14 @@ async function logSmsAttempt(args: {
         to: args.to,
         from: args.from ?? undefined,
         body: args.body,
-        brand: args.brand ?? undefined,
+        brand: HUBTEL_BRAND,
         tenantId: args.tenantId ?? undefined,
         actorId: args.actorId ?? undefined,
         providerMessageId: args.providerMessageId ?? undefined,
-        providerStatus: typeof args.providerStatus === "number" ? args.providerStatus : undefined,
+        providerStatus:
+          typeof args.providerStatus === "number" ? args.providerStatus : undefined,
         providerStatusDescription: args.providerStatusDescription ?? undefined,
-        providerRaw: toJsonValue(args.providerRaw) ?? undefined,
+        providerRaw: toJsonValue(args.providerRaw),
       },
     });
   } catch (err) {
@@ -192,48 +228,74 @@ async function logSmsAttempt(args: {
   }
 }
 
-export async function sendViaHubtel(params: HubtelSendParams): Promise<HubtelSendResult> {
-  if (SMS_PROVIDER.toUpperCase() !== "HUBTEL") {
-    throw new Error(`SMS_PROVIDER is set to '${SMS_PROVIDER}', but sendViaHubtel was called.`);
-  }
-  if (!HUBTEL_BASE_URL) {
-    throw new Error("Hubtel base URL missing in environment.");
+export async function sendViaHubtel(
+  params: HubtelSendParams
+): Promise<HubtelSendResult> {
+  if (SMS_PROVIDER !== "HUBTEL") {
+    throw new Error(
+      `SMS_PROVIDER is set to '${SMS_PROVIDER}', but Hubtel SMS was requested.`
+    );
   }
 
-  const { brand, config } = getBrandConfig(params.brand);
-  const { clientId, clientSecret, from } = config;
+  const requestedBrand = String(params.brand ?? HUBTEL_BRAND)
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
 
-  if (!clientId || !clientSecret) {
-    throw new Error(`Missing Hubtel credentials for brand ${brand}`);
+  if (requestedBrand && requestedBrand !== HUBTEL_BRAND) {
+    console.warn(
+      `[SMS_BRAND_NORMALIZED] Requested revoked sender '${requestedBrand}', using EDULIFEOS instead.`
+    );
+  }
+
+  const config = getEduLifeOsConfig();
+
+  if (!config.clientId || !config.clientSecret) {
+    throw new Error("Missing Hubtel EduLifeOS credentials.");
   }
 
   const logicalTo = normalizeGhanaPhone(params.to);
+
   if (!logicalTo) {
-    throw new Error("Invalid 'to' phone number.");
+    throw new Error("Invalid recipient phone number.");
   }
 
   let actualTo = logicalTo;
-  const testMode = SMS_TEST_MODE;
 
   if (SMS_TEST_MODE) {
     const testTo = normalizeGhanaPhone(TEST_SMS_TO);
-    if (testTo) actualTo = testTo;
+    if (!testTo) {
+      throw new Error("SMS_TEST_MODE is true, but TEST_SMS_TO is not configured.");
+    }
+    actualTo = testTo;
+  }
+
+  const body = String(params.body ?? "").trim();
+
+  if (!body) {
+    throw new Error("SMS body is empty.");
   }
 
   const url = new URL("/v1/messages/send", HUBTEL_BASE_URL);
-  url.searchParams.set("From", from);
+  url.searchParams.set("From", config.from);
   url.searchParams.set("To", actualTo);
-  url.searchParams.set("Content", params.body);
-  url.searchParams.set("ClientId", clientId);
-  url.searchParams.set("ClientSecret", clientSecret);
+  url.searchParams.set("Content", body);
+  url.searchParams.set("ClientId", config.clientId);
+  url.searchParams.set("ClientSecret", config.clientSecret);
 
   let data: unknown = null;
+  let httpStatus = 0;
 
   try {
-    const res = await fetch(url.toString(), { method: "GET", cache: "no-store" });
-    const httpStatus = res.status;
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    httpStatus = res.status;
 
     const text = await res.text();
+
     try {
       data = text ? (JSON.parse(text) as unknown) : null;
     } catch {
@@ -241,68 +303,118 @@ export async function sendViaHubtel(params: HubtelSendParams): Promise<HubtelSen
     }
 
     const providerStatus =
-      pickNumber(data, ["status", "Status", "code", "Code"]) ?? null;
+      pickNumber(data, [
+        "status",
+        "Status",
+        "code",
+        "Code",
+        "responseCode",
+        "ResponseCode",
+      ]) ?? null;
 
     const providerStatusDescription =
-      pickString(data, ["statusDescription", "StatusDescription", "message", "Message"]) ??
-      (res.ok ? "HTTP_OK" : `HTTP_${httpStatus}`);
+      pickString(data, [
+        "statusDescription",
+        "StatusDescription",
+        "message",
+        "Message",
+        "description",
+        "Description",
+        "statusText",
+        "StatusText",
+      ]) ?? (res.ok ? "HTTP_OK_WITH_UNRECOGNIZED_PROVIDER_RESPONSE" : `HTTP_${httpStatus}`);
 
     const providerMessageId =
-      pickString(data, ["messageId", "MessageId", "smsId", "SmsId"]) ?? null;
+      pickString(data, [
+        "messageId",
+        "MessageId",
+        "smsId",
+        "SmsId",
+        "message_id",
+        "sms_id",
+        "transactionId",
+        "TransactionId",
+        "id",
+        "Id",
+      ]) ?? null;
+
+    const accepted = providerAccepted({
+      httpOk: res.ok,
+      data,
+      providerStatus,
+      providerStatusDescription,
+      providerMessageId,
+    });
+
+    const providerStatusForLog = providerStatus ?? httpStatus;
+    const descriptionForLog = accepted
+      ? providerStatusDescription
+      : `NOT_ACCEPTED: ${providerStatusDescription}`;
 
     await logSmsAttempt({
       to: actualTo,
-      from,
-      body: params.body,
-      brand,
+      from: config.from,
+      body,
       tenantId: params.tenantId,
       actorId: params.actorId,
       providerMessageId,
-      providerStatus: providerStatus ?? httpStatus,
-      providerStatusDescription,
+      providerStatus: providerStatusForLog,
+      providerStatusDescription: descriptionForLog,
       providerRaw: {
         httpStatus,
-        testMode,
+        accepted,
+        testMode: SMS_TEST_MODE,
         logicalTo,
+        actualTo,
+        brand: HUBTEL_BRAND,
+        requestedBrand,
         meta: params.meta ?? null,
         hubtel: data,
       },
     });
 
-    if (!res.ok) {
-      throw new Error(`Hubtel HTTP ${httpStatus}`);
-    }
-
     return {
-      ok: true,
-      brand,
-      from,
+      ok: accepted,
+      brand: HUBTEL_BRAND,
+      from: config.from,
       to: actualTo,
-      testMode,
+      testMode: SMS_TEST_MODE,
       providerResponse: data,
       httpStatus,
       providerStatus,
-      providerStatusDescription,
+      providerStatusDescription: descriptionForLog,
       providerMessageId,
+      ...(accepted
+        ? {}
+        : {
+            error: `Hubtel did not clearly accept SMS: ${providerStatusDescription}`,
+          }),
     };
   } catch (err) {
     const msg =
-      err instanceof Error ? err.message : typeof err === "string" ? err : "Unknown error";
+      err instanceof Error
+        ? err.message
+        : typeof err === "string"
+          ? err
+          : "Unknown Hubtel SMS error";
 
     await logSmsAttempt({
-      to: actualTo,
-      from,
-      body: params.body,
-      brand,
+      to: actualTo || logicalTo,
+      from: config.from,
+      body,
       tenantId: params.tenantId,
       actorId: params.actorId,
       providerMessageId: null,
-      providerStatus: null,
+      providerStatus: httpStatus || null,
       providerStatusDescription: "NETWORK_OR_FETCH_ERROR",
       providerRaw: {
         error: msg,
-        testMode,
+        httpStatus,
+        testMode: SMS_TEST_MODE,
         logicalTo,
+        actualTo,
+        brand: HUBTEL_BRAND,
+        requestedBrand,
         meta: params.meta ?? null,
       },
     });

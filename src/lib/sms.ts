@@ -1,14 +1,14 @@
 // src/lib/sms.ts
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { sendViaHubtel, type BrandName } from "@/lib/sms/hubtel";
+import { sendViaHubtel } from "@/lib/sms/hubtel";
 
 type SendSmsArgs = {
   tenantId: string;
   actorId?: string | null;
   to: string;
   message: string;
-  from?: string | null;
+  from?: string | null; // kept for compatibility, normalized to EduLifeOS
   template?: string | null;
   payload?: unknown;
 };
@@ -24,27 +24,9 @@ function normalizeGhanaPhone(raw: string): string | null {
   return s;
 }
 
-function inferBrand(from?: string | null): BrandName {
-  const raw = String(
-    from ??
-      process.env.HUBTEL_DEFAULT_BRAND ??
-      process.env.HUBTEL_EDULIFEOS_FROM ??
-      process.env.HUBTEL_SENDER_ID ??
-      "EDULIFEOS"
-  )
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "");
-
-  if (raw === "AYITIKOPJHS") return "AYITIKOPJHS";
-  if (raw === "AYITIKPRIM") return "AYITIKPRIM";
-  if (raw === "AYITIADMIN") return "AYITIADMIN";
-
-  return "EDULIFEOS";
-}
-
 function toJsonValue(value: unknown): Prisma.InputJsonValue | undefined {
   if (value === undefined) return undefined;
+
   try {
     return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
   } catch {
@@ -55,7 +37,6 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue | undefined {
 export async function sendSms(args: SendSmsArgs) {
   const to = normalizeGhanaPhone(args.to);
   const body = String(args.message ?? "").trim();
-  const brand = inferBrand(args.from);
   const fallbackFrom = process.env.HUBTEL_EDULIFEOS_FROM ?? "EduLifeOS";
 
   if (!to || !body) {
@@ -64,7 +45,7 @@ export async function sendSms(args: SendSmsArgs) {
         to: to ?? String(args.to ?? ""),
         from: fallbackFrom,
         body,
-        brand,
+        brand: "EDULIFEOS",
         tenantId: args.tenantId,
         actorId: args.actorId ?? null,
         providerStatusDescription: "SKIPPED: invalid phone or empty message",
@@ -78,13 +59,15 @@ export async function sendSms(args: SendSmsArgs) {
     const result = await sendViaHubtel({
       to,
       body,
-      brand,
+      brand: "EDULIFEOS",
       tenantId: args.tenantId,
       actorId: args.actorId ?? undefined,
       meta: {
         template: args.template ?? null,
         payload: args.payload ?? null,
         caller: "src/lib/sms.ts",
+        requestedFrom: args.from ?? null,
+        normalizedBrand: "EDULIFEOS",
       },
     });
 
@@ -109,9 +92,18 @@ export async function sendSms(args: SendSmsArgs) {
       from: result.from,
       to: result.to,
       testMode: result.testMode,
+      providerStatusDescription: result.providerStatusDescription,
+      providerMessageId: result.providerMessageId,
+      error: result.error,
     };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: msg };
+
+    return {
+      ok: false,
+      error: msg,
+      brand: "EDULIFEOS",
+      to,
+    };
   }
 }
