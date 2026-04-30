@@ -28,6 +28,11 @@ type FinanceErrorCode =
   | "PAYMENT_GATEWAY_FAILED"
   | "PAYMENT_SERVICE_NOT_CONFIGURED";
 
+const TX_LONG = {
+  maxWait: 10_000,
+  timeout: 60_000,
+} as const;
+
 export class FinanceError extends Error {
   code: FinanceErrorCode;
   status: number;
@@ -179,11 +184,12 @@ export async function recalculateInvoiceTotals(
 
   const lineBilled = lineAgg._sum.amountPesewas ?? 0;
   const legacyBilled = invoice.totalBilledPesewas ?? 0;
-
   const totalBilledPesewas = lineBilled > 0 ? lineBilled : legacyBilled;
+
   const lineWaived = lineAgg._sum.waivedPesewas ?? 0;
   const adjustmentWaived = adjustmentAgg._sum.amountPesewas ?? 0;
   const totalWaivedPesewas = Math.max(0, lineWaived + adjustmentWaived);
+
   const totalPaidPesewas = paymentAgg._sum.amountPesewas ?? 0;
   const netDue = Math.max(0, totalBilledPesewas - totalWaivedPesewas);
   const balancePesewas = Math.max(0, netDue - totalPaidPesewas);
@@ -403,7 +409,7 @@ export async function generateInvoicesForClassroomFeeStructure(input: {
       createdLines,
       existingLines,
     };
-  });
+  }, TX_LONG);
 }
 
 export async function recordManualPayment(input: {
@@ -478,14 +484,17 @@ export async function recordManualPayment(input: {
       }
     }
 
-    const recalculatedBefore = await recalculateInvoiceTotals(tx, tenantId, invoiceId);
-    const balance = recalculatedBefore.balancePesewas;
+    const recalculatedBefore = await recalculateInvoiceTotals(
+      tx,
+      tenantId,
+      invoiceId
+    );
 
-    if (balance <= 0) {
+    if (recalculatedBefore.balancePesewas <= 0) {
       throw new FinanceError("INVOICE_ALREADY_CLEARED", 400);
     }
 
-    if (amountPesewas > balance) {
+    if (amountPesewas > recalculatedBefore.balancePesewas) {
       throw new FinanceError("PAYMENT_EXCEEDS_BALANCE", 400);
     }
 
@@ -549,13 +558,19 @@ export async function recordManualPayment(input: {
         entryType: "PAYMENT_CREDIT",
         direction: "CREDIT",
         amountPesewas,
-        description: `Payment via ${cleanPaymentMethod}${cleanReference ? ` (ref: ${cleanReference})` : ""}`,
+        description: `Payment via ${cleanPaymentMethod}${
+          cleanReference ? ` (ref: ${cleanReference})` : ""
+        }`,
         journalRef: makeJournalRef("PAY"),
         createdByUserId: actorUserId,
       },
     });
 
-    const recalculatedAfter = await recalculateInvoiceTotals(tx, tenantId, invoiceId);
+    const recalculatedAfter = await recalculateInvoiceTotals(
+      tx,
+      tenantId,
+      invoiceId
+    );
 
     return {
       ok: true,
@@ -571,7 +586,7 @@ export async function recordManualPayment(input: {
       academicYear: invoice.academicYear,
       outstandingPesewas: recalculatedAfter.balancePesewas,
     };
-  });
+  }, TX_LONG);
 }
 
 export async function createParentPaymentIntent(input: {
@@ -745,7 +760,7 @@ export async function createParentPaymentIntent(input: {
       totalOutstandingPesewas,
       email,
     };
-  });
+  }, TX_LONG);
 }
 
 export async function attachGatewayToPaymentIntent(input: {
@@ -1148,10 +1163,7 @@ export async function finalizePaystackChargeSuccess(input: {
     });
 
     const studentName =
-      [
-        intent.invoice.student?.firstName,
-        intent.invoice.student?.lastName,
-      ]
+      [intent.invoice.student?.firstName, intent.invoice.student?.lastName]
         .filter(Boolean)
         .join(" ")
         .trim() || "Student";
@@ -1221,5 +1233,5 @@ export async function finalizePaystackChargeSuccess(input: {
       receipt,
       invoice: invoiceAfter,
     };
-  });
+  }, TX_LONG);
 }

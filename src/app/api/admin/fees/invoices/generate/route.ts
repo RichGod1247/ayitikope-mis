@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     requireTenant: true,
     requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "SUPERADMIN"],
   });
+
   if (!auth.ok) return auth.res;
 
   const tenantId = auth.ctx.tenantId;
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
   }
 
   let body: Body;
+
   try {
     body = (await req.json()) as Body;
   } catch {
@@ -77,6 +79,10 @@ export async function POST(req: NextRequest) {
     }
 
     console.error("[ADMIN_FEE_INVOICES_GENERATE_ERROR]", err);
-    return jsonNoStore({ ok: false, error: "FAILED_TO_GENERATE_INVOICES" }, 500);
+
+    return jsonNoStore(
+      { ok: false, error: "FAILED_TO_GENERATE_INVOICES" },
+      500
+    );
   }
 }
