@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
-import { sendViaHubtel } from "@/lib/sms/hubtel";
+import { sendSms } from "@/lib/sms";
 import {
   getIpFromHeaders,
   getUserAgentFromHeaders,
@@ -14,8 +14,8 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const RESEND_COOLDOWN_SECONDS = 120; // 2 minutes
+const OTP_TTL_MS = 5 * 60 * 1000;
+const RESEND_COOLDOWN_SECONDS = 120;
 
 function secret() {
   const s = process.env.OTP_SECRET || process.env.NEXTAUTH_SECRET;
@@ -27,14 +27,19 @@ function sign(base: string) {
   return crypto.createHmac("sha256", secret()).update(base).digest("base64url");
 }
 
-function createSignedToken(payload: Record<string, any>) {
+function createSignedToken(payload: Record<string, unknown>) {
   const base = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
   const sig = sign(base);
   return `${base}.${sig}`;
 }
 
-function digitsOnly(v: string) {
+function digitsOnly(v: unknown) {
   return String(v ?? "").replace(/\D/g, "");
+}
+
+function suffix9(v: unknown) {
+  const d = digitsOnly(v);
+  return d.length >= 9 ? d.slice(-9) : d;
 }
 
 function generateOtp(): string {
@@ -48,7 +53,7 @@ function otpHash(code: string, tenantId: string, phoneDigits: string, expiresAt:
     .digest("base64url");
 }
 
-function noStoreJson(status: number, payload: any) {
+function noStoreJson(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: {
@@ -66,8 +71,12 @@ function safeInt(n: unknown, def: number) {
 export async function POST(req: NextRequest) {
   try {
     const ct = (req.headers.get("content-type") || "").toLowerCase();
+
     if (!ct.includes("application/json")) {
-      return noStoreJson(415, { ok: false, error: "Content-Type must be application/json." });
+      return noStoreJson(415, {
+        ok: false,
+        error: "Content-Type must be application/json.",
+      });
     }
 
     const body = await req.json().catch(() => ({}));
@@ -75,7 +84,9 @@ export async function POST(req: NextRequest) {
     const schoolId = String(body.schoolId ?? "").trim();
     const guardianPhoneRaw = String(body.guardianPhone ?? "").trim();
 
-    if (!schoolId) return noStoreJson(400, { ok: false, error: "schoolId is required" });
+    if (!schoolId) {
+      return noStoreJson(400, { ok: false, error: "Select your school first." });
+    }
 
     const tenant = await prisma.tenant.findFirst({
       where: { id: schoolId, status: "ACTIVE" },
@@ -90,20 +101,22 @@ export async function POST(req: NextRequest) {
     }
 
     const phoneNorm = normalizeGhPhoneE164(guardianPhoneRaw);
+
     if (!phoneNorm) {
       return noStoreJson(400, {
         ok: false,
-        error: "guardianPhone must be a valid Ghana phone (normalizable to +233...)",
+        error: "Enter a valid Ghana phone number, for example 0551234567.",
       });
     }
 
     const ip = getIpFromHeaders(req.headers);
     const userAgent = getUserAgentFromHeaders(req.headers);
 
-    const phoneDigits = digitsOnly(phoneNorm); // 233XXXXXXXXX
+    const phoneDigits = digitsOnly(phoneNorm);
+    const phoneLast9 = suffix9(phoneNorm);
 
-    // cooldown per tenant+phone
     const rlKey = `parentOtpSend:${tenant.id}:${phoneDigits}`;
+
     const lim = await rateLimitCheck({
       action: "PARENT_OTP_SEND",
       key: rlKey,
@@ -112,7 +125,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (!lim.ok) {
-      // return last token if still valid (prevents double-click overwriting)
       const auditKey = `parentOtp:${tenant.id}:${phoneDigits}`;
 
       const last = await prisma.auditLog.findFirst({
@@ -126,35 +138,67 @@ export async function POST(req: NextRequest) {
         select: { metadata: true },
       });
 
-      const md = (last?.metadata as any) || {};
-      const lastToken = typeof md?.token === "string" ? md.token : null;
-      const lastExpiresAt = safeInt(md?.expiresAt, 0);
+      const md = (last?.metadata as Record<string, unknown>) || {};
+      const lastToken = typeof md.token === "string" ? md.token : null;
+      const lastExpiresAt = safeInt(md.expiresAt, 0);
       const stillValid = !!lastToken && lastExpiresAt > Date.now();
 
-      const payload: any = {
+      return noStoreJson(200, {
         ok: true,
         token: stillValid ? lastToken : null,
         validForMinutes: Math.round(OTP_TTL_MS / 60000),
-        message: "If this number is registered, an OTP has been sent.",
+        message: "A code was recently requested. Please wait before requesting another.",
         cooldownSecondsRemaining: lim.retryAfterSeconds,
-      };
-
-      // DEV-only visibility (helps debugging)
-      if (process.env.NODE_ENV !== "production") {
-        payload.smsTestMode = (process.env.SMS_TEST_MODE ?? "false").toLowerCase() === "true";
-      }
-
-      return noStoreJson(200, payload);
+      });
     }
 
-    // record attempt immediately
+    const linkedStudent = await prisma.student.findFirst({
+      where: {
+        tenantId: tenant.id,
+        status: "ACTIVE",
+        OR: [
+          { guardianPhoneNorm: phoneNorm },
+          { guardianPhoneNorm: { endsWith: phoneLast9 } },
+          { guardianPhone: { endsWith: phoneLast9 } },
+        ],
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (!linkedStudent) {
+      await rateLimitRecord({
+        action: "PARENT_OTP_SEND",
+        key: rlKey,
+        tenantId: tenant.id,
+        ip,
+        userAgent,
+        metadata: {
+          kind: "PARENT_OTP_UNREGISTERED_PHONE",
+          phoneLast4: phoneDigits.slice(-4),
+        } as any,
+      });
+
+      return noStoreJson(404, {
+        ok: false,
+        error:
+          "This phone number is not linked to an active learner in this school. Please enter the guardian phone number recorded by the school, or contact the school office for help.",
+      });
+    }
+
     await rateLimitRecord({
       action: "PARENT_OTP_SEND",
       key: rlKey,
       tenantId: tenant.id,
       ip,
       userAgent,
-      metadata: { kind: "PARENT_OTP_SEND" } as any,
+      metadata: {
+        kind: "PARENT_OTP_SEND",
+        phoneLast4: phoneDigits.slice(-4),
+      } as any,
     });
 
     const otp = generateOtp();
@@ -163,31 +207,17 @@ export async function POST(req: NextRequest) {
     const tokenPayload = {
       v: 2,
       tenantId: tenant.id,
-      guardianPhone: phoneDigits, // digits
-      phoneNorm, // +233...
+      guardianPhone: phoneDigits,
+      phoneNorm,
       expiresAt,
       otpHash: otpHash(otp, tenant.id, phoneDigits, expiresAt),
     };
 
     const token = createSignedToken(tokenPayload);
 
-    const responsePayload: any = {
-      ok: true,
-      token,
-      validForMinutes: Math.round(OTP_TTL_MS / 60000),
-      message: "If this number is registered, an OTP has been sent.",
-      cooldownSecondsRemaining: RESEND_COOLDOWN_SECONDS,
-    };
-
-    // Optional debug code (only if explicitly enabled + not production)
-    const otpDebug =
-      (process.env.OTP_DEBUG_MODE ?? "").toLowerCase() === "true" &&
-      process.env.NODE_ENV !== "production";
-    if (otpDebug) responsePayload.debugCode = otp;
-
-    // best-effort audit
     try {
       const auditKey = `parentOtp:${tenant.id}:${phoneDigits}`;
+
       await prisma.auditLog.create({
         data: {
           tenantId: tenant.id,
@@ -197,7 +227,8 @@ export async function POST(req: NextRequest) {
           metadata: {
             phoneLast4: phoneDigits.slice(-4),
             expiresAt,
-            token, // so cooldown responses can reuse token
+            token,
+            linkedStudentId: linkedStudent.id,
           } as any,
           ip,
           userAgent,
@@ -205,58 +236,43 @@ export async function POST(req: NextRequest) {
       });
     } catch {}
 
-    const smsText = `${tenant.name}: Your EduLife OS login code is ${otp}. It expires in 5 minutes. If you did not request this, ignore.`;
+    const smsText = `${tenant.name}: Your EduLife OS login code is ${otp}. It expires in 5 minutes. If you did not request this, ignore this SMS.`;
 
-    // DEV-only diagnostics
-    let smsOk: boolean | null = null;
-    let smsRoutedTo: string | null = null;
-    let smsHttpStatus: number | null = null;
-    let smsMessageId: string | null = null;
-    const smsTestMode = (process.env.SMS_TEST_MODE ?? "false").toLowerCase() === "true";
+    const smsResult = await sendSms({
+      tenantId: tenant.id,
+      to: phoneNorm,
+      message: smsText,
+      template: "PARENT_OTP",
+      payload: {
+        expiresAt,
+        linkedStudentId: linkedStudent.id,
+        phoneLast4: phoneDigits.slice(-4),
+      },
+    });
 
-    try {
-      // optional audit table
-      try {
-        await prisma.sMSSendAudit.create({
-          data: {
-            tenantId: tenant.id,
-            toPhone: phoneNorm,
-            template: "PARENT_OTP",
-            payload: { expiresAt },
-          },
-        });
-      } catch {}
+    if (!smsResult.ok) {
+      console.error("[PARENT_OTP_SMS_FAILED]", smsResult);
 
-      const r = await sendViaHubtel({
-  to: phoneNorm,
-  body: smsText,
-  brand: process.env.HUBTEL_DEFAULT_BRAND ?? "EDULIFEOS",
-  tenantId: tenant.id,
-  meta: { category: "PARENT_OTP", expiresAt },
-});
-
-      smsOk = true;
-      smsRoutedTo = r.to ?? null;
-      smsHttpStatus = (r as any).httpStatus ?? null;
-      smsMessageId = (r as any).providerMessageId ?? null;
-    } catch (e) {
-      smsOk = false;
-      console.error("[PARENT_OTP_SEND_ERROR]", e);
+      return noStoreJson(502, {
+        ok: false,
+        error:
+          "We could not send the login code right now. Please try again shortly or contact the school office.",
+      });
     }
 
-    // DEV-only visibility (never in prod)
-    if (process.env.NODE_ENV !== "production") {
-      responsePayload.smsOk = smsOk;
-      responsePayload.smsTo = phoneNorm;
-      responsePayload.smsRoutedTo = smsRoutedTo;
-      responsePayload.smsHttpStatus = smsHttpStatus;
-      responsePayload.smsMessageId = smsMessageId;
-      responsePayload.smsTestMode = smsTestMode;
-    }
-
-    return noStoreJson(200, responsePayload);
+    return noStoreJson(200, {
+      ok: true,
+      token,
+      validForMinutes: Math.round(OTP_TTL_MS / 60000),
+      message: "A login code has been sent to the guardian phone number.",
+      cooldownSecondsRemaining: RESEND_COOLDOWN_SECONDS,
+    });
   } catch (e) {
     console.error("[PARENT_OTP_REQUEST_ERROR]", e);
-    return noStoreJson(500, { ok: false, error: "Server error. Please try again." });
+
+    return noStoreJson(500, {
+      ok: false,
+      error: "Server error. Please try again.",
+    });
   }
 }
