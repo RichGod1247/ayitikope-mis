@@ -1,3 +1,4 @@
+// src/app/admin/fees/online-payments/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -28,6 +29,10 @@ function clean(v: unknown) {
   return String(v ?? "").trim();
 }
 
+function bankKey(bank: Bank) {
+  return `${bank.code}::${bank.slug || bank.name}::${bank.currency || "GHS"}`;
+}
+
 export default function AdminOnlinePaymentsPage() {
   const [banks, setBanks] = useState<Bank[]>([]);
   const [bankValue, setBankValue] = useState("");
@@ -40,9 +45,7 @@ export default function AdminOnlinePaymentsPage() {
 
   const selectedBank = useMemo(() => {
     if (!bankValue) return null;
-    const [code, ...nameParts] = bankValue.split("::");
-    const name = nameParts.join("::");
-    return banks.find((b) => b.code === code && b.name === name) ?? null;
+    return banks.find((b) => bankKey(b) === bankValue) ?? null;
   }, [bankValue, banks]);
 
   async function loadBanks() {
@@ -59,7 +62,19 @@ export default function AdminOnlinePaymentsPage() {
         return;
       }
 
-      setBanks(Array.isArray(j.items) ? j.items : []);
+      const safeBanks: Bank[] = Array.isArray(j.items)
+        ? j.items
+            .map((b: any) => ({
+              name: clean(b.name),
+              code: clean(b.code),
+              slug: clean(b.slug) || null,
+              type: clean(b.type) || null,
+              currency: clean(b.currency) || "GHS",
+            }))
+            .filter((b: Bank) => b.name && b.code && b.currency === "GHS")
+        : [];
+
+      setBanks(safeBanks);
     } catch {
       setMsg("Network/server error loading banks.");
       setBanks([]);
@@ -113,6 +128,7 @@ export default function AdminOnlinePaymentsPage() {
 
       setCreated(j.settlementAccount);
       setMsg("Online fee payments have been enabled for your school.");
+      setBankValue("");
       setAccountNumber("");
       setAccountName("");
     } catch {
@@ -162,14 +178,23 @@ export default function AdminOnlinePaymentsPage() {
               disabled={loadingBanks || submitting}
             >
               <option value="">
-                {loadingBanks ? "Loading banks…" : "Select bank"}
+                {loadingBanks
+                  ? "Loading banks…"
+                  : banks.length === 0
+                    ? "No Ghana banks available"
+                    : "Select bank"}
               </option>
+
               {banks.map((bank) => (
-                <option key={`${bank.code}-${bank.name}`} value={`${bank.code}::${bank.name}`}>
+                <option key={bankKey(bank)} value={bankKey(bank)}>
                   {bank.name}
                 </option>
               ))}
             </select>
+
+            <p className="text-[11px] text-slate-500">
+              Bank codes are loaded securely from Paystack and never typed manually.
+            </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -183,6 +208,7 @@ export default function AdminOnlinePaymentsPage() {
                 onChange={(e) => setAccountNumber(e.target.value)}
                 placeholder="Enter school account number"
                 inputMode="numeric"
+                autoComplete="off"
                 disabled={submitting}
               />
             </div>
@@ -196,6 +222,7 @@ export default function AdminOnlinePaymentsPage() {
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
                 placeholder="Account name as held by bank"
+                autoComplete="organization"
                 disabled={submitting}
               />
             </div>
@@ -204,7 +231,7 @@ export default function AdminOnlinePaymentsPage() {
           <button
             type="button"
             onClick={submit}
-            disabled={submitting || loadingBanks}
+            disabled={submitting || loadingBanks || banks.length === 0}
             className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
           >
             {submitting ? "Enabling…" : "Enable Online Fee Payments"}
@@ -222,7 +249,8 @@ export default function AdminOnlinePaymentsPage() {
               <div className="mt-2">
                 Bank: {created.bankName || "—"}
                 <br />
-                Account: {created.accountName} · ****{created.accountNumberLast4 || "—"}
+                Account: {created.accountName} · ****
+                {created.accountNumberLast4 || "—"}
                 <br />
                 Status: {created.status}
               </div>
