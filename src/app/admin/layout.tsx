@@ -30,6 +30,7 @@ const scholarshipNav: NavItem[] = [
 
 const financeNav: NavItem[] = [
   { label: "Finance Overview", href: "/admin/fees/overview" },
+  { label: "Online Payments", href: "/admin/fees/online-payments" },
   { label: "Finance Summary", href: "/admin/fees/summary" },
   { label: "Fee Structures", href: "/admin/fees/structures" },
   { label: "Invoices & Payments", href: "/admin/fees/invoices" },
@@ -57,6 +58,17 @@ function SidebarLink({ href, label }: { href: string; label: string }) {
   );
 }
 
+function MobileNavLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]"
+    >
+      {children}
+    </Link>
+  );
+}
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const safe = await requireServerUserContext({
     redirectTo: "/admin/dashboard",
@@ -76,13 +88,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className="min-h-screen bg-[#05070B] text-[#F7F4ED]">
-      {/* Ambient background */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(27,102,209,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(212,175,55,0.06),transparent_22%)]" />
         <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:56px_56px]" />
       </div>
 
-      {/* Top header */}
       <header className="relative z-40 border-b border-white/10 bg-[rgba(5,7,11,0.90)] backdrop-blur-xl">
         <div className="flex items-center justify-between px-4 py-3 md:px-6">
           <div className="min-w-0">
@@ -115,9 +125,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </div>
       </header>
 
-      {/* Body: sidebar + content */}
       <div className="relative flex min-h-[calc(100vh-56px)]">
-        {/* Sidebar */}
         <aside className="hidden w-56 shrink-0 border-r border-white/8 bg-[rgba(7,17,31,0.60)] backdrop-blur-md lg:block">
           <nav className="sticky top-0 max-h-screen overflow-y-auto flex flex-col gap-6 px-3 py-6 scrollbar-none">
             {navSections.map((section) => (
@@ -135,46 +143,23 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </nav>
         </aside>
 
-        {/* Mobile horizontal nav (shown when sidebar is hidden) */}
         <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[rgba(5,7,11,0.95)] backdrop-blur-xl lg:hidden">
           <div className="flex items-center gap-1 overflow-x-auto px-3 py-2 scrollbar-none">
-            <Link href="/admin/dashboard" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Dashboard
-            </Link>
-            <Link href="/admin/students" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Students
-            </Link>
-            <Link href="/admin/fees/invoices" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Invoices
-            </Link>
-            <Link href="/admin/fees/receipts" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Receipts
-            </Link>
-            <Link href="/admin/fees/structures" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Structures
-            </Link>
-            <Link href="/admin/fees/overview" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Overview
-            </Link>
-            <Link href="/admin/fees/ledger" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Ledger
-            </Link>
-            <Link href="/admin/fees/reconciliation" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Reconciliation
-            </Link>
-            <Link href="/admin/fees/disputes" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Disputes
-            </Link>
-            <Link href="/admin/scholarships" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Scholarships
-            </Link>
-            <Link href="/admin/teachers" className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]">
-              Teachers
-            </Link>
+            <MobileNavLink href="/admin/dashboard">Dashboard</MobileNavLink>
+            <MobileNavLink href="/admin/students">Students</MobileNavLink>
+            <MobileNavLink href="/admin/fees/invoices">Invoices</MobileNavLink>
+            <MobileNavLink href="/admin/fees/receipts">Receipts</MobileNavLink>
+            <MobileNavLink href="/admin/fees/online-payments">Online Pay</MobileNavLink>
+            <MobileNavLink href="/admin/fees/structures">Structures</MobileNavLink>
+            <MobileNavLink href="/admin/fees/overview">Overview</MobileNavLink>
+            <MobileNavLink href="/admin/fees/ledger">Ledger</MobileNavLink>
+            <MobileNavLink href="/admin/fees/reconciliation">Reconciliation</MobileNavLink>
+            <MobileNavLink href="/admin/fees/disputes">Disputes</MobileNavLink>
+            <MobileNavLink href="/admin/scholarships">Scholarships</MobileNavLink>
+            <MobileNavLink href="/admin/teachers">Teachers</MobileNavLink>
           </div>
         </div>
 
-        {/* Main content */}
         <main className="relative min-w-0 flex-1 px-4 py-8 pb-20 md:px-6 lg:pb-8">
           {children}
         </main>

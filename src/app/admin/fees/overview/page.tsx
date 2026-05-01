@@ -98,18 +98,9 @@ function statusLabel(status: FeeRow["status"]) {
 }
 
 function statusClass(status: FeeRow["status"]) {
-  if (status === "cleared") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-800";
-  }
-
-  if (status === "partial") {
-    return "border-amber-200 bg-amber-50 text-amber-800";
-  }
-
-  if (status === "unpaid") {
-    return "border-red-200 bg-red-50 text-red-800";
-  }
-
+  if (status === "cleared") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  if (status === "partial") return "border-amber-200 bg-amber-50 text-amber-800";
+  if (status === "unpaid") return "border-red-200 bg-red-50 text-red-800";
   return "border-zinc-200 bg-zinc-50 text-zinc-700";
 }
 
@@ -126,20 +117,6 @@ function methodLabel(method: string) {
   return map[method] ?? method;
 }
 
-function humanDate(iso: string | null) {
-  if (!iso) return "None";
-
-  try {
-    return new Date(iso).toLocaleDateString("en-GH", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return "None";
-  }
-}
-
 export default function AdminFeesOverviewPage() {
   const [term, setTerm] = useState("1st Term");
   const [academicYear, setAcademicYear] = useState("2025/2026");
@@ -153,9 +130,7 @@ export default function AdminFeesOverviewPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rows, setRows] = useState<FeeRow[]>([]);
   const [classSummaries, setClassSummaries] = useState<ClassSummary[]>([]);
-  const [paymentMethodSummaries, setPaymentMethodSummaries] = useState<
-    MethodSummary[]
-  >([]);
+  const [paymentMethodSummaries, setPaymentMethodSummaries] = useState<MethodSummary[]>([]);
 
   async function load(e?: FormEvent) {
     e?.preventDefault();
@@ -171,10 +146,7 @@ export default function AdminFeesOverviewPage() {
       if (classroomId) url.searchParams.set("classroomId", classroomId);
       if (q.trim()) url.searchParams.set("q", q.trim());
 
-      const res = await fetch(url.toString(), {
-        cache: "no-store",
-      });
-
+      const res = await fetch(url.toString(), { cache: "no-store" });
       const json = (await res.json().catch(() => ({}))) as ApiResponse;
 
       if (!res.ok || !json.ok || !json.summary) {
@@ -189,13 +161,9 @@ export default function AdminFeesOverviewPage() {
       setTenantName(json.tenant?.name || "School");
       setSummary(json.summary);
       setRows(Array.isArray(json.rows) ? json.rows : []);
-      setClassSummaries(
-        Array.isArray(json.classSummaries) ? json.classSummaries : []
-      );
+      setClassSummaries(Array.isArray(json.classSummaries) ? json.classSummaries : []);
       setPaymentMethodSummaries(
-        Array.isArray(json.paymentMethodSummaries)
-          ? json.paymentMethodSummaries
-          : []
+        Array.isArray(json.paymentMethodSummaries) ? json.paymentMethodSummaries : []
       );
     } catch {
       setError("Network error loading finance overview.");
@@ -211,17 +179,9 @@ export default function AdminFeesOverviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const classroomOptions = useMemo(() => {
-    return classSummaries.filter((c) => c.classroomId);
-  }, [classSummaries]);
-
-  const topDebtors = useMemo(() => {
-    return rows.filter((r) => r.outstandingPesewas > 0).slice(0, 10);
-  }, [rows]);
-
-  const mismatchCount = useMemo(() => {
-    return rows.filter((r) => r.storedMismatch).length;
-  }, [rows]);
+  const classroomOptions = useMemo(() => classSummaries.filter((c) => c.classroomId), [classSummaries]);
+  const topDebtors = useMemo(() => rows.filter((r) => r.outstandingPesewas > 0).slice(0, 10), [rows]);
+  const mismatchCount = useMemo(() => rows.filter((r) => r.storedMismatch).length, [rows]);
 
   return (
     <main className="min-h-screen bg-zinc-50">
@@ -242,6 +202,12 @@ export default function AdminFeesOverviewPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/fees/online-payments"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 px-4 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+            >
+              Online payments setup
+            </Link>
             <Link
               href="/admin/fees/reconciliation"
               className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-300 bg-white px-4 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
@@ -264,14 +230,9 @@ export default function AdminFeesOverviewPage() {
         </header>
 
         <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <form
-            onSubmit={load}
-            className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto]"
-          >
+          <form onSubmit={load} className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto]">
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-zinc-700">
-                Term
-              </label>
+              <label className="text-[11px] font-semibold text-zinc-700">Term</label>
               <select
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
@@ -285,9 +246,7 @@ export default function AdminFeesOverviewPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-zinc-700">
-                Academic year
-              </label>
+              <label className="text-[11px] font-semibold text-zinc-700">Academic year</label>
               <input
                 value={academicYear}
                 onChange={(e) => setAcademicYear(e.target.value)}
@@ -297,9 +256,7 @@ export default function AdminFeesOverviewPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-zinc-700">
-                Class
-              </label>
+              <label className="text-[11px] font-semibold text-zinc-700">Class</label>
               <select
                 value={classroomId}
                 onChange={(e) => setClassroomId(e.target.value)}
@@ -346,9 +303,7 @@ export default function AdminFeesOverviewPage() {
           <>
             <section className="grid gap-3 md:grid-cols-4">
               <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-[11px] font-medium text-zinc-500">
-                  Total billed
-                </p>
+                <p className="text-[11px] font-medium text-zinc-500">Total billed</p>
                 <p className="mt-1 text-xl font-bold text-zinc-950">
                   {formatCedis(summary.totalBilledPesewas)}
                 </p>
@@ -358,9 +313,7 @@ export default function AdminFeesOverviewPage() {
               </div>
 
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-                <p className="text-[11px] font-medium text-emerald-700">
-                  Total collected
-                </p>
+                <p className="text-[11px] font-medium text-emerald-700">Total collected</p>
                 <p className="mt-1 text-xl font-bold text-emerald-950">
                   {formatCedis(summary.totalPaidPesewas)}
                 </p>
@@ -370,9 +323,7 @@ export default function AdminFeesOverviewPage() {
               </div>
 
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-                <p className="text-[11px] font-medium text-amber-700">
-                  Outstanding
-                </p>
+                <p className="text-[11px] font-medium text-amber-700">Outstanding</p>
                 <p className="mt-1 text-xl font-bold text-amber-950">
                   {formatCedis(summary.outstandingPesewas)}
                 </p>
@@ -382,9 +333,7 @@ export default function AdminFeesOverviewPage() {
               </div>
 
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
-                <p className="text-[11px] font-medium text-blue-700">
-                  Collected today
-                </p>
+                <p className="text-[11px] font-medium text-blue-700">Collected today</p>
                 <p className="mt-1 text-xl font-bold text-blue-950">
                   {formatCedis(summary.todayCollectedPesewas)}
                 </p>
@@ -397,23 +346,17 @@ export default function AdminFeesOverviewPage() {
             <section className="grid gap-3 md:grid-cols-4">
               <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                 <p className="text-[11px] text-zinc-500">Cleared</p>
-                <p className="text-lg font-bold text-emerald-700">
-                  {summary.clearedCount}
-                </p>
+                <p className="text-lg font-bold text-emerald-700">{summary.clearedCount}</p>
               </div>
 
               <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                 <p className="text-[11px] text-zinc-500">Partial</p>
-                <p className="text-lg font-bold text-amber-700">
-                  {summary.partialCount}
-                </p>
+                <p className="text-lg font-bold text-amber-700">{summary.partialCount}</p>
               </div>
 
               <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                 <p className="text-[11px] text-zinc-500">Unpaid</p>
-                <p className="text-lg font-bold text-red-700">
-                  {summary.unpaidCount}
-                </p>
+                <p className="text-lg font-bold text-red-700">{summary.unpaidCount}</p>
               </div>
 
               <div
@@ -433,17 +376,13 @@ export default function AdminFeesOverviewPage() {
                 >
                   {summary.openExceptionCount + mismatchCount}
                 </p>
-                <p className="text-[11px] text-zinc-600">
-                  Exceptions + stored mismatches
-                </p>
+                <p className="text-[11px] text-zinc-600">Exceptions + stored mismatches</p>
               </div>
             </section>
 
             <section className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-zinc-900">
-                  Outstanding by class
-                </h2>
+                <h2 className="text-sm font-semibold text-zinc-900">Outstanding by class</h2>
                 <div className="mt-3 space-y-2">
                   {classSummaries.length === 0 ? (
                     <p className="text-xs text-zinc-500">No class data found.</p>
@@ -455,12 +394,9 @@ export default function AdminFeesOverviewPage() {
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-zinc-900">
-                              {cls.classLabel}
-                            </p>
+                            <p className="text-sm font-semibold text-zinc-900">{cls.classLabel}</p>
                             <p className="text-[11px] text-zinc-500">
-                              {cls.learnerCount} learners /{" "}
-                              {percentFromBps(cls.collectionRateBps)} collected
+                              {cls.learnerCount} learners / {percentFromBps(cls.collectionRateBps)} collected
                             </p>
                           </div>
                           <p className="text-sm font-bold text-amber-700">
@@ -474,9 +410,7 @@ export default function AdminFeesOverviewPage() {
               </div>
 
               <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-zinc-900">
-                  Payment methods
-                </h2>
+                <h2 className="text-sm font-semibold text-zinc-900">Payment methods</h2>
                 <div className="mt-3 space-y-2">
                   {paymentMethodSummaries.length === 0 ? (
                     <p className="text-xs text-zinc-500">No payments found.</p>
@@ -487,9 +421,7 @@ export default function AdminFeesOverviewPage() {
                         className="flex items-center justify-between rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm"
                       >
                         <div>
-                          <p className="font-semibold text-zinc-900">
-                            {methodLabel(method.method)}
-                          </p>
+                          <p className="font-semibold text-zinc-900">{methodLabel(method.method)}</p>
                           <p className="text-[11px] text-zinc-500">
                             {method.count} payment{method.count === 1 ? "" : "s"}
                           </p>
@@ -549,15 +481,11 @@ export default function AdminFeesOverviewPage() {
                               {row.term}, {row.academicYear}
                             </p>
                           </td>
-                          <td className="px-3 py-2 text-zinc-700">
-                            {row.classLabel}
-                          </td>
+                          <td className="px-3 py-2 text-zinc-700">{row.classLabel}</td>
                           <td className="px-3 py-2 text-zinc-700">
                             {row.guardianName || "Unknown"}
                             {row.guardianPhone && (
-                              <p className="text-[10px] text-zinc-500">
-                                {row.guardianPhone}
-                              </p>
+                              <p className="text-[10px] text-zinc-500">{row.guardianPhone}</p>
                             )}
                           </td>
                           <td className="px-3 py-2 text-right text-zinc-900">
