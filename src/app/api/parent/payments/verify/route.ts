@@ -3,9 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 import { finalizePaystackChargeSuccess } from "@/lib/finance/core";
+import { sendSms } from "@/lib/sms";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const RECEIPT_SMS_TEMPLATE = "PAYMENT_RECEIPT_CONFIRMATION";
 
 function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
@@ -19,6 +22,10 @@ function json(status: number, payload: unknown) {
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
+}
+
+function cedis(pesewas: number) {
+  return `GHS ${(pesewas / 100).toFixed(2)}`;
 }
 
 function ownsStudent(input: {
@@ -43,11 +50,7 @@ async function verifyWithPaystack(reference: string) {
   const secret = process.env.PAYSTACK_SECRET_KEY?.trim();
 
   if (!secret) {
-    return {
-      ok: false as const,
-      status: 500,
-      error: "PAYSTACK_SECRET_KEY_MISSING",
-    };
+    return { ok: false as const, status: 500, error: "PAYSTACK_SECRET_KEY_MISSING" };
   }
 
   if (!secret.startsWith("sk_test_") && !secret.startsWith("sk_live_")) {
@@ -88,6 +91,123 @@ async function verifyWithPaystack(reference: string) {
   };
 }
 
+async function smsAlreadySent(tenantId: string, reference: string) {
+  const client = prisma as any;
+
+  try {
+    const found = await client.sMSSendAudit?.findFirst?.({
+      where: {
+        tenantId,
+        template: RECEIPT_SMS_TEMPLATE,
+        payload: {
+          path: ["reference"],
+          equals: reference,
+        },
+      },
+      select: { id: true },
+    });
+
+    return Boolean(found);
+  } catch {
+    return false;
+  }
+}
+
+async function sendReceiptSmsOnce(input: {
+  tenantId: string;
+  reference: string;
+}) {
+  const { tenantId, reference } = input;
+
+  if (await smsAlreadySent(tenantId, reference)) {
+    return { ok: true, skipped: true, reason: "SMS_ALREADY_SENT" };
+  }
+
+  const payment = await prisma.feePayment.findFirst({
+    where: {
+      tenantId,
+      reference,
+      status: "SUCCESS",
+    },
+    select: {
+      id: true,
+      amountPesewas: true,
+      invoice: {
+        select: {
+          balancePesewas: true,
+          term: true,
+          academicYear: true,
+          student: {
+            select: {
+              firstName: true,
+              lastName: true,
+              guardianPhone: true,
+              guardianPhoneNorm: true,
+            },
+          },
+        },
+      },
+      receipt: {
+        select: {
+          id: true,
+          receiptNumber: true,
+        },
+      },
+      tenant: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!payment?.receipt) {
+    return { ok: false, skipped: true, reason: "PAYMENT_OR_RECEIPT_NOT_READY" };
+  }
+
+  const to =
+    payment.invoice.student.guardianPhoneNorm ||
+    payment.invoice.student.guardianPhone ||
+    "";
+
+  if (!to) {
+    return { ok: false, skipped: true, reason: "NO_GUARDIAN_PHONE" };
+  }
+
+  const studentName =
+    [payment.invoice.student.firstName, payment.invoice.student.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "your ward";
+
+  const message =
+    `EduLifeOS Receipt\n` +
+    `Payment received: ${cedis(payment.amountPesewas)}\n` +
+    `Student: ${studentName}\n` +
+    `Receipt: ${payment.receipt.receiptNumber}\n` +
+    `Balance: ${cedis(payment.invoice.balancePesewas)}\n` +
+    `Ref: ${reference}`;
+
+  return sendSms({
+    tenantId,
+    to,
+    message,
+    template: RECEIPT_SMS_TEMPLATE,
+    payload: {
+      reference,
+      feePaymentId: payment.id,
+      receiptId: payment.receipt.id,
+      receiptNumber: payment.receipt.receiptNumber,
+      amountPesewas: payment.amountPesewas,
+      balancePesewas: payment.invoice.balancePesewas,
+      studentName,
+      term: payment.invoice.term,
+      academicYear: payment.invoice.academicYear,
+      schoolName: payment.tenant.name,
+    },
+  });
+}
+
 async function handleVerify(req: NextRequest, referenceInput: string) {
   const gate = requireParentSession(req as any);
   if (!gate.ok) return gate.res as any;
@@ -97,10 +217,7 @@ async function handleVerify(req: NextRequest, referenceInput: string) {
   const reference = clean(referenceInput);
 
   if (!reference) {
-    return json(400, {
-      ok: false,
-      error: "REFERENCE_REQUIRED",
-    });
+    return json(400, { ok: false, error: "REFERENCE_REQUIRED" });
   }
 
   const intent = await prisma.paymentIntent.findFirst({
@@ -131,10 +248,7 @@ async function handleVerify(req: NextRequest, referenceInput: string) {
   });
 
   if (!intent) {
-    return json(404, {
-      ok: false,
-      error: "PAYMENT_INTENT_NOT_FOUND",
-    });
+    return json(404, { ok: false, error: "PAYMENT_INTENT_NOT_FOUND" });
   }
 
   const allowed = ownsStudent({
@@ -145,10 +259,7 @@ async function handleVerify(req: NextRequest, referenceInput: string) {
   });
 
   if (!allowed) {
-    return json(403, {
-      ok: false,
-      error: "FORBIDDEN_PAYMENT_INTENT",
-    });
+    return json(403, { ok: false, error: "FORBIDDEN_PAYMENT_INTENT" });
   }
 
   const verified = await verifyWithPaystack(reference);
@@ -167,10 +278,7 @@ async function handleVerify(req: NextRequest, referenceInput: string) {
   const verifiedAmount = Number(paystackData.amount ?? NaN);
 
   if (verifiedReference !== reference) {
-    return json(409, {
-      ok: false,
-      error: "PAYSTACK_REFERENCE_MISMATCH",
-    });
+    return json(409, { ok: false, error: "PAYSTACK_REFERENCE_MISMATCH" });
   }
 
   if (gatewayStatus !== "success") {
@@ -200,11 +308,21 @@ async function handleVerify(req: NextRequest, referenceInput: string) {
     signature: "SERVER_SIDE_VERIFY",
   });
 
+  let smsResult: unknown = null;
+
+  try {
+    smsResult = await sendReceiptSmsOnce({ tenantId, reference });
+  } catch (err) {
+    console.error("[PAYMENT_RECEIPT_SMS_FAILED]", err);
+    smsResult = { ok: false, error: "PAYMENT_RECEIPT_SMS_FAILED" };
+  }
+
   return json(200, {
     ok: true,
     verified: true,
     reference,
     result,
+    sms: smsResult,
   });
 }
 
