@@ -41,6 +41,11 @@ function last4(v: string) {
   return v.length >= 4 ? v.slice(-4) : v;
 }
 
+function redactDigits(v: unknown) {
+  const digits = digitsOnly(v);
+  return digits.length >= 4 ? `****${digits.slice(-4)}` : "****";
+}
+
 function redactAccountNumber(v: string) {
   if (!v) return null;
   return `****${last4(v)}`;
@@ -50,6 +55,36 @@ function safeServerPercentage() {
   const raw = Number(process.env.PAYSTACK_SCHOOL_FEES_PERCENTAGE_CHARGE ?? 0);
   if (!Number.isFinite(raw) || raw < 0 || raw > 100) return 0;
   return raw;
+}
+
+function scrubSensitiveJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(scrubSensitiveJson);
+
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      if (
+        key === "account_number" ||
+        key === "accountNumber" ||
+        key === "receiver_bank_account_number"
+      ) {
+        out[key] = redactDigits(val);
+      } else if (
+        key === "mobile_money_number" ||
+        key === "primary_contact_phone" ||
+        key === "phone"
+      ) {
+        out[key] = redactDigits(val);
+      } else {
+        out[key] = scrubSensitiveJson(val);
+      }
+    }
+
+    return out;
+  }
+
+  return value;
 }
 
 async function canActAsSuperadmin(userId: string) {
@@ -202,6 +237,7 @@ export async function POST(req: NextRequest) {
   });
 
   const psData = (await psRes.json().catch(() => null)) as any;
+  const safePsData = scrubSensitiveJson(psData);
 
   if (!psRes.ok || !psData?.status || !psData?.data?.subaccount_code) {
     await prisma.auditLog.create({
@@ -221,6 +257,7 @@ export async function POST(req: NextRequest) {
           bankName,
           accountName,
           accountNumberLast4: last4(accountNumber),
+          paystack: safePsData,
         } as any,
       },
     });
@@ -273,7 +310,7 @@ export async function POST(req: NextRequest) {
         approvedAt: new Date(),
         metadata: {
           provider: "PAYSTACK",
-          paystack: psData,
+          paystack: safePsData,
           redactedInput: {
             businessName,
             bankCode,

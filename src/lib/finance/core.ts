@@ -128,8 +128,56 @@ async function createUniquePaystackReference(
   );
 }
 
+const SENSITIVE_JSON_KEYS = new Set([
+  "account_number",
+  "accountNumber",
+  "mobile_money_number",
+  "receiver_bank_account_number",
+  "primary_contact_phone",
+  "phone",
+]);
+
+function redactValueForKey(key: string, value: unknown) {
+  const s = String(value ?? "").trim();
+  if (!s) return value;
+
+  if (
+    key === "account_number" ||
+    key === "accountNumber" ||
+    key === "receiver_bank_account_number"
+  ) {
+    const digits = s.replace(/\D/g, "");
+    return digits.length >= 4 ? `****${digits.slice(-4)}` : "****";
+  }
+
+  if (key === "mobile_money_number" || key === "phone" || key === "primary_contact_phone") {
+    const digits = s.replace(/\D/g, "");
+    return digits.length >= 4 ? `****${digits.slice(-4)}` : "****";
+  }
+
+  return "[REDACTED]";
+}
+
+function scrubSensitiveJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(scrubSensitiveJson);
+
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = SENSITIVE_JSON_KEYS.has(key)
+        ? redactValueForKey(key, val)
+        : scrubSensitiveJson(val);
+    }
+
+    return out;
+  }
+
+  return value;
+}
+
 function toPrismaJson(value: unknown): Prisma.InputJsonValue {
-  return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
+  return JSON.parse(JSON.stringify(scrubSensitiveJson(value ?? {}))) as Prisma.InputJsonValue;
 }
 
 function parseProviderPaidAt(value: unknown): Date | null {
