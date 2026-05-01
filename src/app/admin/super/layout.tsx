@@ -1,4 +1,3 @@
-// src/app/admin/super/layout.tsx
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getServerUserContextOrNull } from "@/lib/serverAuth";
@@ -12,7 +11,11 @@ function toSignIn(callbackUrl: string, error?: string) {
   return `/auth/signin?${p.toString()}`;
 }
 
-export default async function AdminSuperLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminSuperLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const ctx = await getServerUserContextOrNull({ requireTenant: false });
 
   if (!ctx?.userId) redirect(toSignIn("/admin/super"));
@@ -38,8 +41,10 @@ export default async function AdminSuperLayout({ children }: { children: React.R
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] text-[#F7F4ED]">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+    <main className="min-h-screen bg-slate-50 text-slate-950">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {children}
+      </div>
     </main>
   );
 }
