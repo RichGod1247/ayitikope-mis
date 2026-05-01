@@ -2,33 +2,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
+import type {
+  PaymentProvider,
+  ReconciliationExceptionKind,
+  ReconciliationSeverity,
+  ReconciliationStatus,
+} from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type ReconciliationKind =
-  | "MISSING_LEDGER_ENTRY"
-  | "PAYMENT_WITHOUT_RECEIPT"
-  | "RECEIPT_WITHOUT_PAYMENT"
-  | "DUPLICATE_PROVIDER_REFERENCE"
-  | "AMOUNT_MISMATCH"
-  | "UNMATCHED_PROVIDER_EVENT"
-  | "OVERPAYMENT"
-  | "UNKNOWN";
-
-type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-
 type Issue = {
-  kind: ReconciliationKind;
-  severity: Severity;
-  invoiceId?: string | null;
-  studentName?: string | null;
-  term?: string | null;
-  academicYear?: string | null;
-  providerReference?: string | null;
-  expectedPesewas?: number | null;
-  actualPesewas?: number | null;
-  deltaPesewas?: number | null;
+  kind: ReconciliationExceptionKind;
+  severity: ReconciliationSeverity;
+  invoiceId: string | null;
+  studentName: string | null;
+  term: string | null;
+  academicYear: string | null;
+  providerReference: string | null;
+  expectedPesewas: number | null;
+  actualPesewas: number | null;
+  deltaPesewas: number | null;
   description: string;
 };
 
@@ -42,45 +36,50 @@ function json(status: number, payload: unknown) {
   });
 }
 
-function safeDateOnly(raw: string | null): Date {
-  if (!raw) {
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function clampLimit(v: unknown) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 1000;
+  return Math.min(Math.max(Math.floor(n), 1), 5000);
+}
+
+function safeDateOnly(raw: unknown): Date {
+  const s = clean(raw);
+
+  if (!s) {
     const now = new Date();
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   }
 
-  const trimmed = raw.trim();
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
-
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (!match) {
     const now = new Date();
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   }
 
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-
-  return new Date(Date.UTC(year, month, day));
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
 }
 
-function studentDisplayName(student: {
-  firstName: string | null;
-  lastName: string | null;
-} | null | undefined) {
+function studentName(student?: { firstName: string | null; lastName: string | null } | null) {
   return [student?.firstName, student?.lastName].filter(Boolean).join(" ").trim() || "Unknown";
 }
 
-function addIssue(issues: Issue[], issue: Issue) {
+function addIssue(issues: Issue[], issue: Omit<Issue, "invoiceId" | "studentName" | "term" | "academicYear" | "providerReference" | "expectedPesewas" | "actualPesewas" | "deltaPesewas"> & Partial<Issue>) {
   issues.push({
-    ...issue,
-    expectedPesewas: issue.expectedPesewas ?? null,
-    actualPesewas: issue.actualPesewas ?? null,
-    deltaPesewas: issue.deltaPesewas ?? null,
     invoiceId: issue.invoiceId ?? null,
     studentName: issue.studentName ?? null,
     term: issue.term ?? null,
     academicYear: issue.academicYear ?? null,
     providerReference: issue.providerReference ?? null,
+    expectedPesewas: issue.expectedPesewas ?? null,
+    actualPesewas: issue.actualPesewas ?? null,
+    deltaPesewas: issue.deltaPesewas ?? null,
+    kind: issue.kind,
+    severity: issue.severity,
+    description: issue.description,
   });
 }
 
@@ -90,8 +89,10 @@ async function analyzeTenantFinance(input: {
   academicYear?: string | null;
   limit?: number;
 }) {
-  const { tenantId, term = null, academicYear = null } = input;
-  const limit = Math.min(Math.max(input.limit ?? 1000, 1), 5000);
+  const tenantId = input.tenantId;
+  const term = clean(input.term) || null;
+  const academicYear = clean(input.academicYear) || null;
+  const limit = clampLimit(input.limit);
 
   const invoiceWhere: {
     tenantId: string;
@@ -112,7 +113,6 @@ async function analyzeTenantFinance(input: {
       totalWaivedPesewas: true,
       totalPaidPesewas: true,
       balancePesewas: true,
-      status: true,
       student: {
         select: {
           firstName: true,
@@ -124,7 +124,6 @@ async function analyzeTenantFinance(input: {
           id: true,
           amountPesewas: true,
           status: true,
-          method: true,
           reference: true,
         },
       },
@@ -142,43 +141,37 @@ async function analyzeTenantFinance(input: {
           direction: true,
           amountPesewas: true,
           feePaymentId: true,
-          receiptId: true,
         },
       },
     },
-    orderBy: [{ createdAt: "desc" }],
+    orderBy: { createdAt: "desc" },
     take: limit,
   });
 
   const issues: Issue[] = [];
-  let cleanInvoiceCount = 0;
+  let cleanCount = 0;
+
+  let expectedPesewas = 0;
+  let actualPesewas = 0;
 
   for (const inv of invoices) {
-    const invoiceIssuesBefore = issues.length;
-    const name = studentDisplayName(inv.student);
+    const before = issues.length;
+    const name = studentName(inv.student);
 
     const successfulPayments = inv.payments.filter((p) => p.status === "SUCCESS");
-    const paymentTotal = successfulPayments.reduce((sum, p) => sum + p.amountPesewas, 0);
+    const paymentTotal = successfulPayments.reduce((s, p) => s + p.amountPesewas, 0);
 
     const paymentCreditTotal = inv.ledgerEntries
       .filter((e) => e.entryType === "PAYMENT_CREDIT" && e.direction === "CREDIT")
-      .reduce((sum, e) => sum + e.amountPesewas, 0);
+      .reduce((s, e) => s + e.amountPesewas, 0);
 
-    const invoiceDebitTotal = inv.ledgerEntries
-      .filter((e) => e.entryType === "INVOICE_DEBIT" && e.direction === "DEBIT")
-      .reduce((sum, e) => sum + e.amountPesewas, 0);
+    expectedPesewas += paymentTotal;
+    actualPesewas += paymentCreditTotal;
 
-    const adjustmentCreditTotal = inv.ledgerEntries
-      .filter((e) => e.entryType === "ADJUSTMENT_CREDIT" && e.direction === "CREDIT")
-      .reduce((sum, e) => sum + e.amountPesewas, 0);
+    const netBilled = Math.max(0, (inv.totalBilledPesewas ?? 0) - (inv.totalWaivedPesewas ?? 0));
+    const expectedBalance = Math.max(0, netBilled - paymentTotal);
 
-    const expectedPaid = paymentTotal;
-    const expectedBalance = Math.max(
-      0,
-      (inv.totalBilledPesewas ?? 0) - (inv.totalWaivedPesewas ?? 0) - expectedPaid
-    );
-
-    if ((inv.totalPaidPesewas ?? 0) !== expectedPaid) {
+    if ((inv.totalPaidPesewas ?? 0) !== paymentTotal) {
       addIssue(issues, {
         kind: "AMOUNT_MISMATCH",
         severity: "HIGH",
@@ -186,11 +179,10 @@ async function analyzeTenantFinance(input: {
         studentName: name,
         term: inv.term,
         academicYear: inv.academicYear,
-        expectedPesewas: expectedPaid,
+        expectedPesewas: paymentTotal,
         actualPesewas: inv.totalPaidPesewas ?? 0,
-        deltaPesewas: (inv.totalPaidPesewas ?? 0) - expectedPaid,
-        description:
-          "Invoice totalPaidPesewas does not match the sum of successful FeePayment records.",
+        deltaPesewas: (inv.totalPaidPesewas ?? 0) - paymentTotal,
+        description: "Invoice paid total does not equal successful payment total.",
       });
     }
 
@@ -205,8 +197,7 @@ async function analyzeTenantFinance(input: {
         expectedPesewas: expectedBalance,
         actualPesewas: inv.balancePesewas ?? 0,
         deltaPesewas: (inv.balancePesewas ?? 0) - expectedBalance,
-        description:
-          "Invoice balancePesewas does not match billed minus waived minus successful payments.",
+        description: "Invoice balance does not equal net billed minus successful payments.",
       });
     }
 
@@ -221,52 +212,33 @@ async function analyzeTenantFinance(input: {
         expectedPesewas: paymentTotal,
         actualPesewas: paymentCreditTotal,
         deltaPesewas: paymentTotal - paymentCreditTotal,
-        description:
-          "Successful payment total does not match PAYMENT_CREDIT ledger total.",
+        description: "Successful payments do not equal PAYMENT_CREDIT ledger entries.",
       });
     }
 
-    if (invoiceDebitTotal > 0 && invoiceDebitTotal !== (inv.totalBilledPesewas ?? 0)) {
+    if (paymentTotal > netBilled) {
       addIssue(issues, {
-        kind: "AMOUNT_MISMATCH",
-        severity: "MEDIUM",
+        kind: "OVERPAYMENT",
+        severity: "HIGH",
         invoiceId: inv.id,
         studentName: name,
         term: inv.term,
         academicYear: inv.academicYear,
-        expectedPesewas: inv.totalBilledPesewas ?? 0,
-        actualPesewas: invoiceDebitTotal,
-        deltaPesewas: invoiceDebitTotal - (inv.totalBilledPesewas ?? 0),
-        description:
-          "INVOICE_DEBIT ledger total does not match invoice totalBilledPesewas.",
+        expectedPesewas: netBilled,
+        actualPesewas: paymentTotal,
+        deltaPesewas: paymentTotal - netBilled,
+        description: "Successful payments exceed net billed amount.",
       });
     }
 
-    if (adjustmentCreditTotal !== (inv.totalWaivedPesewas ?? 0) && adjustmentCreditTotal > 0) {
-      addIssue(issues, {
-        kind: "AMOUNT_MISMATCH",
-        severity: "MEDIUM",
-        invoiceId: inv.id,
-        studentName: name,
-        term: inv.term,
-        academicYear: inv.academicYear,
-        expectedPesewas: inv.totalWaivedPesewas ?? 0,
-        actualPesewas: adjustmentCreditTotal,
-        deltaPesewas: adjustmentCreditTotal - (inv.totalWaivedPesewas ?? 0),
-        description:
-          "ADJUSTMENT_CREDIT ledger total does not match invoice totalWaivedPesewas.",
-      });
-    }
-
-    const receiptByPaymentId = new Map(
-      inv.receipts.map((r) => [r.feePaymentId, r])
-    );
+    const receiptByPaymentId = new Map(inv.receipts.map((r) => [r.feePaymentId, r]));
+    const paymentIds = new Set(inv.payments.map((p) => p.id));
 
     for (const payment of successfulPayments) {
       if (!receiptByPaymentId.has(payment.id)) {
         addIssue(issues, {
           kind: "PAYMENT_WITHOUT_RECEIPT",
-          severity: "HIGH",
+          severity: "CRITICAL",
           invoiceId: inv.id,
           studentName: name,
           term: inv.term,
@@ -275,18 +247,15 @@ async function analyzeTenantFinance(input: {
           expectedPesewas: payment.amountPesewas,
           actualPesewas: 0,
           deltaPesewas: payment.amountPesewas,
-          description:
-            "Successful payment exists without a receipt record.",
+          description: "Successful payment exists without receipt.",
         });
       }
 
-      const paymentLedger = inv.ledgerEntries.filter(
-        (e) => e.feePaymentId === payment.id && e.entryType === "PAYMENT_CREDIT"
-      );
+      const perPaymentLedgerTotal = inv.ledgerEntries
+        .filter((e) => e.feePaymentId === payment.id && e.entryType === "PAYMENT_CREDIT" && e.direction === "CREDIT")
+        .reduce((s, e) => s + e.amountPesewas, 0);
 
-      const paymentLedgerTotal = paymentLedger.reduce((sum, e) => sum + e.amountPesewas, 0);
-
-      if (paymentLedgerTotal !== payment.amountPesewas) {
+      if (perPaymentLedgerTotal !== payment.amountPesewas) {
         addIssue(issues, {
           kind: "MISSING_LEDGER_ENTRY",
           severity: "CRITICAL",
@@ -296,18 +265,15 @@ async function analyzeTenantFinance(input: {
           academicYear: inv.academicYear,
           providerReference: payment.reference,
           expectedPesewas: payment.amountPesewas,
-          actualPesewas: paymentLedgerTotal,
-          deltaPesewas: payment.amountPesewas - paymentLedgerTotal,
-          description:
-            "Successful payment does not have matching PAYMENT_CREDIT ledger entries.",
+          actualPesewas: perPaymentLedgerTotal,
+          deltaPesewas: payment.amountPesewas - perPaymentLedgerTotal,
+          description: "Payment does not have matching PAYMENT_CREDIT ledger entry.",
         });
       }
     }
 
-    const paymentIdSet = new Set(inv.payments.map((p) => p.id));
-
     for (const receipt of inv.receipts) {
-      if (!paymentIdSet.has(receipt.feePaymentId)) {
+      if (!paymentIds.has(receipt.feePaymentId)) {
         addIssue(issues, {
           kind: "RECEIPT_WITHOUT_PAYMENT",
           severity: "CRITICAL",
@@ -320,9 +286,7 @@ async function analyzeTenantFinance(input: {
       }
     }
 
-    if (issues.length === invoiceIssuesBefore) {
-      cleanInvoiceCount++;
-    }
+    if (issues.length === before) cleanCount++;
   }
 
   const referencedPayments = await prisma.feePayment.findMany({
@@ -335,26 +299,24 @@ async function analyzeTenantFinance(input: {
       invoiceId: true,
       reference: true,
       amountPesewas: true,
-      method: true,
     },
     take: 10000,
   });
 
-  const byReference = new Map<string, typeof referencedPayments>();
+  const byRef = new Map<string, typeof referencedPayments>();
 
   for (const payment of referencedPayments) {
-    const ref = String(payment.reference ?? "").trim();
+    const ref = clean(payment.reference);
     if (!ref) continue;
-
-    const bucket = byReference.get(ref) ?? [];
+    const bucket = byRef.get(ref) ?? [];
     bucket.push(payment);
-    byReference.set(ref, bucket);
+    byRef.set(ref, bucket);
   }
 
-  for (const [reference, payments] of byReference.entries()) {
+  for (const [reference, payments] of byRef.entries()) {
     if (payments.length <= 1) continue;
 
-    const total = payments.reduce((sum, p) => sum + p.amountPesewas, 0);
+    const total = payments.reduce((s, p) => s + p.amountPesewas, 0);
 
     addIssue(issues, {
       kind: "DUPLICATE_PROVIDER_REFERENCE",
@@ -364,8 +326,7 @@ async function analyzeTenantFinance(input: {
       expectedPesewas: payments[0]?.amountPesewas ?? null,
       actualPesewas: total,
       deltaPesewas: total - (payments[0]?.amountPesewas ?? 0),
-      description:
-        "More than one FeePayment uses the same reference. This may indicate duplicate crediting.",
+      description: "More than one payment uses the same provider reference.",
     });
   }
 
@@ -375,7 +336,6 @@ async function analyzeTenantFinance(input: {
       processingStatus: { in: ["RECEIVED", "FAILED"] },
     },
     select: {
-      id: true,
       eventType: true,
       providerReference: true,
       processingStatus: true,
@@ -395,7 +355,7 @@ async function analyzeTenantFinance(input: {
     });
   }
 
-  const severityRank: Record<Severity, number> = {
+  const rank: Record<ReconciliationSeverity, number> = {
     LOW: 1,
     MEDIUM: 2,
     HIGH: 3,
@@ -405,19 +365,23 @@ async function analyzeTenantFinance(input: {
   const highestSeverity =
     issues.length === 0
       ? null
-      : issues.reduce<Severity>(
-          (max, issue) =>
-            severityRank[issue.severity] > severityRank[max] ? issue.severity : max,
+      : issues.reduce<ReconciliationSeverity>(
+          (max, issue) => (rank[issue.severity] > rank[max] ? issue.severity : max),
           issues[0].severity
         );
+
+  const deltaPesewas = expectedPesewas - actualPesewas;
 
   return {
     ok: true,
     isClean: issues.length === 0,
     issueCount: issues.length,
-    cleanCount: cleanInvoiceCount,
+    cleanCount,
     totalInvoices: invoices.length,
     highestSeverity,
+    expectedPesewas,
+    actualPesewas,
+    deltaPesewas,
     issues,
   };
 }
@@ -430,20 +394,14 @@ export async function GET(req: NextRequest) {
 
   if (!auth.ok) return auth.res;
 
-  const tenantId = auth.ctx.tenantId;
   const url = new URL(req.url);
-
-  const term = url.searchParams.get("term")?.trim() || null;
-  const academicYear = url.searchParams.get("academicYear")?.trim() || null;
-  const limitRaw = Number(url.searchParams.get("limit") ?? 1000);
-  const limit = Number.isFinite(limitRaw) ? limitRaw : 1000;
 
   try {
     const result = await analyzeTenantFinance({
-      tenantId,
-      term,
-      academicYear,
-      limit,
+      tenantId: auth.ctx.tenantId,
+      term: url.searchParams.get("term"),
+      academicYear: url.searchParams.get("academicYear"),
+      limit: clampLimit(url.searchParams.get("limit")),
     });
 
     return json(200, result);
@@ -457,6 +415,10 @@ export async function GET(req: NextRequest) {
       issueCount: null,
       cleanCount: null,
       totalInvoices: null,
+      highestSeverity: null,
+      expectedPesewas: null,
+      actualPesewas: null,
+      deltaPesewas: null,
       issues: [],
     });
   }
@@ -470,14 +432,9 @@ export async function POST(req: NextRequest) {
 
   if (!auth.ok) return auth.res;
 
-  const tenantId = auth.ctx.tenantId;
-
   const ct = req.headers.get("content-type") ?? "";
   if (ct && !ct.toLowerCase().includes("application/json")) {
-    return json(415, {
-      ok: false,
-      error: "CONTENT_TYPE_MUST_BE_JSON",
-    });
+    return json(415, { ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" });
   }
 
   let body: {
@@ -492,76 +449,74 @@ export async function POST(req: NextRequest) {
     try {
       body = (await req.json()) as typeof body;
     } catch {
-      return json(400, {
-        ok: false,
-        error: "INVALID_JSON",
-      });
+      return json(400, { ok: false, error: "INVALID_JSON" });
     }
   }
 
-  const term = String(body.term ?? "").trim() || null;
-  const academicYear = String(body.academicYear ?? "").trim() || null;
-  const limit = Number.isFinite(body.limit) ? Number(body.limit) : 1000;
-  const batchDate = safeDateOnly(String(body.batchDate ?? "").trim() || null);
-
   try {
     const result = await analyzeTenantFinance({
-      tenantId,
-      term,
-      academicYear,
-      limit,
+      tenantId: auth.ctx.tenantId,
+      term: body.term,
+      academicYear: body.academicYear,
+      limit: clampLimit(body.limit),
     });
 
-    const provider = null;
-    const batchStatus =
+    const batchStatus: ReconciliationStatus =
       result.issueCount === 0 ? "CLEAN" : "HAS_EXCEPTIONS";
 
-    const batch = await prisma.reconciliationBatch.create({
-      data: {
-        tenantId,
-        provider,
-        batchDate,
-        status: batchStatus,
-        expectedPesewas: 0,
-        actualPesewas: 0,
-        deltaPesewas: 0,
-        notes:
-          body.notes ??
-          `Reconciliation run${term ? ` for ${term}` : ""}${
-            academicYear ? ` ${academicYear}` : ""
-          }`,
-        createdByUserId: auth.ctx.userId,
-      },
-      select: {
-        id: true,
-        status: true,
-        batchDate: true,
-        createdAt: true,
-      },
+    const batch = await prisma.$transaction(async (tx) => {
+      const createdBatch = await tx.reconciliationBatch.create({
+        data: {
+          tenantId: auth.ctx.tenantId,
+          provider: "PAYSTACK" as PaymentProvider,
+          batchDate: safeDateOnly(body.batchDate),
+          status: batchStatus,
+          expectedPesewas: result.expectedPesewas,
+          actualPesewas: result.actualPesewas,
+          deltaPesewas: result.deltaPesewas,
+          notes:
+            clean(body.notes) ||
+            `Reconciliation run. Invoices=${result.totalInvoices}; Issues=${result.issueCount}.`,
+          createdByUserId: auth.ctx.userId,
+          closedAt: result.issueCount === 0 ? new Date() : null,
+        },
+        select: {
+          id: true,
+          status: true,
+          batchDate: true,
+          createdAt: true,
+        },
+      });
+
+      if (result.issues.length > 0) {
+        await tx.reconciliationException.createMany({
+          data: result.issues.map((issue) => ({
+            tenantId: auth.ctx.tenantId,
+            batchId: createdBatch.id,
+            invoiceId: issue.invoiceId,
+            providerReference: issue.providerReference,
+            kind: issue.kind,
+            severity: issue.severity,
+            status: "OPEN",
+            expectedPesewas: issue.expectedPesewas,
+            actualPesewas: issue.actualPesewas,
+            deltaPesewas: issue.deltaPesewas,
+            description: issue.description,
+          })),
+        });
+      }
+
+      return createdBatch;
     });
 
-    if (result.issues.length > 0) {
-      await prisma.reconciliationException.createMany({
-        data: result.issues.map((issue) => ({
-          tenantId,
-          batchId: batch.id,
-          invoiceId: issue.invoiceId ?? null,
-          providerReference: issue.providerReference ?? null,
-          kind: issue.kind,
-          severity: issue.severity,
-          status: "OPEN",
-          expectedPesewas: issue.expectedPesewas ?? null,
-          actualPesewas: issue.actualPesewas ?? null,
-          deltaPesewas: issue.deltaPesewas ?? null,
-          description: issue.description,
-        })),
-      });
-    }
-
-    return json(201, {
+    return json(200, {
       ...result,
       persisted: true,
-      batch,
+      batch: {
+        ...batch,
+        batchDate: batch.batchDate.toISOString(),
+        createdAt: batch.createdAt.toISOString(),
+      },
     });
   } catch (err) {
     console.error("[ADMIN_RECONCILIATION_PERSIST_ERROR]", err);
@@ -573,6 +528,10 @@ export async function POST(req: NextRequest) {
       issueCount: null,
       cleanCount: null,
       totalInvoices: null,
+      highestSeverity: null,
+      expectedPesewas: null,
+      actualPesewas: null,
+      deltaPesewas: null,
       issues: [],
     });
   }
