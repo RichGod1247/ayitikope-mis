@@ -26,7 +26,8 @@ type FinanceErrorCode =
   | "PAYMENT_ALREADY_PROCESSED"
   | "DUPLICATE_PAYMENT_REFERENCE"
   | "PAYMENT_GATEWAY_FAILED"
-  | "PAYMENT_SERVICE_NOT_CONFIGURED";
+  | "PAYMENT_SERVICE_NOT_CONFIGURED"
+  | "SETTLEMENT_ACCOUNT_REQUIRED";
 
 const TX_LONG = {
   maxWait: 10_000,
@@ -617,7 +618,7 @@ export async function createParentPaymentIntent(input: {
   }
 
   return prisma.$transaction(async (tx) => {
-    const [tenant, student] = await Promise.all([
+    const [tenant, student, settlementAccount] = await Promise.all([
       tx.tenant.findUnique({
         where: { id: tenantId },
         select: {
@@ -638,10 +639,36 @@ export async function createParentPaymentIntent(input: {
           guardianName: true,
         },
       }),
+      tx.tenantSettlementAccount.findFirst({
+        where: {
+          tenantId,
+          provider: "PAYSTACK",
+          status: "ACTIVE",
+          isPrimary: true,
+          providerSubaccountCode: { not: null },
+        },
+        select: {
+          id: true,
+          providerSubaccountCode: true,
+          accountName: true,
+          accountNumberLast4: true,
+          bankCode: true,
+          bankName: true,
+          currency: true,
+        },
+      }),
     ]);
 
     if (!tenant) throw new FinanceError("TENANT_NOT_FOUND", 404);
     if (!student) throw new FinanceError("STUDENT_NOT_FOUND", 404);
+
+    if (!settlementAccount?.providerSubaccountCode) {
+      throw new FinanceError(
+        "SETTLEMENT_ACCOUNT_REQUIRED",
+        409,
+        "This school does not have an active Paystack settlement account yet."
+      );
+    }
 
     const studentPhoneNorm = digitsOnlyFinance(
       student.guardianPhoneNorm ?? student.guardianPhone
@@ -721,6 +748,7 @@ export async function createParentPaymentIntent(input: {
         tenantId,
         studentId,
         invoiceId: targetInvoice.id,
+        settlementAccountId: settlementAccount.id,
         provider: "PAYSTACK",
         providerReference,
         amountPesewas,
@@ -731,6 +759,16 @@ export async function createParentPaymentIntent(input: {
           term,
           academicYear,
           source: "parent_portal",
+          settlement: {
+            provider: "PAYSTACK",
+            settlementAccountId: settlementAccount.id,
+            providerSubaccountCode: settlementAccount.providerSubaccountCode,
+            accountName: settlementAccount.accountName,
+            accountNumberLast4: settlementAccount.accountNumberLast4,
+            bankCode: settlementAccount.bankCode,
+            bankName: settlementAccount.bankName,
+            currency: settlementAccount.currency,
+          },
         },
       },
       select: {
@@ -738,6 +776,7 @@ export async function createParentPaymentIntent(input: {
         tenantId: true,
         studentId: true,
         invoiceId: true,
+        settlementAccountId: true,
         providerReference: true,
         amountPesewas: true,
         currency: true,
@@ -755,6 +794,7 @@ export async function createParentPaymentIntent(input: {
       student,
       studentName,
       intent,
+      settlementAccount,
       invoiceId: targetInvoice.id,
       invoiceOutstandingPesewas: targetInvoice.balancePesewas,
       totalOutstandingPesewas,
@@ -865,6 +905,7 @@ export async function finalizePaystackChargeSuccess(input: {
       tenantId: true,
       invoiceId: true,
       studentId: true,
+      settlementAccountId: true,
       amountPesewas: true,
       status: true,
     },
@@ -908,9 +949,22 @@ export async function finalizePaystackChargeSuccess(input: {
         tenantId: true,
         studentId: true,
         invoiceId: true,
+        settlementAccountId: true,
         amountPesewas: true,
         status: true,
         providerReference: true,
+        settlementAccount: {
+          select: {
+            id: true,
+            providerSubaccountCode: true,
+            accountName: true,
+            accountNumberLast4: true,
+            bankCode: true,
+            bankName: true,
+            status: true,
+            isPrimary: true,
+          },
+        },
         invoice: {
           select: {
             id: true,
@@ -1008,7 +1062,14 @@ export async function finalizePaystackChargeSuccess(input: {
           status: "SUCCESS",
           channel,
           providerPaidAt,
-          providerRaw: toPrismaJson(input.event),
+          providerRaw: toPrismaJson({
+            ...input.event,
+            edulifeSettlementEvidence: {
+              settlementAccountId: intent.settlementAccountId,
+              providerSubaccountCode:
+                intent.settlementAccount?.providerSubaccountCode ?? null,
+            },
+          }),
         },
         select: { id: true },
       });
@@ -1128,7 +1189,16 @@ export async function finalizePaystackChargeSuccess(input: {
         status: "SUCCESS",
         channel,
         providerPaidAt,
-        providerRaw: toPrismaJson(input.event),
+        providerRaw: toPrismaJson({
+          ...input.event,
+          edulifeSettlementEvidence: {
+            settlementAccountId: intent.settlementAccountId,
+            providerSubaccountCode:
+              intent.settlementAccount?.providerSubaccountCode ?? null,
+            settlementAccountStatus: intent.settlementAccount?.status ?? null,
+            isPrimarySettlementAccount: intent.settlementAccount?.isPrimary ?? null,
+          },
+        }),
       },
       select: { id: true },
     });

@@ -28,6 +28,25 @@ type Body = {
   amountPesewas?: number;
 };
 
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function getAppUrl() {
+  return (
+    process.env.APP_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    ""
+  ).replace(/\/$/, "");
+}
+
+function validBearer(v: unknown): "account" | "subaccount" | undefined {
+  const s = clean(v).toLowerCase();
+  if (s === "account" || s === "subaccount") return s;
+  return undefined;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const gate = requireParentSession(
@@ -36,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     if (!gate.ok) return gate.res as NextResponse;
 
-    const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+    const paystackSecret = process.env.PAYSTACK_SECRET_KEY?.trim();
 
     if (!paystackSecret) {
       console.error("[PARENT_PAYMENT_INIT] PAYSTACK_SECRET_KEY not set");
@@ -46,12 +65,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const appUrl = (
-      process.env.APP_BASE_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.APP_URL ||
-      ""
-    ).replace(/\/$/, "");
+    if (!paystackSecret.startsWith("sk_test_") && !paystackSecret.startsWith("sk_live_")) {
+      console.error("[PARENT_PAYMENT_INIT] Invalid Paystack secret key prefix");
+      return noStore(500, {
+        ok: false,
+        error: "PAYMENT_SERVICE_NOT_CONFIGURED",
+      });
+    }
+
+    const appUrl = getAppUrl();
 
     if (!appUrl) {
       console.error("[PARENT_PAYMENT_INIT] APP URL not configured");
@@ -78,9 +100,9 @@ export async function POST(req: NextRequest) {
       return noStore(400, { ok: false, error: "INVALID_JSON" });
     }
 
-    const studentId = String(body.studentId ?? "").trim();
-    const term = String(body.term ?? "").trim();
-    const academicYear = String(body.academicYear ?? "").trim();
+    const studentId = clean(body.studentId);
+    const term = clean(body.term);
+    const academicYear = clean(body.academicYear);
 
     const amountRaw = body.amountPesewas;
     const amountPesewas =
@@ -100,6 +122,10 @@ export async function POST(req: NextRequest) {
       return noStore(400, { ok: false, error: "ACADEMIC_YEAR_REQUIRED" });
     }
 
+    if (!Number.isFinite(amountPesewas) || amountPesewas < 100) {
+      return noStore(400, { ok: false, error: "PAYMENT_AMOUNT_INVALID" });
+    }
+
     const sess = gate.session;
 
     const intentResult = await createParentPaymentIntent({
@@ -112,9 +138,63 @@ export async function POST(req: NextRequest) {
       guardianSuffix9: digitsOnly(sess.guardianSuffix9 ?? ""),
     });
 
+    const subaccountCode = clean(
+      intentResult.settlementAccount?.providerSubaccountCode
+    );
+
+    if (!subaccountCode) {
+      await markPaymentIntentGatewayFailed({
+        tenantId: intentResult.intent.tenantId,
+        providerReference: intentResult.intent.providerReference,
+        reason: "MISSING_SETTLEMENT_SUBACCOUNT_CODE",
+      });
+
+      return noStore(409, {
+        ok: false,
+        error: "SETTLEMENT_ACCOUNT_REQUIRED",
+      });
+    }
+
     const callbackUrl = `${appUrl}/parent/fees/payment-callback?ref=${encodeURIComponent(
       intentResult.intent.providerReference
     )}`;
+
+    const bearer = validBearer(process.env.PAYSTACK_SCHOOL_FEES_BEARER);
+
+    const paystackPayload: Record<string, unknown> = {
+      amount: intentResult.intent.amountPesewas,
+      email: intentResult.email,
+      reference: intentResult.intent.providerReference,
+      currency: intentResult.intent.currency || "GHS",
+      callback_url: callbackUrl,
+
+      // Critical settlement routing field.
+      subaccount: subaccountCode,
+
+      metadata: {
+        paymentIntentId: intentResult.intent.id,
+        invoiceId: intentResult.intent.invoiceId,
+        tenantId: intentResult.intent.tenantId,
+        studentId: intentResult.intent.studentId,
+        studentName: intentResult.studentName,
+        term,
+        academicYear,
+        source: "parent_portal",
+        settlement: {
+          provider: "PAYSTACK",
+          settlementAccountId: intentResult.intent.settlementAccountId,
+          providerSubaccountCode: subaccountCode,
+          accountName: intentResult.settlementAccount.accountName,
+          accountNumberLast4: intentResult.settlementAccount.accountNumberLast4,
+          bankCode: intentResult.settlementAccount.bankCode,
+          bankName: intentResult.settlementAccount.bankName,
+        },
+      },
+    };
+
+    if (bearer) {
+      paystackPayload.bearer = bearer;
+    }
 
     const psRes = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
@@ -122,23 +202,7 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${paystackSecret}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        amount: intentResult.intent.amountPesewas,
-        email: intentResult.email,
-        reference: intentResult.intent.providerReference,
-        currency: "GHS",
-        callback_url: callbackUrl,
-        metadata: {
-          paymentIntentId: intentResult.intent.id,
-          invoiceId: intentResult.intent.invoiceId,
-          tenantId: intentResult.intent.tenantId,
-          studentId: intentResult.intent.studentId,
-          studentName: intentResult.studentName,
-          term,
-          academicYear,
-          source: "parent_portal",
-        },
-      }),
+      body: JSON.stringify(paystackPayload),
     });
 
     if (!psRes.ok) {
@@ -150,7 +214,14 @@ export async function POST(req: NextRequest) {
         reason: `PAYSTACK_HTTP_${psRes.status}`,
       });
 
-      console.error("[PAYSTACK_INIT_HTTP_ERROR]", psRes.status, raw);
+      console.error("[PAYSTACK_INIT_HTTP_ERROR]", {
+        status: psRes.status,
+        reference: intentResult.intent.providerReference,
+        tenantId: intentResult.intent.tenantId,
+        settlementAccountId: intentResult.intent.settlementAccountId,
+        subaccountCode,
+        raw,
+      });
 
       return noStore(502, {
         ok: false,
@@ -160,6 +231,7 @@ export async function POST(req: NextRequest) {
 
     const psData = (await psRes.json()) as {
       status: boolean;
+      message?: string;
       data?: {
         authorization_url?: string;
         access_code?: string;
@@ -174,7 +246,13 @@ export async function POST(req: NextRequest) {
         reason: "PAYSTACK_BAD_RESPONSE",
       });
 
-      console.error("[PAYSTACK_INIT_BAD_RESPONSE]", psData);
+      console.error("[PAYSTACK_INIT_BAD_RESPONSE]", {
+        reference: intentResult.intent.providerReference,
+        tenantId: intentResult.intent.tenantId,
+        settlementAccountId: intentResult.intent.settlementAccountId,
+        subaccountCode,
+        psData,
+      });
 
       return noStore(502, {
         ok: false,
@@ -182,7 +260,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const returnedReference = String(psData.data.reference ?? "").trim();
+    const returnedReference = clean(psData.data.reference);
 
     if (
       returnedReference &&
@@ -197,6 +275,8 @@ export async function POST(req: NextRequest) {
       console.error("[PAYSTACK_INIT_REFERENCE_MISMATCH]", {
         local: intentResult.intent.providerReference,
         paystack: returnedReference,
+        tenantId: intentResult.intent.tenantId,
+        settlementAccountId: intentResult.intent.settlementAccountId,
       });
 
       return noStore(502, {
@@ -220,6 +300,7 @@ export async function POST(req: NextRequest) {
       paymentIntentId: intentResult.intent.id,
       amountPesewas: intentResult.intent.amountPesewas,
       invoiceId: intentResult.intent.invoiceId,
+      settlementAccountId: intentResult.intent.settlementAccountId,
       invoiceOutstandingPesewas: intentResult.invoiceOutstandingPesewas,
       totalOutstandingPesewas: intentResult.totalOutstandingPesewas,
     });
