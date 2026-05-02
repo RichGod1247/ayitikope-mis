@@ -198,6 +198,75 @@ function cleanProviderNumber(value: unknown): number {
     : NaN;
 }
 
+function isPrismaUniqueConstraintError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: string }).code === "P2002"
+  );
+}
+
+async function createPaymentCreditLedgerEntryOnce(
+  tx: TxClient,
+  input: {
+    tenantId: string;
+    invoiceId: string;
+    studentId: string;
+    feePaymentId: string;
+    receiptId: string;
+    amountPesewas: number;
+    description: string;
+    createdByUserId?: string | null;
+  }
+) {
+  const existing = await tx.ledgerEntry.findFirst({
+    where: {
+      tenantId: input.tenantId,
+      feePaymentId: input.feePaymentId,
+      entryType: "PAYMENT_CREDIT",
+      direction: "CREDIT",
+    },
+    select: { id: true },
+  });
+
+  if (existing) return existing;
+
+  try {
+    return await tx.ledgerEntry.create({
+      data: {
+        tenantId: input.tenantId,
+        invoiceId: input.invoiceId,
+        studentId: input.studentId,
+        feePaymentId: input.feePaymentId,
+        receiptId: input.receiptId,
+        entryType: "PAYMENT_CREDIT",
+        direction: "CREDIT",
+        amountPesewas: input.amountPesewas,
+        description: input.description,
+        journalRef: makeJournalRef("PAY"),
+        createdByUserId: input.createdByUserId ?? null,
+      },
+      select: { id: true },
+    });
+  } catch (err) {
+    if (!isPrismaUniqueConstraintError(err)) throw err;
+
+    const raced = await tx.ledgerEntry.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        feePaymentId: input.feePaymentId,
+        entryType: "PAYMENT_CREDIT",
+        direction: "CREDIT",
+      },
+      select: { id: true },
+    });
+
+    if (raced) return raced;
+    throw err;
+  }
+}
+
 export async function recalculateInvoiceTotals(
   tx: TxClient,
   tenantId: string,
@@ -597,22 +666,17 @@ export async function recordManualPayment(input: {
       },
     });
 
-    await tx.ledgerEntry.create({
-      data: {
-        tenantId,
-        invoiceId,
-        studentId: invoice.studentId,
-        feePaymentId: payment.id,
-        receiptId: receipt.id,
-        entryType: "PAYMENT_CREDIT",
-        direction: "CREDIT",
-        amountPesewas,
-        description: `Payment via ${cleanPaymentMethod}${
-          cleanReference ? ` (ref: ${cleanReference})` : ""
-        }`,
-        journalRef: makeJournalRef("PAY"),
-        createdByUserId: actorUserId,
-      },
+    await createPaymentCreditLedgerEntryOnce(tx, {
+      tenantId,
+      invoiceId,
+      studentId: invoice.studentId,
+      feePaymentId: payment.id,
+      receiptId: receipt.id,
+      amountPesewas,
+      description: `Payment via ${cleanPaymentMethod}${
+        cleanReference ? ` (ref: ${cleanReference})` : ""
+      }`,
+      createdByUserId: actorUserId,
     });
 
     const recalculatedAfter = await recalculateInvoiceTotals(
@@ -899,18 +963,34 @@ export async function recordProviderEventOnly(input: {
   processingStatus?: "RECEIVED" | "PROCESSED" | "FAILED" | "IGNORED";
   processingError?: string | null;
 }) {
-  return prisma.paymentProviderEvent.create({
-    data: {
-      provider: "PAYSTACK",
-      eventType: input.eventType,
-      providerReference: input.providerReference ?? null,
-      signature: input.signature ?? null,
-      rawPayload: toPrismaJson(input.rawPayload),
-      processingStatus: input.processingStatus ?? "IGNORED",
-      processingError: input.processingError ?? null,
-      processedAt: new Date(),
-    },
-  });
+  const signature = input.signature ?? null;
+
+  try {
+    return await prisma.paymentProviderEvent.create({
+      data: {
+        provider: "PAYSTACK",
+        eventType: input.eventType,
+        providerReference: input.providerReference ?? null,
+        signature,
+        rawPayload: toPrismaJson(input.rawPayload),
+        processingStatus: input.processingStatus ?? "IGNORED",
+        processingError: input.processingError ?? null,
+        processedAt: new Date(),
+      },
+    });
+  } catch (err) {
+    if (!isPrismaUniqueConstraintError(err) || !signature) throw err;
+
+    const existing = await prisma.paymentProviderEvent.findFirst({
+      where: {
+        provider: "PAYSTACK",
+        signature,
+      },
+    });
+
+    if (existing) return existing;
+    throw err;
+  }
 }
 
 export async function finalizePaystackChargeSuccess(input: {
@@ -959,23 +1039,19 @@ export async function finalizePaystackChargeSuccess(input: {
     },
   });
 
-  const providerEvent = await prisma.paymentProviderEvent.create({
-    data: {
-      tenantId: intentLite?.tenantId ?? null,
-      provider: "PAYSTACK",
-      eventType: String(input.event.event ?? "charge.success"),
-      providerReference: reference,
-      signature: input.signature ?? null,
-      rawPayload: toPrismaJson(input.event),
-      processingStatus: "RECEIVED",
-    },
-    select: { id: true },
+  const providerEvent = await recordProviderEventOnly({
+    eventType: String(input.event.event ?? "charge.success"),
+    providerReference: reference,
+    signature: input.signature,
+    rawPayload: input.event,
+    processingStatus: "RECEIVED",
   });
 
   if (!intentLite) {
     await prisma.paymentProviderEvent.update({
       where: { id: providerEvent.id },
       data: {
+        tenantId: null,
         processingStatus: "FAILED",
         processingError: "PAYMENT_INTENT_NOT_FOUND",
         processedAt: new Date(),
@@ -987,6 +1063,13 @@ export async function finalizePaystackChargeSuccess(input: {
       skipped: true,
       reason: "PAYMENT_INTENT_NOT_FOUND",
     };
+  }
+
+  if (providerEvent.tenantId !== intentLite.tenantId) {
+    await prisma.paymentProviderEvent.update({
+      where: { id: providerEvent.id },
+      data: { tenantId: intentLite.tenantId },
+    });
   }
 
   return prisma.$transaction(async (tx) => {
@@ -1310,19 +1393,15 @@ export async function finalizePaystackChargeSuccess(input: {
       select: { id: true, receiptNumber: true },
     });
 
-    await tx.ledgerEntry.create({
-      data: {
-        tenantId: intent.tenantId,
-        invoiceId: intent.invoiceId,
-        studentId: intent.studentId,
-        feePaymentId: payment.id,
-        receiptId: receipt.id,
-        entryType: "PAYMENT_CREDIT",
-        direction: "CREDIT",
-        amountPesewas,
-        description: `Paystack online payment (ref: ${reference})`,
-        journalRef: makeJournalRef("PAY"),
-      },
+    await createPaymentCreditLedgerEntryOnce(tx, {
+      tenantId: intent.tenantId,
+      invoiceId: intent.invoiceId,
+      studentId: intent.studentId,
+      feePaymentId: payment.id,
+      receiptId: receipt.id,
+      amountPesewas,
+      description: `Paystack online payment (ref: ${reference})`,
+      createdByUserId: null,
     });
 
     const invoiceAfter = await recalculateInvoiceTotals(
