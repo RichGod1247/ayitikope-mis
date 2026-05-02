@@ -31,6 +31,7 @@ const scholarshipNav: NavItem[] = [
 const financeNav: NavItem[] = [
   { label: "Finance Overview", href: "/admin/fees/overview" },
   { label: "Online Payments", href: "/admin/fees/online-payments" },
+  { label: "Settlement Reporting", href: "/admin/fees/settlements" },
   { label: "Finance Summary", href: "/admin/fees/summary" },
   { label: "Fee Structures", href: "/admin/fees/structures" },
   { label: "Invoices & Payments", href: "/admin/fees/invoices" },
@@ -38,6 +39,7 @@ const financeNav: NavItem[] = [
   { label: "Ledger Trail", href: "/admin/fees/ledger" },
   { label: "Audit Trail", href: "/admin/fees/audit" },
   { label: "Reconciliation", href: "/admin/fees/reconciliation" },
+  { label: "Reconciliation History", href: "/admin/fees/reconciliation/history" },
   { label: "Disputes", href: "/admin/fees/disputes" },
   { label: "Arrears", href: "/admin/fees/arrears" },
 ];
