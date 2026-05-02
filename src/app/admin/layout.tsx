@@ -36,6 +36,7 @@ const financeNav: NavItem[] = [
   { label: "Invoices & Payments", href: "/admin/fees/invoices" },
   { label: "Receipts", href: "/admin/fees/receipts" },
   { label: "Ledger Trail", href: "/admin/fees/ledger" },
+  { label: "Audit Trail", href: "/admin/fees/audit" },
   { label: "Reconciliation", href: "/admin/fees/reconciliation" },
   { label: "Disputes", href: "/admin/fees/disputes" },
   { label: "Arrears", href: "/admin/fees/arrears" },
