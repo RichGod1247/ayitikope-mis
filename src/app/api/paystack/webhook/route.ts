@@ -2,12 +2,24 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  PaymentProvider,
+  Prisma,
+  SettlementPayoutStatus,
+} from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import {
   finalizePaystackChargeSuccess,
   recordProviderEventOnly,
 } from "@/lib/finance/core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const TRANSFER_EVENTS = new Set([
+  "transfer.success",
+  "transfer.failed",
+  "transfer.reversed",
+]);
 
 function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
@@ -21,6 +33,18 @@ function json(status: number, payload: unknown) {
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
+}
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  try {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
+  } catch {
+    return {};
+  }
 }
 
 function isPrismaUniqueError(err: unknown): boolean {
@@ -41,6 +65,23 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   if (aBuf.length !== bBuf.length) return false;
 
   return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
+function parsePaystackDate(value: unknown): Date | null {
+  const raw = clean(value);
+  if (!raw) return null;
+
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function amountToPesewas(value: unknown): number {
+  const n =
+    typeof value === "number"
+      ? value
+      : Number.parseInt(clean(value), 10);
+
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
 async function verifyWithPaystack(reference: string, secret: string) {
@@ -71,6 +112,358 @@ async function verifyWithPaystack(reference: string, secret: string) {
     data: raw.data as Record<string, unknown>,
     raw,
   };
+}
+
+function transferStatusFromEvent(eventType: string, data: Record<string, unknown>) {
+  const rawStatus = clean(data.status).toLowerCase();
+
+  if (eventType === "transfer.success" || rawStatus === "success") {
+    return SettlementPayoutStatus.PAID;
+  }
+
+  if (eventType === "transfer.failed" || rawStatus === "failed") {
+    return SettlementPayoutStatus.FAILED;
+  }
+
+  if (eventType === "transfer.reversed" || rawStatus === "reversed") {
+    return SettlementPayoutStatus.REVERSED;
+  }
+
+  if (rawStatus === "pending") {
+    return SettlementPayoutStatus.PENDING;
+  }
+
+  return SettlementPayoutStatus.PROCESSING;
+}
+
+function extractTransferFields(data: Record<string, unknown>) {
+  const recipient = isObject(data.recipient) ? data.recipient : {};
+  const metadata = isObject(data.metadata) ? data.metadata : {};
+  const failures = isObject(data.failures) ? data.failures : null;
+
+  const providerTransferCode =
+    clean(data.transfer_code) ||
+    clean(data.transferCode) ||
+    clean(data.code) ||
+    null;
+
+  const providerTransferId =
+    clean(data.id) ||
+    clean(data.transfer_id) ||
+    clean(data.transferId) ||
+    null;
+
+  const providerRecipientCode =
+    clean(data.recipient_code) ||
+    clean(recipient.recipient_code) ||
+    clean(recipient.recipientCode) ||
+    null;
+
+  const providerReference =
+    clean(data.reference) ||
+    clean(data.transfer_reference) ||
+    clean(data.transferReference) ||
+    providerTransferCode ||
+    null;
+
+  const tenantId =
+    clean(metadata.tenantId) ||
+    clean(metadata.tenant_id) ||
+    clean(data.tenantId) ||
+    clean(data.tenant_id) ||
+    null;
+
+  const settlementAccountId =
+    clean(metadata.settlementAccountId) ||
+    clean(metadata.settlement_account_id) ||
+    clean(data.settlementAccountId) ||
+    clean(data.settlement_account_id) ||
+    null;
+
+  const providerSubaccountCode =
+    clean(metadata.providerSubaccountCode) ||
+    clean(metadata.provider_subaccount_code) ||
+    clean(data.subaccount_code) ||
+    clean(data.subaccountCode) ||
+    null;
+
+  const failureReason =
+    clean(data.reason) ||
+    clean(data.failure_reason) ||
+    clean(data.failureReason) ||
+    (failures ? clean(failures.reason) || clean(failures.message) : "") ||
+    null;
+
+  return {
+    metadata,
+    tenantId,
+    settlementAccountId,
+    providerSubaccountCode,
+    providerTransferCode,
+    providerTransferId,
+    providerRecipientCode,
+    providerReference,
+    amountPesewas: amountToPesewas(data.amount),
+    currency: clean(data.currency) || "GHS",
+    failureReason,
+    eventTime:
+      parsePaystackDate(data.updatedAt) ||
+      parsePaystackDate(data.updated_at) ||
+      parsePaystackDate(data.transferred_at) ||
+      parsePaystackDate(data.createdAt) ||
+      parsePaystackDate(data.created_at) ||
+      new Date(),
+  };
+}
+
+async function resolveSettlementContext(input: {
+  tenantId: string | null;
+  settlementAccountId: string | null;
+  providerSubaccountCode: string | null;
+}) {
+  if (input.settlementAccountId && input.tenantId) {
+    const account = await prisma.tenantSettlementAccount.findFirst({
+      where: {
+        id: input.settlementAccountId,
+        tenantId: input.tenantId,
+      },
+      select: { id: true, tenantId: true },
+    });
+
+    if (account) return account;
+  }
+
+  if (input.providerSubaccountCode) {
+    const account = await prisma.tenantSettlementAccount.findFirst({
+      where: {
+        provider: PaymentProvider.PAYSTACK,
+        providerSubaccountCode: input.providerSubaccountCode,
+        ...(input.tenantId ? { tenantId: input.tenantId } : {}),
+      },
+      select: { id: true, tenantId: true },
+    });
+
+    if (account) return account;
+  }
+
+  if (input.tenantId) {
+    const account = await prisma.tenantSettlementAccount.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        provider: PaymentProvider.PAYSTACK,
+        isPrimary: true,
+      },
+      select: { id: true, tenantId: true },
+    });
+
+    if (account) return account;
+
+    const tenantExists = await prisma.tenant.findUnique({
+      where: { id: input.tenantId },
+      select: { id: true },
+    });
+
+    if (tenantExists) {
+      return { id: null, tenantId: tenantExists.id };
+    }
+  }
+
+  return null;
+}
+
+async function recordTransferWebhook(params: {
+  eventType: string;
+  signature: string;
+  event: Record<string, unknown>;
+  data: Record<string, unknown>;
+}) {
+  const fields = extractTransferFields(params.data);
+  const status = transferStatusFromEvent(params.eventType, params.data);
+
+  const context = await resolveSettlementContext({
+    tenantId: fields.tenantId,
+    settlementAccountId: fields.settlementAccountId,
+    providerSubaccountCode: fields.providerSubaccountCode,
+  });
+
+  if (!context) {
+    await recordProviderEventOnly({
+      eventType: params.eventType,
+      providerReference: fields.providerReference,
+      signature: params.signature,
+      rawPayload: params.event,
+      processingStatus: "IGNORED",
+      processingError: "PAYOUT_TENANT_UNRESOLVED",
+    });
+
+    return {
+      ok: true,
+      skipped: true,
+      reason: "PAYOUT_TENANT_UNRESOLVED",
+    };
+  }
+
+  if (!fields.amountPesewas) {
+    await recordProviderEventOnly({
+      eventType: params.eventType,
+      providerReference: fields.providerReference,
+      signature: params.signature,
+      rawPayload: params.event,
+      processingStatus: "FAILED",
+      processingError: "PAYOUT_AMOUNT_REQUIRED",
+    });
+
+    return {
+      ok: true,
+      skipped: true,
+      reason: "PAYOUT_AMOUNT_REQUIRED",
+    };
+  }
+
+  const paidAt = status === SettlementPayoutStatus.PAID ? fields.eventTime : null;
+  const failedAt = status === SettlementPayoutStatus.FAILED ? fields.eventTime : null;
+  const reversedAt = status === SettlementPayoutStatus.REVERSED ? fields.eventTime : null;
+
+  const providerRaw = toJsonValue(params.event);
+  const metadata = toJsonValue({
+    webhookEventType: params.eventType,
+    webhookMetadata: fields.metadata,
+    inferredFrom: {
+      tenantId: fields.tenantId,
+      settlementAccountId: fields.settlementAccountId,
+      providerSubaccountCode: fields.providerSubaccountCode,
+      providerRecipientCode: fields.providerRecipientCode,
+    },
+  });
+
+  try {
+    const existing = await prisma.settlementPayout.findFirst({
+      where: {
+        tenantId: context.tenantId,
+        provider: PaymentProvider.PAYSTACK,
+        OR: [
+          ...(fields.providerTransferCode
+            ? [{ providerTransferCode: fields.providerTransferCode }]
+            : []),
+          ...(fields.providerReference
+            ? [{ providerReference: fields.providerReference }]
+            : []),
+          ...(fields.providerTransferId
+            ? [{ providerTransferId: fields.providerTransferId }]
+            : []),
+        ],
+      },
+      select: { id: true },
+    });
+
+    const payout = existing
+      ? await prisma.settlementPayout.update({
+          where: { id: existing.id },
+          data: {
+            settlementAccountId: context.id,
+            providerTransferCode: fields.providerTransferCode,
+            providerTransferId: fields.providerTransferId,
+            providerRecipientCode: fields.providerRecipientCode,
+            providerReference: fields.providerReference,
+            amountPesewas: fields.amountPesewas,
+            currency: fields.currency,
+            status,
+            paidAt,
+            failedAt,
+            reversedAt,
+            failureReason: fields.failureReason,
+            providerRaw,
+            metadata,
+          },
+        })
+      : await prisma.settlementPayout.create({
+          data: {
+            tenantId: context.tenantId,
+            settlementAccountId: context.id,
+            provider: PaymentProvider.PAYSTACK,
+            providerTransferCode: fields.providerTransferCode,
+            providerTransferId: fields.providerTransferId,
+            providerRecipientCode: fields.providerRecipientCode,
+            providerReference: fields.providerReference,
+            amountPesewas: fields.amountPesewas,
+            currency: fields.currency,
+            status,
+            paidAt,
+            failedAt,
+            reversedAt,
+            failureReason: fields.failureReason,
+            providerRaw,
+            metadata,
+          },
+        });
+
+    await recordProviderEventOnly({
+      eventType: params.eventType,
+      providerReference: fields.providerReference,
+      signature: params.signature,
+      rawPayload: params.event,
+      processingStatus: "PROCESSED",
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        tenantId: context.tenantId,
+        action: "FINANCE_SETTLEMENT_PAYOUT_WEBHOOK_RECORDED",
+        resource: "SettlementPayout",
+        resourceId: payout.id,
+        metadata: toJsonValue({
+          eventType: params.eventType,
+          status,
+          amountPesewas: fields.amountPesewas,
+          providerTransferCode: fields.providerTransferCode,
+          providerTransferId: fields.providerTransferId,
+          providerRecipientCode: fields.providerRecipientCode,
+          providerReference: fields.providerReference,
+          settlementAccountId: context.id,
+        }),
+      },
+    });
+
+    return {
+      ok: true,
+      processed: true,
+      payoutId: payout.id,
+      status,
+    };
+  } catch (err) {
+    if (isPrismaUniqueError(err)) {
+      const existing = await prisma.settlementPayout.findFirst({
+        where: {
+          tenantId: context.tenantId,
+          provider: PaymentProvider.PAYSTACK,
+          providerTransferCode: fields.providerTransferCode,
+        },
+        select: { id: true, status: true },
+      });
+
+      return {
+        ok: true,
+        alreadyProcessed: true,
+        payoutId: existing?.id ?? null,
+        status: existing?.status ?? status,
+      };
+    }
+
+    console.error("[PAYSTACK_TRANSFER_WEBHOOK_PROCESSING_ERROR]", err);
+
+    await recordProviderEventOnly({
+      eventType: params.eventType,
+      providerReference: fields.providerReference,
+      signature: params.signature,
+      rawPayload: params.event,
+      processingStatus: "FAILED",
+      processingError: "PAYOUT_WEBHOOK_PROCESSING_FAILED",
+    });
+
+    return json(500, {
+      error: "PAYSTACK_TRANSFER_WEBHOOK_PROCESSING_FAILED",
+    });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -110,6 +503,17 @@ export async function POST(req: NextRequest) {
   const eventType = clean(event.event);
   const data = (event.data ?? {}) as Record<string, unknown>;
   const providerReference = clean(data.reference) || null;
+
+  if (TRANSFER_EVENTS.has(eventType)) {
+    const result = await recordTransferWebhook({
+      eventType,
+      signature,
+      event,
+      data,
+    });
+
+    return result instanceof NextResponse ? result : json(200, result);
+  }
 
   if (eventType !== "charge.success") {
     await recordProviderEventOnly({
