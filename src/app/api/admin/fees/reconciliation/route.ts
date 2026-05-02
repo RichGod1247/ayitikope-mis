@@ -48,15 +48,14 @@ function clampLimit(v: unknown) {
 
 function safeDateOnly(raw: unknown): Date {
   const s = clean(raw);
+  const now = new Date();
 
   if (!s) {
-    const now = new Date();
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   }
 
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (!match) {
-    const now = new Date();
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   }
 
@@ -67,7 +66,21 @@ function studentName(student?: { firstName: string | null; lastName: string | nu
   return [student?.firstName, student?.lastName].filter(Boolean).join(" ").trim() || "Unknown";
 }
 
-function addIssue(issues: Issue[], issue: Omit<Issue, "invoiceId" | "studentName" | "term" | "academicYear" | "providerReference" | "expectedPesewas" | "actualPesewas" | "deltaPesewas"> & Partial<Issue>) {
+function addIssue(
+  issues: Issue[],
+  issue: Omit<
+    Issue,
+    | "invoiceId"
+    | "studentName"
+    | "term"
+    | "academicYear"
+    | "providerReference"
+    | "expectedPesewas"
+    | "actualPesewas"
+    | "deltaPesewas"
+  > &
+    Partial<Issue>
+) {
   issues.push({
     invoiceId: issue.invoiceId ?? null,
     studentName: issue.studentName ?? null,
@@ -113,12 +126,7 @@ async function analyzeTenantFinance(input: {
       totalWaivedPesewas: true,
       totalPaidPesewas: true,
       balancePesewas: true,
-      student: {
-        select: {
-          firstName: true,
-          lastName: true,
-        },
-      },
+      student: { select: { firstName: true, lastName: true } },
       payments: {
         select: {
           id: true,
@@ -150,7 +158,6 @@ async function analyzeTenantFinance(input: {
 
   const issues: Issue[] = [];
   let cleanCount = 0;
-
   let expectedPesewas = 0;
   let actualPesewas = 0;
 
@@ -168,10 +175,10 @@ async function analyzeTenantFinance(input: {
     expectedPesewas += paymentTotal;
     actualPesewas += paymentCreditTotal;
 
-    const netBilled = Math.max(0, (inv.totalBilledPesewas ?? 0) - (inv.totalWaivedPesewas ?? 0));
+    const netBilled = Math.max(0, inv.totalBilledPesewas - inv.totalWaivedPesewas);
     const expectedBalance = Math.max(0, netBilled - paymentTotal);
 
-    if ((inv.totalPaidPesewas ?? 0) !== paymentTotal) {
+    if (inv.totalPaidPesewas !== paymentTotal) {
       addIssue(issues, {
         kind: "AMOUNT_MISMATCH",
         severity: "HIGH",
@@ -180,13 +187,13 @@ async function analyzeTenantFinance(input: {
         term: inv.term,
         academicYear: inv.academicYear,
         expectedPesewas: paymentTotal,
-        actualPesewas: inv.totalPaidPesewas ?? 0,
-        deltaPesewas: (inv.totalPaidPesewas ?? 0) - paymentTotal,
+        actualPesewas: inv.totalPaidPesewas,
+        deltaPesewas: inv.totalPaidPesewas - paymentTotal,
         description: "Invoice paid total does not equal successful payment total.",
       });
     }
 
-    if ((inv.balancePesewas ?? 0) !== expectedBalance) {
+    if (inv.balancePesewas !== expectedBalance) {
       addIssue(issues, {
         kind: "AMOUNT_MISMATCH",
         severity: "HIGH",
@@ -195,8 +202,8 @@ async function analyzeTenantFinance(input: {
         term: inv.term,
         academicYear: inv.academicYear,
         expectedPesewas: expectedBalance,
-        actualPesewas: inv.balancePesewas ?? 0,
-        deltaPesewas: (inv.balancePesewas ?? 0) - expectedBalance,
+        actualPesewas: inv.balancePesewas,
+        deltaPesewas: inv.balancePesewas - expectedBalance,
         description: "Invoice balance does not equal net billed minus successful payments.",
       });
     }
@@ -252,7 +259,12 @@ async function analyzeTenantFinance(input: {
       }
 
       const perPaymentLedgerTotal = inv.ledgerEntries
-        .filter((e) => e.feePaymentId === payment.id && e.entryType === "PAYMENT_CREDIT" && e.direction === "CREDIT")
+        .filter(
+          (e) =>
+            e.feePaymentId === payment.id &&
+            e.entryType === "PAYMENT_CREDIT" &&
+            e.direction === "CREDIT"
+        )
         .reduce((s, e) => s + e.amountPesewas, 0);
 
       if (perPaymentLedgerTotal !== payment.amountPesewas) {
@@ -290,10 +302,7 @@ async function analyzeTenantFinance(input: {
   }
 
   const referencedPayments = await prisma.feePayment.findMany({
-    where: {
-      tenantId,
-      reference: { not: null },
-    },
+    where: { tenantId, reference: { not: null } },
     select: {
       id: true,
       invoiceId: true,
@@ -407,20 +416,7 @@ export async function GET(req: NextRequest) {
     return json(200, result);
   } catch (err) {
     console.error("[ADMIN_RECONCILIATION_ERROR]", err);
-
-    return json(500, {
-      ok: false,
-      error: "FAILED_TO_RUN_RECONCILIATION",
-      isClean: false,
-      issueCount: null,
-      cleanCount: null,
-      totalInvoices: null,
-      highestSeverity: null,
-      expectedPesewas: null,
-      actualPesewas: null,
-      deltaPesewas: null,
-      issues: [],
-    });
+    return json(500, { ok: false, error: "FAILED_TO_RUN_RECONCILIATION", issues: [] });
   }
 }
 
@@ -506,6 +502,24 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      await tx.auditLog.create({
+        data: {
+          tenantId: auth.ctx.tenantId,
+          userId: auth.ctx.userId,
+          action: "FINANCE_RECONCILIATION_BATCH_CREATED",
+          resource: "ReconciliationBatch",
+          resourceId: createdBatch.id,
+          metadata: {
+            status: batchStatus,
+            issueCount: result.issueCount,
+            totalInvoices: result.totalInvoices,
+            expectedPesewas: result.expectedPesewas,
+            actualPesewas: result.actualPesewas,
+            deltaPesewas: result.deltaPesewas,
+          },
+        },
+      });
+
       return createdBatch;
     });
 
@@ -520,19 +534,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[ADMIN_RECONCILIATION_PERSIST_ERROR]", err);
-
-    return json(500, {
-      ok: false,
-      error: "FAILED_TO_PERSIST_RECONCILIATION",
-      isClean: false,
-      issueCount: null,
-      cleanCount: null,
-      totalInvoices: null,
-      highestSeverity: null,
-      expectedPesewas: null,
-      actualPesewas: null,
-      deltaPesewas: null,
-      issues: [],
-    });
+    return json(500, { ok: false, error: "FAILED_TO_PERSIST_RECONCILIATION", issues: [] });
   }
 }

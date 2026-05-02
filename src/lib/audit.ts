@@ -1,14 +1,8 @@
 // src/lib/audit.ts
 import { prisma } from "@/lib/prisma";
 
-type AuthAction =
-  | "AUTH_LOGIN_SUCCESS"
-  | "AUTH_LOGIN_FAILED"
-  | "ONBOARDING_CODE_ROTATED"
-  | "INVITE_CREATED";
-
 export async function writeAuditLog(params: {
-  action: AuthAction;
+  action: string;
   tenantId?: string;
   userId?: string;
   resource?: string;
