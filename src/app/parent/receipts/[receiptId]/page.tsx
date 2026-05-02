@@ -169,7 +169,7 @@ export default function ParentReceiptPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-white flex items-center justify-center px-4">
+      <main className="flex min-h-screen items-center justify-center bg-white px-4">
         <p className="text-sm text-zinc-500">Loading receipt...</p>
       </main>
     );
@@ -177,14 +177,10 @@ export default function ParentReceiptPage() {
 
   if (error || !receipt) {
     return (
-      <main className="min-h-screen bg-zinc-50 flex items-center justify-center px-4">
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
         <div className="max-w-md rounded-2xl border border-red-200 bg-red-50 px-5 py-5 text-center">
-          <p className="text-sm font-semibold text-red-900">
-            Receipt unavailable
-          </p>
-          <p className="mt-1 text-xs text-red-800">
-            {error ?? "Receipt not found."}
-          </p>
+          <p className="text-sm font-semibold text-red-900">Receipt unavailable</p>
+          <p className="mt-1 text-xs text-red-800">{error ?? "Receipt not found."}</p>
           <div className="mt-4 flex justify-center gap-2">
             <button
               type="button"
@@ -229,13 +225,12 @@ export default function ParentReceiptPage() {
             Back to receipts
           </Link>
 
-          <button
-            type="button"
-            onClick={() => window.print()}
+          <a
+            href={`/api/parent/receipts/${receiptId}/pdf`}
             className="inline-flex h-10 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white hover:bg-black"
           >
-            Print / save PDF
-          </button>
+            Download PDF
+          </a>
         </div>
 
         <article className="receipt-shell mx-auto max-w-3xl overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-lg">
@@ -250,14 +245,10 @@ export default function ParentReceiptPage() {
                   School code: {receipt.school.schoolCode || "Unavailable"}
                 </p>
                 {receipt.school.contactPhone && (
-                  <p className="text-xs text-zinc-400">
-                    {receipt.school.contactPhone}
-                  </p>
+                  <p className="text-xs text-zinc-400">{receipt.school.contactPhone}</p>
                 )}
                 {receipt.school.contactEmail && (
-                  <p className="text-xs text-zinc-400">
-                    {receipt.school.contactEmail}
-                  </p>
+                  <p className="text-xs text-zinc-400">{receipt.school.contactEmail}</p>
                 )}
               </div>
 
@@ -265,9 +256,7 @@ export default function ParentReceiptPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
                   Official receipt
                 </p>
-                <p className="mt-1 font-mono text-lg font-bold">
-                  {receipt.receiptNumber}
-                </p>
+                <p className="mt-1 font-mono text-lg font-bold">{receipt.receiptNumber}</p>
                 <p className="mt-1 text-xs text-zinc-400">
                   {formatDateTime(receipt.issuedAt)}
                 </p>
@@ -282,14 +271,10 @@ export default function ParentReceiptPage() {
                   Issued to
                 </p>
                 <p className="mt-1 font-semibold text-zinc-900">
-                  {receipt.issuedToName ||
-                    receipt.student.guardianName ||
-                    "Parent / Guardian"}
+                  {receipt.issuedToName || receipt.student.guardianName || "Parent / Guardian"}
                 </p>
                 {receipt.issuedToPhone && (
-                  <p className="text-xs text-zinc-600">
-                    {receipt.issuedToPhone}
-                  </p>
+                  <p className="text-xs text-zinc-600">{receipt.issuedToPhone}</p>
                 )}
               </div>
 
@@ -297,40 +282,30 @@ export default function ParentReceiptPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                   Learner
                 </p>
-                <p className="mt-1 font-semibold text-zinc-900">
-                  {receipt.student.name}
-                </p>
+                <p className="mt-1 font-semibold text-zinc-900">{receipt.student.name}</p>
                 {receipt.student.classLabel && (
-                  <p className="text-xs text-zinc-600">
-                    {receipt.student.classLabel}
-                  </p>
+                  <p className="text-xs text-zinc-600">{receipt.student.classLabel}</p>
                 )}
               </div>
             </div>
 
             <div className="grid gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-3">
               <div>
-                <p className="text-[11px] font-medium text-zinc-500">
-                  Amount paid
-                </p>
+                <p className="text-[11px] font-medium text-zinc-500">Amount paid</p>
                 <p className="mt-1 text-lg font-bold text-emerald-700">
                   {formatCedis(receipt.payment.amountPesewas)}
                 </p>
               </div>
 
               <div>
-                <p className="text-[11px] font-medium text-zinc-500">
-                  Payment method
-                </p>
+                <p className="text-[11px] font-medium text-zinc-500">Payment method</p>
                 <p className="mt-1 text-sm font-semibold text-zinc-900">
                   {methodLabel(receipt.payment.method)}
                 </p>
               </div>
 
               <div>
-                <p className="text-[11px] font-medium text-zinc-500">
-                  Payment date
-                </p>
+                <p className="text-[11px] font-medium text-zinc-500">Payment date</p>
                 <p className="mt-1 text-sm font-semibold text-zinc-900">
                   {formatDate(receipt.payment.paidAt ?? receipt.issuedAt)}
                 </p>
@@ -392,23 +367,15 @@ export default function ParentReceiptPage() {
                     <tr>
                       <th className="px-3 py-2 font-semibold">Fee item</th>
                       <th className="px-3 py-2 font-semibold">Category</th>
-                      <th className="px-3 py-2 text-right font-semibold">
-                        Amount
-                      </th>
-                      <th className="px-3 py-2 text-right font-semibold">
-                        Waived
-                      </th>
+                      <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                      <th className="px-3 py-2 text-right font-semibold">Waived</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100">
                     {receipt.invoice.lines.map((line) => (
                       <tr key={line.id}>
-                        <td className="px-3 py-2 text-zinc-800">
-                          {line.description}
-                        </td>
-                        <td className="px-3 py-2 text-zinc-500">
-                          {line.category}
-                        </td>
+                        <td className="px-3 py-2 text-zinc-800">{line.description}</td>
+                        <td className="px-3 py-2 text-zinc-500">{line.category}</td>
                         <td className="px-3 py-2 text-right font-medium text-zinc-900">
                           {formatCedis(line.amountPesewas)}
                         </td>
@@ -476,17 +443,13 @@ export default function ParentReceiptPage() {
             <footer className="border-t border-zinc-100 pt-4 text-xs text-zinc-500">
               <p>
                 Issued by:{" "}
-                <span className="font-semibold text-zinc-700">
-                  {receipt.issuedByName}
-                </span>
+                <span className="font-semibold text-zinc-700">{receipt.issuedByName}</span>
               </p>
               <p className="mt-1">
-                This is an official payment receipt from {receipt.school.name}
-                via EduLife OS. Keep this document as proof of payment.
+                This is an official payment receipt from {receipt.school.name} via EduLife OS.
+                Keep this document as proof of payment.
               </p>
-              <p className="mt-2 font-mono text-[11px]">
-                Receipt: {receipt.receiptNumber}
-              </p>
+              <p className="mt-2 font-mono text-[11px]">Receipt: {receipt.receiptNumber}</p>
             </footer>
           </section>
         </article>

@@ -151,6 +151,13 @@ function friendlyError(code?: string) {
     RESOLUTION_NOTE_TOO_SHORT: "Resolution note must be at least 8 characters.",
     BATCH_ALREADY_CLOSED: "This batch is already closed.",
     BATCH_HAS_ACTIVE_EXCEPTIONS: "Resolve or dismiss all active exceptions before closing.",
+    UNSUPPORTED_REPAIR_ACTION: "This exception type does not support receipt repair.",
+    EXCEPTION_HAS_NO_INVOICE: "This exception is not attached to an invoice.",
+    SUCCESSFUL_PAYMENT_WITHOUT_RECEIPT_NOT_FOUND:
+      "The missing-receipt payment could not be found. It may already have been repaired.",
+    FAILED_TO_GENERATE_RECEIPT_NUMBER: "Could not generate a unique receipt number.",
+    PAYMENT_LEDGER_ALREADY_LINKED_TO_DIFFERENT_RECEIPT:
+      "This payment ledger is already linked to another receipt.",
   };
 
   return map[code ?? ""] ?? "Action failed. Please try again.";
@@ -166,6 +173,7 @@ export default function AdminFeesReconciliationPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [persisting, setPersisting] = useState(false);
   const [savingExceptionId, setSavingExceptionId] = useState<string | null>(null);
+  const [repairingExceptionId, setRepairingExceptionId] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [term, setTerm] = useState("");
@@ -333,6 +341,36 @@ export default function AdminFeesReconciliationPage() {
       setError("Network error while updating exception.");
     } finally {
       setSavingExceptionId(null);
+    }
+  }
+
+  async function repairMissingReceipt(exceptionId: string) {
+    setRepairingExceptionId(exceptionId);
+    setError(null);
+
+    try {
+      const res = await fetch(
+        `/api/admin/fees/reconciliation/exceptions/${exceptionId}/repair-receipt`,
+        { method: "POST" }
+      );
+
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+      };
+
+      if (!res.ok || !json.ok) {
+        setError(friendlyError(json.error));
+        return;
+      }
+
+      await loadHistory();
+      if (selectedBatch?.id) await loadBatch(selectedBatch.id);
+      await runCheck();
+    } catch {
+      setError("Network error while repairing missing receipt.");
+    } finally {
+      setRepairingExceptionId(null);
     }
   }
 
@@ -585,7 +623,7 @@ export default function AdminFeesReconciliationPage() {
                 <div>
                   <h2 className="text-sm font-semibold text-zinc-950">Exception workflow</h2>
                   <p className="mt-1 text-xs text-zinc-500">
-                    Resolve, dismiss, or investigate issues. Closed batches cannot be modified.
+                    Resolve, dismiss, investigate, or repair supported issues. Closed batches cannot be modified.
                   </p>
                 </div>
 
@@ -650,6 +688,9 @@ export default function AdminFeesReconciliationPage() {
                       {selectedBatch.exceptions.map((ex) => {
                         const closed =
                           selectedBatch.status === "CLOSED" || Boolean(selectedBatch.closedAt);
+                        const canRepairMissingReceipt =
+                          ex.kind === "PAYMENT_WITHOUT_RECEIPT" &&
+                          (ex.status === "OPEN" || ex.status === "INVESTIGATING");
 
                         return (
                           <div key={ex.id} className="rounded-2xl border border-zinc-200 p-4">
@@ -718,6 +759,20 @@ export default function AdminFeesReconciliationPage() {
                               >
                                 Resolve
                               </button>
+
+                              {canRepairMissingReceipt && (
+                                <button
+                                  type="button"
+                                  disabled={closed || repairingExceptionId === ex.id}
+                                  onClick={() => repairMissingReceipt(ex.id)}
+                                  className="rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-100 disabled:opacity-50"
+                                >
+                                  {repairingExceptionId === ex.id
+                                    ? "Creating..."
+                                    : "Create missing receipt"}
+                                </button>
+                              )}
+
                               <button
                                 type="button"
                                 disabled={closed || savingExceptionId === ex.id}
