@@ -44,7 +44,6 @@ type PaymentModalState = {
   balancePesewas: number;
 };
 
-// Match /api/me payload (only fields we use)
 type MeResponse =
   | {
       ok: true;
@@ -55,7 +54,6 @@ type MeResponse =
     }
   | { ok: false; error?: string };
 
-// Match /api/admin/setup/load (only fields we use)
 type SetupLoadResponse =
   | {
       tenant: any;
@@ -82,7 +80,19 @@ function formatDateShort(iso?: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
+
+function makeClientIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `manual-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 async function safeJson(r: Response) {
@@ -120,7 +130,6 @@ export default function AdminFeesInvoicesPage() {
   const [classError, setClassError] = useState<string | null>(null);
   const [classroomId, setClassroomId] = useState<string>("");
 
-  // UI defaults (will be overridden by tenant setup if present)
   const [term, setTerm] = useState<string>("1st Term");
   const [academicYear, setAcademicYear] = useState<string>("2025/2026");
 
@@ -148,12 +157,10 @@ export default function AdminFeesInvoicesPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [paymentReference, setPaymentReference] = useState<string>("");
   const [paymentChannel, setPaymentChannel] = useState<string>("office");
+  const [paymentIdempotencyKey, setPaymentIdempotencyKey] = useState<string>("");
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  // ---------------------------
-  // Bootstrap tenant from /api/me (bank-grade)
-  // ---------------------------
   useEffect(() => {
     let alive = true;
 
@@ -189,9 +196,6 @@ export default function AdminFeesInvoicesPage() {
     };
   }, []);
 
-  // ---------------------------
-  // Bootstrap term/year from TenantSettings (/api/admin/setup/load)
-  // ---------------------------
   useEffect(() => {
     if (!tenant?.id) return;
 
@@ -202,14 +206,12 @@ export default function AdminFeesInvoicesPage() {
         if (!alive) return;
 
         if (!setup.ok) {
-          // Keep UI defaults; show a soft hint only (don't block page)
           setSetupComplete(null);
           return;
         }
 
         setSetupComplete(setup.setupComplete);
 
-        // Only override if configured
         if (setup.currentTerm) setTerm(setup.currentTerm);
         if (setup.currentAcademicYear) setAcademicYear(setup.currentAcademicYear);
       } catch {
@@ -223,21 +225,20 @@ export default function AdminFeesInvoicesPage() {
     };
   }, [tenant?.id]);
 
-  // ---------------------------
-  // Classrooms (prefer server-derived tenant, fallback to tenantId)
-  // ---------------------------
   const fetchClassOptions = useCallback(async (tid: string, m: "single" | "multi") => {
     setClassLoading(true);
     setClassError(null);
 
     try {
-      // Prefer: server infers tenant
-      let r = await fetch(`/api/classrooms/list?mode=${encodeURIComponent(m)}`, { cache: "no-store" });
+      let r = await fetch(`/api/classrooms/list?mode=${encodeURIComponent(m)}`, {
+        cache: "no-store",
+      });
       let j = await safeJson(r);
 
-      // Fallback: old API expects tenantId
       if ((!r.ok || !Array.isArray(j?.items)) && tid) {
-        const url = `/api/classrooms/list?tenantId=${encodeURIComponent(tid)}&mode=${encodeURIComponent(m)}`;
+        const url = `/api/classrooms/list?tenantId=${encodeURIComponent(
+          tid
+        )}&mode=${encodeURIComponent(m)}`;
         r = await fetch(url, { cache: "no-store" });
         j = await safeJson(r);
       }
@@ -278,7 +279,6 @@ export default function AdminFeesInvoicesPage() {
       setClassError(null);
 
       try {
-        // Prefer: no tenantId
         let r = await fetch("/api/classrooms/seed-canonical", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -286,7 +286,6 @@ export default function AdminFeesInvoicesPage() {
         });
         let j = await safeJson(r);
 
-        // Fallback: old API expects tenantId
         if (!r.ok) {
           r = await fetch("/api/classrooms/seed-canonical", {
             method: "POST",
@@ -314,9 +313,6 @@ export default function AdminFeesInvoicesPage() {
     if (tenant?.id) fetchClassOptions(tenant.id, mode);
   }, [tenant?.id, mode, fetchClassOptions]);
 
-  // ---------------------------
-  // Fee structures (prefer server-derived tenant, fallback to tenantId)
-  // ---------------------------
   const loadStructures = useCallback(async () => {
     if (!tenant?.id) return;
 
@@ -324,22 +320,24 @@ export default function AdminFeesInvoicesPage() {
     setStructuresError(null);
 
     try {
-      // Prefer: server infers tenant
       const params1 = new URLSearchParams();
       params1.set("term", term);
       params1.set("academicYear", academicYear);
 
-      let r = await fetch(`/api/admin/fees/structures/list?${params1.toString()}`, { cache: "no-store" });
+      let r = await fetch(`/api/admin/fees/structures/list?${params1.toString()}`, {
+        cache: "no-store",
+      });
       let j = await safeJson(r);
 
-      // Fallback: old API expects tenantId
       if ((!r.ok || !j?.ok) && tenant.id) {
         const params2 = new URLSearchParams();
         params2.set("tenantId", tenant.id);
         params2.set("term", term);
         params2.set("academicYear", academicYear);
 
-        r = await fetch(`/api/admin/fees/structures/list?${params2.toString()}`, { cache: "no-store" });
+        r = await fetch(`/api/admin/fees/structures/list?${params2.toString()}`, {
+          cache: "no-store",
+        });
         j = await safeJson(r);
       }
 
@@ -374,9 +372,6 @@ export default function AdminFeesInvoicesPage() {
     if (tenant?.id) loadStructures();
   }, [tenant?.id, term, academicYear, loadStructures]);
 
-  // ---------------------------
-  // Invoices list (prefer server-derived tenant, fallback to tenantId)
-  // ---------------------------
   const loadInvoices = useCallback(async () => {
     if (!tenant?.id || !term || !academicYear) return;
 
@@ -385,16 +380,16 @@ export default function AdminFeesInvoicesPage() {
     setInfo(null);
 
     try {
-      // Prefer: server infers tenant
       const params1 = new URLSearchParams();
       params1.set("term", term);
       params1.set("academicYear", academicYear);
       if (classroomId) params1.set("classroomId", classroomId);
 
-      let r = await fetch(`/api/admin/fees/invoices/list?${params1.toString()}`, { cache: "no-store" });
+      let r = await fetch(`/api/admin/fees/invoices/list?${params1.toString()}`, {
+        cache: "no-store",
+      });
       let j = await safeJson(r);
 
-      // Fallback: old API expects tenantId
       if ((!r.ok || !j?.ok) && tenant.id) {
         const params2 = new URLSearchParams();
         params2.set("tenantId", tenant.id);
@@ -402,7 +397,9 @@ export default function AdminFeesInvoicesPage() {
         params2.set("academicYear", academicYear);
         if (classroomId) params2.set("classroomId", classroomId);
 
-        r = await fetch(`/api/admin/fees/invoices/list?${params2.toString()}`, { cache: "no-store" });
+        r = await fetch(`/api/admin/fees/invoices/list?${params2.toString()}`, {
+          cache: "no-store",
+        });
         j = await safeJson(r);
       }
 
@@ -426,14 +423,10 @@ export default function AdminFeesInvoicesPage() {
     }
   }, [tenant?.id, term, academicYear, classroomId]);
 
-  // Auto-load invoices when ready (DO NOT require classroomId; list supports all/optional filter)
   useEffect(() => {
     if (tenant?.id && term && academicYear) loadInvoices();
   }, [tenant?.id, classroomId, term, academicYear, loadInvoices]);
 
-  // ---------------------------
-  // Generate invoices (prefer server-derived tenant, fallback to tenantId)
-  // ---------------------------
   async function handleGenerateInvoices() {
     if (!tenant?.id || !classroomId || !term || !academicYear) return;
 
@@ -447,11 +440,8 @@ export default function AdminFeesInvoicesPage() {
     setInvoicesError(null);
 
     try {
-      // NOTE: server ignores term/year here; it derives from FeeStructure (correct).
-      // Keep for back-compat / future UI logic.
       let body: any = { classroomId, term, academicYear, feeStructureId: selectedStructureId };
 
-      // Prefer: no tenantId
       let r = await fetch("/api/admin/fees/invoices/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -459,7 +449,6 @@ export default function AdminFeesInvoicesPage() {
       });
       let j = await safeJson(r);
 
-      // Fallback: old API expects tenantId
       if ((!r.ok || !j?.ok) && tenant.id) {
         body = { ...body, tenantId: tenant.id };
         r = await fetch("/api/admin/fees/invoices/generate", {
@@ -495,6 +484,7 @@ export default function AdminFeesInvoicesPage() {
     setPaymentMethod("cash");
     setPaymentReference("");
     setPaymentChannel("office");
+    setPaymentIdempotencyKey(makeClientIdempotencyKey());
     setPaymentModal({
       open: true,
       invoiceId: inv.invoiceId,
@@ -505,14 +495,13 @@ export default function AdminFeesInvoicesPage() {
   }
 
   function closePaymentModal() {
+    if (paymentLoading) return;
     setPaymentModal((prev) => ({ ...prev, open: false }));
+    setPaymentIdempotencyKey("");
   }
 
-  // ---------------------------
-  // Record payment (prefer server-derived tenant, fallback to tenantId)
-  // ---------------------------
   async function handleSubmitPayment() {
-    if (!tenant?.id) return;
+    if (!tenant?.id || paymentLoading) return;
 
     if (!paymentModal.invoiceId) {
       setPaymentError("Invoice is required.");
@@ -538,38 +527,54 @@ export default function AdminFeesInvoicesPage() {
       return;
     }
 
+    const idempotencyKey = paymentIdempotencyKey || makeClientIdempotencyKey();
+    if (!paymentIdempotencyKey) setPaymentIdempotencyKey(idempotencyKey);
+
     setPaymentLoading(true);
     setPaymentError(null);
 
     try {
-      // Prefer: no tenantId
       let body: any = {
         invoiceId: paymentModal.invoiceId,
         amountPesewas: pesewas,
         method: paymentMethod || "cash",
         reference: paymentReference || undefined,
         channel: paymentChannel || "office",
+        idempotencyKey,
       };
 
       let r = await fetch("/api/admin/fees/payments/create", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "x-idempotency-key": idempotencyKey,
+        },
         body: JSON.stringify(body),
       });
       let j = await safeJson(r);
 
-      // Fallback: old API expects tenantId
       if ((!r.ok || !j?.ok) && tenant.id) {
         body = { ...body, tenantId: tenant.id };
         r = await fetch("/api/admin/fees/payments/create", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            "x-idempotency-key": idempotencyKey,
+          },
           body: JSON.stringify(body),
         });
         j = await safeJson(r);
       }
 
       if (!r.ok || !j?.ok) {
+        if (j?.error === "DUPLICATE_PAYMENT_REFERENCE") {
+          setPaymentError(
+            "This payment request was already processed or is a duplicate. Reload invoices before trying again."
+          );
+          await loadInvoices();
+          return;
+        }
+
         setPaymentError(j?.error || "Failed to record payment. Please try again.");
         return;
       }
@@ -609,13 +614,14 @@ export default function AdminFeesInvoicesPage() {
         {tenantLoading && <p className="text-xs text-[#8F98A8]">Loading school context…</p>}
 
         {tenantError && (
-          <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded-xl px-3 py-2">{tenantError}</p>
+          <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded-xl px-3 py-2">
+            {tenantError}
+          </p>
         )}
 
         {setupComplete === false && (
           <p className="text-xs text-amber-300 bg-amber-900/20 border border-amber-500/30 rounded-xl px-3 py-2">
-            Admin setup is not completed yet. Term/academic year defaults may be wrong. Complete Admin → Setup to lock
-            them properly.
+            Admin setup is not completed yet. Term/academic year defaults may be wrong. Complete Admin → Setup to lock them properly.
           </p>
         )}
       </header>
@@ -786,15 +792,9 @@ export default function AdminFeesInvoicesPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="space-y-1 text-sm text-zinc-900">
             <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Invoice Summary</div>
-            <div>
-              Total invoices in view: <span className="font-semibold">{summary.totalInvoices}</span>
-            </div>
-            <div>
-              Total billed: <span className="font-semibold">{formatMoneyFromPesewas(summary.totalBilled)}</span>
-            </div>
-            <div>
-              Total paid: <span className="font-semibold">{formatMoneyFromPesewas(summary.totalPaid)}</span>
-            </div>
+            <div>Total invoices in view: <span className="font-semibold">{summary.totalInvoices}</span></div>
+            <div>Total billed: <span className="font-semibold">{formatMoneyFromPesewas(summary.totalBilled)}</span></div>
+            <div>Total paid: <span className="font-semibold">{formatMoneyFromPesewas(summary.totalPaid)}</span></div>
             <div>
               Total outstanding:{" "}
               <span className="font-semibold text-red-700">{formatMoneyFromPesewas(summary.totalBalance)}</span>
@@ -894,13 +894,7 @@ export default function AdminFeesInvoicesPage() {
                     <td className="px-3 py-2 align-top text-right">{formatMoneyFromPesewas(inv.amountBilledPesewas)}</td>
                     <td className="px-3 py-2 align-top text-right">{formatMoneyFromPesewas(inv.totalPaidPesewas)}</td>
                     <td className="px-3 py-2 align-top text-right">
-                      <span
-                        className={
-                          inv.balancePesewas > 0
-                            ? "text-red-700 font-semibold"
-                            : "text-emerald-700 font-semibold"
-                        }
-                      >
+                      <span className={inv.balancePesewas > 0 ? "text-red-700 font-semibold" : "text-emerald-700 font-semibold"}>
                         {formatMoneyFromPesewas(inv.balancePesewas)}
                       </span>
                     </td>
@@ -942,7 +936,9 @@ export default function AdminFeesInvoicesPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-zinc-900">Record payment — {paymentModal.studentName}</h2>
+              <h2 className="text-sm font-semibold text-zinc-900">
+                Record payment — {paymentModal.studentName}
+              </h2>
               <button className={btnOutline} onClick={closePaymentModal} disabled={paymentLoading} type="button">
                 Close
               </button>
@@ -984,9 +980,9 @@ export default function AdminFeesInvoicesPage() {
                   disabled={paymentLoading}
                 >
                   <option value="cash">Cash</option>
+                  <option value="momo">Mobile money</option>
+                  <option value="bank_transfer">Bank transfer</option>
                   <option value="paystack">Paystack</option>
-                  <option value="hubtel">Hubtel</option>
-                  <option value="bank">Bank transfer</option>
                   <option value="other">Other</option>
                 </select>
               </div>
@@ -1034,7 +1030,9 @@ export default function AdminFeesInvoicesPage() {
               </button>
             </div>
 
-            <p className="text-[11px] text-zinc-500 mt-1">Payments recorded here update balances immediately.</p>
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Payments recorded here update balances immediately. Duplicate clicks are protected with a one-time request key.
+            </p>
           </div>
         </div>
       )}

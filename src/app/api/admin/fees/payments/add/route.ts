@@ -1,4 +1,5 @@
 // src/app/api/admin/fees/payments/add/route.ts
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
@@ -26,7 +27,47 @@ type Body = {
   method?: string;
   reference?: string;
   channel?: string;
+  idempotencyKey?: string;
 };
+
+function cleanOptional(value: unknown) {
+  const s = String(value ?? "").trim();
+  return s || null;
+}
+
+function normalizeIdempotencyKey(value: unknown) {
+  const raw = cleanOptional(value);
+  if (!raw) return null;
+
+  const normalized = raw.replace(/[^a-zA-Z0-9:_./-]/g, "").slice(0, 120);
+  return normalized || null;
+}
+
+function makeManualPaymentIdempotencyReference(input: {
+  tenantId: string;
+  invoiceId: string;
+  amountPesewas: number;
+  method?: string | null;
+  idempotencyKey: string;
+}) {
+  const digest = crypto
+    .createHash("sha256")
+    .update(
+      [
+        "manual-payment",
+        input.tenantId,
+        input.invoiceId,
+        String(input.amountPesewas),
+        String(input.method ?? "cash").trim().toLowerCase(),
+        input.idempotencyKey,
+      ].join(":")
+    )
+    .digest("hex")
+    .slice(0, 32)
+    .toUpperCase();
+
+  return `MANUAL-IDEMP-${digest}`;
+}
 
 export async function POST(req: NextRequest) {
   const auth = await requireApiUserContext(req, {
@@ -72,13 +113,30 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const explicitReference = cleanOptional(body.reference);
+  const idempotencyKey = normalizeIdempotencyKey(
+    req.headers.get("x-idempotency-key") ?? body.idempotencyKey
+  );
+
+  const reference =
+    explicitReference ??
+    (idempotencyKey
+      ? makeManualPaymentIdempotencyReference({
+          tenantId,
+          invoiceId,
+          amountPesewas,
+          method: body.method,
+          idempotencyKey,
+        })
+      : undefined);
+
   try {
     const result = await recordManualPayment({
       tenantId,
       invoiceId,
       amountPesewas,
       method: body.method,
-      reference: body.reference,
+      reference,
       channel: body.channel,
       actorUserId: auth.ctx.userId,
     });
@@ -104,6 +162,7 @@ export async function POST(req: NextRequest) {
           amountPesewas,
           invoiceId,
           outstandingPesewas: result.outstandingPesewas,
+          idempotencyKey: idempotencyKey ?? null,
         },
       }).catch((err) => console.error("[PAYMENT_SMS_ERROR]", err));
     }
@@ -111,6 +170,7 @@ export async function POST(req: NextRequest) {
     return jsonNoStore(
       {
         ok: true,
+        idempotent: Boolean(idempotencyKey),
         payment: result.payment,
         receipt: {
           id: result.receipt.id,
