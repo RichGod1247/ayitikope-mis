@@ -1,12 +1,14 @@
+//src/app/api/admin/fees/structures/list/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
+import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonNoStore(payload: any, status = 200) {
+function jsonNoStore(payload: unknown, status = 200) {
   return NextResponse.json(payload, {
     status,
     headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
@@ -73,7 +75,7 @@ export async function GET(req: NextRequest) {
   const onlyActive = parseBool(url.searchParams.get("onlyActive"));
 
   try {
-    const where: any = { tenantId: ctx.tenantId };
+    const where: Prisma.FeeStructureWhereInput = { tenantId: ctx.tenantId };
     if (term) where.term = term;
     if (academicYear) where.academicYear = academicYear;
     if (typeof onlyActive === "boolean") where.isActive = onlyActive;

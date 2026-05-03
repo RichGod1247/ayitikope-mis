@@ -22,135 +22,110 @@ type FeeStructure = {
   updatedAt: string;
 };
 
+type ApiResponse<T> = {
+  ok: boolean;
+  error?: string;
+} & Partial<T>;
+
 type MeResponse =
   | { ok: true; tenantId: string; tenant?: { name?: string | null; slug?: string | null } | null }
   | { ok: false; error?: string };
 
-const btnBase =
-  "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-xs md:text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-800`;
-const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50`;
-
 const TERM_OPTIONS = ["1st Term", "2nd Term", "3rd Term"] as const;
 
-function formatMoneyFromPesewas(p: number) {
-  const n = typeof p === "number" && Number.isFinite(p) ? p : 0;
-  const cedis = n / 100;
-  return `GH₵ ${cedis.toFixed(2)}`;
+function formatMoneyFromPesewas(pesewas: number) {
+  const safe = Number.isFinite(pesewas) ? Math.max(0, Math.floor(pesewas)) : 0;
+  return `GH₵ ${(safe / 100).toFixed(2)}`;
 }
 
-function normalizeYear(v: string) {
-  return String(v ?? "").trim();
-}
-
-function normalizeName(v: string) {
-  return String(v ?? "").trim();
-}
-
-function validateAmountCedis(v: string): { ok: true; value: string } | { ok: false; error: string } {
-  const raw = String(v ?? "").trim();
-  if (!raw.length) return { ok: false, error: "Amount is required." };
+function validateAmountCedis(value: string) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return { ok: false as const, error: "Amount is required." };
 
   const numeric = Number(raw);
-  if (!Number.isFinite(numeric)) return { ok: false, error: "Amount must be a valid number." };
-  if (numeric <= 0) return { ok: false, error: "Amount must be greater than 0." };
-  if (numeric > 1_000_000) return { ok: false, error: "Amount is too large. Please verify." };
+  if (!Number.isFinite(numeric)) {
+    return { ok: false as const, error: "Amount must be a valid number." };
+  }
 
-  return { ok: true, value: numeric.toFixed(2) };
+  if (numeric <= 0) {
+    return { ok: false as const, error: "Amount must be greater than 0." };
+  }
+
+  if (numeric > 1_000_000) {
+    return { ok: false as const, error: "Amount is too large. Please verify." };
+  }
+
+  return { ok: true as const, value: numeric.toFixed(2) };
 }
 
-async function safeJson(r: Response) {
-  return (await r.json().catch(() => ({}))) as any;
+async function safeJson<T>(response: Response): Promise<T | null> {
+  return response.json().catch(() => null) as Promise<T | null>;
 }
 
 export default function AdminFeeStructuresPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [tenantLoading, setTenantLoading] = useState(false);
+  const [tenantLoading, setTenantLoading] = useState(true);
   const [tenantError, setTenantError] = useState<string | null>(null);
 
   const [items, setItems] = useState<FeeStructure[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
 
+  const [tab, setTab] = useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formTerm, setFormTerm] = useState<(typeof TERM_OPTIONS)[number]>("1st Term");
   const [formAcademicYear, setFormAcademicYear] = useState("2025/2026");
   const [formAmountCedis, setFormAmountCedis] = useState("");
-  const [formIsActive, setFormIsActive] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formInfo, setFormInfo] = useState<string | null>(null);
 
-  // -------------------------
-  // Bootstrap tenant from /api/me
-  // -------------------------
-  useEffect(() => {
-    let alive = true;
+  async function loadTenant() {
+    setTenantLoading(true);
+    setTenantError(null);
 
-    (async () => {
-      setTenantLoading(true);
-      setTenantError(null);
+    try {
+      const res = await fetch("/api/me", { cache: "no-store" });
+      const data = await safeJson<MeResponse>(res);
 
-      try {
-        const r = await fetch("/api/me", { cache: "no-store" });
-        const j = (await r.json().catch(() => ({}))) as MeResponse;
-
-        if (!alive) return;
-
-        if (!r.ok || !j || (j as any).ok !== true) {
-          setTenantError("Failed to load school context. Please sign in again.");
-          return;
-        }
-
-        const ok = j as Extract<MeResponse, { ok: true }>;
-        setTenant({
-          id: ok.tenantId,
-          name: ok.tenant?.name || "School",
-          slug: ok.tenant?.slug ?? null,
-        });
-      } catch {
-        if (!alive) return;
-        setTenantError("Failed to load school context. Please check your connection.");
-      } finally {
-        if (alive) setTenantLoading(false);
+      if (!res.ok || !data || data.ok !== true) {
+        setTenantError("Failed to load school context. Please sign in again.");
+        return;
       }
-    })();
 
-    return () => {
-      alive = false;
-    };
-  }, []);
+      setTenant({
+        id: data.tenantId,
+        name: data.tenant?.name || "School",
+        slug: data.tenant?.slug ?? null,
+      });
+    } catch {
+      setTenantError("Failed to load school context. Please check your connection.");
+    } finally {
+      setTenantLoading(false);
+    }
+  }
 
-  // -------------------------
-  // Load structures (prefers session tenant)
-  // -------------------------
   async function loadStructures() {
-    if (!tenant?.id) return;
-
     setListLoading(true);
     setListError(null);
 
     try {
-      // 1) Prefer bank-grade API: server derives tenant from session
-      let r = await fetch("/api/admin/fees/structures/list", { cache: "no-store" });
-      let j = await safeJson(r);
+      const res = await fetch("/api/admin/fees/structures/list", {
+        cache: "no-store",
+      });
 
-      // 2) Backward compatibility: if your route still requires tenantId, fallback
-      if ((!r.ok || !j?.ok) && tenant.id) {
-        const params = new URLSearchParams();
-        params.set("tenantId", tenant.id);
-        r = await fetch(`/api/admin/fees/structures/list?${params.toString()}`, { cache: "no-store" });
-        j = await safeJson(r);
-      }
+      const data = await safeJson<ApiResponse<{ items: FeeStructure[] }>>(res);
 
-      if (!r.ok || !j?.ok) {
+      if (!res.ok || !data || data.ok !== true) {
         setItems([]);
-        setListError(j?.error || "Failed to load fee structures. Please try again.");
+        setListError(data?.error || "Failed to load fee structures.");
         return;
       }
 
-      setItems(Array.isArray(j.items) ? (j.items as FeeStructure[]) : []);
+      setItems(Array.isArray(data.items) ? data.items : []);
     } catch {
       setItems([]);
       setListError("Network or server error while loading fee structures.");
@@ -160,63 +135,51 @@ export default function AdminFeeStructuresPage() {
   }
 
   useEffect(() => {
-    if (tenant?.id) loadStructures();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadTenant();
+  }, []);
+
+  useEffect(() => {
+    if (tenant?.id) void loadStructures();
   }, [tenant?.id]);
 
-  // -------------------------
-  // Create new structure (prefers session tenant)
-  // -------------------------
   async function handleCreateStructure(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!tenant?.id) return;
 
     setFormError(null);
     setFormInfo(null);
 
-    const name = normalizeName(formName);
-    if (!name.length) return setFormError("Name is required.");
+    const name = formName.trim();
+    const year = formAcademicYear.trim();
+    const description = formDescription.trim();
 
-    const year = normalizeYear(formAcademicYear);
-    if (!year.length) return setFormError("Academic year is required.");
+    if (!name) return setFormError("Name is required.");
+    if (!year) return setFormError("Academic year is required.");
 
-    const amt = validateAmountCedis(formAmountCedis);
-    if (!amt.ok) return setFormError(amt.error);
+    const amount = validateAmountCedis(formAmountCedis);
+    if (!amount.ok) return setFormError(amount.error);
 
     setFormLoading(true);
 
     try {
-      // 1) Prefer bank-grade: no tenantId from client
-      let payload: any = {
+      const payload = {
         name,
-        description: formDescription.trim().length ? formDescription.trim() : null,
+        description: description || null,
         term: formTerm,
         academicYear: year,
-        amountCedis: amt.value, // backward-compatible input format
-        isActive: !!formIsActive,
+        amountCedis: amount.value,
+        isActive: true,
       };
 
-      let r = await fetch("/api/admin/fees/structures/upsert", {
+      const res = await fetch("/api/admin/fees/structures/upsert", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      let j = await safeJson(r);
+      const data = await safeJson<ApiResponse<{ item?: FeeStructure }>>(res);
 
-      // 2) Backward compatibility: if backend still expects tenantId, fallback
-      if ((!r.ok || !j?.ok) && tenant.id) {
-        payload = { ...payload, tenantId: tenant.id };
-        r = await fetch("/api/admin/fees/structures/upsert", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        j = await safeJson(r);
-      }
-
-      if (!r.ok || !j?.ok) {
-        setFormError(j?.error || "Failed to save fee structure. Please try again.");
+      if (!res.ok || !data || data.ok !== true) {
+        setFormError(data?.error || "Failed to save fee structure.");
         return;
       }
 
@@ -224,8 +187,7 @@ export default function AdminFeeStructuresPage() {
       setFormName("");
       setFormDescription("");
       setFormAmountCedis("");
-      setFormIsActive(true);
-
+      setTab("ACTIVE");
       await loadStructures();
     } catch {
       setFormError("Network or server error while saving fee structure.");
@@ -234,15 +196,49 @@ export default function AdminFeeStructuresPage() {
     }
   }
 
-  const canSubmit = useMemo(() => !!tenant?.id && !formLoading, [tenant?.id, formLoading]);
+  async function setStructureActive(id: string, isActive: boolean) {
+    setBusyId(id);
+    setListError(null);
+
+    try {
+      const res = await fetch("/api/admin/fees/structures/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, isActive }),
+      });
+
+      const data = await safeJson<ApiResponse<{ item?: FeeStructure }>>(res);
+
+      if (!res.ok || !data || data.ok !== true) {
+        setListError(data?.error || "Failed to update fee structure.");
+        return;
+      }
+
+      await loadStructures();
+    } catch {
+      setListError("Network or server error while updating fee structure.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const activeItems = useMemo(() => items.filter((item) => item.isActive), [items]);
+  const archivedItems = useMemo(() => items.filter((item) => !item.isActive), [items]);
+
+  const visibleItems = tab === "ACTIVE" ? activeItems : archivedItems;
 
   return (
-    <main className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
+    <main className="mx-auto min-h-screen max-w-6xl space-y-6 p-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold">Fees &amp; Billing — Structures</h1>
-        <p className="text-sm text-[#C9CDD6] max-w-3xl">
-          Define high-level <span className="font-semibold">fee structures</span> such as "Term 1 School Fees"
-          per academic year.
+        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#D4AF37]">
+          Finance Control
+        </p>
+        <h1 className="text-2xl font-bold text-[#F7F4ED]">
+          Fee Structures
+        </h1>
+        <p className="max-w-3xl text-sm text-[#C9CDD6]">
+          Create fee structures, archive old ones, and preserve financial history without
+          destructive deletes.
         </p>
 
         {tenant && (
@@ -250,186 +246,221 @@ export default function AdminFeeStructuresPage() {
             School: <span className="font-semibold text-[#C9CDD6]">{tenant.name}</span>
           </p>
         )}
-        {tenantLoading && <p className="text-xs text-[#8F98A8]">Loading school information…</p>}
+
+        {tenantLoading && <p className="text-xs text-[#8F98A8]">Loading school information...</p>}
+
         {tenantError && (
-          <p className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded-xl px-3 py-2">{tenantError}</p>
+          <p className="rounded-xl border border-red-500/30 bg-red-900/20 px-3 py-2 text-xs text-red-300">
+            {tenantError}
+          </p>
         )}
       </header>
 
-      <section className="border rounded-xl p-4 bg-white space-y-3">
-        <h2 className="text-sm font-semibold text-zinc-900">Create a new fee structure</h2>
-        <p className="text-xs text-zinc-500 max-w-2xl">
-          Amounts are stored in <span className="font-semibold">pesewas</span> for correct rounding.
-        </p>
+      <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+        <h2 className="text-sm font-semibold text-[#F7F4ED]">
+          Create a new fee structure
+        </h2>
 
-        <form className="grid md:grid-cols-2 gap-3 mt-2" onSubmit={handleCreateStructure}>
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-zinc-900">
-              Name<span className="text-red-500">*</span>
-            </label>
+        <form onSubmit={handleCreateStructure} className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-[#C9CDD6]">Name</span>
             <input
-              type="text"
-              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
-              placeholder="e.g. Term 1 School Fees"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
-              required
-              disabled={formLoading}
+              placeholder="3rd Term Printing fees"
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
             />
-          </div>
+          </label>
 
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-zinc-900">
-              Term<span className="text-red-500">*</span>
-            </label>
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-[#C9CDD6]">Amount</span>
+            <input
+              value={formAmountCedis}
+              onChange={(e) => setFormAmountCedis(e.target.value)}
+              placeholder="20.00"
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-[#C9CDD6]">Term</span>
             <select
-              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
               value={formTerm}
-              onChange={(e) => setFormTerm(e.target.value as any)}
-              disabled={formLoading}
+              onChange={(e) => setFormTerm(e.target.value as (typeof TERM_OPTIONS)[number])}
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
             >
-              {TERM_OPTIONS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {TERM_OPTIONS.map((term) => (
+                <option key={term} value={term}>
+                  {term}
                 </option>
               ))}
             </select>
-          </div>
+          </label>
 
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-zinc-900">
-              Academic year<span className="text-red-500">*</span>
-            </label>
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-[#C9CDD6]">Academic Year</span>
             <input
-              type="text"
-              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
-              placeholder="e.g. 2025/2026"
               value={formAcademicYear}
               onChange={(e) => setFormAcademicYear(e.target.value)}
-              required
-              disabled={formLoading}
+              placeholder="2025/2026"
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
             />
-          </div>
+          </label>
 
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-zinc-900">
-              Amount (GHS)<span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min={0}
-              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400"
-              placeholder="e.g. 150.00"
-              value={formAmountCedis}
-              onChange={(e) => setFormAmountCedis(e.target.value)}
-              required
-              disabled={formLoading}
-            />
-          </div>
-
-          <div className="space-y-1 md:col-span-2">
-            <label className="block text-xs font-medium text-zinc-900">Description (optional)</label>
+          <label className="space-y-1 md:col-span-2">
+            <span className="text-xs font-semibold text-[#C9CDD6]">Description</span>
             <textarea
-              className="w-full border border-zinc-300 rounded-xl px-3 py-2 text-sm text-zinc-900 bg-white placeholder:text-zinc-400 min-h-[60px]"
-              placeholder="Optional note for admins."
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
-              disabled={formLoading}
+              rows={3}
+              placeholder="Optional internal note for admins."
+              className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]"
             />
-          </div>
+          </label>
 
-          <div className="flex items-center gap-2 md:col-span-2">
-            <label className="inline-flex items-center gap-2 text-xs text-zinc-900">
-              <input
-                type="checkbox"
-                checked={formIsActive}
-                onChange={(e) => setFormIsActive(e.target.checked)}
-                disabled={formLoading}
-              />
-              Active for billing
-            </label>
-          </div>
-
-          <div className="flex items-center gap-2 md:col-span-2">
-            <button type="submit" className={btnPrimary} disabled={!canSubmit}>
-              {formLoading ? "Saving…" : "Save fee structure"}
-            </button>
-            <button type="button" className={btnOutline} onClick={loadStructures} disabled={listLoading}>
-              {listLoading ? "Refreshing…" : "Reload list"}
+          <div className="md:col-span-2">
+            <button
+              type="submit"
+              disabled={!tenant?.id || formLoading}
+              className="rounded-xl border border-[#D4AF37]/50 bg-[#D4AF37] px-4 py-2 text-sm font-bold text-[#071A3D] disabled:opacity-50"
+            >
+              {formLoading ? "Saving..." : "Save Fee Structure"}
             </button>
           </div>
         </form>
 
-        {formError && (
-          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 mt-2">{formError}</p>
-        )}
-        {formInfo && (
-          <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mt-2">
-            {formInfo}
-          </p>
-        )}
+        {formError && <p className="mt-3 text-sm text-red-300">{formError}</p>}
+        {formInfo && <p className="mt-3 text-sm text-emerald-300">{formInfo}</p>}
       </section>
 
-      <section className="border rounded-xl p-4 bg-white space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-900">Existing structures</h2>
-          {listLoading && <span className="text-xs text-zinc-500">Loading…</span>}
+      <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-[#F7F4ED]">
+              Existing fee structures
+            </h2>
+            <p className="mt-1 text-xs text-[#8F98A8]">
+              Archived structures remain visible for audit history but cannot be used for new invoice generation.
+            </p>
+          </div>
+
+          <button
+            onClick={loadStructures}
+            disabled={listLoading}
+            className="rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white hover:bg-white/15 disabled:opacity-50"
+          >
+            {listLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() => setTab("ACTIVE")}
+            className={`rounded-xl px-4 py-2 text-sm font-bold ${
+              tab === "ACTIVE"
+                ? "bg-emerald-400 text-[#071A3D]"
+                : "border border-white/10 bg-white/5 text-white"
+            }`}
+          >
+            Active ({activeItems.length})
+          </button>
+
+          <button
+            onClick={() => setTab("ARCHIVED")}
+            className={`rounded-xl px-4 py-2 text-sm font-bold ${
+              tab === "ARCHIVED"
+                ? "bg-amber-300 text-[#071A3D]"
+                : "border border-white/10 bg-white/5 text-white"
+            }`}
+          >
+            Archived ({archivedItems.length})
+          </button>
         </div>
 
         {listError && (
-          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{listError}</p>
+          <p className="mt-4 rounded-xl border border-red-500/30 bg-red-900/20 px-3 py-2 text-sm text-red-300">
+            {listError}
+          </p>
         )}
 
-        <div className="overflow-x-auto mt-2">
-          <table className="min-w-full text-xs border rounded-xl overflow-hidden text-zinc-900">
-            <thead className="bg-zinc-50 text-zinc-700">
-              <tr>
-                <th className="px-3 py-2 text-left border-b">Name</th>
-                <th className="px-3 py-2 text-left border-b">Term</th>
-                <th className="px-3 py-2 text-left border-b">Academic Year</th>
-                <th className="px-3 py-2 text-right border-b">Amount</th>
-                <th className="px-3 py-2 text-left border-b">Active</th>
-                <th className="px-3 py-2 text-left border-b">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((fs) => (
-                <tr key={fs.id} className="border-b last:border-b-0">
-                  <td className="px-3 py-2 align-top font-semibold">{fs.name}</td>
-                  <td className="px-3 py-2 align-top">{fs.term || "—"}</td>
-                  <td className="px-3 py-2 align-top">{fs.academicYear || "—"}</td>
-                  <td className="px-3 py-2 align-top text-right">{formatMoneyFromPesewas(fs.amountPesewas)}</td>
-                  <td className="px-3 py-2 align-top">
-                    {fs.isActive ? (
-                      <span className="inline-flex px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px]">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex px-2 py-0.5 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-700 text-[11px]">
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 align-top max-w-xs">{fs.description || "—"}</td>
-                </tr>
-              ))}
-
-              {!items.length && !listLoading && !listError && (
+        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-white/10 text-left text-sm">
+              <thead className="bg-white/[0.03] text-xs uppercase tracking-[0.16em] text-white/50">
                 <tr>
-                  <td className="px-3 py-3 text-xs text-zinc-600" colSpan={6}>
-                    No fee structures defined yet.
-                  </td>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Term</th>
+                  <th className="px-4 py-3">Year</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Action</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
 
-        <p className="text-[11px] text-zinc-500 mt-1 max-w-3xl">
-          Next: invoices + payments. This page stays intentionally low-risk.
-        </p>
+              <tbody className="divide-y divide-white/10">
+                {listLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-white/55">
+                      Loading fee structures...
+                    </td>
+                  </tr>
+                ) : visibleItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-white/55">
+                      No {tab === "ACTIVE" ? "active" : "archived"} fee structures found.
+                    </td>
+                  </tr>
+                ) : (
+                  visibleItems.map((item) => (
+                    <tr key={item.id} className="align-top">
+                      <td className="px-4 py-4">
+                        <p className="font-semibold text-white">{item.name}</p>
+                        {item.description && (
+                          <p className="mt-1 max-w-lg text-xs text-white/55">{item.description}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-white/70">{item.term}</td>
+                      <td className="px-4 py-4 text-white/70">{item.academicYear}</td>
+                      <td className="px-4 py-4 font-semibold text-white">
+                        {formatMoneyFromPesewas(item.amountPesewas)}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                            item.isActive
+                              ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-200"
+                              : "border-amber-400/30 bg-amber-500/15 text-amber-200"
+                          }`}
+                        >
+                          {item.isActive ? "ACTIVE" : "ARCHIVED"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        {item.isActive ? (
+                          <button
+                            onClick={() => setStructureActive(item.id, false)}
+                            disabled={busyId === item.id}
+                            className="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-100 hover:bg-amber-500/20 disabled:opacity-50"
+                          >
+                            {busyId === item.id ? "Archiving..." : "Archive"}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setStructureActive(item.id, true)}
+                            disabled={busyId === item.id}
+                            className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-100 hover:bg-emerald-500/20 disabled:opacity-50"
+                          >
+                            {busyId === item.id ? "Restoring..." : "Restore"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </main>
   );
