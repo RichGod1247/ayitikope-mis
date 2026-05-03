@@ -874,6 +874,7 @@ model FeeInvoiceLine {
 
   ledgerEntries LedgerEntry[]
 
+  @@unique([tenantId, invoiceId, feeStructureId], map: "FeeInvoiceLine_tenant_invoice_feeStructure_unique")
   @@index([tenantId, invoiceId])
   @@index([tenantId, feeStructureId])
 }

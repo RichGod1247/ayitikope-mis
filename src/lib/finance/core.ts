@@ -184,6 +184,34 @@ function formatCedisFromPesewas(pesewas: number): string {
   return (Math.max(0, Math.floor(pesewas)) / 100).toFixed(2);
 }
 
+function buildInvoicePaymentFor(input: {
+  lines?: Array<{
+    description: string | null;
+    amountPesewas: number | null;
+  }> | null;
+}) {
+  const descriptions =
+    input.lines
+      ?.map((line) => String(line.description ?? "").trim())
+      .filter((description) => {
+        const normalized = description.toLowerCase();
+        if (!description) return false;
+        if (normalized === "legacy invoice total") return false;
+        if (normalized.includes("legacy invoice")) return false;
+        return true;
+      }) ?? [];
+
+  const uniqueDescriptions = Array.from(new Set(descriptions));
+
+  if (uniqueDescriptions.length === 1) return uniqueDescriptions[0];
+
+  if (uniqueDescriptions.length > 1) {
+    return uniqueDescriptions.slice(0, 3).join(", ");
+  }
+
+  return "school fees";
+}
+
 function buildReceiptSmsMessage(input: {
   amountPesewas: number;
   studentName: string;
@@ -193,14 +221,17 @@ function buildReceiptSmsMessage(input: {
   receiptNumber: string;
   balancePesewas: number;
   schoolName: string;
+  paymentFor: string;
 }) {
-  return `EduLife OS: Payment of GHS ${formatCedisFromPesewas(
+  return `EduLife OS: GHS ${formatCedisFromPesewas(
     input.amountPesewas
-  )} received for ${input.studentName} (${input.classLabel}) - ${input.term} ${
-    input.academicYear
-  }. Receipt: ${input.receiptNumber}. Balance: GHS ${formatCedisFromPesewas(
-    input.balancePesewas
-  )}. School: ${input.schoolName}. Keep this SMS as proof.`;
+  )} received for ${input.studentName} (${input.classLabel}) as payment for ${
+    input.paymentFor
+  } - ${input.term} ${input.academicYear}. Receipt: ${
+    input.receiptNumber
+  }. Balance: GHS ${formatCedisFromPesewas(input.balancePesewas)}. School: ${
+    input.schoolName
+  }. Keep this SMS as proof.`;
 }
 
 async function enqueueReceiptSmsOutbox(
@@ -499,6 +530,8 @@ export async function generateInvoicesForClassroomFeeStructure(input: {
         existingInvoices: 0,
         createdLines: 0,
         existingLines: 0,
+        createdLedgers: 0,
+        existingLedgers: 0,
         message: "No active learners in this classroom.",
         structure,
       };
@@ -508,6 +541,8 @@ export async function generateInvoicesForClassroomFeeStructure(input: {
     let existingInvoices = 0;
     let createdLines = 0;
     let existingLines = 0;
+    let createdLedgers = 0;
+    let existingLedgers = 0;
 
     for (const student of students) {
       let invoice = await tx.feeInvoice.findFirst({
@@ -546,47 +581,92 @@ export async function generateInvoicesForClassroomFeeStructure(input: {
         select: { id: true },
       });
 
+      let invoiceLineId = existingLine?.id ?? null;
+
       if (existingLine) {
         existingLines++;
-        await recalculateInvoiceTotals(tx, tenantId, invoice.id);
-        continue;
+      } else {
+        try {
+          const line = await tx.feeInvoiceLine.create({
+            data: {
+              tenantId,
+              invoiceId: invoice.id,
+              feeStructureId: structure.id,
+              category: structure.category ?? "GENERAL",
+              description: structure.name,
+              amountPesewas,
+              waivedPesewas: 0,
+            },
+            select: { id: true },
+          });
+
+          invoiceLineId = line.id;
+          createdLines++;
+        } catch (err) {
+          if (!isPrismaUniqueConstraintError(err)) throw err;
+
+          const racedLine = await tx.feeInvoiceLine.findFirst({
+            where: {
+              tenantId,
+              invoiceId: invoice.id,
+              feeStructureId: structure.id,
+            },
+            select: { id: true },
+          });
+
+          if (!racedLine) throw err;
+
+          invoiceLineId = racedLine.id;
+          existingLines++;
+        }
       }
 
-      const line = await tx.feeInvoiceLine.create({
-        data: {
+      if (!invoiceLineId) {
+        throw new FinanceError(
+          "FEE_STRUCTURE_NOT_FOUND",
+          409,
+          "Unable to resolve invoice line for fee structure."
+        );
+      }
+
+      const existingLedger = await tx.ledgerEntry.findFirst({
+        where: {
           tenantId,
           invoiceId: invoice.id,
-          feeStructureId: structure.id,
-          category: structure.category ?? "GENERAL",
-          description: structure.name,
-          amountPesewas,
-          waivedPesewas: 0,
+          invoiceLineId,
+          entryType: "INVOICE_DEBIT",
+          direction: "DEBIT",
         },
         select: { id: true },
       });
 
-      createdLines++;
+      if (existingLedger) {
+        existingLedgers++;
+      } else {
+        await tx.ledgerEntry.create({
+          data: {
+            tenantId,
+            invoiceId: invoice.id,
+            invoiceLineId,
+            studentId: student.id,
+            entryType: "INVOICE_DEBIT",
+            direction: "DEBIT",
+            amountPesewas,
+            description: `Invoice charge: ${structure.name}`,
+            journalRef: makeJournalRef("INV"),
+            createdByUserId: actorUserId,
+          },
+        });
 
-      await tx.ledgerEntry.create({
-        data: {
-          tenantId,
-          invoiceId: invoice.id,
-          invoiceLineId: line.id,
-          studentId: student.id,
-          entryType: "INVOICE_DEBIT",
-          direction: "DEBIT",
-          amountPesewas,
-          description: `Invoice charge: ${structure.name}`,
-          journalRef: makeJournalRef("INV"),
-          createdByUserId: actorUserId,
-        },
-      });
+        createdLedgers++;
+      }
 
       await recalculateInvoiceTotals(tx, tenantId, invoice.id);
     }
 
     return {
       ok: true,
+      idempotent: true,
       structureId: structure.id,
       structureName: structure.name,
       term,
@@ -597,6 +677,8 @@ export async function generateInvoicesForClassroomFeeStructure(input: {
       existingInvoices,
       createdLines,
       existingLines,
+      createdLedgers,
+      existingLedgers,
     };
   }, TX_LONG);
 }
@@ -646,6 +728,14 @@ export async function recordManualPayment(input: {
           studentId: true,
           term: true,
           academicYear: true,
+          lines: {
+            select: {
+              description: true,
+              amountPesewas: true,
+            },
+            orderBy: { sortOrder: "asc" },
+            take: 5,
+          },
           student: {
             select: {
               firstName: true,
@@ -776,6 +866,7 @@ export async function recordManualPayment(input: {
         receiptNumber: receipt.receiptNumber,
         balancePesewas: recalculatedAfter.balancePesewas,
         schoolName: tenant.name,
+        paymentFor: buildInvoicePaymentFor({ lines: invoice.lines }),
       }),
     });
 
@@ -1195,12 +1286,26 @@ export async function finalizePaystackChargeSuccess(input: {
             studentId: true,
             term: true,
             academicYear: true,
+            lines: {
+              select: {
+                description: true,
+                amountPesewas: true,
+              },
+              orderBy: { sortOrder: "asc" },
+              take: 5,
+            },
             student: {
               select: {
                 firstName: true,
                 lastName: true,
                 guardianPhone: true,
                 guardianPhoneNorm: true,
+                classroom: {
+                  select: {
+                    name: true,
+                    grade: true,
+                  },
+                },
               },
             },
           },
@@ -1503,6 +1608,11 @@ export async function finalizePaystackChargeSuccess(input: {
       intent.invoiceId
     );
 
+    const classLabel =
+      intent.invoice.student?.classroom?.name ||
+      intent.invoice.student?.classroom?.grade ||
+      "Class";
+
     await enqueueReceiptSmsOutbox(tx, {
       tenantId: intent.tenantId,
       actorId: null,
@@ -1514,12 +1624,13 @@ export async function finalizePaystackChargeSuccess(input: {
       message: buildReceiptSmsMessage({
         amountPesewas,
         studentName,
-        classLabel: "Class",
+        classLabel,
         term: intent.invoice.term,
         academicYear: intent.invoice.academicYear,
         receiptNumber: receipt.receiptNumber,
         balancePesewas: invoiceAfter.balancePesewas,
         schoolName: intent.tenant.name,
+        paymentFor: buildInvoicePaymentFor({ lines: intent.invoice.lines }),
       }),
     });
 
