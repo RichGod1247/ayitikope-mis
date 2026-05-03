@@ -84,6 +84,9 @@ model User {
   reconciliationExceptionsResolved ReconciliationException[] @relation("ReconciliationExceptionResolvedBy")
   settlementAccountsRequested      TenantSettlementAccount[] @relation("TenantSettlementRequestedBy")
   settlementAccountsApproved       TenantSettlementAccount[] @relation("TenantSettlementApprovedBy")
+  feeRefundsRequested              FeeRefund[]               @relation("FeeRefundRequestedBy")
+  feeRefundsApproved               FeeRefund[]               @relation("FeeRefundApprovedBy")
+  receiptsReversed                 Receipt[]                 @relation("ReceiptReversedBy")
 
   /// ✅ Headteacher signature store
   headteacherSignatures HeadteacherSignature[]
@@ -127,6 +130,7 @@ model Tenant {
   feeInvoices   FeeInvoice[]   @relation("TenantFeeInvoices")
   feePayments   FeePayment[]   @relation("TenantFeePayments")
   feeStructures FeeStructure[] @relation("TenantFeeStructures")
+  feeRefunds    FeeRefund[]    @relation("TenantFeeRefunds")
 
   invites                    Invite[]
   lessonNotes                LessonNote[]
@@ -885,7 +889,6 @@ model FeePayment {
   invoiceId     String
   amountPesewas Int
 
-  /// Keep as String for compatibility with existing routes using "cash", "momo", "paystack".
   method String
 
   reference String?       @db.VarChar(120)
@@ -902,10 +905,14 @@ model FeePayment {
   ledgerEntries      LedgerEntry[]
   paymentAllocations PaymentAllocation[]
   paymentTransaction PaymentTransaction?
+  refunds            FeeRefund[]         @relation("PaymentRefunds")
 
+  /// DB truth: partial unique index manually created:
+  /// "FeePayment_tenant_reference_unique"
+  /// unique only where reference is not null/blank.
+  @@index([tenantId, reference], map: "FeePayment_tenant_reference_idx")
   @@index([tenantId, invoiceId], map: "FeePayment_tenant_invoice_idx")
   @@index([tenantId, paidAt], map: "FeePayment_tenant_paidAt_idx")
-  @@index([tenantId, reference])
   @@index([tenantId, status])
 }
 
@@ -944,24 +951,47 @@ model PaymentIntent {
 }
 
 model PaymentProviderEvent {
-  id                String              @id @default(cuid())
+  id                String          @id @default(cuid())
   tenantId          String?
-  provider          PaymentProvider     @default(PAYSTACK)
+  provider          PaymentProvider @default(PAYSTACK)
   eventType         String
-  providerReference String?             @db.VarChar(120)
-  signature         String?
-  rawPayload        Json
-  receivedAt        DateTime            @default(now()) @db.Timestamptz(6)
-  processedAt       DateTime?           @db.Timestamptz(6)
-  processingStatus  ProviderEventStatus @default(RECEIVED)
-  processingError   String?
+  providerReference String?         @db.VarChar(120)
+
+  eventFingerprint String? @unique @db.VarChar(128)
+  providerEventId  String? @db.VarChar(120)
+
+  signature  String?
+  rawPayload Json
+
+  eventTime DateTime? @db.Timestamptz(6)
+
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  firstSeenAt DateTime  @default(now()) @db.Timestamptz(6)
+  lastSeenAt  DateTime? @db.Timestamptz(6)
+  processedAt DateTime? @db.Timestamptz(6)
+
+  duplicateCount Int     @default(0)
+  isReplay       Boolean @default(false)
+  isSuspicious   Boolean @default(false)
+
+  suspiciousReason String?
+  processingStatus ProviderEventStatus @default(RECEIVED)
+  processingError  String?
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
+  /// DB truth: partial unique index manually created:
+  /// "PaymentProviderEvent_provider_event_id_unique"
+  /// unique only where providerEventId is not null/blank.
   @@index([tenantId])
   @@index([provider, providerReference])
+  @@index([provider, eventType, providerReference])
+  @@index([provider, eventType, providerEventId], map: "PaymentProviderEvent_provider_event_id_idx")
+  @@index([providerEventId])
   @@index([processingStatus])
+  @@index([isSuspicious])
   @@index([receivedAt])
+  @@index([eventTime])
 }
 
 model PaymentTransaction {
@@ -985,6 +1015,7 @@ model PaymentTransaction {
   paymentIntent PaymentIntent? @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
   feePayment    FeePayment?    @relation(fields: [feePaymentId], references: [id], onDelete: SetNull)
   createdBy     User?          @relation("PaymentTransactionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  refunds       FeeRefund[]    @relation("TransactionRefunds")
 
   @@unique([tenantId, provider, providerReference], map: "PaymentTransaction_tenant_provider_ref_unique")
   @@index([tenantId, status])
@@ -1093,17 +1124,20 @@ model PaymentAllocation {
   invoice    FeeInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
   feePayment FeePayment @relation(fields: [feePaymentId], references: [id], onDelete: Restrict)
 
+  @@unique([tenantId, feePaymentId, allocationType], map: "PaymentAllocation_payment_allocation_unique")
   @@index([tenantId, studentId])
   @@index([tenantId, invoiceId])
   @@index([tenantId, feePaymentId])
 }
 
 model Receipt {
-  id             String   @id @default(cuid())
-  tenantId       String
-  invoiceId      String
-  feePaymentId   String   @unique
-  receiptNumber  String   @db.VarChar(64)
+  id            String        @id @default(cuid())
+  tenantId      String
+  invoiceId     String
+  feePaymentId  String        @unique
+  receiptNumber String        @db.VarChar(64)
+  status        ReceiptStatus @default(ISSUED)
+
   issuedAt       DateTime @default(now()) @db.Timestamptz(6)
   issuedToName   String?
   issuedToPhone  String?  @db.VarChar(32)
@@ -1111,16 +1145,76 @@ model Receipt {
   note           String?
   createdAt      DateTime @default(now()) @db.Timestamptz(6)
 
+  reversedAt       DateTime? @db.Timestamptz(6)
+  reversedByUserId String?
+  reversalReason   String?   @db.Text
+
   tenant     Tenant     @relation("TenantReceipts", fields: [tenantId], references: [id], onDelete: Cascade)
   invoice    FeeInvoice @relation("InvoiceReceipts", fields: [invoiceId], references: [id], onDelete: Restrict)
   feePayment FeePayment @relation("PaymentReceipt", fields: [feePaymentId], references: [id], onDelete: Restrict)
   issuedBy   User?      @relation("ReceiptIssuedBy", fields: [issuedByUserId], references: [id], onDelete: SetNull)
+  reversedBy User?      @relation("ReceiptReversedBy", fields: [reversedByUserId], references: [id], onDelete: SetNull)
 
   ledgerEntries LedgerEntry[]
+  refunds       FeeRefund[]   @relation("ReceiptRefunds")
 
   @@unique([tenantId, receiptNumber], map: "Receipt_tenant_receiptNumber_unique")
   @@index([tenantId, invoiceId])
   @@index([tenantId, issuedAt])
+  @@index([tenantId, status])
+}
+
+model FeeRefund {
+  id       String @id @default(cuid())
+  tenantId String
+
+  feePaymentId         String
+  paymentTransactionId String?
+  receiptId            String?
+
+  provider PaymentProvider @default(PAYSTACK)
+
+  providerRefundReference String? @db.VarChar(160)
+  providerReference       String? @db.VarChar(120)
+
+  amountPesewas Int
+  currency      String @default("GHS") @db.VarChar(8)
+
+  status RefundStatus @default(REQUESTED)
+
+  reason String? @db.Text
+
+  requestedByUserId String?
+  approvedByUserId  String?
+
+  requestedAt DateTime  @default(now()) @db.Timestamptz(6)
+  approvedAt  DateTime? @db.Timestamptz(6)
+  processedAt DateTime? @db.Timestamptz(6)
+  failedAt    DateTime? @db.Timestamptz(6)
+
+  failureReason String?
+  providerRaw   Json?
+  metadata      Json    @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant             Tenant              @relation("TenantFeeRefunds", fields: [tenantId], references: [id], onDelete: Cascade)
+  feePayment         FeePayment          @relation("PaymentRefunds", fields: [feePaymentId], references: [id], onDelete: Restrict)
+  paymentTransaction PaymentTransaction? @relation("TransactionRefunds", fields: [paymentTransactionId], references: [id], onDelete: SetNull)
+  receipt            Receipt?            @relation("ReceiptRefunds", fields: [receiptId], references: [id], onDelete: SetNull)
+
+  requestedBy User? @relation("FeeRefundRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  approvedBy  User? @relation("FeeRefundApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  ledgerEntries LedgerEntry[]
+
+  @@unique([tenantId, provider, providerRefundReference], map: "FeeRefund_tenant_provider_refund_unique")
+  @@index([tenantId, status])
+  @@index([tenantId, feePaymentId])
+  @@index([tenantId, paymentTransactionId])
+  @@index([tenantId, receiptId])
+  @@index([provider, providerReference])
 }
 
 model SponsorProfile {
@@ -1236,6 +1330,7 @@ model LedgerEntry {
   feePaymentId    String?
   feeAdjustmentId String?
   receiptId       String?
+  feeRefundId     String?
   entryType       LedgerEntryType
   amountPesewas   Int
   direction       LedgerDirection @default(CREDIT)
@@ -1252,13 +1347,20 @@ model LedgerEntry {
   feeAdjustment FeeAdjustment?  @relation(fields: [feeAdjustmentId], references: [id], onDelete: SetNull)
   receipt       Receipt?        @relation(fields: [receiptId], references: [id], onDelete: SetNull)
   createdBy     User?           @relation("LedgerEntryCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  feeRefund     FeeRefund?      @relation(fields: [feeRefundId], references: [id], onDelete: SetNull)
 
+  /// DB truth: partial unique indexes manually created:
+  /// "LedgerEntry_payment_credit_unique"
+  /// "LedgerEntry_invoice_debit_unique"
+  @@index([tenantId, feePaymentId], map: "LedgerEntry_tenant_feePayment_idx")
+  @@index([tenantId, invoiceLineId], map: "LedgerEntry_tenant_invoiceLine_idx")
   @@index([tenantId, invoiceId])
   @@index([tenantId, studentId])
   @@index([tenantId, entryType])
   @@index([tenantId, createdAt])
   @@index([receiptId])
   @@index([journalRef])
+  @@index([feeRefundId])
 }
 
 model ReconciliationBatch {
@@ -1346,6 +1448,23 @@ model FinanceOutboxEvent {
   @@index([tenantId, status], map: "FinanceOutboxEvent_tenant_status_idx")
   @@index([status, nextAttemptAt, priority], map: "FinanceOutboxEvent_dispatch_idx")
   @@index([aggregateType, aggregateId], map: "FinanceOutboxEvent_aggregate_idx")
+}
+
+model FinanceOperationIdempotency {
+  id               String    @id @default(cuid())
+  tenantId         String
+  operationType    String    @db.VarChar(80)
+  idempotencyKey   String    @db.VarChar(180)
+  requestHash      String?   @db.VarChar(128)
+  responseSnapshot Json?
+  lockedAt         DateTime? @db.Timestamptz(6)
+  completedAt      DateTime? @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@unique([tenantId, operationType, idempotencyKey], map: "FinanceOperationIdempotency_unique")
+  @@index([tenantId, operationType])
+  @@index([createdAt])
 }
 
 model LessonNote {
@@ -2070,6 +2189,9 @@ enum ReconciliationExceptionKind {
   DUPLICATE_PROVIDER_REFERENCE
   AMOUNT_MISMATCH
   UNMATCHED_PROVIDER_EVENT
+  SUSPICIOUS_PROVIDER_EVENT
+  REFUND_WITHOUT_LEDGER_ENTRY
+  REFUND_AMOUNT_MISMATCH
   OVERPAYMENT
   UNKNOWN
 }
@@ -2090,6 +2212,7 @@ enum ReconciliationExceptionStatus {
 
 enum FinanceOutboxEventType {
   SMS_RECEIPT
+  SMS_REFUND_NOTICE
   SMS_ARREARS_NOTICE
   SMS_RESULTS_RELEASE
   PAYSTACK_WEBHOOK_CHARGE_SUCCESS
@@ -2105,4 +2228,20 @@ enum FinanceOutboxStatus {
   FAILED
   DEAD
   CANCELLED
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum ReceiptStatus {
+  ISSUED
+  REVERSED
+  REFUNDED
+  PARTIALLY_REFUNDED
 }

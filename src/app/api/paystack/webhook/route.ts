@@ -23,6 +23,11 @@ const TRANSFER_EVENTS = new Set([
   "transfer.reversed",
 ]);
 
+const WEBHOOK_MAX_EVENT_AGE_MINUTES = Number.parseInt(
+  process.env.PAYSTACK_WEBHOOK_MAX_EVENT_AGE_MINUTES ?? "1440",
+  10
+);
+
 function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
@@ -61,12 +66,16 @@ function isPrismaUniqueError(err: unknown): boolean {
 function timingSafeEqualHex(a: string, b: string): boolean {
   if (!a || !b) return false;
 
-  const aBuf = Buffer.from(a, "hex");
-  const bBuf = Buffer.from(b, "hex");
+  try {
+    const aBuf = Buffer.from(a, "hex");
+    const bBuf = Buffer.from(b, "hex");
 
-  if (aBuf.length !== bBuf.length) return false;
+    if (aBuf.length !== bBuf.length) return false;
 
-  return crypto.timingSafeEqual(aBuf, bBuf);
+    return crypto.timingSafeEqual(aBuf, bBuf);
+  } catch {
+    return false;
+  }
 }
 
 function parsePaystackDate(value: unknown): Date | null {
@@ -84,6 +93,73 @@ function amountToPesewas(value: unknown): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
+function extractProviderEventId(event: Record<string, unknown>) {
+  const data = isObject(event.data) ? event.data : {};
+
+  return (
+    clean(event.id) ||
+    clean(data.id) ||
+    clean(data.event_id) ||
+    clean(data.eventId) ||
+    null
+  );
+}
+
+function extractWebhookEventTime(event: Record<string, unknown>) {
+  const data = isObject(event.data) ? event.data : {};
+
+  return (
+    parsePaystackDate(data.paid_at) ||
+    parsePaystackDate(data.paidAt) ||
+    parsePaystackDate(data.transferred_at) ||
+    parsePaystackDate(data.transferredAt) ||
+    parsePaystackDate(data.created_at) ||
+    parsePaystackDate(data.createdAt) ||
+    parsePaystackDate(data.updated_at) ||
+    parsePaystackDate(data.updatedAt) ||
+    null
+  );
+}
+
+function getWebhookStaleness(eventTime: Date | null) {
+  if (!eventTime) {
+    return {
+      stale: true,
+      reason: "PAYSTACK_EVENT_TIME_MISSING",
+      ageMinutes: null as number | null,
+    };
+  }
+
+  const ageMs = Date.now() - eventTime.getTime();
+  const ageMinutes = Math.floor(ageMs / 60_000);
+
+  if (ageMs < -5 * 60_000) {
+    return {
+      stale: true,
+      reason: "PAYSTACK_EVENT_TIME_IN_FUTURE",
+      ageMinutes,
+    };
+  }
+
+  if (
+    Number.isFinite(WEBHOOK_MAX_EVENT_AGE_MINUTES) &&
+    WEBHOOK_MAX_EVENT_AGE_MINUTES > 0 &&
+    ageMinutes > WEBHOOK_MAX_EVENT_AGE_MINUTES
+  ) {
+    return {
+      stale: true,
+      reason: "PAYSTACK_EVENT_TOO_OLD",
+      ageMinutes,
+    };
+  }
+
+  return {
+    stale: false,
+    reason: null as string | null,
+    ageMinutes,
+  };
+}
+
 async function verifyWithPaystack(reference: string, secret: string) {
   const res = await fetch(
     `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
@@ -97,9 +173,9 @@ async function verifyWithPaystack(reference: string, secret: string) {
     }
   );
 
-  const raw = (await res.json().catch(() => null)) as any;
+  const raw = (await res.json().catch(() => null)) as unknown;
 
-  if (!res.ok || !raw?.status || !raw?.data) {
+  if (!res.ok || !isObject(raw) || !raw.status || !raw.data) {
     return {
       ok: false as const,
       status: res.status || 502,
@@ -131,7 +207,10 @@ async function drainReceiptSmsOutbox(providerReference: string | null) {
   }
 }
 
-function transferStatusFromEvent(eventType: string, data: Record<string, unknown>) {
+function transferStatusFromEvent(
+  eventType: string,
+  data: Record<string, unknown>
+) {
   const rawStatus = clean(data.status).toLowerCase();
 
   if (eventType === "transfer.success" || rawStatus === "success") {
@@ -227,6 +306,7 @@ function extractTransferFields(data: Record<string, unknown>) {
       parsePaystackDate(data.updatedAt) ||
       parsePaystackDate(data.updated_at) ||
       parsePaystackDate(data.transferred_at) ||
+      parsePaystackDate(data.transferredAt) ||
       parsePaystackDate(data.createdAt) ||
       parsePaystackDate(data.created_at) ||
       new Date(),
@@ -288,11 +368,41 @@ async function resolveSettlementContext(input: {
   return null;
 }
 
+async function recordSuspiciousAudit(params: {
+  tenantId?: string | null;
+  action: string;
+  providerReference?: string | null;
+  eventType?: string | null;
+  providerEventId?: string | null;
+  eventTime?: Date | null;
+  reason: string;
+  metadata?: Record<string, unknown>;
+}) {
+  await prisma.auditLog.create({
+    data: {
+      tenantId: params.tenantId ?? null,
+      action: params.action,
+      resource: "PaymentProviderEvent",
+      resourceId: params.providerReference ?? null,
+      metadata: toJsonValue({
+        eventType: params.eventType ?? null,
+        providerReference: params.providerReference ?? null,
+        providerEventId: params.providerEventId ?? null,
+        eventTime: params.eventTime?.toISOString() ?? null,
+        reason: params.reason,
+        ...(params.metadata ?? {}),
+      }),
+    },
+  });
+}
+
 async function recordTransferWebhook(params: {
   eventType: string;
   signature: string;
   event: Record<string, unknown>;
   data: Record<string, unknown>;
+  providerEventId: string | null;
+  eventTime: Date | null;
 }) {
   const fields = extractTransferFields(params.data);
   const status = transferStatusFromEvent(params.eventType, params.data);
@@ -311,6 +421,19 @@ async function recordTransferWebhook(params: {
       rawPayload: params.event,
       processingStatus: "IGNORED",
       processingError: "PAYOUT_TENANT_UNRESOLVED",
+      providerEventId: params.providerEventId,
+      eventTime: params.eventTime ?? fields.eventTime,
+      isSuspicious: true,
+      suspiciousReason: "PAYOUT_TENANT_UNRESOLVED",
+    });
+
+    await recordSuspiciousAudit({
+      action: "PAYSTACK_TRANSFER_WEBHOOK_UNRESOLVED_TENANT",
+      providerReference: fields.providerReference,
+      eventType: params.eventType,
+      providerEventId: params.providerEventId,
+      eventTime: params.eventTime ?? fields.eventTime,
+      reason: "PAYOUT_TENANT_UNRESOLVED",
     });
 
     return {
@@ -322,12 +445,27 @@ async function recordTransferWebhook(params: {
 
   if (!fields.amountPesewas) {
     await recordProviderEventOnly({
+      tenantId: context.tenantId,
       eventType: params.eventType,
       providerReference: fields.providerReference,
       signature: params.signature,
       rawPayload: params.event,
       processingStatus: "FAILED",
       processingError: "PAYOUT_AMOUNT_REQUIRED",
+      providerEventId: params.providerEventId,
+      eventTime: params.eventTime ?? fields.eventTime,
+      isSuspicious: true,
+      suspiciousReason: "PAYOUT_AMOUNT_REQUIRED",
+    });
+
+    await recordSuspiciousAudit({
+      tenantId: context.tenantId,
+      action: "PAYSTACK_TRANSFER_WEBHOOK_AMOUNT_REQUIRED",
+      providerReference: fields.providerReference,
+      eventType: params.eventType,
+      providerEventId: params.providerEventId,
+      eventTime: params.eventTime ?? fields.eventTime,
+      reason: "PAYOUT_AMOUNT_REQUIRED",
     });
 
     return {
@@ -416,11 +554,14 @@ async function recordTransferWebhook(params: {
         });
 
     await recordProviderEventOnly({
+      tenantId: context.tenantId,
       eventType: params.eventType,
       providerReference: fields.providerReference,
       signature: params.signature,
       rawPayload: params.event,
       processingStatus: "PROCESSED",
+      providerEventId: params.providerEventId,
+      eventTime: params.eventTime ?? fields.eventTime,
     });
 
     await prisma.auditLog.create({
@@ -470,12 +611,17 @@ async function recordTransferWebhook(params: {
     console.error("[PAYSTACK_TRANSFER_WEBHOOK_PROCESSING_ERROR]", err);
 
     await recordProviderEventOnly({
+      tenantId: context.tenantId,
       eventType: params.eventType,
       providerReference: fields.providerReference,
       signature: params.signature,
       rawPayload: params.event,
       processingStatus: "FAILED",
       processingError: "PAYOUT_WEBHOOK_PROCESSING_FAILED",
+      providerEventId: params.providerEventId,
+      eventTime: params.eventTime ?? fields.eventTime,
+      isSuspicious: true,
+      suspiciousReason: "PAYOUT_WEBHOOK_PROCESSING_FAILED",
     });
 
     return json(500, {
@@ -519,8 +665,45 @@ export async function POST(req: NextRequest) {
   }
 
   const eventType = clean(event.event);
-  const data = (event.data ?? {}) as Record<string, unknown>;
+  const data = isObject(event.data) ? event.data : {};
   const providerReference = clean(data.reference) || null;
+  const providerEventId = extractProviderEventId(event);
+  const eventTime = extractWebhookEventTime(event);
+  const staleness = getWebhookStaleness(eventTime);
+
+  if (staleness.stale) {
+    await recordProviderEventOnly({
+      eventType: eventType || "UNKNOWN_EVENT",
+      providerReference,
+      signature,
+      rawPayload: event,
+      processingStatus: "IGNORED",
+      processingError: staleness.reason ?? "STALE_PROVIDER_EVENT",
+      providerEventId,
+      eventTime,
+      isSuspicious: true,
+      suspiciousReason: staleness.reason ?? "STALE_PROVIDER_EVENT",
+    });
+
+    await recordSuspiciousAudit({
+      action: "PAYSTACK_WEBHOOK_SUSPICIOUS_EVENT_BLOCKED",
+      providerReference,
+      eventType,
+      providerEventId,
+      eventTime,
+      reason: staleness.reason ?? "STALE_PROVIDER_EVENT",
+      metadata: {
+        ageMinutes: staleness.ageMinutes,
+      },
+    });
+
+    return json(200, {
+      ok: true,
+      ignored: true,
+      suspicious: true,
+      reason: staleness.reason,
+    });
+  }
 
   if (TRANSFER_EVENTS.has(eventType)) {
     const result = await recordTransferWebhook({
@@ -528,6 +711,8 @@ export async function POST(req: NextRequest) {
       signature,
       event,
       data,
+      providerEventId,
+      eventTime,
     });
 
     return result instanceof NextResponse ? result : json(200, result);
@@ -540,6 +725,8 @@ export async function POST(req: NextRequest) {
       signature,
       rawPayload: event,
       processingStatus: "IGNORED",
+      providerEventId,
+      eventTime,
     });
 
     return json(200, {
@@ -556,6 +743,18 @@ export async function POST(req: NextRequest) {
       rawPayload: event,
       processingStatus: "FAILED",
       processingError: "REFERENCE_REQUIRED",
+      providerEventId,
+      eventTime,
+      isSuspicious: true,
+      suspiciousReason: "REFERENCE_REQUIRED",
+    });
+
+    await recordSuspiciousAudit({
+      action: "PAYSTACK_WEBHOOK_REFERENCE_REQUIRED",
+      eventType,
+      providerEventId,
+      eventTime,
+      reason: "REFERENCE_REQUIRED",
     });
 
     return json(200, {
@@ -578,6 +777,22 @@ export async function POST(req: NextRequest) {
       },
       processingStatus: "FAILED",
       processingError: `PAYSTACK_VERIFY_FAILED_${verified.status}`,
+      providerEventId,
+      eventTime,
+      isSuspicious: true,
+      suspiciousReason: "PAYSTACK_VERIFY_FAILED",
+    });
+
+    await recordSuspiciousAudit({
+      action: "PAYSTACK_WEBHOOK_VERIFY_FAILED",
+      providerReference,
+      eventType,
+      providerEventId,
+      eventTime,
+      reason: "PAYSTACK_VERIFY_FAILED",
+      metadata: {
+        verifyStatus: verified.status,
+      },
     });
 
     return json(200, {
@@ -589,6 +804,8 @@ export async function POST(req: NextRequest) {
 
   const verifiedReference = clean(verified.data.reference);
   const verifiedStatus = clean(verified.data.status).toLowerCase();
+  const verifiedAmount = amountToPesewas(verified.data.amount);
+  const webhookAmount = amountToPesewas(data.amount);
 
   if (verifiedReference !== providerReference) {
     await recordProviderEventOnly({
@@ -601,12 +818,65 @@ export async function POST(req: NextRequest) {
       },
       processingStatus: "FAILED",
       processingError: "PAYSTACK_REFERENCE_MISMATCH",
+      providerEventId,
+      eventTime,
+      isSuspicious: true,
+      suspiciousReason: "PAYSTACK_REFERENCE_MISMATCH",
+    });
+
+    await recordSuspiciousAudit({
+      action: "PAYSTACK_WEBHOOK_REFERENCE_MISMATCH",
+      providerReference,
+      eventType,
+      providerEventId,
+      eventTime,
+      reason: "PAYSTACK_REFERENCE_MISMATCH",
+      metadata: {
+        verifiedReference,
+      },
     });
 
     return json(200, {
       ok: true,
       skipped: true,
       reason: "PAYSTACK_REFERENCE_MISMATCH",
+    });
+  }
+
+  if (webhookAmount > 0 && verifiedAmount > 0 && webhookAmount !== verifiedAmount) {
+    await recordProviderEventOnly({
+      eventType,
+      providerReference,
+      signature,
+      rawPayload: {
+        webhook: event,
+        verification: verified.raw,
+      },
+      processingStatus: "FAILED",
+      processingError: "PAYSTACK_AMOUNT_MISMATCH",
+      providerEventId,
+      eventTime,
+      isSuspicious: true,
+      suspiciousReason: "PAYSTACK_AMOUNT_MISMATCH",
+    });
+
+    await recordSuspiciousAudit({
+      action: "PAYSTACK_WEBHOOK_AMOUNT_MISMATCH",
+      providerReference,
+      eventType,
+      providerEventId,
+      eventTime,
+      reason: "PAYSTACK_AMOUNT_MISMATCH",
+      metadata: {
+        webhookAmount,
+        verifiedAmount,
+      },
+    });
+
+    return json(200, {
+      ok: true,
+      skipped: true,
+      reason: "PAYSTACK_AMOUNT_MISMATCH",
     });
   }
 
@@ -621,6 +891,8 @@ export async function POST(req: NextRequest) {
       },
       processingStatus: "IGNORED",
       processingError: `PAYSTACK_STATUS_${verifiedStatus || "UNKNOWN"}`,
+      providerEventId,
+      eventTime,
     });
 
     return json(200, {
@@ -652,6 +924,19 @@ export async function POST(req: NextRequest) {
     if (isPrismaUniqueError(err)) {
       console.warn("[PAYSTACK_WEBHOOK] Duplicate provider reference race.");
 
+      await recordProviderEventOnly({
+        eventType,
+        providerReference,
+        signature,
+        rawPayload: event,
+        processingStatus: "IGNORED",
+        processingError: "DUPLICATE_PROVIDER_REFERENCE_RACE",
+        providerEventId,
+        eventTime,
+        isSuspicious: true,
+        suspiciousReason: "DUPLICATE_PROVIDER_REFERENCE_RACE",
+      });
+
       const smsDispatch = await drainReceiptSmsOutbox(providerReference);
 
       return json(200, {
@@ -662,6 +947,19 @@ export async function POST(req: NextRequest) {
     }
 
     console.error("[PAYSTACK_WEBHOOK_PROCESSING_ERROR]", err);
+
+    await recordProviderEventOnly({
+      eventType,
+      providerReference,
+      signature,
+      rawPayload: event,
+      processingStatus: "FAILED",
+      processingError: "PAYSTACK_WEBHOOK_PROCESSING_FAILED",
+      providerEventId,
+      eventTime,
+      isSuspicious: true,
+      suspiciousReason: "PAYSTACK_WEBHOOK_PROCESSING_FAILED",
+    });
 
     return json(500, {
       error: "PAYSTACK_WEBHOOK_PROCESSING_FAILED",

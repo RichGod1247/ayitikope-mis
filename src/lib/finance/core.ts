@@ -34,6 +34,10 @@ const TX_LONG = {
   timeout: 60_000,
 } as const;
 
+const DEFAULT_PAYMENT_INTENT_TTL_MINUTES = 30;
+const IDEMPOTENCY_LOCK_STALE_MINUTES = 10;
+const INVOICE_GENERATION_CHUNK_SIZE = 100;
+
 export class FinanceError extends Error {
   code: FinanceErrorCode;
   status: number;
@@ -45,6 +49,24 @@ export class FinanceError extends Error {
     this.status = status;
   }
 }
+
+type RecalculatedInvoiceResult = Awaited<
+  ReturnType<typeof recalculateInvoiceTotals>
+>;
+
+type ManualPaymentResult = {
+  ok: true;
+  tenantName: string;
+  payment: Prisma.FeePaymentGetPayload<Record<string, never>>;
+  receipt: Prisma.ReceiptGetPayload<Record<string, never>>;
+  invoice: RecalculatedInvoiceResult;
+  studentName: string;
+  guardianPhone: string | null;
+  classLabel: string;
+  term: string;
+  academicYear: string;
+  outstandingPesewas: number;
+};
 
 function cleanMethod(method: string | null | undefined): string {
   const m = String(method ?? "cash").trim().toLowerCase();
@@ -150,7 +172,11 @@ function redactValueForKey(key: string, value: unknown) {
     return digits.length >= 4 ? `****${digits.slice(-4)}` : "****";
   }
 
-  if (key === "mobile_money_number" || key === "phone" || key === "primary_contact_phone") {
+  if (
+    key === "mobile_money_number" ||
+    key === "phone" ||
+    key === "primary_contact_phone"
+  ) {
     const digits = s.replace(/\D/g, "");
     return digits.length >= 4 ? `****${digits.slice(-4)}` : "****";
   }
@@ -178,6 +204,32 @@ function scrubSensitiveJson(value: unknown): unknown {
 
 function toPrismaJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(scrubSensitiveJson(value ?? {}))) as Prisma.InputJsonValue;
+}
+
+function stableHash(value: unknown): string {
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(toPrismaJson(value)))
+    .digest("hex");
+}
+
+function assertPositiveIntegerPesewas(
+  value: unknown,
+  code: FinanceErrorCode = "PAYMENT_AMOUNT_INVALID",
+  minimum = 1
+): number {
+  const n =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Number(value)
+        : NaN;
+
+  if (!Number.isSafeInteger(n) || n < minimum) {
+    throw new FinanceError(code, 400, "Amount must be a positive integer in pesewas.");
+  }
+
+  return n;
 }
 
 function formatCedisFromPesewas(pesewas: number): string {
@@ -282,11 +334,15 @@ async function enqueueReceiptSmsOutbox(
   });
 }
 
-function parseProviderPaidAt(value: unknown): Date | null {
+function parseProviderDate(value: unknown): Date | null {
   if (typeof value !== "string" || !value.trim()) return null;
 
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function parseProviderPaidAt(value: unknown): Date | null {
+  return parseProviderDate(value);
 }
 
 function cleanProviderString(value: unknown): string | null {
@@ -295,9 +351,14 @@ function cleanProviderString(value: unknown): string | null {
 }
 
 function cleanProviderNumber(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value)
-    ? Math.floor(value)
-    : NaN;
+  const n =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Number(value)
+        : NaN;
+
+  return Number.isSafeInteger(n) && n > 0 ? n : NaN;
 }
 
 function isPrismaUniqueConstraintError(err: unknown): boolean {
@@ -307,6 +368,87 @@ function isPrismaUniqueConstraintError(err: unknown): boolean {
     "code" in err &&
     (err as { code?: string }).code === "P2002"
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function extractProviderEventIdFromPayload(event: Record<string, unknown>) {
+  const data = isRecord(event.data) ? event.data : {};
+
+  return (
+    cleanProviderString(event.id) ||
+    cleanProviderString(data.id) ||
+    cleanProviderString(data.event_id) ||
+    cleanProviderString(data.eventId)
+  );
+}
+
+function extractProviderEventTimeFromPayload(event: Record<string, unknown>) {
+  const data = isRecord(event.data) ? event.data : {};
+
+  return (
+    parseProviderDate(data.paid_at) ||
+    parseProviderDate(data.paidAt) ||
+    parseProviderDate(data.created_at) ||
+    parseProviderDate(data.createdAt) ||
+    parseProviderDate(data.updated_at) ||
+    parseProviderDate(data.updatedAt)
+  );
+}
+
+async function lockFeeInvoiceForUpdate(
+  tx: TxClient,
+  tenantId: string,
+  invoiceId: string
+) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    select "id"
+    from "FeeInvoice"
+    where "id" = ${invoiceId}
+      and "tenantId" = ${tenantId}
+    for update
+  `;
+
+  if (rows.length === 0) {
+    throw new FinanceError("INVOICE_NOT_FOUND", 404);
+  }
+}
+
+async function lockPaymentIntentForUpdate(
+  tx: TxClient,
+  tenantId: string,
+  paymentIntentId: string
+) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    select "id"
+    from "PaymentIntent"
+    where "id" = ${paymentIntentId}
+      and "tenantId" = ${tenantId}
+    for update
+  `;
+
+  if (rows.length === 0) {
+    throw new FinanceError("PAYMENT_INTENT_NOT_FOUND", 404);
+  }
+}
+
+async function expireStalePaymentIntents(
+  tx: TxClient,
+  tenantId: string,
+  invoiceId?: string
+) {
+  await tx.paymentIntent.updateMany({
+    where: {
+      tenantId,
+      ...(invoiceId ? { invoiceId } : {}),
+      provider: "PAYSTACK",
+      status: "PENDING",
+      expiresAt: { lt: new Date() },
+    },
+    data: { status: "EXPIRED" },
+  });
 }
 
 async function createPaymentCreditLedgerEntryOnce(
@@ -322,6 +464,8 @@ async function createPaymentCreditLedgerEntryOnce(
     createdByUserId?: string | null;
   }
 ) {
+  const amountPesewas = assertPositiveIntegerPesewas(input.amountPesewas);
+
   const existing = await tx.ledgerEntry.findFirst({
     where: {
       tenantId: input.tenantId,
@@ -344,7 +488,7 @@ async function createPaymentCreditLedgerEntryOnce(
         receiptId: input.receiptId,
         entryType: "PAYMENT_CREDIT",
         direction: "CREDIT",
-        amountPesewas: input.amountPesewas,
+        amountPesewas,
         description: input.description,
         journalRef: makeJournalRef("PAY"),
         createdByUserId: input.createdByUserId ?? null,
@@ -367,6 +511,201 @@ async function createPaymentCreditLedgerEntryOnce(
     if (raced) return raced;
     throw err;
   }
+}
+
+async function createInvoiceDebitLedgerEntryOnce(
+  tx: TxClient,
+  input: {
+    tenantId: string;
+    invoiceId: string;
+    invoiceLineId: string;
+    studentId: string;
+    amountPesewas: number;
+    description: string;
+    createdByUserId?: string | null;
+  }
+) {
+  const amountPesewas = assertPositiveIntegerPesewas(
+    input.amountPesewas,
+    "FEE_STRUCTURE_AMOUNT_INVALID"
+  );
+
+  const existing = await tx.ledgerEntry.findFirst({
+    where: {
+      tenantId: input.tenantId,
+      invoiceId: input.invoiceId,
+      invoiceLineId: input.invoiceLineId,
+      entryType: "INVOICE_DEBIT",
+      direction: "DEBIT",
+    },
+    select: { id: true },
+  });
+
+  if (existing) return existing;
+
+  try {
+    return await tx.ledgerEntry.create({
+      data: {
+        tenantId: input.tenantId,
+        invoiceId: input.invoiceId,
+        invoiceLineId: input.invoiceLineId,
+        studentId: input.studentId,
+        entryType: "INVOICE_DEBIT",
+        direction: "DEBIT",
+        amountPesewas,
+        description: input.description,
+        journalRef: makeJournalRef("INV"),
+        createdByUserId: input.createdByUserId ?? null,
+      },
+      select: { id: true },
+    });
+  } catch (err) {
+    if (!isPrismaUniqueConstraintError(err)) throw err;
+
+    const raced = await tx.ledgerEntry.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        invoiceId: input.invoiceId,
+        invoiceLineId: input.invoiceLineId,
+        entryType: "INVOICE_DEBIT",
+        direction: "DEBIT",
+      },
+      select: { id: true },
+    });
+
+    if (raced) return raced;
+    throw err;
+  }
+}
+
+async function claimFinanceOperationIdempotency(
+  tx: TxClient,
+  input: {
+    tenantId: string;
+    operationType: string;
+    idempotencyKey?: string | null;
+    requestPayload: unknown;
+  }
+): Promise<
+  | { mode: "NONE" }
+  | { mode: "CLAIMED"; id: string; requestHash: string }
+  | { mode: "REPLAY"; response: unknown }
+> {
+  const idempotencyKey = input.idempotencyKey?.trim();
+  if (!idempotencyKey) return { mode: "NONE" };
+
+  const operationType = input.operationType.trim();
+  const requestHash = stableHash(input.requestPayload);
+  const now = new Date();
+
+  try {
+    const row = await tx.financeOperationIdempotency.create({
+      data: {
+        tenantId: input.tenantId,
+        operationType,
+        idempotencyKey,
+        requestHash,
+        lockedAt: now,
+      },
+      select: {
+        id: true,
+        requestHash: true,
+      },
+    });
+
+    return {
+      mode: "CLAIMED",
+      id: row.id,
+      requestHash: row.requestHash ?? requestHash,
+    };
+  } catch (err) {
+    if (!isPrismaUniqueConstraintError(err)) throw err;
+  }
+
+  const existing = await tx.financeOperationIdempotency.findUnique({
+    where: {
+      tenantId_operationType_idempotencyKey: {
+        tenantId: input.tenantId,
+        operationType,
+        idempotencyKey,
+      },
+    },
+    select: {
+      id: true,
+      requestHash: true,
+      responseSnapshot: true,
+      lockedAt: true,
+      completedAt: true,
+    },
+  });
+
+  if (!existing) {
+    throw new FinanceError("PAYMENT_ALREADY_PROCESSED", 409);
+  }
+
+  if (existing.requestHash && existing.requestHash !== requestHash) {
+    throw new FinanceError(
+      "PAYMENT_ALREADY_PROCESSED",
+      409,
+      "Idempotency key was reused with a different request payload."
+    );
+  }
+
+  if (existing.completedAt && existing.responseSnapshot !== null) {
+    return {
+      mode: "REPLAY",
+      response: existing.responseSnapshot,
+    };
+  }
+
+  const lockAgeMs = existing.lockedAt
+    ? Date.now() - existing.lockedAt.getTime()
+    : Number.POSITIVE_INFINITY;
+
+  if (lockAgeMs < IDEMPOTENCY_LOCK_STALE_MINUTES * 60_000) {
+    throw new FinanceError(
+      "PAYMENT_ALREADY_PROCESSED",
+      409,
+      "A matching finance operation is already in progress."
+    );
+  }
+
+  const reclaimed = await tx.financeOperationIdempotency.update({
+    where: { id: existing.id },
+    data: {
+      lockedAt: now,
+      requestHash,
+    },
+    select: {
+      id: true,
+      requestHash: true,
+    },
+  });
+
+  return {
+    mode: "CLAIMED",
+    id: reclaimed.id,
+    requestHash: reclaimed.requestHash ?? requestHash,
+  };
+}
+
+async function completeFinanceOperationIdempotency(
+  tx: TxClient,
+  claim:
+    | { mode: "NONE" }
+    | { mode: "CLAIMED"; id: string; requestHash: string }
+    | { mode: "REPLAY"; response: unknown },
+  response: unknown
+) {
+  if (claim.mode !== "CLAIMED") return;
+
+  await tx.financeOperationIdempotency.update({
+    where: { id: claim.id },
+    data: {
+      responseSnapshot: toPrismaJson(response),
+      completedAt: new Date(),
+    },
+  });
 }
 
 export async function recalculateInvoiceTotals(
@@ -479,208 +818,253 @@ export async function generateInvoicesForClassroomFeeStructure(input: {
 }) {
   const { tenantId, classroomId, feeStructureId, actorUserId = null } = input;
 
-  return prisma.$transaction(async (tx) => {
-    const [classroom, structure] = await Promise.all([
-      tx.classroom.findFirst({
-        where: { id: classroomId, tenantId },
-        select: { id: true, name: true, grade: true },
-      }),
-      tx.feeStructure.findFirst({
-        where: { id: feeStructureId, tenantId },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          category: true,
-          term: true,
-          academicYear: true,
-          amountPesewas: true,
-          isActive: true,
-        },
-      }),
-    ]);
+  const [classroom, structure, students] = await prisma.$transaction(
+    async (tx) => {
+      const [classroomRow, structureRow, studentRows] = await Promise.all([
+        tx.classroom.findFirst({
+          where: { id: classroomId, tenantId },
+          select: { id: true, name: true, grade: true },
+        }),
+        tx.feeStructure.findFirst({
+          where: { id: feeStructureId, tenantId },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            category: true,
+            term: true,
+            academicYear: true,
+            amountPesewas: true,
+            isActive: true,
+          },
+        }),
+        tx.student.findMany({
+          where: { tenantId, classroomId, status: "ACTIVE" },
+          select: { id: true },
+          orderBy: { id: "asc" },
+          take: 6000,
+        }),
+      ]);
 
-    if (!classroom) throw new FinanceError("CLASSROOM_NOT_FOUND", 404);
-    if (!structure) throw new FinanceError("FEE_STRUCTURE_NOT_FOUND", 404);
-    if (!structure.isActive) throw new FinanceError("FEE_STRUCTURE_INACTIVE", 409);
+      return [classroomRow, structureRow, studentRows] as const;
+    },
+    TX_LONG
+  );
 
-    const term = String(structure.term ?? "").trim();
-    const academicYear = String(structure.academicYear ?? "").trim();
-    const amountPesewas = Math.floor(Number(structure.amountPesewas ?? 0));
+  if (!classroom) throw new FinanceError("CLASSROOM_NOT_FOUND", 404);
+  if (!structure) throw new FinanceError("FEE_STRUCTURE_NOT_FOUND", 404);
+  if (!structure.isActive) throw new FinanceError("FEE_STRUCTURE_INACTIVE", 409);
 
-    if (!term || !academicYear) {
-      throw new FinanceError("FEE_STRUCTURE_MISSING_TERM_OR_YEAR", 409);
-    }
+  const term = String(structure.term ?? "").trim();
+  const academicYear = String(structure.academicYear ?? "").trim();
+  const amountPesewas = assertPositiveIntegerPesewas(
+    structure.amountPesewas,
+    "FEE_STRUCTURE_AMOUNT_INVALID"
+  );
 
-    if (!Number.isFinite(amountPesewas) || amountPesewas <= 0) {
-      throw new FinanceError("FEE_STRUCTURE_AMOUNT_INVALID", 409);
-    }
+  if (!term || !academicYear) {
+    throw new FinanceError("FEE_STRUCTURE_MISSING_TERM_OR_YEAR", 409);
+  }
 
-    const students = await tx.student.findMany({
-      where: { tenantId, classroomId, status: "ACTIVE" },
-      select: { id: true },
-      take: 6000,
-    });
+  if (students.length === 0) {
+    return {
+      ok: true,
+      totalLearners: 0,
+      createdInvoices: 0,
+      existingInvoices: 0,
+      createdLines: 0,
+      existingLines: 0,
+      createdLedgers: 0,
+      existingLedgers: 0,
+      message: "No active learners in this classroom.",
+      structure,
+    };
+  }
 
-    if (students.length === 0) {
-      return {
-        ok: true,
-        totalLearners: 0,
-        createdInvoices: 0,
-        existingInvoices: 0,
-        createdLines: 0,
-        existingLines: 0,
-        createdLedgers: 0,
-        existingLedgers: 0,
-        message: "No active learners in this classroom.",
-        structure,
-      };
-    }
+  let createdInvoices = 0;
+  let existingInvoices = 0;
+  let createdLines = 0;
+  let existingLines = 0;
+  let createdLedgers = 0;
+  let existingLedgers = 0;
 
-    let createdInvoices = 0;
-    let existingInvoices = 0;
-    let createdLines = 0;
-    let existingLines = 0;
-    let createdLedgers = 0;
-    let existingLedgers = 0;
+  for (let i = 0; i < students.length; i += INVOICE_GENERATION_CHUNK_SIZE) {
+    const chunk = students.slice(i, i + INVOICE_GENERATION_CHUNK_SIZE);
 
-    for (const student of students) {
-      let invoice = await tx.feeInvoice.findFirst({
-        where: { tenantId, studentId: student.id, term, academicYear },
-        select: { id: true },
-      });
+    const result = await prisma.$transaction(async (tx) => {
+      let chunkCreatedInvoices = 0;
+      let chunkExistingInvoices = 0;
+      let chunkCreatedLines = 0;
+      let chunkExistingLines = 0;
+      let chunkCreatedLedgers = 0;
+      let chunkExistingLedgers = 0;
 
-      if (!invoice) {
-        invoice = await tx.feeInvoice.create({
-          data: {
+      for (const student of chunk) {
+        let invoice = await tx.feeInvoice.findFirst({
+          where: { tenantId, studentId: student.id, term, academicYear },
+          select: { id: true },
+        });
+
+        if (!invoice) {
+          try {
+            invoice = await tx.feeInvoice.create({
+              data: {
+                tenantId,
+                studentId: student.id,
+                term,
+                academicYear,
+                status: "OPEN",
+                totalBilledPesewas: 0,
+                totalWaivedPesewas: 0,
+                totalPaidPesewas: 0,
+                balancePesewas: 0,
+                note: `Generated from ${structure.name}`,
+              },
+              select: { id: true },
+            });
+
+            chunkCreatedInvoices++;
+          } catch (err) {
+            if (!isPrismaUniqueConstraintError(err)) throw err;
+
+            const racedInvoice = await tx.feeInvoice.findFirst({
+              where: { tenantId, studentId: student.id, term, academicYear },
+              select: { id: true },
+            });
+
+            if (!racedInvoice) throw err;
+
+            invoice = racedInvoice;
+            chunkExistingInvoices++;
+          }
+        } else {
+          chunkExistingInvoices++;
+        }
+
+        await lockFeeInvoiceForUpdate(tx, tenantId, invoice.id);
+
+        const existingLine = await tx.feeInvoiceLine.findFirst({
+          where: {
             tenantId,
-            studentId: student.id,
-            term,
-            academicYear,
-            status: "OPEN",
-            totalBilledPesewas: 0,
-            totalWaivedPesewas: 0,
-            totalPaidPesewas: 0,
-            balancePesewas: 0,
-            note: `Generated from ${structure.name}`,
+            invoiceId: invoice.id,
+            feeStructureId: structure.id,
           },
           select: { id: true },
         });
 
-        createdInvoices++;
-      } else {
-        existingInvoices++;
-      }
+        let invoiceLineId = existingLine?.id ?? null;
 
-      const existingLine = await tx.feeInvoiceLine.findFirst({
-        where: {
-          tenantId,
-          invoiceId: invoice.id,
-          feeStructureId: structure.id,
-        },
-        select: { id: true },
-      });
+        if (existingLine) {
+          chunkExistingLines++;
+        } else {
+          try {
+            const line = await tx.feeInvoiceLine.create({
+              data: {
+                tenantId,
+                invoiceId: invoice.id,
+                feeStructureId: structure.id,
+                category: structure.category ?? "GENERAL",
+                description: structure.name,
+                amountPesewas,
+                waivedPesewas: 0,
+              },
+              select: { id: true },
+            });
 
-      let invoiceLineId = existingLine?.id ?? null;
+            invoiceLineId = line.id;
+            chunkCreatedLines++;
+          } catch (err) {
+            if (!isPrismaUniqueConstraintError(err)) throw err;
 
-      if (existingLine) {
-        existingLines++;
-      } else {
-        try {
-          const line = await tx.feeInvoiceLine.create({
-            data: {
-              tenantId,
-              invoiceId: invoice.id,
-              feeStructureId: structure.id,
-              category: structure.category ?? "GENERAL",
-              description: structure.name,
-              amountPesewas,
-              waivedPesewas: 0,
-            },
-            select: { id: true },
-          });
+            const racedLine = await tx.feeInvoiceLine.findFirst({
+              where: {
+                tenantId,
+                invoiceId: invoice.id,
+                feeStructureId: structure.id,
+              },
+              select: { id: true },
+            });
 
-          invoiceLineId = line.id;
-          createdLines++;
-        } catch (err) {
-          if (!isPrismaUniqueConstraintError(err)) throw err;
+            if (!racedLine) throw err;
 
-          const racedLine = await tx.feeInvoiceLine.findFirst({
-            where: {
-              tenantId,
-              invoiceId: invoice.id,
-              feeStructureId: structure.id,
-            },
-            select: { id: true },
-          });
-
-          if (!racedLine) throw err;
-
-          invoiceLineId = racedLine.id;
-          existingLines++;
+            invoiceLineId = racedLine.id;
+            chunkExistingLines++;
+          }
         }
-      }
 
-      if (!invoiceLineId) {
-        throw new FinanceError(
-          "FEE_STRUCTURE_NOT_FOUND",
-          409,
-          "Unable to resolve invoice line for fee structure."
-        );
-      }
+        if (!invoiceLineId) {
+          throw new FinanceError(
+            "FEE_STRUCTURE_NOT_FOUND",
+            409,
+            "Unable to resolve invoice line for fee structure."
+          );
+        }
 
-      const existingLedger = await tx.ledgerEntry.findFirst({
-        where: {
-          tenantId,
-          invoiceId: invoice.id,
-          invoiceLineId,
-          entryType: "INVOICE_DEBIT",
-          direction: "DEBIT",
-        },
-        select: { id: true },
-      });
+        const existingLedger = await tx.ledgerEntry.findFirst({
+          where: {
+            tenantId,
+            invoiceId: invoice.id,
+            invoiceLineId,
+            entryType: "INVOICE_DEBIT",
+            direction: "DEBIT",
+          },
+          select: { id: true },
+        });
 
-      if (existingLedger) {
-        existingLedgers++;
-      } else {
-        await tx.ledgerEntry.create({
-          data: {
+        if (existingLedger) {
+          chunkExistingLedgers++;
+        } else {
+          await createInvoiceDebitLedgerEntryOnce(tx, {
             tenantId,
             invoiceId: invoice.id,
             invoiceLineId,
             studentId: student.id,
-            entryType: "INVOICE_DEBIT",
-            direction: "DEBIT",
             amountPesewas,
             description: `Invoice charge: ${structure.name}`,
-            journalRef: makeJournalRef("INV"),
             createdByUserId: actorUserId,
-          },
-        });
+          });
 
-        createdLedgers++;
+          chunkCreatedLedgers++;
+        }
+
+        await recalculateInvoiceTotals(tx, tenantId, invoice.id);
       }
 
-      await recalculateInvoiceTotals(tx, tenantId, invoice.id);
-    }
+      return {
+        chunkCreatedInvoices,
+        chunkExistingInvoices,
+        chunkCreatedLines,
+        chunkExistingLines,
+        chunkCreatedLedgers,
+        chunkExistingLedgers,
+      };
+    }, TX_LONG);
 
-    return {
-      ok: true,
-      idempotent: true,
-      structureId: structure.id,
-      structureName: structure.name,
-      term,
-      academicYear,
-      amountPesewas,
-      totalLearners: students.length,
-      createdInvoices,
-      existingInvoices,
-      createdLines,
-      existingLines,
-      createdLedgers,
-      existingLedgers,
-    };
-  }, TX_LONG);
+    createdInvoices += result.chunkCreatedInvoices;
+    existingInvoices += result.chunkExistingInvoices;
+    createdLines += result.chunkCreatedLines;
+    existingLines += result.chunkExistingLines;
+    createdLedgers += result.chunkCreatedLedgers;
+    existingLedgers += result.chunkExistingLedgers;
+  }
+
+  return {
+    ok: true,
+    idempotent: true,
+    chunked: true,
+    structureId: structure.id,
+    structureName: structure.name,
+    term,
+    academicYear,
+    amountPesewas,
+    totalLearners: students.length,
+    createdInvoices,
+    existingInvoices,
+    createdLines,
+    existingLines,
+    createdLedgers,
+    existingLedgers,
+  };
 }
 
 export async function recordManualPayment(input: {
@@ -691,30 +1075,43 @@ export async function recordManualPayment(input: {
   reference?: string | null;
   channel?: string | null;
   actorUserId?: string | null;
-}) {
+  idempotencyKey?: string | null;
+}): Promise<ManualPaymentResult> {
   const {
     tenantId,
     invoiceId,
-    amountPesewas,
     method,
     reference,
     channel,
     actorUserId = null,
+    idempotencyKey = null,
   } = input;
 
+  const amountPesewas = assertPositiveIntegerPesewas(input.amountPesewas);
   const cleanReference = reference?.trim() || null;
   const cleanChannel = channel?.trim() || null;
   const cleanPaymentMethod = cleanMethod(method);
 
-  if (!Number.isFinite(amountPesewas) || amountPesewas <= 0) {
-    throw new FinanceError(
-      "PAYMENT_AMOUNT_INVALID",
-      400,
-      "amountPesewas must be positive."
-    );
-  }
-
   return prisma.$transaction(async (tx) => {
+    const claim = await claimFinanceOperationIdempotency(tx, {
+      tenantId,
+      operationType: "MANUAL_PAYMENT",
+      idempotencyKey,
+      requestPayload: {
+        tenantId,
+        invoiceId,
+        amountPesewas,
+        method: cleanPaymentMethod,
+        reference: cleanReference,
+        channel: cleanChannel,
+        actorUserId,
+      },
+    });
+
+        if (claim.mode === "REPLAY") {
+      return claim.response as ManualPaymentResult;
+    }
+
     const [tenant, invoice] = await Promise.all([
       tx.tenant.findUnique({
         where: { id: tenantId },
@@ -751,6 +1148,8 @@ export async function recordManualPayment(input: {
 
     if (!tenant) throw new FinanceError("TENANT_NOT_FOUND", 404);
     if (!invoice) throw new FinanceError("INVOICE_NOT_FOUND", 404);
+
+    await lockFeeInvoiceForUpdate(tx, tenantId, invoiceId);
 
     if (cleanReference) {
       const existing = await tx.feePayment.findFirst({
@@ -847,7 +1246,9 @@ export async function recordManualPayment(input: {
     );
 
     const classLabel =
-      invoice.student?.classroom?.name || invoice.student?.classroom?.grade || "Class";
+      invoice.student?.classroom?.name ||
+      invoice.student?.classroom?.grade ||
+      "Class";
 
     await enqueueReceiptSmsOutbox(tx, {
       tenantId,
@@ -870,9 +1271,9 @@ export async function recordManualPayment(input: {
       }),
     });
 
-    return {
-      ok: true,
-      tenantName: tenant.name,
+    const response: ManualPaymentResult = {
+  ok: true,
+  tenantName: tenant.name,
       payment,
       receipt,
       invoice: recalculatedAfter,
@@ -883,6 +1284,10 @@ export async function recordManualPayment(input: {
       academicYear: invoice.academicYear,
       outstandingPesewas: recalculatedAfter.balancePesewas,
     };
+
+    await completeFinanceOperationIdempotency(tx, claim, response);
+
+    return response;
   }, TX_LONG);
 }
 
@@ -900,18 +1305,15 @@ export async function createParentPaymentIntent(input: {
     studentId,
     term,
     academicYear,
-    amountPesewas,
     guardianPhoneE164,
     guardianSuffix9,
   } = input;
 
-  if (!Number.isFinite(amountPesewas) || amountPesewas < 100) {
-    throw new FinanceError(
-      "PAYMENT_AMOUNT_INVALID",
-      400,
-      "amountPesewas must be at least 100."
-    );
-  }
+  const amountPesewas = assertPositiveIntegerPesewas(
+    input.amountPesewas,
+    "PAYMENT_AMOUNT_INVALID",
+    100
+  );
 
   return prisma.$transaction(async (tx) => {
     const [tenant, student, settlementAccount] = await Promise.all([
@@ -975,10 +1377,10 @@ export async function createParentPaymentIntent(input: {
     const parentLast9 = parentDigits.slice(-9);
 
     const ownsStudent =
-      (parentLast9.length >= 7 &&
+      (parentLast9.length >= 9 &&
         (studentPhoneNorm.endsWith(parentLast9) ||
           studentPhoneRaw.endsWith(parentLast9))) ||
-      (suffix9.length >= 7 &&
+      (suffix9.length >= 9 &&
         (studentPhoneNorm.endsWith(suffix9) || studentPhoneRaw.endsWith(suffix9)));
 
     if (!ownsStudent) {
@@ -1009,6 +1411,7 @@ export async function createParentPaymentIntent(input: {
     let totalOutstandingPesewas = 0;
 
     for (const inv of invoices) {
+      await lockFeeInvoiceForUpdate(tx, tenantId, inv.id);
       const recalculated = await recalculateInvoiceTotals(tx, tenantId, inv.id);
 
       if (recalculated.balancePesewas > 0) {
@@ -1021,11 +1424,28 @@ export async function createParentPaymentIntent(input: {
       throw new FinanceError("INVOICE_ALREADY_CLEARED", 400);
     }
 
-    if (amountPesewas > targetInvoice.balancePesewas) {
+    await expireStalePaymentIntents(tx, tenantId, targetInvoice.id);
+
+    const pendingAgg = await tx.paymentIntent.aggregate({
+      where: {
+        tenantId,
+        invoiceId: targetInvoice.id,
+        provider: "PAYSTACK",
+        status: "PENDING",
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      _sum: { amountPesewas: true },
+    });
+
+    const pendingExposurePesewas = pendingAgg._sum.amountPesewas ?? 0;
+    const effectiveAvailablePesewas =
+      targetInvoice.balancePesewas - pendingExposurePesewas;
+
+    if (amountPesewas > effectiveAvailablePesewas) {
       throw new FinanceError(
         "PAYMENT_EXCEEDS_BALANCE",
         400,
-        "Amount exceeds the selected invoice balance."
+        "Amount exceeds the currently available invoice balance after pending payments."
       );
     }
 
@@ -1039,6 +1459,10 @@ export async function createParentPaymentIntent(input: {
       [student.firstName, student.lastName].filter(Boolean).join(" ").trim() ||
       "Student";
 
+    const expiresAt = new Date(
+      Date.now() + DEFAULT_PAYMENT_INTENT_TTL_MINUTES * 60_000
+    );
+
     const intent = await tx.paymentIntent.create({
       data: {
         tenantId,
@@ -1050,11 +1474,15 @@ export async function createParentPaymentIntent(input: {
         amountPesewas,
         currency: "GHS",
         status: "PENDING",
-        metadata: {
+        expiresAt,
+        metadata: toPrismaJson({
           studentName,
           term,
           academicYear,
           source: "parent_portal",
+          expiresAt: expiresAt.toISOString(),
+          pendingExposurePesewas,
+          effectiveAvailablePesewas,
           settlement: {
             provider: "PAYSTACK",
             settlementAccountId: settlementAccount.id,
@@ -1065,7 +1493,7 @@ export async function createParentPaymentIntent(input: {
             bankName: settlementAccount.bankName,
             currency: settlementAccount.currency,
           },
-        },
+        }),
       },
       select: {
         id: true,
@@ -1077,6 +1505,7 @@ export async function createParentPaymentIntent(input: {
         amountPesewas: true,
         currency: true,
         status: true,
+        expiresAt: true,
       },
     });
 
@@ -1094,6 +1523,8 @@ export async function createParentPaymentIntent(input: {
       invoiceId: targetInvoice.id,
       invoiceOutstandingPesewas: targetInvoice.balancePesewas,
       totalOutstandingPesewas,
+      pendingExposurePesewas,
+      effectiveAvailablePesewas,
       email,
     };
   }, TX_LONG);
@@ -1110,6 +1541,7 @@ export async function attachGatewayToPaymentIntent(input: {
       tenantId: input.tenantId,
       provider: "PAYSTACK",
       providerReference: input.providerReference,
+      status: "PENDING",
     },
     data: {
       checkoutUrl: input.checkoutUrl,
@@ -1132,48 +1564,107 @@ export async function markPaymentIntentGatewayFailed(input: {
     },
     data: {
       status: "FAILED",
-      metadata: {
+      metadata: toPrismaJson({
         gatewayFailureReason: input.reason ?? "PAYSTACK_INITIALIZATION_FAILED",
-      },
+      }),
     },
   });
 }
 
 export async function recordProviderEventOnly(input: {
+  tenantId?: string | null;
   eventType: string;
   providerReference?: string | null;
   signature?: string | null;
   rawPayload: unknown;
   processingStatus?: "RECEIVED" | "PROCESSED" | "FAILED" | "IGNORED";
   processingError?: string | null;
+  eventTime?: Date | null;
+  providerEventId?: string | null;
+  isSuspicious?: boolean;
+  suspiciousReason?: string | null;
 }) {
-  const signature = input.signature ?? null;
+  const eventType = String(input.eventType || "UNKNOWN_EVENT").trim();
+  const providerReference = input.providerReference?.trim() || null;
+  const signature = input.signature?.trim() || null;
+  const providerEventId = input.providerEventId?.trim() || null;
+
+  const rawPayload = toPrismaJson(input.rawPayload);
+  const stablePayloadString = JSON.stringify(rawPayload);
+
+  const payloadFingerprint = crypto
+    .createHash("sha256")
+    .update(stablePayloadString)
+    .digest("hex");
+
+  const eventFingerprint = crypto
+    .createHash("sha256")
+    .update(
+      [
+        "PAYSTACK",
+        eventType,
+        providerReference ?? "NO_REFERENCE",
+        providerEventId ?? "NO_PROVIDER_EVENT_ID",
+        signature ?? payloadFingerprint,
+      ].join(":")
+    )
+    .digest("hex");
 
   try {
     return await prisma.paymentProviderEvent.create({
       data: {
+        tenantId: input.tenantId ?? null,
         provider: "PAYSTACK",
-        eventType: input.eventType,
-        providerReference: input.providerReference ?? null,
+        eventType,
+        providerReference,
+        eventFingerprint,
+        providerEventId,
         signature,
-        rawPayload: toPrismaJson(input.rawPayload),
-        processingStatus: input.processingStatus ?? "IGNORED",
+        rawPayload,
+        eventTime: input.eventTime ?? null,
+        processingStatus: input.processingStatus ?? "RECEIVED",
         processingError: input.processingError ?? null,
-        processedAt: new Date(),
+        processedAt:
+          input.processingStatus &&
+          ["PROCESSED", "FAILED", "IGNORED"].includes(input.processingStatus)
+            ? new Date()
+            : null,
+        isSuspicious: input.isSuspicious ?? false,
+        suspiciousReason: input.suspiciousReason ?? null,
       },
     });
   } catch (err) {
-    if (!isPrismaUniqueConstraintError(err) || !signature) throw err;
+    if (!isPrismaUniqueConstraintError(err)) throw err;
 
     const existing = await prisma.paymentProviderEvent.findFirst({
       where: {
-        provider: "PAYSTACK",
-        signature,
+        OR: [
+          { eventFingerprint },
+          ...(providerEventId
+            ? [{ provider: "PAYSTACK" as const, eventType, providerEventId }]
+            : []),
+        ],
       },
+      select: { id: true },
     });
 
-    if (existing) return existing;
-    throw err;
+    if (!existing) throw err;
+
+    return prisma.paymentProviderEvent.update({
+      where: { id: existing.id },
+      data: {
+        lastSeenAt: new Date(),
+        duplicateCount: { increment: 1 },
+        isReplay: true,
+        ...(input.isSuspicious
+          ? {
+              isSuspicious: true,
+              suspiciousReason:
+                input.suspiciousReason ?? "DUPLICATE_PROVIDER_EVENT_REPLAY",
+            }
+          : {}),
+      },
+    });
   }
 }
 
@@ -1181,7 +1672,7 @@ export async function finalizePaystackChargeSuccess(input: {
   event: Record<string, unknown>;
   signature?: string | null;
 }) {
-  const data = (input.event.data ?? {}) as Record<string, unknown>;
+  const data = isRecord(input.event.data) ? input.event.data : {};
 
   const reference = cleanProviderString(data.reference);
   const amountPesewas = cleanProviderNumber(data.amount);
@@ -1189,15 +1680,22 @@ export async function finalizePaystackChargeSuccess(input: {
   const channel = cleanProviderString(data.channel);
   const providerTransactionId = cleanProviderString(data.id);
   const providerPaidAt = parseProviderPaidAt(data.paid_at);
+  const providerEventId = extractProviderEventIdFromPayload(input.event);
+  const providerEventTime = extractProviderEventTimeFromPayload(input.event);
+  const eventType = String(input.event.event ?? "charge.success");
 
   if (!reference || !Number.isFinite(amountPesewas) || amountPesewas <= 0) {
     await recordProviderEventOnly({
-      eventType: String(input.event.event ?? "charge.success"),
+      eventType,
       providerReference: reference,
       signature: input.signature,
       rawPayload: input.event,
       processingStatus: "FAILED",
       processingError: "INVALID_REFERENCE_OR_AMOUNT",
+      providerEventId,
+      eventTime: providerEventTime,
+      isSuspicious: true,
+      suspiciousReason: "INVALID_REFERENCE_OR_AMOUNT",
     });
 
     return {
@@ -1224,11 +1722,14 @@ export async function finalizePaystackChargeSuccess(input: {
   });
 
   const providerEvent = await recordProviderEventOnly({
-    eventType: String(input.event.event ?? "charge.success"),
+    tenantId: intentLite?.tenantId ?? null,
+    eventType,
     providerReference: reference,
     signature: input.signature,
     rawPayload: input.event,
     processingStatus: "RECEIVED",
+    providerEventId,
+    eventTime: providerEventTime,
   });
 
   if (!intentLite) {
@@ -1239,6 +1740,8 @@ export async function finalizePaystackChargeSuccess(input: {
         processingStatus: "FAILED",
         processingError: "PAYMENT_INTENT_NOT_FOUND",
         processedAt: new Date(),
+        isSuspicious: true,
+        suspiciousReason: "PAYMENT_INTENT_NOT_FOUND",
       },
     });
 
@@ -1249,14 +1752,10 @@ export async function finalizePaystackChargeSuccess(input: {
     };
   }
 
-  if (providerEvent.tenantId !== intentLite.tenantId) {
-    await prisma.paymentProviderEvent.update({
-      where: { id: providerEvent.id },
-      data: { tenantId: intentLite.tenantId },
-    });
-  }
-
   return prisma.$transaction(async (tx) => {
+    await lockPaymentIntentForUpdate(tx, intentLite.tenantId, intentLite.id);
+    await lockFeeInvoiceForUpdate(tx, intentLite.tenantId, intentLite.invoiceId);
+
     const intent = await tx.paymentIntent.findFirst({
       where: { id: intentLite.id },
       select: {
@@ -1268,6 +1767,7 @@ export async function finalizePaystackChargeSuccess(input: {
         amountPesewas: true,
         status: true,
         providerReference: true,
+        expiresAt: true,
         settlementAccount: {
           select: {
             id: true,
@@ -1354,6 +1854,7 @@ export async function finalizePaystackChargeSuccess(input: {
       await tx.paymentProviderEvent.update({
         where: { id: providerEvent.id },
         data: {
+          tenantId: intent.tenantId,
           processingStatus: "PROCESSED",
           processedAt: new Date(),
         },
@@ -1411,6 +1912,7 @@ export async function finalizePaystackChargeSuccess(input: {
       await tx.paymentProviderEvent.update({
         where: { id: providerEvent.id },
         data: {
+          tenantId: intent.tenantId,
           processingStatus: "PROCESSED",
           processedAt: new Date(),
         },
@@ -1449,9 +1951,12 @@ export async function finalizePaystackChargeSuccess(input: {
       await tx.paymentProviderEvent.update({
         where: { id: providerEvent.id },
         data: {
+          tenantId: intent.tenantId,
           processingStatus: "FAILED",
           processingError: "PAYMENT_AMOUNT_MISMATCH",
           processedAt: new Date(),
+          isSuspicious: true,
+          suspiciousReason: "PAYMENT_AMOUNT_MISMATCH",
         },
       });
 
@@ -1493,6 +1998,7 @@ export async function finalizePaystackChargeSuccess(input: {
       await tx.paymentProviderEvent.update({
         where: { id: providerEvent.id },
         data: {
+          tenantId: intent.tenantId,
           processingStatus: "FAILED",
           processingError: "PAYMENT_EXCEEDS_BALANCE",
           processedAt: new Date(),
@@ -1642,6 +2148,7 @@ export async function finalizePaystackChargeSuccess(input: {
     await tx.paymentProviderEvent.update({
       where: { id: providerEvent.id },
       data: {
+        tenantId: intent.tenantId,
         processingStatus: "PROCESSED",
         processedAt: new Date(),
       },
