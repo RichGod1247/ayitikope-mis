@@ -172,6 +172,9 @@ model Tenant {
   settlementAccounts TenantSettlementAccount[]
   settlementPayouts  SettlementPayout[]
 
+  /// ✅ Sprint 9 Phase F — durable retry/outbox spine
+  financeOutboxEvents FinanceOutboxEvent[]
+
   /// Sprint 10 placeholder — keep because current schema already has SchoolRiskSnapshot.
   riskSnapshots SchoolRiskSnapshot[]
 
@@ -1307,6 +1310,43 @@ model ReconciliationException {
   @@index([providerReference])
 }
 
+model FinanceOutboxEvent {
+  id String @id @default(cuid())
+
+  tenantId String?
+
+  type   FinanceOutboxEventType
+  status FinanceOutboxStatus    @default(PENDING)
+
+  idempotencyKey String @db.VarChar(180)
+
+  aggregateType String? @db.VarChar(80)
+  aggregateId   String? @db.VarChar(120)
+
+  payload Json @default("{}")
+
+  attempts    Int @default(0)
+  maxAttempts Int @default(5)
+  priority    Int @default(5)
+
+  nextAttemptAt DateTime  @default(now()) @db.Timestamptz(6)
+  lockedAt      DateTime? @db.Timestamptz(6)
+  lockedBy      String?   @db.VarChar(120)
+
+  lastError   String?   @db.Text
+  processedAt DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([type, idempotencyKey], map: "FinanceOutboxEvent_type_idempotency_unique")
+  @@index([tenantId, status], map: "FinanceOutboxEvent_tenant_status_idx")
+  @@index([status, nextAttemptAt, priority], map: "FinanceOutboxEvent_dispatch_idx")
+  @@index([aggregateType, aggregateId], map: "FinanceOutboxEvent_aggregate_idx")
+}
+
 model LessonNote {
   id                        String    @id @default(cuid())
   tenantId                  String
@@ -2045,4 +2085,23 @@ enum ReconciliationExceptionStatus {
   INVESTIGATING
   RESOLVED
   DISMISSED
+}
+
+enum FinanceOutboxEventType {
+  SMS_RECEIPT
+  SMS_ARREARS_NOTICE
+  SMS_RESULTS_RELEASE
+  PAYSTACK_WEBHOOK_CHARGE_SUCCESS
+  PAYSTACK_WEBHOOK_TRANSFER_EVENT
+  SETTLEMENT_PAYOUT_VERIFY
+  RECONCILIATION_RECHECK
+}
+
+enum FinanceOutboxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  DEAD
+  CANCELLED
 }
