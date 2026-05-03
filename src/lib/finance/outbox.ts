@@ -157,6 +157,21 @@ export async function markFinanceOutboxFailed(eventId: string, error: unknown) {
   });
 }
 
+export async function retryFinanceOutboxEvent(eventId: string) {
+  return prisma.financeOutboxEvent.update({
+    where: { id: eventId },
+    data: {
+      status: FinanceOutboxStatus.PENDING,
+      attempts: 0,
+      nextAttemptAt: new Date(),
+      lockedAt: null,
+      lockedBy: null,
+      lastError: null,
+      processedAt: null,
+    },
+  });
+}
+
 export async function cancelFinanceOutboxEvent(eventId: string) {
   return prisma.financeOutboxEvent.update({
     where: { id: eventId },
