@@ -1,9 +1,11 @@
 // src/app/api/admin/fees/payments/add/route.ts
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { FinanceOutboxEventType } from "@prisma/client";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
 import { FinanceError, recordManualPayment } from "@/lib/finance/core";
+import { runFinanceOutboxWorker } from "@/lib/finance/outbox-worker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +39,6 @@ function cleanOptional(value: unknown) {
 function normalizeIdempotencyKey(value: unknown) {
   const raw = cleanOptional(value);
   if (!raw) return null;
-
   const normalized = raw.replace(/[^a-zA-Z0-9:_./-]/g, "").slice(0, 120);
   return normalized || null;
 }
@@ -140,6 +141,24 @@ export async function POST(req: NextRequest) {
       actorUserId: auth.ctx.userId,
     });
 
+    let smsDispatch:
+      | Awaited<ReturnType<typeof runFinanceOutboxWorker>>
+      | { skipped: true; error: string };
+
+    try {
+      smsDispatch = await runFinanceOutboxWorker({
+        workerId: `manual-payment:${auth.ctx.userId}`,
+        limit: 5,
+        types: [FinanceOutboxEventType.SMS_RECEIPT],
+      });
+    } catch (err) {
+      smsDispatch = {
+        skipped: true,
+        error: err instanceof Error ? err.message : String(err),
+      };
+      console.error("[MANUAL_PAYMENT_SMS_OUTBOX_DRAIN_ERROR]", err);
+    }
+
     return jsonNoStore(
       {
         ok: true,
@@ -152,6 +171,7 @@ export async function POST(req: NextRequest) {
         },
         invoice: result.invoice,
         outstandingPesewas: result.outstandingPesewas,
+        smsDispatch,
       },
       201
     );

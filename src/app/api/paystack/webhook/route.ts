@@ -2,6 +2,7 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  FinanceOutboxEventType,
   PaymentProvider,
   Prisma,
   SettlementPayoutStatus,
@@ -11,6 +12,7 @@ import {
   finalizePaystackChargeSuccess,
   recordProviderEventOnly,
 } from "@/lib/finance/core";
+import { runFinanceOutboxWorker } from "@/lib/finance/outbox-worker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,9 +79,7 @@ function parsePaystackDate(value: unknown): Date | null {
 
 function amountToPesewas(value: unknown): number {
   const n =
-    typeof value === "number"
-      ? value
-      : Number.parseInt(clean(value), 10);
+    typeof value === "number" ? value : Number.parseInt(clean(value), 10);
 
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
@@ -112,6 +112,23 @@ async function verifyWithPaystack(reference: string, secret: string) {
     data: raw.data as Record<string, unknown>,
     raw,
   };
+}
+
+async function drainReceiptSmsOutbox(providerReference: string | null) {
+  try {
+    return await runFinanceOutboxWorker({
+      workerId: `paystack-webhook:${providerReference ?? "unknown"}`,
+      limit: 10,
+      types: [FinanceOutboxEventType.SMS_RECEIPT],
+    });
+  } catch (err) {
+    console.error("[PAYSTACK_WEBHOOK_SMS_OUTBOX_DRAIN_ERROR]", err);
+
+    return {
+      skipped: true,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 function transferStatusFromEvent(eventType: string, data: Record<string, unknown>) {
@@ -322,7 +339,8 @@ async function recordTransferWebhook(params: {
 
   const paidAt = status === SettlementPayoutStatus.PAID ? fields.eventTime : null;
   const failedAt = status === SettlementPayoutStatus.FAILED ? fields.eventTime : null;
-  const reversedAt = status === SettlementPayoutStatus.REVERSED ? fields.eventTime : null;
+  const reversedAt =
+    status === SettlementPayoutStatus.REVERSED ? fields.eventTime : null;
 
   const providerRaw = toJsonValue(params.event);
   const metadata = toJsonValue({
@@ -624,14 +642,22 @@ export async function POST(req: NextRequest) {
       signature,
     });
 
-    return json(200, result);
+    const smsDispatch = await drainReceiptSmsOutbox(providerReference);
+
+    return json(200, {
+      ...result,
+      smsDispatch,
+    });
   } catch (err) {
     if (isPrismaUniqueError(err)) {
       console.warn("[PAYSTACK_WEBHOOK] Duplicate provider reference race.");
 
+      const smsDispatch = await drainReceiptSmsOutbox(providerReference);
+
       return json(200, {
         ok: true,
         alreadyProcessed: true,
+        smsDispatch,
       });
     }
 
