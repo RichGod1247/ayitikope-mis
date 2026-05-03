@@ -7,6 +7,11 @@ import {
   FinanceError,
   markPaymentIntentGatewayFailed,
 } from "@/lib/finance/core";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,13 +52,50 @@ function validBearer(v: unknown): "account" | "subaccount" | undefined {
   return undefined;
 }
 
+function parseAmountPesewas(value: unknown) {
+  return typeof value === "number" && Number.isSafeInteger(value) ? value : NaN;
+}
+
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+
+    const ipLimit = await checkRateLimit({
+      scope: "parent_payment_init_ip",
+      keyParts: [ip],
+      limit: 20,
+      windowSeconds: 60,
+      blockSeconds: 300,
+      metadata: { route: "/api/parent/payments/init" },
+    });
+
+    if (!ipLimit.ok) return rateLimitResponse(ipLimit);
+
     const gate = requireParentSession(
       req as Parameters<typeof requireParentSession>[0]
     );
 
     if (!gate.ok) return gate.res as NextResponse;
+
+    const sess = gate.session;
+
+    const parentLimit = await checkRateLimit({
+      scope: "parent_payment_init_session",
+      keyParts: [
+        sess.tenantId,
+        String(sess.guardianPhoneE164 ?? ""),
+        String(sess.guardianSuffix9 ?? ""),
+      ],
+      limit: 8,
+      windowSeconds: 60,
+      blockSeconds: 600,
+      metadata: {
+        route: "/api/parent/payments/init",
+        tenantId: sess.tenantId,
+      },
+    });
+
+    if (!parentLimit.ok) return rateLimitResponse(parentLimit);
 
     const paystackSecret = process.env.PAYSTACK_SECRET_KEY?.trim();
 
@@ -103,12 +145,7 @@ export async function POST(req: NextRequest) {
     const studentId = clean(body.studentId);
     const term = clean(body.term);
     const academicYear = clean(body.academicYear);
-
-    const amountRaw = body.amountPesewas;
-    const amountPesewas =
-      typeof amountRaw === "number" && Number.isFinite(amountRaw)
-        ? Math.floor(amountRaw)
-        : NaN;
+    const amountPesewas = parseAmountPesewas(body.amountPesewas);
 
     if (!studentId) {
       return noStore(400, { ok: false, error: "STUDENT_ID_REQUIRED" });
@@ -126,7 +163,25 @@ export async function POST(req: NextRequest) {
       return noStore(400, { ok: false, error: "PAYMENT_AMOUNT_INVALID" });
     }
 
-    const sess = gate.session;
+    const studentLimit = await checkRateLimit({
+      scope: "parent_payment_init_student",
+      keyParts: [
+        sess.tenantId,
+        String(sess.guardianPhoneE164 ?? ""),
+        studentId,
+      ],
+      limit: 4,
+      windowSeconds: 300,
+      blockSeconds: 900,
+      metadata: {
+        route: "/api/parent/payments/init",
+        tenantId: sess.tenantId,
+        studentId,
+        amountPesewas,
+      },
+    });
+
+    if (!studentLimit.ok) return rateLimitResponse(studentLimit);
 
     const intentResult = await createParentPaymentIntent({
       tenantId: sess.tenantId,
@@ -167,10 +222,7 @@ export async function POST(req: NextRequest) {
       reference: intentResult.intent.providerReference,
       currency: intentResult.intent.currency || "GHS",
       callback_url: callbackUrl,
-
-      // Critical settlement routing field.
       subaccount: subaccountCode,
-
       metadata: {
         paymentIntentId: intentResult.intent.id,
         invoiceId: intentResult.intent.invoiceId,
@@ -303,6 +355,8 @@ export async function POST(req: NextRequest) {
       settlementAccountId: intentResult.intent.settlementAccountId,
       invoiceOutstandingPesewas: intentResult.invoiceOutstandingPesewas,
       totalOutstandingPesewas: intentResult.totalOutstandingPesewas,
+      pendingExposurePesewas: intentResult.pendingExposurePesewas,
+      effectiveAvailablePesewas: intentResult.effectiveAvailablePesewas,
     });
   } catch (err) {
     if (err instanceof FinanceError) {

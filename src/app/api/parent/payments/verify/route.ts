@@ -5,6 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 import { finalizePaystackChargeSuccess } from "@/lib/finance/core";
 import { runFinanceOutboxWorker } from "@/lib/finance/outbox-worker";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +38,7 @@ function ownsStudent(input: {
   const suffix9 =
     digitsOnly(input.guardianSuffix9 ?? "") || parentDigits.slice(-9);
 
-  if (suffix9.length < 7) return false;
+  if (suffix9.length < 9) return false;
 
   const studentNorm = digitsOnly(input.studentGuardianPhoneNorm ?? "");
   const studentRaw = digitsOnly(input.studentGuardianPhone ?? "");
@@ -72,9 +77,13 @@ async function verifyWithPaystack(reference: string) {
     }
   );
 
-  const data = (await res.json().catch(() => null)) as any;
+  const data = (await res.json().catch(() => null)) as {
+    status?: boolean;
+    message?: string;
+    data?: Record<string, unknown>;
+  } | null;
 
-  if (!res.ok || !data?.status) {
+  if (!res.ok || !data?.status || !data.data) {
     return {
       ok: false as const,
       status: res.status || 502,
@@ -85,7 +94,7 @@ async function verifyWithPaystack(reference: string) {
 
   return {
     ok: true as const,
-    data: data.data as Record<string, unknown>,
+    data: data.data,
     raw: data,
   };
 }
@@ -108,16 +117,63 @@ async function drainReceiptSmsOutbox(reference: string) {
 }
 
 async function handleVerify(req: NextRequest, referenceInput: string) {
-  const gate = requireParentSession(req as any);
-  if (!gate.ok) return gate.res as any;
+  const ipLimit = await checkRateLimit({
+    scope: "parent_payment_verify_ip",
+    keyParts: [getClientIp(req)],
+    limit: 40,
+    windowSeconds: 60,
+    blockSeconds: 300,
+    metadata: { route: "/api/parent/payments/verify" },
+  });
+
+  if (!ipLimit.ok) return rateLimitResponse(ipLimit);
+
+  const gate = requireParentSession(
+    req as Parameters<typeof requireParentSession>[0]
+  );
+
+  if (!gate.ok) return gate.res as NextResponse;
 
   const session = gate.session;
   const tenantId = session.tenantId;
   const reference = clean(referenceInput);
 
+  const parentLimit = await checkRateLimit({
+    scope: "parent_payment_verify_session",
+    keyParts: [
+      tenantId,
+      String(session.guardianPhoneE164 ?? ""),
+      String(session.guardianSuffix9 ?? ""),
+    ],
+    limit: 20,
+    windowSeconds: 60,
+    blockSeconds: 600,
+    metadata: {
+      route: "/api/parent/payments/verify",
+      tenantId,
+    },
+  });
+
+  if (!parentLimit.ok) return rateLimitResponse(parentLimit);
+
   if (!reference) {
     return json(400, { ok: false, error: "REFERENCE_REQUIRED" });
   }
+
+  const referenceLimit = await checkRateLimit({
+    scope: "parent_payment_verify_reference",
+    keyParts: [tenantId, reference],
+    limit: 10,
+    windowSeconds: 300,
+    blockSeconds: 900,
+    metadata: {
+      route: "/api/parent/payments/verify",
+      tenantId,
+      reference,
+    },
+  });
+
+  if (!referenceLimit.ok) return rateLimitResponse(referenceLimit);
 
   const intent = await prisma.paymentIntent.findFirst({
     where: {
@@ -174,7 +230,11 @@ async function handleVerify(req: NextRequest, referenceInput: string) {
   const paystackData = verified.data;
   const gatewayStatus = clean(paystackData.status).toLowerCase();
   const verifiedReference = clean(paystackData.reference);
-  const verifiedAmount = Number(paystackData.amount ?? NaN);
+  const verifiedAmount =
+    typeof paystackData.amount === "number" &&
+    Number.isSafeInteger(paystackData.amount)
+      ? paystackData.amount
+      : NaN;
 
   if (verifiedReference !== reference) {
     return json(409, { ok: false, error: "PAYSTACK_REFERENCE_MISMATCH" });
@@ -219,7 +279,13 @@ async function handleVerify(req: NextRequest, referenceInput: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
+  const ct = req.headers.get("content-type") || "";
+
+  if (!ct.toLowerCase().includes("application/json")) {
+    return json(415, { ok: false, error: "CONTENT_TYPE_MUST_BE_JSON" });
+  }
+
+  const body = (await req.json().catch(() => ({}))) as { reference?: unknown };
   return handleVerify(req, clean(body.reference));
 }
 

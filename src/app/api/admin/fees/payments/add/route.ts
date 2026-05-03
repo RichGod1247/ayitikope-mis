@@ -6,6 +6,11 @@ import { requireApiUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
 import { FinanceError, recordManualPayment } from "@/lib/finance/core";
 import { runFinanceOutboxWorker } from "@/lib/finance/outbox-worker";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +48,10 @@ function normalizeIdempotencyKey(value: unknown) {
   return normalized || null;
 }
 
+function parseAmountPesewas(value: unknown) {
+  return typeof value === "number" && Number.isSafeInteger(value) ? value : NaN;
+}
+
 function makeManualPaymentIdempotencyReference(input: {
   tenantId: string;
   invoiceId: string;
@@ -70,6 +79,17 @@ function makeManualPaymentIdempotencyReference(input: {
 }
 
 export async function POST(req: NextRequest) {
+  const ipLimit = await checkRateLimit({
+    scope: "admin_manual_payment_ip",
+    keyParts: [getClientIp(req)],
+    limit: 60,
+    windowSeconds: 60,
+    blockSeconds: 300,
+    metadata: { route: "/api/admin/fees/payments/add" },
+  });
+
+  if (!ipLimit.ok) return rateLimitResponse(ipLimit);
+
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
     requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "SUPERADMIN"],
@@ -77,6 +97,21 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.res;
 
   const tenantId = auth.ctx.tenantId;
+
+  const userLimit = await checkRateLimit({
+    scope: "admin_manual_payment_user",
+    keyParts: [tenantId, auth.ctx.userId],
+    limit: 25,
+    windowSeconds: 60,
+    blockSeconds: 600,
+    metadata: {
+      route: "/api/admin/fees/payments/add",
+      tenantId,
+      userId: auth.ctx.userId,
+    },
+  });
+
+  if (!userLimit.ok) return rateLimitResponse(userLimit);
 
   const ct = req.headers.get("content-type") || "";
   if (!ct.toLowerCase().includes("application/json")) {
@@ -96,11 +131,7 @@ export async function POST(req: NextRequest) {
   }
 
   const invoiceId = String(body.invoiceId ?? body.invoice ?? "").trim();
-  const amountRaw = body.amountPesewas;
-  const amountPesewas =
-    typeof amountRaw === "number" && Number.isFinite(amountRaw)
-      ? Math.floor(amountRaw)
-      : NaN;
+  const amountPesewas = parseAmountPesewas(body.amountPesewas);
 
   if (!invoiceId) {
     return jsonNoStore({ ok: false, error: "invoiceId is required." }, 400);
@@ -112,6 +143,23 @@ export async function POST(req: NextRequest) {
       400
     );
   }
+
+  const invoiceLimit = await checkRateLimit({
+    scope: "admin_manual_payment_invoice",
+    keyParts: [tenantId, invoiceId, auth.ctx.userId],
+    limit: 8,
+    windowSeconds: 60,
+    blockSeconds: 900,
+    metadata: {
+      route: "/api/admin/fees/payments/add",
+      tenantId,
+      userId: auth.ctx.userId,
+      invoiceId,
+      amountPesewas,
+    },
+  });
+
+  if (!invoiceLimit.ok) return rateLimitResponse(invoiceLimit);
 
   const explicitReference = cleanOptional(body.reference);
   const idempotencyKey = normalizeIdempotencyKey(
@@ -139,6 +187,7 @@ export async function POST(req: NextRequest) {
       reference,
       channel: body.channel,
       actorUserId: auth.ctx.userId,
+      idempotencyKey,
     });
 
     let smsDispatch:

@@ -408,6 +408,23 @@ model AuditLog {
   @@index([action])
 }
 
+model ApiRateLimitBucket {
+  id           String    @id @default(cuid())
+  scope        String    @db.VarChar(100)
+  keyHash      String    @db.VarChar(128)
+  windowStart  DateTime  @db.Timestamptz(6)
+  count        Int       @default(1)
+  blockedUntil DateTime? @db.Timestamptz(6)
+  metadata     Json      @default("{}")
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  lastSeenAt   DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@unique([scope, keyHash, windowStart], map: "ApiRateLimitBucket_scope_key_window_unique")
+  @@index([scope, keyHash])
+  @@index([blockedUntil])
+  @@index([createdAt])
+}
+
 /// *
 /// * =======================
 /// * NextAuth Adapter
