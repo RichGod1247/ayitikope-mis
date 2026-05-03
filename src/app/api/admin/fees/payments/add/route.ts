@@ -3,7 +3,6 @@ import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
-import { sendSms } from "@/lib/sms";
 import { FinanceError, recordManualPayment } from "@/lib/finance/core";
 
 export const runtime = "nodejs";
@@ -140,32 +139,6 @@ export async function POST(req: NextRequest) {
       channel: body.channel,
       actorUserId: auth.ctx.userId,
     });
-
-    if (result.guardianPhone) {
-      const amountCedis = (amountPesewas / 100).toFixed(2);
-      const outstandingCedis = (result.outstandingPesewas / 100).toFixed(2);
-
-      const smsBody =
-        `EduLife OS: Payment of GHS ${amountCedis} received for ${result.studentName} ` +
-        `(${result.classLabel}) - ${result.term} ${result.academicYear}. ` +
-        `Receipt: ${result.receipt.receiptNumber}. Balance: GHS ${outstandingCedis}. ` +
-        `School: ${result.tenantName}. Keep this SMS as proof.`;
-
-      sendSms({
-        tenantId,
-        actorId: auth.ctx.userId,
-        to: result.guardianPhone,
-        message: smsBody,
-        template: "payment_receipt",
-        payload: {
-          receiptNumber: result.receipt.receiptNumber,
-          amountPesewas,
-          invoiceId,
-          outstandingPesewas: result.outstandingPesewas,
-          idempotencyKey: idempotencyKey ?? null,
-        },
-      }).catch((err) => console.error("[PAYMENT_SMS_ERROR]", err));
-    }
 
     return jsonNoStore(
       {

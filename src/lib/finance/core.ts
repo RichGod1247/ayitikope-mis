@@ -180,6 +180,77 @@ function toPrismaJson(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(scrubSensitiveJson(value ?? {}))) as Prisma.InputJsonValue;
 }
 
+function formatCedisFromPesewas(pesewas: number): string {
+  return (Math.max(0, Math.floor(pesewas)) / 100).toFixed(2);
+}
+
+function buildReceiptSmsMessage(input: {
+  amountPesewas: number;
+  studentName: string;
+  classLabel: string;
+  term: string;
+  academicYear: string;
+  receiptNumber: string;
+  balancePesewas: number;
+  schoolName: string;
+}) {
+  return `EduLife OS: Payment of GHS ${formatCedisFromPesewas(
+    input.amountPesewas
+  )} received for ${input.studentName} (${input.classLabel}) - ${input.term} ${
+    input.academicYear
+  }. Receipt: ${input.receiptNumber}. Balance: GHS ${formatCedisFromPesewas(
+    input.balancePesewas
+  )}. School: ${input.schoolName}. Keep this SMS as proof.`;
+}
+
+async function enqueueReceiptSmsOutbox(
+  tx: TxClient,
+  input: {
+    tenantId: string;
+    actorId?: string | null;
+    receiptId: string;
+    receiptNumber: string;
+    feePaymentId: string;
+    invoiceId: string;
+    to: string | null;
+    message: string;
+  }
+) {
+  if (!input.to?.trim()) return null;
+
+  return tx.financeOutboxEvent.upsert({
+    where: {
+      type_idempotencyKey: {
+        type: "SMS_RECEIPT",
+        idempotencyKey: `receipt-sms:${input.receiptId}`,
+      },
+    },
+    create: {
+      tenantId: input.tenantId,
+      type: "SMS_RECEIPT",
+      status: "PENDING",
+      idempotencyKey: `receipt-sms:${input.receiptId}`,
+      aggregateType: "Receipt",
+      aggregateId: input.receiptId,
+      payload: toPrismaJson({
+        tenantId: input.tenantId,
+        actorId: input.actorId ?? null,
+        to: input.to,
+        message: input.message,
+        template: "FEES_RECEIPT",
+        receiptId: input.receiptId,
+        receiptNumber: input.receiptNumber,
+        feePaymentId: input.feePaymentId,
+        invoiceId: input.invoiceId,
+      }),
+      priority: 3,
+      maxAttempts: 5,
+      nextAttemptAt: new Date(),
+    },
+    update: {},
+  });
+}
+
 function parseProviderPaidAt(value: unknown): Date | null {
   if (typeof value !== "string" || !value.trim()) return null;
 
@@ -685,6 +756,29 @@ export async function recordManualPayment(input: {
       invoiceId
     );
 
+    const classLabel =
+      invoice.student?.classroom?.name || invoice.student?.classroom?.grade || "Class";
+
+    await enqueueReceiptSmsOutbox(tx, {
+      tenantId,
+      actorId: actorUserId,
+      receiptId: receipt.id,
+      receiptNumber: receipt.receiptNumber,
+      feePaymentId: payment.id,
+      invoiceId,
+      to: guardianPhone,
+      message: buildReceiptSmsMessage({
+        amountPesewas,
+        studentName,
+        classLabel,
+        term: invoice.term,
+        academicYear: invoice.academicYear,
+        receiptNumber: receipt.receiptNumber,
+        balancePesewas: recalculatedAfter.balancePesewas,
+        schoolName: tenant.name,
+      }),
+    });
+
     return {
       ok: true,
       tenantName: tenant.name,
@@ -693,8 +787,7 @@ export async function recordManualPayment(input: {
       invoice: recalculatedAfter,
       studentName,
       guardianPhone,
-      classLabel:
-        invoice.student?.classroom?.name || invoice.student?.classroom?.grade || "Class",
+      classLabel,
       term: invoice.term,
       academicYear: invoice.academicYear,
       outstandingPesewas: recalculatedAfter.balancePesewas,
@@ -1409,6 +1502,26 @@ export async function finalizePaystackChargeSuccess(input: {
       intent.tenantId,
       intent.invoiceId
     );
+
+    await enqueueReceiptSmsOutbox(tx, {
+      tenantId: intent.tenantId,
+      actorId: null,
+      receiptId: receipt.id,
+      receiptNumber: receipt.receiptNumber,
+      feePaymentId: payment.id,
+      invoiceId: intent.invoiceId,
+      to: guardianPhone,
+      message: buildReceiptSmsMessage({
+        amountPesewas,
+        studentName,
+        classLabel: "Class",
+        term: intent.invoice.term,
+        academicYear: intent.invoice.academicYear,
+        receiptNumber: receipt.receiptNumber,
+        balancePesewas: invoiceAfter.balancePesewas,
+        schoolName: intent.tenant.name,
+      }),
+    });
 
     await tx.paymentIntent.update({
       where: { id: intent.id },
