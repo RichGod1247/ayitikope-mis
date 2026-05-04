@@ -27,11 +27,7 @@ function classLabel(classroom?: {
   arm?: string | null;
 } | null) {
   if (!classroom) return "Unassigned";
-  return (
-    classroom.name ||
-    [classroom.grade, classroom.arm].filter(Boolean).join(" ") ||
-    "Class"
-  );
+  return classroom.name || [classroom.grade, classroom.arm].filter(Boolean).join(" ") || "Class";
 }
 
 export async function GET(req: NextRequest) {
@@ -49,6 +45,7 @@ export async function GET(req: NextRequest) {
   const academicYear = url.searchParams.get("academicYear")?.trim() || null;
   const studentId = url.searchParams.get("studentId")?.trim() || null;
   const method = url.searchParams.get("method")?.trim().toLowerCase() || null;
+  const refundState = url.searchParams.get("refundState")?.trim().toUpperCase() || null;
   const q = url.searchParams.get("q")?.trim() || null;
 
   const takeRaw = Number(url.searchParams.get("take") ?? "300");
@@ -62,31 +59,11 @@ export async function GET(req: NextRequest) {
 
     if (q) {
       invoiceFilter.OR = [
-        {
-          student: {
-            firstName: { contains: q, mode: "insensitive" },
-          },
-        },
-        {
-          student: {
-            lastName: { contains: q, mode: "insensitive" },
-          },
-        },
-        {
-          student: {
-            guardianName: { contains: q, mode: "insensitive" },
-          },
-        },
-        {
-          student: {
-            guardianPhone: { contains: q, mode: "insensitive" },
-          },
-        },
-        {
-          student: {
-            guardianPhoneNorm: { contains: q, mode: "insensitive" },
-          },
-        },
+        { student: { firstName: { contains: q, mode: "insensitive" } } },
+        { student: { lastName: { contains: q, mode: "insensitive" } } },
+        { student: { guardianName: { contains: q, mode: "insensitive" } } },
+        { student: { guardianPhone: { contains: q, mode: "insensitive" } } },
+        { student: { guardianPhoneNorm: { contains: q, mode: "insensitive" } } },
       ];
     }
 
@@ -94,6 +71,9 @@ export async function GET(req: NextRequest) {
       tenantId,
       ...(Object.keys(invoiceFilter).length > 0 ? { invoice: invoiceFilter } : {}),
       ...(method ? { feePayment: { method } } : {}),
+      ...(refundState === "REFUNDED"
+        ? { status: { in: ["REFUNDED", "PARTIALLY_REFUNDED"] } }
+        : {}),
       ...(q
         ? {
             OR: [
@@ -115,6 +95,9 @@ export async function GET(req: NextRequest) {
         issuedAt: true,
         issuedToName: true,
         issuedToPhone: true,
+        status: true,
+        reversedAt: true,
+        reversalReason: true,
         note: true,
         feePayment: {
           select: {
@@ -124,11 +107,24 @@ export async function GET(req: NextRequest) {
             reference: true,
             channel: true,
             paidAt: true,
+            status: true,
             paymentTransaction: {
               select: {
                 provider: true,
                 providerReference: true,
                 providerTransactionId: true,
+              },
+            },
+            refunds: {
+              where: {
+                status: {
+                  in: ["REQUESTED", "APPROVED", "PROCESSING", "SUCCEEDED"],
+                },
+              },
+              select: {
+                id: true,
+                amountPesewas: true,
+                status: true,
               },
             },
           },
@@ -148,29 +144,39 @@ export async function GET(req: NextRequest) {
                 guardianName: true,
                 guardianPhone: true,
                 classroom: {
-                  select: {
-                    name: true,
-                    grade: true,
-                    arm: true,
-                  },
+                  select: { name: true, grade: true, arm: true },
                 },
               },
             },
           },
         },
         issuedBy: {
-          select: {
-            name: true,
-            firstName: true,
-            lastName: true,
-          },
+          select: { name: true, firstName: true, lastName: true },
         },
       },
       orderBy: [{ issuedAt: "desc" }],
       take,
     });
 
-    const items = receipts.map((r) => {
+    const mapped = receipts.map((r) => {
+      const refunds = r.feePayment?.refunds ?? [];
+      const originalAmountPesewas = r.feePayment?.amountPesewas ?? 0;
+      const succeededRefundPesewas = refunds
+        .filter((refund) => refund.status === "SUCCEEDED")
+        .reduce((sum, refund) => sum + refund.amountPesewas, 0);
+      const reservedRefundPesewas = refunds.reduce(
+        (sum, refund) => sum + refund.amountPesewas,
+        0
+      );
+      const netAmountPesewas = Math.max(0, originalAmountPesewas - succeededRefundPesewas);
+
+      const computedRefundState =
+        succeededRefundPesewas <= 0
+          ? "NOT_REFUNDED"
+          : succeededRefundPesewas >= originalAmountPesewas
+            ? "FULLY_REFUNDED"
+            : "PARTIALLY_REFUNDED";
+
       const studentName =
         fullName(r.invoice?.student?.firstName, r.invoice?.student?.lastName) ||
         "Unknown";
@@ -186,17 +192,26 @@ export async function GET(req: NextRequest) {
         issuedAt: r.issuedAt.toISOString(),
         issuedToName: r.issuedToName,
         issuedToPhone: r.issuedToPhone,
+        status: r.status,
+        reversedAt: r.reversedAt?.toISOString() ?? null,
+        reversalReason: r.reversalReason,
         note: r.note,
 
-        amountPesewas: r.feePayment?.amountPesewas ?? 0,
+        amountPesewas: originalAmountPesewas,
+        refundedPesewas: succeededRefundPesewas,
+        reservedRefundPesewas,
+        netAmountPesewas,
+        remainingRefundablePesewas: Math.max(0, originalAmountPesewas - reservedRefundPesewas),
+        refundState: computedRefundState,
+
         method: r.feePayment?.method ?? null,
         reference: r.feePayment?.reference ?? null,
         channel: r.feePayment?.channel ?? null,
         paidAt: r.feePayment?.paidAt?.toISOString() ?? null,
+        paymentStatus: r.feePayment?.status ?? null,
 
         provider: r.feePayment?.paymentTransaction?.provider ?? null,
-        providerReference:
-          r.feePayment?.paymentTransaction?.providerReference ?? null,
+        providerReference: r.feePayment?.paymentTransaction?.providerReference ?? null,
         providerTransactionId:
           r.feePayment?.paymentTransaction?.providerTransactionId ?? null,
 
@@ -216,27 +231,26 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const totalAmountPesewas = items.reduce(
-      (sum, item) => sum + item.amountPesewas,
-      0
-    );
+    const items =
+      refundState === "PARTIALLY_REFUNDED"
+        ? mapped.filter((item) => item.refundState === "PARTIALLY_REFUNDED")
+        : refundState === "FULLY_REFUNDED"
+          ? mapped.filter((item) => item.refundState === "FULLY_REFUNDED")
+          : refundState === "NOT_REFUNDED"
+            ? mapped.filter((item) => item.refundState === "NOT_REFUNDED")
+            : mapped;
 
     return jsonNoStore(200, {
       ok: true,
       count: items.length,
-      totalAmountPesewas,
-      filters: {
-        term,
-        academicYear,
-        studentId,
-        method,
-        q,
-      },
+      totalAmountPesewas: items.reduce((sum, item) => sum + item.amountPesewas, 0),
+      totalRefundedPesewas: items.reduce((sum, item) => sum + item.refundedPesewas, 0),
+      totalNetAmountPesewas: items.reduce((sum, item) => sum + item.netAmountPesewas, 0),
+      filters: { term, academicYear, studentId, method, refundState, q },
       items,
     });
   } catch (err) {
     console.error("[ADMIN_RECEIPTS_LIST_ERROR]", err);
-
     return jsonNoStore(500, {
       ok: false,
       error: "FAILED_TO_LOAD_RECEIPTS",

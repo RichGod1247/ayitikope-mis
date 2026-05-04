@@ -133,6 +133,14 @@ async function analyzeTenantFinance(input: {
           amountPesewas: true,
           status: true,
           reference: true,
+          refunds: {
+            where: { status: "SUCCEEDED" },
+            select: {
+              id: true,
+              amountPesewas: true,
+              status: true,
+            },
+          },
         },
       },
       receipts: {
@@ -140,6 +148,7 @@ async function analyzeTenantFinance(input: {
           id: true,
           feePaymentId: true,
           receiptNumber: true,
+          status: true,
         },
       },
       ledgerEntries: {
@@ -149,6 +158,7 @@ async function analyzeTenantFinance(input: {
           direction: true,
           amountPesewas: true,
           feePaymentId: true,
+          feeRefundId: true,
         },
       },
     },
@@ -160,25 +170,43 @@ async function analyzeTenantFinance(input: {
   let cleanCount = 0;
   let expectedPesewas = 0;
   let actualPesewas = 0;
+  let grossPaymentTotalPesewas = 0;
+  let refundTotalPesewas = 0;
 
   for (const inv of invoices) {
     const before = issues.length;
     const name = studentName(inv.student);
 
-    const successfulPayments = inv.payments.filter((p) => p.status === "SUCCESS");
-    const paymentTotal = successfulPayments.reduce((s, p) => s + p.amountPesewas, 0);
+    const successfulPayments = inv.payments.filter((p) =>
+      ["SUCCESS", "REFUNDED"].includes(p.status)
+    );
+
+    const grossPaymentTotal = successfulPayments.reduce((s, p) => s + p.amountPesewas, 0);
+    const succeededRefundTotal = successfulPayments.reduce(
+      (s, p) => s + p.refunds.reduce((rs, r) => rs + r.amountPesewas, 0),
+      0
+    );
+    const netPaymentTotal = Math.max(0, grossPaymentTotal - succeededRefundTotal);
 
     const paymentCreditTotal = inv.ledgerEntries
       .filter((e) => e.entryType === "PAYMENT_CREDIT" && e.direction === "CREDIT")
       .reduce((s, e) => s + e.amountPesewas, 0);
 
-    expectedPesewas += paymentTotal;
-    actualPesewas += paymentCreditTotal;
+    const refundLedgerTotal = inv.ledgerEntries
+      .filter((e) => e.entryType === "REVERSAL_DEBIT" && e.direction === "DEBIT")
+      .reduce((s, e) => s + e.amountPesewas, 0);
+
+    const ledgerNetTotal = Math.max(0, paymentCreditTotal - refundLedgerTotal);
+
+    grossPaymentTotalPesewas += grossPaymentTotal;
+    refundTotalPesewas += succeededRefundTotal;
+    expectedPesewas += netPaymentTotal;
+    actualPesewas += ledgerNetTotal;
 
     const netBilled = Math.max(0, inv.totalBilledPesewas - inv.totalWaivedPesewas);
-    const expectedBalance = Math.max(0, netBilled - paymentTotal);
+    const expectedBalance = Math.max(0, netBilled - netPaymentTotal);
 
-    if (inv.totalPaidPesewas !== paymentTotal) {
+    if (inv.totalPaidPesewas !== netPaymentTotal) {
       addIssue(issues, {
         kind: "AMOUNT_MISMATCH",
         severity: "HIGH",
@@ -186,10 +214,11 @@ async function analyzeTenantFinance(input: {
         studentName: name,
         term: inv.term,
         academicYear: inv.academicYear,
-        expectedPesewas: paymentTotal,
+        expectedPesewas: netPaymentTotal,
         actualPesewas: inv.totalPaidPesewas,
-        deltaPesewas: inv.totalPaidPesewas - paymentTotal,
-        description: "Invoice paid total does not equal successful payment total.",
+        deltaPesewas: inv.totalPaidPesewas - netPaymentTotal,
+        description:
+          "Invoice paid total does not equal successful payments minus succeeded refunds.",
       });
     }
 
@@ -204,11 +233,12 @@ async function analyzeTenantFinance(input: {
         expectedPesewas: expectedBalance,
         actualPesewas: inv.balancePesewas,
         deltaPesewas: inv.balancePesewas - expectedBalance,
-        description: "Invoice balance does not equal net billed minus successful payments.",
+        description:
+          "Invoice balance does not equal net billed minus net paid after refunds.",
       });
     }
 
-    if (paymentCreditTotal !== paymentTotal) {
+    if (paymentCreditTotal !== grossPaymentTotal) {
       addIssue(issues, {
         kind: "MISSING_LEDGER_ENTRY",
         severity: "CRITICAL",
@@ -216,14 +246,47 @@ async function analyzeTenantFinance(input: {
         studentName: name,
         term: inv.term,
         academicYear: inv.academicYear,
-        expectedPesewas: paymentTotal,
+        expectedPesewas: grossPaymentTotal,
         actualPesewas: paymentCreditTotal,
-        deltaPesewas: paymentTotal - paymentCreditTotal,
-        description: "Successful payments do not equal PAYMENT_CREDIT ledger entries.",
+        deltaPesewas: grossPaymentTotal - paymentCreditTotal,
+        description:
+          "Gross successful payments do not equal PAYMENT_CREDIT ledger entries.",
       });
     }
 
-    if (paymentTotal > netBilled) {
+    if (refundLedgerTotal !== succeededRefundTotal) {
+      addIssue(issues, {
+        kind: "MISSING_LEDGER_ENTRY",
+        severity: "CRITICAL",
+        invoiceId: inv.id,
+        studentName: name,
+        term: inv.term,
+        academicYear: inv.academicYear,
+        expectedPesewas: succeededRefundTotal,
+        actualPesewas: refundLedgerTotal,
+        deltaPesewas: succeededRefundTotal - refundLedgerTotal,
+        description:
+          "Succeeded refunds do not equal REVERSAL_DEBIT ledger entries.",
+      });
+    }
+
+    if (ledgerNetTotal !== netPaymentTotal) {
+      addIssue(issues, {
+        kind: "AMOUNT_MISMATCH",
+        severity: "CRITICAL",
+        invoiceId: inv.id,
+        studentName: name,
+        term: inv.term,
+        academicYear: inv.academicYear,
+        expectedPesewas: netPaymentTotal,
+        actualPesewas: ledgerNetTotal,
+        deltaPesewas: netPaymentTotal - ledgerNetTotal,
+        description:
+          "Ledger net does not equal payment net after refunds.",
+      });
+    }
+
+    if (netPaymentTotal > netBilled) {
       addIssue(issues, {
         kind: "OVERPAYMENT",
         severity: "HIGH",
@@ -232,9 +295,9 @@ async function analyzeTenantFinance(input: {
         term: inv.term,
         academicYear: inv.academicYear,
         expectedPesewas: netBilled,
-        actualPesewas: paymentTotal,
-        deltaPesewas: paymentTotal - netBilled,
-        description: "Successful payments exceed net billed amount.",
+        actualPesewas: netPaymentTotal,
+        deltaPesewas: netPaymentTotal - netBilled,
+        description: "Net payments after refunds exceed net billed amount.",
       });
     }
 
@@ -281,6 +344,33 @@ async function analyzeTenantFinance(input: {
           deltaPesewas: payment.amountPesewas - perPaymentLedgerTotal,
           description: "Payment does not have matching PAYMENT_CREDIT ledger entry.",
         });
+      }
+
+      for (const refund of payment.refunds) {
+        const perRefundLedgerTotal = inv.ledgerEntries
+          .filter(
+            (e) =>
+              e.feeRefundId === refund.id &&
+              e.entryType === "REVERSAL_DEBIT" &&
+              e.direction === "DEBIT"
+          )
+          .reduce((s, e) => s + e.amountPesewas, 0);
+
+        if (perRefundLedgerTotal !== refund.amountPesewas) {
+          addIssue(issues, {
+            kind: "MISSING_LEDGER_ENTRY",
+            severity: "CRITICAL",
+            invoiceId: inv.id,
+            studentName: name,
+            term: inv.term,
+            academicYear: inv.academicYear,
+            providerReference: payment.reference,
+            expectedPesewas: refund.amountPesewas,
+            actualPesewas: perRefundLedgerTotal,
+            deltaPesewas: refund.amountPesewas - perRefundLedgerTotal,
+            description: "Refund does not have matching REVERSAL_DEBIT ledger entry.",
+          });
+        }
       }
     }
 
@@ -349,18 +439,21 @@ async function analyzeTenantFinance(input: {
       providerReference: true,
       processingStatus: true,
       processingError: true,
+      isSuspicious: true,
+      suspiciousReason: true,
     },
     take: 1000,
   });
 
   for (const event of providerEvents) {
     addIssue(issues, {
-      kind: "UNMATCHED_PROVIDER_EVENT",
-      severity: event.processingStatus === "FAILED" ? "HIGH" : "MEDIUM",
+      kind: event.isSuspicious ? "SUSPICIOUS_PROVIDER_EVENT" : "UNMATCHED_PROVIDER_EVENT",
+      severity: event.processingStatus === "FAILED" || event.isSuspicious ? "HIGH" : "MEDIUM",
       providerReference: event.providerReference,
       description:
         `Provider event ${event.eventType} is ${event.processingStatus}` +
-        (event.processingError ? `: ${event.processingError}` : "."),
+        (event.processingError ? `: ${event.processingError}` : "") +
+        (event.suspiciousReason ? ` Suspicion: ${event.suspiciousReason}` : "."),
     });
   }
 
@@ -388,6 +481,8 @@ async function analyzeTenantFinance(input: {
     cleanCount,
     totalInvoices: invoices.length,
     highestSeverity,
+    grossPaymentTotalPesewas,
+    refundTotalPesewas,
     expectedPesewas,
     actualPesewas,
     deltaPesewas,
@@ -472,7 +567,7 @@ export async function POST(req: NextRequest) {
           deltaPesewas: result.deltaPesewas,
           notes:
             clean(body.notes) ||
-            `Reconciliation run. Invoices=${result.totalInvoices}; Issues=${result.issueCount}.`,
+            `Reconciliation run. Invoices=${result.totalInvoices}; Issues=${result.issueCount}; Gross=${result.grossPaymentTotalPesewas}; Refunds=${result.refundTotalPesewas}.`,
           createdByUserId: auth.ctx.userId,
           closedAt: result.issueCount === 0 ? new Date() : null,
         },
@@ -513,6 +608,8 @@ export async function POST(req: NextRequest) {
             status: batchStatus,
             issueCount: result.issueCount,
             totalInvoices: result.totalInvoices,
+            grossPaymentTotalPesewas: result.grossPaymentTotalPesewas,
+            refundTotalPesewas: result.refundTotalPesewas,
             expectedPesewas: result.expectedPesewas,
             actualPesewas: result.actualPesewas,
             deltaPesewas: result.deltaPesewas,
