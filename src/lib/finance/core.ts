@@ -726,7 +726,7 @@ export async function recalculateInvoiceTotals(
     throw new FinanceError("INVOICE_NOT_FOUND", 404);
   }
 
-  const [lineAgg, adjustmentAgg, paymentAgg] = await Promise.all([
+  const [lineAgg, adjustmentAgg, paymentAgg, refundAgg] = await Promise.all([
     tx.feeInvoiceLine.aggregate({
       where: { tenantId, invoiceId },
       _sum: { amountPesewas: true, waivedPesewas: true },
@@ -736,7 +736,19 @@ export async function recalculateInvoiceTotals(
       _sum: { amountPesewas: true },
     }),
     tx.feePayment.aggregate({
-      where: { tenantId, invoiceId, status: "SUCCESS" },
+      where: {
+        tenantId,
+        invoiceId,
+        status: { in: ["SUCCESS", "REFUNDED"] },
+      },
+      _sum: { amountPesewas: true },
+    }),
+    tx.feeRefund.aggregate({
+      where: {
+        tenantId,
+        status: "SUCCEEDED",
+        feePayment: { invoiceId },
+      },
       _sum: { amountPesewas: true },
     }),
   ]);
@@ -749,7 +761,10 @@ export async function recalculateInvoiceTotals(
   const adjustmentWaived = adjustmentAgg._sum.amountPesewas ?? 0;
   const totalWaivedPesewas = Math.max(0, lineWaived + adjustmentWaived);
 
-  const totalPaidPesewas = paymentAgg._sum.amountPesewas ?? 0;
+  const grossPaidPesewas = paymentAgg._sum.amountPesewas ?? 0;
+  const refundedPesewas = refundAgg._sum.amountPesewas ?? 0;
+  const totalPaidPesewas = Math.max(0, grossPaidPesewas - refundedPesewas);
+
   const netDue = Math.max(0, totalBilledPesewas - totalWaivedPesewas);
   const balancePesewas = Math.max(0, netDue - totalPaidPesewas);
 

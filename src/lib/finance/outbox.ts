@@ -65,7 +65,48 @@ export async function enqueueFinanceOutboxEvent(args: EnqueueFinanceOutboxArgs) 
       nextAttemptAt: args.nextAttemptAt ?? new Date(),
       status: FinanceOutboxStatus.PENDING,
     },
-    update: {},
+    update: {
+      tenantId: args.tenantId ?? null,
+      aggregateType: args.aggregateType ?? null,
+      aggregateId: args.aggregateId ?? null,
+      payload: safePayload(args.payload),
+      priority: args.priority ?? 5,
+      maxAttempts: args.maxAttempts ?? 5,
+      nextAttemptAt: args.nextAttemptAt ?? new Date(),
+      status: FinanceOutboxStatus.PENDING,
+      lockedAt: null,
+      lockedBy: null,
+      processedAt: null,
+      lastError: null,
+    },
+  });
+}
+
+export async function enqueueProviderEventRecoveryOutbox(args: {
+  tenantId?: string | null;
+  eventId: string;
+  actorUserId?: string | null;
+  nextAttemptAt?: Date;
+}) {
+  const eventId = String(args.eventId ?? "").trim();
+
+  if (!eventId) {
+    throw new Error("eventId is required for provider event recovery outbox.");
+  }
+
+  return enqueueFinanceOutboxEvent({
+    tenantId: args.tenantId ?? null,
+    type: FinanceOutboxEventType.PAYSTACK_WEBHOOK_CHARGE_SUCCESS,
+    idempotencyKey: `provider-event-reprocess:${eventId}`,
+    aggregateType: "PaymentProviderEvent",
+    aggregateId: eventId,
+    payload: {
+      eventId,
+      actorUserId: args.actorUserId ?? null,
+    },
+    priority: 2,
+    maxAttempts: 5,
+    nextAttemptAt: args.nextAttemptAt ?? new Date(),
   });
 }
 

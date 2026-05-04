@@ -10,6 +10,7 @@ import {
   markFinanceOutboxCompleted,
   markFinanceOutboxFailed,
 } from "@/lib/finance/outbox";
+import { reprocessPaymentProviderEvent } from "@/lib/finance/provider-event-recovery";
 
 type WorkerResult = {
   claimed: number;
@@ -55,19 +56,49 @@ async function handleSmsEvent(event: FinanceOutboxEvent) {
   }
 }
 
+async function handleProviderEventReprocess(event: FinanceOutboxEvent) {
+  if (!isRecord(event.payload)) {
+    throw new Error("Provider event recovery payload must be an object.");
+  }
+
+  const eventId =
+    readString(event.payload, "eventId") ||
+    readString(event.payload, "paymentProviderEventId") ||
+    event.aggregateId;
+
+  if (!eventId) {
+    throw new Error("Provider event recovery payload missing eventId.");
+  }
+
+  await reprocessPaymentProviderEvent({
+    eventId,
+    actorUserId: readString(event.payload, "actorUserId"),
+  });
+}
+
 async function processFinanceOutboxEvent(event: FinanceOutboxEvent) {
   switch (event.type) {
     case FinanceOutboxEventType.SMS_RECEIPT:
+    case FinanceOutboxEventType.SMS_REFUND_NOTICE:
     case FinanceOutboxEventType.SMS_ARREARS_NOTICE:
     case FinanceOutboxEventType.SMS_RESULTS_RELEASE:
       await handleSmsEvent(event);
       return;
 
     case FinanceOutboxEventType.PAYSTACK_WEBHOOK_CHARGE_SUCCESS:
+      await handleProviderEventReprocess(event);
+      return;
+
     case FinanceOutboxEventType.PAYSTACK_WEBHOOK_TRANSFER_EVENT:
+      throw new Error(
+        "Transfer webhook recovery is not implemented in shared core yet. Keep this event failed/dead for admin review."
+      );
+
     case FinanceOutboxEventType.SETTLEMENT_PAYOUT_VERIFY:
+      throw new Error("Settlement payout verification handler not implemented yet.");
+
     case FinanceOutboxEventType.RECONCILIATION_RECHECK:
-      throw new Error(`Outbox handler not implemented yet for ${event.type}.`);
+      throw new Error("Reconciliation recheck handler not implemented yet.");
 
     default:
       throw new Error(`Unknown finance outbox event type: ${String(event.type)}`);

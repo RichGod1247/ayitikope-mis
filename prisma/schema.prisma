@@ -1191,6 +1191,9 @@ model FeeRefund {
 
   provider PaymentProvider @default(PAYSTACK)
 
+  /// Bank-grade idempotency key for admin refund request/execution.
+  idempotencyKey String @db.VarChar(180)
+
   providerRefundReference String? @db.VarChar(160)
   providerReference       String? @db.VarChar(120)
 
@@ -1199,19 +1202,25 @@ model FeeRefund {
 
   status RefundStatus @default(REQUESTED)
 
-  reason String? @db.Text
+  reason       String? @db.Text
+  approvalNote String? @db.Text
 
   requestedByUserId String?
   approvedByUserId  String?
+  cancelledByUserId String?
 
-  requestedAt DateTime  @default(now()) @db.Timestamptz(6)
-  approvedAt  DateTime? @db.Timestamptz(6)
-  processedAt DateTime? @db.Timestamptz(6)
-  failedAt    DateTime? @db.Timestamptz(6)
+  requestedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  approvedAt   DateTime? @db.Timestamptz(6)
+  processingAt DateTime? @db.Timestamptz(6)
+  processedAt  DateTime? @db.Timestamptz(6)
+  failedAt     DateTime? @db.Timestamptz(6)
+  cancelledAt  DateTime? @db.Timestamptz(6)
 
-  failureReason String?
-  providerRaw   Json?
-  metadata      Json    @default("{}")
+  failureReason      String? @db.Text
+  cancellationReason String? @db.Text
+
+  providerRaw Json?
+  metadata    Json  @default("{}")
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
@@ -1226,12 +1235,16 @@ model FeeRefund {
 
   ledgerEntries LedgerEntry[]
 
+  @@unique([tenantId, idempotencyKey], map: "FeeRefund_tenant_idempotency_unique")
   @@unique([tenantId, provider, providerRefundReference], map: "FeeRefund_tenant_provider_refund_unique")
   @@index([tenantId, status])
   @@index([tenantId, feePaymentId])
   @@index([tenantId, paymentTransactionId])
   @@index([tenantId, receiptId])
   @@index([provider, providerReference])
+  @@index([requestedByUserId])
+  @@index([approvedByUserId])
+  @@index([cancelledByUserId])
 }
 
 model SponsorProfile {
@@ -1369,6 +1382,7 @@ model LedgerEntry {
   /// DB truth: partial unique indexes manually created:
   /// "LedgerEntry_payment_credit_unique"
   /// "LedgerEntry_invoice_debit_unique"
+  /// "LedgerEntry_refund_reversal_unique"
   @@index([tenantId, feePaymentId], map: "LedgerEntry_tenant_feePayment_idx")
   @@index([tenantId, invoiceLineId], map: "LedgerEntry_tenant_invoiceLine_idx")
   @@index([tenantId, invoiceId])
@@ -1378,6 +1392,7 @@ model LedgerEntry {
   @@index([receiptId])
   @@index([journalRef])
   @@index([feeRefundId])
+  @@index([tenantId, feeRefundId], map: "LedgerEntry_tenant_feeRefund_idx")
 }
 
 model ReconciliationBatch {
@@ -2170,6 +2185,7 @@ enum LedgerEntryType {
   INVOICE_DEBIT
   PAYMENT_CREDIT
   ADJUSTMENT_CREDIT
+  REFUND_DEBIT
   REVERSAL_DEBIT
   REVERSAL_CREDIT
   CORRECTION
