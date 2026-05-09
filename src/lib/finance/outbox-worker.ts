@@ -109,12 +109,19 @@ export async function runFinanceOutboxWorker(args?: {
   workerId?: string;
   limit?: number;
   types?: FinanceOutboxEventType[];
+  tenantId?: string | null;
+  aggregateType?: string | null;
+  aggregateId?: string | null;
 }): Promise<WorkerResult> {
   const workerId = args?.workerId ?? `finance-worker-${process.pid}`;
+
   const events = await claimFinanceOutboxEvents({
     workerId,
     limit: args?.limit ?? 10,
     types: args?.types,
+    tenantId: args?.tenantId,
+    aggregateType: args?.aggregateType,
+    aggregateId: args?.aggregateId,
   });
 
   let completed = 0;

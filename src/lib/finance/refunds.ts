@@ -221,17 +221,69 @@ async function createRefundLedgerOnce(tx: TxClient, input: {
   }
 }
 
+function recordFromJson(value: unknown): Record<string, unknown> {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function refundRequestHash(input: {
+  tenantId: string;
+  feePaymentId: string;
+  amountPesewas: number;
+  reason: string;
+}) {
+  return crypto
+    .createHash("sha256")
+    .update(
+      JSON.stringify({
+        tenantId: clean(input.tenantId),
+        feePaymentId: clean(input.feePaymentId),
+        amountPesewas: input.amountPesewas,
+        reason: clean(input.reason),
+      })
+    )
+    .digest("hex");
+}
+
 export async function requestFeeRefund(input: {
   tenantId: string;
   feePaymentId: string;
   amountPesewas: number;
   reason: string;
-  requestedByUserId: string;
+  requestedByUserId?: string | null;
   idempotencyKey: string;
+  metadata?: Prisma.InputJsonValue;
 }) {
   const amountPesewas = assertAmount(input.amountPesewas);
   const idempotencyKey = clean(input.idempotencyKey);
-  if (!idempotencyKey) throw new FinanceError("DUPLICATE_PAYMENT_REFERENCE", 400, "idempotencyKey is required.");
+
+  if (!idempotencyKey) {
+    throw new FinanceError(
+      "DUPLICATE_PAYMENT_REFERENCE",
+      400,
+      "idempotencyKey is required."
+    );
+  }
+
+  const reason = clean(input.reason);
+  if (!reason) {
+    throw new FinanceError(
+      "PAYMENT_AMOUNT_INVALID",
+      400,
+      "Refund reason is required."
+    );
+  }
+
+  const requestHash = refundRequestHash({
+    tenantId: input.tenantId,
+    feePaymentId: input.feePaymentId,
+    amountPesewas,
+    reason,
+  });
+
+  const extraMetadata = recordFromJson(input.metadata);
 
   return prisma.$transaction(async (tx) => {
     await lockFeePayment(tx, input.tenantId, input.feePaymentId);
@@ -284,8 +336,21 @@ export async function requestFeeRefund(input: {
       },
     });
 
-    if (!payment) throw new FinanceError("PAYMENT_INTENT_NOT_FOUND", 404, "Refundable payment not found.");
-    if (!payment.receipt) throw new FinanceError("PAYMENT_AMOUNT_INVALID", 409, "Cannot refund payment without receipt.");
+    if (!payment) {
+      throw new FinanceError(
+        "PAYMENT_INTENT_NOT_FOUND",
+        404,
+        "Refundable payment not found."
+      );
+    }
+
+    if (!payment.receipt) {
+      throw new FinanceError(
+        "PAYMENT_AMOUNT_INVALID",
+        409,
+        "Cannot refund payment without receipt."
+      );
+    }
 
     await lockInvoice(tx, input.tenantId, payment.invoiceId);
 
@@ -293,7 +358,11 @@ export async function requestFeeRefund(input: {
     const available = payment.amountPesewas - exposure.reservedPesewas;
 
     if (amountPesewas > available) {
-      throw new FinanceError("PAYMENT_EXCEEDS_BALANCE", 409, "Refund exceeds remaining refundable amount.");
+      throw new FinanceError(
+        "PAYMENT_EXCEEDS_BALANCE",
+        409,
+        "Refund exceeds remaining refundable amount."
+      );
     }
 
     const provider = payment.paymentTransaction?.provider ?? PaymentProvider.MANUAL;
@@ -313,9 +382,11 @@ export async function requestFeeRefund(input: {
           amountPesewas,
           currency: payment.paymentTransaction?.currency ?? "GHS",
           status: RefundStatus.REQUESTED,
-          reason: clean(input.reason) || null,
-          requestedByUserId: input.requestedByUserId,
+          reason,
+          requestedByUserId: input.requestedByUserId ?? null,
           metadata: toJson({
+            ...extraMetadata,
+            refundRequestHash: requestHash,
             originalPaymentAmountPesewas: payment.amountPesewas,
             reservedBeforePesewas: exposure.reservedPesewas,
             availableBeforePesewas: available,
@@ -327,14 +398,62 @@ export async function requestFeeRefund(input: {
       if (!isUniqueError(err)) throw err;
 
       const existing = await tx.feeRefund.findFirst({
-  where: {
-    tenantId: input.tenantId,
-    idempotencyKey,
-  },
-});
+        where: {
+          tenantId: input.tenantId,
+          idempotencyKey,
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          feePaymentId: true,
+          paymentTransactionId: true,
+          receiptId: true,
+          provider: true,
+          idempotencyKey: true,
+          providerRefundReference: true,
+          providerReference: true,
+          amountPesewas: true,
+          currency: true,
+          status: true,
+          reason: true,
+          approvalNote: true,
+          requestedByUserId: true,
+          approvedByUserId: true,
+          requestedAt: true,
+          approvedAt: true,
+          processingAt: true,
+          processedAt: true,
+          failedAt: true,
+          cancelledAt: true,
+          failureReason: true,
+          cancellationReason: true,
+          providerRaw: true,
+          metadata: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
-      if (existing) return existing;
-      throw err;
+      if (!existing) throw err;
+
+      const existingMetadata = recordFromJson(existing.metadata);
+      const existingHash = clean(existingMetadata.refundRequestHash);
+
+      const sameRequest = existingHash
+        ? existingHash === requestHash
+        : existing.feePaymentId === input.feePaymentId &&
+          existing.amountPesewas === amountPesewas &&
+          clean(existing.reason) === reason;
+
+      if (!sameRequest) {
+        throw new FinanceError(
+  "DUPLICATE_PAYMENT_REFERENCE",
+  409,
+  "This idempotency key was already used for a different refund request."
+);
+      }
+
+      return existing;
     }
   }, TX_LONG);
 }

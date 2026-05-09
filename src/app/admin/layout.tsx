@@ -37,6 +37,7 @@ const financeNav: NavItem[] = [
   { label: "Fee Structures", href: "/admin/fees/structures" },
   { label: "Invoices & Payments", href: "/admin/fees/invoices" },
   { label: "Receipts", href: "/admin/fees/receipts" },
+  { label: "Refunds", href: "/admin/fees/refunds" },
   { label: "Ledger Trail", href: "/admin/fees/ledger" },
   { label: "Audit Trail", href: "/admin/fees/audit" },
   { label: "Reconciliation", href: "/admin/fees/reconciliation" },
@@ -153,6 +154,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <MobileNavLink href="/admin/students">Students</MobileNavLink>
             <MobileNavLink href="/admin/fees/invoices">Invoices</MobileNavLink>
             <MobileNavLink href="/admin/fees/receipts">Receipts</MobileNavLink>
+            <MobileNavLink href="/admin/fees/refunds">Refunds</MobileNavLink>
             <MobileNavLink href="/admin/fees/online-payments">Online Pay</MobileNavLink>
             <MobileNavLink href="/admin/fees/outbox">SMS Outbox</MobileNavLink>
             <MobileNavLink href="/admin/fees/structures">Structures</MobileNavLink>

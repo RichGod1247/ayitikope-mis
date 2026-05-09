@@ -9,6 +9,14 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const SAFE_CRON_TYPES: FinanceOutboxEventType[] = [
+  FinanceOutboxEventType.SMS_RECEIPT,
+  FinanceOutboxEventType.SMS_REFUND_NOTICE,
+  FinanceOutboxEventType.SMS_ARREARS_NOTICE,
+  FinanceOutboxEventType.SMS_RESULTS_RELEASE,
+  FinanceOutboxEventType.PAYSTACK_WEBHOOK_CHARGE_SUCCESS,
+];
+
 function jsonNoStore(payload: unknown, status = 200) {
   return NextResponse.json(payload, {
     status,
@@ -41,7 +49,7 @@ export async function POST(req: NextRequest) {
   const result = await runFinanceOutboxWorker({
     workerId: "finance-outbox-cron",
     limit: 25,
-    types: [FinanceOutboxEventType.SMS_RECEIPT],
+    types: SAFE_CRON_TYPES,
   });
 
   const after = await getFinanceOutboxHealth();
@@ -51,6 +59,7 @@ export async function POST(req: NextRequest) {
     before,
     result,
     after,
+    safeTypes: SAFE_CRON_TYPES,
   });
 }
 

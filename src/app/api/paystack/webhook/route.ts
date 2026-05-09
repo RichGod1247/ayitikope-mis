@@ -190,12 +190,32 @@ async function verifyWithPaystack(reference: string, secret: string) {
   };
 }
 
-async function drainReceiptSmsOutbox(providerReference: string | null) {
+function getReceiptIdFromFinalizeResult(result: unknown): string | null {
+  if (!isObject(result)) return null;
+  const receipt = isObject(result.receipt) ? result.receipt : null;
+  return clean(receipt?.id) || null;
+}
+
+async function drainReceiptSmsOutbox(args: {
+  providerReference: string | null;
+  receiptId?: string | null;
+}) {
+  const receiptId = clean(args.receiptId);
+
+  if (!receiptId) {
+    return {
+      skipped: true,
+      reason: "RECEIPT_ID_REQUIRED_FOR_SCOPED_SMS_DRAIN",
+    };
+  }
+
   try {
     return await runFinanceOutboxWorker({
-      workerId: `paystack-webhook:${providerReference ?? "unknown"}`,
-      limit: 10,
+      workerId: `paystack-webhook:${args.providerReference ?? receiptId}`,
+      limit: 1,
       types: [FinanceOutboxEventType.SMS_RECEIPT],
+      aggregateType: "Receipt",
+      aggregateId: receiptId,
     });
   } catch (err) {
     console.error("[PAYSTACK_WEBHOOK_SMS_OUTBOX_DRAIN_ERROR]", err);
@@ -914,7 +934,10 @@ export async function POST(req: NextRequest) {
       signature,
     });
 
-    const smsDispatch = await drainReceiptSmsOutbox(providerReference);
+    const smsDispatch = await drainReceiptSmsOutbox({
+  providerReference,
+  receiptId: getReceiptIdFromFinalizeResult(result),
+});
 
     return json(200, {
       ...result,
@@ -937,7 +960,10 @@ export async function POST(req: NextRequest) {
         suspiciousReason: "DUPLICATE_PROVIDER_REFERENCE_RACE",
       });
 
-      const smsDispatch = await drainReceiptSmsOutbox(providerReference);
+      const smsDispatch = await drainReceiptSmsOutbox({
+  providerReference,
+  receiptId: null,
+});
 
       return json(200, {
         ok: true,

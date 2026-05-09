@@ -24,6 +24,9 @@ type ClaimFinanceOutboxArgs = {
   workerId: string;
   limit?: number;
   types?: FinanceOutboxEventType[];
+  tenantId?: string | null;
+  aggregateType?: string | null;
+  aggregateId?: string | null;
 };
 
 function cleanIdempotencyKey(value: string): string {
@@ -32,6 +35,11 @@ function cleanIdempotencyKey(value: string): string {
 
 function cleanWorkerId(value: string): string {
   return String(value ?? "finance-worker").trim().slice(0, 120);
+}
+
+function cleanOptional(value: unknown, max = 120): string | null {
+  const cleaned = String(value ?? "").trim().slice(0, max);
+  return cleaned || null;
 }
 
 function safePayload(payload: JsonInput | undefined): JsonInput {
@@ -115,6 +123,10 @@ export async function claimFinanceOutboxEvents(args: ClaimFinanceOutboxArgs) {
   const workerId = cleanWorkerId(args.workerId);
   const types = args.types ?? [];
 
+  const tenantId = cleanOptional(args.tenantId);
+  const aggregateType = cleanOptional(args.aggregateType, 80);
+  const aggregateId = cleanOptional(args.aggregateId);
+
   return prisma.$transaction(async (tx) => {
     const claimedIds = await tx.$queryRaw<Array<{ id: string }>>`
       update "FinanceOutboxEvent" foe
@@ -133,6 +145,18 @@ export async function claimFinanceOutboxEvents(args: ClaimFinanceOutboxArgs) {
           and (
             ${types.length} = 0
             or "type" = any(${types}::"FinanceOutboxEventType"[])
+          )
+          and (
+            ${tenantId}::text is null
+            or "tenantId" = ${tenantId}
+          )
+          and (
+            ${aggregateType}::text is null
+            or "aggregateType" = ${aggregateType}
+          )
+          and (
+            ${aggregateId}::text is null
+            or "aggregateId" = ${aggregateId}
           )
         order by "priority" asc, "nextAttemptAt" asc, "createdAt" asc
         limit ${limit}

@@ -1,5 +1,6 @@
 // src/app/api/parent/fees/summary/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { PaymentStatus, RefundStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 
@@ -18,6 +19,17 @@ function noStore(status: number, payload: unknown) {
 
 function fullName(firstName?: string | null, lastName?: string | null) {
   return [firstName, lastName].filter(Boolean).join(" ").trim() || "Student";
+}
+
+function toIso(value: unknown): string | null {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 function parentOwnsStudent(input: {
@@ -40,6 +52,57 @@ function parentOwnsStudent(input: {
   );
 }
 
+function succeededRefundTotal(
+  refunds: Array<{ status: string; amountPesewas: number }>
+) {
+  return refunds
+    .filter((refund) => refund.status === RefundStatus.SUCCEEDED)
+    .reduce((sum, refund) => sum + refund.amountPesewas, 0);
+}
+
+function pendingRefundTotal(
+  refunds: Array<{ status: string; amountPesewas: number }>
+) {
+  const pendingStatuses = new Set<string>([
+    RefundStatus.REQUESTED,
+    RefundStatus.APPROVED,
+    RefundStatus.PROCESSING,
+  ]);
+
+  return refunds
+    .filter((refund) => pendingStatuses.has(String(refund.status)))
+    .reduce((sum, refund) => sum + refund.amountPesewas, 0);
+}
+
+function spendingFromPayments(
+  payments: Array<{
+    amountPesewas: number;
+    refunds: Array<{ status: string; amountPesewas: number }>;
+  }>
+) {
+  const grossPaidPesewas = payments.reduce(
+    (sum, payment) => sum + (payment.amountPesewas ?? 0),
+    0
+  );
+
+  const refundedPesewas = payments.reduce(
+    (sum, payment) => sum + succeededRefundTotal(payment.refunds),
+    0
+  );
+
+  const pendingRefundPesewas = payments.reduce(
+    (sum, payment) => sum + pendingRefundTotal(payment.refunds),
+    0
+  );
+
+  return {
+    grossPaidPesewas,
+    refundedPesewas,
+    pendingRefundPesewas,
+    netSpentPesewas: Math.max(0, grossPaidPesewas - refundedPesewas),
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const gate = requireParentSession(
@@ -60,14 +123,8 @@ export async function GET(req: NextRequest) {
       url.searchParams.get("academicYear") ?? "2025/2026"
     ).trim();
 
-    if (!studentId) {
-      return noStore(400, { ok: false, error: "STUDENT_ID_REQUIRED" });
-    }
-
-    if (!term) {
-      return noStore(400, { ok: false, error: "TERM_REQUIRED" });
-    }
-
+    if (!studentId) return noStore(400, { ok: false, error: "STUDENT_ID_REQUIRED" });
+    if (!term) return noStore(400, { ok: false, error: "TERM_REQUIRED" });
     if (!academicYear) {
       return noStore(400, { ok: false, error: "ACADEMIC_YEAR_REQUIRED" });
     }
@@ -152,7 +209,9 @@ export async function GET(req: NextRequest) {
           orderBy: { createdAt: "asc" },
         },
         payments: {
-          where: { status: "SUCCESS" },
+          where: {
+            status: { in: [PaymentStatus.SUCCESS, PaymentStatus.REFUNDED] },
+          },
           select: {
             id: true,
             amountPesewas: true,
@@ -160,12 +219,29 @@ export async function GET(req: NextRequest) {
             reference: true,
             channel: true,
             paidAt: true,
+            status: true,
             receipt: {
               select: {
                 id: true,
                 receiptNumber: true,
                 issuedAt: true,
+                status: true,
               },
+            },
+            refunds: {
+              select: {
+                id: true,
+                status: true,
+                amountPesewas: true,
+                reason: true,
+                requestedAt: true,
+                approvedAt: true,
+                processingAt: true,
+                processedAt: true,
+                failedAt: true,
+                failureReason: true,
+              },
+              orderBy: { requestedAt: "desc" },
             },
           },
           orderBy: { paidAt: "asc" },
@@ -174,6 +250,45 @@ export async function GET(req: NextRequest) {
       orderBy: [{ issuedAt: "asc" }, { createdAt: "asc" }],
       take: 50,
     });
+
+    const allStudentPayments = await prisma.feePayment.findMany({
+      where: {
+        tenantId,
+        status: { in: [PaymentStatus.SUCCESS, PaymentStatus.REFUNDED] },
+        invoice: {
+          studentId,
+          status: { notIn: ["CANCELLED", "WRITTEN_OFF"] },
+        },
+      },
+      select: {
+        id: true,
+        amountPesewas: true,
+        paidAt: true,
+        invoice: {
+          select: {
+            term: true,
+            academicYear: true,
+          },
+        },
+        refunds: {
+          select: {
+            id: true,
+            status: true,
+            amountPesewas: true,
+          },
+        },
+      },
+      take: 1000,
+    });
+
+    const selectedTermPayments = allStudentPayments.filter(
+      (payment) =>
+        payment.invoice.term === term && payment.invoice.academicYear === academicYear
+    );
+
+    const academicYearPayments = allStudentPayments.filter(
+      (payment) => payment.invoice.academicYear === academicYear
+    );
 
     const studentName = fullName(student.firstName, student.lastName);
 
@@ -188,6 +303,9 @@ export async function GET(req: NextRequest) {
         summary: {
           totalBilledPesewas: 0,
           totalWaivedPesewas: 0,
+          totalGrossPaidPesewas: 0,
+          totalRefundedPesewas: 0,
+          totalPendingRefundPesewas: 0,
           totalPaidPesewas: 0,
           balancePesewas: 0,
           invoiceCount: 0,
@@ -198,6 +316,11 @@ export async function GET(req: NextRequest) {
           payableInvoiceId: null,
           payableInvoiceBalancePesewas: 0,
           note: "No fees have been posted for this learner in the selected term.",
+        },
+        spendingSummary: {
+          selectedTerm: spendingFromPayments([]),
+          academicYear: spendingFromPayments(academicYearPayments),
+          lifetime: spendingFromPayments(allStudentPayments),
         },
         invoices: [],
         paymentHistory: [],
@@ -220,10 +343,66 @@ export async function GET(req: NextRequest) {
         0
       );
 
-      const paid = inv.payments.reduce(
-        (sum, payment) => sum + (payment.amountPesewas ?? 0),
+      const paymentDetails = inv.payments.map((payment) => {
+        const refundedPesewas = succeededRefundTotal(payment.refunds);
+        const pendingRefundPesewas = pendingRefundTotal(payment.refunds);
+        const netAmountPesewas = Math.max(0, payment.amountPesewas - refundedPesewas);
+        const refundablePesewas = Math.max(
+          0,
+          payment.amountPesewas - refundedPesewas - pendingRefundPesewas
+        );
+
+        return {
+          id: payment.id,
+          amountPesewas: payment.amountPesewas,
+          netAmountPesewas,
+          refundedPesewas,
+          pendingRefundPesewas,
+          refundablePesewas,
+          method: payment.method,
+          reference: payment.reference,
+          channel: payment.channel,
+          status: payment.status,
+          paidAt: payment.paidAt.toISOString(),
+          receipt: payment.receipt
+            ? {
+                id: payment.receipt.id,
+                receiptNumber: payment.receipt.receiptNumber,
+                issuedAt: payment.receipt.issuedAt.toISOString(),
+                status: payment.receipt.status,
+              }
+            : null,
+          refunds: payment.refunds.map((refund) => ({
+  id: refund.id,
+  status: refund.status,
+  amountPesewas: refund.amountPesewas,
+  reason: refund.reason,
+  requestedAt: toIso(refund.requestedAt) ?? "",
+  approvedAt: toIso(refund.approvedAt),
+  processingAt: toIso(refund.processingAt),
+  processedAt: toIso(refund.processedAt),
+  failedAt: toIso(refund.failedAt),
+  failureReason: refund.failureReason,
+})),
+        };
+      });
+
+      const grossPaid = paymentDetails.reduce(
+        (sum, payment) => sum + payment.amountPesewas,
         0
       );
+
+      const refunded = paymentDetails.reduce(
+        (sum, payment) => sum + payment.refundedPesewas,
+        0
+      );
+
+      const pendingRefund = paymentDetails.reduce(
+        (sum, payment) => sum + payment.pendingRefundPesewas,
+        0
+      );
+
+      const paid = Math.max(0, grossPaid - refunded);
 
       const billed =
         lineBilled > 0 ? lineBilled : Math.max(0, inv.totalBilledPesewas ?? 0);
@@ -242,6 +421,9 @@ export async function GET(req: NextRequest) {
         note: inv.note,
         totalBilledPesewas: billed,
         totalWaivedPesewas: waived,
+        totalGrossPaidPesewas: grossPaid,
+        totalRefundedPesewas: refunded,
+        totalPendingRefundPesewas: pendingRefund,
         totalPaidPesewas: paid,
         balancePesewas: balance,
         lines: inv.lines.map((line) => ({
@@ -258,21 +440,7 @@ export async function GET(req: NextRequest) {
           reason: adj.reason,
           createdAt: adj.createdAt.toISOString(),
         })),
-        payments: inv.payments.map((payment) => ({
-          id: payment.id,
-          amountPesewas: payment.amountPesewas,
-          method: payment.method,
-          reference: payment.reference,
-          channel: payment.channel,
-          paidAt: payment.paidAt.toISOString(),
-          receipt: payment.receipt
-            ? {
-                id: payment.receipt.id,
-                receiptNumber: payment.receipt.receiptNumber,
-                issuedAt: payment.receipt.issuedAt.toISOString(),
-              }
-            : null,
-        })),
+        payments: paymentDetails,
       };
     });
 
@@ -280,6 +448,9 @@ export async function GET(req: NextRequest) {
       (acc, inv) => {
         acc.totalBilledPesewas += inv.totalBilledPesewas;
         acc.totalWaivedPesewas += inv.totalWaivedPesewas;
+        acc.totalGrossPaidPesewas += inv.totalGrossPaidPesewas;
+        acc.totalRefundedPesewas += inv.totalRefundedPesewas;
+        acc.totalPendingRefundPesewas += inv.totalPendingRefundPesewas;
         acc.totalPaidPesewas += inv.totalPaidPesewas;
         acc.balancePesewas += inv.balancePesewas;
         acc.paymentCount += inv.payments.length;
@@ -288,6 +459,9 @@ export async function GET(req: NextRequest) {
       {
         totalBilledPesewas: 0,
         totalWaivedPesewas: 0,
+        totalGrossPaidPesewas: 0,
+        totalRefundedPesewas: 0,
+        totalPendingRefundPesewas: 0,
         totalPaidPesewas: 0,
         balancePesewas: 0,
         paymentCount: 0,
@@ -307,7 +481,6 @@ export async function GET(req: NextRequest) {
 
     const lastPayment = paymentHistory[0] ?? null;
     const payableInvoice = invoiceDetails.find((inv) => inv.balancePesewas > 0);
-
     const isSettled = totals.balancePesewas <= 0;
 
     return noStore(200, {
@@ -320,6 +493,9 @@ export async function GET(req: NextRequest) {
       summary: {
         totalBilledPesewas: totals.totalBilledPesewas,
         totalWaivedPesewas: totals.totalWaivedPesewas,
+        totalGrossPaidPesewas: totals.totalGrossPaidPesewas,
+        totalRefundedPesewas: totals.totalRefundedPesewas,
+        totalPendingRefundPesewas: totals.totalPendingRefundPesewas,
         totalPaidPesewas: totals.totalPaidPesewas,
         balancePesewas: Math.max(0, totals.balancePesewas),
         invoiceCount: invoiceDetails.length,
@@ -332,6 +508,11 @@ export async function GET(req: NextRequest) {
         note: isSettled
           ? "Fees for this learner are fully settled for the selected term."
           : "A balance remains. You may pay in parts or contact the school for support.",
+      },
+      spendingSummary: {
+        selectedTerm: spendingFromPayments(selectedTermPayments),
+        academicYear: spendingFromPayments(academicYearPayments),
+        lifetime: spendingFromPayments(allStudentPayments),
       },
       invoices: invoiceDetails,
       paymentHistory,

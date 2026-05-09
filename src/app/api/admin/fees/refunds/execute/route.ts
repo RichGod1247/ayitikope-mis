@@ -52,8 +52,11 @@ export async function POST(req: NextRequest) {
 
     const smsDispatch = await runFinanceOutboxWorker({
       workerId: `refund-execute:${refundId}`,
-      limit: 5,
+      limit: 1,
       types: [FinanceOutboxEventType.SMS_REFUND_NOTICE],
+      tenantId: auth.ctx.tenantId,
+      aggregateType: "FeeRefund",
+      aggregateId: refundId,
     });
 
     return json(200, { ok: true, refund, smsDispatch });

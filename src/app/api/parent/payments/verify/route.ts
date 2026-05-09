@@ -99,12 +99,36 @@ async function verifyWithPaystack(reference: string) {
   };
 }
 
-async function drainReceiptSmsOutbox(reference: string) {
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getReceiptIdFromFinalizeResult(result: unknown): string | null {
+  if (!isObject(result)) return null;
+  const receipt = isObject(result.receipt) ? result.receipt : null;
+  return clean(receipt?.id) || null;
+}
+
+async function drainReceiptSmsOutbox(args: {
+  reference: string;
+  receiptId?: string | null;
+}) {
+  const receiptId = clean(args.receiptId);
+
+  if (!receiptId) {
+    return {
+      skipped: true,
+      reason: "RECEIPT_ID_REQUIRED_FOR_SCOPED_SMS_DRAIN",
+    };
+  }
+
   try {
     return await runFinanceOutboxWorker({
-      workerId: `parent-payment-verify:${reference}`,
-      limit: 10,
+      workerId: `parent-payment-verify:${args.reference}`,
+      limit: 1,
       types: [FinanceOutboxEventType.SMS_RECEIPT],
+      aggregateType: "Receipt",
+      aggregateId: receiptId,
     });
   } catch (err) {
     console.error("[PARENT_PAYMENT_VERIFY_SMS_OUTBOX_DRAIN_ERROR]", err);
@@ -267,7 +291,10 @@ async function handleVerify(req: NextRequest, referenceInput: string) {
     signature: "SERVER_SIDE_VERIFY",
   });
 
-  const smsDispatch = await drainReceiptSmsOutbox(reference);
+  const smsDispatch = await drainReceiptSmsOutbox({
+  reference,
+  receiptId: getReceiptIdFromFinalizeResult(result),
+});
 
   return json(200, {
     ok: true,
