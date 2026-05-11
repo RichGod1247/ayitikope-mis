@@ -11,7 +11,10 @@ export const dynamic = "force-dynamic";
 function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
-    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }
 
@@ -22,8 +25,9 @@ function clean(v: unknown) {
 export async function POST(req: NextRequest) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
-    requireRoleNames: ["HEADTEACHER", "ADMIN", "SUPERADMIN"],
+    requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "HEADTEACHER", "SUPERADMIN"],
   });
+
   if (!auth.ok) return auth.res;
 
   const limit = await checkRateLimit({
@@ -34,6 +38,7 @@ export async function POST(req: NextRequest) {
     blockSeconds: 600,
     metadata: { route: "/api/admin/fees/refunds/approve" },
   });
+
   if (!limit.ok) return rateLimitResponse(limit);
 
   const body = (await req.json().catch(() => null)) as {
@@ -42,7 +47,10 @@ export async function POST(req: NextRequest) {
   } | null;
 
   const refundId = clean(body?.refundId);
-  if (!refundId) return json(400, { ok: false, error: "REFUND_ID_REQUIRED" });
+
+  if (!refundId) {
+    return json(400, { ok: false, error: "REFUND_ID_REQUIRED" });
+  }
 
   try {
     const refund = await approveFeeRefund({
@@ -54,7 +62,10 @@ export async function POST(req: NextRequest) {
 
     return json(200, { ok: true, refund });
   } catch (err) {
-    if (err instanceof FinanceError) return json(err.status, { ok: false, error: err.code });
+    if (err instanceof FinanceError) {
+      return json(err.status, { ok: false, error: err.code });
+    }
+
     console.error("[REFUND_APPROVE_ERROR]", err);
     return json(500, { ok: false, error: "FAILED_TO_APPROVE_REFUND" });
   }

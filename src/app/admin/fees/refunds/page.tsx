@@ -117,6 +117,281 @@ function statusClass(status: unknown) {
   return "border-white/10 bg-white/5 text-[#C9CDD6]";
 }
 
+function unwrapRefundDetail(detail: unknown): Record<string, unknown> | null {
+  if (!isRecord(detail)) return null;
+  if (isRecord(detail.refund)) return detail.refund;
+  return detail;
+}
+
+function recordAt(source: Record<string, unknown> | null, key: string) {
+  if (!source) return null;
+  const value = source[key];
+  return isRecord(value) ? value : null;
+}
+
+function stringAt(source: Record<string, unknown> | null, key: string) {
+  if (!source) return "";
+  return clean(source[key]);
+}
+
+function numberAt(source: Record<string, unknown> | null, key: string) {
+  if (!source) return 0;
+  const value = source[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function refundStageExplanation(status: unknown, provider: unknown) {
+  const s = clean(status).toUpperCase();
+  const p = clean(provider).toUpperCase();
+
+  if (s === "REQUESTED") {
+    return "The parent has submitted a refund request. The school must inspect the payment, receipt, learner, reason, and amount before approval.";
+  }
+
+  if (s === "APPROVED") {
+    return "The school has approved this refund request. Money has not necessarily reached the parent yet. The next step is execution.";
+  }
+
+  if (s === "PROCESSING") {
+    return p === "PAYSTACK"
+      ? "The refund has been submitted to Paystack for processing. Final success depends on provider confirmation."
+      : "The refund is being processed by the school finance office.";
+  }
+
+  if (s === "SUCCEEDED") {
+    return "The refund has been completed. Ledger, receipt, payment, and parent-facing records should now reflect the refund.";
+  }
+
+  if (s === "FAILED") {
+    return "The refund attempt failed. The school must inspect the failure reason before retrying or escalating.";
+  }
+
+  if (s === "CANCELLED") {
+    return "The refund request was cancelled and should not be processed unless a new valid request is created.";
+  }
+
+  return "Inspect this refund before taking further action.";
+}
+
+function DetailLine({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: React.ReactNode;
+  strong?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8F98A8]">
+        {label}
+      </p>
+      <div
+        className={`mt-1 text-sm ${
+          strong ? "font-bold text-[#F7F4ED]" : "font-medium text-[#C9CDD6]"
+        }`}
+      >
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
+function HumanRefundDetail({ detail }: { detail: unknown }) {
+  const refund = unwrapRefundDetail(detail);
+
+  if (!refund) {
+    return (
+      <div className="mt-4 rounded-2xl border border-white/10 bg-black/25 p-4 text-sm text-[#9EA7B8]">
+        No refund detail loaded yet. Click <span className="font-semibold">Inspect</span>{" "}
+        on a refund request.
+      </div>
+    );
+  }
+
+  const receipt = recordAt(refund, "receipt");
+  const payment = recordAt(refund, "payment");
+  const invoice = recordAt(refund, "invoice");
+  const student = recordAt(refund, "student");
+  const approvedBy = recordAt(refund, "approvedBy");
+  const metadata = recordAt(refund, "metadata");
+
+  const status = stringAt(refund, "status");
+  const provider = stringAt(refund, "provider");
+  const currency = stringAt(refund, "currency") || "GHS";
+
+  const refundAmount = numberAt(refund, "amountPesewas");
+  const originalPayment = numberAt(payment, "amountPesewas");
+  const availableBefore = numberAt(metadata, "availableBeforePesewas");
+
+  const statusText = clean(status).toUpperCase();
+
+  return (
+    <div className="mt-4 space-y-4">
+      <div className={`rounded-2xl border px-4 py-4 ${statusClass(status)}`}>
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] opacity-80">
+              Current Refund Stage
+            </p>
+            <h3 className="mt-1 text-lg font-black">
+              {statusText || "UNKNOWN"} · {formatMoney(refundAmount, currency)}
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 opacity-90">
+              {refundStageExplanation(status, provider)}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/15 bg-black/15 px-3 py-2 text-xs font-bold">
+            {provider || "MANUAL"}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <DetailLine
+          label="Learner"
+          value={
+            <>
+              <span className="block">{stringAt(student, "name") || "Student"}</span>
+              <span className="mt-0.5 block text-xs text-[#8F98A8]">
+                Class: {stringAt(student, "classLabel") || "—"}
+              </span>
+            </>
+          }
+          strong
+        />
+
+        <DetailLine
+          label="Parent / Guardian"
+          value={
+            <>
+              <span className="block">
+                {stringAt(student, "guardianName") || "Guardian name not captured"}
+              </span>
+              <span className="mt-0.5 block text-xs text-[#8F98A8]">
+                {stringAt(student, "guardianPhoneNorm") ||
+                  stringAt(student, "guardianPhone") ||
+                  stringAt(receipt, "issuedToPhone") ||
+                  "Phone unavailable"}
+              </span>
+            </>
+          }
+        />
+
+        <DetailLine
+          label="Reason Given"
+          value={stringAt(refund, "reason") || "No reason provided"}
+          strong
+        />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <DetailLine
+          label="Refund Requested"
+          value={formatMoney(refundAmount, currency)}
+          strong
+        />
+        <DetailLine
+          label="Original Payment"
+          value={formatMoney(originalPayment, currency)}
+        />
+        <DetailLine
+          label="Available Before Request"
+          value={formatMoney(availableBefore, currency)}
+        />
+        <DetailLine
+          label="Payment Channel"
+          value={
+            <>
+              <span className="block">{stringAt(payment, "method") || "payment"}</span>
+              <span className="mt-0.5 block text-xs text-[#8F98A8]">
+                {stringAt(payment, "channel") || "channel not captured"}
+              </span>
+            </>
+          }
+        />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <DetailLine
+          label="Receipt Evidence"
+          value={
+            <>
+              <span className="block">
+                {stringAt(receipt, "receiptNumber") || "Receipt unavailable"}
+              </span>
+              <span className="mt-0.5 block text-xs text-[#8F98A8]">
+                Issued: {formatDate(stringAt(receipt, "issuedAt"))}
+              </span>
+              <span className="mt-0.5 block text-xs text-[#8F98A8]">
+                Receipt status: {stringAt(receipt, "status") || "—"}
+              </span>
+            </>
+          }
+        />
+
+        <DetailLine
+          label="Payment Reference"
+          value={
+            <>
+              <span className="block break-all font-mono text-xs">
+                {stringAt(payment, "reference") ||
+                  stringAt(refund, "providerReference") ||
+                  "Reference unavailable"}
+              </span>
+              <span className="mt-0.5 block text-xs text-[#8F98A8]">
+                Paid: {formatDate(stringAt(payment, "paidAt"))}
+              </span>
+            </>
+          }
+        />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <DetailLine
+          label="Invoice Term"
+          value={`${stringAt(invoice, "term") || "—"} · ${
+            stringAt(invoice, "academicYear") || "—"
+          }`}
+        />
+        <DetailLine
+          label="Invoice Balance"
+          value={formatMoney(numberAt(invoice, "balancePesewas"), currency)}
+        />
+        <DetailLine
+          label="Approved By"
+          value={
+            stringAt(approvedBy, "name") ||
+            stringAt(approvedBy, "email") ||
+            "Not approved yet"
+          }
+        />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <DetailLine label="Requested At" value={formatDate(stringAt(refund, "requestedAt"))} />
+        <DetailLine label="Approved At" value={formatDate(stringAt(refund, "approvedAt"))} />
+        <DetailLine label="Processing At" value={formatDate(stringAt(refund, "processingAt"))} />
+        <DetailLine label="Processed At" value={formatDate(stringAt(refund, "processedAt"))} />
+      </div>
+
+      {(stringAt(refund, "failureReason") || stringAt(refund, "cancellationReason")) && (
+        <div className="rounded-2xl border border-rose-400/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em]">
+            Attention Required
+          </p>
+          <p className="mt-1">
+            {stringAt(refund, "failureReason") || stringAt(refund, "cancellationReason")}
+          </p>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 async function readJson(res: Response) {
   const payload = await res.json().catch(() => null);
 
@@ -293,6 +568,35 @@ export default function AdminRefundsPage() {
       setAction({
         kind: "error",
         message: err instanceof Error ? err.message : "FAILED_TO_EXECUTE_REFUND",
+      });
+    }
+  }
+
+    async function syncRefund(refundId: string) {
+    const id = clean(refundId);
+    if (!id) return;
+
+    setAction({
+      kind: "idle",
+      message: "Syncing refund status from Paystack...",
+    });
+
+    try {
+      const payload = await postJson("/api/admin/fees/refunds/sync", {
+        refundId: id,
+      });
+
+      setDetail(payload);
+      setAction({
+        kind: "success",
+        message: "Refund status synced from Paystack successfully.",
+      });
+
+      await loadRefunds();
+    } catch (err) {
+      setAction({
+        kind: "error",
+        message: err instanceof Error ? err.message : "FAILED_TO_SYNC_REFUND",
       });
     }
   }
@@ -508,9 +812,11 @@ export default function AdminRefundsPage() {
                   </tr>
                 ) : visibleRefunds.length ? (
                   visibleRefunds.map((refund) => {
-                    const status = clean(refund.status).toUpperCase();
+                                        const status = clean(refund.status).toUpperCase();
+                    const provider = clean(refund.provider).toUpperCase();
                     const canApprove = status === "REQUESTED";
                     const canExecute = status === "APPROVED";
+                    const canSync = status === "PROCESSING" && provider === "PAYSTACK";
 
                     return (
                       <tr key={refund.id} className="align-top hover:bg-white/[0.025]">
@@ -585,14 +891,24 @@ export default function AdminRefundsPage() {
                               Approve
                             </button>
 
-                            <button
-                              type="button"
-                              disabled={!canExecute}
-                              onClick={() => void executeRefund(refund.id)}
-                              className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-35"
-                            >
-                              Execute
-                            </button>
+                                                        {canSync ? (
+                              <button
+                                type="button"
+                                onClick={() => void syncRefund(refund.id)}
+                                className="rounded-xl border border-amber-300/25 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-400/15"
+                              >
+                                Sync Paystack
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={!canExecute}
+                                onClick={() => void executeRefund(refund.id)}
+                                className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-35"
+                              >
+                                Execute
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -612,32 +928,30 @@ export default function AdminRefundsPage() {
       </section>
 
       <section className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-5">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#E8C96A]">
-              Evidence Panel
-            </p>
-            <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">
-              Last API Response {selectedRefundId ? `· ${shortId(selectedRefundId)}` : ""}
-            </h2>
-            <p className="mt-2 text-sm text-[#9EA7B8]">
-              Use this response while filling the Sprint 9 finance trust test log.
-            </p>
-          </div>
+  <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#E8C96A]">
+        Evidence Panel
+      </p>
+      <h2 className="mt-1 text-lg font-bold text-[#F7F4ED]">
+        Refund Request Detail {selectedRefundId ? `· ${shortId(selectedRefundId)}` : ""}
+      </h2>
+      <p className="mt-2 text-sm text-[#9EA7B8]">
+        Human-readable refund evidence for approval, execution, audit, and parent trust.
+      </p>
+    </div>
 
-          <button
-            type="button"
-            onClick={() => setDetail(null)}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-[#F7F4ED] hover:bg-white/10"
-          >
-            Clear
-          </button>
-        </div>
+    <button
+      type="button"
+      onClick={() => setDetail(null)}
+      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-[#F7F4ED] hover:bg-white/10"
+    >
+      Clear
+    </button>
+  </div>
 
-        <pre className="mt-4 max-h-[440px] overflow-auto rounded-2xl border border-white/10 bg-black/35 p-4 text-xs leading-5 text-[#C9CDD6]">
-          {detail ? JSON.stringify(detail, null, 2) : "No action response yet."}
-        </pre>
-      </section>
+  <HumanRefundDetail detail={detail} />
+</section>
     </div>
   );
 }

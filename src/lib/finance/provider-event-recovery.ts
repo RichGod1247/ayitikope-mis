@@ -1,21 +1,21 @@
 // src/lib/finance/provider-event-recovery.ts
-import { PaymentProvider, Prisma, ProviderEventStatus } from "@prisma/client";
+import {
+  PaymentProvider,
+  ProviderEventStatus,
+  type Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { finalizePaystackChargeSuccess } from "@/lib/finance/core";
+import { applyPaystackRefundStatus } from "@/lib/finance/refunds";
 
-type ReprocessResult =
-  | {
-      ok: true;
-      eventId: string;
-      alreadyProcessed?: boolean;
-      result?: unknown;
-    }
-  | {
-      ok: true;
-      eventId: string;
-      skipped: true;
-      reason: string;
-    };
+type ReprocessResult = {
+  ok: true;
+  eventId: string;
+  alreadyProcessed?: boolean;
+  skipped?: boolean;
+  reason?: string;
+  result?: unknown;
+};
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
@@ -33,7 +33,9 @@ function toInputJson(value: unknown): Prisma.InputJsonValue {
   }
 }
 
-function extractWebhookPayload(rawPayload: unknown): Record<string, unknown> | null {
+function extractWebhookPayload(
+  rawPayload: unknown
+): Record<string, unknown> | null {
   if (!isRecord(rawPayload)) return null;
 
   if (isRecord(rawPayload.webhook)) return rawPayload.webhook;
@@ -44,6 +46,13 @@ function extractWebhookPayload(rawPayload: unknown): Record<string, unknown> | n
 
   return null;
 }
+
+const REFUND_EVENTS = new Set([
+  "refund.pending",
+  "refund.processing",
+  "refund.processed",
+  "refund.failed",
+]);
 
 async function verifyPaystackReference(reference: string) {
   const secret = process.env.PAYSTACK_SECRET_KEY?.trim();
@@ -67,7 +76,9 @@ async function verifyPaystackReference(reference: string) {
   }
 
   const res = await fetch(
-    `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+    `https://api.paystack.co/transaction/verify/${encodeURIComponent(
+      reference
+    )}`,
     {
       method: "GET",
       headers: {
@@ -149,6 +160,79 @@ export async function reprocessPaymentProviderEvent(input: {
   }
 
   if (event.eventType !== "charge.success") {
+    if (REFUND_EVENTS.has(event.eventType)) {
+      const webhookPayload = extractWebhookPayload(event.rawPayload);
+
+      if (!webhookPayload || !isRecord(webhookPayload.data)) {
+        await prisma.paymentProviderEvent.update({
+          where: { id: event.id },
+          data: {
+            processingStatus: ProviderEventStatus.FAILED,
+            processingError: "REFUND_WEBHOOK_PAYLOAD_INVALID",
+            processedAt: new Date(),
+          },
+        });
+
+        return {
+          ok: true,
+          eventId: event.id,
+          skipped: true,
+          reason: "REFUND_WEBHOOK_PAYLOAD_INVALID",
+        };
+      }
+
+      const result = await applyPaystackRefundStatus({
+        eventType: event.eventType,
+        data: webhookPayload.data,
+        rawPayload: webhookPayload,
+        signature: event.signature,
+        actorUserId: input.actorUserId ?? null,
+      });
+
+      const skipped =
+        isRecord(result) &&
+        "skipped" in result &&
+        Boolean(result.skipped);
+
+      const reason = skipped
+        ? clean((result as { reason?: unknown }).reason) ||
+          "REFUND_REPROCESS_SKIPPED"
+        : null;
+
+      await prisma.paymentProviderEvent.update({
+        where: { id: event.id },
+        data: {
+          processingStatus: skipped
+            ? ProviderEventStatus.FAILED
+            : ProviderEventStatus.PROCESSED,
+          processingError: reason,
+          processedAt: new Date(),
+          rawPayload: toInputJson({
+            original: event.rawPayload,
+            recoveryResult: result,
+            recoveredByUserId: input.actorUserId ?? null,
+          }),
+        },
+      });
+
+      if (skipped) {
+        return {
+          ok: true,
+          eventId: event.id,
+          skipped: true,
+          reason: reason ?? "REFUND_REPROCESS_SKIPPED",
+          result,
+        };
+      }
+
+      return {
+        ok: true,
+        eventId: event.id,
+        skipped: false,
+        result,
+      };
+    }
+
     await prisma.paymentProviderEvent.update({
       where: { id: event.id },
       data: {
@@ -201,6 +285,7 @@ export async function reprocessPaymentProviderEvent(input: {
       data: {
         processingStatus: ProviderEventStatus.FAILED,
         processingError: `PAYSTACK_VERIFY_FAILED_${verified.status}`,
+        processedAt: new Date(),
         rawPayload: toInputJson({
           original: event.rawPayload,
           recoveryVerification: verified.raw,
@@ -294,6 +379,7 @@ export async function reprocessPaymentProviderEvent(input: {
   return {
     ok: true,
     eventId: event.id,
+    skipped: false,
     result,
   };
 }

@@ -1,5 +1,6 @@
 // src/app/api/parent/receipts/[receiptId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { PaymentStatus, RefundStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 
@@ -40,6 +41,30 @@ function parentOwnsStudent(input: {
   );
 }
 
+function toIso(value?: Date | null) {
+  return value ? value.toISOString() : null;
+}
+
+function computedReceiptStatus(input: {
+  storedStatus: string | null;
+  paymentAmountPesewas: number;
+  succeededRefundPesewas: number;
+}) {
+  const stored = String(input.storedStatus ?? "").trim();
+
+  if (input.paymentAmountPesewas > 0) {
+    if (input.succeededRefundPesewas >= input.paymentAmountPesewas) {
+      return "REFUNDED";
+    }
+
+    if (input.succeededRefundPesewas > 0) {
+      return "PARTIALLY_REFUNDED";
+    }
+  }
+
+  return stored || "ISSUED";
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ receiptId: string }> }
@@ -53,7 +78,6 @@ export async function GET(
 
     const sess = gate.session;
     const tenantId = sess.tenantId;
-
     const { receiptId } = await params;
 
     if (!receiptId?.trim()) {
@@ -71,11 +95,14 @@ export async function GET(
         invoiceId: true,
         feePaymentId: true,
         receiptNumber: true,
+        status: true,
         issuedAt: true,
         issuedToName: true,
         issuedToPhone: true,
         note: true,
         createdAt: true,
+        reversedAt: true,
+        reversalReason: true,
         feePayment: {
           select: {
             id: true,
@@ -83,6 +110,7 @@ export async function GET(
             method: true,
             reference: true,
             channel: true,
+            status: true,
             paidAt: true,
             paymentTransaction: {
               select: {
@@ -168,21 +196,91 @@ export async function GET(
       return noStore(403, { ok: false, error: "FORBIDDEN_RECEIPT" });
     }
 
-    const totalPaidAgg = await prisma.feePayment.aggregate({
+    const paymentId = receipt.feePayment?.id ?? receipt.feePaymentId;
+    const originalPaymentPesewas = receipt.feePayment?.amountPesewas ?? 0;
+
+    const refundRows = await prisma.feeRefund.findMany({
+      where: {
+        tenantId,
+        OR: [{ feePaymentId: paymentId }, { receiptId: receipt.id }],
+      },
+      select: {
+        id: true,
+        amountPesewas: true,
+        currency: true,
+        status: true,
+        provider: true,
+        providerReference: true,
+        providerRefundReference: true,
+        reason: true,
+        requestedAt: true,
+        approvedAt: true,
+        processingAt: true,
+        processedAt: true,
+        failedAt: true,
+        cancelledAt: true,
+        failureReason: true,
+        cancellationReason: true,
+      },
+      orderBy: [{ requestedAt: "desc" }, { createdAt: "desc" }],
+    });
+
+    const succeededRefundPesewas = refundRows
+      .filter((r) => r.status === RefundStatus.SUCCEEDED)
+      .reduce((sum, r) => sum + r.amountPesewas, 0);
+
+    const pendingRefundStatuses: ReadonlySet<RefundStatus> = new Set([
+  RefundStatus.REQUESTED,
+  RefundStatus.APPROVED,
+  RefundStatus.PROCESSING,
+]);
+
+const failedOrCancelledRefundStatuses: ReadonlySet<RefundStatus> = new Set([
+  RefundStatus.FAILED,
+  RefundStatus.CANCELLED,
+]);
+
+const pendingRefundPesewas = refundRows
+  .filter((r) => pendingRefundStatuses.has(r.status))
+  .reduce((sum, r) => sum + r.amountPesewas, 0);
+
+const failedOrCancelledRefundPesewas = refundRows
+  .filter((r) => failedOrCancelledRefundStatuses.has(r.status))
+  .reduce((sum, r) => sum + r.amountPesewas, 0);
+
+    const invoiceGrossPaidAgg = await prisma.feePayment.aggregate({
       where: {
         tenantId,
         invoiceId: receipt.invoiceId,
-        status: "SUCCESS",
+        status: {
+          in: [PaymentStatus.SUCCESS, PaymentStatus.REFUNDED],
+        },
       },
-      _sum: {
-        amountPesewas: true,
-      },
+      _sum: { amountPesewas: true },
     });
 
-    const totalPaidPesewas = totalPaidAgg._sum.amountPesewas ?? 0;
+    const invoiceRefundedAgg = await prisma.feeRefund.aggregate({
+      where: {
+        tenantId,
+        status: RefundStatus.SUCCEEDED,
+        feePayment: {
+          invoiceId: receipt.invoiceId,
+        },
+      },
+      _sum: { amountPesewas: true },
+    });
+
+    const invoiceGrossPaidPesewas = invoiceGrossPaidAgg._sum.amountPesewas ?? 0;
+    const invoiceRefundedPesewas = invoiceRefundedAgg._sum.amountPesewas ?? 0;
+    const invoiceNetPaidPesewas = Math.max(
+      0,
+      invoiceGrossPaidPesewas - invoiceRefundedPesewas
+    );
+
     const billed = receipt.invoice.totalBilledPesewas ?? 0;
     const waived = receipt.invoice.totalWaivedPesewas ?? 0;
-    const outstandingPesewas = Math.max(0, billed - waived - totalPaidPesewas);
+    const netBilledPesewas = Math.max(0, billed - waived);
+    const outstandingPesewas = Math.max(0, netBilledPesewas - invoiceNetPaidPesewas);
 
     const issuedByName =
       fullName(receipt.issuedBy?.firstName, receipt.issuedBy?.lastName) ||
@@ -197,28 +295,83 @@ export async function GET(
 
     const learnerName = fullName(student.firstName, student.lastName) || "Student";
 
+    const netReceiptPaymentPesewas = Math.max(
+      0,
+      originalPaymentPesewas - succeededRefundPesewas
+    );
+
+    const refundableRemainingPesewas = Math.max(
+      0,
+      originalPaymentPesewas - succeededRefundPesewas - pendingRefundPesewas
+    );
+
+    const receiptTruthStatus = computedReceiptStatus({
+      storedStatus: receipt.status,
+      paymentAmountPesewas: originalPaymentPesewas,
+      succeededRefundPesewas,
+    });
+
     return noStore(200, {
       ok: true,
       receipt: {
         id: receipt.id,
         receiptNumber: receipt.receiptNumber,
+        status: receipt.status,
+        computedStatus: receiptTruthStatus,
         issuedAt: receipt.issuedAt.toISOString(),
         issuedToName: receipt.issuedToName,
         issuedToPhone: receipt.issuedToPhone,
         note: receipt.note,
+        reversedAt: toIso(receipt.reversedAt),
+        reversalReason: receipt.reversalReason,
+
         payment: {
           id: receipt.feePayment?.id ?? null,
-          amountPesewas: receipt.feePayment?.amountPesewas ?? 0,
+          amountPesewas: originalPaymentPesewas,
+          grossAmountPesewas: originalPaymentPesewas,
+          netAmountPesewas: netReceiptPaymentPesewas,
+          succeededRefundPesewas,
+          pendingRefundPesewas,
+          refundableRemainingPesewas,
           method: receipt.feePayment?.method ?? null,
           reference: receipt.feePayment?.reference ?? null,
           channel: receipt.feePayment?.channel ?? null,
-          paidAt: receipt.feePayment?.paidAt?.toISOString() ?? null,
+          status: receipt.feePayment?.status ?? null,
+          paidAt: toIso(receipt.feePayment?.paidAt ?? null),
           provider: receipt.feePayment?.paymentTransaction?.provider ?? null,
           providerReference:
             receipt.feePayment?.paymentTransaction?.providerReference ?? null,
           providerTransactionId:
             receipt.feePayment?.paymentTransaction?.providerTransactionId ?? null,
         },
+
+        refund: {
+          succeededRefundPesewas,
+          pendingRefundPesewas,
+          failedOrCancelledRefundPesewas,
+          netPaidPesewas: netReceiptPaymentPesewas,
+          refundableRemainingPesewas,
+          computedReceiptStatus: receiptTruthStatus,
+          items: refundRows.map((r) => ({
+            id: r.id,
+            amountPesewas: r.amountPesewas,
+            currency: r.currency,
+            status: r.status,
+            provider: r.provider,
+            providerReference: r.providerReference,
+            providerRefundReference: r.providerRefundReference,
+            reason: r.reason,
+            requestedAt: r.requestedAt.toISOString(),
+            approvedAt: toIso(r.approvedAt),
+            processingAt: toIso(r.processingAt),
+            processedAt: toIso(r.processedAt),
+            failedAt: toIso(r.failedAt),
+            cancelledAt: toIso(r.cancelledAt),
+            failureReason: r.failureReason,
+            cancellationReason: r.cancellationReason,
+          })),
+        },
+
         invoice: {
           id: receipt.invoice.id,
           term: receipt.invoice.term,
@@ -226,8 +379,12 @@ export async function GET(
           status: receipt.invoice.status,
           totalBilledPesewas: billed,
           totalWaivedPesewas: waived,
-          totalPaidPesewas,
+          grossPaidPesewas: invoiceGrossPaidPesewas,
+          refundedPesewas: invoiceRefundedPesewas,
+          totalPaidPesewas: invoiceNetPaidPesewas,
           outstandingPesewas,
+          storedTotalPaidPesewas: receipt.invoice.totalPaidPesewas,
+          storedBalancePesewas: receipt.invoice.balancePesewas,
           lines: receipt.invoice.lines.map((line) => ({
             id: line.id,
             category: line.category,
@@ -236,18 +393,21 @@ export async function GET(
             waivedPesewas: line.waivedPesewas,
           })),
         },
+
         student: {
           id: student.id,
           name: learnerName,
           guardianName: student.guardianName ?? null,
           classLabel,
         },
+
         school: {
           name: receipt.tenant.name,
           schoolCode: receipt.tenant.schoolCode,
           contactEmail: receipt.tenant.contactEmail,
           contactPhone: receipt.tenant.contactPhone,
         },
+
         issuedByName,
       },
     });

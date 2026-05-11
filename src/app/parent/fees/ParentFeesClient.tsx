@@ -189,11 +189,11 @@ function refundStatusLabel(status: string) {
   const s = status.toUpperCase();
 
   const map: Record<string, string> = {
-    REQUESTED: "Requested",
-    APPROVED: "Approved",
-    PROCESSING: "Processing",
-    SUCCEEDED: "Refunded",
-    FAILED: "Failed",
+    REQUESTED: "Requested — school review pending",
+    APPROVED: "Approved by school — awaiting refund processing",
+    PROCESSING: "Processing — sent for refund",
+    SUCCEEDED: "Refund paid",
+    FAILED: "Refund failed — contact school",
     CANCELLED: "Cancelled",
   };
 

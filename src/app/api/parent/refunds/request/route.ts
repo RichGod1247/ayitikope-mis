@@ -6,6 +6,8 @@ import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 import { requestFeeRefund } from "@/lib/finance/refunds";
 import { FinanceError } from "@/lib/finance/core";
 import { checkRateLimit, getClientIp, rateLimitResponse } from "@/lib/rate-limit";
+import { FinanceOutboxEventType } from "@prisma/client";
+import { runFinanceOutboxWorker } from "@/lib/finance/outbox-worker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -213,27 +215,36 @@ export async function POST(req: NextRequest) {
         .digest("hex");
 
     const refund = await requestFeeRefund({
-      tenantId,
-      feePaymentId: payment.id,
-      amountPesewas,
-      reason,
-      requestedByUserId: null,
-      idempotencyKey,
-      metadata: {
-        refundRequestSource: "parent_portal",
-        parentGuardianPhoneE164: parentE164 || null,
-        parentGuardianSuffix9: parentSuffix9 || null,
-        studentId: student.id,
-        studentName: fullName(student.firstName, student.lastName),
-        invoiceId: payment.invoice.id,
-        term: payment.invoice.term,
-        academicYear: payment.invoice.academicYear,
-        receiptId: payment.receipt.id,
-        receiptNumber: payment.receipt.receiptNumber,
-      },
-    });
+  tenantId,
+  feePaymentId: payment.id,
+  amountPesewas,
+  reason,
+  requestedByUserId: null,
+  idempotencyKey,
+  metadata: {
+    refundRequestSource: "parent_portal",
+    parentGuardianPhoneE164: parentE164 || null,
+    parentGuardianSuffix9: parentSuffix9 || null,
+    studentId: student.id,
+    studentName: fullName(student.firstName, student.lastName),
+    invoiceId: payment.invoice.id,
+    term: payment.invoice.term,
+    academicYear: payment.invoice.academicYear,
+    receiptId: payment.receipt.id,
+    receiptNumber: payment.receipt.receiptNumber,
+  },
+});
 
-    return json(201, { ok: true, refund });
+const smsDispatch = await runFinanceOutboxWorker({
+  workerId: `parent-refund-request:${refund.id}`,
+  limit: 1,
+  types: [FinanceOutboxEventType.SMS_REFUND_NOTICE],
+  tenantId,
+  aggregateType: "FeeRefund",
+  aggregateId: refund.id,
+});
+
+return json(201, { ok: true, refund, smsDispatch });
   } catch (err) {
     if (err instanceof FinanceError) {
       return json(err.status, { ok: false, error: err.code });

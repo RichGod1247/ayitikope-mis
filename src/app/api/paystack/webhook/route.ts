@@ -13,6 +13,7 @@ import {
   recordProviderEventOnly,
 } from "@/lib/finance/core";
 import { runFinanceOutboxWorker } from "@/lib/finance/outbox-worker";
+import { applyPaystackRefundStatus } from "@/lib/finance/refunds";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,6 +22,13 @@ const TRANSFER_EVENTS = new Set([
   "transfer.success",
   "transfer.failed",
   "transfer.reversed",
+]);
+
+const REFUND_EVENTS = new Set([
+  "refund.pending",
+  "refund.processing",
+  "refund.processed",
+  "refund.failed",
 ]);
 
 const WEBHOOK_MAX_EVENT_AGE_MINUTES = Number.parseInt(
@@ -738,22 +746,52 @@ export async function POST(req: NextRequest) {
     return result instanceof NextResponse ? result : json(200, result);
   }
 
-  if (eventType !== "charge.success") {
-    await recordProviderEventOnly({
-      eventType: eventType || "UNKNOWN_EVENT",
-      providerReference,
-      signature,
-      rawPayload: event,
-      processingStatus: "IGNORED",
-      providerEventId,
-      eventTime,
-    });
+  if (REFUND_EVENTS.has(eventType)) {
+  const result = await applyPaystackRefundStatus({
+    eventType,
+    data,
+    rawPayload: event,
+    signature,
+  });
 
-    return json(200, {
-      ok: true,
-      message: `Event '${eventType || "UNKNOWN_EVENT"}' acknowledged`,
-    });
-  }
+  const refundId =
+    isObject(result) && "refundId" in result ? clean(result.refundId) : null;
+  const tenantId =
+    isObject(result) && "tenantId" in result ? clean(result.tenantId) : null;
+
+  const smsDispatch = refundId
+    ? await runFinanceOutboxWorker({
+        workerId: `paystack-refund-webhook:${refundId}`,
+        limit: 2,
+        types: [FinanceOutboxEventType.SMS_REFUND_NOTICE],
+        tenantId: tenantId || undefined,
+        aggregateType: "FeeRefund",
+        aggregateId: refundId,
+      })
+    : { skipped: true, reason: "REFUND_ID_NOT_RETURNED" };
+
+  return json(200, {
+    ...result,
+    smsDispatch,
+  });
+}
+
+if (eventType !== "charge.success") {
+  await recordProviderEventOnly({
+    eventType: eventType || "UNKNOWN_EVENT",
+    providerReference,
+    signature,
+    rawPayload: event,
+    processingStatus: "IGNORED",
+    providerEventId,
+    eventTime,
+  });
+
+  return json(200, {
+    ok: true,
+    message: `Event '${eventType || "UNKNOWN_EVENT"}' acknowledged`,
+  });
+}
 
   if (!providerReference) {
     await recordProviderEventOnly({
