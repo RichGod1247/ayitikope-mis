@@ -1,13 +1,16 @@
 // src/app/api/admin/fees/reconciliation/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { requireApiUserContext } from "@/lib/serverAuth";
-import type {
+import {
   PaymentProvider,
+  PaymentStatus,
   ReconciliationExceptionKind,
   ReconciliationSeverity,
   ReconciliationStatus,
+  RefundStatus,
+  type Prisma,
 } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { requireApiUserContext } from "@/lib/serverAuth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,6 +69,10 @@ function studentName(student?: { firstName: string | null; lastName: string | nu
   return [student?.firstName, student?.lastName].filter(Boolean).join(" ").trim() || "Unknown";
 }
 
+function isSuccessfulOrRefundedPayment(status: PaymentStatus) {
+  return status === PaymentStatus.SUCCESS || status === PaymentStatus.REFUNDED;
+}
+
 function addIssue(
   issues: Issue[],
   issue: Omit<
@@ -107,12 +114,7 @@ async function analyzeTenantFinance(input: {
   const academicYear = clean(input.academicYear) || null;
   const limit = clampLimit(input.limit);
 
-  const invoiceWhere: {
-    tenantId: string;
-    term?: string;
-    academicYear?: string;
-  } = { tenantId };
-
+  const invoiceWhere: Prisma.FeeInvoiceWhereInput = { tenantId };
   if (term) invoiceWhere.term = term;
   if (academicYear) invoiceWhere.academicYear = academicYear;
 
@@ -134,11 +136,11 @@ async function analyzeTenantFinance(input: {
           status: true,
           reference: true,
           refunds: {
-            where: { status: "SUCCEEDED" },
             select: {
               id: true,
               amountPesewas: true,
               status: true,
+              providerRefundReference: true,
             },
           },
         },
@@ -178,14 +180,34 @@ async function analyzeTenantFinance(input: {
     const name = studentName(inv.student);
 
     const successfulPayments = inv.payments.filter((p) =>
-      ["SUCCESS", "REFUNDED"].includes(p.status)
+      isSuccessfulOrRefundedPayment(p.status)
     );
 
     const grossPaymentTotal = successfulPayments.reduce((s, p) => s + p.amountPesewas, 0);
+
     const succeededRefundTotal = successfulPayments.reduce(
-      (s, p) => s + p.refunds.reduce((rs, r) => rs + r.amountPesewas, 0),
+      (s, p) =>
+        s +
+        p.refunds
+          .filter((r) => r.status === RefundStatus.SUCCEEDED)
+          .reduce((rs, r) => rs + r.amountPesewas, 0),
       0
     );
+
+    const pendingRefundTotal = successfulPayments.reduce(
+      (s, p) =>
+        s +
+        p.refunds
+          .filter(
+            (r) =>
+              r.status === RefundStatus.REQUESTED ||
+              r.status === RefundStatus.APPROVED ||
+              r.status === RefundStatus.PROCESSING
+          )
+          .reduce((rs, r) => rs + r.amountPesewas, 0),
+      0
+    );
+
     const netPaymentTotal = Math.max(0, grossPaymentTotal - succeededRefundTotal);
 
     const paymentCreditTotal = inv.ledgerEntries
@@ -208,8 +230,8 @@ async function analyzeTenantFinance(input: {
 
     if (inv.totalPaidPesewas !== netPaymentTotal) {
       addIssue(issues, {
-        kind: "AMOUNT_MISMATCH",
-        severity: "HIGH",
+        kind: ReconciliationExceptionKind.AMOUNT_MISMATCH,
+        severity: ReconciliationSeverity.HIGH,
         invoiceId: inv.id,
         studentName: name,
         term: inv.term,
@@ -224,8 +246,8 @@ async function analyzeTenantFinance(input: {
 
     if (inv.balancePesewas !== expectedBalance) {
       addIssue(issues, {
-        kind: "AMOUNT_MISMATCH",
-        severity: "HIGH",
+        kind: ReconciliationExceptionKind.AMOUNT_MISMATCH,
+        severity: ReconciliationSeverity.HIGH,
         invoiceId: inv.id,
         studentName: name,
         term: inv.term,
@@ -234,14 +256,14 @@ async function analyzeTenantFinance(input: {
         actualPesewas: inv.balancePesewas,
         deltaPesewas: inv.balancePesewas - expectedBalance,
         description:
-          "Invoice balance does not equal net billed minus net paid after refunds.",
+          "Invoice balance does not equal net billed minus net paid after succeeded refunds.",
       });
     }
 
     if (paymentCreditTotal !== grossPaymentTotal) {
       addIssue(issues, {
-        kind: "MISSING_LEDGER_ENTRY",
-        severity: "CRITICAL",
+        kind: ReconciliationExceptionKind.MISSING_LEDGER_ENTRY,
+        severity: ReconciliationSeverity.CRITICAL,
         invoiceId: inv.id,
         studentName: name,
         term: inv.term,
@@ -256,8 +278,8 @@ async function analyzeTenantFinance(input: {
 
     if (refundLedgerTotal !== succeededRefundTotal) {
       addIssue(issues, {
-        kind: "MISSING_LEDGER_ENTRY",
-        severity: "CRITICAL",
+        kind: ReconciliationExceptionKind.REFUND_WITHOUT_LEDGER_ENTRY,
+        severity: ReconciliationSeverity.CRITICAL,
         invoiceId: inv.id,
         studentName: name,
         term: inv.term,
@@ -272,8 +294,8 @@ async function analyzeTenantFinance(input: {
 
     if (ledgerNetTotal !== netPaymentTotal) {
       addIssue(issues, {
-        kind: "AMOUNT_MISMATCH",
-        severity: "CRITICAL",
+        kind: ReconciliationExceptionKind.REFUND_AMOUNT_MISMATCH,
+        severity: ReconciliationSeverity.CRITICAL,
         invoiceId: inv.id,
         studentName: name,
         term: inv.term,
@@ -282,14 +304,14 @@ async function analyzeTenantFinance(input: {
         actualPesewas: ledgerNetTotal,
         deltaPesewas: netPaymentTotal - ledgerNetTotal,
         description:
-          "Ledger net does not equal payment net after refunds.",
+          "Ledger net does not equal gross payments minus succeeded refunds.",
       });
     }
 
     if (netPaymentTotal > netBilled) {
       addIssue(issues, {
-        kind: "OVERPAYMENT",
-        severity: "HIGH",
+        kind: ReconciliationExceptionKind.OVERPAYMENT,
+        severity: ReconciliationSeverity.HIGH,
         invoiceId: inv.id,
         studentName: name,
         term: inv.term,
@@ -301,14 +323,30 @@ async function analyzeTenantFinance(input: {
       });
     }
 
+    if (pendingRefundTotal > 0 && netPaymentTotal - pendingRefundTotal < 0) {
+      addIssue(issues, {
+        kind: ReconciliationExceptionKind.REFUND_AMOUNT_MISMATCH,
+        severity: ReconciliationSeverity.HIGH,
+        invoiceId: inv.id,
+        studentName: name,
+        term: inv.term,
+        academicYear: inv.academicYear,
+        expectedPesewas: netPaymentTotal,
+        actualPesewas: pendingRefundTotal,
+        deltaPesewas: pendingRefundTotal - netPaymentTotal,
+        description:
+          "Pending refunds exceed currently retained net payment value.",
+      });
+    }
+
     const receiptByPaymentId = new Map(inv.receipts.map((r) => [r.feePaymentId, r]));
     const paymentIds = new Set(inv.payments.map((p) => p.id));
 
     for (const payment of successfulPayments) {
       if (!receiptByPaymentId.has(payment.id)) {
         addIssue(issues, {
-          kind: "PAYMENT_WITHOUT_RECEIPT",
-          severity: "CRITICAL",
+          kind: ReconciliationExceptionKind.PAYMENT_WITHOUT_RECEIPT,
+          severity: ReconciliationSeverity.CRITICAL,
           invoiceId: inv.id,
           studentName: name,
           term: inv.term,
@@ -332,8 +370,8 @@ async function analyzeTenantFinance(input: {
 
       if (perPaymentLedgerTotal !== payment.amountPesewas) {
         addIssue(issues, {
-          kind: "MISSING_LEDGER_ENTRY",
-          severity: "CRITICAL",
+          kind: ReconciliationExceptionKind.MISSING_LEDGER_ENTRY,
+          severity: ReconciliationSeverity.CRITICAL,
           invoiceId: inv.id,
           studentName: name,
           term: inv.term,
@@ -346,7 +384,7 @@ async function analyzeTenantFinance(input: {
         });
       }
 
-      for (const refund of payment.refunds) {
+      for (const refund of payment.refunds.filter((r) => r.status === RefundStatus.SUCCEEDED)) {
         const perRefundLedgerTotal = inv.ledgerEntries
           .filter(
             (e) =>
@@ -358,8 +396,8 @@ async function analyzeTenantFinance(input: {
 
         if (perRefundLedgerTotal !== refund.amountPesewas) {
           addIssue(issues, {
-            kind: "MISSING_LEDGER_ENTRY",
-            severity: "CRITICAL",
+            kind: ReconciliationExceptionKind.REFUND_WITHOUT_LEDGER_ENTRY,
+            severity: ReconciliationSeverity.CRITICAL,
             invoiceId: inv.id,
             studentName: name,
             term: inv.term,
@@ -377,8 +415,8 @@ async function analyzeTenantFinance(input: {
     for (const receipt of inv.receipts) {
       if (!paymentIds.has(receipt.feePaymentId)) {
         addIssue(issues, {
-          kind: "RECEIPT_WITHOUT_PAYMENT",
-          severity: "CRITICAL",
+          kind: ReconciliationExceptionKind.RECEIPT_WITHOUT_PAYMENT,
+          severity: ReconciliationSeverity.CRITICAL,
           invoiceId: inv.id,
           studentName: name,
           term: inv.term,
@@ -392,7 +430,10 @@ async function analyzeTenantFinance(input: {
   }
 
   const referencedPayments = await prisma.feePayment.findMany({
-    where: { tenantId, reference: { not: null } },
+    where: {
+      tenantId,
+      reference: { not: null },
+    },
     select: {
       id: true,
       invoiceId: true,
@@ -407,6 +448,7 @@ async function analyzeTenantFinance(input: {
   for (const payment of referencedPayments) {
     const ref = clean(payment.reference);
     if (!ref) continue;
+
     const bucket = byRef.get(ref) ?? [];
     bucket.push(payment);
     byRef.set(ref, bucket);
@@ -418,8 +460,8 @@ async function analyzeTenantFinance(input: {
     const total = payments.reduce((s, p) => s + p.amountPesewas, 0);
 
     addIssue(issues, {
-      kind: "DUPLICATE_PROVIDER_REFERENCE",
-      severity: "CRITICAL",
+      kind: ReconciliationExceptionKind.DUPLICATE_PROVIDER_REFERENCE,
+      severity: ReconciliationSeverity.CRITICAL,
       invoiceId: payments[0]?.invoiceId ?? null,
       providerReference: reference,
       expectedPesewas: payments[0]?.amountPesewas ?? null,
@@ -447,8 +489,13 @@ async function analyzeTenantFinance(input: {
 
   for (const event of providerEvents) {
     addIssue(issues, {
-      kind: event.isSuspicious ? "SUSPICIOUS_PROVIDER_EVENT" : "UNMATCHED_PROVIDER_EVENT",
-      severity: event.processingStatus === "FAILED" || event.isSuspicious ? "HIGH" : "MEDIUM",
+      kind: event.isSuspicious
+        ? ReconciliationExceptionKind.SUSPICIOUS_PROVIDER_EVENT
+        : ReconciliationExceptionKind.UNMATCHED_PROVIDER_EVENT,
+      severity:
+        event.processingStatus === "FAILED" || event.isSuspicious
+          ? ReconciliationSeverity.HIGH
+          : ReconciliationSeverity.MEDIUM,
       providerReference: event.providerReference,
       description:
         `Provider event ${event.eventType} is ${event.processingStatus}` +
@@ -493,7 +540,7 @@ async function analyzeTenantFinance(input: {
 export async function GET(req: NextRequest) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
-    requireRoleNames: ["SCHOOL_ADMIN", "HEADTEACHER", "SUPERADMIN"],
+    requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "HEADTEACHER", "SUPERADMIN"],
   });
 
   if (!auth.ok) return auth.res;
@@ -511,14 +558,19 @@ export async function GET(req: NextRequest) {
     return json(200, result);
   } catch (err) {
     console.error("[ADMIN_RECONCILIATION_ERROR]", err);
-    return json(500, { ok: false, error: "FAILED_TO_RUN_RECONCILIATION", issues: [] });
+
+    return json(500, {
+      ok: false,
+      error: "FAILED_TO_RUN_RECONCILIATION",
+      issues: [],
+    });
   }
 }
 
 export async function POST(req: NextRequest) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
-    requireRoleNames: ["SCHOOL_ADMIN", "HEADTEACHER", "SUPERADMIN"],
+    requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "HEADTEACHER", "SUPERADMIN"],
   });
 
   if (!auth.ok) return auth.res;
@@ -534,6 +586,7 @@ export async function POST(req: NextRequest) {
     batchDate?: string;
     notes?: string;
     limit?: number;
+    provider?: PaymentProvider;
   } = {};
 
   if (ct) {
@@ -553,13 +606,13 @@ export async function POST(req: NextRequest) {
     });
 
     const batchStatus: ReconciliationStatus =
-      result.issueCount === 0 ? "CLEAN" : "HAS_EXCEPTIONS";
+      result.issueCount === 0 ? ReconciliationStatus.CLEAN : ReconciliationStatus.HAS_EXCEPTIONS;
 
     const batch = await prisma.$transaction(async (tx) => {
       const createdBatch = await tx.reconciliationBatch.create({
         data: {
           tenantId: auth.ctx.tenantId,
-          provider: "PAYSTACK" as PaymentProvider,
+          provider: body.provider ?? null,
           batchDate: safeDateOnly(body.batchDate),
           status: batchStatus,
           expectedPesewas: result.expectedPesewas,
@@ -567,15 +620,8 @@ export async function POST(req: NextRequest) {
           deltaPesewas: result.deltaPesewas,
           notes:
             clean(body.notes) ||
-            `Reconciliation run. Invoices=${result.totalInvoices}; Issues=${result.issueCount}; Gross=${result.grossPaymentTotalPesewas}; Refunds=${result.refundTotalPesewas}.`,
+            "Finance reconciliation batch persisted from admin dashboard.",
           createdByUserId: auth.ctx.userId,
-          closedAt: result.issueCount === 0 ? new Date() : null,
-        },
-        select: {
-          id: true,
-          status: true,
-          batchDate: true,
-          createdAt: true,
         },
       });
 
@@ -597,40 +643,21 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      await tx.auditLog.create({
-        data: {
-          tenantId: auth.ctx.tenantId,
-          userId: auth.ctx.userId,
-          action: "FINANCE_RECONCILIATION_BATCH_CREATED",
-          resource: "ReconciliationBatch",
-          resourceId: createdBatch.id,
-          metadata: {
-            status: batchStatus,
-            issueCount: result.issueCount,
-            totalInvoices: result.totalInvoices,
-            grossPaymentTotalPesewas: result.grossPaymentTotalPesewas,
-            refundTotalPesewas: result.refundTotalPesewas,
-            expectedPesewas: result.expectedPesewas,
-            actualPesewas: result.actualPesewas,
-            deltaPesewas: result.deltaPesewas,
-          },
-        },
-      });
-
       return createdBatch;
     });
 
     return json(200, {
       ...result,
+      batch,
       persisted: true,
-      batch: {
-        ...batch,
-        batchDate: batch.batchDate.toISOString(),
-        createdAt: batch.createdAt.toISOString(),
-      },
     });
   } catch (err) {
     console.error("[ADMIN_RECONCILIATION_PERSIST_ERROR]", err);
-    return json(500, { ok: false, error: "FAILED_TO_PERSIST_RECONCILIATION", issues: [] });
+
+    return json(500, {
+      ok: false,
+      error: "FAILED_TO_PERSIST_RECONCILIATION",
+      issues: [],
+    });
   }
 }
