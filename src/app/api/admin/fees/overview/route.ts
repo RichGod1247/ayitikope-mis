@@ -1,13 +1,30 @@
 // src/app/api/admin/fees/overview/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import {
+  PaymentStatus,
+  RefundStatus,
+  type Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
-import type { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type InvoiceStatusLabel = "cleared" | "partial" | "unpaid" | "no_charge";
+
+const REFUND_PENDING_STATUSES = [
+  RefundStatus.REQUESTED,
+  RefundStatus.APPROVED,
+  RefundStatus.PROCESSING,
+] as const;
+
+const REFUND_VISIBLE_STATUSES = [
+  RefundStatus.REQUESTED,
+  RefundStatus.APPROVED,
+  RefundStatus.PROCESSING,
+  RefundStatus.SUCCEEDED,
+] as const;
 
 function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
@@ -32,24 +49,68 @@ function classLabel(
   } | null
 ) {
   if (!classroom) return "Unassigned";
-  return classroom.name || [classroom.grade, classroom.arm].filter(Boolean).join(" ") || "Class";
-}
 
-function statusFromAmounts(input: {
-  billedPesewas: number;
-  paidPesewas: number;
-  outstandingPesewas: number;
-}): InvoiceStatusLabel {
-  if (input.billedPesewas <= 0) return "no_charge";
-  if (input.outstandingPesewas <= 0) return "cleared";
-  if (input.paidPesewas > 0) return "partial";
-  return "unpaid";
+  return (
+    classroom.name ||
+    [classroom.grade, classroom.arm].filter(Boolean).join(" ") ||
+    "Class"
+  );
 }
 
 function nowStartOfDay() {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+function statusFromAmounts(input: {
+  netBilledPesewas: number;
+  netPaidPesewas: number;
+  outstandingPesewas: number;
+}): InvoiceStatusLabel {
+  if (input.netBilledPesewas <= 0) return "no_charge";
+  if (input.outstandingPesewas <= 0) return "cleared";
+  if (input.netPaidPesewas > 0) return "partial";
+  return "unpaid";
+}
+
+function collectionRateBps(input: {
+  netPaidPesewas: number;
+  netBilledPesewas: number;
+}) {
+  if (input.netBilledPesewas <= 0) return 0;
+
+  return Math.round((input.netPaidPesewas / input.netBilledPesewas) * 10000);
+}
+
+function refundBucket(
+  refunds: Array<{
+    status: RefundStatus;
+    amountPesewas: number;
+    processedAt: Date | null;
+  }>
+) {
+  let succeededPesewas = 0;
+  let pendingPesewas = 0;
+
+  for (const refund of refunds) {
+    const amount = Math.max(0, refund.amountPesewas ?? 0);
+
+    if (refund.status === RefundStatus.SUCCEEDED) {
+      succeededPesewas += amount;
+      continue;
+    }
+
+    if (
+      refund.status === RefundStatus.REQUESTED ||
+      refund.status === RefundStatus.APPROVED ||
+      refund.status === RefundStatus.PROCESSING
+    ) {
+      pendingPesewas += amount;
+    }
+  }
+
+  return { succeededPesewas, pendingPesewas };
 }
 
 export async function GET(req: NextRequest) {
@@ -67,13 +128,22 @@ export async function GET(req: NextRequest) {
   const academicYear = url.searchParams.get("academicYear")?.trim() || null;
   const classroomId = url.searchParams.get("classroomId")?.trim() || null;
   const q = url.searchParams.get("q")?.trim() || null;
+
   const takeRaw = Number(url.searchParams.get("take") ?? "2000");
-  const take = Math.min(5000, Math.max(1, Number.isFinite(takeRaw) ? takeRaw : 2000));
+  const take = Math.min(
+    5000,
+    Math.max(1, Number.isFinite(takeRaw) ? Math.floor(takeRaw) : 2000)
+  );
 
   try {
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { id: true, name: true, slug: true, schoolCode: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        schoolCode: true,
+      },
     });
 
     let studentIdFilter: string[] | null = null;
@@ -113,8 +183,14 @@ export async function GET(req: NextRequest) {
             learnerCount: 0,
             totalBilledPesewas: 0,
             totalWaivedPesewas: 0,
+            totalNetBilledPesewas: 0,
+            totalGrossPaidPesewas: 0,
+            totalRefundedPesewas: 0,
+            totalPendingRefundPesewas: 0,
             totalPaidPesewas: 0,
             outstandingPesewas: 0,
+            todayGrossCollectedPesewas: 0,
+            todayRefundedPesewas: 0,
             todayCollectedPesewas: 0,
             receiptCount: 0,
             clearedCount: 0,
@@ -122,6 +198,7 @@ export async function GET(req: NextRequest) {
             unpaidCount: 0,
             noChargeCount: 0,
             openExceptionCount: 0,
+            storedMismatchCount: 0,
             collectionRateBps: 0,
           },
           classSummaries: [],
@@ -166,17 +243,36 @@ export async function GET(req: NextRequest) {
           },
         },
         payments: {
-          where: { status: "SUCCESS" },
+          where: {
+            status: {
+              in: [PaymentStatus.SUCCESS, PaymentStatus.REFUNDED],
+            },
+          },
           select: {
             id: true,
             amountPesewas: true,
             method: true,
             paidAt: true,
             reference: true,
+            status: true,
+            refunds: {
+              where: {
+                status: { in: [...REFUND_VISIBLE_STATUSES] },
+              },
+              select: {
+                id: true,
+                status: true,
+                amountPesewas: true,
+                processedAt: true,
+              },
+            },
           },
         },
         receipts: {
-          select: { id: true },
+          select: {
+            id: true,
+            status: true,
+          },
         },
         student: {
           select: {
@@ -185,6 +281,7 @@ export async function GET(req: NextRequest) {
             lastName: true,
             guardianName: true,
             guardianPhone: true,
+            guardianPhoneNorm: true,
             classroom: {
               select: {
                 id: true,
@@ -204,17 +301,25 @@ export async function GET(req: NextRequest) {
 
     let totalBilledPesewas = 0;
     let totalWaivedPesewas = 0;
-    let totalPaidPesewas = 0;
+    let totalNetBilledPesewas = 0;
+    let totalGrossPaidPesewas = 0;
+    let totalRefundedPesewas = 0;
+    let totalPendingRefundPesewas = 0;
+    let totalNetPaidPesewas = 0;
     let outstandingPesewas = 0;
-    let todayCollectedPesewas = 0;
+
+    let todayGrossCollectedPesewas = 0;
+    let todayRefundedPesewas = 0;
     let receiptCount = 0;
 
     let clearedCount = 0;
     let partialCount = 0;
     let unpaidCount = 0;
     let noChargeCount = 0;
+    let storedMismatchCount = 0;
 
     const learnerIds = new Set<string>();
+
     const classMap = new Map<
       string,
       {
@@ -223,6 +328,11 @@ export async function GET(req: NextRequest) {
         invoiceCount: number;
         learnerIds: Set<string>;
         billedPesewas: number;
+        waivedPesewas: number;
+        netBilledPesewas: number;
+        grossPaidPesewas: number;
+        refundedPesewas: number;
+        pendingRefundPesewas: number;
         paidPesewas: number;
         outstandingPesewas: number;
         clearedCount: number;
@@ -236,6 +346,9 @@ export async function GET(req: NextRequest) {
       {
         method: string;
         count: number;
+        grossPaidPesewas: number;
+        refundedPesewas: number;
+        pendingRefundPesewas: number;
         amountPesewas: number;
       }
     >();
@@ -243,47 +356,96 @@ export async function GET(req: NextRequest) {
     const rows = invoices.map((inv) => {
       learnerIds.add(inv.studentId);
 
-      const lineBilled = inv.lines.reduce((sum, line) => sum + line.amountPesewas, 0);
-      const lineWaived = inv.lines.reduce((sum, line) => sum + line.waivedPesewas, 0);
-      const adjustmentWaived = inv.adjustments.reduce((sum, adj) => sum + adj.amountPesewas, 0);
+      const lineBilled = inv.lines.reduce(
+        (sum, line) => sum + Math.max(0, line.amountPesewas ?? 0),
+        0
+      );
 
-      const billed = lineBilled > 0 ? lineBilled : inv.totalBilledPesewas ?? 0;
+      const lineWaived = inv.lines.reduce(
+        (sum, line) => sum + Math.max(0, line.waivedPesewas ?? 0),
+        0
+      );
+
+      const adjustmentWaived = inv.adjustments.reduce(
+        (sum, adj) => sum + Math.max(0, adj.amountPesewas ?? 0),
+        0
+      );
+
+      const billed =
+        lineBilled > 0 ? lineBilled : Math.max(0, inv.totalBilledPesewas ?? 0);
+
       const waived = Math.max(0, lineWaived + adjustmentWaived);
-      const paid = inv.payments.reduce((sum, payment) => sum + payment.amountPesewas, 0);
-      const balance = Math.max(0, billed - waived - paid);
+      const netBilled = Math.max(0, billed - waived);
+
+      let grossPaid = 0;
+      let refunded = 0;
+      let pendingRefund = 0;
+
+      for (const payment of inv.payments) {
+        const paymentAmount = Math.max(0, payment.amountPesewas ?? 0);
+        grossPaid += paymentAmount;
+
+        if (payment.paidAt >= todayStart) {
+          todayGrossCollectedPesewas += paymentAmount;
+        }
+
+        const bucketedRefunds = refundBucket(payment.refunds);
+        refunded += bucketedRefunds.succeededPesewas;
+        pendingRefund += bucketedRefunds.pendingPesewas;
+
+        for (const refund of payment.refunds) {
+          if (
+            refund.status === RefundStatus.SUCCEEDED &&
+            refund.processedAt &&
+            refund.processedAt >= todayStart
+          ) {
+            todayRefundedPesewas += Math.max(0, refund.amountPesewas ?? 0);
+          }
+        }
+
+        const method = String(payment.method ?? "unknown").toLowerCase();
+        const methodBucket = paymentMethodMap.get(method) ?? {
+          method,
+          count: 0,
+          grossPaidPesewas: 0,
+          refundedPesewas: 0,
+          pendingRefundPesewas: 0,
+          amountPesewas: 0,
+        };
+
+        methodBucket.count += 1;
+        methodBucket.grossPaidPesewas += paymentAmount;
+        methodBucket.refundedPesewas += bucketedRefunds.succeededPesewas;
+        methodBucket.pendingRefundPesewas += bucketedRefunds.pendingPesewas;
+        methodBucket.amountPesewas =
+          methodBucket.grossPaidPesewas - methodBucket.refundedPesewas;
+
+        paymentMethodMap.set(method, methodBucket);
+      }
+
+      const netPaid = Math.max(0, grossPaid - refunded);
+      const balance = Math.max(0, netBilled - netPaid);
+
       const status = statusFromAmounts({
-        billedPesewas: billed,
-        paidPesewas: paid,
+        netBilledPesewas: netBilled,
+        netPaidPesewas: netPaid,
         outstandingPesewas: balance,
       });
 
       totalBilledPesewas += billed;
       totalWaivedPesewas += waived;
-      totalPaidPesewas += paid;
+      totalNetBilledPesewas += netBilled;
+      totalGrossPaidPesewas += grossPaid;
+      totalRefundedPesewas += refunded;
+      totalPendingRefundPesewas += pendingRefund;
+      totalNetPaidPesewas += netPaid;
       outstandingPesewas += balance;
       receiptCount += inv.receipts.length;
 
-      if (status === "cleared") clearedCount++;
-      else if (status === "partial") partialCount++;
-      else if (status === "unpaid") unpaidCount++;
-      else noChargeCount++;
-
-      for (const payment of inv.payments) {
-        if (payment.paidAt >= todayStart) {
-          todayCollectedPesewas += payment.amountPesewas;
-        }
-
-        const method = String(payment.method ?? "unknown").toLowerCase();
-        const bucket = paymentMethodMap.get(method) ?? {
-          method,
-          count: 0,
-          amountPesewas: 0,
-        };
-
-        bucket.count += 1;
-        bucket.amountPesewas += payment.amountPesewas;
-        paymentMethodMap.set(method, bucket);
-      }
+      if (status === "cleared") clearedCount += 1;
+      else if (status === "partial") partialCount += 1;
+      else if (status === "unpaid") unpaidCount += 1;
+      else noChargeCount += 1;
 
       const cls = inv.student.classroom;
       const clsLabel = classLabel(cls);
@@ -297,6 +459,11 @@ export async function GET(req: NextRequest) {
           invoiceCount: 0,
           learnerIds: new Set<string>(),
           billedPesewas: 0,
+          waivedPesewas: 0,
+          netBilledPesewas: 0,
+          grossPaidPesewas: 0,
+          refundedPesewas: 0,
+          pendingRefundPesewas: 0,
           paidPesewas: 0,
           outstandingPesewas: 0,
           clearedCount: 0,
@@ -307,20 +474,27 @@ export async function GET(req: NextRequest) {
       classBucket.invoiceCount += 1;
       classBucket.learnerIds.add(inv.studentId);
       classBucket.billedPesewas += billed;
-      classBucket.paidPesewas += paid;
+      classBucket.waivedPesewas += waived;
+      classBucket.netBilledPesewas += netBilled;
+      classBucket.grossPaidPesewas += grossPaid;
+      classBucket.refundedPesewas += refunded;
+      classBucket.pendingRefundPesewas += pendingRefund;
+      classBucket.paidPesewas += netPaid;
       classBucket.outstandingPesewas += balance;
 
-      if (status === "cleared") classBucket.clearedCount++;
-      else if (status === "partial") classBucket.partialCount++;
-      else if (status === "unpaid") classBucket.unpaidCount++;
+      if (status === "cleared") classBucket.clearedCount += 1;
+      else if (status === "partial") classBucket.partialCount += 1;
+      else if (status === "unpaid") classBucket.unpaidCount += 1;
 
       classMap.set(clsKey, classBucket);
 
       const storedMismatch =
-        (inv.totalPaidPesewas ?? 0) !== paid ||
+        (inv.totalPaidPesewas ?? 0) !== netPaid ||
         (inv.balancePesewas ?? 0) !== balance ||
         (inv.totalBilledPesewas ?? 0) !== billed ||
         (inv.totalWaivedPesewas ?? 0) !== waived;
+
+      if (storedMismatch) storedMismatchCount += 1;
 
       return {
         invoiceId: inv.id,
@@ -329,7 +503,8 @@ export async function GET(req: NextRequest) {
         classLabel: clsLabel,
         classroomId: cls?.id ?? null,
         guardianName: inv.student.guardianName ?? null,
-        guardianPhone: inv.student.guardianPhone ?? null,
+        guardianPhone:
+          inv.student.guardianPhoneNorm ?? inv.student.guardianPhone ?? null,
         term: inv.term,
         academicYear: inv.academicYear,
         status,
@@ -338,7 +513,11 @@ export async function GET(req: NextRequest) {
         dueDate: inv.dueDate ? inv.dueDate.toISOString() : null,
         billedPesewas: billed,
         waivedPesewas: waived,
-        paidPesewas: paid,
+        netBilledPesewas: netBilled,
+        grossPaidPesewas: grossPaid,
+        refundedPesewas: refunded,
+        pendingRefundPesewas: pendingRefund,
+        paidPesewas: netPaid,
         outstandingPesewas: balance,
         paymentCount: inv.payments.length,
         receiptCount: inv.receipts.length,
@@ -373,20 +552,30 @@ export async function GET(req: NextRequest) {
         invoiceCount: item.invoiceCount,
         learnerCount: item.learnerIds.size,
         billedPesewas: item.billedPesewas,
+        waivedPesewas: item.waivedPesewas,
+        netBilledPesewas: item.netBilledPesewas,
+        grossPaidPesewas: item.grossPaidPesewas,
+        refundedPesewas: item.refundedPesewas,
+        pendingRefundPesewas: item.pendingRefundPesewas,
         paidPesewas: item.paidPesewas,
         outstandingPesewas: item.outstandingPesewas,
         clearedCount: item.clearedCount,
         partialCount: item.partialCount,
         unpaidCount: item.unpaidCount,
-        collectionRateBps:
-          item.billedPesewas > 0
-            ? Math.round((item.paidPesewas / item.billedPesewas) * 10000)
-            : 0,
+        collectionRateBps: collectionRateBps({
+          netPaidPesewas: item.paidPesewas,
+          netBilledPesewas: item.netBilledPesewas,
+        }),
       }))
       .sort((a, b) => b.outstandingPesewas - a.outstandingPesewas);
 
     const paymentMethodSummaries = Array.from(paymentMethodMap.values()).sort(
       (a, b) => b.amountPesewas - a.amountPesewas
+    );
+
+    const todayNetCollectedPesewas = Math.max(
+      0,
+      todayGrossCollectedPesewas - todayRefundedPesewas
     );
 
     return json(200, {
@@ -398,19 +587,26 @@ export async function GET(req: NextRequest) {
         learnerCount: learnerIds.size,
         totalBilledPesewas,
         totalWaivedPesewas,
-        totalPaidPesewas,
+        totalNetBilledPesewas,
+        totalGrossPaidPesewas,
+        totalRefundedPesewas,
+        totalPendingRefundPesewas,
+        totalPaidPesewas: totalNetPaidPesewas,
         outstandingPesewas,
-        todayCollectedPesewas,
+        todayGrossCollectedPesewas,
+        todayRefundedPesewas,
+        todayCollectedPesewas: todayNetCollectedPesewas,
         receiptCount,
         clearedCount,
         partialCount,
         unpaidCount,
         noChargeCount,
         openExceptionCount,
-        collectionRateBps:
-          totalBilledPesewas > 0
-            ? Math.round((totalPaidPesewas / totalBilledPesewas) * 10000)
-            : 0,
+        storedMismatchCount,
+        collectionRateBps: collectionRateBps({
+          netPaidPesewas: totalNetPaidPesewas,
+          netBilledPesewas: totalNetBilledPesewas,
+        }),
       },
       classSummaries,
       paymentMethodSummaries,
