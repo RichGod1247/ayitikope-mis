@@ -6,6 +6,7 @@ import {
   PaymentIntentStatus,
   PaymentProvider,
   PaymentStatus,
+  RefundStatus,
   SettlementAccountStatus,
   SettlementPayoutStatus,
 } from "@prisma/client";
@@ -18,6 +19,12 @@ export const metadata: Metadata = {
   title: "Settlement Reporting | Admin | EduLife OS",
 };
 
+const PENDING_REFUND_STATUSES: RefundStatus[] = [
+  RefundStatus.REQUESTED,
+  RefundStatus.APPROVED,
+  RefundStatus.PROCESSING,
+];
+
 function formatCedis(pesewas: number | null | undefined) {
   const value = typeof pesewas === "number" ? pesewas : 0;
   const sign = value < 0 ? "-" : "";
@@ -26,26 +33,46 @@ function formatCedis(pesewas: number | null | undefined) {
 
 function formatDateTime(value: Date | string | null | undefined) {
   if (!value) return "—";
+
   return new Intl.DateTimeFormat("en-GH", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
 }
 
-function statusClass(status: string) {
-  if (["ACTIVE", "SUCCESS", "PAID"].includes(status)) {
+function fullName(firstName?: string | null, lastName?: string | null) {
+  return [firstName, lastName].filter(Boolean).join(" ").trim();
+}
+
+function classLabel(
+  classroom?: { name: string | null; grade: string | null; arm: string | null } | null
+) {
+  if (!classroom) return "Class unavailable";
+  return classroom.name || [classroom.grade, classroom.arm].filter(Boolean).join(" ") || "Class";
+}
+
+function statusClass(status: string | null | undefined) {
+  const s = String(status ?? "").toUpperCase();
+
+  if (["ACTIVE", "SUCCESS", "SUCCEEDED", "PAID", "PROCESSED", "COMPLETED"].includes(s)) {
     return "border-emerald-300 bg-emerald-50 text-emerald-800";
   }
 
-  if (["PENDING", "AUTHORIZED", "PROCESSING"].includes(status)) {
+  if (["PENDING", "AUTHORIZED", "REQUESTED", "APPROVED", "PROCESSING"].includes(s)) {
     return "border-amber-300 bg-amber-50 text-amber-800";
   }
 
-  if (["FAILED", "DISABLED", "CANCELLED", "EXPIRED", "REVERSED"].includes(status)) {
+  if (["FAILED", "DISABLED", "CANCELLED", "EXPIRED", "REVERSED", "DEAD"].includes(s)) {
     return "border-red-300 bg-red-50 text-red-800";
   }
 
   return "border-zinc-300 bg-zinc-50 text-zinc-700";
+}
+
+function riskClass(level: "critical" | "warning" | "good") {
+  if (level === "critical") return "border-red-300 bg-red-50 text-red-900";
+  if (level === "warning") return "border-amber-300 bg-amber-50 text-amber-900";
+  return "border-emerald-300 bg-emerald-50 text-emerald-900";
 }
 
 function actorName(user?: {
@@ -64,15 +91,25 @@ function actorName(user?: {
   );
 }
 
+function refundLifecycleText(status: RefundStatus | string | null | undefined) {
+  const s = String(status ?? "").toUpperCase();
+
+  if (s === "REQUESTED") return "Refund requested";
+  if (s === "APPROVED") return "Approved by school";
+  if (s === "PROCESSING") return "Sent to Paystack";
+  if (s === "SUCCEEDED") return "Processed and reflected";
+  if (s === "FAILED") return "Failed";
+  if (s === "CANCELLED") return "Cancelled";
+  return "No refund activity";
+}
+
 export default async function AdminFeesSettlementsPage() {
   const auth = await requireServerUserContext({
     requireTenant: true,
     requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "HEADTEACHER", "SUPERADMIN"],
   });
 
-  if (!auth.tenantId) {
-    redirect("/login");
-  }
+  if (!auth.tenantId) redirect("/login");
 
   const tenantId = auth.tenantId;
 
@@ -87,7 +124,10 @@ export default async function AdminFeesSettlementsPage() {
     payoutPaid,
     payoutPending,
     payoutFailed,
+    paystackRefundSucceeded,
+    paystackRefundPending,
     recentTransactions,
+    recentPaystackRefunds,
     recentPayouts,
   ] = await Promise.all([
     prisma.tenantSettlementAccount.findMany({
@@ -234,6 +274,26 @@ export default async function AdminFeesSettlementsPage() {
       _count: { id: true },
     }),
 
+    prisma.feeRefund.aggregate({
+      where: {
+        tenantId,
+        provider: PaymentProvider.PAYSTACK,
+        status: RefundStatus.SUCCEEDED,
+      },
+      _sum: { amountPesewas: true },
+      _count: { id: true },
+    }),
+
+    prisma.feeRefund.aggregate({
+      where: {
+        tenantId,
+        provider: PaymentProvider.PAYSTACK,
+        status: { in: PENDING_REFUND_STATUSES },
+      },
+      _sum: { amountPesewas: true },
+      _count: { id: true },
+    }),
+
     prisma.paymentTransaction.findMany({
       where: {
         tenantId,
@@ -251,6 +311,7 @@ export default async function AdminFeesSettlementsPage() {
         paymentIntent: {
           select: {
             providerReference: true,
+            status: true,
             settlementAccount: {
               select: {
                 providerSubaccountCode: true,
@@ -264,17 +325,115 @@ export default async function AdminFeesSettlementsPage() {
         },
         feePayment: {
           select: {
+            id: true,
+            amountPesewas: true,
+            method: true,
+            reference: true,
+            channel: true,
+            status: true,
+            paidAt: true,
             receipt: {
               select: {
                 id: true,
                 receiptNumber: true,
+                status: true,
+              },
+            },
+            refunds: {
+              select: {
+                id: true,
+                amountPesewas: true,
+                status: true,
+                reason: true,
+                providerReference: true,
+                providerRefundReference: true,
+                requestedAt: true,
+                approvedAt: true,
+                processingAt: true,
+                processedAt: true,
+                failedAt: true,
+                cancelledAt: true,
+              },
+              orderBy: { createdAt: "desc" },
+            },
+            invoice: {
+              select: {
+                term: true,
+                academicYear: true,
+                student: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    guardianName: true,
+                    guardianPhoneNorm: true,
+                    classroom: {
+                      select: { name: true, grade: true, arm: true },
+                    },
+                  },
+                },
               },
             },
           },
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 12,
+      take: 40,
+    }),
+
+    prisma.feeRefund.findMany({
+      where: {
+        tenantId,
+        provider: PaymentProvider.PAYSTACK,
+      },
+      select: {
+        id: true,
+        amountPesewas: true,
+        status: true,
+        reason: true,
+        providerReference: true,
+        providerRefundReference: true,
+        requestedAt: true,
+        approvedAt: true,
+        processingAt: true,
+        processedAt: true,
+        failedAt: true,
+        cancelledAt: true,
+        feePayment: {
+          select: {
+            id: true,
+            amountPesewas: true,
+            reference: true,
+            method: true,
+            channel: true,
+            receipt: {
+              select: {
+                id: true,
+                receiptNumber: true,
+                status: true,
+              },
+            },
+            invoice: {
+              select: {
+                term: true,
+                academicYear: true,
+                student: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    guardianName: true,
+                    guardianPhoneNorm: true,
+                    classroom: {
+                      select: { name: true, grade: true, arm: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 40,
     }),
 
     prisma.settlementPayout.findMany({
@@ -311,8 +470,10 @@ export default async function AdminFeesSettlementsPage() {
   ]);
 
   const primaryAccount =
-    settlementAccounts.find((account) => account.isPrimary && account.status === "ACTIVE") ??
-    settlementAccounts.find((account) => account.status === "ACTIVE") ??
+    settlementAccounts.find(
+      (account) => account.isPrimary && account.status === SettlementAccountStatus.ACTIVE
+    ) ??
+    settlementAccounts.find((account) => account.status === SettlementAccountStatus.ACTIVE) ??
     settlementAccounts[0] ??
     null;
 
@@ -320,7 +481,16 @@ export default async function AdminFeesSettlementsPage() {
     (account) => account.status === SettlementAccountStatus.ACTIVE
   );
 
-  const riskFlags: { level: "critical" | "warning" | "good"; title: string; detail: string }[] = [];
+  const grossPaystackPesewas = totalOnlineTransactions._sum.amountPesewas ?? 0;
+  const succeededRefundPesewas = paystackRefundSucceeded._sum.amountPesewas ?? 0;
+  const pendingRefundPesewas = paystackRefundPending._sum.amountPesewas ?? 0;
+  const netPaystackRetainedPesewas = Math.max(0, grossPaystackPesewas - succeededRefundPesewas);
+
+  const riskFlags: {
+    level: "critical" | "warning" | "good";
+    title: string;
+    detail: string;
+  }[] = [];
 
   if (!primaryAccount) {
     riskFlags.push({
@@ -363,12 +533,20 @@ export default async function AdminFeesSettlementsPage() {
     });
   }
 
+  if ((paystackRefundPending._count.id ?? 0) > 0) {
+    riskFlags.push({
+      level: "warning",
+      title: "Refunds still pending or processing",
+      detail: `${paystackRefundPending._count.id} Paystack refund(s) are not final yet. Do not treat gross collection as retained revenue.`,
+    });
+  }
+
   if ((payoutAll._count.id ?? 0) === 0) {
     riskFlags.push({
       level: "warning",
       title: "No payout records yet",
       detail:
-        "EduLife OS can currently verify payment routing, but no payout/transfer event has been recorded yet.",
+        "EduLife OS can currently verify payment routing and refund deductions, but no payout/transfer event has been recorded yet.",
     });
   }
 
@@ -380,16 +558,12 @@ export default async function AdminFeesSettlementsPage() {
     });
   }
 
-  const hasOnlyGood =
-    riskFlags.length === 0 ||
-    riskFlags.every((flag) => flag.level !== "critical" && flag.level !== "warning");
-
-  if (hasOnlyGood) {
+  if (riskFlags.length === 0) {
     riskFlags.push({
       level: "good",
-      title: "Settlement routing and payout records look healthy",
+      title: "Settlement routing and refund state look healthy",
       detail:
-        "Paystack routing and payout records are present. Independent bank-statement confirmation is still a separate control.",
+        "Online payments, routing, and refund state are consistent. Bank statement reconciliation remains a separate control.",
     });
   }
 
@@ -405,8 +579,8 @@ export default async function AdminFeesSettlementsPage() {
               Settlement Reporting
             </h1>
             <p className="max-w-3xl text-sm text-zinc-600">
-              Read-only settlement visibility for Paystack routing, payout events, subaccount
-              readiness, and payment-to-settlement linkage.
+              Read-only settlement visibility for Paystack routing, refund exposure, net
+              retained online collections, payout events, and settlement-account readiness.
             </p>
           </div>
 
@@ -416,6 +590,12 @@ export default async function AdminFeesSettlementsPage() {
               className="inline-flex h-10 items-center rounded-xl border border-zinc-300 bg-white px-4 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
             >
               Online payments
+            </Link>
+            <Link
+              href="/admin/fees/refunds"
+              className="inline-flex h-10 items-center rounded-xl border border-zinc-300 bg-white px-4 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
+            >
+              Refunds
             </Link>
             <Link
               href="/admin/fees/audit"
@@ -428,15 +608,47 @@ export default async function AdminFeesSettlementsPage() {
 
         <section className="grid gap-3 md:grid-cols-4">
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-[11px] text-zinc-500">Successful online payments</p>
+            <p className="text-[11px] text-zinc-500">Gross Paystack received</p>
             <p className="mt-1 text-xl font-bold text-zinc-950">
-              {formatCedis(totalOnlineTransactions._sum.amountPesewas)}
+              {formatCedis(grossPaystackPesewas)}
             </p>
             <p className="mt-1 text-xs text-zinc-500">
-              {totalOnlineTransactions._count.id} transaction(s)
+              {totalOnlineTransactions._count.id} successful transaction(s)
             </p>
           </div>
 
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+            <p className="text-[11px] text-red-700">Succeeded Paystack refunds</p>
+            <p className="mt-1 text-xl font-bold text-red-950">
+              {formatCedis(succeededRefundPesewas)}
+            </p>
+            <p className="mt-1 text-xs text-red-700">
+              {paystackRefundSucceeded._count.id} completed refund(s)
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+            <p className="text-[11px] text-blue-700">Net retained online</p>
+            <p className="mt-1 text-xl font-bold text-blue-950">
+              {formatCedis(netPaystackRetainedPesewas)}
+            </p>
+            <p className="mt-1 text-xs text-blue-700">
+              Gross Paystack minus succeeded refunds
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <p className="text-[11px] text-amber-700">Pending refund exposure</p>
+            <p className="mt-1 text-xl font-bold text-amber-950">
+              {formatCedis(pendingRefundPesewas)}
+            </p>
+            <p className="mt-1 text-xs text-amber-700">
+              {paystackRefundPending._count.id} requested, approved, or processing
+            </p>
+          </div>
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-4">
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
             <p className="text-[11px] text-emerald-700">Routed through settlement</p>
             <p className="mt-1 text-xl font-bold text-emerald-900">
@@ -447,328 +659,474 @@ export default async function AdminFeesSettlementsPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
-            <p className="text-[11px] text-blue-700">Recorded Paystack payouts</p>
-            <p className="mt-1 text-xl font-bold text-blue-900">
-              {formatCedis(payoutAll._sum.amountPesewas)}
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+            <p className="text-[11px] text-red-700">Unrouted online payments</p>
+            <p className="mt-1 text-xl font-bold text-red-900">
+              {formatCedis(unroutedOnlineTransactions._sum.amountPesewas)}
             </p>
-            <p className="mt-1 text-xs text-blue-700">{payoutAll._count.id} payout(s)</p>
+            <p className="mt-1 text-xs text-red-700">
+              {unroutedOnlineTransactions._count.id} transaction(s)
+            </p>
           </div>
 
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-            <p className="text-[11px] text-emerald-700">Processed payouts</p>
-            <p className="mt-1 text-xl font-bold text-emerald-900">
-              {formatCedis(payoutPaid._sum.amountPesewas)}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-[11px] text-zinc-500">Pending checkout intents</p>
+            <p className="mt-1 text-xl font-bold text-zinc-950">
+              {formatCedis(pendingIntents._sum.amountPesewas)}
             </p>
-            <p className="mt-1 text-xs text-emerald-700">{payoutPaid._count.id} paid</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              {pendingIntents._count.id} pending / authorized
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-[11px] text-zinc-500">Failed checkout intents</p>
+            <p className="mt-1 text-xl font-bold text-zinc-950">
+              {formatCedis(failedIntents._sum.amountPesewas)}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              {failedIntents._count.id} failed / cancelled / expired
+            </p>
           </div>
         </section>
 
         <section className="grid gap-3 md:grid-cols-4">
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-            <p className="text-[11px] text-amber-700">Pending/authorized intents</p>
-            <p className="mt-1 text-xl font-bold text-amber-900">
-              {formatCedis(pendingIntents._sum.amountPesewas)}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <p className="text-[11px] text-zinc-500">Recorded Paystack payouts</p>
+            <p className="mt-1 text-xl font-bold text-zinc-950">
+              {formatCedis(payoutAll._sum.amountPesewas)}
             </p>
-            <p className="mt-1 text-xs text-amber-700">{pendingIntents._count.id} intent(s)</p>
+            <p className="mt-1 text-xs text-zinc-500">{payoutAll._count.id} payout record(s)</p>
           </div>
 
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
-            <p className="text-[11px] text-red-700">Failed/expired intents</p>
-            <p className="mt-1 text-xl font-bold text-red-900">
-              {formatCedis(failedIntents._sum.amountPesewas)}
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <p className="text-[11px] text-emerald-700">Paid payouts</p>
+            <p className="mt-1 text-xl font-bold text-emerald-950">
+              {formatCedis(payoutPaid._sum.amountPesewas)}
             </p>
-            <p className="mt-1 text-xs text-red-700">{failedIntents._count.id} intent(s)</p>
+            <p className="mt-1 text-xs text-emerald-700">{payoutPaid._count.id} paid</p>
           </div>
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-            <p className="text-[11px] text-amber-700">Pending/processing payouts</p>
-            <p className="mt-1 text-xl font-bold text-amber-900">
+            <p className="text-[11px] text-amber-700">Pending payouts</p>
+            <p className="mt-1 text-xl font-bold text-amber-950">
               {formatCedis(payoutPending._sum.amountPesewas)}
             </p>
-            <p className="mt-1 text-xs text-amber-700">{payoutPending._count.id} payout(s)</p>
+            <p className="mt-1 text-xs text-amber-700">
+              {payoutPending._count.id} pending / processing
+            </p>
           </div>
 
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
-            <p className="text-[11px] text-red-700">Failed/reversed payouts</p>
-            <p className="mt-1 text-xl font-bold text-red-900">
+            <p className="text-[11px] text-red-700">Failed payouts</p>
+            <p className="mt-1 text-xl font-bold text-red-950">
               {formatCedis(payoutFailed._sum.amountPesewas)}
             </p>
-            <p className="mt-1 text-xs text-red-700">{payoutFailed._count.id} payout(s)</p>
+            <p className="mt-1 text-xs text-red-700">
+              {payoutFailed._count.id} failed / reversed
+            </p>
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-          <div className="space-y-6">
-            <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-zinc-950">
-                Primary settlement identity
-              </h2>
-              <p className="mt-1 text-xs text-zinc-500">
-                Account numbers are never exposed here. Only last four digits are displayed.
-              </p>
-
-              {!primaryAccount ? (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                  Settlement account not configured.
-                </div>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${statusClass(
-                        primaryAccount.status
-                      )}`}
-                    >
-                      {primaryAccount.status}
-                    </span>
-
-                    {primaryAccount.isPrimary && (
-                      <span className="rounded-full border border-zinc-300 bg-zinc-50 px-2.5 py-1 text-[10px] font-bold text-zinc-700">
-                        PRIMARY
-                      </span>
-                    )}
-
-                    <span className="rounded-full border border-blue-300 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-800">
-                      {primaryAccount.provider}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3 text-sm">
-                    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                      <p className="text-[11px] text-zinc-500">Paystack subaccount</p>
-                      <p className="mt-1 break-all font-mono text-xs font-semibold text-zinc-950">
-                        {primaryAccount.providerSubaccountCode ?? "Not available"}
-                      </p>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="rounded-xl border border-zinc-200 p-3">
-                        <p className="text-[11px] text-zinc-500">Bank</p>
-                        <p className="mt-1 font-semibold text-zinc-950">
-                          {primaryAccount.bankName ?? "—"}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-zinc-200 p-3">
-                        <p className="text-[11px] text-zinc-500">Account last four</p>
-                        <p className="mt-1 font-semibold text-zinc-950">
-                          {primaryAccount.accountNumberLast4
-                            ? `•••• ${primaryAccount.accountNumberLast4}`
-                            : "—"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-zinc-200 p-3">
-                      <p className="text-[11px] text-zinc-500">Account name</p>
-                      <p className="mt-1 font-semibold text-zinc-950">
-                        {primaryAccount.accountName ?? "—"}
-                      </p>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="rounded-xl border border-zinc-200 p-3">
-                        <p className="text-[11px] text-zinc-500">Requested by</p>
-                        <p className="mt-1 font-semibold text-zinc-950">
-                          {actorName(primaryAccount.requestedBy)}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-zinc-200 p-3">
-                        <p className="text-[11px] text-zinc-500">Approved by</p>
-                        <p className="mt-1 font-semibold text-zinc-950">
-                          {actorName(primaryAccount.approvedBy)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="rounded-xl border border-zinc-200 p-3">
-                        <p className="text-[11px] text-zinc-500">Created</p>
-                        <p className="mt-1 font-semibold text-zinc-950">
-                          {formatDateTime(primaryAccount.createdAt)}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-zinc-200 p-3">
-                        <p className="text-[11px] text-zinc-500">Approved</p>
-                        <p className="mt-1 font-semibold text-zinc-950">
-                          {formatDateTime(primaryAccount.approvedAt)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-zinc-950">Settlement risk flags</h2>
-
-              <div className="mt-4 space-y-3">
-                {riskFlags.map((flag) => (
-                  <div
-                    key={flag.title}
-                    className={`rounded-xl border p-3 ${
-                      flag.level === "critical"
-                        ? "border-red-200 bg-red-50 text-red-900"
-                        : flag.level === "warning"
-                          ? "border-amber-200 bg-amber-50 text-amber-900"
-                          : "border-emerald-200 bg-emerald-50 text-emerald-900"
-                    }`}
-                  >
-                    <p className="text-sm font-semibold">{flag.title}</p>
-                    <p className="mt-1 text-xs">{flag.detail}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <div className="border-b border-zinc-200 px-4 py-3">
-              <h2 className="text-sm font-semibold text-zinc-950">Recent payout records</h2>
-              <p className="mt-1 text-xs text-zinc-500">
-                Payout events recorded from Paystack transfer/webhook data.
-              </p>
+        <section className="grid gap-3 md:grid-cols-3">
+          {riskFlags.map((flag) => (
+            <div
+              key={`${flag.level}-${flag.title}`}
+              className={`rounded-2xl border p-4 shadow-sm ${riskClass(flag.level)}`}
+            >
+              <p className="text-sm font-semibold">{flag.title}</p>
+              <p className="mt-1 text-xs leading-5">{flag.detail}</p>
             </div>
-
-            {recentPayouts.length === 0 ? (
-              <div className="p-6 text-sm text-zinc-500">
-                No payout records yet. Next step is webhook ingestion for Paystack transfer events.
-              </div>
-            ) : (
-              <div className="divide-y divide-zinc-100">
-                {recentPayouts.map((payout) => (
-                  <article key={payout.id} className="p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <div className="flex flex-wrap gap-2">
-                          <span
-                            className={`rounded-full border px-2 py-1 text-[10px] font-bold ${statusClass(
-                              payout.status
-                            )}`}
-                          >
-                            {payout.status}
-                          </span>
-                          <span className="rounded-full border border-blue-300 bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-800">
-                            {payout.provider}
-                          </span>
-                        </div>
-
-                        <p className="mt-2 text-sm font-semibold text-zinc-950">
-                          {formatCedis(payout.amountPesewas)}
-                        </p>
-
-                        <p className="mt-1 break-all font-mono text-[11px] text-zinc-500">
-                          {payout.providerTransferCode ??
-                            payout.providerReference ??
-                            payout.providerTransferId ??
-                            "No provider reference"}
-                        </p>
-                      </div>
-
-                      <div className="text-xs text-zinc-500 md:text-right">
-                        <p>Created: {formatDateTime(payout.createdAt)}</p>
-                        <p>Paid: {formatDateTime(payout.paidAt)}</p>
-                        <p>Failed: {formatDateTime(payout.failedAt)}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs">
-                      <p className="font-semibold text-zinc-800">
-                        {payout.settlementAccount?.accountName ?? "No settlement account linked"}
-                      </p>
-                      <p className="mt-1 text-zinc-500">
-                        {payout.settlementAccount?.bankName ?? "—"} ·{" "}
-                        {payout.settlementAccount?.accountNumberLast4
-                          ? `•••• ${payout.settlementAccount.accountNumberLast4}`
-                          : "—"}
-                      </p>
-                      {payout.failureReason && (
-                        <p className="mt-2 text-red-700">Failure: {payout.failureReason}</p>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+          ))}
         </section>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-200 px-4 py-3">
-            <h2 className="text-sm font-semibold text-zinc-950">Recent Paystack routing</h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Read-only view of recent online transactions and their settlement-account linkage.
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-1 border-b border-zinc-100 pb-3">
+            <h2 className="text-sm font-semibold text-zinc-950">Settlement accounts</h2>
+            <p className="text-xs text-zinc-500">
+              Account ownership, approval trail, Paystack subaccount code, and operational status.
             </p>
           </div>
 
-          {recentTransactions.length === 0 ? (
-            <div className="p-6 text-sm text-zinc-500">No Paystack transactions found.</div>
+          {settlementAccounts.length === 0 ? (
+            <p className="mt-4 text-sm text-zinc-500">No settlement account is configured yet.</p>
           ) : (
-            <div className="divide-y divide-zinc-100">
-              {recentTransactions.map((tx) => {
-                const settlement = tx.paymentIntent?.settlementAccount;
-                const receipt = tx.feePayment?.receipt;
-
-                return (
-                  <article key={tx.id} className="p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <div className="flex flex-wrap gap-2">
-                          <span
-                            className={`rounded-full border px-2 py-1 text-[10px] font-bold ${statusClass(
-                              tx.status
-                            )}`}
-                          >
-                            {tx.status}
-                          </span>
-
-                          {settlement ? (
-                            <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
-                              ROUTED
-                            </span>
-                          ) : (
-                            <span className="rounded-full border border-red-300 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-800">
-                              UNROUTED
-                            </span>
-                          )}
-
-                          {receipt && (
-                            <span className="rounded-full border border-blue-300 bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-800">
-                              RECEIPTED
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="mt-2 text-sm font-semibold text-zinc-950">
-                          {formatCedis(tx.amountPesewas)}
-                        </p>
-
-                        <p className="mt-1 break-all font-mono text-[11px] text-zinc-500">
-                          {tx.providerReference}
-                        </p>
-                      </div>
-
-                      <div className="text-xs text-zinc-500 md:text-right">
-                        <p>{tx.channel ?? "No channel"}</p>
-                        <p>{formatDateTime(tx.providerPaidAt ?? tx.createdAt)}</p>
-                      </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {settlementAccounts.map((account) => (
+                <article
+                  key={account.id}
+                  className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-950">
+                        {account.accountName ?? "Account name unavailable"}
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {account.bankName || "Bank unavailable"} · ****
+                        {account.accountNumberLast4 || "----"}
+                      </p>
+                      <p className="mt-1 break-all font-mono text-[11px] text-zinc-500">
+                        {account.providerSubaccountCode || "No provider subaccount"}
+                      </p>
                     </div>
-                  </article>
-                );
-              })}
+
+                    <span
+                      className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${statusClass(
+                        account.status
+                      )}`}
+                    >
+                      {account.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-zinc-500">Requested by</p>
+                      <p className="font-semibold text-zinc-900">{actorName(account.requestedBy)}</p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-zinc-500">Approved by</p>
+                      <p className="font-semibold text-zinc-900">{actorName(account.approvedBy)}</p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-zinc-500">Approved at</p>
+                      <p className="font-semibold text-zinc-900">
+                        {formatDateTime(account.approvedAt)}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-zinc-500">Currency</p>
+                      <p className="font-semibold text-zinc-900">{account.currency}</p>
+                    </div>
+                  </div>
+
+                  {account.disableReason && (
+                    <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                      Disabled: {account.disableReason}
+                    </p>
+                  )}
+                </article>
+              ))}
             </div>
           )}
         </section>
 
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-semibold">Bank-grade boundary</p>
-          <p className="mt-1 text-xs">
-            This page can verify EduLife OS routing and Paystack payout records. Final independent
-            bank-credit proof requires a future bank-statement reconciliation layer.
+        <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <div className="border-b border-zinc-200 px-4 py-3">
+            <h2 className="text-sm font-semibold text-zinc-950">
+              Recent Paystack routing and refund truth
+            </h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Each row shows original payment, settlement linkage, refund exposure, and net retained.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs">
+              <thead className="bg-zinc-50 text-zinc-500">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Transaction</th>
+                  <th className="px-3 py-2 text-left font-medium">Learner</th>
+                  <th className="px-3 py-2 text-right font-medium">Gross</th>
+                  <th className="px-3 py-2 text-right font-medium">Refunded</th>
+                  <th className="px-3 py-2 text-right font-medium">Pending</th>
+                  <th className="px-3 py-2 text-right font-medium">Net retained</th>
+                  <th className="px-3 py-2 text-left font-medium">Settlement account</th>
+                  <th className="px-3 py-2 text-left font-medium">Evidence</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-zinc-100">
+                {recentTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-3 py-8 text-center text-zinc-500">
+                      No Paystack transactions found.
+                    </td>
+                  </tr>
+                ) : (
+                  recentTransactions.map((tx) => {
+                    const refunds = tx.feePayment?.refunds ?? [];
+                    const succeededRefunds = refunds.filter(
+                      (refund) => refund.status === RefundStatus.SUCCEEDED
+                    );
+                    const pendingRefunds = refunds.filter((refund) =>
+                      PENDING_REFUND_STATUSES.includes(refund.status)
+                    );
+
+                    const refundedPesewas = succeededRefunds.reduce(
+                      (sum, refund) => sum + refund.amountPesewas,
+                      0
+                    );
+                    const pendingPesewas = pendingRefunds.reduce(
+                      (sum, refund) => sum + refund.amountPesewas,
+                      0
+                    );
+                    const netPesewas = Math.max(0, tx.amountPesewas - refundedPesewas);
+
+                    const student = tx.feePayment?.invoice.student;
+                    const learnerName =
+                      fullName(student?.firstName, student?.lastName) || "Learner unavailable";
+                    const account = tx.paymentIntent?.settlementAccount;
+
+                    return (
+                      <tr key={tx.id} className="align-top">
+                        <td className="px-3 py-3">
+                          <p className="break-all font-mono text-[11px] font-semibold text-zinc-900">
+                            {tx.providerReference}
+                          </p>
+                          <p className="mt-1 text-[10px] text-zinc-500">
+                            {tx.channel ?? "channel unavailable"} ·{" "}
+                            {formatDateTime(tx.providerPaidAt ?? tx.createdAt)}
+                          </p>
+                          <p className="mt-1 text-[10px] text-zinc-500">
+                            Gateway status: {tx.status}
+                          </p>
+                        </td>
+
+                        <td className="px-3 py-3">
+                          <p className="font-semibold text-zinc-900">{learnerName}</p>
+                          <p className="text-[10px] text-zinc-500">
+                            {classLabel(student?.classroom)} ·{" "}
+                            {tx.feePayment?.invoice.term ?? "—"}{" "}
+                            {tx.feePayment?.invoice.academicYear ?? ""}
+                          </p>
+                          <p className="text-[10px] text-zinc-500">
+                            Guardian: {student?.guardianName ?? "—"}
+                          </p>
+                        </td>
+
+                        <td className="px-3 py-3 text-right font-semibold text-zinc-900">
+                          {formatCedis(tx.amountPesewas)}
+                        </td>
+
+                        <td className="px-3 py-3 text-right font-semibold text-red-700">
+                          {formatCedis(refundedPesewas)}
+                        </td>
+
+                        <td className="px-3 py-3 text-right font-semibold text-amber-700">
+                          {formatCedis(pendingPesewas)}
+                        </td>
+
+                        <td className="px-3 py-3 text-right font-semibold text-blue-900">
+                          {formatCedis(netPesewas)}
+                        </td>
+
+                        <td className="px-3 py-3">
+                          {account ? (
+                            <>
+                              <p className="font-semibold text-zinc-900">
+                                {account.accountName ?? "Account name unavailable"}
+                              </p>
+                              <p className="text-[10px] text-zinc-500">
+                                {account.bankName ?? "Bank unavailable"} · ****
+                                {account.accountNumberLast4 ?? "----"}
+                              </p>
+                              <p className="break-all font-mono text-[10px] text-zinc-500">
+                                {account.providerSubaccountCode ?? "No subaccount code"}
+                              </p>
+                              <span
+                                className={`mt-1 inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${statusClass(
+                                  account.status
+                                )}`}
+                              >
+                                {account.status}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700">
+                              Not linked
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-3 py-3">
+                          <p className="text-[10px] text-zinc-500">
+                            Receipt: {tx.feePayment?.receipt?.receiptNumber ?? "—"}
+                          </p>
+                          <p className="text-[10px] text-zinc-500">
+                            Receipt status: {tx.feePayment?.receipt?.status ?? "—"}
+                          </p>
+
+                          {refunds.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {refunds.map((refund) => (
+                                <div key={refund.id} className="rounded-lg bg-zinc-50 p-2">
+                                  <p className="font-semibold text-zinc-800">
+                                    {refundLifecycleText(refund.status)} ·{" "}
+                                    {formatCedis(refund.amountPesewas)}
+                                  </p>
+                                  <p className="break-all font-mono text-[10px] text-zinc-500">
+                                    Refund ref: {refund.providerRefundReference ?? "—"}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-zinc-950">Refund lifecycle visibility</h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Paystack refunds remain visible until final success, failure, or cancellation.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {recentPaystackRefunds.length === 0 ? (
+                <p className="text-xs text-zinc-500">No Paystack refunds found.</p>
+              ) : (
+                recentPaystackRefunds.slice(0, 14).map((refund) => {
+                  const student = refund.feePayment.invoice.student;
+                  const learnerName =
+                    fullName(student?.firstName, student?.lastName) || "Learner unavailable";
+
+                  return (
+                    <article
+                      key={refund.id}
+                      className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-zinc-950">
+                            {learnerName}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {refund.feePayment.receipt?.receiptNumber ?? "Receipt unavailable"}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {refundLifecycleText(refund.status)}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-zinc-950">
+                            {formatCedis(refund.amountPesewas)}
+                          </p>
+                          <span
+                            className={`mt-1 inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${statusClass(
+                              refund.status
+                            )}`}
+                          >
+                            {refund.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid gap-2 text-[11px] md:grid-cols-2">
+                        <p className="rounded-xl bg-white p-2">
+                          Requested: {formatDateTime(refund.requestedAt)}
+                        </p>
+                        <p className="rounded-xl bg-white p-2">
+                          Approved: {formatDateTime(refund.approvedAt)}
+                        </p>
+                        <p className="rounded-xl bg-white p-2">
+                          Sent: {formatDateTime(refund.processingAt)}
+                        </p>
+                        <p className="rounded-xl bg-white p-2">
+                          Processed: {formatDateTime(refund.processedAt)}
+                        </p>
+                      </div>
+
+                      <p className="mt-2 break-all font-mono text-[10px] text-zinc-500">
+                        Paystack refund ref: {refund.providerRefundReference ?? "—"}
+                      </p>
+                      <p className="mt-1 break-all font-mono text-[10px] text-zinc-500">
+                        Payment ref: {refund.providerReference ?? refund.feePayment.reference ?? "—"}
+                      </p>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-zinc-950">Recent payout records</h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              Payout tracking is separate from receipt truth. Refunds reduce retained collection
+              truth even before payout records exist.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {recentPayouts.length === 0 ? (
+                <p className="text-xs text-zinc-500">No payout records found yet.</p>
+              ) : (
+                recentPayouts.map((payout) => (
+                  <article
+                    key={payout.id}
+                    className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-zinc-950">
+                          {formatCedis(payout.amountPesewas)}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {payout.provider} · {payout.currency}
+                        </p>
+                        <p className="mt-1 break-all font-mono text-[10px] text-zinc-500">
+                          {payout.providerReference ||
+                            payout.providerTransferCode ||
+                            payout.providerTransferId ||
+                            "No provider reference"}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${statusClass(
+                          payout.status
+                        )}`}
+                      >
+                        {payout.status}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-xs md:grid-cols-2">
+                      <p>Created: {formatDateTime(payout.createdAt)}</p>
+                      <p>Updated: {formatDateTime(payout.updatedAt)}</p>
+                      <p>Paid: {formatDateTime(payout.paidAt)}</p>
+                      <p>Failed: {formatDateTime(payout.failedAt)}</p>
+                    </div>
+
+                    {payout.settlementAccount && (
+                      <p className="mt-2 text-xs text-zinc-500">
+                        Account: {payout.settlementAccount.accountName ?? "—"} ·{" "}
+                        {payout.settlementAccount.bankName ?? "—"} · ****
+                        {payout.settlementAccount.accountNumberLast4 ?? "----"}
+                      </p>
+                    )}
+
+                    {payout.failureReason && (
+                      <p className="mt-2 rounded-xl border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                        Failure: {payout.failureReason}
+                      </p>
+                    )}
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 text-xs text-zinc-600">
+          <p className="font-semibold text-zinc-900">Bank-grade settlement rule</p>
+          <p className="mt-1">
+            This page must never treat gross Paystack payment as final retained revenue after
+            refunds. Use net retained online collection as the truth, and use refund lifecycle
+            state to explain temporary differences between Paystack, ledger, receipts, and parent
+            visibility.
           </p>
         </section>
       </div>
