@@ -1,7 +1,7 @@
 // src/app/admin/fees/arrears/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type MeResponse =
   | { ok: true; tenantId: string; tenant?: { name?: string | null } | null }
@@ -12,9 +12,23 @@ type ArrearsRow = {
   studentName: string;
   guardianPhone: string | null;
   amountDue: number;
+  grossPaid?: number;
+  succeededRefunds?: number;
+  pendingRefunds?: number;
+  netPaid?: number;
   className: string | null;
   term: string | null;
+  academicYear?: string | null;
   dueDate: string | null;
+};
+
+type ArrearsListResponse = {
+  ok: boolean;
+  source?: "db" | string;
+  count?: number;
+  formula?: string;
+  items?: ArrearsRow[];
+  error?: string;
 };
 
 type FeesTemplateMeta = {
@@ -49,19 +63,37 @@ type NotifySendResponse = {
 };
 
 const btnBase =
-  "inline-flex items-center justify-center h-9 px-3 rounded-xl border text-sm shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
-const btnPrimary = `${btnBase} bg-black text-white border-black hover:bg-zinc-800`;
-const btnOutline = `${btnBase} bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-50`;
+  "inline-flex h-9 items-center justify-center rounded-xl border px-3 text-sm shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+const btnPrimary = `${btnBase} border-black bg-black text-white hover:bg-zinc-800`;
+const btnOutline = `${btnBase} border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50`;
 
-const SMS_COST_PER_MESSAGE = 0.03; // estimate only
+const SMS_COST_PER_MESSAGE = 0.03;
 
-function hasPhone(v: string | null) {
-  return !!v && v.trim().length > 0;
+function hasPhone(value: string | null) {
+  return Boolean(value?.trim());
 }
 
-function safeJson<T>(v: unknown): T | null {
-  if (!v || typeof v !== "object") return null;
-  return v as T;
+function safeJson<T>(value: unknown): T | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as T;
+}
+
+function formatCedis(value: number | null | undefined) {
+  const n = typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return `GH₵ ${n.toFixed(2)}`;
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  return d.toLocaleDateString("en-GH", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default function FeesArrearsPage() {
@@ -70,13 +102,15 @@ export default function FeesArrearsPage() {
 
   const [arrears, setArrears] = useState<ArrearsRow[]>([]);
   const [loadingArrears, setLoadingArrears] = useState(false);
-  const [arrearsSource, setArrearsSource] = useState<"sample" | "database" | null>(null);
+  const [arrearsSource, setArrearsSource] = useState<"database" | null>(null);
 
-  const [templateText, setTemplateText] = useState<string>("");
+  const [templateText, setTemplateText] = useState("");
   const [templateMeta, setTemplateMeta] = useState<FeesTemplateMeta | null>(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
 
-  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(() => new Set());
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const [info, setInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,49 +119,59 @@ export default function FeesArrearsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmSimulateOnly, setConfirmSimulateOnly] = useState(false);
 
-  // Tenant context from /api/me (session-scoped)
   useEffect(() => {
     const ac = new AbortController();
 
-    (async () => {
+    async function loadMe() {
       try {
-        const r = await fetch("/api/me", { cache: "no-store", signal: ac.signal });
-        const j = safeJson<MeResponse>(await r.json().catch(() => null));
+        const res = await fetch("/api/me", {
+          cache: "no-store",
+          signal: ac.signal,
+        });
 
-        if (!r.ok || !j || (j as any).ok !== true) {
+        const json = safeJson<MeResponse>(await res.json().catch(() => null));
+
+        if (!res.ok || !json || json.ok !== true) {
           setError("Could not load tenant context. Please sign in again.");
           return;
         }
 
-        const ok = j as Extract<MeResponse, { ok: true }>;
-        setTenantName(ok.tenant?.name || "School");
+        setTenantName(json.tenant?.name || "School");
         setMeReady(true);
       } catch {
-        if (!ac.signal.aborted) setError("Failed to load tenant context.");
+        if (!ac.signal.aborted) {
+          setError("Failed to load tenant context.");
+        }
       }
-    })();
+    }
+
+    void loadMe();
 
     return () => ac.abort();
   }, []);
 
-  async function loadTemplate() {
+  const loadTemplate = useCallback(async () => {
     setLoadingTemplate(true);
     setError(null);
 
     try {
-      // Server infers tenant from session; no tenantId query param.
-      const r = await fetch("/api/admin/sms/templates/fees-arrears", { cache: "no-store" });
-      const j = safeJson<FeesTemplateResponse>(await r.json().catch(() => null));
+      const res = await fetch("/api/admin/sms/templates/fees-arrears", {
+        cache: "no-store",
+      });
 
-      if (!r.ok || !j || !j.ok) {
+      const json = safeJson<FeesTemplateResponse>(
+        await res.json().catch(() => null)
+      );
+
+      if (!res.ok || !json || !json.ok) {
         setTemplateText("");
         setTemplateMeta(null);
-        setError(j?.error || "Failed to load fees arrears SMS template.");
+        setError(json?.error || "Failed to load fees arrears SMS template.");
         return;
       }
 
-      setTemplateText(j.template || "");
-      setTemplateMeta(j.meta || null);
+      setTemplateText(json.template || "");
+      setTemplateMeta(json.meta || null);
     } catch {
       setTemplateText("");
       setTemplateMeta(null);
@@ -135,34 +179,41 @@ export default function FeesArrearsPage() {
     } finally {
       setLoadingTemplate(false);
     }
-  }
+  }, []);
 
-  async function loadArrears() {
+  const loadArrears = useCallback(async () => {
     setLoadingArrears(true);
     setError(null);
     setInfo(null);
     setSelectedInvoiceIds(new Set());
 
     try {
-      // Server infers tenant from session; no tenantId query param.
-      const r = await fetch("/api/admin/fees/arrears/list", { cache: "no-store" });
-      const j = await r.json().catch(() => ({}));
+      const res = await fetch("/api/admin/fees/arrears/list", {
+        cache: "no-store",
+      });
 
-      if (!r.ok || !j?.ok) {
+      const json = safeJson<ArrearsListResponse>(
+        await res.json().catch(() => null)
+      );
+
+      if (!res.ok || !json || !json.ok) {
         setArrears([]);
         setArrearsSource(null);
-        setError(j?.error || "Internal error loading arrears. Please try again.");
+        setError(json?.error || "Internal error loading arrears. Please try again.");
         return;
       }
 
-      const items = (j.items || []) as ArrearsRow[];
+      const items = Array.isArray(json.items) ? json.items : [];
+
       setArrears(items);
-      setArrearsSource(j.source === "db" ? "database" : "sample");
+      setArrearsSource(json.source === "db" ? "database" : null);
 
       if (!items.length) {
         setInfo("No current unpaid invoices were found.");
-      } else if (j.source !== "db") {
-        setInfo("Using safe sample arrears for preview only. No real parents will be contacted.");
+      } else {
+        setInfo(
+          "Arrears loaded from invoice, payment, and refund records. Refunded amounts are deducted from net paid."
+        );
       }
     } catch {
       setArrears([]);
@@ -171,18 +222,18 @@ export default function FeesArrearsPage() {
     } finally {
       setLoadingArrears(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    if (meReady) {
-      loadTemplate();
-      loadArrears();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meReady]);
+    if (!meReady) return;
+
+    void loadTemplate();
+    void loadArrears();
+  }, [meReady, loadTemplate, loadArrears]);
 
   function toggleSelect(invoiceId: string, allowed: boolean) {
     if (!allowed) return;
+
     setSelectedInvoiceIds((prev) => {
       const next = new Set(prev);
       if (next.has(invoiceId)) next.delete(invoiceId);
@@ -193,7 +244,11 @@ export default function FeesArrearsPage() {
 
   function selectAllWithPhone() {
     const next = new Set<string>();
-    for (const a of arrears) if (hasPhone(a.guardianPhone)) next.add(a.invoiceId);
+
+    for (const row of arrears) {
+      if (hasPhone(row.guardianPhone)) next.add(row.invoiceId);
+    }
+
     setSelectedInvoiceIds(next);
   }
 
@@ -203,19 +258,44 @@ export default function FeesArrearsPage() {
 
   const selectedRows = useMemo(() => {
     if (!selectedInvoiceIds.size) return [];
-    return arrears.filter((a) => selectedInvoiceIds.has(a.invoiceId) && hasPhone(a.guardianPhone));
+
+    return arrears.filter(
+      (row) => selectedInvoiceIds.has(row.invoiceId) && hasPhone(row.guardianPhone)
+    );
   }, [arrears, selectedInvoiceIds]);
 
-  const withPhoneCount = useMemo(() => arrears.filter((a) => hasPhone(a.guardianPhone)).length, [arrears]);
+  const withPhoneCount = useMemo(
+    () => arrears.filter((row) => hasPhone(row.guardianPhone)).length,
+    [arrears]
+  );
+
+  const totalArrears = useMemo(
+    () => arrears.reduce((sum, row) => sum + row.amountDue, 0),
+    [arrears]
+  );
+
+  const totalSucceededRefunds = useMemo(
+    () => arrears.reduce((sum, row) => sum + (row.succeededRefunds ?? 0), 0),
+    [arrears]
+  );
+
+  const totalPendingRefunds = useMemo(
+    () => arrears.reduce((sum, row) => sum + (row.pendingRefunds ?? 0), 0),
+    [arrears]
+  );
 
   const estimatedSmsCount = selectedRows.length;
-  const estimatedCost = estimatedSmsCount > 0 ? Number((estimatedSmsCount * SMS_COST_PER_MESSAGE).toFixed(2)) : 0;
+  const estimatedCost =
+    estimatedSmsCount > 0
+      ? Number((estimatedSmsCount * SMS_COST_PER_MESSAGE).toFixed(2))
+      : 0;
 
   async function sendReminders(simulateOnly: boolean) {
     if (!meReady) {
       setError("Session not detected. Please reload or sign in again.");
       return;
     }
+
     if (!selectedRows.length) {
       setError("Select at least one student with a phone number before continuing.");
       return;
@@ -227,41 +307,49 @@ export default function FeesArrearsPage() {
 
     try {
       const payload = {
-        arrears: selectedRows.map((a) => ({
-          invoiceId: a.invoiceId,
-          studentName: a.studentName,
-          guardianPhone: a.guardianPhone,
-          amountDue: a.amountDue,
-          className: a.className,
-          term: a.term,
-          dueDate: a.dueDate,
+        arrears: selectedRows.map((row) => ({
+          invoiceId: row.invoiceId,
+          studentName: row.studentName,
+          guardianPhone: row.guardianPhone,
+          amountDue: row.amountDue,
+          className: row.className,
+          term: row.term,
+          dueDate: row.dueDate,
         })),
       };
 
-      const endpoint = simulateOnly ? "/api/fees/notify-arrears/simulate" : "/api/fees/notify-arrears";
+      const endpoint = simulateOnly
+        ? "/api/fees/notify-arrears/simulate"
+        : "/api/fees/notify-arrears";
 
-      const r = await fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const raw = await r.json().catch(() => ({}));
+      const raw = safeJson<NotifySimulateResponse | NotifySendResponse>(
+        await res.json().catch(() => null)
+      );
 
-      if (!r.ok || !raw?.ok) {
+      if (!res.ok || !raw?.ok) {
         setError(raw?.error || "Failed to process fee reminders. Please try again.");
         return;
       }
 
       if (simulateOnly) {
-        const j = raw as NotifySimulateResponse;
-        const total = Number(j.total ?? 0);
-        setInfo(`Simulation complete. ${total} reminder(s) would have been sent. No parent was contacted.`);
+        const result = raw as NotifySimulateResponse;
+        const total = Number(result.total ?? 0);
+
+        setInfo(
+          `Simulation complete. ${total} reminder(s) would have been sent. No parent was contacted.`
+        );
       } else {
-        const j = raw as NotifySendResponse;
-        const success = Number(j.successCount ?? j.sent ?? 0);
-        const total = Number(j.total ?? j.attempted ?? selectedRows.length);
-        setInfo(`Fee reminder request processed. Success (reported): ${success}/${total}.`);
+        const result = raw as NotifySendResponse;
+        const success = Number(result.successCount ?? result.sent ?? 0);
+        const total = Number(result.total ?? result.attempted ?? selectedRows.length);
+
+        setInfo(`Fee reminder request processed. Success reported: ${success}/${total}.`);
       }
     } catch {
       setError("Network or server error while sending reminders.");
@@ -272,135 +360,242 @@ export default function FeesArrearsPage() {
   }
 
   return (
-    <main className="min-h-screen p-6 max-w-6xl mx-auto space-y-6">
+    <main className="mx-auto min-h-screen max-w-6xl space-y-6 p-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-bold">Fees – Gentle Arrears Reminder Centre</h1>
-        <p className="text-sm text-[#C9CDD6] max-w-3xl">
-          Send kind, respectful reminders to families who are behind on fees. Clarity, not shame.
+        <div className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-900">
+          Finance Trust Spine
+        </div>
+
+        <h1 className="text-2xl font-bold text-[#F7F4ED]">
+          Fees Arrears Reminder Centre
+        </h1>
+
+        <p className="max-w-3xl text-sm text-[#C9CDD6]">
+          Send kind, respectful reminders to families who are behind on fees.
+          The amounts shown here are refund-aware and calculated from real finance
+          records.
         </p>
       </header>
 
-      <section className="border rounded-xl p-4 bg-white space-y-4">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+      <section className="space-y-4 rounded-2xl border border-white/10 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="space-y-1">
-            <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Context</div>
-            <div className="text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Context
+            </div>
+
+            <div className="text-sm text-zinc-800">
               Tenant / School: <span className="font-semibold">{tenantName}</span>
             </div>
-            <div className="text-xs text-zinc-600 max-w-xl">
-              <span className="font-semibold">Guardrail:</span> messages must be factual, time-bound, never shaming.
+
+            <div className="max-w-xl text-xs text-zinc-600">
+              <span className="font-semibold">Guardrail:</span> messages must be
+              factual, time-bound, and never shaming.
             </div>
           </div>
 
-          <div className="space-y-2 text-xs md:text-sm">
-            <div className="border rounded-xl p-3 bg-zinc-50">
-              <div className="font-semibold text-zinc-700 mb-1">Current template (read-only here)</div>
-              {loadingTemplate ? (
-                <div className="text-xs text-zinc-500">Loading template…</div>
-              ) : templateText ? (
-                <p className="text-xs text-zinc-700 whitespace-pre-wrap break-words">{templateText}</p>
-              ) : (
-                <p className="text-xs text-zinc-500">
-                  No template loaded. Set one under <span className="font-semibold">Admin → Tools → SMS Templates → Fees Arrears</span>.
-                </p>
-              )}
-
-              {templateMeta && (
-                <div className="mt-2 text-[11px] text-zinc-500">
-                  Sender: <span className="font-semibold">{templateMeta.brand || "SENDER"}</span>
-                  {templateMeta.lastUpdatedAt && <> • Last updated: {new Date(templateMeta.lastUpdatedAt).toLocaleString()}</>}
-                </div>
-              )}
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs md:text-sm">
+            <div className="mb-1 font-semibold text-zinc-700">
+              Current template
             </div>
+
+            {loadingTemplate ? (
+              <div className="text-xs text-zinc-500">Loading template…</div>
+            ) : templateText ? (
+              <p className="whitespace-pre-wrap break-words text-xs text-zinc-700">
+                {templateText}
+              </p>
+            ) : (
+              <p className="text-xs text-zinc-500">
+                No template loaded. Set one under{" "}
+                <span className="font-semibold">
+                  Admin → Tools → SMS Templates → Fees Arrears
+                </span>
+                .
+              </p>
+            )}
+
+            {templateMeta && (
+              <div className="mt-2 text-[11px] text-zinc-500">
+                Sender:{" "}
+                <span className="font-semibold">
+                  {templateMeta.brand || "SENDER"}
+                </span>
+                {templateMeta.lastUpdatedAt && (
+                  <>
+                    {" "}
+                    • Last updated:{" "}
+                    {new Date(templateMeta.lastUpdatedAt).toLocaleString()}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      <section className="border rounded-xl p-4 bg-white space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <section className="space-y-4 rounded-2xl border border-white/10 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-sm">
-              <span className="font-semibold">Arrears overview</span>
+              <span className="font-semibold text-zinc-900">Arrears overview</span>
+
               {arrearsSource && (
-                <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-50 text-zinc-700">
-                  Source: {arrearsSource === "database" ? "Database" : "Sample"}
+                <span className="rounded-full border bg-zinc-50 px-2 py-0.5 text-xs text-zinc-700">
+                  Source: Database
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-500 max-w-xl">
-              Use "Refresh from DB" for real invoices. Sample is safe for testing without contacting parents.
+
+            <p className="max-w-xl text-xs text-zinc-500">
+              Use the refresh button to reload real invoice, payment, and refund
+              records.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button className={btnOutline} onClick={() => loadArrears()} disabled={loadingArrears || !meReady}>
+            <button
+              className={btnOutline}
+              onClick={() => void loadArrears()}
+              disabled={loadingArrears || !meReady}
+            >
               {loadingArrears ? "Refreshing…" : "Refresh from DB"}
             </button>
-            <button className={btnOutline} onClick={selectAllWithPhone} disabled={!arrears.length}>
+
+            <button
+              className={btnOutline}
+              onClick={selectAllWithPhone}
+              disabled={!arrears.length}
+            >
               Select all with phone
             </button>
-            <button className={btnOutline} onClick={clearSelection} disabled={!selectedInvoiceIds.size}>
+
+            <button
+              className={btnOutline}
+              onClick={clearSelection}
+              disabled={!selectedInvoiceIds.size}
+            >
               Clear selection
             </button>
           </div>
         </div>
 
-        {error && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</div>}
-        {info && !error && <div className="text-sm text-zinc-700 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2">{info}</div>}
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs md:text-sm mt-2">
-          <div className="border rounded-xl px-3 py-2 bg-zinc-50">
-            <div className="text-zinc-500">Total invoices shown</div>
+        {info && !error && (
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+            {info}
+          </div>
+        )}
+
+        <div className="mt-2 grid grid-cols-2 gap-3 text-xs md:grid-cols-5 md:text-sm">
+          <div className="rounded-xl border bg-zinc-50 px-3 py-2">
+            <div className="text-zinc-500">Invoices shown</div>
             <div className="text-lg font-semibold">{arrears.length}</div>
           </div>
-          <div className="border rounded-xl px-3 py-2 bg-zinc-50">
-            <div className="text-zinc-500">With phone on file</div>
+
+          <div className="rounded-xl border bg-zinc-50 px-3 py-2">
+            <div className="text-zinc-500">With phone</div>
             <div className="text-lg font-semibold">{withPhoneCount}</div>
           </div>
-          <div className="border rounded-xl px-3 py-2 bg-amber-50 border-amber-100">
-            <div className="text-amber-700">Selected for reminder</div>
-            <div className="text-lg font-semibold text-amber-800">{selectedRows.length}</div>
+
+          <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2">
+            <div className="text-red-700">Total arrears</div>
+            <div className="text-lg font-semibold text-red-800">
+              {formatCedis(totalArrears)}
+            </div>
           </div>
-          <div className="border rounded-xl px-3 py-2 bg-emerald-50 border-emerald-100">
-            <div className="text-emerald-700">Est. SMS cost (guidance)</div>
-            <div className="text-lg font-semibold text-emerald-800">GH₵ {estimatedCost.toFixed(2)}</div>
+
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
+            <div className="text-emerald-700">Succeeded refunds</div>
+            <div className="text-lg font-semibold text-emerald-800">
+              {formatCedis(totalSucceededRefunds)}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
+            <div className="text-amber-700">Pending refunds</div>
+            <div className="text-lg font-semibold text-amber-800">
+              {formatCedis(totalPendingRefunds)}
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto mt-3">
-          <table className="min-w-full text-sm border rounded-xl overflow-hidden text-zinc-900">
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-full overflow-hidden rounded-xl border text-sm text-zinc-900">
             <thead className="bg-zinc-50 text-xs text-zinc-700">
               <tr>
-                <th className="px-3 py-2 text-left border-b">Select</th>
-                <th className="px-3 py-2 text-left border-b">Student</th>
-                <th className="px-3 py-2 text-left border-b">Class</th>
-                <th className="px-3 py-2 text-left border-b">Term</th>
-                <th className="px-3 py-2 text-left border-b">Amount Due</th>
-                <th className="px-3 py-2 text-left border-b">Due Date</th>
-                <th className="px-3 py-2 text-left border-b">Guardian Phone</th>
+                <th className="border-b px-3 py-2 text-left">Select</th>
+                <th className="border-b px-3 py-2 text-left">Student</th>
+                <th className="border-b px-3 py-2 text-left">Class</th>
+                <th className="border-b px-3 py-2 text-left">Term</th>
+                <th className="border-b px-3 py-2 text-right">Net paid</th>
+                <th className="border-b px-3 py-2 text-right">Refunded</th>
+                <th className="border-b px-3 py-2 text-right">Amount due</th>
+                <th className="border-b px-3 py-2 text-left">Due date</th>
+                <th className="border-b px-3 py-2 text-left">Guardian phone</th>
               </tr>
             </thead>
+
             <tbody>
-              {arrears.map((a, idx) => {
-                const key = `${a.invoiceId}-${idx}`;
-                const allowed = hasPhone(a.guardianPhone);
-                const selected = allowed && selectedInvoiceIds.has(a.invoiceId);
+              {arrears.map((row, index) => {
+                const key = `${row.invoiceId}-${index}`;
+                const allowed = hasPhone(row.guardianPhone);
+                const selected = allowed && selectedInvoiceIds.has(row.invoiceId);
 
                 return (
                   <tr key={key} className="border-b last:border-b-0">
                     <td className="px-3 py-2 align-top">
-                      <input type="checkbox" checked={selected} disabled={!allowed} onChange={() => toggleSelect(a.invoiceId, allowed)} />
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        disabled={!allowed}
+                        onChange={() => toggleSelect(row.invoiceId, allowed)}
+                      />
                     </td>
+
                     <td className="px-3 py-2 align-top">
-                      <div className="font-semibold">{a.studentName}</div>
-                      <div className="text-xs text-zinc-500">Invoice ID: {a.invoiceId}</div>
+                      <div className="font-semibold">{row.studentName}</div>
+                      <div className="text-xs text-zinc-500">
+                        Invoice ID: {row.invoiceId}
+                      </div>
                     </td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-700">{a.className || "—"}</td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-700">{a.term || "—"}</td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-800">{a.amountDue.toFixed(2)}</td>
-                    <td className="px-3 py-2 align-top text-xs text-zinc-700">{a.dueDate || "—"}</td>
+
                     <td className="px-3 py-2 align-top text-xs text-zinc-700">
-                      {allowed ? a.guardianPhone : <span className="text-red-600">No phone on file</span>}
+                      {row.className || "—"}
+                    </td>
+
+                    <td className="px-3 py-2 align-top text-xs text-zinc-700">
+                      {[row.term, row.academicYear].filter(Boolean).join(" · ") ||
+                        "—"}
+                    </td>
+
+                    <td className="px-3 py-2 text-right align-top text-xs text-zinc-800">
+                      {formatCedis(row.netPaid)}
+                    </td>
+
+                    <td className="px-3 py-2 text-right align-top text-xs text-emerald-700">
+                      {formatCedis(row.succeededRefunds)}
+                    </td>
+
+                    <td className="px-3 py-2 text-right align-top text-xs font-semibold text-red-700">
+                      {formatCedis(row.amountDue)}
+                    </td>
+
+                    <td className="px-3 py-2 align-top text-xs text-zinc-700">
+                      {formatDate(row.dueDate)}
+                    </td>
+
+                    <td className="px-3 py-2 align-top text-xs text-zinc-700">
+                      {allowed ? (
+                        row.guardianPhone
+                      ) : (
+                        <span className="text-red-600">No phone on file</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -408,7 +603,7 @@ export default function FeesArrearsPage() {
 
               {!arrears.length && !loadingArrears && (
                 <tr>
-                  <td className="px-3 py-4 text-sm text-zinc-600" colSpan={7}>
+                  <td className="px-3 py-4 text-sm text-zinc-600" colSpan={9}>
                     No arrears to show at the moment.
                   </td>
                 </tr>
@@ -417,9 +612,11 @@ export default function FeesArrearsPage() {
           </table>
         </div>
 
-        <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <p className="text-xs text-zinc-500 max-w-xl">
-            <span className="font-semibold">Guardrail:</span> verify amounts and due dates before sending real reminders.
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <p className="max-w-xl text-xs text-zinc-500">
+            <span className="font-semibold">Guardrail:</span> verify amounts
+            before sending real reminders. Refunds already paid are deducted from
+            what the family owes.
           </p>
 
           <div className="flex flex-wrap gap-2">
@@ -430,13 +627,15 @@ export default function FeesArrearsPage() {
                   setError("Select at least one student with a phone number before simulating.");
                   return;
                 }
+
                 setConfirmSimulateOnly(true);
                 setConfirmOpen(true);
               }}
               disabled={sending || !selectedRows.length}
             >
-              Simulate (no SMS)
+              Simulate, no SMS
             </button>
+
             <button
               className={btnPrimary}
               onClick={() => {
@@ -444,6 +643,7 @@ export default function FeesArrearsPage() {
                   setError("Select at least one student with a phone number before sending.");
                   return;
                 }
+
                 setConfirmSimulateOnly(false);
                 setConfirmOpen(true);
               }}
@@ -456,34 +656,61 @@ export default function FeesArrearsPage() {
       </section>
 
       {confirmOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-zinc-900">{confirmSimulateOnly ? "Run a simulation only?" : "Confirm sending SMS reminders?"}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md space-y-4 rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="text-lg font-semibold text-zinc-900">
+              {confirmSimulateOnly
+                ? "Run simulation only?"
+                : "Confirm sending SMS reminders?"}
+            </h2>
 
-            <p className="text-sm text-zinc-600 break-words">
+            <p className="break-words text-sm text-zinc-600">
               You are about to{" "}
               {confirmSimulateOnly ? (
                 <>
-                  <span className="font-semibold">simulate</span> sending <span className="font-semibold">{selectedRows.length}</span> reminder(s) without contacting any parent.
+                  <span className="font-semibold">simulate</span>{" "}
+                  <span className="font-semibold">{selectedRows.length}</span>{" "}
+                  reminder(s) without contacting any parent.
                 </>
               ) : (
                 <>
-                  <span className="font-semibold">send</span> <span className="font-semibold">{selectedRows.length}</span> real reminder(s) using the current template.
+                  <span className="font-semibold">send</span>{" "}
+                  <span className="font-semibold">{selectedRows.length}</span>{" "}
+                  real reminder(s) using the current template.
                 </>
               )}
             </p>
 
             <p className="text-sm text-zinc-600">
-              Estimated SMS units: <span className="font-semibold">{estimatedSmsCount}</span> • Estimated cost:{" "}
-              <span className="font-semibold">GH₵ {estimatedCost.toFixed(2)}</span>
+              Estimated SMS units:{" "}
+              <span className="font-semibold">{estimatedSmsCount}</span> •
+              Estimated cost:{" "}
+              <span className="font-semibold">
+                GH₵ {estimatedCost.toFixed(2)}
+              </span>
             </p>
 
             <div className="flex justify-end gap-2 pt-2">
-              <button className={btnOutline} onClick={() => setConfirmOpen(false)} disabled={sending}>
+              <button
+                className={btnOutline}
+                onClick={() => setConfirmOpen(false)}
+                disabled={sending}
+              >
                 Cancel
               </button>
-              <button className={confirmSimulateOnly ? btnOutline : btnPrimary} onClick={() => sendReminders(confirmSimulateOnly)} disabled={sending}>
-                {sending ? (confirmSimulateOnly ? "Simulating…" : "Sending…") : confirmSimulateOnly ? "Yes, simulate" : "Yes, send"}
+
+              <button
+                className={confirmSimulateOnly ? btnOutline : btnPrimary}
+                onClick={() => void sendReminders(confirmSimulateOnly)}
+                disabled={sending}
+              >
+                {sending
+                  ? confirmSimulateOnly
+                    ? "Simulating…"
+                    : "Sending…"
+                  : confirmSimulateOnly
+                    ? "Yes, simulate"
+                    : "Yes, send"}
               </button>
             </div>
           </div>
