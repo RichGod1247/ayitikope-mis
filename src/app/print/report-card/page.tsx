@@ -1,7 +1,8 @@
 // src/app/print/report-card/page.tsx
-// Clean A4 NaCCA terminal report card — no nav/sidebar (SiteChrome hides chrome for /print paths).
-// Used by headteachers for browser print and navigated by the PDF route via puppeteer.
+// Clean A4 NaCCA terminal report card — no nav/sidebar.
+// Used by headteachers for browser print and by the PDF route through Puppeteer.
 import { redirect } from "next/navigation";
+import { RefundStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 
@@ -23,24 +24,42 @@ function naccaGrade(pct: number | null): string | null {
 
 function naccaRemark(grade: string | null): string | null {
   const map: Record<string, string> = {
-    "1": "Excellent", "2": "Very Good", "3": "Good",
-    "4": "Credit", "5": "Pass", "6": "Below Average", "7": "Fail",
+    "1": "Excellent",
+    "2": "Very Good",
+    "3": "Good",
+    "4": "Credit",
+    "5": "Pass",
+    "6": "Below Average",
+    "7": "Fail",
   };
-  return grade ? (map[grade] ?? null) : null;
+
+  return grade ? map[grade] ?? null : null;
 }
 
-function fmtDate(d: Date | string | null | undefined): string {
-  if (!d) return "—";
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return "—";
-  return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+function fmtDate(value: Date | string | null | undefined): string {
+  if (!value) return "—";
+
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "—";
+
+  return dt.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-function pesewasToGhs(p: number): string {
-  return `GHS ${(p / 100).toFixed(2)}`;
+function pesewasToGhs(value: number): string {
+  return `GHS ${(value / 100).toFixed(2)}`;
 }
 
-export default async function ReportCardPrintPage(props: { searchParams: Promise<SP> }) {
+function safeNumber(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+export default async function ReportCardPrintPage(props: {
+  searchParams: Promise<SP>;
+}) {
   const ctx = await requireServerUserContext({
     redirectTo: "/auth/signin",
     requireTenant: true,
@@ -54,8 +73,16 @@ export default async function ReportCardPrintPage(props: { searchParams: Promise
 
   if (!studentId) {
     return (
-      <div style={{ padding: 32, color: "#555", fontFamily: "sans-serif", fontSize: 13 }}>
-        No learner ID provided. Add <code>?studentId=X&amp;term=Y&amp;academicYear=Z</code> to the URL.
+      <div
+        style={{
+          padding: 32,
+          color: "#555",
+          fontFamily: "sans-serif",
+          fontSize: 13,
+        }}
+      >
+        No learner ID provided. Add{" "}
+        <code>?studentId=X&amp;term=Y&amp;academicYear=Z</code> to the URL.
       </div>
     );
   }
@@ -63,9 +90,17 @@ export default async function ReportCardPrintPage(props: { searchParams: Promise
   const student = await prisma.student.findFirst({
     where: { id: studentId, tenantId: ctx.tenantId },
     select: {
-      id: true, firstName: true, lastName: true, sex: true, dob: true,
-      classroomId: true, guardianName: true, guardianPhone: true,
-      classroom: { select: { id: true, name: true, grade: true, arm: true } },
+      id: true,
+      firstName: true,
+      lastName: true,
+      sex: true,
+      dob: true,
+      classroomId: true,
+      guardianName: true,
+      guardianPhone: true,
+      classroom: {
+        select: { id: true, name: true, grade: true, arm: true },
+      },
     },
   });
 
@@ -78,85 +113,141 @@ export default async function ReportCardPrintPage(props: { searchParams: Promise
 
   const classroomId = student.classroomId ?? "";
 
-  const items = await prisma.assessmentItem.findMany({
+  const assessmentItems = await prisma.assessmentItem.findMany({
     where: { tenantId: ctx.tenantId, classroomId, term, academicYear },
     select: { id: true, subject: true, maxScore: true },
   });
 
-  const scores = items.length
+  const assessmentScores = assessmentItems.length
     ? await prisma.assessmentScore.findMany({
-        where: { studentId: student.id, itemId: { in: items.map((i) => i.id) } },
+        where: {
+          studentId: student.id,
+          itemId: { in: assessmentItems.map((item) => item.id) },
+        },
         select: { itemId: true, score: true },
       })
     : [];
 
-  const scoreMap = new Map(scores.map((s) => [s.itemId, Number(s.score ?? 0)]));
+  const scoreMap = new Map(
+    assessmentScores.map((score) => [score.itemId, Number(score.score ?? 0)])
+  );
 
   const bySubject: Record<string, { total: number; max: number }> = {};
-  for (const item of items) {
-    const k = item.subject ?? "Subject";
-    if (!bySubject[k]) bySubject[k] = { total: 0, max: 0 };
-    bySubject[k].total += scoreMap.get(item.id) ?? 0;
-    bySubject[k].max += Number(item.maxScore ?? 0);
+
+  for (const item of assessmentItems) {
+    const subject = item.subject ?? "Subject";
+
+    if (!bySubject[subject]) {
+      bySubject[subject] = { total: 0, max: 0 };
+    }
+
+    bySubject[subject].total += scoreMap.get(item.id) ?? 0;
+    bySubject[subject].max += Number(item.maxScore ?? 0);
   }
 
   const subjectRows = Object.entries(bySubject)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([subject, { total, max }]) => {
-      const pct = max > 0 ? (total / max) * 100 : null;
+    .map(([subject, totals]) => {
+      const pct = totals.max > 0 ? (totals.total / totals.max) * 100 : null;
       const grade = naccaGrade(pct);
-      return { subject, total, max, pct, grade, remark: naccaRemark(grade) };
+
+      return {
+        subject,
+        total: totals.total,
+        max: totals.max,
+        pct,
+        grade,
+        remark: naccaRemark(grade),
+      };
     });
 
-  const totalSum = subjectRows.reduce((s, r) => s + r.total, 0);
-  const maxSum = subjectRows.reduce((s, r) => s + r.max, 0);
-  const overallPct = maxSum > 0 ? (totalSum / maxSum) * 100 : null;
+  const totalScore = subjectRows.reduce((sum, row) => sum + row.total, 0);
+  const maxScore = subjectRows.reduce((sum, row) => sum + row.max, 0);
+  const overallPct = maxScore > 0 ? (totalScore / maxScore) * 100 : null;
 
   const attendanceMarks = classroomId
     ? await prisma.attendanceMark.findMany({
-        where: { studentId: student.id, session: { tenantId: ctx.tenantId, classroomId } },
+        where: {
+          studentId: student.id,
+          session: { tenantId: ctx.tenantId, classroomId },
+        },
         select: { status: true },
       })
     : [];
-  const daysPresent = attendanceMarks.filter((m) => m.status === "PRESENT").length;
-  const daysAbsent = attendanceMarks.filter((m) => m.status === "ABSENT").length;
-  const daysLate = attendanceMarks.filter((m) => m.status === "LATE").length;
+
+  const daysPresent = attendanceMarks.filter(
+    (mark) => mark.status === "PRESENT"
+  ).length;
+  const daysAbsent = attendanceMarks.filter(
+    (mark) => mark.status === "ABSENT"
+  ).length;
+  const daysLate = attendanceMarks.filter(
+    (mark) => mark.status === "LATE"
+  ).length;
+
   const totalSchoolDays = classroomId
     ? await prisma.attendanceSession.count({
         where: { tenantId: ctx.tenantId, classroomId, isClosed: true },
       })
     : 0;
 
-  const invAgg = await prisma.feeInvoice.aggregate({
-    where: { tenantId: ctx.tenantId, term, academicYear, studentId: student.id },
-    _sum: { totalBilledPesewas: true, totalWaivedPesewas: true },
-  }).catch(() => ({ _sum: { totalBilledPesewas: 0, totalWaivedPesewas: 0 } }));
-  const payAgg = await prisma.feePayment.aggregate({
-    where: { tenantId: ctx.tenantId, invoice: { term, academicYear, studentId: student.id } },
-    _sum: { amountPesewas: true },
-  }).catch(() => ({ _sum: { amountPesewas: 0 } }));
-  const billed = invAgg._sum.totalBilledPesewas ?? 0;
-  const waived = invAgg._sum.totalWaivedPesewas ?? 0;
-  const paid = payAgg._sum.amountPesewas ?? 0;
+  const invoiceAgg = await prisma.feeInvoice
+    .aggregate({
+      where: { tenantId: ctx.tenantId, term, academicYear, studentId: student.id },
+      _sum: { totalBilledPesewas: true, totalWaivedPesewas: true },
+    })
+    .catch(() => ({
+      _sum: { totalBilledPesewas: 0, totalWaivedPesewas: 0 },
+    }));
 
-  const sig = await prisma.headteacherSignature.findFirst({
-    where: { tenantId: ctx.tenantId },
-    select: { signatureSvg: true },
-    orderBy: { updatedAt: "desc" },
-  }).catch(() => null);
+  const paymentAgg = await prisma.feePayment
+    .aggregate({
+      where: {
+        tenantId: ctx.tenantId,
+        status: "SUCCESS",
+        invoice: { term, academicYear, studentId: student.id },
+      },
+      _sum: { amountPesewas: true },
+    })
+    .catch(() => ({ _sum: { amountPesewas: 0 } }));
+
+  const refundAgg = await prisma.feeRefund
+    .aggregate({
+      where: {
+        tenantId: ctx.tenantId,
+        status: RefundStatus.SUCCEEDED,
+        feePayment: {
+          invoice: { term, academicYear, studentId: student.id },
+        },
+      },
+      _sum: { amountPesewas: true },
+    })
+    .catch(() => ({ _sum: { amountPesewas: 0 } }));
+
+  const billed = safeNumber(invoiceAgg._sum.totalBilledPesewas);
+  const waived = safeNumber(invoiceAgg._sum.totalWaivedPesewas);
+  const grossPaid = safeNumber(paymentAgg._sum.amountPesewas);
+  const refunded = safeNumber(refundAgg._sum.amountPesewas);
+  const netPaid = Math.max(0, grossPaid - refunded);
+  const outstanding = Math.max(0, billed - waived - netPaid);
+
+  const signature = await prisma.headteacherSignature
+    .findFirst({
+      where: { tenantId: ctx.tenantId },
+      select: { signatureSvg: true },
+      orderBy: { updatedAt: "desc" },
+    })
+    .catch(() => null);
 
   const schoolName = tenant?.name ?? "EduLife OS School";
   const studentName = `${student.lastName} ${student.firstName}`.trim();
   const classLabel = student.classroom?.name ?? student.classroom?.grade ?? "—";
   const classArm = student.classroom?.arm ? ` (${student.classroom.arm})` : "";
-  const outstanding = billed - waived - paid;
 
   const css = `
     @page { size: A4 portrait; margin: 10mm 12mm; }
-    .rc-root { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10pt; color: #111; background: #fff; width: 100%; max-width: 794px; margin: 0 auto; padding: 0; }
+    .rc-root { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10pt; color: #111; background: #fff; width: 100%; max-width: 794px; margin: 0 auto; padding: 0; }
     .rc-root *, .rc-root *::before, .rc-root *::after { box-sizing: border-box; }
-
-    /* Header */
     .rc-header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 3px solid #071A3D; padding-bottom: 8px; margin-bottom: 10px; gap: 8px; }
     .rc-logo-wrap { display: flex; align-items: center; gap: 7px; min-width: 0; }
     .rc-logo-icon { width: 30px; height: 30px; background: #071A3D; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #D4AF37; font-weight: 900; font-size: 15pt; flex-shrink: 0; line-height: 1; }
@@ -168,50 +259,32 @@ export default async function ReportCardPrintPage(props: { searchParams: Promise
     .rc-card-term { font-size: 7.5pt; color: #666; margin-top: 3px; }
     .rc-photo-box { border: 2px solid #D4AF37; width: 70px; height: 88px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 3px; background: #faf8f0; }
     .rc-photo-label { font-size: 6pt; color: #bbb; text-align: center; line-height: 1.5; }
-
-    /* Tables */
     .rc-table { width: 100%; border-collapse: collapse; }
     .rc-table th, .rc-table td { padding: 4px 6px; border: 1px solid #ccd; vertical-align: middle; }
     .rc-table thead th { background: #071A3D; color: #F7F4ED; font-weight: 700; font-size: 8pt; }
-
-    /* Section labels */
     .rc-section-title { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #071A3D; margin-bottom: 4px; padding-left: 5px; border-left: 3px solid #D4AF37; }
-
-    /* Info boxes */
     .rc-info-box { border: 1px solid #ddd; border-radius: 3px; padding: 6px 8px; font-size: 9pt; }
     .rc-info-row { display: flex; gap: 4px; margin-bottom: 2px; }
     .rc-info-label { font-weight: 600; min-width: 85px; color: #444; flex-shrink: 0; }
-
-    /* Grids */
     .rc-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .rc-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-
-    /* Overall score */
     .rc-overall-box { border: 2px solid #071A3D; border-radius: 5px; padding: 6px 10px; text-align: center; background: #f0f4ff; }
     .rc-overall-pct { font-size: 20pt; font-weight: 800; color: #071A3D; }
     .rc-overall-label { font-size: 8pt; color: #555; }
-
-    /* Grade badges */
     .rc-grade { display: inline-block; background: #e8f5e9; color: #1b5e20; border-radius: 3px; padding: 1px 5px; font-weight: 700; font-size: 9pt; }
     .rc-grade-fail { background: #ffebee; color: #b71c1c; }
     .rc-grade-below { background: #fff3e0; color: #e65100; }
-
-    /* Signature blocks */
     .rc-sig-block { border: 1px solid #ddd; border-radius: 3px; padding: 8px; font-size: 9pt; min-height: 72px; }
     .rc-sig-container { overflow: hidden; height: 46px; max-width: 180px; display: flex; align-items: center; }
     .rc-sig-container span { display: flex; align-items: center; max-width: 100%; }
     .rc-sig-container svg { max-height: 44px !important; max-width: 180px !important; width: auto !important; height: auto !important; }
     .rc-sig-line { border-top: 1px solid #aaa; margin-top: 5px; padding-top: 3px; font-size: 8pt; color: #555; }
-
-    /* Footer */
     .rc-footer { border-top: 2px solid #071A3D; padding-top: 4px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; }
     .rc-footer-brand { display: flex; align-items: center; gap: 4px; }
     .rc-footer-icon { width: 14px; height: 14px; background: #071A3D; border-radius: 2px; display: flex; align-items: center; justify-content: center; color: #D4AF37; font-weight: 900; font-size: 8pt; line-height: 1; }
     .rc-footer-name { font-size: 7pt; font-weight: 700; color: #071A3D; }
     .rc-footer-nacca { font-size: 7pt; color: #D4AF37; font-weight: 700; }
     .rc-footer-date { font-size: 7pt; color: #999; }
-
-    /* Misc */
     .rc-highlight { background: #eef2ff; font-weight: 700; }
     .rc-outstanding { color: ${outstanding > 0 ? "#b71c1c" : "#1b5e20"}; font-weight: 700; }
     .rc-odd { background: #fafafa; }
@@ -220,180 +293,252 @@ export default async function ReportCardPrintPage(props: { searchParams: Promise
 
   return (
     <>
-      {/* eslint-disable-next-line react/no-danger */}
       <style dangerouslySetInnerHTML={{ __html: css }} />
+
       <div className="rc-root">
-        {/* Header */}
         <div className="rc-header">
           <div className="rc-logo-wrap">
             <div className="rc-logo-icon">E</div>
             <div>
               <div className="rc-school-name">{schoolName}</div>
-              <div className="rc-school-sub">EduLife OS · Ghana Basic Education</div>
+              <div className="rc-school-sub">
+                EduLife OS · Ghana Basic Education
+              </div>
             </div>
           </div>
+
           <div className="rc-title-center">
             <div className="rc-card-title">School Terminal Report Card</div>
             <div className="rc-card-subtitle">NaCCA Curriculum · Ghana</div>
-            <div className="rc-card-term">{term} · Academic Year {academicYear}</div>
+            <div className="rc-card-term">
+              {term} · Academic Year {academicYear}
+            </div>
           </div>
+
           <div className="rc-photo-box">
-            <div className="rc-photo-label">Passport<br />Photo</div>
+            <div className="rc-photo-label">
+              Passport
+              <br />
+              Photo
+            </div>
           </div>
         </div>
 
-        {/* Student info grid */}
         <div className="rc-grid-3" style={{ marginBottom: 10 }}>
           <div className="rc-info-box">
-            <div className="rc-info-row"><span className="rc-info-label">Name:</span><span>{studentName}</span></div>
-            <div className="rc-info-row"><span className="rc-info-label">Sex:</span><span>{student.sex ?? "—"}</span></div>
-            <div className="rc-info-row"><span className="rc-info-label">DOB:</span><span>{fmtDate(student.dob)}</span></div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Name:</span>
+              <span>{studentName}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Sex:</span>
+              <span>{student.sex ?? "—"}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">DOB:</span>
+              <span>{fmtDate(student.dob)}</span>
+            </div>
           </div>
+
           <div className="rc-info-box">
-            <div className="rc-info-row"><span className="rc-info-label">Class:</span><span>{classLabel}{classArm}</span></div>
-            <div className="rc-info-row"><span className="rc-info-label">Term:</span><span>{term}</span></div>
-            <div className="rc-info-row"><span className="rc-info-label">Acad. Year:</span><span>{academicYear}</span></div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Class:</span>
+              <span>
+                {classLabel}
+                {classArm}
+              </span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Term:</span>
+              <span>{term}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Acad. Year:</span>
+              <span>{academicYear}</span>
+            </div>
           </div>
-          <div className="rc-info-box" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+
+          <div
+            className="rc-info-box"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             {overallPct != null ? (
               <div className="rc-overall-box">
                 <div className="rc-overall-pct">{overallPct.toFixed(1)}%</div>
-                <div className="rc-overall-label">Overall · Grade {naccaGrade(overallPct) ?? "—"}</div>
+                <div className="rc-overall-label">Overall Performance</div>
               </div>
             ) : (
-              <div style={{ fontSize: "9pt", color: "#999", textAlign: "center" }}>No scores<br />recorded</div>
+              <div style={{ color: "#777", fontSize: "8pt" }}>
+                No assessment score yet
+              </div>
             )}
           </div>
         </div>
 
-        {/* Subjects table */}
+        <div className="rc-grid-2" style={{ marginBottom: 10 }}>
+          <div className="rc-info-box">
+            <div className="rc-section-title">Guardian</div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Name:</span>
+              <span>{student.guardianName ?? "—"}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Phone:</span>
+              <span>{student.guardianPhone ?? "—"}</span>
+            </div>
+          </div>
+
+          <div className="rc-info-box">
+            <div className="rc-section-title">Attendance</div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Present:</span>
+              <span>{daysPresent}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Absent:</span>
+              <span>{daysAbsent}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Late:</span>
+              <span>{daysLate}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">School Days:</span>
+              <span>{totalSchoolDays}</span>
+            </div>
+          </div>
+        </div>
+
         <div style={{ marginBottom: 10 }}>
-          <div className="rc-section-title">Subject Performance</div>
+          <div className="rc-section-title">Academic Performance</div>
           <table className="rc-table">
             <thead>
               <tr>
                 <th style={{ textAlign: "left" }}>Subject</th>
-                <th style={{ textAlign: "center" }}>Score</th>
-                <th style={{ textAlign: "center" }}>Max</th>
-                <th style={{ textAlign: "center" }}>%</th>
-                <th style={{ textAlign: "center" }}>Grade</th>
-                <th style={{ textAlign: "left" }}>Remarks</th>
+                <th>Total</th>
+                <th>Max</th>
+                <th>%</th>
+                <th>Grade</th>
+                <th style={{ textAlign: "left" }}>Remark</th>
               </tr>
             </thead>
             <tbody>
               {subjectRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "12px 6px", color: "#999" }}>
-                    No assessment scores recorded for this term.
+                  <td colSpan={6} style={{ textAlign: "center", color: "#777" }}>
+                    No assessment scores available for this learner.
                   </td>
                 </tr>
               ) : (
-                <>
-                  {subjectRows.map((r, i) => (
-                    <tr key={r.subject} className={i % 2 === 1 ? "rc-odd" : ""}>
-                      <td style={{ fontWeight: 600 }}>{r.subject}</td>
-                      <td style={{ textAlign: "center" }}>{r.total}</td>
-                      <td style={{ textAlign: "center", color: "#666" }}>{r.max}</td>
-                      <td style={{ textAlign: "center" }}>{r.pct != null ? `${r.pct.toFixed(1)}%` : "—"}</td>
-                      <td style={{ textAlign: "center" }}>
-                        <span className={`rc-grade${r.grade === "7" ? " rc-grade-fail" : r.grade === "6" ? " rc-grade-below" : ""}`}>
-                          {r.grade ?? "—"}
-                        </span>
-                      </td>
-                      <td>{r.remark ?? "—"}</td>
-                    </tr>
-                  ))}
-                  <tr className="rc-highlight">
-                    <td>TOTAL</td>
-                    <td style={{ textAlign: "center" }}>{totalSum}</td>
-                    <td style={{ textAlign: "center" }}>{maxSum}</td>
-                    <td style={{ textAlign: "center" }}>{overallPct != null ? `${overallPct.toFixed(1)}%` : "—"}</td>
-                    <td style={{ textAlign: "center" }}>{naccaGrade(overallPct) ?? "—"}</td>
-                    <td>{naccaRemark(naccaGrade(overallPct)) ?? "—"}</td>
+                subjectRows.map((row, index) => (
+                  <tr
+                    key={row.subject}
+                    className={index % 2 === 1 ? "rc-odd" : undefined}
+                  >
+                    <td>{row.subject}</td>
+                    <td style={{ textAlign: "center" }}>{row.total}</td>
+                    <td style={{ textAlign: "center" }}>{row.max}</td>
+                    <td style={{ textAlign: "center" }}>
+                      {row.pct == null ? "—" : `${row.pct.toFixed(1)}%`}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <span
+                        className={[
+                          "rc-grade",
+                          row.grade === "7" ? "rc-grade-fail" : "",
+                          row.grade === "6" ? "rc-grade-below" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {row.grade ?? "—"}
+                      </span>
+                    </td>
+                    <td>{row.remark ?? "—"}</td>
                   </tr>
-                </>
+                ))
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Attendance + Fees */}
         <div className="rc-grid-2" style={{ marginBottom: 10 }}>
-          <div>
-            <div className="rc-section-title">Attendance</div>
-            <table className="rc-table" style={{ fontSize: "9pt" }}>
-              <tbody>
-                <tr><td>Days Present</td><td style={{ textAlign: "right", fontWeight: 700 }}>{daysPresent}</td></tr>
-                <tr className="rc-odd"><td>Days Absent</td><td style={{ textAlign: "right" }}>{daysAbsent}</td></tr>
-                <tr><td>Days Late</td><td style={{ textAlign: "right" }}>{daysLate}</td></tr>
-                <tr className="rc-odd"><td>Total School Days</td><td style={{ textAlign: "right" }}>{totalSchoolDays}</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div>
+          <div className="rc-info-box">
             <div className="rc-section-title">Fees Summary</div>
-            <table className="rc-table" style={{ fontSize: "9pt" }}>
-              <tbody>
-                <tr><td>Total Billed</td><td style={{ textAlign: "right" }}>{pesewasToGhs(billed)}</td></tr>
-                <tr className="rc-odd"><td>Waived</td><td style={{ textAlign: "right" }}>{pesewasToGhs(waived)}</td></tr>
-                <tr><td>Paid</td><td style={{ textAlign: "right" }}>{pesewasToGhs(paid)}</td></tr>
-                <tr className="rc-odd rc-outstanding"><td>Outstanding</td><td style={{ textAlign: "right" }}>{pesewasToGhs(outstanding)}</td></tr>
-              </tbody>
-            </table>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Billed:</span>
+              <span>{pesewasToGhs(billed)}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Waived:</span>
+              <span>{pesewasToGhs(waived)}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Gross Paid:</span>
+              <span>{pesewasToGhs(grossPaid)}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Refunded:</span>
+              <span>{pesewasToGhs(refunded)}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Net Paid:</span>
+              <span>{pesewasToGhs(netPaid)}</span>
+            </div>
+            <div className="rc-info-row">
+              <span className="rc-info-label">Outstanding:</span>
+              <span className="rc-outstanding">{pesewasToGhs(outstanding)}</span>
+            </div>
+          </div>
+
+          <div className="rc-sig-block">
+            <div className="rc-section-title">Approval</div>
+
+            {signature?.signatureSvg ? (
+              <div
+                className="rc-sig-container"
+                dangerouslySetInnerHTML={{ __html: signature.signatureSvg }}
+              />
+            ) : (
+              <div style={{ height: 46, color: "#999", fontSize: "8pt" }}>
+                Headteacher signature not uploaded
+              </div>
+            )}
+
+            <div className="rc-sig-line">Headteacher&apos;s Signature</div>
           </div>
         </div>
 
-        {/* Remarks / Signatures */}
-        <div style={{ marginBottom: 10 }}>
-          <div className="rc-section-title">Conduct &amp; Remarks</div>
-          <div className="rc-grid-2">
-            <div className="rc-sig-block">
-              <div style={{ fontWeight: 600, marginBottom: 4, fontSize: "9pt" }}>Class Teacher's Remark</div>
-              <div style={{ minHeight: 28, fontSize: "9pt", color: "#aaa" }}>
-                ................................................................
-              </div>
-              <div className="rc-sig-line">Signature: __________________________</div>
-            </div>
-            <div className="rc-sig-block">
-              <div style={{ fontWeight: 600, marginBottom: 4, fontSize: "9pt" }}>Headteacher&apos;s Remark</div>
-              <div style={{ minHeight: 24, fontSize: "9pt", color: "#aaa" }}>
-                ................................................................
-              </div>
-              <div className="rc-sig-line">
-                {sig?.signatureSvg ? (
-                  <div className="rc-sig-container">
-                    <span
-                      // eslint-disable-next-line react/no-danger
-                      dangerouslySetInnerHTML={{ __html: sig.signatureSvg }}
-                    />
-                  </div>
-                ) : (
-                  <span>Signature &amp; Stamp: ______________________</span>
-                )}
-              </div>
+        <div className="rc-grid-2" style={{ marginBottom: 10 }}>
+          <div className="rc-info-box">
+            <div className="rc-section-title">Class Teacher&apos;s Remark</div>
+            <div style={{ minHeight: 48, color: "#555" }}>
+              Learner&apos;s progress should be discussed with the class teacher
+              for targeted support and encouragement.
             </div>
           </div>
-        </div>
 
-        {/* Footer row */}
-        <div className="rc-grid-2" style={{ marginBottom: 6 }}>
-          <div className="rc-info-box" style={{ fontSize: "9pt" }}>
-            <div className="rc-info-row"><span className="rc-info-label">Guardian:</span><span>{student.guardianName ?? "—"}</span></div>
-            <div className="rc-info-row"><span className="rc-info-label">Phone:</span><span>{student.guardianPhone ?? "—"}</span></div>
-          </div>
-          <div className="rc-info-box" style={{ fontSize: "9pt" }}>
-            <div style={{ marginBottom: 6 }}>Next Term Begins: <span style={{ fontStyle: "italic", color: "#888" }}>To be announced</span></div>
-            <div>Parent / Guardian Signature: __________________</div>
+          <div className="rc-info-box">
+            <div className="rc-section-title">Parent / Guardian Comment</div>
+            <div style={{ minHeight: 48 }} />
           </div>
         </div>
 
         <div className="rc-footer">
           <div className="rc-footer-brand">
             <div className="rc-footer-icon">E</div>
-            <div className="rc-footer-name">EduLife OS · {schoolName}</div>
+            <div>
+              <div className="rc-footer-name">EduLife OS</div>
+              <div className="rc-footer-nacca">Build Minds. Power Futures.</div>
+            </div>
           </div>
-          <div className="rc-footer-nacca">NaCCA Compliant</div>
-          <div className="rc-footer-date">Generated: {new Date().toLocaleDateString("en-GB")}</div>
+          <div className="rc-footer-date">
+            Printed: {fmtDate(new Date())}
+          </div>
         </div>
       </div>
     </>
