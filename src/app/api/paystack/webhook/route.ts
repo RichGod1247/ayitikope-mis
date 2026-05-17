@@ -747,33 +747,70 @@ export async function POST(req: NextRequest) {
   }
 
   if (REFUND_EVENTS.has(eventType)) {
-  const result = await applyPaystackRefundStatus({
-    eventType,
-    data,
-    rawPayload: event,
-    signature,
-  });
+  try {
+    const result = await applyPaystackRefundStatus({
+      eventType,
+      data,
+      rawPayload: event,
+      signature,
+    });
 
-  const refundId =
-    isObject(result) && "refundId" in result ? clean(result.refundId) : null;
-  const tenantId =
-    isObject(result) && "tenantId" in result ? clean(result.tenantId) : null;
+    const refundId =
+      isObject(result) && "refundId" in result ? clean(result.refundId) : null;
+    const tenantId =
+      isObject(result) && "tenantId" in result ? clean(result.tenantId) : null;
 
-  const smsDispatch = refundId
-    ? await runFinanceOutboxWorker({
-        workerId: `paystack-refund-webhook:${refundId}`,
-        limit: 2,
-        types: [FinanceOutboxEventType.SMS_REFUND_NOTICE],
-        tenantId: tenantId || undefined,
-        aggregateType: "FeeRefund",
-        aggregateId: refundId,
-      })
-    : { skipped: true, reason: "REFUND_ID_NOT_RETURNED" };
+    const smsDispatch = refundId
+      ? await runFinanceOutboxWorker({
+          workerId: `paystack-refund-webhook:${refundId}`,
+          limit: 2,
+          types: [FinanceOutboxEventType.SMS_REFUND_NOTICE],
+          tenantId: tenantId || undefined,
+          aggregateType: "FeeRefund",
+          aggregateId: refundId,
+        })
+      : { skipped: true, reason: "REFUND_ID_NOT_RETURNED" };
 
-  return json(200, {
-    ...result,
-    smsDispatch,
-  });
+    return json(200, {
+      ...result,
+      smsDispatch,
+    });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+
+    console.error("[PAYSTACK_REFUND_WEBHOOK_PROCESSING_ERROR]", err);
+
+    await recordProviderEventOnly({
+      eventType,
+      providerReference,
+      signature,
+      rawPayload: event,
+      processingStatus: "FAILED",
+      processingError: error || "PAYSTACK_REFUND_WEBHOOK_PROCESSING_FAILED",
+      providerEventId,
+      eventTime,
+      isSuspicious: true,
+      suspiciousReason: "PAYSTACK_REFUND_WEBHOOK_PROCESSING_FAILED",
+    });
+
+    await recordSuspiciousAudit({
+      action: "PAYSTACK_REFUND_WEBHOOK_PROCESSING_FAILED",
+      providerReference,
+      eventType,
+      providerEventId,
+      eventTime,
+      reason: error || "PAYSTACK_REFUND_WEBHOOK_PROCESSING_FAILED",
+      metadata: {
+        route: "/api/paystack/webhook",
+      },
+    });
+
+    return json(200, {
+      ok: true,
+      queuedForReview: true,
+      error: "PAYSTACK_REFUND_WEBHOOK_PROCESSING_FAILED",
+    });
+  }
 }
 
 if (eventType !== "charge.success") {
@@ -983,32 +1020,44 @@ if (eventType !== "charge.success") {
     });
   } catch (err) {
     if (isPrismaUniqueError(err)) {
-      console.warn("[PAYSTACK_WEBHOOK] Duplicate provider reference race.");
+  console.warn("[PAYSTACK_WEBHOOK] Duplicate provider reference race.");
 
-      await recordProviderEventOnly({
-        eventType,
-        providerReference,
-        signature,
-        rawPayload: event,
-        processingStatus: "IGNORED",
-        processingError: "DUPLICATE_PROVIDER_REFERENCE_RACE",
-        providerEventId,
-        eventTime,
-        isSuspicious: true,
-        suspiciousReason: "DUPLICATE_PROVIDER_REFERENCE_RACE",
-      });
+  await recordProviderEventOnly({
+    eventType,
+    providerReference,
+    signature,
+    rawPayload: event,
+    processingStatus: "IGNORED",
+    processingError: "DUPLICATE_PROVIDER_REFERENCE_RACE",
+    providerEventId,
+    eventTime,
+    isSuspicious: true,
+    suspiciousReason: "DUPLICATE_PROVIDER_REFERENCE_RACE",
+  });
 
-      const smsDispatch = await drainReceiptSmsOutbox({
-  providerReference,
-  receiptId: null,
-});
+  await recordSuspiciousAudit({
+    action: "PAYSTACK_WEBHOOK_DUPLICATE_PROVIDER_REFERENCE_RACE",
+    providerReference,
+    eventType,
+    providerEventId,
+    eventTime,
+    reason: "DUPLICATE_PROVIDER_REFERENCE_RACE",
+    metadata: {
+      route: "/api/paystack/webhook",
+    },
+  });
 
-      return json(200, {
-        ok: true,
-        alreadyProcessed: true,
-        smsDispatch,
-      });
-    }
+  const smsDispatch = await drainReceiptSmsOutbox({
+    providerReference,
+    receiptId: null,
+  });
+
+  return json(200, {
+    ok: true,
+    alreadyProcessed: true,
+    smsDispatch,
+  });
+}
 
     console.error("[PAYSTACK_WEBHOOK_PROCESSING_ERROR]", err);
 

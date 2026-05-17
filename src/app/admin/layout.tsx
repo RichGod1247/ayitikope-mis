@@ -31,6 +31,7 @@ const scholarshipNav: NavItem[] = [
 const financeNav: NavItem[] = [
   { label: "Finance Overview", href: "/admin/fees/overview" },
   { label: "Online Payments", href: "/admin/fees/online-payments" },
+  { label: "Provider Events", href: "/admin/fees/provider-events" },
   { label: "Settlement Reporting", href: "/admin/fees/settlements" },
   { label: "SMS Outbox Monitor", href: "/admin/fees/outbox" },
   { label: "Finance Summary", href: "/admin/fees/summary" },
@@ -156,6 +157,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <MobileNavLink href="/admin/fees/receipts">Receipts</MobileNavLink>
             <MobileNavLink href="/admin/fees/refunds">Refunds</MobileNavLink>
             <MobileNavLink href="/admin/fees/online-payments">Online Pay</MobileNavLink>
+            <MobileNavLink href="/admin/fees/provider-events">Provider Events</MobileNavLink>
             <MobileNavLink href="/admin/fees/outbox">SMS Outbox</MobileNavLink>
             <MobileNavLink href="/admin/fees/structures">Structures</MobileNavLink>
             <MobileNavLink href="/admin/fees/overview">Overview</MobileNavLink>

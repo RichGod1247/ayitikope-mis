@@ -117,6 +117,9 @@ function lineTruth(inv: {
   return { grossBilled, waived, netBilled };
 }
 
+const CONTROL_CLASS =
+  "mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
+
 export default async function AdminFeesSummaryPage({
   searchParams,
 }: {
@@ -360,14 +363,14 @@ export default async function AdminFeesSummaryPage({
               Term
             </span>
             <select
-              name="term"
-              defaultValue={term}
-              className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"
-            >
-              <option>1st Term</option>
-              <option>2nd Term</option>
-              <option>3rd Term</option>
-            </select>
+  name="term"
+  defaultValue={term}
+  className={CONTROL_CLASS}
+>
+  <option>1st Term</option>
+  <option>2nd Term</option>
+  <option>3rd Term</option>
+</select>
           </label>
 
           <label className="block">
@@ -375,11 +378,11 @@ export default async function AdminFeesSummaryPage({
               Academic year
             </span>
             <input
-              name="academicYear"
-              defaultValue={academicYear}
-              className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"
-              placeholder="2025/2026"
-            />
+  name="academicYear"
+  defaultValue={academicYear}
+  className={CONTROL_CLASS}
+  placeholder="2025/2026"
+/>
           </label>
 
           <button

@@ -1,6 +1,6 @@
 // src/app/api/admin/fees/provider-events/reprocess/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { FinanceOutboxEventType } from "@prisma/client";
+import { FinanceOutboxEventType, type Prisma } from "@prisma/client";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
 import { reprocessPaymentProviderEvent } from "@/lib/finance/provider-event-recovery";
@@ -27,6 +27,22 @@ function json(status: number, payload: unknown) {
 
 function clean(value: unknown) {
   return String(value ?? "").trim();
+}
+
+function errorCode(error: unknown) {
+  if (error instanceof Error && error.message.trim()) return error.message.trim();
+  return "PROVIDER_EVENT_REPROCESS_FAILED";
+}
+
+function toAuditMetadata(value: Record<string, unknown>): Prisma.InputJsonObject {
+  try {
+    return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonObject;
+  } catch {
+    return {
+      serializationError: true,
+      fallbackMessage: "Audit metadata could not be serialized safely.",
+    };
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -88,6 +104,9 @@ export async function POST(req: NextRequest) {
     select: {
       id: true,
       tenantId: true,
+      provider: true,
+      eventType: true,
+      providerReference: true,
       processingStatus: true,
     },
   });
@@ -103,6 +122,23 @@ export async function POST(req: NextRequest) {
       actorUserId: auth.ctx.userId,
     });
 
+    await prisma.auditLog.create({
+      data: {
+        tenantId: auth.ctx.tenantId,
+        userId: auth.ctx.userId,
+        action: "FINANCE_PROVIDER_EVENT_REPROCESS_QUEUED",
+        resource: "PaymentProviderEvent",
+        resourceId: eventId,
+        metadata: toAuditMetadata({
+          eventType: event.eventType,
+          provider: event.provider,
+          providerReference: event.providerReference,
+          previousProcessingStatus: event.processingStatus,
+          outboxEventId: outbox.id,
+        }),
+      },
+    });
+
     return json(202, {
       ok: true,
       queued: true,
@@ -110,23 +146,68 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const result = await reprocessPaymentProviderEvent({
-    eventId,
-    actorUserId: auth.ctx.userId,
-  });
+  try {
+    const result = await reprocessPaymentProviderEvent({
+      eventId,
+      actorUserId: auth.ctx.userId,
+    });
 
-  const smsDispatch = await runFinanceOutboxWorker({
-    workerId: `provider-event-reprocess:${eventId}`,
-    limit: 10,
-    types: [
-      FinanceOutboxEventType.SMS_RECEIPT,
-      FinanceOutboxEventType.SMS_REFUND_NOTICE,
-    ],
-  });
+    const smsDispatch = await runFinanceOutboxWorker({
+      workerId: `provider-event-reprocess:${eventId}`,
+      limit: 10,
+      tenantId: auth.ctx.tenantId,
+      types: [
+        FinanceOutboxEventType.SMS_RECEIPT,
+        FinanceOutboxEventType.SMS_REFUND_NOTICE,
+      ],
+    });
 
-  return json(200, {
-    ok: true,
-    result,
-    smsDispatch,
-  });
+    await prisma.auditLog.create({
+      data: {
+        tenantId: auth.ctx.tenantId,
+        userId: auth.ctx.userId,
+        action: "FINANCE_PROVIDER_EVENT_REPROCESSED",
+        resource: "PaymentProviderEvent",
+        resourceId: eventId,
+        metadata: toAuditMetadata({
+          eventType: event.eventType,
+          provider: event.provider,
+          providerReference: event.providerReference,
+          previousProcessingStatus: event.processingStatus,
+          result,
+          smsDispatch,
+        }),
+      },
+    });
+
+    return json(200, {
+      ok: true,
+      result,
+      smsDispatch,
+    });
+  } catch (err) {
+    const code = errorCode(err);
+
+    await prisma.auditLog.create({
+      data: {
+        tenantId: auth.ctx.tenantId,
+        userId: auth.ctx.userId,
+        action: "FINANCE_PROVIDER_EVENT_REPROCESS_FAILED",
+        resource: "PaymentProviderEvent",
+        resourceId: eventId,
+        metadata: toAuditMetadata({
+          eventType: event.eventType,
+          provider: event.provider,
+          providerReference: event.providerReference,
+          previousProcessingStatus: event.processingStatus,
+          error: code,
+        }),
+      },
+    });
+
+    return json(500, {
+      ok: false,
+      error: code,
+    });
+  }
 }
