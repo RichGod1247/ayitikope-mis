@@ -1,8 +1,8 @@
 // src/app/api/parent/receipts/list/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { PaymentStatus, RefundStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
-import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,11 +52,28 @@ function studentName(firstName?: string | null, lastName?: string | null) {
   return [firstName, lastName].filter(Boolean).join(" ").trim() || null;
 }
 
+function computeReceiptStatus(input: {
+  grossAmountPesewas: number;
+  succeededRefundPesewas: number;
+}) {
+  if (input.grossAmountPesewas > 0 && input.succeededRefundPesewas >= input.grossAmountPesewas) {
+    return "REFUNDED";
+  }
+
+  if (input.succeededRefundPesewas > 0) {
+    return "PARTIALLY_REFUNDED";
+  }
+
+  return "ISSUED";
+}
+
+function successfulPaymentStatus(status?: PaymentStatus | null) {
+  return status === PaymentStatus.SUCCESS || status === PaymentStatus.REFUNDED;
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const gate = requireParentSession(
-      req as Parameters<typeof requireParentSession>[0]
-    );
+    const gate = requireParentSession(req as Parameters<typeof requireParentSession>[0]);
 
     if (!gate.ok) return gate.res as NextResponse;
 
@@ -101,12 +118,21 @@ export async function GET(req: NextRequest) {
         receiptNumber: true,
         issuedAt: true,
         issuedToName: true,
+        status: true,
         feePayment: {
           select: {
             amountPesewas: true,
+            status: true,
             method: true,
             reference: true,
             channel: true,
+            refunds: {
+              select: {
+                id: true,
+                amountPesewas: true,
+                status: true,
+              },
+            },
           },
         },
         invoice: {
@@ -114,6 +140,7 @@ export async function GET(req: NextRequest) {
             id: true,
             term: true,
             academicYear: true,
+            balancePesewas: true,
             student: {
               select: {
                 firstName: true,
@@ -129,23 +156,80 @@ export async function GET(req: NextRequest) {
 
     return noStore(200, {
       ok: true,
-      receipts: receipts.map((r) => ({
-        id: r.id,
-        receiptNumber: r.receiptNumber,
-        issuedAt: r.issuedAt.toISOString(),
-        issuedToName: r.issuedToName,
-        amountPesewas: r.feePayment?.amountPesewas ?? 0,
-        method: r.feePayment?.method ?? null,
-        reference: r.feePayment?.reference ?? null,
-        channel: r.feePayment?.channel ?? null,
-        invoiceId: r.invoice?.id ?? null,
-        term: r.invoice?.term ?? null,
-        academicYear: r.invoice?.academicYear ?? null,
-        studentName: studentName(
-          r.invoice?.student?.firstName,
-          r.invoice?.student?.lastName
-        ),
-      })),
+      receipts: receipts.map((r) => {
+        const grossAmountPesewas = r.feePayment?.amountPesewas ?? 0;
+
+        const succeededRefundPesewas =
+          r.feePayment?.refunds
+            .filter((refund) => refund.status === RefundStatus.SUCCEEDED)
+            .reduce((sum, refund) => sum + refund.amountPesewas, 0) ?? 0;
+
+        const pendingRefundPesewas =
+          r.feePayment?.refunds
+            .filter(
+              (refund) =>
+                refund.status === RefundStatus.REQUESTED ||
+                refund.status === RefundStatus.APPROVED ||
+                refund.status === RefundStatus.PROCESSING
+            )
+            .reduce((sum, refund) => sum + refund.amountPesewas, 0) ?? 0;
+
+        const failedOrCancelledRefundPesewas =
+          r.feePayment?.refunds
+            .filter(
+              (refund) =>
+                refund.status === RefundStatus.FAILED ||
+                refund.status === RefundStatus.CANCELLED
+            )
+            .reduce((sum, refund) => sum + refund.amountPesewas, 0) ?? 0;
+
+        const netAmountPesewas = Math.max(0, grossAmountPesewas - succeededRefundPesewas);
+        const refundableRemainingPesewas = Math.max(
+          0,
+          grossAmountPesewas - succeededRefundPesewas - pendingRefundPesewas
+        );
+
+        return {
+          id: r.id,
+          receiptNumber: r.receiptNumber,
+          issuedAt: r.issuedAt.toISOString(),
+          issuedToName: r.issuedToName,
+
+          amountPesewas: grossAmountPesewas,
+          grossAmountPesewas,
+          succeededRefundPesewas,
+          pendingRefundPesewas,
+          failedOrCancelledRefundPesewas,
+          netAmountPesewas,
+          refundableRemainingPesewas,
+
+          computedStatus: computeReceiptStatus({
+            grossAmountPesewas,
+            succeededRefundPesewas,
+          }),
+
+          receiptStatus: r.status,
+          paymentStatus: r.feePayment?.status ?? null,
+          paymentIsSuccessful: successfulPaymentStatus(r.feePayment?.status ?? null),
+
+          refundCount: r.feePayment?.refunds.length ?? 0,
+          hasRefundActivity:
+            succeededRefundPesewas > 0 ||
+            pendingRefundPesewas > 0 ||
+            failedOrCancelledRefundPesewas > 0,
+
+          method: r.feePayment?.method ?? null,
+          reference: r.feePayment?.reference ?? null,
+          channel: r.feePayment?.channel ?? null,
+
+          invoiceId: r.invoice?.id ?? null,
+          term: r.invoice?.term ?? null,
+          academicYear: r.invoice?.academicYear ?? null,
+          outstandingPesewas: r.invoice?.balancePesewas ?? null,
+
+          studentName: studentName(r.invoice?.student?.firstName, r.invoice?.student?.lastName),
+        };
+      }),
     });
   } catch (err) {
     console.error("[PARENT_RECEIPTS_LIST_ERROR]", err);
