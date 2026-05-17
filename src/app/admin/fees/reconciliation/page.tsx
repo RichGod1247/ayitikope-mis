@@ -24,22 +24,38 @@ type ReconciliationIssue = {
 type ReconciliationData = {
   ok: boolean;
   error?: string;
+  message?: string;
+
   isClean: boolean;
   issueCount: number;
   cleanCount: number;
   totalInvoices: number;
   highestSeverity: Severity | null;
+
   expectedPesewas: number;
   actualPesewas: number;
   deltaPesewas: number;
+
   issues: ReconciliationIssue[];
+
   persisted?: boolean;
+  recheckOnly?: boolean;
+
+  createdExceptionCount?: number;
+  createdExceptionIds?: string[];
+
+  alreadyTrackedExceptionCount?: number;
+  alreadyTrackedExceptionIds?: string[];
+
+  dismissedDuplicateCount?: number;
+  dismissedDuplicateExceptionIds?: string[];
+
   batch?: {
     id: string;
     status: string;
     batchDate: string;
     createdAt: string;
-  };
+  } | null;
 };
 
 type BatchSummary = {
@@ -131,6 +147,9 @@ function kindLabel(kind: string) {
     DUPLICATE_PROVIDER_REFERENCE: "Duplicate provider reference",
     AMOUNT_MISMATCH: "Amount mismatch",
     UNMATCHED_PROVIDER_EVENT: "Unmatched provider event",
+    SUSPICIOUS_PROVIDER_EVENT: "Suspicious provider event",
+    REFUND_WITHOUT_LEDGER_ENTRY: "Refund without ledger entry",
+    REFUND_AMOUNT_MISMATCH: "Refund amount mismatch",
     OVERPAYMENT: "Overpayment",
     UNKNOWN: "Unknown issue",
   };
@@ -145,12 +164,17 @@ function friendlyError(code?: string) {
     FAILED_TO_LOAD_RECONCILIATION_BATCHES: "Could not load reconciliation batch history.",
     FAILED_TO_LOAD_RECONCILIATION_BATCH: "Could not load reconciliation batch detail.",
     FAILED_TO_UPDATE_RECONCILIATION_EXCEPTION: "Could not update exception.",
+    FAILED_TO_REPAIR_RECEIPT: "Could not repair the missing receipt.",
     CONTENT_TYPE_MUST_BE_JSON: "The request content type was invalid.",
     INVALID_JSON: "The request body was invalid.",
     INVALID_EXCEPTION_STATUS: "Invalid exception status.",
-    RESOLUTION_NOTE_TOO_SHORT: "Resolution note must be at least 8 characters.",
+    RESOLUTION_NOTE_TOO_SHORT: "Action note must be at least 8 characters.",
     BATCH_ALREADY_CLOSED: "This batch is already closed.",
     BATCH_HAS_ACTIVE_EXCEPTIONS: "Resolve or dismiss all active exceptions before closing.",
+    EXCEPTION_NOT_FOUND: "This reconciliation exception could not be found.",
+    EXCEPTION_ALREADY_CLOSED: "This exception has already been closed.",
+    EXCEPTION_STILL_ACTIVE_REPAIR_OR_DISMISS:
+      "This issue is still active in the finance records. Repair the underlying evidence first, or dismiss it with a clear reason if it is an accepted/known exception.",
     UNSUPPORTED_REPAIR_ACTION: "This exception type does not support receipt repair.",
     EXCEPTION_HAS_NO_INVOICE: "This exception is not attached to an invoice.",
     SUCCESSFUL_PAYMENT_WITHOUT_RECEIPT_NOT_FOUND:
@@ -160,7 +184,11 @@ function friendlyError(code?: string) {
       "This payment ledger is already linked to another receipt.",
   };
 
-  return map[code ?? ""] ?? "Action failed. Please try again.";
+  return map[code ?? ""] ?? `Action failed${code ? `: ${code}` : ""}.`;
+}
+
+function defaultActionNote() {
+  return `Reviewed by finance admin on ${new Date().toLocaleDateString("en-GH")}.`;
 }
 
 export default function AdminFeesReconciliationPage() {
@@ -176,6 +204,8 @@ export default function AdminFeesReconciliationPage() {
   const [repairingExceptionId, setRepairingExceptionId] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
   const [term, setTerm] = useState("");
   const [academicYear, setAcademicYear] = useState("");
   const [limit, setLimit] = useState("1000");
@@ -211,6 +241,7 @@ export default function AdminFeesReconciliationPage() {
   async function loadBatch(batchId: string) {
     setDetailLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
       const res = await fetch(`/api/admin/fees/reconciliation/batches/${batchId}`, {
@@ -232,7 +263,7 @@ export default function AdminFeesReconciliationPage() {
         Object.fromEntries(
           json.batch.exceptions.map((e) => [
             e.id,
-            e.resolutionNote ?? `Reviewed by finance admin on ${new Date().toLocaleDateString()}.`,
+            e.resolutionNote ?? defaultActionNote(),
           ])
         )
       );
@@ -248,6 +279,7 @@ export default function AdminFeesReconciliationPage() {
 
     setLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
       const url = new URL("/api/admin/fees/reconciliation", window.location.origin);
@@ -281,6 +313,7 @@ export default function AdminFeesReconciliationPage() {
   async function persistBatch() {
     setPersisting(true);
     setError(null);
+    setNotice(null);
 
     try {
       const res = await fetch("/api/admin/fees/reconciliation", {
@@ -304,6 +337,27 @@ export default function AdminFeesReconciliationPage() {
       setData(json);
       await loadHistory();
 
+      if (json.recheckOnly) {
+        setNotice(
+          json.message ||
+            `Recheck completed. No new exception case was created because ${
+              json.alreadyTrackedExceptionCount ?? 0
+            } issue(s) are already tracked.`
+        );
+        return;
+      }
+
+      if (json.createdExceptionCount && json.createdExceptionCount > 0) {
+        setNotice(
+          json.message ||
+            `${json.createdExceptionCount} new reconciliation exception case(s) created.`
+        );
+      } else if (json.persisted && json.isClean) {
+        setNotice(json.message || "Clean reconciliation batch saved.");
+      } else if (json.persisted) {
+        setNotice(json.message || "Reconciliation batch saved.");
+      }
+
       if (json.batch?.id) {
         await loadBatch(json.batch.id);
       }
@@ -317,6 +371,7 @@ export default function AdminFeesReconciliationPage() {
   async function updateException(exceptionId: string, status: ExceptionStatus) {
     setSavingExceptionId(exceptionId);
     setError(null);
+    setNotice(null);
 
     try {
       const res = await fetch(`/api/admin/fees/reconciliation/exceptions/${exceptionId}`, {
@@ -328,11 +383,33 @@ export default function AdminFeesReconciliationPage() {
         }),
       });
 
-      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        batchAutoClosed?: boolean;
+      };
 
       if (!res.ok || !json.ok) {
         setError(friendlyError(json.error));
         return;
+      }
+
+      if (status === "INVESTIGATING") {
+        setNotice("Exception moved to investigation. Save Batch will not duplicate this active case.");
+      }
+
+      if (status === "DISMISSED") {
+        setNotice(
+          "Exception dismissed with audit trail. Future rechecks will not recreate the same dismissed case blindly."
+        );
+      }
+
+      if (status === "RESOLVED") {
+        setNotice(
+          json.batchAutoClosed
+            ? "Exception resolved and the batch was automatically closed because no active exceptions remain."
+            : "Exception resolved because the underlying finance evidence is now clean."
+        );
       }
 
       await loadHistory();
@@ -347,6 +424,7 @@ export default function AdminFeesReconciliationPage() {
   async function repairMissingReceipt(exceptionId: string) {
     setRepairingExceptionId(exceptionId);
     setError(null);
+    setNotice(null);
 
     try {
       const res = await fetch(
@@ -357,11 +435,30 @@ export default function AdminFeesReconciliationPage() {
       const json = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         error?: string;
+        repaired?: boolean;
+        alreadyHadReceipt?: boolean;
+        batchAutoClosed?: boolean;
       };
 
       if (!res.ok || !json.ok) {
         setError(friendlyError(json.error));
         return;
+      }
+
+      if (json.alreadyHadReceipt) {
+        setNotice(
+          json.batchAutoClosed
+            ? "Receipt already existed. Exception resolved and batch auto-closed."
+            : "Receipt already existed. Exception resolved without creating a duplicate receipt."
+        );
+      } else if (json.repaired) {
+        setNotice(
+          json.batchAutoClosed
+            ? "Missing receipt created safely. Exception resolved and batch auto-closed."
+            : "Missing receipt created safely and exception resolved."
+        );
+      } else {
+        setNotice("Repair completed without creating duplicate evidence.");
       }
 
       await loadHistory();
@@ -377,6 +474,7 @@ export default function AdminFeesReconciliationPage() {
   async function closeBatch(batchId: string) {
     setDetailLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
       const res = await fetch(`/api/admin/fees/reconciliation/batches/${batchId}`, {
@@ -390,6 +488,7 @@ export default function AdminFeesReconciliationPage() {
         return;
       }
 
+      setNotice("Batch closed. All active exceptions were cleared before closure.");
       await loadHistory();
       await loadBatch(batchId);
     } catch {
@@ -440,7 +539,8 @@ export default function AdminFeesReconciliationPage() {
             </h1>
             <p className="max-w-3xl text-sm text-zinc-600">
               Run finance checks, persist reconciliation batches, inspect exceptions, and record
-              resolution decisions with an audit trail.
+              resolution decisions with an audit trail. Resolve means the underlying finance
+              evidence is clean; dismiss means the issue is accepted with a recorded reason.
             </p>
           </div>
 
@@ -463,6 +563,12 @@ export default function AdminFeesReconciliationPage() {
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-800">
             {error}
+          </div>
+        )}
+
+        {notice && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+            {notice}
           </div>
         )}
 
@@ -523,32 +629,67 @@ export default function AdminFeesReconciliationPage() {
         </section>
 
         {data && (
-          <section className="grid gap-3 md:grid-cols-5">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <p className="text-[11px] text-zinc-500">Total invoices</p>
-              <p className="mt-1 text-xl font-bold text-zinc-950">{data.totalInvoices}</p>
-            </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
-              <p className="text-[11px] text-emerald-700">Clean invoices</p>
-              <p className="mt-1 text-xl font-bold text-emerald-950">{data.cleanCount}</p>
-            </div>
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
-              <p className="text-[11px] text-red-700">Issues found</p>
-              <p className="mt-1 text-xl font-bold text-red-900">{data.issueCount}</p>
-            </div>
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <p className="text-[11px] text-zinc-500">Expected</p>
-              <p className="mt-1 text-xl font-bold text-zinc-950">
-                {formatCedis(data.expectedPesewas)}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <p className="text-[11px] text-zinc-500">Delta</p>
-              <p className="mt-1 text-xl font-bold text-zinc-950">
-                {formatCedis(data.deltaPesewas)}
-              </p>
-            </div>
-          </section>
+          <>
+            <section className="grid gap-3 md:grid-cols-5">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <p className="text-[11px] text-zinc-500">Total invoices</p>
+                <p className="mt-1 text-xl font-bold text-zinc-950">{data.totalInvoices}</p>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+                <p className="text-[11px] text-emerald-700">Clean invoices</p>
+                <p className="mt-1 text-xl font-bold text-emerald-950">{data.cleanCount}</p>
+              </div>
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+                <p className="text-[11px] text-red-700">Issues found</p>
+                <p className="mt-1 text-xl font-bold text-red-900">{data.issueCount}</p>
+              </div>
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <p className="text-[11px] text-zinc-500">Expected</p>
+                <p className="mt-1 text-xl font-bold text-zinc-950">
+                  {formatCedis(data.expectedPesewas)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <p className="text-[11px] text-zinc-500">Delta</p>
+                <p className="mt-1 text-xl font-bold text-zinc-950">
+                  {formatCedis(data.deltaPesewas)}
+                </p>
+              </div>
+            </section>
+
+            {(data.recheckOnly ||
+              typeof data.createdExceptionCount === "number" ||
+              typeof data.alreadyTrackedExceptionCount === "number" ||
+              typeof data.dismissedDuplicateCount === "number") && (
+              <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-xs text-blue-900 shadow-sm">
+                <p className="font-semibold">Save Batch control result</p>
+                <p className="mt-1">
+                  {data.message ??
+                    "Save Batch completed. Existing cases are tracked without creating duplicate exception records."}
+                </p>
+                <div className="mt-3 grid gap-2 md:grid-cols-3">
+                  <div className="rounded-xl border border-blue-200 bg-white/70 p-3">
+                    <p className="text-blue-600">New cases</p>
+                    <p className="text-lg font-bold text-blue-950">
+                      {data.createdExceptionCount ?? 0}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-blue-200 bg-white/70 p-3">
+                    <p className="text-blue-600">Already tracked</p>
+                    <p className="text-lg font-bold text-blue-950">
+                      {data.alreadyTrackedExceptionCount ?? 0}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-blue-200 bg-white/70 p-3">
+                    <p className="text-blue-600">Dismissed matches</p>
+                    <p className="text-lg font-bold text-blue-950">
+                      {data.dismissedDuplicateCount ?? 0}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         <section className="grid gap-6 lg:grid-cols-[0.95fr_1.4fr]">
@@ -623,7 +764,8 @@ export default function AdminFeesReconciliationPage() {
                 <div>
                   <h2 className="text-sm font-semibold text-zinc-950">Exception workflow</h2>
                   <p className="mt-1 text-xs text-zinc-500">
-                    Resolve, dismiss, investigate, or repair supported issues. Closed batches cannot be modified.
+                    Investigate, repair, resolve, or dismiss issues. Closed batches and closed
+                    exceptions cannot be modified.
                   </p>
                 </div>
 
@@ -681,13 +823,17 @@ export default function AdminFeesReconciliationPage() {
 
                   {selectedBatch.exceptions.length === 0 ? (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                      This batch has no exceptions.
+                      This batch has no exceptions. If a recheck found issues already tracked in
+                      another active or dismissed case, no duplicate batch was created.
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {selectedBatch.exceptions.map((ex) => {
-                        const closed =
+                        const closedBatch =
                           selectedBatch.status === "CLOSED" || Boolean(selectedBatch.closedAt);
+                        const closedException =
+                          ex.status === "RESOLVED" || ex.status === "DISMISSED";
+                        const locked = closedBatch || closedException;
                         const canRepairMissingReceipt =
                           ex.kind === "PAYMENT_WITHOUT_RECEIPT" &&
                           (ex.status === "OPEN" || ex.status === "INVESTIGATING");
@@ -736,16 +882,16 @@ export default function AdminFeesReconciliationPage() {
                                   [ex.id]: e.target.value,
                                 }))
                               }
-                              disabled={closed}
+                              disabled={locked}
                               rows={3}
                               className="mt-3 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 disabled:bg-zinc-100"
-                              placeholder="Write the investigation or resolution note..."
+                              placeholder="Write the investigation, resolution, or dismissal note..."
                             />
 
                             <div className="mt-3 flex flex-wrap gap-2">
                               <button
                                 type="button"
-                                disabled={closed || savingExceptionId === ex.id}
+                                disabled={locked || savingExceptionId === ex.id}
                                 onClick={() => updateException(ex.id, "INVESTIGATING")}
                                 className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
                               >
@@ -753,7 +899,7 @@ export default function AdminFeesReconciliationPage() {
                               </button>
                               <button
                                 type="button"
-                                disabled={closed || savingExceptionId === ex.id}
+                                disabled={locked || savingExceptionId === ex.id}
                                 onClick={() => updateException(ex.id, "RESOLVED")}
                                 className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
                               >
@@ -763,7 +909,7 @@ export default function AdminFeesReconciliationPage() {
                               {canRepairMissingReceipt && (
                                 <button
                                   type="button"
-                                  disabled={closed || repairingExceptionId === ex.id}
+                                  disabled={locked || repairingExceptionId === ex.id}
                                   onClick={() => repairMissingReceipt(ex.id)}
                                   className="rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-100 disabled:opacity-50"
                                 >
@@ -775,7 +921,7 @@ export default function AdminFeesReconciliationPage() {
 
                               <button
                                 type="button"
-                                disabled={closed || savingExceptionId === ex.id}
+                                disabled={locked || savingExceptionId === ex.id}
                                 onClick={() => updateException(ex.id, "DISMISSED")}
                                 className="rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-800 hover:bg-zinc-100 disabled:opacity-50"
                               >
@@ -783,9 +929,16 @@ export default function AdminFeesReconciliationPage() {
                               </button>
                             </div>
 
+                            {closedException && (
+                              <p className="mt-2 text-[11px] font-medium text-zinc-500">
+                                This exception is closed. Create a new case only if the defect
+                                reappears after being resolved.
+                              </p>
+                            )}
+
                             {ex.resolutionNote && (
                               <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
-                                <p className="font-semibold text-zinc-800">Resolution note</p>
+                                <p className="font-semibold text-zinc-800">Action note</p>
                                 <p className="mt-1">{ex.resolutionNote}</p>
                                 <p className="mt-2 text-zinc-400">
                                   {ex.resolvedByName ?? "—"} · {formatDate(ex.resolvedAt)}
@@ -806,6 +959,10 @@ export default function AdminFeesReconciliationPage() {
         {groupedIssues.length > 0 && (
           <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-semibold text-zinc-950">Latest unsaved check issues</h2>
+            <p className="mt-1 text-xs text-zinc-500">
+              These are current scan findings. Saving a batch will create only new exception cases;
+              issues already tracked by existing cases will be logged as a recheck, not duplicated.
+            </p>
             <div className="mt-4 space-y-3">
               {groupedIssues.map((group) => (
                 <div key={group.kind} className="rounded-xl border border-zinc-200 p-3">

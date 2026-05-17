@@ -103,6 +103,61 @@ function addIssue(
   });
 }
 
+function countIssuesByKind(issues: Issue[]) {
+  return issues.reduce<Record<string, number>>((acc, issue) => {
+    acc[issue.kind] = (acc[issue.kind] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+function countIssuesBySeverity(issues: Issue[]) {
+  return issues.reduce<Record<string, number>>((acc, issue) => {
+    acc[issue.severity] = (acc[issue.severity] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+/**
+ * Temporary case identity until we add a formal fingerprint column.
+ *
+ * Bank-grade rule:
+ * - One unresolved/accepted control case per underlying defect.
+ * - Do not create duplicate active cases on repeated Save Batch.
+ * - RESOLVED is intentionally excluded: if a previously resolved issue reappears,
+ *   that is a new control event and should be captured.
+ */
+function exceptionCaseWhere(
+  tenantId: string,
+  issue: Issue
+): Prisma.ReconciliationExceptionWhereInput {
+  const activeOrAcceptedStatus: Prisma.EnumReconciliationExceptionStatusFilter = {
+    in: ["OPEN", "INVESTIGATING", "DISMISSED"],
+  };
+
+  if (
+    issue.kind === ReconciliationExceptionKind.DUPLICATE_PROVIDER_REFERENCE ||
+    issue.kind === ReconciliationExceptionKind.UNMATCHED_PROVIDER_EVENT ||
+    issue.kind === ReconciliationExceptionKind.SUSPICIOUS_PROVIDER_EVENT
+  ) {
+    return {
+      tenantId,
+      kind: issue.kind,
+      providerReference: issue.providerReference,
+      description: issue.description,
+      status: activeOrAcceptedStatus,
+    };
+  }
+
+  return {
+    tenantId,
+    kind: issue.kind,
+    invoiceId: issue.invoiceId,
+    providerReference: issue.providerReference,
+    description: issue.description,
+    status: activeOrAcceptedStatus,
+  };
+}
+
 async function analyzeTenantFinance(input: {
   tenantId: string;
   term?: string | null;
@@ -271,8 +326,7 @@ async function analyzeTenantFinance(input: {
         expectedPesewas: grossPaymentTotal,
         actualPesewas: paymentCreditTotal,
         deltaPesewas: grossPaymentTotal - paymentCreditTotal,
-        description:
-          "Gross successful payments do not equal PAYMENT_CREDIT ledger entries.",
+        description: "Gross successful payments do not equal PAYMENT_CREDIT ledger entries.",
       });
     }
 
@@ -287,8 +341,7 @@ async function analyzeTenantFinance(input: {
         expectedPesewas: succeededRefundTotal,
         actualPesewas: refundLedgerTotal,
         deltaPesewas: succeededRefundTotal - refundLedgerTotal,
-        description:
-          "Succeeded refunds do not equal REVERSAL_DEBIT ledger entries.",
+        description: "Succeeded refunds do not equal REVERSAL_DEBIT ledger entries.",
       });
     }
 
@@ -303,8 +356,7 @@ async function analyzeTenantFinance(input: {
         expectedPesewas: netPaymentTotal,
         actualPesewas: ledgerNetTotal,
         deltaPesewas: netPaymentTotal - ledgerNetTotal,
-        description:
-          "Ledger net does not equal gross payments minus succeeded refunds.",
+        description: "Ledger net does not equal gross payments minus succeeded refunds.",
       });
     }
 
@@ -334,8 +386,7 @@ async function analyzeTenantFinance(input: {
         expectedPesewas: netPaymentTotal,
         actualPesewas: pendingRefundTotal,
         deltaPesewas: pendingRefundTotal - netPaymentTotal,
-        description:
-          "Pending refunds exceed currently retained net payment value.",
+        description: "Pending refunds exceed currently retained net payment value.",
       });
     }
 
@@ -605,16 +656,110 @@ export async function POST(req: NextRequest) {
       limit: clampLimit(body.limit),
     });
 
-    const batchStatus: ReconciliationStatus =
-      result.issueCount === 0 ? ReconciliationStatus.CLEAN : ReconciliationStatus.HAS_EXCEPTIONS;
+    const persisted = await prisma.$transaction(async (tx) => {
+      let createdExceptionCount = 0;
+      let alreadyTrackedExceptionCount = 0;
+      let dismissedDuplicateCount = 0;
 
-    const batch = await prisma.$transaction(async (tx) => {
+      const createdExceptionIds: string[] = [];
+      const alreadyTrackedExceptionIds: string[] = [];
+      const dismissedDuplicateExceptionIds: string[] = [];
+      const issuesToCreate: Issue[] = [];
+
+      for (const issue of result.issues) {
+        const existingCase = await tx.reconciliationException.findFirst({
+          where: exceptionCaseWhere(auth.ctx.tenantId, issue),
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            status: true,
+            batchId: true,
+            createdAt: true,
+          },
+        });
+
+        if (existingCase) {
+          if (existingCase.status === "DISMISSED") {
+            dismissedDuplicateCount++;
+            dismissedDuplicateExceptionIds.push(existingCase.id);
+          } else {
+            alreadyTrackedExceptionCount++;
+            alreadyTrackedExceptionIds.push(existingCase.id);
+          }
+
+          continue;
+        }
+
+        issuesToCreate.push(issue);
+      }
+
+      const shouldCreateBatch = result.issueCount === 0 || issuesToCreate.length > 0;
+
+      if (!shouldCreateBatch) {
+        await tx.auditLog.create({
+          data: {
+            tenantId: auth.ctx.tenantId,
+            userId: auth.ctx.userId,
+            action: "FINANCE_RECONCILIATION_RECHECK_NO_NEW_EXCEPTION_CASES",
+            resource: "ReconciliationException",
+            resourceId: alreadyTrackedExceptionIds[0] ?? dismissedDuplicateExceptionIds[0] ?? null,
+            metadata: {
+              term: clean(body.term) || null,
+              academicYear: clean(body.academicYear) || null,
+              limit: clampLimit(body.limit),
+
+              totalInvoices: result.totalInvoices,
+              cleanCount: result.cleanCount,
+              issueCount: result.issueCount,
+              highestSeverity: result.highestSeverity,
+
+              grossPaymentTotalPesewas: result.grossPaymentTotalPesewas,
+              refundTotalPesewas: result.refundTotalPesewas,
+              expectedPesewas: result.expectedPesewas,
+              actualPesewas: result.actualPesewas,
+              deltaPesewas: result.deltaPesewas,
+
+              issueKindCounts: countIssuesByKind(result.issues),
+              issueSeverityCounts: countIssuesBySeverity(result.issues),
+
+              createdExceptionCount: 0,
+              createdExceptionIds: [],
+
+              alreadyTrackedExceptionCount,
+              alreadyTrackedExceptionIds,
+
+              dismissedDuplicateCount,
+              dismissedDuplicateExceptionIds,
+
+              duplicatePolicy:
+                "Recheck did not create a new batch because every detected issue is already tracked by an existing OPEN, INVESTIGATING, or DISMISSED exception case.",
+            },
+          },
+        });
+
+        return {
+          batch: null,
+          recheckOnly: true,
+          message:
+            "No new exception batch was created. Existing reconciliation cases already track these detected issues.",
+          createdExceptionCount: 0,
+          createdExceptionIds: [],
+          alreadyTrackedExceptionCount,
+          alreadyTrackedExceptionIds,
+          dismissedDuplicateCount,
+          dismissedDuplicateExceptionIds,
+        };
+      }
+
       const createdBatch = await tx.reconciliationBatch.create({
         data: {
           tenantId: auth.ctx.tenantId,
           provider: body.provider ?? null,
           batchDate: safeDateOnly(body.batchDate),
-          status: batchStatus,
+          status:
+            result.issueCount === 0
+              ? ReconciliationStatus.CLEAN
+              : ReconciliationStatus.HAS_EXCEPTIONS,
           expectedPesewas: result.expectedPesewas,
           actualPesewas: result.actualPesewas,
           deltaPesewas: result.deltaPesewas,
@@ -625,9 +770,9 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      if (result.issues.length > 0) {
-        await tx.reconciliationException.createMany({
-          data: result.issues.map((issue) => ({
+      for (const issue of issuesToCreate) {
+        const createdException = await tx.reconciliationException.create({
+          data: {
             tenantId: auth.ctx.tenantId,
             batchId: createdBatch.id,
             invoiceId: issue.invoiceId,
@@ -639,17 +784,87 @@ export async function POST(req: NextRequest) {
             actualPesewas: issue.actualPesewas,
             deltaPesewas: issue.deltaPesewas,
             description: issue.description,
-          })),
+          },
+          select: { id: true },
         });
+
+        createdExceptionCount++;
+        createdExceptionIds.push(createdException.id);
       }
 
-      return createdBatch;
+      await tx.auditLog.create({
+        data: {
+          tenantId: auth.ctx.tenantId,
+          userId: auth.ctx.userId,
+          action: "FINANCE_RECONCILIATION_BATCH_CREATED",
+          resource: "ReconciliationBatch",
+          resourceId: createdBatch.id,
+          metadata: {
+            provider: createdBatch.provider,
+            batchDate: createdBatch.batchDate.toISOString().slice(0, 10),
+            status: createdBatch.status,
+            term: clean(body.term) || null,
+            academicYear: clean(body.academicYear) || null,
+            limit: clampLimit(body.limit),
+            notes: createdBatch.notes,
+
+            totalInvoices: result.totalInvoices,
+            cleanCount: result.cleanCount,
+            issueCount: result.issueCount,
+            highestSeverity: result.highestSeverity,
+
+            grossPaymentTotalPesewas: result.grossPaymentTotalPesewas,
+            refundTotalPesewas: result.refundTotalPesewas,
+            expectedPesewas: result.expectedPesewas,
+            actualPesewas: result.actualPesewas,
+            deltaPesewas: result.deltaPesewas,
+
+            issueKindCounts: countIssuesByKind(result.issues),
+            issueSeverityCounts: countIssuesBySeverity(result.issues),
+
+            createdExceptionCount,
+            createdExceptionIds,
+
+            alreadyTrackedExceptionCount,
+            alreadyTrackedExceptionIds,
+
+            dismissedDuplicateCount,
+            dismissedDuplicateExceptionIds,
+
+            duplicatePolicy:
+              "Save Batch creates new exception cases only for newly detected issues. Existing OPEN, INVESTIGATING, or DISMISSED cases are not duplicated.",
+          },
+        },
+      });
+
+      return {
+        batch: createdBatch,
+        recheckOnly: false,
+        message:
+          createdExceptionCount > 0
+            ? `${createdExceptionCount} new reconciliation exception case(s) created.`
+            : "Clean reconciliation batch saved.",
+        createdExceptionCount,
+        createdExceptionIds,
+        alreadyTrackedExceptionCount,
+        alreadyTrackedExceptionIds,
+        dismissedDuplicateCount,
+        dismissedDuplicateExceptionIds,
+      };
     });
 
     return json(200, {
       ...result,
-      batch,
-      persisted: true,
+      batch: persisted.batch,
+      persisted: Boolean(persisted.batch),
+      recheckOnly: persisted.recheckOnly,
+      message: persisted.message,
+      createdExceptionCount: persisted.createdExceptionCount,
+      createdExceptionIds: persisted.createdExceptionIds,
+      alreadyTrackedExceptionCount: persisted.alreadyTrackedExceptionCount,
+      alreadyTrackedExceptionIds: persisted.alreadyTrackedExceptionIds,
+      dismissedDuplicateCount: persisted.dismissedDuplicateCount,
+      dismissedDuplicateExceptionIds: persisted.dismissedDuplicateExceptionIds,
     });
   } catch (err) {
     console.error("[ADMIN_RECONCILIATION_PERSIST_ERROR]", err);

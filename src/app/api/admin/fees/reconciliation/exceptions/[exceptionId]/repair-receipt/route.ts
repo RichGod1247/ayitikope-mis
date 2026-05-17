@@ -54,13 +54,75 @@ async function getParams(ctx: {
   return await ctx.params;
 }
 
+async function autoCloseBatchIfReady(
+  tx: Tx,
+  input: {
+    tenantId: string;
+    batchId: string | null;
+    actorUserId: string;
+    trigger: string;
+    exceptionId: string;
+    receiptId?: string | null;
+    receiptNumber?: string | null;
+  }
+) {
+  if (!input.batchId) return false;
+
+  const activeCount = await tx.reconciliationException.count({
+    where: {
+      tenantId: input.tenantId,
+      batchId: input.batchId,
+      status: { in: ["OPEN", "INVESTIGATING"] },
+    },
+  });
+
+  if (activeCount !== 0) return false;
+
+  const closedAt = new Date();
+
+  const updated = await tx.reconciliationBatch.updateMany({
+    where: {
+      id: input.batchId,
+      tenantId: input.tenantId,
+      closedAt: null,
+      status: { not: "CLOSED" },
+    },
+    data: {
+      status: "CLOSED",
+      closedAt,
+    },
+  });
+
+  if (updated.count === 0) return false;
+
+  await tx.auditLog.create({
+    data: {
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      action: "FINANCE_RECONCILIATION_BATCH_AUTO_CLOSED",
+      resource: "ReconciliationBatch",
+      resourceId: input.batchId,
+      metadata: {
+        trigger: input.trigger,
+        exceptionId: input.exceptionId,
+        receiptId: input.receiptId ?? null,
+        receiptNumber: input.receiptNumber ?? null,
+        activeExceptionCountAfterAction: activeCount,
+        closedAt: closedAt.toISOString(),
+      },
+    },
+  });
+
+  return true;
+}
+
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ exceptionId: string }> | { exceptionId: string } }
 ) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
-    requireRoleNames: ["SCHOOL_ADMIN", "HEADTEACHER", "SUPERADMIN"],
+    requireRoleNames: ["SCHOOL_ADMIN", "ADMIN", "HEADTEACHER", "SUPERADMIN"],
   });
 
   if (!auth.ok) return auth.res;
@@ -191,16 +253,32 @@ export async function POST(
                 resourceId: exception.id,
                 metadata: {
                   repairType: "PAYMENT_WITHOUT_RECEIPT",
+                  batchId: exception.batchId,
+                  invoiceId: invoice.id,
                   receiptId: existingReceipt.id,
                   receiptNumber: existingReceipt.receiptNumber,
+                  previousExceptionStatus: exception.status,
+                  nextExceptionStatus: "RESOLVED",
+                  reason: "Receipt already existed, so no duplicate receipt was created.",
                 },
               },
+            });
+
+            const batchAutoClosed = await autoCloseBatchIfReady(tx, {
+              tenantId,
+              batchId: exception.batchId,
+              actorUserId,
+              trigger: "REPAIR_RECEIPT_NOOP_EXISTING_RECEIPT",
+              exceptionId: exception.id,
+              receiptId: existingReceipt.id,
+              receiptNumber: existingReceipt.receiptNumber,
             });
 
             return {
               ok: true as const,
               repaired: false,
               alreadyHadReceipt: true,
+              batchAutoClosed,
               exception: updated,
               receipt: existingReceipt,
               smsPayload: null,
@@ -218,7 +296,8 @@ export async function POST(
           [invoice.student?.firstName, invoice.student?.lastName].filter(Boolean).join(" ").trim() ||
           "Student";
 
-        const guardianPhone = invoice.student?.guardianPhoneNorm || invoice.student?.guardianPhone || null;
+        const guardianPhone =
+          invoice.student?.guardianPhoneNorm || invoice.student?.guardianPhone || null;
 
         const receiptNumber = await createUniqueReceiptNumber(tx, tenantId, tenant.schoolCode);
 
@@ -315,26 +394,6 @@ export async function POST(
           },
         });
 
-        if (exception.batchId) {
-          const activeCount = await tx.reconciliationException.count({
-            where: {
-              tenantId,
-              batchId: exception.batchId,
-              status: { in: ["OPEN", "INVESTIGATING"] },
-            },
-          });
-
-          if (activeCount === 0) {
-            await tx.reconciliationBatch.update({
-              where: { id: exception.batchId },
-              data: {
-                status: "CLOSED",
-                closedAt: new Date(),
-              },
-            });
-          }
-        }
-
         await tx.auditLog.create({
           data: {
             tenantId,
@@ -351,6 +410,8 @@ export async function POST(
               receiptNumber: receipt.receiptNumber,
               amountPesewas: payment.amountPesewas,
               providerReference: payment.reference,
+              previousExceptionStatus: exception.status,
+              nextExceptionStatus: "RESOLVED",
               invoiceStatusAfter: invoiceAfter.status,
               invoiceBalanceAfterPesewas: invoiceAfter.balancePesewas,
               ledgerAction: existingLedgers.length > 0 ? "LINKED_EXISTING_LEDGER" : "CREATED_LEDGER",
@@ -358,10 +419,21 @@ export async function POST(
           },
         });
 
+        const batchAutoClosed = await autoCloseBatchIfReady(tx, {
+          tenantId,
+          batchId: exception.batchId,
+          actorUserId,
+          trigger: "REPAIR_RECEIPT_CREATED_RECEIPT",
+          exceptionId: exception.id,
+          receiptId: receipt.id,
+          receiptNumber: receipt.receiptNumber,
+        });
+
         return {
           ok: true as const,
           repaired: true,
           alreadyHadReceipt: false,
+          batchAutoClosed,
           exception: updatedException,
           receipt,
           smsPayload: guardianPhone
@@ -407,32 +479,42 @@ export async function POST(
           `(${result.smsPayload.classLabel}) - ${result.smsPayload.term} ` +
           `${result.smsPayload.academicYear}. Balance: GHS ${outstandingCedis}. ` +
           `School: ${result.smsPayload.tenantName}. Keep this SMS as proof.`,
-        template: "payment_receipt_repair",
+        template: "FEES_RECEIPT_REPAIR",
         payload: {
-          exceptionId,
           receiptId: result.smsPayload.receiptId,
           receiptNumber: result.smsPayload.receiptNumber,
           amountPesewas: result.smsPayload.amountPesewas,
           outstandingPesewas: result.smsPayload.outstandingPesewas,
+          source: "RECONCILIATION_REPAIR",
         },
-      }).catch((err) => console.error("[REPAIR_RECEIPT_SMS_ERROR]", err));
+      }).catch((err) => {
+        console.error("[RECONCILIATION_REPAIR_SMS_ERROR]", err);
+      });
     }
 
     return json(200, {
       ok: true,
       repaired: result.repaired,
       alreadyHadReceipt: result.alreadyHadReceipt,
+      batchAutoClosed: result.batchAutoClosed,
       receipt: result.receipt,
       exception: result.exception,
     });
   } catch (err) {
-    console.error("[REPAIR_PAYMENT_WITHOUT_RECEIPT_ERROR]", err);
-    return json(500, {
-      ok: false,
-      error:
-        err instanceof Error && err.message
-          ? err.message
-          : "FAILED_TO_REPAIR_PAYMENT_WITHOUT_RECEIPT",
-    });
+    console.error("[RECONCILIATION_REPAIR_RECEIPT_ERROR]", err);
+
+    const message = err instanceof Error ? err.message : "";
+    if (message === "PAYMENT_LEDGER_ALREADY_LINKED_TO_DIFFERENT_RECEIPT") {
+      return json(409, {
+        ok: false,
+        error: "PAYMENT_LEDGER_ALREADY_LINKED_TO_DIFFERENT_RECEIPT",
+      });
+    }
+
+    if (message === "FAILED_TO_GENERATE_RECEIPT_NUMBER") {
+      return json(500, { ok: false, error: "FAILED_TO_GENERATE_RECEIPT_NUMBER" });
+    }
+
+    return json(500, { ok: false, error: "FAILED_TO_REPAIR_RECEIPT" });
   }
 }
