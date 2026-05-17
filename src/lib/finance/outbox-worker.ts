@@ -4,6 +4,7 @@ import {
   FinanceOutboxEventType,
   FinanceOutboxStatus,
 } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { sendSms } from "@/lib/sms";
 import {
   claimFinanceOutboxEvents,
@@ -16,6 +17,11 @@ type WorkerResult = {
   claimed: number;
   completed: number;
   failed: number;
+};
+
+type OutboxHealthArgs = {
+  tenantId?: string | null;
+  types?: FinanceOutboxEventType[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -112,6 +118,8 @@ export async function runFinanceOutboxWorker(args?: {
   tenantId?: string | null;
   aggregateType?: string | null;
   aggregateId?: string | null;
+  eventId?: string | null;
+  staleProcessingAfterMinutes?: number;
 }): Promise<WorkerResult> {
   const workerId = args?.workerId ?? `finance-worker-${process.pid}`;
 
@@ -122,6 +130,8 @@ export async function runFinanceOutboxWorker(args?: {
     tenantId: args?.tenantId,
     aggregateType: args?.aggregateType,
     aggregateId: args?.aggregateId,
+    eventId: args?.eventId,
+    staleProcessingAfterMinutes: args?.staleProcessingAfterMinutes ?? 15,
   });
 
   let completed = 0;
@@ -145,19 +155,37 @@ export async function runFinanceOutboxWorker(args?: {
   };
 }
 
-export async function getFinanceOutboxHealth() {
-  return {
-    pending: await countByStatus(FinanceOutboxStatus.PENDING),
-    processing: await countByStatus(FinanceOutboxStatus.PROCESSING),
-    failed: await countByStatus(FinanceOutboxStatus.FAILED),
-    dead: await countByStatus(FinanceOutboxStatus.DEAD),
+export async function getFinanceOutboxHealth(args?: OutboxHealthArgs) {
+  const where = {
+    ...(args?.tenantId ? { tenantId: args.tenantId } : {}),
+    ...(args?.types?.length ? { type: { in: args.types } } : {}),
   };
-}
 
-async function countByStatus(status: FinanceOutboxStatus) {
-  const { prisma } = await import("@/lib/prisma");
-
-  return prisma.financeOutboxEvent.count({
-    where: { status },
+  const rows = await prisma.financeOutboxEvent.groupBy({
+    by: ["status"],
+    where,
+    _count: { _all: true },
   });
+
+  const base: Record<FinanceOutboxStatus, number> = {
+    PENDING: 0,
+    PROCESSING: 0,
+    COMPLETED: 0,
+    FAILED: 0,
+    DEAD: 0,
+    CANCELLED: 0,
+  };
+
+  for (const row of rows) {
+    base[row.status] = row._count._all;
+  }
+
+  return {
+    pending: base.PENDING,
+    processing: base.PROCESSING,
+    completed: base.COMPLETED,
+    failed: base.FAILED,
+    dead: base.DEAD,
+    cancelled: base.CANCELLED,
+  };
 }

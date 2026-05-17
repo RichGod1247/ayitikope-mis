@@ -27,6 +27,8 @@ type ClaimFinanceOutboxArgs = {
   tenantId?: string | null;
   aggregateType?: string | null;
   aggregateId?: string | null;
+  eventId?: string | null;
+  staleProcessingAfterMinutes?: number;
 };
 
 function cleanIdempotencyKey(value: string): string {
@@ -47,6 +49,25 @@ function safePayload(payload: JsonInput | undefined): JsonInput {
   return payload;
 }
 
+function isUniqueConstraintError(err: unknown) {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
+
+function canReviveStatus(status: FinanceOutboxStatus) {
+  return (
+    status === FinanceOutboxStatus.PENDING ||
+    status === FinanceOutboxStatus.FAILED ||
+    status === FinanceOutboxStatus.DEAD
+  );
+}
+
+/**
+ * Bank-grade idempotency rule:
+ * - COMPLETED is never silently reopened.
+ * - PROCESSING is never reset by enqueue; the worker stale-lock policy handles crashes.
+ * - CANCELLED is not casually revived.
+ * - PENDING/FAILED/DEAD may be refreshed because they represent incomplete work.
+ */
 export async function enqueueFinanceOutboxEvent(args: EnqueueFinanceOutboxArgs) {
   const idempotencyKey = cleanIdempotencyKey(args.idempotencyKey);
 
@@ -54,40 +75,57 @@ export async function enqueueFinanceOutboxEvent(args: EnqueueFinanceOutboxArgs) 
     throw new Error("Finance outbox idempotencyKey is required.");
   }
 
-  return prisma.financeOutboxEvent.upsert({
-    where: {
-      type_idempotencyKey: {
+  try {
+    return await prisma.financeOutboxEvent.create({
+      data: {
+        tenantId: args.tenantId ?? null,
         type: args.type,
         idempotencyKey,
+        aggregateType: args.aggregateType ?? null,
+        aggregateId: args.aggregateId ?? null,
+        payload: safePayload(args.payload),
+        priority: args.priority ?? 5,
+        maxAttempts: args.maxAttempts ?? 5,
+        nextAttemptAt: args.nextAttemptAt ?? new Date(),
+        status: FinanceOutboxStatus.PENDING,
       },
-    },
-    create: {
-      tenantId: args.tenantId ?? null,
-      type: args.type,
-      idempotencyKey,
-      aggregateType: args.aggregateType ?? null,
-      aggregateId: args.aggregateId ?? null,
-      payload: safePayload(args.payload),
-      priority: args.priority ?? 5,
-      maxAttempts: args.maxAttempts ?? 5,
-      nextAttemptAt: args.nextAttemptAt ?? new Date(),
-      status: FinanceOutboxStatus.PENDING,
-    },
-    update: {
-      tenantId: args.tenantId ?? null,
-      aggregateType: args.aggregateType ?? null,
-      aggregateId: args.aggregateId ?? null,
-      payload: safePayload(args.payload),
-      priority: args.priority ?? 5,
-      maxAttempts: args.maxAttempts ?? 5,
-      nextAttemptAt: args.nextAttemptAt ?? new Date(),
-      status: FinanceOutboxStatus.PENDING,
-      lockedAt: null,
-      lockedBy: null,
-      processedAt: null,
-      lastError: null,
-    },
-  });
+    });
+  } catch (err) {
+    if (!isUniqueConstraintError(err)) throw err;
+
+    const existing = await prisma.financeOutboxEvent.findUnique({
+      where: {
+        type_idempotencyKey: {
+          type: args.type,
+          idempotencyKey,
+        },
+      },
+    });
+
+    if (!existing) throw err;
+
+    if (!canReviveStatus(existing.status)) {
+      return existing;
+    }
+
+    return prisma.financeOutboxEvent.update({
+      where: { id: existing.id },
+      data: {
+        tenantId: args.tenantId ?? existing.tenantId,
+        aggregateType: args.aggregateType ?? existing.aggregateType,
+        aggregateId: args.aggregateId ?? existing.aggregateId,
+        payload: safePayload(args.payload),
+        priority: args.priority ?? existing.priority,
+        maxAttempts: args.maxAttempts ?? existing.maxAttempts,
+        nextAttemptAt: args.nextAttemptAt ?? new Date(),
+        status: FinanceOutboxStatus.PENDING,
+        lockedAt: null,
+        lockedBy: null,
+        processedAt: null,
+        lastError: null,
+      },
+    });
+  }
 }
 
 export async function enqueueProviderEventRecoveryOutbox(args: {
@@ -126,6 +164,10 @@ export async function claimFinanceOutboxEvents(args: ClaimFinanceOutboxArgs) {
   const tenantId = cleanOptional(args.tenantId);
   const aggregateType = cleanOptional(args.aggregateType, 80);
   const aggregateId = cleanOptional(args.aggregateId);
+  const eventId = cleanOptional(args.eventId);
+
+  const staleMinutes = Math.max(5, Math.min(args.staleProcessingAfterMinutes ?? 15, 120));
+  const staleBefore = new Date(Date.now() - staleMinutes * 60_000);
 
   return prisma.$transaction(async (tx) => {
     const claimedIds = await tx.$queryRaw<Array<{ id: string }>>`
@@ -139,8 +181,18 @@ export async function claimFinanceOutboxEvents(args: ClaimFinanceOutboxArgs) {
         select "id"
         from "FinanceOutboxEvent"
         where
-          "status" in ('PENDING'::"FinanceOutboxStatus", 'FAILED'::"FinanceOutboxStatus")
-          and "nextAttemptAt" <= now()
+          (
+            (
+              "status" in ('PENDING'::"FinanceOutboxStatus", 'FAILED'::"FinanceOutboxStatus")
+              and "nextAttemptAt" <= now()
+            )
+            or
+            (
+              "status" = 'PROCESSING'::"FinanceOutboxStatus"
+              and "lockedAt" is not null
+              and "lockedAt" < ${staleBefore}
+            )
+          )
           and "attempts" < "maxAttempts"
           and (
             ${types.length} = 0
@@ -157,6 +209,10 @@ export async function claimFinanceOutboxEvents(args: ClaimFinanceOutboxArgs) {
           and (
             ${aggregateId}::text is null
             or "aggregateId" = ${aggregateId}
+          )
+          and (
+            ${eventId}::text is null
+            or "id" = ${eventId}
           )
         order by "priority" asc, "nextAttemptAt" asc, "createdAt" asc
         limit ${limit}
@@ -200,10 +256,18 @@ export async function markFinanceOutboxFailed(eventId: string, error: unknown) {
     select: {
       attempts: true,
       maxAttempts: true,
+      status: true,
     },
   });
 
   if (!existing) return null;
+
+  if (
+    existing.status === FinanceOutboxStatus.COMPLETED ||
+    existing.status === FinanceOutboxStatus.CANCELLED
+  ) {
+    return null;
+  }
 
   const attempts = existing.attempts + 1;
   const isDead = attempts >= existing.maxAttempts;
@@ -223,17 +287,42 @@ export async function markFinanceOutboxFailed(eventId: string, error: unknown) {
 }
 
 export async function retryFinanceOutboxEvent(eventId: string) {
-  return prisma.financeOutboxEvent.update({
-    where: { id: eventId },
-    data: {
-      status: FinanceOutboxStatus.PENDING,
-      attempts: 0,
-      nextAttemptAt: new Date(),
-      lockedAt: null,
-      lockedBy: null,
-      lastError: null,
-      processedAt: null,
-    },
+  return prisma.$transaction(async (tx) => {
+    const event = await tx.financeOutboxEvent.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!event) {
+      throw new Error("OUTBOX_EVENT_NOT_FOUND");
+    }
+
+    if (
+      event.status === FinanceOutboxStatus.COMPLETED ||
+      event.status === FinanceOutboxStatus.CANCELLED
+    ) {
+      throw new Error(`CANNOT_RETRY_${event.status}`);
+    }
+
+    if (event.status === FinanceOutboxStatus.PROCESSING) {
+      throw new Error("CANNOT_RETRY_PROCESSING");
+    }
+
+    return tx.financeOutboxEvent.update({
+      where: { id: event.id },
+      data: {
+        status: FinanceOutboxStatus.PENDING,
+        attempts: 0,
+        nextAttemptAt: new Date(),
+        lockedAt: null,
+        lockedBy: null,
+        lastError: null,
+        processedAt: null,
+      },
+    });
   });
 }
 
@@ -244,6 +333,7 @@ export async function cancelFinanceOutboxEvent(eventId: string) {
       status: FinanceOutboxStatus.CANCELLED,
       lockedAt: null,
       lockedBy: null,
+      lastError: null,
     },
   });
 }

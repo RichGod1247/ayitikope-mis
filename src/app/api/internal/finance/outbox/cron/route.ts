@@ -44,15 +44,20 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
   }
 
-  const before = await getFinanceOutboxHealth();
+  const before = await getFinanceOutboxHealth({
+    types: SAFE_CRON_TYPES,
+  });
 
   const result = await runFinanceOutboxWorker({
     workerId: "finance-outbox-cron",
     limit: 25,
     types: SAFE_CRON_TYPES,
+    staleProcessingAfterMinutes: 15,
   });
 
-  const after = await getFinanceOutboxHealth();
+  const after = await getFinanceOutboxHealth({
+    types: SAFE_CRON_TYPES,
+  });
 
   return jsonNoStore({
     ok: true,
