@@ -160,13 +160,24 @@ function isStaffProtectedPath(path: string) {
   return (
     path === "/app" ||
     path.startsWith("/app/") ||
+
     path.startsWith("/admin/") ||
     path.startsWith("/teacher/") ||
     path.startsWith("/headteacher/") ||
+
+    // Sprint 10 governance officer pages
+    path.startsWith("/circuit/") ||
+    path.startsWith("/district/") ||
+
     path.startsWith("/api/admin/") ||
     path.startsWith("/api/teacher/") ||
     path.startsWith("/api/teachers/") ||
     path.startsWith("/api/headteacher/") ||
+
+    // Sprint 10 governance APIs
+    path.startsWith("/api/circuit/") ||
+    path.startsWith("/api/district/") ||
+
     path.startsWith("/api/rbac/") ||
     path.startsWith("/api/attendance/") ||
     path.startsWith("/api/consent/") ||

@@ -10,6 +10,13 @@ export type Role =
   | "SUPER_ADMIN"
   | "SYSTEM_ADMIN"
   | "OWNER"
+  | "SISSO"
+  | "CIRCUIT_SUPERVISOR"
+  | "DISTRICT_DIRECTOR"
+  | "DISTRICT_MIS_OFFICER"
+  | "DISTRICT_SHEP_OFFICER"
+  | "DISTRICT_ASSESSMENT_OFFICER"
+  | "REGIONAL_VIEWER"
   | string;
 
 export function normRole(v: unknown) {
@@ -19,12 +26,6 @@ export function normRole(v: unknown) {
     .replace(/\s+/g, "_");
 }
 
-/**
- * Canonicalize legacy roles WITHOUT collapsing SUPERADMIN.
- * - ADMIN -> SCHOOL_ADMIN
- * - HEADMASTER -> HEADTEACHER
- * - SUPER_ADMIN / SYSTEM_ADMIN / OWNER -> SUPERADMIN
- */
 export function effectiveRole(roleName: unknown) {
   const r = normRole(roleName);
   if (r === "ADMIN") return "SCHOOL_ADMIN";
@@ -33,7 +34,6 @@ export function effectiveRole(roleName: unknown) {
   return r;
 }
 
-// Block open-redirects, allow only internal paths.
 export function safeInternalPath(raw: string | null | undefined, fallback = "/app") {
   const v = String(raw ?? "").trim();
   if (!v) return fallback;
@@ -56,24 +56,41 @@ export function buildAppCallbackUrl(nextPath: string) {
   return `/app?next=${encodeURIComponent(next)}`;
 }
 
-/**
- * Adminish = can operate on tenant-wide data.
- * MVP decision: SCHOOL_ADMIN + SUPERADMIN + HEADTEACHER
- */
 function isSuper(role: string) {
   return role === "SUPERADMIN";
 }
+
 function isSchoolAdmin(role: string) {
   return role === "SCHOOL_ADMIN";
 }
+
 function isHeadteacher(role: string) {
   return role === "HEADTEACHER";
 }
+
 function isTeacher(role: string) {
   return role === "TEACHER";
 }
+
 function isParent(role: string) {
   return role === "PARENT";
+}
+
+function isCircuitGovernance(role: string) {
+  return role === "SISSO" || role === "CIRCUIT_SUPERVISOR";
+}
+
+function isDistrictGovernance(role: string) {
+  return (
+    role === "DISTRICT_DIRECTOR" ||
+    role === "DISTRICT_MIS_OFFICER" ||
+    role === "DISTRICT_SHEP_OFFICER" ||
+    role === "DISTRICT_ASSESSMENT_OFFICER"
+  );
+}
+
+function isGovernance(role: string) {
+  return isCircuitGovernance(role) || isDistrictGovernance(role) || role === "REGIONAL_VIEWER";
 }
 
 function isAdminish(role: string) {
@@ -98,11 +115,18 @@ function isParentLike(role: string) {
 
 export function roleDefaultDestination(roleName: unknown) {
   const role = effectiveRole(roleName);
+
   if (role === "SUPERADMIN") return "/admin/super";
+
+  if (isCircuitGovernance(role)) return "/circuit/dashboard";
+  if (isDistrictGovernance(role)) return "/district/dashboard";
+  if (role === "REGIONAL_VIEWER") return "/district/dashboard";
+
   if (role === "SCHOOL_ADMIN") return "/admin/dashboard";
   if (role === "HEADTEACHER") return "/headteacher/dashboard";
   if (role === "TEACHER") return "/teacher/dashboard";
   if (role === "PARENT") return "/parents/my-children";
+
   return "/app";
 }
 
@@ -111,13 +135,19 @@ export function requiredRoleForPath(path: string) {
 
   // Pages
   if (p.startsWith("/admin/super")) return "SUPERADMIN";
+  if (p.startsWith("/admin/governance")) return "SUPERADMIN";
   if (p === "/head-portal") return "HEADTEACHER";
   if (p.startsWith("/headteacher")) return "HEADTEACHER";
   if (p.startsWith("/teacher")) return "TEACHER";
+  if (p.startsWith("/circuit")) return "SISSO";
+  if (p.startsWith("/district")) return "DISTRICT_DIRECTOR";
   if (p.startsWith("/admin")) return "SCHOOL_ADMIN";
   if (p.startsWith("/parents") || p.startsWith("/parent-portal")) return "PARENT";
 
   // APIs
+  if (p.startsWith("/api/admin/governance")) return "SUPERADMIN";
+  if (p.startsWith("/api/circuit")) return "SISSO";
+  if (p.startsWith("/api/district")) return "DISTRICT_DIRECTOR";
   if (p.startsWith("/api/headteacher")) return "HEADTEACHER";
   if (p.startsWith("/api/teacher")) return "TEACHER";
   if (p.startsWith("/api/teachers")) return "TEACHER";
@@ -137,18 +167,19 @@ export function isPathAllowedForRole(path: string, roleName: unknown) {
   const p = safeInternalPath(path, "/app");
 
   if (p.startsWith("/auth/")) return true;
+  if (p.startsWith("/governance/invite")) return true;
+
   if (p === "/app" || p.startsWith("/app/")) return true;
   if (p.startsWith("/api/auth/")) return true;
+  if (p.startsWith("/api/governance/invite/")) return true;
   if (p === "/api/me") return true;
 
   if (p === "/head-portal") return isHeadteacherApiAllowed(role);
 
-  // Special-case legacy
   if (p === "/api/admin/invite-teacher") {
     return isAdminish(role) || isHeadteacher(role);
   }
 
-  // ✅ Phase 7 narrow allowlist: ONLY specific /api/tenants/* endpoints that are tenant-scoped
   if (
     p.startsWith("/api/tenants/") &&
     (p.endsWith("/onboarding/rotate") || p.endsWith("/invites/create"))
@@ -156,7 +187,18 @@ export function isPathAllowedForRole(path: string, roleName: unknown) {
     return isAdminish(role);
   }
 
-  // ---- Protected API families ----
+  // Governance admin is superadmin-only for now.
+  if (p.startsWith("/admin/governance")) return isSuper(role);
+  if (p.startsWith("/api/admin/governance")) return isSuper(role);
+
+  // Governance officer areas.
+  if (p.startsWith("/circuit")) return isSuper(role) || isCircuitGovernance(role);
+  if (p.startsWith("/district")) return isSuper(role) || isDistrictGovernance(role);
+
+  if (p.startsWith("/api/circuit")) return isSuper(role) || isCircuitGovernance(role);
+  if (p.startsWith("/api/district")) return isSuper(role) || isDistrictGovernance(role);
+
+  // Protected API families
   if (p.startsWith("/api/tenants")) return isSuper(role);
   if (p.startsWith("/api/rbac")) return isAdminish(role);
   if (p.startsWith("/api/admin")) return isAdminish(role);
@@ -168,7 +210,7 @@ export function isPathAllowedForRole(path: string, roleName: unknown) {
 
   if (p.startsWith("/api/")) return false;
 
-  // ---- Page policy ----
+  // Protected pages
   if (p.startsWith("/admin")) return isAdminish(role);
   if (p.startsWith("/headteacher")) return isHeadteacherApiAllowed(role);
   if (p.startsWith("/teacher")) return isTeacherLike(role);

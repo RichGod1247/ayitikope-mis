@@ -158,6 +158,52 @@ type PickedMembership = {
   role: { name: string | null } | null;
 };
 
+const GOVERNANCE_LOGIN_ROLE_PRIORITY = [
+  "DISTRICT_DIRECTOR",
+  "DISTRICT_MIS_OFFICER",
+  "DISTRICT_SHEP_OFFICER",
+  "DISTRICT_ASSESSMENT_OFFICER",
+  "SISSO",
+  "CIRCUIT_SUPERVISOR",
+  "REGIONAL_VIEWER",
+];
+
+async function pickGovernanceLoginRoleForUser(userId: string): Promise<string | null> {
+  const now = new Date();
+
+  const rows = await prisma.governanceOfficerAssignment.findMany({
+    where: {
+      userId,
+      status: "ACTIVE",
+      revokedAt: null,
+      AND: [
+        { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
+        { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
+      ],
+    },
+    select: {
+      role: true,
+      zone: {
+        select: {
+          isActive: true,
+          zoneType: { select: { level: true } },
+        },
+      },
+    },
+  });
+
+  const active = rows.filter((r) => r.zone?.isActive);
+  if (!active.length) return null;
+
+  const roles = new Set(active.map((r) => String(r.role)));
+
+  for (const role of GOVERNANCE_LOGIN_ROLE_PRIORITY) {
+    if (roles.has(role)) return role;
+  }
+
+  return String(active[0].role);
+}
+
 async function pickMembershipForUserStrict(
   userId: string,
   preferredTenantId: string | null
@@ -406,7 +452,8 @@ export const authOptions: NextAuthOptions = {
           lastActiveTenantId: string | null;
         } | null = null;
 
-        let membership: PickedMembership | null = null;
+                let membership: PickedMembership | null = null;
+        let governanceRoleName: string | null = null;
 
         if (emailLogin) {
           user = await prisma.user.findFirst({
@@ -481,9 +528,17 @@ export const authOptions: NextAuthOptions = {
             }
           }
 
-          if (!membership?.tenantId) {
-            await recordFail("NO_ACTIVE_MEMBERSHIP", user.id);
-            return null;
+                    if (!membership?.tenantId) {
+            // Governance-only officers do not need school tenant membership.
+            // They must have an active GovernanceOfficerAssignment instead.
+            if (!tenantRaw) {
+              governanceRoleName = await pickGovernanceLoginRoleForUser(user.id);
+            }
+
+            if (!governanceRoleName) {
+              await recordFail("NO_ACTIVE_MEMBERSHIP_OR_GOVERNANCE_ASSIGNMENT", user.id);
+              return null;
+            }
           }
         } else {
           // Staff ID login
@@ -596,7 +651,9 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        if (!user?.id || !user.passwordHash || !membership?.tenantId) return null;
+                if (!user?.id || !user.passwordHash || (!membership?.tenantId && !governanceRoleName)) {
+          return null;
+        }
 
         // ---------------------------
         // 2) Lockouts (password + OTP)
@@ -775,7 +832,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           staffId: membership?.staffId ?? null,
           tenantId: membership?.tenantId ?? null,
-          roleName: membership?.role?.name ?? null,
+                    roleName: membership?.role?.name ?? governanceRoleName ?? null,
           teacherScope,
           phone: phoneBundle.phone,
           phoneNumber: phoneBundle.phoneNumber,

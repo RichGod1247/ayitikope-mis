@@ -100,6 +100,11 @@ model User {
   governanceOfficerAssignmentsCreated GovernanceOfficerAssignment[] @relation("GovernanceOfficerAssignmentCreatedBy")
   governanceOfficerAssignmentsRevoked GovernanceOfficerAssignment[] @relation("GovernanceOfficerAssignmentRevokedBy")
 
+  /// ✅ Sprint 10 — governance officer invite lifecycle.
+  governanceOfficerInvitesCreated  GovernanceOfficerInvite[] @relation("GovernanceOfficerInviteCreatedBy")
+  governanceOfficerInvitesAccepted GovernanceOfficerInvite[] @relation("GovernanceOfficerInviteAcceptedBy")
+  governanceOfficerInvitesRevoked  GovernanceOfficerInvite[] @relation("GovernanceOfficerInviteRevokedBy")
+
   @@index([twoFactorEnabled])
   @@index([lastActiveTenantId])
 }
@@ -2060,6 +2065,7 @@ model AdminZone {
 
   /// ✅ Bank-grade officer assignment spine.
   officerAssignments GovernanceOfficerAssignment[]
+  officerInvites     GovernanceOfficerInvite[]
 
   isActive Boolean @default(true)
 
@@ -2129,6 +2135,53 @@ model GovernanceOfficerAssignment {
   @@index([userId, zoneId, role, status], map: "GovernanceOfficerAssignment_user_zone_role_status_idx")
 }
 
+model GovernanceOfficerInvite {
+  id String @id @default(cuid())
+
+  email     String @db.VarChar(320)
+  emailNorm String @db.VarChar(320)
+
+  phone     String? @db.VarChar(32)
+  phoneNorm String? @db.VarChar(16)
+
+  tokenHash String @unique @db.VarChar(64)
+
+  role GovernanceOfficerRole
+
+  zoneId String
+  zone   AdminZone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+
+  status GovernanceOfficerInviteStatus @default(PENDING)
+
+  expiresAt DateTime @db.Timestamptz(6)
+
+  acceptedAt DateTime? @db.Timestamptz(6)
+  revokedAt  DateTime? @db.Timestamptz(6)
+
+  createdByUserId  String?
+  acceptedByUserId String?
+  revokedByUserId  String?
+
+  createdBy  User? @relation("GovernanceOfficerInviteCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  acceptedBy User? @relation("GovernanceOfficerInviteAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  revokedBy  User? @relation("GovernanceOfficerInviteRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  @@index([emailNorm])
+  @@index([zoneId])
+  @@index([role])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([createdByUserId])
+  @@index([acceptedByUserId])
+  @@index([revokedByUserId])
+  @@index([zoneId, role, status], map: "GovernanceOfficerInvite_zone_role_status_idx")
+}
+
 // Daily risk briefing snapshots — one per tenant per day.
 // Later phases will harden this with explainable risk reasons.
 model SchoolRiskSnapshot {
@@ -2164,6 +2217,13 @@ enum GovernanceAssignmentStatus {
   ACTIVE
   SUSPENDED
   REVOKED
+}
+
+enum GovernanceOfficerInviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
 }
 
 enum AttendanceStatus {
