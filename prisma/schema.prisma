@@ -91,8 +91,14 @@ model User {
   /// ✅ Headteacher signature store
   headteacherSignatures HeadteacherSignature[]
 
-  /// Sprint 10 placeholder — keep only because current schema already has GES models.
+  /// Sprint 10 legacy placeholder — retained because current schema already has GES models.
   gesOfficer GesOfficer?
+
+  /// ✅ Sprint 10 — bank-grade governance officer assignment spine.
+  /// A user may hold multiple jurisdiction assignments over time.
+  governanceOfficerAssignments        GovernanceOfficerAssignment[] @relation("GovernanceOfficerAssignmentUser")
+  governanceOfficerAssignmentsCreated GovernanceOfficerAssignment[] @relation("GovernanceOfficerAssignmentCreatedBy")
+  governanceOfficerAssignmentsRevoked GovernanceOfficerAssignment[] @relation("GovernanceOfficerAssignmentRevokedBy")
 
   @@index([twoFactorEnabled])
   @@index([lastActiveTenantId])
@@ -2005,44 +2011,78 @@ model InviteCodeUse {
 
 /// *
 /// * =======================
-/// * Sprint 10 — GES Zone Hierarchy & AI Analytics
+/// * Sprint 10 — Governance Geography, Officer Scope & Risk Analytics
 /// * =======================
+///
+/// Bank-grade principle:
+/// - Tenant remains the school boundary.
+/// - Governance zones provide oversight scope.
+/// - Officer assignments determine who may see which schools.
+/// - Dashboards must never infer authority from tenant membership alone.
 
-// Flexible country-agnostic zone type (Circuit, District, Region, LGA, etc.)
+// Flexible country-agnostic zone type.
+// Ghana target:
+// level 1 = Circuit
+// level 2 = District / Municipality
+// level 3 = Region
+// level 4 = National
 model AdminZoneType {
-  id          String      @id @default(cuid())
+  id          String @id @default(cuid())
   countryCode String // "GH", "NG", "KE" etc.
-  level       Int // 1=lowest (circuit), 2=district, 3=region, 4=national
-  name        String // "Circuit", "District", "Region", "LGA", "County" etc.
-  zones       AdminZone[]
+  level       Int
+  name        String // "Circuit", "District", "Region", "National", etc.
+
+  zones AdminZone[]
 
   @@unique([countryCode, level], map: "AdminZoneType_country_level_unique")
   @@index([countryCode])
 }
 
 model AdminZone {
-  id           String        @id @default(cuid())
-  name         String
-  code         String?
-  zoneTypeId   String
-  zoneType     AdminZoneType @relation(fields: [zoneTypeId], references: [id])
+  id          String  @id @default(cuid())
+  name        String
+  code        String?
+  countryCode String  @default("GH")
+
+  zoneTypeId String
+  zoneType   AdminZoneType @relation(fields: [zoneTypeId], references: [id], onDelete: Restrict)
+
   parentZoneId String?
-  parentZone   AdminZone?    @relation("ZoneHierarchy", fields: [parentZoneId], references: [id])
-  childZones   AdminZone[]   @relation("ZoneHierarchy")
-  tenants      Tenant[]
-  officers     GesOfficer[]
+  parentZone   AdminZone?  @relation("ZoneHierarchy", fields: [parentZoneId], references: [id], onDelete: Restrict)
+  childZones   AdminZone[] @relation("ZoneHierarchy")
+
+  /// Schools are attached to their lowest practical governance zone.
+  /// For Ghana Sprint 10 Phase A, this should be the circuit zone.
+  tenants Tenant[]
+
+  /// Legacy placeholder relation. Keep for compatibility, but do not use for new auth.
+  officers GesOfficer[]
+
+  /// ✅ Bank-grade officer assignment spine.
+  officerAssignments GovernanceOfficerAssignment[]
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@index([zoneTypeId])
   @@index([parentZoneId])
+  @@index([countryCode])
+  @@index([isActive])
+  @@index([code])
+  @@index([countryCode, code])
 }
 
+/// Legacy placeholder retained because the current schema already has it.
+/// New Sprint 10 authorization must use GovernanceOfficerAssignment instead.
 model GesOfficer {
   id         String    @id @default(cuid())
   userId     String    @unique
-  user       User      @relation(fields: [userId], references: [id])
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   zoneId     String
-  zone       AdminZone @relation(fields: [zoneId], references: [id])
-  title      String // "SISO", "District Director", "Regional Director", "Director-General"
+  zone       AdminZone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  title      String
   phone      String?
   notifMuted Boolean   @default(false)
   createdAt  DateTime  @default(now())
@@ -2050,7 +2090,47 @@ model GesOfficer {
   @@index([zoneId])
 }
 
-// Daily AI briefing snapshots — one per tenant per day
+model GovernanceOfficerAssignment {
+  id String @id @default(cuid())
+
+  userId String
+  zoneId String
+
+  role   GovernanceOfficerRole
+  status GovernanceAssignmentStatus @default(ACTIVE)
+
+  title String?
+  phone String?
+
+  startsAt DateTime? @db.Timestamptz(6)
+  endsAt   DateTime? @db.Timestamptz(6)
+
+  createdByUserId String?
+  revokedByUserId String?
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+
+  revokeReason String?
+  metadata     Json    @default("{}")
+
+  user      User      @relation("GovernanceOfficerAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  zone      AdminZone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
+  createdBy User?     @relation("GovernanceOfficerAssignmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  revokedBy User?     @relation("GovernanceOfficerAssignmentRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([zoneId])
+  @@index([role])
+  @@index([status])
+  @@index([userId, status])
+  @@index([zoneId, status])
+  @@index([userId, zoneId, role, status], map: "GovernanceOfficerAssignment_user_zone_role_status_idx")
+}
+
+// Daily risk briefing snapshots — one per tenant per day.
+// Later phases will harden this with explainable risk reasons.
 model SchoolRiskSnapshot {
   id                    String   @id @default(cuid())
   tenantId              String
@@ -2060,14 +2140,30 @@ model SchoolRiskSnapshot {
   assessmentAvg         Float
   lessonNoteRate        Float
   healthFlagCount       Int
-  riskScore             Int // 0-100, higher = more at risk
-  riskLevel             String   @default("LOW") // LOW | MEDIUM | HIGH | CRITICAL
-  becePassRatePredicted Float? // null if no JHS3 (BS11) students
+  riskScore             Int
+  riskLevel             String   @default("LOW")
+  becePassRatePredicted Float?
   alerts                Json     @default("[]")
   createdAt             DateTime @default(now())
 
   @@unique([tenantId, snapshotDate], map: "SchoolRiskSnapshot_tenant_date_unique")
   @@index([tenantId, snapshotDate])
+}
+
+enum GovernanceOfficerRole {
+  SISSO
+  CIRCUIT_SUPERVISOR
+  DISTRICT_DIRECTOR
+  DISTRICT_MIS_OFFICER
+  DISTRICT_SHEP_OFFICER
+  DISTRICT_ASSESSMENT_OFFICER
+  REGIONAL_VIEWER
+}
+
+enum GovernanceAssignmentStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
 }
 
 enum AttendanceStatus {
