@@ -119,12 +119,24 @@ const ROLE_OPTIONS = [
   },
 ] as const;
 
+const CONTROL_CLASS =
+  "mt-1 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none placeholder:text-slate-400 focus:border-amber-600 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500";
+
+const SELECT_CLASS =
+  "mt-1 h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-950 shadow-sm outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500";
+
+const controlStyle = {
+  backgroundColor: "#ffffff",
+  color: "#020617",
+};
+
 function clean(v: unknown) {
   return String(v ?? "").trim();
 }
 
 function formatDate(v: string | null | undefined) {
   if (!v) return "—";
+
   try {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
@@ -182,9 +194,11 @@ function sortZones(a: Zone, b: Zone) {
 function normalizePhone(v: string) {
   const raw = clean(v).replace(/\s+/g, "");
   let p = raw.replace(/[^\d+]/g, "");
+
   if (!p) return "";
   if (p.startsWith("0") && p.length === 10) p = `+233${p.slice(1)}`;
   if (p.startsWith("233") && !p.startsWith("+233")) p = `+${p}`;
+
   return p;
 }
 
@@ -221,10 +235,6 @@ export default function GovernanceOfficersClient() {
     return zones.find((z) => z.id === zoneId) ?? null;
   }, [zones, zoneId]);
 
-  const selectedRole = useMemo(() => {
-    return ROLE_OPTIONS.find((r) => r.value === role) ?? null;
-  }, [role]);
-
   const pendingInvites = useMemo(() => {
     return invites.filter((i) => i.status === "PENDING");
   }, [invites]);
@@ -258,17 +268,21 @@ export default function GovernanceOfficersClient() {
         return;
       }
 
-      setZones(data.zones ?? []);
-      setInvites(data.invites ?? []);
-      setAssignments(data.assignments ?? []);
+      const nextZones = data.zones ?? [];
+      const nextInvites = data.invites ?? [];
+      const nextAssignments = data.assignments ?? [];
 
-      const nextZones = (data.zones ?? [])
+      setZones(nextZones);
+      setInvites(nextInvites);
+      setAssignments(nextAssignments);
+
+      const validZones = nextZones
         .filter((z) => z.zoneType.level === expectedLevelForRole(role))
         .sort(sortZones);
 
-      if (!zoneId && nextZones[0]) {
-        setZoneId(nextZones[0].id);
-        setTitle(defaultTitleFor(role, nextZones[0].name));
+      if (!zoneId && validZones[0]) {
+        setZoneId(validZones[0].id);
+        setTitle(defaultTitleFor(role, validZones[0].name));
       }
     } catch {
       setZones([]);
@@ -303,6 +317,7 @@ export default function GovernanceOfficersClient() {
 
     setTitle((current) => {
       const trimmed = clean(current);
+
       if (!trimmed) return defaultTitleFor(role, nextZone.name);
 
       const allPrefixes = ROLE_OPTIONS.map((r) => r.titlePrefix);
@@ -404,37 +419,26 @@ export default function GovernanceOfficersClient() {
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Active Zones
-          </p>
-          <p className="mt-2 text-3xl font-bold text-slate-950">{zones.length}</p>
-          <p className="mt-1 text-xs text-slate-500">Regions, districts, and circuits available.</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Pending Invites
-          </p>
-          <p className="mt-2 text-3xl font-bold text-slate-950">{pendingInvites.length}</p>
-          <p className="mt-1 text-xs text-slate-500">Awaiting officer acceptance.</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Accepted Invites
-          </p>
-          <p className="mt-2 text-3xl font-bold text-slate-950">{acceptedInvites.length}</p>
-          <p className="mt-1 text-xs text-slate-500">Completed onboarding links.</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Active Assignments
-          </p>
-          <p className="mt-2 text-3xl font-bold text-slate-950">{assignments.length}</p>
-          <p className="mt-1 text-xs text-slate-500">Live governance authority records.</p>
-        </div>
+        <SummaryCard
+          label="Active Zones"
+          value={zones.length}
+          note="Regions, districts, and circuits available."
+        />
+        <SummaryCard
+          label="Pending Invites"
+          value={pendingInvites.length}
+          note="Awaiting officer acceptance."
+        />
+        <SummaryCard
+          label="Accepted Invites"
+          value={acceptedInvites.length}
+          note="Completed onboarding links."
+        />
+        <SummaryCard
+          label="Active Assignments"
+          value={assignments.length}
+          note="Live governance authority records."
+        />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -452,7 +456,7 @@ export default function GovernanceOfficersClient() {
               type="button"
               onClick={load}
               disabled={loading}
-              className="h-10 rounded-xl border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+              className="h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-60"
             >
               {loading ? "Loading…" : "Reload"}
             </button>
@@ -460,9 +464,10 @@ export default function GovernanceOfficersClient() {
 
           <div className="mt-5 grid gap-4">
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Officer email</span>
+              <span className="text-sm font-medium text-slate-800">Officer email</span>
               <input
-                className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-amber-600"
+                className={CONTROL_CLASS}
+                style={controlStyle}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="officer@district.ges.gov.gh"
@@ -471,28 +476,30 @@ export default function GovernanceOfficersClient() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Phone</span>
+              <span className="text-sm font-medium text-slate-800">Phone</span>
               <input
-                className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-amber-600"
+                className={CONTROL_CLASS}
+                style={controlStyle}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="024..."
                 autoComplete="tel"
               />
-              <span className="mt-1 block text-xs text-slate-500">
+              <span className="mt-1 block text-xs text-slate-600">
                 Ghana numbers are normalized to +233 where possible.
               </span>
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Officer role</span>
+              <span className="text-sm font-medium text-slate-800">Officer role</span>
               <select
-                className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-amber-600"
+                className={SELECT_CLASS}
+                style={controlStyle}
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
                 {ROLE_OPTIONS.map((r) => (
-                  <option key={r.value} value={r.value}>
+                  <option key={r.value} value={r.value} className="bg-white text-slate-950">
                     {r.label} — {r.help}
                   </option>
                 ))}
@@ -500,9 +507,10 @@ export default function GovernanceOfficersClient() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Jurisdiction zone</span>
+              <span className="text-sm font-medium text-slate-800">Jurisdiction zone</span>
               <select
-                className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-amber-600"
+                className={SELECT_CLASS}
+                style={controlStyle}
                 value={zoneId}
                 onChange={(e) => {
                   const nextId = e.target.value;
@@ -514,15 +522,17 @@ export default function GovernanceOfficersClient() {
               >
                 {filteredZones.length ? (
                   filteredZones.map((z) => (
-                    <option key={z.id} value={z.id}>
+                    <option key={z.id} value={z.id} className="bg-white text-slate-950">
                       {zoneLabel(z)}
                     </option>
                   ))
                 ) : (
-                  <option value="">No valid zones for this role</option>
+                  <option value="" className="bg-white text-slate-950">
+                    No valid zones for this role
+                  </option>
                 )}
               </select>
-              <span className="mt-1 block text-xs text-slate-500">
+              <span className="mt-1 block text-xs text-slate-600">
                 Selected role expects{" "}
                 {expectedLevel === 1
                   ? "a circuit"
@@ -536,29 +546,39 @@ export default function GovernanceOfficersClient() {
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Title</span>
+              <span className="text-sm font-medium text-slate-800">Title</span>
               <input
-                className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-amber-600"
+                className={CONTROL_CLASS}
+                style={controlStyle}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={
-                  selectedZone ? defaultTitleFor(role, selectedZone.name) : "Officer title"
-                }
+                placeholder={selectedZone ? defaultTitleFor(role, selectedZone.name) : "Officer title"}
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-slate-700">Invite expiry</span>
+              <span className="text-sm font-medium text-slate-800">Invite expiry</span>
               <select
-                className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-amber-600"
+                className={SELECT_CLASS}
+                style={controlStyle}
                 value={expiresInDays}
                 onChange={(e) => setExpiresInDays(Number(e.target.value))}
               >
-                <option value={1}>1 day</option>
-                <option value={3}>3 days</option>
-                <option value={7}>7 days</option>
-                <option value={14}>14 days</option>
-                <option value={30}>30 days</option>
+                <option value={1} className="bg-white text-slate-950">
+                  1 day
+                </option>
+                <option value={3} className="bg-white text-slate-950">
+                  3 days
+                </option>
+                <option value={7} className="bg-white text-slate-950">
+                  7 days
+                </option>
+                <option value={14} className="bg-white text-slate-950">
+                  14 days
+                </option>
+                <option value={30} className="bg-white text-slate-950">
+                  30 days
+                </option>
               </select>
             </label>
 
@@ -578,7 +598,7 @@ export default function GovernanceOfficersClient() {
               type="button"
               onClick={createInvite}
               disabled={creating || loading || !filteredZones.length}
-              className="h-11 rounded-xl bg-black px-4 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-11 rounded-xl bg-black px-4 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {creating ? "Creating invite…" : "Create governance invite"}
             </button>
@@ -594,7 +614,8 @@ export default function GovernanceOfficersClient() {
                 <div className="mt-3 flex flex-col gap-2 md:flex-row">
                   <input
                     readOnly
-                    className="h-10 flex-1 rounded-xl border border-amber-200 bg-white px-3 text-xs font-mono text-slate-700"
+                    className="h-10 flex-1 rounded-xl border border-amber-300 bg-white px-3 text-xs font-mono text-slate-950 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-100"
+                    style={controlStyle}
                     value={createdInviteUrl}
                     onFocus={(e) => e.currentTarget.select()}
                   />
@@ -685,7 +706,7 @@ export default function GovernanceOfficersClient() {
             type="button"
             onClick={load}
             disabled={loading}
-            className="h-10 rounded-xl border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            className="h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-60"
           >
             {loading ? "Loading…" : "Reload"}
           </button>
@@ -697,6 +718,16 @@ export default function GovernanceOfficersClient() {
           <InviteColumn title="Revoked / Expired" items={revokedOrExpiredInvites} />
         </div>
       </section>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, note }: { label: string; value: number; note: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
+      <p className="mt-1 text-xs text-slate-500">{note}</p>
     </div>
   );
 }
