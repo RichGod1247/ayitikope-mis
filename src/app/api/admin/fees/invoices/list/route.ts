@@ -132,16 +132,26 @@ export async function GET(req: NextRequest) {
           },
         },
         payments: {
-          where: { status: "SUCCESS" },
-          select: {
-            id: true,
-            amountPesewas: true,
-            method: true,
-            reference: true,
-            paidAt: true,
-          },
-          orderBy: [{ paidAt: "desc" }],
-        },
+  where: {
+    status: { in: ["SUCCESS", "REFUNDED"] },
+  },
+  select: {
+    id: true,
+    amountPesewas: true,
+    status: true,
+    method: true,
+    reference: true,
+    paidAt: true,
+    refunds: {
+      select: {
+        id: true,
+        amountPesewas: true,
+        status: true,
+      },
+    },
+  },
+  orderBy: [{ paidAt: "desc" }],
+},
         receipts: {
           select: { id: true, receiptNumber: true },
         },
@@ -160,15 +170,44 @@ export async function GET(req: NextRequest) {
 
     const items = invoices.map((inv) => {
       const billed = inv.totalBilledPesewas ?? 0;
-      const waived = inv.totalWaivedPesewas ?? 0;
-      const paid = inv.payments.reduce((sum, p) => sum + p.amountPesewas, 0);
-      const balance = Math.max(0, billed - waived - paid);
+const waived = inv.totalWaivedPesewas ?? 0;
 
-      const status = invoiceStatus({
-        billedPesewas: billed,
-        paidPesewas: paid,
-        balancePesewas: balance,
-      });
+const grossPaid = inv.payments.reduce(
+  (sum, payment) => sum + Math.max(0, payment.amountPesewas ?? 0),
+  0
+);
+
+const succeededRefundPesewas = inv.payments.reduce(
+  (sum, payment) =>
+    sum +
+    payment.refunds
+      .filter((refund) => refund.status === "SUCCEEDED")
+      .reduce((refundSum, refund) => refundSum + Math.max(0, refund.amountPesewas ?? 0), 0),
+  0
+);
+
+const pendingRefundPesewas = inv.payments.reduce(
+  (sum, payment) =>
+    sum +
+    payment.refunds
+      .filter(
+        (refund) =>
+          refund.status === "REQUESTED" ||
+          refund.status === "APPROVED" ||
+          refund.status === "PROCESSING"
+      )
+      .reduce((refundSum, refund) => refundSum + Math.max(0, refund.amountPesewas ?? 0), 0),
+  0
+);
+
+const paid = Math.max(0, grossPaid - succeededRefundPesewas);
+const balance = Math.max(0, billed - waived - paid);
+
+const status = invoiceStatus({
+  billedPesewas: billed,
+  paidPesewas: paid,
+  balancePesewas: balance,
+});
 
       if (status === "cleared") clearedCount++;
       else if (status === "partial") partialCount++;
@@ -207,11 +246,14 @@ export async function GET(req: NextRequest) {
         totalWaivedPesewas: waived,
 
         totalPaidPesewas: paid,
-        paidPesewas: paid,
+paidPesewas: paid,
+grossPaidPesewas: grossPaid,
+succeededRefundPesewas,
+pendingRefundPesewas,
+netPaidPesewas: paid,
 
-        balancePesewas: balance,
-        outstandingPesewas: balance,
-
+balancePesewas: balance,
+outstandingPesewas: balance,
         status,
         storedInvoiceStatus: inv.status,
         paymentCount: inv.payments.length,

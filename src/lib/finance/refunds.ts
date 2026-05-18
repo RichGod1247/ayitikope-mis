@@ -201,12 +201,23 @@ function buildRefundSuccessSmsMessage(input: {
   studentName: string;
   receiptNumber: string | null;
   schoolName: string;
+  provider?: PaymentProvider | string | null;
 }) {
-  return `EduLife OS: Refund of GHS ${formatCedis(
+  const provider = String(input.provider ?? "").toUpperCase();
+
+  if (provider === "PAYSTACK") {
+    return `EduLife OS: Paystack has confirmed a refund of GHS ${formatCedis(
+      input.amountPesewas
+    )} for ${input.studentName}. ${
+      input.receiptNumber ? `Original receipt: ${input.receiptNumber}. ` : ""
+    }School: ${input.schoolName}. Keep this SMS as proof.`;
+  }
+
+  return `EduLife OS: The school has recorded a manual/cash refund of GHS ${formatCedis(
     input.amountPesewas
-  )} has been processed for ${input.studentName}. ${
+  )} for ${input.studentName}. ${
     input.receiptNumber ? `Original receipt: ${input.receiptNumber}. ` : ""
-  }School: ${input.schoolName}. Keep this SMS as proof.`;
+  }School: ${input.schoolName}. This is not a Paystack refund. Keep this SMS and confirm with the school office if needed.`;
 }
 
 function buildRefundFailedSmsMessage(input: {
@@ -225,21 +236,27 @@ function buildRefundFailedSmsMessage(input: {
 async function enqueueRefundSms(
   tx: TxClient,
   input: {
-    tenantId: string;
-    actorId?: string | null;
-    refundId: string;
-    receiptId: string | null;
-    feePaymentId: string;
-    invoiceId: string;
-    to: string | null;
-    message: string;
-    kind: "REQUESTED" | "PROCESSING" | "SUCCEEDED" | "FAILED";
-template:
-  | "FEES_REFUND_REQUESTED"
-  | "FEES_REFUND_PROCESSING"
-  | "FEES_REFUND_SUCCEEDED"
-  | "FEES_REFUND_FAILED";
-  }
+  tenantId: string;
+  actorId?: string | null;
+  refundId: string;
+  receiptId: string | null;
+  feePaymentId: string;
+  invoiceId: string;
+  to: string | null;
+  message: string;
+  kind: "REQUESTED" | "PROCESSING" | "SUCCEEDED" | "FAILED";
+  template:
+    | "FEES_REFUND_REQUESTED"
+    | "FEES_REFUND_PROCESSING"
+    | "FEES_REFUND_SUCCEEDED"
+    | "FEES_REFUND_FAILED";
+  amountPesewas?: number | null;
+  studentName?: string | null;
+  receiptNumber?: string | null;
+  provider?: PaymentProvider | string | null;
+  providerReference?: string | null;
+  providerRefundReference?: string | null;
+}
 ) {
   if (!input.to?.trim()) return null;
 
@@ -270,6 +287,17 @@ template:
         receiptId: input.receiptId,
         feePaymentId: input.feePaymentId,
         invoiceId: input.invoiceId,
+amountPesewas: input.amountPesewas ?? null,
+refundAmountPesewas: input.amountPesewas ?? null,
+studentName: input.studentName ?? null,
+receiptNumber: input.receiptNumber ?? null,
+provider: input.provider ?? null,
+providerReference: input.providerReference ?? null,
+providerRefundReference: input.providerRefundReference ?? null,
+truthSource:
+  String(input.provider ?? "").toUpperCase() === "PAYSTACK"
+    ? "Paystack refund lifecycle notice"
+    : "School-recorded manual/cash refund notice",
       }),
       priority: input.kind === "REQUESTED" ? 2 : 3,
       maxAttempts: 5,
@@ -855,22 +883,29 @@ export async function finalizeRefundSuccess(
     null;
 
   await enqueueRefundSms(tx, {
-    tenantId: input.tenantId,
-    actorId: input.actorUserId,
-    refundId: refund.id,
-    receiptId: refund.receiptId,
-    feePaymentId: refund.feePaymentId,
-    invoiceId: refund.feePayment.invoiceId,
-    to: guardianPhone,
-    kind: "SUCCEEDED",
-    template: "FEES_REFUND_SUCCEEDED",
-    message: buildRefundSuccessSmsMessage({
-      amountPesewas: refund.amountPesewas,
-      studentName,
-      receiptNumber: refund.receipt?.receiptNumber ?? null,
-      schoolName: refund.feePayment.invoice.tenant.name,
-    }),
-  });
+  tenantId: input.tenantId,
+  actorId: input.actorUserId,
+  refundId: refund.id,
+  receiptId: refund.receiptId,
+  feePaymentId: refund.feePaymentId,
+  invoiceId: refund.feePayment.invoiceId,
+  to: guardianPhone,
+  kind: "SUCCEEDED",
+  template: "FEES_REFUND_SUCCEEDED",
+  amountPesewas: refund.amountPesewas,
+  studentName,
+  receiptNumber: refund.receipt?.receiptNumber ?? null,
+  provider: refund.provider,
+  providerReference: refund.providerReference,
+  providerRefundReference: null,
+  message: buildRefundSuccessSmsMessage({
+    amountPesewas: refund.amountPesewas,
+    studentName,
+    receiptNumber: refund.receipt?.receiptNumber ?? null,
+    schoolName: refund.feePayment.invoice.tenant.name,
+    provider: refund.provider,
+  }),
+});
 
   return tx.feeRefund.findUniqueOrThrow({ where: { id: refund.id } });
 }

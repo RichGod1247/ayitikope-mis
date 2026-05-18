@@ -1,11 +1,6 @@
 // src/app/api/admin/fees/provider-events/list/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import {
-  ProviderEventStatus,
-  RefundStatus,
-  type PaymentProviderEvent,
-  type Prisma,
-} from "@prisma/client";
+import { ProviderEventStatus, RefundStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 
@@ -68,21 +63,79 @@ function readString(value: unknown, key: string): string | null {
 function readNumberish(value: unknown, key: string): string | null {
   if (!isObject(value)) return null;
   const v = value[key];
+
   if (typeof v === "number" && Number.isFinite(v)) return String(v);
   if (typeof v === "string" && v.trim()) return v.trim();
+
   return null;
+}
+
+function parseDateValue(value: unknown): Date | null {
+  if (!value) return null;
+
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value;
+
+  if (typeof value === "string" && value.trim()) {
+    const d = new Date(value.trim());
+    return Number.isFinite(d.getTime()) ? d : null;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const ms = value > 10_000_000_000 ? value : value * 1000;
+    const d = new Date(ms);
+    return Number.isFinite(d.getTime()) ? d : null;
+  }
+
+  return null;
+}
+
+function readDate(value: unknown, key: string): Date | null {
+  if (!isObject(value)) return null;
+  return parseDateValue(value[key]);
+}
+
+function derivePayloadEventTime(rawPayload: Prisma.JsonValue): {
+  date: Date | null;
+  source: string | null;
+} {
+  const root = isObject(rawPayload) ? rawPayload : {};
+  const data = childObject(root, "data") ?? root;
+  const tx = childObject(data, "transaction");
+  const refund = childObject(data, "refund");
+
+  const candidates: Array<[Date | null, string]> = [
+    [readDate(data, "created_at"), "payload.data.created_at"],
+    [readDate(data, "createdAt"), "payload.data.createdAt"],
+    [readDate(data, "paid_at"), "payload.data.paid_at"],
+    [readDate(data, "paidAt"), "payload.data.paidAt"],
+    [readDate(data, "processed_at"), "payload.data.processed_at"],
+    [readDate(data, "processedAt"), "payload.data.processedAt"],
+    [readDate(tx, "created_at"), "payload.data.transaction.created_at"],
+    [readDate(tx, "paid_at"), "payload.data.transaction.paid_at"],
+    [readDate(refund, "created_at"), "payload.data.refund.created_at"],
+    [readDate(refund, "processed_at"), "payload.data.refund.processed_at"],
+  ];
+
+  for (const [date, source] of candidates) {
+    if (date) return { date, source };
+  }
+
+  return { date: null, source: null };
 }
 
 function deriveProviderReference(rawPayload: Prisma.JsonValue, fallback: string | null) {
   const root = isObject(rawPayload) ? rawPayload : {};
   const data = childObject(root, "data") ?? root;
   const tx = childObject(data, "transaction");
+  const authorization = childObject(data, "authorization");
 
   return (
     fallback ||
     readString(data, "reference") ||
     readString(data, "transaction_reference") ||
+    readString(data, "payment_reference") ||
     readString(tx, "reference") ||
+    readString(authorization, "reference") ||
     null
   );
 }
@@ -90,11 +143,15 @@ function deriveProviderReference(rawPayload: Prisma.JsonValue, fallback: string 
 function deriveProviderRefundReference(rawPayload: Prisma.JsonValue) {
   const root = isObject(rawPayload) ? rawPayload : {};
   const data = childObject(root, "data") ?? root;
+  const refund = childObject(data, "refund");
 
   return (
     readNumberish(data, "id") ||
-    readString(data, "reference") ||
     readString(data, "refund_reference") ||
+    readString(data, "refundReference") ||
+    readString(data, "reference") ||
+    readNumberish(refund, "id") ||
+    readString(refund, "reference") ||
     null
   );
 }
@@ -105,12 +162,172 @@ function eventCategory(eventType: string) {
   if (e.startsWith("refund.")) return "REFUND";
   if (e === "charge.success" || e.startsWith("charge.")) return "PAYMENT";
   if (e.includes("transfer")) return "TRANSFER";
+
   return "OTHER";
 }
 
-function humanEventSummary(input: {
-  eventType: string;
+function providerRefundSignal(eventType: string) {
+  const e = clean(eventType).toLowerCase();
+
+  if (e === "refund.success" || e === "refund.succeeded" || e === "refund.processed") {
+    return {
+      webhookRefundSignal: "SUCCEEDED",
+      webhookRefundMeaning: "This historical webhook says Paystack had processed/succeeded this refund at that event time.",
+    };
+  }
+
+  if (e === "refund.failed") {
+    return {
+      webhookRefundSignal: "FAILED",
+      webhookRefundMeaning: "This historical webhook says Paystack failed this refund at that event time.",
+    };
+  }
+
+  if (e === "refund.pending" || e === "refund.processing") {
+    return {
+      webhookRefundSignal: "PENDING",
+      webhookRefundMeaning:
+        "This historical webhook says the refund was pending/processing at that event time. It is not a live Paystack dashboard check.",
+    };
+  }
+
+  if (e.startsWith("refund.")) {
+    return {
+      webhookRefundSignal: e.replace("refund.", "").toUpperCase(),
+      webhookRefundMeaning:
+        "This is a historical Paystack refund lifecycle webhook. Compare it with the current EduLife refund status.",
+    };
+  }
+
+  return {
+    webhookRefundSignal: null,
+    webhookRefundMeaning: null,
+  };
+}
+
+function attentionDecision(input: {
+  category: string;
   processingStatus: ProviderEventStatus;
+  isReplay: boolean;
+  isSuspicious: boolean;
+  suspiciousReason: string | null;
+  processingError: string | null;
+  webhookRefundSignal: string | null;
+  hasLinkedRefund: boolean;
+  refundLifecycleComplete: boolean;
+  internalRefundStatus: string | null;
+}) {
+  if (input.processingStatus === ProviderEventStatus.FAILED) {
+    return {
+      needsAdminAttention: true,
+      attentionSeverity: "HIGH",
+      attentionReason:
+        input.processingError || "EduLife OS failed to process this provider event.",
+      recommendedAction:
+        "Use Reprocess now. If it fails again, inspect the processing error and linked finance evidence.",
+    };
+  }
+
+  if (input.processingStatus === ProviderEventStatus.RECEIVED) {
+    return {
+      needsAdminAttention: true,
+      attentionSeverity: "HIGH",
+      attentionReason:
+        "Provider event has been received but has not been finalized by EduLife OS.",
+      recommendedAction:
+        "Use Reprocess now or Queue recovery so EduLife OS can safely re-run the event handler.",
+    };
+  }
+
+  if (input.isSuspicious) {
+    return {
+      needsAdminAttention: true,
+      attentionSeverity: "HIGH",
+      attentionReason:
+        input.suspiciousReason ||
+        "This provider event was marked suspicious and needs finance review.",
+      recommendedAction:
+        "Compare provider reference, amount, event time, and linked finance records before trusting this event.",
+    };
+  }
+
+  if (input.isReplay) {
+    return {
+      needsAdminAttention: true,
+      attentionSeverity: "MEDIUM",
+      attentionReason:
+        "This provider event appears to be a replay/duplicate provider delivery.",
+      recommendedAction:
+        "Confirm no duplicate receipt, ledger posting, refund, or SMS was created. If all evidence is clean, no action is required.",
+    };
+  }
+
+  if (input.category === "REFUND" && !input.hasLinkedRefund) {
+    return {
+      needsAdminAttention: true,
+      attentionSeverity: "HIGH",
+      attentionReason:
+        "Paystack sent a refund event, but EduLife OS could not link it to an internal refund record.",
+      recommendedAction:
+        "Search refunds by provider refund reference or payment reference. If no internal refund exists, investigate before updating balances.",
+    };
+  }
+
+  /*
+    Bank-grade distinction:
+    If the internal refund is now SUCCEEDED, an old refund.pending webhook remains historical evidence,
+    but it must NOT continue to count as unresolved attention.
+  */
+  if (input.category === "REFUND" && input.refundLifecycleComplete) {
+    return {
+      needsAdminAttention: false,
+      attentionSeverity: "NONE",
+      attentionReason: null,
+      recommendedAction:
+        "No action required. Internal refund is complete; any older pending webhook is historical evidence only.",
+    };
+  }
+
+  if (
+    input.category === "REFUND" &&
+    input.webhookRefundSignal &&
+    input.webhookRefundSignal !== "SUCCEEDED"
+  ) {
+    return {
+      needsAdminAttention: true,
+      attentionSeverity: input.webhookRefundSignal === "FAILED" ? "HIGH" : "MEDIUM",
+      attentionReason: `Historical webhook signal is ${input.webhookRefundSignal}, while internal refund status is ${
+        input.internalRefundStatus ?? "unknown"
+      }.`,
+      recommendedAction:
+        "Use Sync refund status to check Paystack’s latest state. Do not treat the historical webhook alone as live Paystack truth.",
+    };
+  }
+
+  if (input.category === "REFUND" && !input.refundLifecycleComplete) {
+    return {
+      needsAdminAttention: true,
+      attentionSeverity: "MEDIUM",
+      attentionReason:
+        "Refund provider event exists, but the internal EduLife refund lifecycle is not complete.",
+      recommendedAction:
+        "Open the refund record and sync or investigate the current refund status.",
+    };
+  }
+
+  return {
+    needsAdminAttention: false,
+    attentionSeverity: "NONE",
+    attentionReason: null,
+    recommendedAction: "No action required.",
+  };
+}
+
+function humanEventSummary(input: {
+  category: string;
+  processingStatus: ProviderEventStatus;
+  webhookRefundSignal: string | null;
+  internalRefundStatus: string | null;
   isReplay: boolean;
   duplicateCount: number;
   isSuspicious: boolean;
@@ -119,22 +336,27 @@ function humanEventSummary(input: {
 }) {
   const parts: string[] = [];
 
-  const category = eventCategory(input.eventType);
+  if (input.category === "REFUND") parts.push("Refund provider event");
+  else if (input.category === "PAYMENT") parts.push("Payment provider event");
+  else if (input.category === "TRANSFER") parts.push("Transfer/settlement provider event");
+  else parts.push("Provider event");
 
-  if (category === "REFUND") {
-    parts.push("Refund provider event");
-  } else if (category === "PAYMENT") {
-    parts.push("Payment provider event");
-  } else if (category === "TRANSFER") {
-    parts.push("Transfer/settlement provider event");
-  } else {
-    parts.push("Provider event");
+  parts.push(`EduLife event handling: ${input.processingStatus}`);
+
+  if (input.webhookRefundSignal) {
+    parts.push(`Historical webhook signal: ${input.webhookRefundSignal}`);
   }
 
-  parts.push(`status: ${input.processingStatus}`);
+  if (input.internalRefundStatus) {
+    parts.push(`Current internal refund status: ${input.internalRefundStatus}`);
+  }
 
   if (input.isReplay) {
-    parts.push(`replay detected (${input.duplicateCount} duplicate hit${input.duplicateCount === 1 ? "" : "s"})`);
+    parts.push(
+      `replay detected (${input.duplicateCount} duplicate hit${
+        input.duplicateCount === 1 ? "" : "s"
+      })`
+    );
   }
 
   if (input.isSuspicious) {
@@ -146,6 +368,45 @@ function humanEventSummary(input: {
   }
 
   return parts.join(" · ");
+}
+
+function studentName(firstName?: string | null, lastName?: string | null) {
+  return [firstName, lastName].filter(Boolean).join(" ").trim() || null;
+}
+
+function buildRefundWhere(input: {
+  tenantId: string;
+  paymentReferences: string[];
+  refundReferences: string[];
+}): Prisma.FeeRefundWhereInput | null {
+  const OR: Prisma.FeeRefundWhereInput[] = [];
+
+  if (input.refundReferences.length) {
+    OR.push({
+      providerRefundReference: { in: input.refundReferences },
+    });
+  }
+
+  if (input.paymentReferences.length) {
+    OR.push({
+      feePayment: {
+        reference: { in: input.paymentReferences },
+      },
+    });
+
+    OR.push({
+      paymentTransaction: {
+        providerReference: { in: input.paymentReferences },
+      },
+    });
+  }
+
+  if (!OR.length) return null;
+
+  return {
+    tenantId: input.tenantId,
+    OR,
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -161,6 +422,7 @@ export async function GET(req: NextRequest) {
 
   const status = parseStatus(url.searchParams.get("status"));
   const suspiciousOnly = clean(url.searchParams.get("suspicious")) === "1";
+  const attentionOnly = clean(url.searchParams.get("attention")) === "1";
   const reference = clean(url.searchParams.get("reference"));
   const eventType = clean(url.searchParams.get("eventType"));
   const includeRaw = clean(url.searchParams.get("includeRaw")) === "1";
@@ -175,7 +437,7 @@ export async function GET(req: NextRequest) {
       ...(eventType ? { eventType } : {}),
     };
 
-    const rows = await prisma.paymentProviderEvent.findMany({
+    const providerEvents = await prisma.paymentProviderEvent.findMany({
       where,
       orderBy: { receivedAt: "desc" },
       take: limit,
@@ -202,87 +464,92 @@ export async function GET(req: NextRequest) {
     const paymentReferences = new Set<string>();
     const refundReferences = new Set<string>();
 
-    for (const row of rows) {
-      const paymentRef = deriveProviderReference(row.rawPayload, row.providerReference);
-      const refundRef = deriveProviderRefundReference(row.rawPayload);
+    for (const event of providerEvents) {
+      const paymentRef = deriveProviderReference(event.rawPayload, event.providerReference);
+      const refundRef = deriveProviderRefundReference(event.rawPayload);
 
       if (paymentRef) paymentReferences.add(paymentRef);
       if (refundRef) refundReferences.add(refundRef);
     }
 
+    const paymentRefList = [...paymentReferences];
+    const refundRefList = [...refundReferences];
+
+    const refundWhere = buildRefundWhere({
+      tenantId,
+      paymentReferences: paymentRefList,
+      refundReferences: refundRefList,
+    });
+
     const [transactions, payments, refunds] = await Promise.all([
-      prisma.paymentTransaction.findMany({
-        where: {
-          tenantId,
-          providerReference: { in: [...paymentReferences] },
-        },
-        select: {
-          id: true,
-          provider: true,
-          providerReference: true,
-          providerTransactionId: true,
-          amountPesewas: true,
-          currency: true,
-          status: true,
-          feePaymentId: true,
-          createdAt: true,
-        },
-        take: 500,
-      }),
-      prisma.feePayment.findMany({
-        where: {
-          tenantId,
-          reference: { in: [...paymentReferences] },
-        },
-        select: {
-          id: true,
-          invoiceId: true,
-          amountPesewas: true,
-          reference: true,
-          method: true,
-          channel: true,
-          status: true,
-          paidAt: true,
-          invoice: {
+      paymentRefList.length
+        ? prisma.paymentTransaction.findMany({
+            where: {
+              tenantId,
+              providerReference: { in: paymentRefList },
+            },
             select: {
-              term: true,
-              academicYear: true,
-              student: {
+              id: true,
+              provider: true,
+              providerReference: true,
+              providerTransactionId: true,
+              amountPesewas: true,
+              currency: true,
+              status: true,
+              feePaymentId: true,
+              createdAt: true,
+              feePayment: {
                 select: {
-                  firstName: true,
-                  lastName: true,
+                  id: true,
+                  invoiceId: true,
+                  amountPesewas: true,
+                  reference: true,
+                  method: true,
+                  channel: true,
+                  status: true,
+                  paidAt: true,
+                  invoice: {
+                    select: {
+                      term: true,
+                      academicYear: true,
+                      student: {
+                        select: {
+                          firstName: true,
+                          lastName: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
-          },
-        },
-        take: 500,
-      }),
-      prisma.feeRefund.findMany({
-        where: {
-          tenantId,
-          OR: [
-            { providerReference: { in: [...paymentReferences] } },
-            { providerRefundReference: { in: [...refundReferences] } },
-          ],
-        },
-        select: {
-          id: true,
-          amountPesewas: true,
-          currency: true,
-          status: true,
-          providerReference: true,
-          providerRefundReference: true,
-          reason: true,
-          requestedAt: true,
-          approvedAt: true,
-          processingAt: true,
-          processedAt: true,
-          failedAt: true,
-          feePayment: {
+            take: 500,
+          })
+        : Promise.resolve([]),
+
+      paymentRefList.length
+        ? prisma.feePayment.findMany({
+            where: {
+              tenantId,
+              reference: { in: paymentRefList },
+            },
             select: {
               id: true,
+              invoiceId: true,
+              amountPesewas: true,
               reference: true,
+              method: true,
+              channel: true,
+              status: true,
+              paidAt: true,
+              paymentTransaction: {
+                select: {
+                  provider: true,
+                  providerReference: true,
+                  providerTransactionId: true,
+                  status: true,
+                },
+              },
               invoice: {
                 select: {
                   term: true,
@@ -296,46 +563,134 @@ export async function GET(req: NextRequest) {
                 },
               },
             },
-          },
-        },
-        take: 500,
-      }),
+            take: 500,
+          })
+        : Promise.resolve([]),
+
+      refundWhere
+        ? prisma.feeRefund.findMany({
+            where: refundWhere,
+            select: {
+              id: true,
+              amountPesewas: true,
+              currency: true,
+              status: true,
+              provider: true,
+              providerRefundReference: true,
+              reason: true,
+              requestedAt: true,
+              approvedAt: true,
+              processingAt: true,
+              processedAt: true,
+              failedAt: true,
+              feePayment: {
+                select: {
+                  id: true,
+                  reference: true,
+                  invoice: {
+                    select: {
+                      term: true,
+                      academicYear: true,
+                      student: {
+                        select: {
+                          firstName: true,
+                          lastName: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              paymentTransaction: {
+                select: {
+                  provider: true,
+                  providerReference: true,
+                  providerTransactionId: true,
+                  status: true,
+                },
+              },
+            },
+            take: 500,
+          })
+        : Promise.resolve([]),
     ]);
 
     const transactionByReference = new Map(
       transactions.map((tx) => [tx.providerReference, tx])
     );
 
-    const paymentByReference = new Map(
-      payments
-        .filter((payment) => payment.reference)
-        .map((payment) => [String(payment.reference), payment])
-    );
+    const paymentByReference = new Map<string, (typeof payments)[number]>();
 
-    const refundByProviderRefundReference = new Map(
-      refunds
-        .filter((refund) => refund.providerRefundReference)
-        .map((refund) => [String(refund.providerRefundReference), refund])
-    );
+    for (const payment of payments) {
+      if (payment.reference) {
+        paymentByReference.set(payment.reference, payment);
+      }
 
-    const refundsByPaymentReference = new Map<string, typeof refunds>();
-
-    for (const refund of refunds) {
-      const ref =
-        clean(refund.providerReference) ||
-        clean(refund.feePayment?.reference);
-
-      if (!ref) continue;
-
-      const bucket = refundsByPaymentReference.get(ref) ?? [];
-      bucket.push(refund);
-      refundsByPaymentReference.set(ref, bucket);
+      if (payment.paymentTransaction?.providerReference) {
+        paymentByReference.set(payment.paymentTransaction.providerReference, payment);
+      }
     }
 
-    const mapped = rows.map((row) => {
-      const paymentReference = deriveProviderReference(row.rawPayload, row.providerReference);
-      const providerRefundReference = deriveProviderRefundReference(row.rawPayload);
-      const category = eventCategory(row.eventType);
+    for (const tx of transactions) {
+      const payment = tx.feePayment;
+      if (!payment) continue;
+
+      const hydratedPayment = {
+        ...payment,
+        paymentTransaction: {
+          provider: tx.provider,
+          providerReference: tx.providerReference,
+          providerTransactionId: tx.providerTransactionId,
+          status: tx.status,
+        },
+      };
+
+      if (tx.providerReference) {
+        paymentByReference.set(tx.providerReference, hydratedPayment);
+      }
+
+      if (payment.reference) {
+        paymentByReference.set(payment.reference, hydratedPayment);
+      }
+    }
+
+    const refundByProviderRefundReference = new Map<string, (typeof refunds)[number]>();
+
+    for (const refund of refunds) {
+      if (refund.providerRefundReference) {
+        refundByProviderRefundReference.set(refund.providerRefundReference, refund);
+      }
+    }
+
+    const refundsByPaymentReference = new Map<string, Array<(typeof refunds)[number]>>();
+
+    for (const refund of refunds) {
+      const refs = [
+        clean(refund.feePayment?.reference),
+        clean(refund.paymentTransaction?.providerReference),
+      ].filter(Boolean);
+
+      for (const ref of refs) {
+        const bucket = refundsByPaymentReference.get(ref) ?? [];
+        bucket.push(refund);
+        refundsByPaymentReference.set(ref, bucket);
+      }
+    }
+
+    const mapped = providerEvents.map((event) => {
+      const category = eventCategory(event.eventType);
+      const paymentReference = deriveProviderReference(
+        event.rawPayload,
+        event.providerReference
+      );
+      const providerRefundReference = deriveProviderRefundReference(event.rawPayload);
+      const refundSignal = providerRefundSignal(event.eventType);
+
+      const payloadTime = derivePayloadEventTime(event.rawPayload);
+      const effectiveEventTime = event.eventTime ?? payloadTime.date ?? event.receivedAt;
+      const eventTimeSource = event.eventTime
+        ? "paymentProviderEvent.eventTime"
+        : payloadTime.source ?? "receivedAt fallback";
 
       const relatedTransaction = paymentReference
         ? transactionByReference.get(paymentReference) ?? null
@@ -353,47 +708,68 @@ export async function GET(req: NextRequest) {
           ? refundsByPaymentReference.get(paymentReference)?.[0] ?? null
           : null);
 
-      const refundLifecycleComplete =
-        relatedRefund?.status === RefundStatus.SUCCEEDED;
+      const refundLifecycleComplete = relatedRefund?.status === RefundStatus.SUCCEEDED;
+      const hasLinkedRefund = Boolean(relatedRefund);
 
-      const student =
+      const learner =
         relatedPayment?.invoice?.student ||
         relatedRefund?.feePayment?.invoice?.student ||
         null;
 
-      const studentName = [student?.firstName, student?.lastName]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
+      const internalRefundStatus = relatedRefund?.status ?? null;
+
+      const attention = attentionDecision({
+        category,
+        processingStatus: event.processingStatus,
+        isReplay: event.isReplay,
+        isSuspicious: event.isSuspicious,
+        suspiciousReason: event.suspiciousReason,
+        processingError: event.processingError,
+        webhookRefundSignal: refundSignal.webhookRefundSignal,
+        hasLinkedRefund,
+        refundLifecycleComplete,
+        internalRefundStatus,
+      });
 
       return {
-        id: row.id,
-        tenantId: row.tenantId,
-        provider: row.provider,
-        eventType: row.eventType,
+        id: event.id,
+        tenantId: event.tenantId,
+        provider: event.provider,
+        eventType: event.eventType,
         category,
-        providerReference: row.providerReference,
+        providerReference: event.providerReference,
         derivedPaymentReference: paymentReference,
         providerRefundReference,
-        providerEventId: row.providerEventId,
-        processingStatus: row.processingStatus,
-        processingError: row.processingError,
-        isReplay: row.isReplay,
-        isSuspicious: row.isSuspicious,
-        suspiciousReason: row.suspiciousReason,
-        duplicateCount: row.duplicateCount,
-        receivedAt: row.receivedAt.toISOString(),
-        eventTime: row.eventTime?.toISOString() ?? null,
-        processedAt: row.processedAt?.toISOString() ?? null,
+        providerEventId: event.providerEventId,
+
+        processingStatus: event.processingStatus,
+        eventHandlingStatus: event.processingStatus,
+        processingError: event.processingError,
+
+        providerRefundStatus: refundSignal.webhookRefundSignal,
+        providerRefundMeaning: refundSignal.webhookRefundMeaning,
+        internalRefundStatus,
+
+        isReplay: event.isReplay,
+        isSuspicious: event.isSuspicious,
+        suspiciousReason: event.suspiciousReason,
+        duplicateCount: event.duplicateCount,
+
+        receivedAt: event.receivedAt.toISOString(),
+        eventTime: effectiveEventTime.toISOString(),
+        eventTimeSource,
+        processedAt: event.processedAt?.toISOString() ?? null,
 
         humanSummary: humanEventSummary({
-          eventType: row.eventType,
-          processingStatus: row.processingStatus,
-          isReplay: row.isReplay,
-          duplicateCount: row.duplicateCount,
-          isSuspicious: row.isSuspicious,
-          suspiciousReason: row.suspiciousReason,
-          processingError: row.processingError,
+          category,
+          processingStatus: event.processingStatus,
+          webhookRefundSignal: refundSignal.webhookRefundSignal,
+          internalRefundStatus,
+          isReplay: event.isReplay,
+          duplicateCount: event.duplicateCount,
+          isSuspicious: event.isSuspicious,
+          suspiciousReason: event.suspiciousReason,
+          processingError: event.processingError,
         }),
 
         relatedPayment: relatedPayment
@@ -404,6 +780,12 @@ export async function GET(req: NextRequest) {
               reference: relatedPayment.reference,
               method: relatedPayment.method,
               channel: relatedPayment.channel,
+              provider: relatedPayment.paymentTransaction?.provider ?? null,
+              providerReference:
+                relatedPayment.paymentTransaction?.providerReference ?? null,
+              providerTransactionId:
+                relatedPayment.paymentTransaction?.providerTransactionId ?? null,
+              providerStatus: relatedPayment.paymentTransaction?.status ?? null,
               status: relatedPayment.status,
               paidAt: relatedPayment.paidAt.toISOString(),
               term: relatedPayment.invoice.term,
@@ -431,8 +813,16 @@ export async function GET(req: NextRequest) {
               amountPesewas: relatedRefund.amountPesewas,
               currency: relatedRefund.currency,
               status: relatedRefund.status,
-              providerReference: relatedRefund.providerReference,
+              provider: relatedRefund.provider,
+              providerReference:
+                relatedRefund.paymentTransaction?.providerReference ??
+                relatedRefund.feePayment?.reference ??
+                paymentReference ??
+                null,
               providerRefundReference: relatedRefund.providerRefundReference,
+              providerTransactionId:
+                relatedRefund.paymentTransaction?.providerTransactionId ?? null,
+              providerStatus: relatedRefund.paymentTransaction?.status ?? null,
               reason: relatedRefund.reason,
               requestedAt: relatedRefund.requestedAt.toISOString(),
               approvedAt: relatedRefund.approvedAt?.toISOString() ?? null,
@@ -443,24 +833,35 @@ export async function GET(req: NextRequest) {
             }
           : null,
 
-        studentName: studentName || null,
-        needsAdminAttention:
-          row.processingStatus === ProviderEventStatus.FAILED ||
-          row.processingStatus === ProviderEventStatus.RECEIVED ||
-          row.isSuspicious ||
-          row.isReplay ||
-          (category === "REFUND" && !refundLifecycleComplete),
+        studentName: studentName(learner?.firstName, learner?.lastName),
 
-        rawPayload: includeRaw ? row.rawPayload : undefined,
+        needsAdminAttention: attention.needsAdminAttention,
+        attentionReason: attention.attentionReason,
+        recommendedAction: attention.recommendedAction,
+        attentionSeverity: attention.attentionSeverity,
+
+        rawPayload: includeRaw ? event.rawPayload : undefined,
       };
     });
 
+    const visibleRows = attentionOnly
+      ? mapped.filter((row) => row.needsAdminAttention)
+      : mapped;
+
     const summary = {
       total: mapped.length,
-      received: mapped.filter((row) => row.processingStatus === ProviderEventStatus.RECEIVED).length,
-      processed: mapped.filter((row) => row.processingStatus === ProviderEventStatus.PROCESSED).length,
-      failed: mapped.filter((row) => row.processingStatus === ProviderEventStatus.FAILED).length,
-      ignored: mapped.filter((row) => row.processingStatus === ProviderEventStatus.IGNORED).length,
+      received: mapped.filter(
+        (row) => row.processingStatus === ProviderEventStatus.RECEIVED
+      ).length,
+      processed: mapped.filter(
+        (row) => row.processingStatus === ProviderEventStatus.PROCESSED
+      ).length,
+      failed: mapped.filter(
+        (row) => row.processingStatus === ProviderEventStatus.FAILED
+      ).length,
+      ignored: mapped.filter(
+        (row) => row.processingStatus === ProviderEventStatus.IGNORED
+      ).length,
       suspicious: mapped.filter((row) => row.isSuspicious).length,
       replay: mapped.filter((row) => row.isReplay).length,
       refundEvents: mapped.filter((row) => row.category === "REFUND").length,
@@ -471,7 +872,16 @@ export async function GET(req: NextRequest) {
     return json(200, {
       ok: true,
       summary,
-      rows: mapped,
+      rows: visibleRows,
+      filters: {
+        status: status ?? null,
+        suspiciousOnly,
+        attentionOnly,
+        reference: reference || null,
+        eventType: eventType || null,
+        includeRaw,
+        limit,
+      },
     });
   } catch (err) {
     console.error("[ADMIN_PROVIDER_EVENTS_LIST_ERROR]", err);

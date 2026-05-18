@@ -13,6 +13,8 @@ type RelatedPayment = {
   reference: string | null;
   method: string | null;
   channel: string | null;
+  provider?: string | null;
+  providerReference?: string | null;
   status: string;
   paidAt: string;
   term: string | null;
@@ -36,6 +38,7 @@ type RelatedRefund = {
   amountPesewas: number;
   currency: string;
   status: string;
+  provider?: string | null;
   providerReference: string | null;
   providerRefundReference: string | null;
   reason: string | null;
@@ -57,21 +60,36 @@ type ProviderEventRow = {
   derivedPaymentReference: string | null;
   providerRefundReference: string | null;
   providerEventId: string | null;
+
   processingStatus: ProviderEventStatus;
+  eventHandlingStatus?: string | null;
   processingError: string | null;
+
+  providerRefundStatus?: string | null;
+  providerRefundMeaning?: string | null;
+  internalRefundStatus?: string | null;
+
   isReplay: boolean;
   isSuspicious: boolean;
   suspiciousReason: string | null;
   duplicateCount: number;
+
   receivedAt: string;
   eventTime: string | null;
-  processedAt: string | null;
+eventTimeSource?: string | null;
+processedAt: string | null;
   humanSummary: string;
+
   relatedPayment: RelatedPayment | null;
   relatedTransaction: RelatedTransaction | null;
   relatedRefund: RelatedRefund | null;
   studentName: string | null;
+
   needsAdminAttention: boolean;
+  attentionReason?: string | null;
+  recommendedAction?: string | null;
+  attentionSeverity?: "NONE" | "LOW" | "MEDIUM" | "HIGH" | string | null;
+
   rawPayload?: unknown;
 };
 
@@ -107,6 +125,39 @@ type ReprocessPayload = {
   };
 };
 
+type RefundSyncPayload = {
+  ok?: boolean;
+  error?: string;
+  refund?: {
+    id?: string;
+    status?: string;
+    providerRefundReference?: string | null;
+    processedAt?: string | null;
+    failedAt?: string | null;
+  };
+  smsDispatch?: {
+    claimed?: number;
+    completed?: number;
+    failed?: number;
+  };
+};
+
+const emptySummary: ProviderEventsSummary = {
+  total: 0,
+  received: 0,
+  processed: 0,
+  failed: 0,
+  ignored: 0,
+  suspicious: 0,
+  replay: 0,
+  refundEvents: 0,
+  paymentEvents: 0,
+  needsAdminAttention: 0,
+};
+
+const CONTROL_CLASS =
+  "h-10 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "—";
 
@@ -141,6 +192,13 @@ function categoryClass(category: string) {
   return "border-zinc-200 bg-zinc-50 text-zinc-700";
 }
 
+function attentionClass(severity?: string | null) {
+  if (severity === "HIGH") return "border-red-300 bg-red-50 text-red-800";
+  if (severity === "MEDIUM") return "border-amber-300 bg-amber-50 text-amber-800";
+  if (severity === "LOW") return "border-blue-300 bg-blue-50 text-blue-800";
+  return "border-zinc-300 bg-zinc-50 text-zinc-700";
+}
+
 function friendlyError(code?: string) {
   const map: Record<string, string> = {
     FAILED_TO_LOAD_PROVIDER_EVENTS: "Could not load provider events.",
@@ -159,17 +217,16 @@ function canReprocess(row: ProviderEventRow) {
   return row.processingStatus === "RECEIVED" || row.processingStatus === "FAILED";
 }
 
-const CONTROL_CLASS =
-  "h-10 w-full rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
-
 function referenceOf(row: ProviderEventRow) {
   return (
     row.derivedPaymentReference ||
     row.providerReference ||
     row.providerRefundReference ||
     row.relatedPayment?.reference ||
+    row.relatedPayment?.providerReference ||
     row.relatedTransaction?.providerReference ||
     row.relatedRefund?.providerRefundReference ||
+    row.relatedRefund?.providerReference ||
     "—"
   );
 }
@@ -189,35 +246,26 @@ function evidenceItems(row: ProviderEventRow) {
     row.relatedPayment?.invoiceId ? `Invoice: ${row.relatedPayment.invoiceId}` : null,
     row.relatedTransaction ? `Transaction: ${row.relatedTransaction.id}` : null,
     row.relatedRefund ? `Refund: ${row.relatedRefund.id}` : null,
-    row.relatedRefund?.refundLifecycleComplete === false ? "Refund lifecycle still incomplete" : null,
+    row.relatedRefund?.refundLifecycleComplete === false
+      ? "Internal refund lifecycle is not complete"
+      : null,
   ].filter(Boolean) as string[];
 
   return items.length ? items : ["No linked finance record found yet."];
 }
-
-const emptySummary: ProviderEventsSummary = {
-  total: 0,
-  received: 0,
-  processed: 0,
-  failed: 0,
-  ignored: 0,
-  suspicious: 0,
-  replay: 0,
-  refundEvents: 0,
-  paymentEvents: 0,
-  needsAdminAttention: 0,
-};
 
 export default function AdminProviderEventsPage() {
   const [rows, setRows] = useState<ProviderEventRow[]>([]);
   const [summary, setSummary] = useState<ProviderEventsSummary>(emptySummary);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [syncingRefundId, setSyncingRefundId] = useState<string | null>(null);
 
   const [status, setStatus] = useState("");
   const [eventType, setEventType] = useState("");
   const [reference, setReference] = useState("");
   const [suspiciousOnly, setSuspiciousOnly] = useState(false);
+  const [attentionOnly, setAttentionOnly] = useState(false);
   const [includeRaw, setIncludeRaw] = useState(false);
   const [limit, setLimit] = useState("80");
 
@@ -237,6 +285,7 @@ export default function AdminProviderEventsPage() {
       if (eventType.trim()) url.searchParams.set("eventType", eventType.trim());
       if (reference.trim()) url.searchParams.set("reference", reference.trim());
       if (suspiciousOnly) url.searchParams.set("suspicious", "1");
+      if (attentionOnly) url.searchParams.set("attention", "1");
       if (includeRaw) url.searchParams.set("includeRaw", "1");
 
       const safeLimit = Number(limit);
@@ -307,6 +356,48 @@ export default function AdminProviderEventsPage() {
     }
   }
 
+  async function syncRefund(row: ProviderEventRow) {
+  const refundId = row.relatedRefund?.id;
+
+  if (!refundId) {
+    setError("No linked refund record found for this provider event.");
+    return;
+  }
+
+  setSyncingRefundId(refundId);
+  setError(null);
+  setNotice(null);
+
+  try {
+    const res = await fetch("/api/admin/fees/refunds/sync", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refundId }),
+    });
+
+    const data = (await res.json().catch(() => ({}))) as RefundSyncPayload;
+
+    if (!res.ok || !data.ok) {
+      setError(friendlyError(data.error ?? "FAILED_TO_SYNC_REFUND"));
+      return;
+    }
+
+    setNotice(
+      `Refund status synced. Current EduLife refund status: ${
+        data.refund?.status ?? "updated"
+      }. SMS worker claimed ${data.smsDispatch?.claimed ?? 0}, completed ${
+        data.smsDispatch?.completed ?? 0
+      }, failed ${data.smsDispatch?.failed ?? 0}.`
+    );
+
+    await load();
+  } catch {
+    setError("Network error while syncing refund status.");
+  } finally {
+    setSyncingRefundId(null);
+  }
+}
+
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -328,12 +419,18 @@ export default function AdminProviderEventsPage() {
               Provider Event Recovery
             </h1>
             <p className="max-w-3xl text-sm text-zinc-600">
-              Review Paystack events, replay/suspicious evidence, processing failures, linked
-              payment/refund records, and recoverable provider events.
+              Separates EduLife event handling from Webhook refund signal and internal refund
+              status, so finance officers can see exactly what needs attention.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/fees/refunds"
+              className="inline-flex h-10 items-center rounded-xl border border-zinc-300 bg-white px-4 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
+            >
+              Refunds
+            </Link>
             <Link
               href="/admin/fees/outbox"
               className="inline-flex h-10 items-center rounded-xl border border-zinc-300 bg-white px-4 text-xs font-semibold text-zinc-900 hover:bg-zinc-50"
@@ -353,7 +450,7 @@ export default function AdminProviderEventsPage() {
           {[
             ["Total", summary.total, "zinc"],
             ["Received", summary.received, "amber"],
-            ["Processed", summary.processed, "emerald"],
+            ["Handled", summary.processed, "emerald"],
             ["Failed", summary.failed, "red"],
             ["Ignored", summary.ignored, "zinc"],
             ["Suspicious", summary.suspicious, "red"],
@@ -387,15 +484,17 @@ export default function AdminProviderEventsPage() {
         <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <form onSubmit={load} className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-zinc-700">Status</label>
+              <label className="text-[11px] font-semibold text-zinc-700">
+                EduLife event handling
+              </label>
               <select
-  value={status}
-  onChange={(e) => setStatus(e.target.value)}
-  className={CONTROL_CLASS}
->
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className={CONTROL_CLASS}
+              >
                 <option value="">All statuses</option>
                 <option value="RECEIVED">Received</option>
-                <option value="PROCESSED">Processed</option>
+                <option value="PROCESSED">Handled by EduLife</option>
                 <option value="FAILED">Failed</option>
                 <option value="IGNORED">Ignored</option>
               </select>
@@ -404,12 +503,12 @@ export default function AdminProviderEventsPage() {
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-zinc-700">Event type</label>
               <input
-  value={eventType}
-  onChange={(e) => setEventType(e.target.value)}
-  list="provider-event-types"
-  placeholder="charge.success"
-  className={CONTROL_CLASS}
-/>
+                value={eventType}
+                onChange={(e) => setEventType(e.target.value)}
+                list="provider-event-types"
+                placeholder="refund.pending"
+                className={CONTROL_CLASS}
+              />
               <datalist id="provider-event-types">
                 {eventTypes.map((type) => (
                   <option key={type} value={type} />
@@ -422,21 +521,21 @@ export default function AdminProviderEventsPage() {
                 Provider reference
               </label>
               <input
-  value={reference}
-  onChange={(e) => setReference(e.target.value)}
-  placeholder="provider reference"
-  className={CONTROL_CLASS}
-/>
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                placeholder="Paystack reference"
+                className={CONTROL_CLASS}
+              />
             </div>
 
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-zinc-700">Limit</label>
               <input
-  value={limit}
-  onChange={(e) => setLimit(e.target.value)}
-  inputMode="numeric"
-  className={CONTROL_CLASS}
-/>
+                value={limit}
+                onChange={(e) => setLimit(e.target.value)}
+                inputMode="numeric"
+                className={CONTROL_CLASS}
+              />
             </div>
 
             <button
@@ -455,6 +554,15 @@ export default function AdminProviderEventsPage() {
                 onChange={(e) => setSuspiciousOnly(e.target.checked)}
               />
               Suspicious only
+            </label>
+
+            <label className="flex items-center gap-2 text-xs font-medium text-zinc-700">
+              <input
+                type="checkbox"
+                checked={attentionOnly}
+                onChange={(e) => setAttentionOnly(e.target.checked)}
+              />
+              Attention only
             </label>
 
             <label className="flex items-center gap-2 text-xs font-medium text-zinc-700">
@@ -484,8 +592,8 @@ export default function AdminProviderEventsPage() {
           <div className="border-b border-zinc-200 px-4 py-3">
             <h2 className="text-sm font-semibold text-zinc-950">Provider event queue</h2>
             <p className="mt-1 text-xs text-zinc-500">
-              Failed or received events are recoverable. Processed events are evidence. Ignored
-              events usually represent duplicates or unsupported cases.
+              “Handled by EduLife” means the webhook/event was processed internally. It does not
+              automatically mean Paystack has completed a refund payout.
             </p>
           </div>
 
@@ -498,14 +606,14 @@ export default function AdminProviderEventsPage() {
               {rows.map((row) => (
                 <article key={row.id} className="p-4">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0 space-y-3">
+                    <div className="min-w-0 flex-1 space-y-3">
                       <div className="flex flex-wrap gap-2">
                         <span
                           className={`rounded-full border px-2 py-1 text-[10px] font-bold ${statusClass(
                             row.processingStatus
                           )}`}
                         >
-                          {row.processingStatus}
+                          EduLife: {row.processingStatus}
                         </span>
 
                         <span
@@ -516,9 +624,25 @@ export default function AdminProviderEventsPage() {
                           {row.category}
                         </span>
 
+                        {row.providerRefundStatus && (
+                          <span className="rounded-full border border-rose-300 bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-800">
+                            Webhook signal: {row.providerRefundStatus}
+                          </span>
+                        )}
+
+                        {row.internalRefundStatus && (
+                          <span className="rounded-full border border-indigo-300 bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-800">
+                            EduLife refund: {row.internalRefundStatus}
+                          </span>
+                        )}
+
                         {row.needsAdminAttention && (
-                          <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">
-                            NEEDS ATTENTION
+                          <span
+                            className={`rounded-full border px-2 py-1 text-[10px] font-bold ${attentionClass(
+                              row.attentionSeverity
+                            )}`}
+                          >
+                            ATTENTION: {row.attentionSeverity ?? "REVIEW"}
                           </span>
                         )}
 
@@ -539,6 +663,65 @@ export default function AdminProviderEventsPage() {
                         <h3 className="text-sm font-semibold text-zinc-950">{row.eventType}</h3>
                         <p className="mt-1 text-xs text-zinc-600">{row.humanSummary}</p>
                       </div>
+
+                      <div className="grid gap-2 text-xs md:grid-cols-3">
+                        <div className="rounded-xl border border-zinc-200 bg-white p-3">
+                          <p className="font-semibold text-zinc-800">EduLife event handling</p>
+                          <p className="mt-1 text-zinc-700">
+                            {row.eventHandlingStatus ?? row.processingStatus}
+                          </p>
+                          <p className="mt-1 text-[11px] text-zinc-500">
+                            Whether EduLife OS processed the webhook/event record.
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-zinc-200 bg-white p-3">
+                          <p className="font-semibold text-zinc-800">Historical webhook refund signal</p>
+                          <p className="mt-1 text-zinc-700">
+                            {row.providerRefundStatus ?? "Not a refund lifecycle event"}
+                          </p>
+                          <p className="mt-1 text-[11px] text-zinc-500">
+                            {row.providerRefundMeaning ??
+                              "This event does not carry Webhook refund signal status."}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-zinc-200 bg-white p-3">
+                          <p className="font-semibold text-zinc-800">EduLife refund status</p>
+                          <p className="mt-1 text-zinc-700">
+                            {row.internalRefundStatus ??
+                              row.relatedRefund?.status ??
+                              "No linked refund"}
+                          </p>
+                          <p className="mt-1 text-[11px] text-zinc-500">
+                            Internal refund record status inside EduLife OS.
+                          </p>
+                        </div>
+                      </div>
+
+                      {row.needsAdminAttention && (
+                        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-semibold">Why this needs attention</p>
+                            <span className="rounded-full border border-amber-400 bg-white px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                              {row.attentionSeverity ?? "REVIEW"}
+                            </span>
+                          </div>
+
+                          <p className="mt-2 break-words">
+                            {row.attentionReason ??
+                              "This provider event needs finance review."}
+                          </p>
+
+                          <div className="mt-3 rounded-lg border border-amber-200 bg-white/75 p-2">
+                            <p className="font-semibold">Recommended action</p>
+                            <p className="mt-1 break-words">
+                              {row.recommendedAction ??
+                                "Review the linked finance record before closing this case."}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="grid gap-2 text-xs md:grid-cols-2">
                         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
@@ -577,7 +760,9 @@ export default function AdminProviderEventsPage() {
                             {row.relatedPayment.academicYear ?? "No academic year"}
                           </p>
                           <p className="mt-1 break-all font-mono text-[10px]">
-                            {row.relatedPayment.reference ?? "No payment reference"}
+                            {row.relatedPayment.reference ??
+                              row.relatedPayment.providerReference ??
+                              "No payment reference"}
                           </p>
                         </div>
                       )}
@@ -591,7 +776,9 @@ export default function AdminProviderEventsPage() {
                             {row.relatedRefund.refundLifecycleComplete ? "complete" : "incomplete"}
                           </p>
                           <p className="mt-1 break-all font-mono text-[10px]">
-                            {row.relatedRefund.providerRefundReference ?? "No refund reference"}
+                            {row.relatedRefund.providerRefundReference ??
+                              row.relatedRefund.providerReference ??
+                              "No refund reference"}
                           </p>
                         </div>
                       )}
@@ -629,12 +816,17 @@ export default function AdminProviderEventsPage() {
                       </div>
 
                       <div className="rounded-xl border border-zinc-200 bg-white p-3">
-                        <p className="text-zinc-500">Event time</p>
-                        <p className="font-semibold text-zinc-950">{formatDate(row.eventTime)}</p>
-                      </div>
+  <p className="text-zinc-500">Provider event time</p>
+  <p className="font-semibold text-zinc-950">{formatDate(row.eventTime)}</p>
+  {row.eventTimeSource && (
+    <p className="mt-1 text-[10px] text-zinc-400">
+      Source: {row.eventTimeSource}
+    </p>
+  )}
+</div>
 
                       <div className="rounded-xl border border-zinc-200 bg-white p-3">
-                        <p className="text-zinc-500">Processed</p>
+                        <p className="text-zinc-500">EduLife processed at</p>
                         <p className="font-semibold text-zinc-950">{formatDate(row.processedAt)}</p>
                       </div>
 
@@ -643,31 +835,54 @@ export default function AdminProviderEventsPage() {
                         <p className="font-semibold text-zinc-950">{formatCedis(amountOf(row))}</p>
                       </div>
 
-                      {canReprocess(row) ? (
-                        <div className="flex flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={() => reprocess(row, false)}
-                            disabled={busyId === row.id}
-                            className="rounded-xl bg-zinc-950 px-4 py-2 text-xs font-semibold text-white hover:bg-black disabled:opacity-50"
-                          >
-                            {busyId === row.id ? "Working..." : "Reprocess now"}
-                          </button>
+                      <div className="flex flex-col gap-2">
+  {canReprocess(row) && (
+    <>
+      <button
+        type="button"
+        onClick={() => reprocess(row, false)}
+        disabled={busyId === row.id}
+        className="rounded-xl bg-zinc-950 px-4 py-2 text-xs font-semibold text-white hover:bg-black disabled:opacity-50"
+      >
+        {busyId === row.id ? "Working..." : "Reprocess now"}
+      </button>
 
-                          <button
-                            type="button"
-                            onClick={() => reprocess(row, true)}
-                            disabled={busyId === row.id}
-                            className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-900 hover:bg-zinc-50 disabled:opacity-50"
-                          >
-                            Queue recovery
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">
-                          No recovery action available for this status.
-                        </p>
-                      )}
+      <button
+        type="button"
+        onClick={() => reprocess(row, true)}
+        disabled={busyId === row.id}
+        className="rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-900 hover:bg-zinc-50 disabled:opacity-50"
+      >
+        Queue recovery
+      </button>
+    </>
+  )}
+
+  {row.category === "REFUND" && row.relatedRefund?.id && (
+    <button
+      type="button"
+      onClick={() => syncRefund(row)}
+      disabled={syncingRefundId === row.relatedRefund.id}
+      className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-900 hover:bg-rose-100 disabled:opacity-50"
+    >
+      {syncingRefundId === row.relatedRefund.id
+        ? "Syncing refund..."
+        : "Sync refund status"}
+    </button>
+  )}
+
+  {!canReprocess(row) && !(row.category === "REFUND" && row.relatedRefund?.id) && (
+    <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-500">
+      No recovery action is available for this event. Processed provider events are historical evidence.
+    </p>
+  )}
+
+  {row.category === "REFUND" && (
+    <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+      Refund webhook signals are historical. Use Sync refund status to check Paystack’s latest state.
+    </p>
+  )}
+</div>
                     </aside>
                   </div>
                 </article>
