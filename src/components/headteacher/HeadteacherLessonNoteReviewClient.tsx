@@ -202,9 +202,9 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
   }, [router]);
 
   const printHref = useMemo(() => {
-    const id = note?.id || noteId;
-    return `/teacher/lesson-notes/${encodeURIComponent(id)}/print`;
-  }, [note?.id, noteId]);
+  const id = note?.id || noteId;
+  return `/print/lesson-note/${encodeURIComponent(id)}`;
+}, [note?.id, noteId]);
 
   const printEmbedHref = useMemo(() => `${printHref}?embed=1`, [printHref]);
 
@@ -601,7 +601,7 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
   title="Lesson note print preview"
   src={printEmbedHref}
   className="h-[720px] w-full bg-white md:h-[860px]"
-  sandbox="allow-same-origin allow-scripts"
+  sandbox="allow-same-origin"
   referrerPolicy="same-origin"
 />
               </div>

@@ -31,6 +31,7 @@ function navLinkClass(active = false) {
 
 export default async function HeadteacherLayout({ children }: { children: ReactNode }) {
   let ctx: Awaited<ReturnType<typeof requireHeadteacherContext>>;
+
   try {
     ctx = await requireHeadteacherContext({ redirectTo: "/headteacher/dashboard" });
   } catch {
@@ -81,15 +82,15 @@ export default async function HeadteacherLayout({ children }: { children: ReactN
                 <Link className={navLinkClass()} href="/headteacher/dashboard">
                   Dashboard
                 </Link>
+
                 <Link className={navLinkClass()} href="/headteacher/reports">
                   Reports
                 </Link>
+
                 <Link className={navLinkClass()} href="/headteacher/lesson-notes">
                   Lesson Notes
                 </Link>
-                <Link className={navLinkClass()} href="/teacher/dashboard">
-                  Teacher Portal
-                </Link>
+
                 {showAdmin ? (
                   <Link className={navLinkClass()} href="/admin/dashboard">
                     Admin
