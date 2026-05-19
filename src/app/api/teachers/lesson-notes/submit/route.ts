@@ -2,11 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import { notifyLessonNoteSubmitted } from "@/lib/lessonNotes/submitNotifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+function jsonNoStore(payload: unknown, init?: Parameters<typeof NextResponse.json>[1]) {
   return NextResponse.json(payload, {
     ...init,
     headers: {
@@ -34,13 +35,21 @@ function normTerm(v: unknown) {
   return s;
 }
 
+function readBodyValue(body: unknown, key: string) {
+  if (!body || typeof body !== "object") return undefined;
+  return (body as Record<string, unknown>)[key];
+}
+
 export async function GET() {
-  return jsonNoStore({ ok: false, error: "Method not allowed. Use POST." }, { status: 405, headers: { Allow: "POST" } });
+  return jsonNoStore(
+    { ok: false, error: "Method not allowed. Use POST." },
+    { status: 405, headers: { Allow: "POST" } }
+  );
 }
 
 export async function POST(req: NextRequest) {
-  // Auth
   let ctx: { userId: string; tenantId: string };
+
   try {
     const c = await requireServerUserContext({
       redirectTo: "/teacher/lesson-notes",
@@ -51,29 +60,31 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
-  // Membership gate
   const membership = await prisma.membership.findUnique({
     where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
     select: { status: true, role: { select: { name: true } } },
   });
+
   if (!membership || membership.status !== "ACTIVE") {
     return jsonNoStore({ ok: false, error: "Forbidden (membership inactive)." }, { status: 403 });
   }
 
-  // Parse body
-  let body: any = null;
+  let body: unknown = null;
+
   try {
     body = await req.json();
   } catch {
     body = null;
   }
 
-  const idRaw = body?.id ?? body?.lessonNoteId ?? null;
+  const idRaw = readBodyValue(body, "id") ?? readBodyValue(body, "lessonNoteId") ?? null;
   const id = typeof idRaw === "string" ? idRaw.trim() : "";
-  if (!id) return jsonNoStore({ ok: false, error: "Lesson note id is required." }, { status: 400 });
+
+  if (!id) {
+    return jsonNoStore({ ok: false, error: "Lesson note id is required." }, { status: 400 });
+  }
 
   try {
-    // Load note + optional curriculum unit
     const note = await prisma.lessonNote.findFirst({
       where: { id, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
       select: {
@@ -109,11 +120,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (!note) return jsonNoStore({ ok: false, error: "Lesson note not found." }, { status: 404 });
+    if (!note) {
+      return jsonNoStore({ ok: false, error: "Lesson note not found." }, { status: 404 });
+    }
 
     const status = safeTrim(note.status).toUpperCase();
 
-    // Idempotent
     if (status === "SUBMITTED" || status === "APPROVED") {
       return jsonNoStore(
         { ok: true, alreadySubmitted: true, status, submittedAt: note.submittedAt ?? null },
@@ -122,10 +134,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (status !== "DRAFT" && status !== "REJECTED") {
-      return jsonNoStore({ ok: false, error: "Only DRAFT or REJECTED lesson notes can be submitted." }, { status: 400 });
+      return jsonNoStore(
+        { ok: false, error: "Only DRAFT or REJECTED lesson notes can be submitted." },
+        { status: 400 }
+      );
     }
 
-    // Completeness checks
     const indicatorOk = safeTrim(note.indicator).length > 0;
     const objectivesOk = safeTrim(note.objectives).length > 0;
     const devOk = safeTrim(note.lessonDevelopment).length > 0;
@@ -144,7 +158,6 @@ export async function POST(req: NextRequest) {
     const hasCurriculum = Boolean(note.curriculumUnitId && note.curriculumUnit);
     const hasSchemeItem = Boolean(note.schemeOfWorkItemId);
 
-    // ✅ MVP reality: accept scheme-backed even if curriculum seed is missing
     if (!hasCurriculum && !hasSchemeItem) {
       return jsonNoStore(
         {
@@ -155,9 +168,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // --- Scheme gate ---
-    // If we have schemeOfWorkItemId, validate it directly (strongest proof).
-    // Else fall back to searching by scope (legacy).
     let schemeIndicatorCode = "";
     let schemeWeekNumber: number | null = null;
     let schemeTerm = "";
@@ -168,7 +178,7 @@ export async function POST(req: NextRequest) {
         where: {
           id: note.schemeOfWorkItemId as string,
           scheme: { tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-        } as any,
+        },
         select: {
           id: true,
           weekNumber: true,
@@ -210,7 +220,6 @@ export async function POST(req: NextRequest) {
         );
       }
     } else {
-      // Legacy fallback: must have a scheme with matching week
       const unit = note.curriculumUnit;
       const scheme = await prisma.schemeOfWork.findFirst({
         where: {
@@ -220,7 +229,7 @@ export async function POST(req: NextRequest) {
           level: unit?.level ?? safeTrim(note.level),
           term: safeTrim(note.term),
           academicYear: safeTrim(note.academicYear),
-          status: { in: ["DRAFT", "SUBMITTED", "APPROVED"] as any },
+          status: { in: ["DRAFT", "SUBMITTED", "APPROVED"] },
         },
         select: {
           id: true,
@@ -235,7 +244,11 @@ export async function POST(req: NextRequest) {
 
       if (!scheme) {
         return jsonNoStore(
-          { ok: false, error: "Scheme of Work required: create your Scheme of Work for this subject/level/term/year before submitting." },
+          {
+            ok: false,
+            error:
+              "Scheme of Work required: create your Scheme of Work for this subject/level/term/year before submitting.",
+          },
           { status: 400 }
         );
       }
@@ -243,7 +256,11 @@ export async function POST(req: NextRequest) {
       const item = scheme.items?.[0] ?? null;
       if (!item) {
         return jsonNoStore(
-          { ok: false, error: "Scheme of Work required: your scheme has no item for this week. Add the week plan first, then submit the lesson note." },
+          {
+            ok: false,
+            error:
+              "Scheme of Work required: your scheme has no item for this week. Add the week plan first, then submit the lesson note.",
+          },
           { status: 400 }
         );
       }
@@ -251,7 +268,6 @@ export async function POST(req: NextRequest) {
       schemeIndicatorCode = normCode(item.indicatorCode);
     }
 
-    // --- Optional code match gate (only when BOTH exist) ---
     if (hasCurriculum) {
       const unitCode = normCode(note.curriculumUnit?.indicatorCode);
       if (schemeIndicatorCode && unitCode && schemeIndicatorCode !== unitCode) {
@@ -266,14 +282,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Submit (race-safe)
     const now = new Date();
+
     const updated = await prisma.lessonNote.updateMany({
       where: {
         id,
         tenantId: ctx.tenantId,
         teacherUserId: ctx.userId,
-        status: { in: ["DRAFT", "REJECTED"] as any },
+        status: { in: ["DRAFT", "REJECTED"] },
       },
       data: {
         status: "SUBMITTED",
@@ -292,11 +308,24 @@ export async function POST(req: NextRequest) {
 
       const st = safeTrim(fresh?.status).toUpperCase();
       if (st === "SUBMITTED" || st === "APPROVED") {
-        return jsonNoStore({ ok: true, alreadySubmitted: true, status: st, submittedAt: fresh?.submittedAt ?? null }, { status: 200 });
+        return jsonNoStore(
+          { ok: true, alreadySubmitted: true, status: st, submittedAt: fresh?.submittedAt ?? null },
+          { status: 200 }
+        );
       }
 
-      return jsonNoStore({ ok: false, error: "Conflict: lesson note changed. Refresh and try again." }, { status: 409 });
+      return jsonNoStore(
+        { ok: false, error: "Conflict: lesson note changed. Refresh and try again." },
+        { status: 409 }
+      );
     }
+
+    void notifyLessonNoteSubmitted({
+      tenantId: ctx.tenantId,
+      lessonNoteId: id,
+      teacherUserId: ctx.userId,
+      submittedAt: now,
+    });
 
     return jsonNoStore({ ok: true, alreadySubmitted: false }, { status: 200 });
   } catch (err) {
