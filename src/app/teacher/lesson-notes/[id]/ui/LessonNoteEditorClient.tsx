@@ -255,10 +255,18 @@ function Field(props: {
 }) {
   return (
     <div>
-      <label className="text-xs font-medium text-[#F7F4ED]">{props.label}</label>
-      {props.hint ? <div className="mt-1 text-[11px] text-[#8F98A8]">{props.hint}</div> : null}
+      <label className="text-xs font-bold uppercase tracking-[0.08em] text-[#F7F4ED]">
+        {props.label}
+      </label>
+
+      {props.hint ? (
+        <div className="mt-1 text-[12px] leading-5 text-[#DDE3EE]">
+          {props.hint}
+        </div>
+      ) : null}
+
       <textarea
-        className="mt-2 w-full rounded-2xl border border-white/10 bg-[#07111F] p-3 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:border-[#D4AF37]/30 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/15 disabled:bg-white/5 disabled:text-[#7E8796]"
+        className="mt-2 w-full rounded-2xl border border-slate-300 bg-white p-3 text-[15px] leading-7 text-slate-950 shadow-inner placeholder:text-slate-500 focus:border-[#D4AF37] focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/20 disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-700"
         rows={props.rows ?? 4}
         value={props.value}
         placeholder={props.placeholder}
@@ -859,7 +867,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
             <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
               <input
-                className="w-full rounded-xl border border-white/10 bg-[#05070B] px-3 py-2 text-sm text-[#F7F4ED] placeholder:text-[#738095] focus:border-[#D4AF37]/30 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/15"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-950 shadow-inner placeholder:text-slate-500 focus:border-[#D4AF37] focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/20"
                 placeholder="Search indicator code / text..."
                 value={unitQ}
                 onChange={(e) => setUnitQ(e.target.value)}
@@ -917,10 +925,10 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
             {unitsLoading ? (
               <div className="mt-3 text-sm text-[#C9CDD6]">Loading…</div>
             ) : (
-              <div className="mt-3 max-h-[380px] overflow-auto rounded-2xl border border-white/10 bg-[#05070B]/75">
+              <div className="mt-3 max-h-[380px] overflow-auto rounded-2xl border border-slate-300 bg-white text-slate-950 shadow-inner">
                 {units.length === 0 ? (
-                  <div className="p-3 text-sm text-[#C9CDD6]">
-                    <div className="font-semibold text-[#F7F4ED]">No units found.</div>
+                  <div className="p-3 text-sm text-slate-700">
+                    <div className="font-semibold text-slate-950">No units found.</div>
                     <div className="mt-1 text-xs text-[#8F98A8]">
                       Try <span className="font-medium text-[#F7F4ED]">Widen: ignore week</span>. If still none, your lesson note scope and scheme scope don’t match.
                       {unitsMeta?.reason || unitsMeta?.message ? (
@@ -949,19 +957,19 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
                         `${u.weekNumber}-${trimOrEmpty(u.indicatorCode) || "na"}-${idx}`;
 
                       return (
-                        <li key={stableKey} className="flex items-start justify-between gap-3 p-3">
+                        <li key={stableKey} className="flex items-start justify-between gap-3 p-3 hover:bg-amber-50">
                           <div className="min-w-0">
-                            <div className="text-sm font-semibold text-[#F7F4ED]">{ind}</div>
-                            <div className="mt-1 text-xs text-[#C9CDD6]">
+                            <div className="text-sm font-bold text-slate-950">{ind}</div>
+                            <div className="mt-1 text-xs leading-5 text-slate-700">
                               {u.strandTitle || "—"} • {u.subStrandTitle || "—"} • {cs}
                             </div>
-                            <div className="mt-1 text-[11px] text-[#8F98A8]">
-                              Week: <span className="font-medium text-[#F7F4ED]">{u.weekNumber}</span>
+                            <div className="mt-1 text-[11px] font-medium text-slate-600">
+                              Week: <span className="font-bold text-slate-950">{u.weekNumber}</span>
                             </div>
                           </div>
 
                           <button
-                            className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
+                            className="shrink-0 rounded-xl border border-[#D4AF37]/40 bg-[#D4AF37]/15 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-[#D4AF37]/25 disabled:opacity-60"
                             disabled={locked}
                             onClick={() => void pickUnit(u)}
                           >
@@ -1070,10 +1078,10 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               </div>
 
               <textarea
-                className="h-[420px] w-full rounded-2xl border border-white/10 bg-[#07111F] p-3 text-xs text-[#E7EBF2] focus:outline-none"
-                readOnly
-                value={aiSuggestion}
-              />
+  className="h-[420px] w-full rounded-2xl border border-slate-300 bg-white p-3 text-sm leading-6 text-slate-950 shadow-inner focus:outline-none"
+  readOnly
+  value={aiSuggestion}
+/>
             </div>
           ) : (
             <div className="mt-3 text-sm text-[#C9CDD6]">Run AI after linking a unit. Otherwise it’s forced to guess.</div>
@@ -1086,24 +1094,28 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
 
 function ChecklistItem({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#07111F]/80 px-3 py-2">
+    <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white px-3 py-2 shadow-sm">
       <span
-        className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold ${
-          ok ? "bg-emerald-500 text-white" : "bg-white/10 text-[#C9CDD6]"
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
+          ok ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"
         }`}
       >
         {ok ? "✓" : "•"}
       </span>
-      <span className="text-sm text-[#F7F4ED]">{label}</span>
+      <span className="text-sm font-semibold text-slate-950">{label}</span>
     </div>
   );
 }
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 p-3">
-      <div className="text-xs text-[#8F98A8]">{label}</div>
-      <div className="mt-1 whitespace-pre-wrap text-sm text-[#F7F4ED]">{value}</div>
+    <div className="rounded-2xl border border-slate-300 bg-white p-3 shadow-sm">
+      <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
+        {label}
+      </div>
+      <div className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-6 text-slate-950">
+        {value}
+      </div>
     </div>
   );
 }
