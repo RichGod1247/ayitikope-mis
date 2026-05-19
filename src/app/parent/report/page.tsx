@@ -22,200 +22,30 @@ type ChildrenResponse = {
   message?: string;
   detail?: string;
   guardianPhone: string | null;
-  students: {
-    id: string;
-    name: string;
-    guardianName?: string | null;
-    guardianPhone?: string | null;
-    classroom: {
-      id: string;
-      name: string;
-      grade?: string | null;
-      arm?: string | null;
-    } | null;
-  }[];
+  students: ParentChild[];
   count: number;
 };
 
-type ParentOverviewStudent = {
-  id: string;
-  name: string;
-  classroomName: string | null;
-  fees: {
-    term: string;
-    academicYear: string;
-    totalBilledPesewas: number;
-    totalWaivedPesewas: number;
-    totalPaidPesewas: number;
-    balancePesewas: number;
-    lastPaymentAmountPesewas: number | null;
-    lastPaymentAt: string | null;
-  };
-  health: {
-    lastDate: string | null;
-    temperatureC: number | null;
-    symptoms: string | null;
-    notes: string | null;
+type ReleaseStatusResponse = {
+  ok: boolean;
+  error?: string;
+  message?: string;
+  detail?: string;
+  studentId?: string;
+  term?: string;
+  academicYear?: string;
+  released?: boolean;
+  release?: {
+    scope: string;
+    scopeKey: string;
+    releasedAt: string;
   } | null;
-};
-
-type ParentOverviewResponse = {
-  ok: boolean;
-  error?: string;
-  message?: string;
-  detail?: string;
-  guardianPhone: string | null;
-  meta: {
-    term: string;
-    academicYear: string;
-  };
-  students: {
-    id: string;
-    name: string;
-    classroomName: string | null;
-    fees: {
-      term: string;
-      academicYear: string;
-      totalBilledPesewas: number;
-      totalWaivedPesewas: number;
-      totalPaidPesewas: number;
-      balancePesewas: number;
-      lastPaymentAmountPesewas: number | null;
-      lastPaymentAt: string | null;
-    };
-    health: {
-      lastDate: string | null;
-      temperatureC: number | null;
-      symptoms: string | null;
-      notes: string | null;
-    } | null;
-  }[];
-};
-
-type SubjectSummary = {
-  subject: string;
-  classScore: number | null;
-  examScore: number | null;
-  totalScore: number | null;
-  maxScore: number | null;
-  percentage: number | null;
-  grade: string | null;
-  remark: string | null;
-  position: number | null;
-};
-
-type AttendanceSummary = {
-  daysPresent: number;
-  daysAbsent: number;
-  daysLate: number;
-  totalSchoolDays: number;
-} | null;
-
-type FeesSummary = {
-  totalBilledPesewas: number;
-  totalWaivedPesewas: number;
-  totalPaidPesewas: number;
-  outstandingPesewas: number;
-  lastPaymentDate: string | null;
-};
-
-type HealthSummary = {
-  totalScreenings: number;
-  feverCount: number;
-  symptomsCount: number;
-  lastScreenedAt: string | null;
-  overallFlag: string | null;
-} | null;
-
-type BehaviourSummary = {
-  conduct?: string | null;
-  attitude?: string | null;
-  interest?: string | null;
-  classTeacherRemark?: string | null;
-  headTeacherRemark?: string | null;
-} | null;
-
-type TermSummary = {
-  term: string;
-  academicYear: string;
-  overallPercentage: number | null;
-  overallPosition: number | null;
-  classSize: number | null;
-  promotedTo: string | null;
-  attendance: AttendanceSummary;
-  fees: FeesSummary;
-  health: HealthSummary;
-  behaviour: BehaviourSummary;
-  nextTermBegins: string | null;
-  subjects: SubjectSummary[];
-};
-
-type ParentTermReportResponse = {
-  ok: boolean;
-  error?: string;
-  message?: string;
-  detail?: string;
-  context: {
-    tenantId: string;
-    studentId: string;
-    term: string;
-    academicYear: string;
-  };
-  student: {
-    id: string;
-    tenantId: string;
-    classroomId: string;
-    firstName: string;
-    lastName: string;
-    sex: string | null;
-    dob: string | null;
-    guardianName: string;
-    guardianPhone: string;
-    note: string | null;
-    classroom: {
-      id: string;
-      name: string;
-      grade: string | null;
-      arm: string | null;
-    };
-  };
-  classroom: {
-    id: string;
-    name: string;
-    grade: string | null;
-    arm: string | null;
-  };
-  termSummary: TermSummary;
-  subjects: SubjectSummary[];
-  attendanceSummary: AttendanceSummary;
-  feesSummary: FeesSummary;
-  healthSummary: HealthSummary;
-  headteacherSignature?: string | null;
 };
 
 const DEFAULT_TERM = "1st Term";
 const DEFAULT_YEAR = "2025/2026";
 
-function formatMoneyFromPesewas(value: number | null | undefined): string {
-  if (value == null) return "0.00";
-  return (value / 100).toFixed(2);
-}
-
-function formatDateNice(value: string | null | undefined): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function percentageDisplay(value: number | null | undefined): string {
-  if (value == null || Number.isNaN(value)) return "—";
-  return `${value.toFixed(1)}%`;
-}
+const TERM_OPTIONS = ["1st Term", "2nd Term", "3rd Term"];
 
 function looksLikeErrorCode(value: string | null | undefined) {
   const s = String(value ?? "").trim();
@@ -245,965 +75,246 @@ function readableApiMessage(
   }
 
   if (status === 403) {
-    return "This report is not available right now.";
+    if (payload?.error === "RESULTS_NOT_RELEASED") {
+      return "Report not yet released by the Headteacher.";
+    }
+    if (payload?.error === "GUARDIAN_MISMATCH") {
+      return "This child is not linked to your parent login.";
+    }
+    return "You are not allowed to view this report.";
+  }
+
+  if (status === 404) {
+    return "The selected learner could not be found.";
   }
 
   return fallback;
 }
 
-async function readJsonResponse<T>(res: Response): Promise<{
-  data: T | null;
-  text: string;
-}> {
+async function readJsonResponse<T>(res: Response): Promise<T | null> {
   const text = await res.text();
   try {
-    return { data: JSON.parse(text) as T, text };
+    return JSON.parse(text) as T;
   } catch {
-    return { data: null, text };
+    return null;
   }
 }
 
+function classLabel(child: ParentChild | null): string {
+  if (!child?.classroom) return "Class not assigned";
+
+  const parts = [
+    child.classroom.name || child.classroom.grade || "",
+    child.classroom.arm || "",
+  ]
+    .map((x) => String(x).trim())
+    .filter(Boolean);
+
+  return parts.length ? parts.join(" ") : "Class not assigned";
+}
+
+function formatReleaseDate(value: string | null | undefined): string {
+  if (!value) return "—";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function buildPrintHref(studentId: string, term: string, academicYear: string) {
+  const params = new URLSearchParams({ studentId, term, academicYear });
+  return `/parent/report/print?${params.toString()}`;
+}
+
 function shellCardClass() {
-  return "rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)]";
+  return "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_24px_80px_rgba(0,0,0,0.22)]";
 }
 
-function darkInnerCardClass(active = false) {
-  return active
-    ? "rounded-2xl border border-[#D4AF37]/35 bg-[#D4AF37]/12"
-    : "rounded-2xl border border-white/10 bg-[#07111F]/70";
-}
-
-/**
- * AI-style Parent Results Coach – speaks to the guardian using the same data.
- */
-function ParentResultsCoach({ report }: { report: ParentTermReportResponse }) {
-  const { student, termSummary } = report;
-  const subjects = termSummary.subjects || [];
-
-  const {
-    strengths,
-    growthAreas,
-    almostThere,
-    overallPercent,
-    attendance,
-    fees,
-    health,
-  } = useMemo(() => {
-    const withPercent = subjects
-      .filter((s) => s.percentage != null)
-      .map((s) => s as SubjectSummary & { percentage: number });
-
-    const overallPercent = termSummary.overallPercentage ?? null;
-
-    const strengths = withPercent
-      .filter((s) => s.percentage >= 80)
-      .sort((a, b) => b.percentage - a.percentage)
-      .slice(0, 3);
-
-    const growthAreas = withPercent
-      .filter((s) => s.percentage <= 65)
-      .sort((a, b) => a.percentage - b.percentage)
-      .slice(0, 3);
-
-    const almostThere = withPercent
-      .filter((s) => s.percentage > 65 && s.percentage < 80)
-      .sort((a, b) => b.percentage - a.percentage)
-      .slice(0, 3);
-
-    return {
-      strengths,
-      growthAreas,
-      almostThere,
-      overallPercent,
-      attendance: termSummary.attendance,
-      fees: termSummary.fees,
-      health: termSummary.health,
-    };
-  }, [subjects, termSummary]);
-
-  const fullName = `${student.firstName} ${student.lastName}`.trim();
-  const childName = fullName || "your child";
-  const sex = student.sex?.toUpperCase() ?? null;
-  const pronoun = sex === "M" ? "he" : sex === "F" ? "she" : "they";
-  const possessive = sex === "M" ? "his" : sex === "F" ? "her" : "their";
-
-  const renderSubjectTags = (list: SubjectSummary[]) => {
-    if (!list.length) {
-      return (
-        <span className="text-[11px] text-slate-500">
-          No clear pattern yet – this will update as more scores are recorded.
-        </span>
-      );
-    }
-    return (
-      <div className="flex flex-wrap gap-1.5">
-        {list.map((s) => (
-          <span
-            key={s.subject}
-            className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2 py-0.5 text-[11px] text-slate-800"
-          >
-            <span className="font-medium">{s.subject}</span>
-            {s.percentage != null && (
-              <span className="text-[10px] text-slate-500">
-                {s.percentage.toFixed(0)}%
-              </span>
-            )}
-          </span>
-        ))}
-      </div>
-    );
-  };
-
-  return (
-    <section className="space-y-3 rounded-2xl border border-indigo-200 bg-indigo-50/80 p-3 text-xs text-indigo-900">
-      <div className="flex items-start gap-2">
-        <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-semibold text-white">
-          AI
-        </div>
-        <div className="space-y-1">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-indigo-700">
-            Parent Results Coach
-          </div>
-          <p className="text-[11px] leading-relaxed">
-            Here is a simple, human explanation of{" "}
-            <span className="font-semibold">
-              what this report is saying about {childName}
-            </span>{" "}
-            and how you can support {pronoun} at home – in the spirit of
-            EduLife OS: calm, honest, and focused on growth.
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-1.5 rounded-xl bg-white/80 px-3 py-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold text-indigo-900">
-            1. Overall performance snapshot
-          </span>
-          {overallPercent != null && (
-            <span className="inline-flex items-center rounded-full bg-indigo-600/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-900">
-              Overall: {overallPercent.toFixed(1)}%
-            </span>
-          )}
-        </div>
-        <p className="text-[11px] text-indigo-900/90">
-          This term, {childName} is{" "}
-          {overallPercent == null
-            ? "building a learning foundation. Not all subjects have scores yet."
-            : overallPercent >= 85
-              ? "performing at a very strong level. The key now is consistency and emotional balance – not pressure."
-              : overallPercent >= 70
-                ? "doing well, with clear room to move from ‘good’ to ‘excellent’ in a few subjects."
-                : overallPercent >= 55
-                  ? "in a normal growth phase. There are gaps to close, but this is a workable starting point."
-                  : "still forming a basic foundation. The report is not a verdict, it is a map – we are seeing where to strengthen next."}
-        </p>
-      </div>
-
-      <div className="grid gap-2.5 md:grid-cols-2">
-        <div className="space-y-1.5 rounded-xl bg-white/80 px-3 py-2.5">
-          <div className="text-[11px] font-semibold text-indigo-900">
-            2. Subjects where {pronoun} is strong
-          </div>
-          <p className="text-[11px] text-indigo-900/90">
-            These subjects show how {childName} naturally learns best. Protect
-            these strengths – they are confidence anchors.
-          </p>
-          {renderSubjectTags(strengths)}
-        </div>
-
-        <div className="space-y-1.5 rounded-xl bg-white/80 px-3 py-2.5">
-          <div className="text-[11px] font-semibold text-indigo-900">
-            3. Subjects that need careful support
-          </div>
-          <p className="text-[11px] text-indigo-900/90">
-            These are the areas quietly asking for more{" "}
-            <span className="font-semibold">time, patience and strategy</span>,
-            not shouting for anger or shame.
-          </p>
-          {renderSubjectTags(growthAreas)}
-        </div>
-      </div>
-
-      <div className="space-y-1.5 rounded-xl bg-white/80 px-3 py-2.5">
-        <div className="text-[11px] font-semibold text-indigo-900">
-          4. “Almost there” subjects
-        </div>
-        <p className="text-[11px] text-indigo-900/90">
-          These subjects are very close to becoming strengths. Small, consistent
-          practice can push them into the 80%+ zone.
-        </p>
-        {renderSubjectTags(almostThere)}
-      </div>
-
-      <div className="grid gap-2.5 md:grid-cols-3">
-        <div className="space-y-1 rounded-xl bg-white/80 px-3 py-2">
-          <div className="text-[11px] font-semibold text-indigo-900">
-            5. Attendance story
-          </div>
-          {attendance ? (
-            <p className="text-[11px] text-indigo-900/90">
-              Present:{" "}
-              <span className="font-semibold">{attendance.daysPresent}</span> /{" "}
-              <span className="font-semibold">
-                {attendance.totalSchoolDays}
-              </span>{" "}
-              days.{" "}
-              {attendance.daysAbsent === 0
-                ? "Excellent consistency – keep protecting school days as much as possible."
-                : attendance.daysAbsent <= 3
-                  ? "Absences are low. Continue monitoring reasons (sickness, family duties) so they don’t quietly increase."
-                  : "There were several absences. It may help to quietly explore with your child what made those days difficult."}
-            </p>
-          ) : (
-            <p className="text-[11px] text-indigo-600/80">
-              Once daily attendance is fully updated in EduLife OS, a clearer
-              picture of {possessive} presence and punctuality will appear here.
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1 rounded-xl bg-white/80 px-3 py-2">
-          <div className="text-[11px] font-semibold text-indigo-900">
-            6. Fees pressure (or peace)
-          </div>
-          {fees ? (
-            <p className="text-[11px] text-indigo-900/90">
-              Total billed:{" "}
-              <span className="font-semibold">
-                GHS {formatMoneyFromPesewas(fees.totalBilledPesewas)}
-              </span>
-              . Outstanding:{" "}
-              <span className="font-semibold text-indigo-900">
-                GHS {formatMoneyFromPesewas(fees.outstandingPesewas)}
-              </span>
-              .{" "}
-              {fees.outstandingPesewas > 0
-                ? "If possible, discuss a simple plan with the school so that money worries do not disturb your child’s focus."
-                : "With fees up to date, your child can learn without silent financial tension."}
-            </p>
-          ) : (
-            <p className="text-[11px] text-indigo-600/80">
-              When the term&apos;s fee structures and payments are finalized in
-              EduLife OS, a short summary will appear here.
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1 rounded-xl bg-white/80 px-3 py-2">
-          <div className="text-[11px] font-semibold text-indigo-900">
-            7. Health & energy
-          </div>
-          {health ? (
-            <p className="text-[11px] text-indigo-900/90">
-              {health.overallFlag
-                ? health.overallFlag
-                : "The school is tracking temperature and symptoms to protect your child."}{" "}
-              Please remember: sleep, food, water, and emotional peace{" "}
-              <span className="font-semibold">directly affect results</span>,
-              not just textbooks.
-            </p>
-          ) : (
-            <p className="text-[11px] text-indigo-600/80">
-              As the school&apos;s health screening data grows, you will see a
-              simple summary of {possessive} wellness pattern here.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-1.5 rounded-xl border border-indigo-200 bg-indigo-900 px-3 py-2.5 text-[11px] text-indigo-50">
-        <div className="font-semibold">
-          8. A gentle 3-step support plan at home
-        </div>
-        <ol className="list-decimal space-y-1 pl-4">
-          <li>
-            <span className="font-semibold">Protect the strong areas:</span> let{" "}
-            {childName} keep practising the subjects {pronoun} loves – they
-            build confidence for the harder ones.
-          </li>
-          <li>
-            <span className="font-semibold">Choose one “project subject”:</span>{" "}
-            pick just one weaker subject this term and agree on a small daily
-            routine (e.g. 20 minutes of questions after supper).
-          </li>
-          <li>
-            <span className="font-semibold">
-              Keep conversations calm and curious:
-            </span>{" "}
-            instead of asking “Why did you fail?”, try “Which parts confuse you,
-            and how can we or your teacher help?” EduLife OS is built to turn
-            fear into honest conversation.
-          </li>
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-/**
- * BECE-style report card
- */
-function BeceReportCard({ report }: { report: ParentTermReportResponse }) {
-  const { student, classroom, termSummary, headteacherSignature } = report;
-
-  const subjects = termSummary.subjects ?? [];
-  const overallPercent = termSummary.overallPercentage;
-  const overallPosition = termSummary.overallPosition;
-  const classSize = termSummary.classSize;
-
-  const attendance = termSummary.attendance;
-  const fees = termSummary.fees;
-  const health = termSummary.health;
-  const behaviour = termSummary.behaviour;
-
-  const fullName = `${student.lastName} ${student.firstName}`.trim();
-
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              School Terminal Report
-            </div>
-            <div className="text-lg font-bold text-slate-900">
-              BECE-Style Terminal Report
-            </div>
-            <div className="mt-0.5 text-[11px] text-slate-500">
-              “Knowledge • Character • Service.”
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[10px] text-slate-500">
-              <span className="mb-1 text-[11px] font-semibold text-slate-600">
-                Passport Photograph
-              </span>
-              <div className="h-20 w-16 rounded border border-slate-300 bg-slate-100" />
-              <span className="mt-1">Attach here</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-2 rounded-md bg-slate-50 p-3 text-[11px] text-slate-700 md:grid-cols-3">
-          <div className="space-y-1">
-            <div>
-              <span className="font-semibold">Name:</span>{" "}
-              <span>{fullName || "—"}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Sex:</span>{" "}
-              <span>{student.sex || "—"}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Class:</span>{" "}
-              <span>
-                {classroom.name}
-                {classroom.arm ? ` (${classroom.arm})` : ""}
-              </span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div>
-              <span className="font-semibold">Guardian:</span>{" "}
-              <span>{student.guardianName || "—"}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Guardian Phone:</span>{" "}
-              <span>{student.guardianPhone || "—"}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Term:</span>{" "}
-              <span>{termSummary.term}</span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div>
-              <span className="font-semibold">Academic Year:</span>{" "}
-              <span>{termSummary.academicYear}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Overall %:</span>{" "}
-              <span>{percentageDisplay(overallPercent)}</span>
-            </div>
-            <div>
-              <span className="font-semibold">Position in Class:</span>{" "}
-              <span>
-                {overallPosition != null && classSize != null
-                  ? `${overallPosition} of ${classSize}`
-                  : "—"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,2.1fr)_minmax(0,1.2fr)]">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-              Subject Performance (Class &amp; Exam Scores)
-            </h3>
-            <span className="text-[10px] text-slate-500">
-              In line with BECE grading style
-            </span>
-          </div>
-
-          <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
-            <table className="min-w-full border-separate border-spacing-0 text-[11px]">
-              <thead>
-                <tr className="bg-slate-50">
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-left font-semibold text-slate-700">
-                    Subject
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Class Score
-                    <span className="block text-[9px] font-normal text-slate-500">
-                      (e.g. /40)
-                    </span>
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Exam Score
-                    <span className="block text-[9px] font-normal text-slate-500">
-                      (e.g. /60)
-                    </span>
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Total
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    %
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Grade
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">
-                    Position
-                  </th>
-                  <th className="border-b border-slate-200 px-2 py-1.5 text-left font-semibold text-slate-700">
-                    Remarks
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {subjects.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={8}
-                      className="px-3 py-4 text-center text-[11px] text-slate-500"
-                    >
-                      No subject scores recorded yet for this term.
-                    </td>
-                  </tr>
-                ) : (
-                  subjects.map((subj, idx) => {
-                    const rowBg = idx % 2 === 1 ? "bg-slate-50/60" : "bg-white";
-                    const total =
-                      subj.totalScore != null
-                        ? subj.totalScore
-                        : subj.percentage != null
-                          ? subj.percentage
-                          : null;
-
-                    return (
-                      <tr key={`${subj.subject}-${idx}`} className={rowBg}>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-left font-medium text-slate-800">
-                          {subj.subject}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {subj.classScore != null ? subj.classScore : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {subj.examScore != null ? subj.examScore : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {total != null ? total : "—"}
-                          {subj.maxScore != null ? (
-                            <span className="text-[9px] text-slate-400">
-                              {` / ${subj.maxScore}`}
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {percentageDisplay(subj.percentage)}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {subj.grade || "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-center text-slate-700">
-                          {subj.position != null ? subj.position : "—"}
-                        </td>
-                        <td className="border-b border-slate-100 px-2 py-1.5 text-left text-slate-700">
-                          {subj.remark || "—"}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-              Attendance, Fees &amp; Health Summary
-            </h3>
-            <div className="grid gap-2 text-[11px] lg:grid-cols-1">
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">
-                    Attendance
-                  </span>
-                </div>
-                {attendance ? (
-                  <div className="grid grid-cols-2 gap-1 text-slate-700">
-                    <div>
-                      <span className="font-semibold">Days Present:</span>{" "}
-                      <span>{attendance.daysPresent}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Days Absent:</span>{" "}
-                      <span>{attendance.daysAbsent}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Days Late:</span>{" "}
-                      <span>{attendance.daysLate}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Total School Days:</span>{" "}
-                      <span>{attendance.totalSchoolDays}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500">
-                    No attendance data recorded yet for this term.
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">Fees</span>
-                </div>
-                {fees ? (
-                  <div className="grid grid-cols-2 gap-1 text-slate-700">
-                    <div>
-                      <span className="font-semibold">Total Billed:</span>{" "}
-                      <span>
-                        GHS {formatMoneyFromPesewas(fees.totalBilledPesewas ?? 0)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Total Paid:</span>{" "}
-                      <span>
-                        GHS {formatMoneyFromPesewas(fees.totalPaidPesewas ?? 0)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Waived:</span>{" "}
-                      <span>
-                        GHS {formatMoneyFromPesewas(fees.totalWaivedPesewas ?? 0)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Outstanding:</span>{" "}
-                      <span className="font-semibold text-rose-700">
-                        GHS {formatMoneyFromPesewas(fees.outstandingPesewas ?? 0)}
-                      </span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="font-semibold">Last Payment:</span>{" "}
-                      <span>{formatDateNice(fees.lastPaymentDate)}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500">
-                    No fees record yet for this term.
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">Health</span>
-                </div>
-                {health ? (
-                  <div className="grid grid-cols-2 gap-1 text-slate-700">
-                    <div>
-                      <span className="font-semibold">Screenings:</span>{" "}
-                      <span>{health.totalScreenings ?? 0}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Fever Episodes:</span>{" "}
-                      <span>{health.feverCount ?? 0}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Symptoms Logged:</span>{" "}
-                      <span>{health.symptomsCount ?? 0}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Last Screened:</span>{" "}
-                      <span>{formatDateNice(health.lastScreenedAt)}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="font-semibold">Health Flag:</span>{" "}
-                      <span>{health.overallFlag || "—"}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500">
-                    No health screening data recorded yet for this term.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-              Behaviour &amp; Remarks
-            </h3>
-            <div className="space-y-2 text-[11px] text-slate-700">
-              <div className="rounded-md border border-slate-200 bg-white p-2.5">
-                <div className="mb-1 font-semibold text-slate-800">
-                  Conduct / Attitude / Interest
-                </div>
-                <p className="text-[11px] text-slate-700">
-                  {behaviour?.conduct ||
-                    behaviour?.attitude ||
-                    behaviour?.interest ||
-                    "Teacher’s notes on conduct, attitude to work, and interest in school activities will appear here."}
-                </p>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="rounded-md border border-slate-200 bg-white p-2.5">
-                  <div className="mb-1 font-semibold text-slate-800">
-                    Class Teacher’s Remark
-                  </div>
-                  <p className="min-h-10 text-[11px] text-slate-700">
-                    {behaviour?.classTeacherRemark ||
-                      "…………........................................................................................................................"}
-                  </p>
-                  <div className="mt-1 text-[10px] text-slate-500">
-                    Signature: ______________________
-                  </div>
-                </div>
-                <div className="rounded-md border border-slate-200 bg-white p-2.5">
-                  <div className="mb-1 font-semibold text-slate-800">
-                    Headteacher’s Remark
-                  </div>
-                  <p className="min-h-10 text-[11px] text-slate-700">
-                    {behaviour?.headTeacherRemark ||
-                      "…………........................................................................................................................"}
-                  </p>
-                  <div className="mt-1 text-[10px] text-slate-500">
-                    {headteacherSignature ? (
-                      <span
-                        className="inline-block max-h-10 max-w-[160px] align-middle"
-                        dangerouslySetInnerHTML={{ __html: headteacherSignature }}
-                      />
-                    ) : (
-                      <span>Signature &amp; Stamp: ______________________</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-800">
-                    Next Term Begins:
-                  </span>
-                  <span className="text-[11px] text-slate-700">
-                    {termSummary.nextTermBegins
-                      ? formatDateNice(termSummary.nextTermBegins)
-                      : "To be announced"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div> 
-    </div>
-  );
-}
-
-const ParentReportPage: React.FC = () => {
+export default function ParentReportPage() {
   const [term, setTerm] = useState(DEFAULT_TERM);
   const [academicYear, setAcademicYear] = useState(DEFAULT_YEAR);
 
-  const [guardianPhone, setGuardianPhone] = useState<string | null>(null);
-  const [sessionExpired, setSessionExpired] = useState(false);
-
   const [children, setChildren] = useState<ParentChild[]>([]);
-  const [childrenLoading, setChildrenLoading] = useState(false);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [guardianPhone, setGuardianPhone] = useState<string | null>(null);
+
+  const [childrenLoading, setChildrenLoading] = useState(true);
   const [childrenError, setChildrenError] = useState<string | null>(null);
 
-  const [overview, setOverview] = useState<ParentOverviewResponse | null>(null);
-  const [overviewLoading, setOverviewLoading] = useState(false);
-  const [overviewError, setOverviewError] = useState<string | null>(null);
+  const [releaseLoading, setReleaseLoading] = useState(false);
+  const [releaseError, setReleaseError] = useState<string | null>(null);
+  const [releaseStatus, setReleaseStatus] =
+    useState<ReleaseStatusResponse | null>(null);
 
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
-  const [report, setReport] = useState<ParentTermReportResponse | null>(null);
-  const [reportLoading, setReportLoading] = useState(false);
-  const [reportError, setReportError] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const selectedChild = useMemo(() => {
+    return children.find((child) => child.id === selectedChildId) ?? null;
+  }, [children, selectedChildId]);
 
-  const overviewByStudentId = useMemo(() => {
-    const map = new Map<string, ParentOverviewStudent>();
-    if (overview?.students) {
-      for (const s of overview.students) {
-        map.set(s.id, s);
+  const released = !!releaseStatus?.released;
+  const releasedHref =
+    selectedChildId && released
+      ? buildPrintHref(selectedChildId, term, academicYear)
+      : "";
+
+  const loadChildren = useCallback(async () => {
+    setChildrenLoading(true);
+    setChildrenError(null);
+    setSessionExpired(false);
+
+    try {
+      const res = await fetch("/api/parent/children", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+
+      const data = await readJsonResponse<ChildrenResponse>(res);
+
+      const unauthorized =
+        res.status === 401 || data?.error === "UNAUTHORIZED_PARENT";
+
+      if (unauthorized) {
+        setSessionExpired(true);
+        setChildren([]);
+        setSelectedChildId(null);
+        setGuardianPhone(null);
+        return;
       }
-    }
-    return map;
-  }, [overview]);
 
-  const loadChildrenAndOverview = useCallback(
-    async (termValue: string, yearValue: string) => {
-      setChildrenLoading(true);
-      setOverviewLoading(true);
-      setChildrenError(null);
-      setOverviewError(null);
+      if (!res.ok || !data?.ok) {
+        setChildrenError(
+          readableApiMessage(data, res.status, "Failed to load your children.")
+        );
+        setChildren([]);
+        setSelectedChildId(null);
+        return;
+      }
+
+      const nextChildren = Array.isArray(data.students) ? data.students : [];
+
+      setChildren(nextChildren);
+      setGuardianPhone(data.guardianPhone || null);
+
+      setSelectedChildId((prev) => {
+        if (prev && nextChildren.some((child) => child.id === prev)) {
+          return prev;
+        }
+        return nextChildren[0]?.id ?? null;
+      });
+    } catch (err) {
+      console.error("[PARENT_REPORT_SELECTOR_CHILDREN_ERROR]", err);
+      setChildrenError("Network error loading your children.");
+      setChildren([]);
+      setSelectedChildId(null);
+    } finally {
+      setChildrenLoading(false);
+    }
+  }, []);
+
+  const loadReleaseStatus = useCallback(
+    async (studentId: string, termValue: string, yearValue: string) => {
+      setReleaseLoading(true);
+      setReleaseError(null);
+      setReleaseStatus(null);
       setSessionExpired(false);
 
       try {
-        const [childrenRes, overviewRes] = await Promise.all([
-          fetch("/api/parent/children", {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-            headers: { Accept: "application/json" },
-          }),
-          fetch(
-            `/api/parent/overview?term=${encodeURIComponent(
-              termValue
-            )}&academicYear=${encodeURIComponent(yearValue)}`,
-            {
-              method: "GET",
-              credentials: "include",
-              cache: "no-store",
-              headers: { Accept: "application/json" },
-            }
-          ),
-        ]);
+        const params = new URLSearchParams({
+          studentId,
+          term: termValue,
+          academicYear: yearValue,
+        });
 
-        const [{ data: childrenData }, { data: overviewData }] =
-          await Promise.all([
-            readJsonResponse<ChildrenResponse>(childrenRes),
-            readJsonResponse<ParentOverviewResponse>(overviewRes),
-          ]);
-
-        const unauthorized =
-          childrenRes.status === 401 ||
-          overviewRes.status === 401 ||
-          childrenData?.error === "UNAUTHORIZED_PARENT" ||
-          overviewData?.error === "UNAUTHORIZED_PARENT";
-
-        if (unauthorized) {
-          setSessionExpired(true);
-          setChildren([]);
-          setOverview(null);
-          setSelectedChildId(null);
-          setGuardianPhone(null);
-          return;
-        }
-
-        if (!childrenRes.ok || !childrenData?.ok) {
-          setChildrenError(
-            readableApiMessage(
-              childrenData,
-              childrenRes.status,
-              "Failed to load your children."
-            )
-          );
-          setChildren([]);
-        } else {
-          const nextChildren = Array.isArray(childrenData.students)
-            ? childrenData.students
-            : [];
-
-          setChildren(nextChildren);
-          setGuardianPhone(childrenData.guardianPhone || null);
-
-          setSelectedChildId((prev) => {
-            if (prev && nextChildren.some((child) => child.id === prev)) {
-              return prev;
-            }
-            return nextChildren[0]?.id ?? null;
-          });
-        }
-
-        if (!overviewRes.ok || !overviewData?.ok) {
-          setOverviewError(
-            readableApiMessage(
-              overviewData,
-              overviewRes.status,
-              "Failed to load overview for this term and year."
-            )
-          );
-          setOverview(null);
-        } else {
-          setOverview(overviewData);
-          setGuardianPhone((prev) => prev || overviewData.guardianPhone || null);
-        }
-      } catch (err) {
-        console.error("[ParentPortal] error loading children/overview", err);
-        setChildrenError("Network error loading children.");
-        setOverviewError("Network error loading overview.");
-      } finally {
-        setChildrenLoading(false);
-        setOverviewLoading(false);
-      }
-    },
-    []
-  );
-
-  const loadReportForSelection = useCallback(
-    async (studentId: string, termValue: string, yearValue: string) => {
-      setReportLoading(true);
-      setReportError(null);
-
-      try {
-        const url = `/api/parent/report/term?studentId=${encodeURIComponent(
-          studentId
-        )}&term=${encodeURIComponent(termValue)}&academicYear=${encodeURIComponent(
-          yearValue
-        )}`;
-
-        const res = await fetch(url, {
+        const res = await fetch(`/api/parent/report/release-status?${params}`, {
           method: "GET",
           credentials: "include",
           cache: "no-store",
           headers: { Accept: "application/json" },
         });
 
-        const { data } = await readJsonResponse<ParentTermReportResponse>(res);
+        const data = await readJsonResponse<ReleaseStatusResponse>(res);
 
         const unauthorized =
           res.status === 401 || data?.error === "UNAUTHORIZED_PARENT";
 
         if (unauthorized) {
           setSessionExpired(true);
-          setReport(null);
+          setReleaseStatus(null);
           return;
         }
 
         if (!res.ok || !data?.ok) {
-          setReportError(
+          setReleaseError(
             readableApiMessage(
               data,
               res.status,
-              "Failed to load parent term report."
+              "Failed to check report release status."
             )
           );
-          setReport(null);
+          setReleaseStatus(null);
           return;
         }
 
-        setReport(data);
+        setReleaseStatus(data);
       } catch (err) {
-        console.error("[ParentTermReportPage] error loading report", err);
-        setReportError("Network error loading term report.");
-        setReport(null);
+        console.error("[PARENT_REPORT_RELEASE_STATUS_ERROR]", err);
+        setReleaseError("Network error checking report release status.");
+        setReleaseStatus(null);
       } finally {
-        setReportLoading(false);
+        setReleaseLoading(false);
       }
     },
     []
   );
 
   useEffect(() => {
-    loadChildrenAndOverview(term, academicYear);
-  }, [term, academicYear, loadChildrenAndOverview]);
+    void loadChildren();
+  }, [loadChildren]);
 
   useEffect(() => {
     if (sessionExpired) return;
+
     if (!selectedChildId) {
-      setReport(null);
+      setReleaseStatus(null);
+      setReleaseError(null);
       return;
     }
 
-    loadReportForSelection(selectedChildId, term, academicYear);
-  }, [
-    sessionExpired,
-    selectedChildId,
-    term,
-    academicYear,
-    loadReportForSelection,
-  ]);
-
-  function handlePrintCurrent() {
-    if (!report?.context) return;
-
-    const params = new URLSearchParams({
-      studentId: report.context.studentId,
-      term: report.context.term,
-      academicYear: report.context.academicYear,
-    });
-
-    window.open(`/parent/report/print?${params.toString()}`, "_blank");
-  }
-
-  async function handleDownloadPdf() {
-    if (!report?.context) return;
-    const { studentId, term: t, academicYear: yr } = report.context;
-
-    setPdfLoading(true);
-    try {
-      const params = new URLSearchParams({ studentId, term: t, academicYear: yr });
-      const res = await fetch(`/api/parent/report/term/pdf?${params}`, {
-        method: "GET",
-        credentials: "include",
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        setReportError(json.error || "PDF generation failed. Please try again.");
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `report-card-${studentId.slice(0, 8)}-${t.replace(/\s+/g, "-")}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch {
-      setReportError("Network error while generating PDF. Please try again.");
-    } finally {
-      setPdfLoading(false);
-    }
-  }
+    void loadReleaseStatus(selectedChildId, term, academicYear);
+  }, [sessionExpired, selectedChildId, term, academicYear, loadReleaseStatus]);
 
   if (sessionExpired) {
     return (
       <div className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] text-[#F7F4ED]">
         <div className="mx-auto max-w-md px-4 py-10">
-          <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
-            <h1 className="text-base font-semibold text-[#F7F4ED]">
+          <div className={`${shellCardClass()} p-6`}>
+            <div className="inline-flex rounded-full border border-rose-300/20 bg-rose-400/12 px-3 py-1 text-[11px] font-semibold text-rose-100">
               Parent session required
+            </div>
+
+            <h1 className="mt-3 text-lg font-semibold text-[#F7F4ED]">
+              Please log in again
             </h1>
+
             <p className="mt-2 text-xs leading-6 text-[#C9CDD6]">
-              Your parent session has expired or is missing. Please log in again
-              to continue.
+              Your parent session has expired or is missing. For learner safety,
+              reports can only be checked after a verified parent login.
             </p>
 
-            <div className="mt-4">
-              <a
-                href="/parent/login?next=/parent-portal"
-                className="inline-flex w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-xs font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105"
-              >
-                Go to parent login
-              </a>
-            </div>
+            <a
+              href="/parent/login?next=/parent/report"
+              className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-xs font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105"
+            >
+              Go to parent login
+            </a>
           </div>
         </div>
       </div>
@@ -1211,267 +322,286 @@ const ParentReportPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_55%,#05070B_100%)] text-[#F7F4ED]">
-      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6">
-        <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.9),rgba(7,17,31,0.94))] px-4 py-3 text-xs shadow-[0_24px_80px_rgba(0,0,0,0.24)] sm:px-5">
-          <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
-          <div className="absolute -left-12 top-0 h-40 w-40 rounded-full bg-[#1B66D1]/18 blur-3xl" />
-          <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-[#D4AF37]/12 blur-3xl" />
+    <main className="min-h-screen bg-[linear-gradient(180deg,#05070B_0%,#071A3D_52%,#05070B_100%)] text-[#F7F4ED]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <section className={`${shellCardClass()} relative overflow-hidden p-5 sm:p-6`}>
+          <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+          <div className="pointer-events-none absolute -left-20 top-0 h-56 w-56 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+          <div className="pointer-events-none absolute right-0 top-0 h-52 w-52 rounded-full bg-[#D4AF37]/14 blur-3xl" />
 
-          <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">
-                Parent Portal
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="inline-flex items-center rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/12 px-3 py-1 text-[11px] font-semibold text-[#E8C96A]">
+                EduLife OS · Parent Reports
               </div>
-              <div className="text-sm font-semibold text-[#F7F4ED]">
-                BECE-Style Term Report &amp; Health-Aware Summary
-              </div>
-              <div className="text-[11px] text-[#C9CDD6]">
-                Phone:{" "}
-                <span className="font-medium text-[#F7F4ED]">
-                  {guardianPhone || "Signed in"}
-                </span>
-              </div>
+
+              <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[#F7F4ED] sm:text-3xl">
+                Released report cards
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#C9CDD6]">
+                Select your child, term, and academic year. EduLife OS will show
+                the report only after the Headteacher has officially released it.
+              </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 text-[11px] text-[#C9CDD6]">
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-medium text-[#AEB6C4]">
-                    Term
-                  </label>
-                  <select
-                    className="rounded-xl border border-white/10 bg-[#07111F] px-2 py-1 text-[11px] text-[#F7F4ED] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25"
-                    value={term}
-                    onChange={(e) => setTerm(e.target.value)}
-                  >
-                    <option value="1st Term">1st Term</option>
-                    <option value="2nd Term">2nd Term</option>
-                    <option value="3rd Term">3rd Term</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-medium text-[#AEB6C4]">
-                    Academic Year
-                  </label>
-                  <input
-                    className="w-28 rounded-xl border border-white/10 bg-[#07111F] px-2 py-1 text-[11px] text-[#F7F4ED] placeholder:text-[#738095] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/25"
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                    placeholder="2025/2026"
-                  />
-                </div>
+            <div className="rounded-2xl border border-white/10 bg-[#07111F]/70 px-4 py-3 text-xs text-[#C9CDD6]">
+              <div className="font-semibold text-[#F7F4ED]">Parent access</div>
+              <div className="mt-1">
+                {guardianPhone ? `Verified phone: ${guardianPhone}` : "Phone verified by OTP"}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="mt-5 grid gap-5 lg:grid-cols-[360px_1fr]">
+          <section className={`${shellCardClass()} p-4`}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-[#F7F4ED]">
+                  1. Select learner
+                </h2>
+                <p className="mt-1 text-[11px] text-[#AEB6C4]">
+                  Only children linked to your verified parent phone are shown.
+                </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => loadChildrenAndOverview(term, academicYear)}
-                className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-[#F7F4ED] transition hover:bg-white/10"
+                onClick={() => void loadChildren()}
+                disabled={childrenLoading}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Refresh data
+                {childrenLoading ? "Loading…" : "Refresh"}
               </button>
             </div>
-          </div>
-        </div>
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.7fr)]">
-          <div className="space-y-3">
-            <div className={`${shellCardClass()} p-3 text-xs`}>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-xs font-semibold text-[#F7F4ED]">
-                    Your children this term
-                  </h2>
-                  <p className="text-[11px] text-[#C9CDD6]">
-                    Select a child to view detailed report, fees, and health
-                    summary.
-                  </p>
-                </div>
-                <span className="min-w-8 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-center text-[10px] font-medium text-[#F7F4ED]">
-                  {children.length} child
-                  {children.length === 1 ? "" : "ren"}
-                </span>
-              </div>
-
+            <div className="mt-4 space-y-2">
               {childrenLoading ? (
-                <div className="py-4 text-center text-[11px] text-[#C9CDD6]">
-                  Loading children…
+                <div className="rounded-2xl border border-white/10 bg-[#07111F]/70 px-4 py-5 text-center text-xs text-[#C9CDD6]">
+                  Loading linked learners…
                 </div>
               ) : childrenError ? (
-                <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
+                <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-xs text-rose-100">
                   {childrenError}
                 </div>
               ) : children.length === 0 ? (
-                <div className="py-4 text-center text-[11px] text-[#C9CDD6]">
-                  No children found for this parent session yet.
+                <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-5 text-center text-xs text-[#C9CDD6]">
+                  No learner is currently linked to this parent login.
                 </div>
               ) : (
-                <ul className="space-y-1.5">
-                  {children.map((child) => {
-                    const isSelected = selectedChildId === child.id;
-                    const overviewChild = overviewByStudentId.get(child.id);
-                    const outstanding =
-                      overviewChild?.fees?.balancePesewas ?? 0;
-                    const healthLast = overviewChild?.health;
+                children.map((child) => {
+                  const active = child.id === selectedChildId;
 
-                    return (
-                      <li key={child.id}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedChildId(child.id)}
-                          className={`flex w-full items-start justify-between px-3 py-2 text-left transition ${
-                            darkInnerCardClass(isSelected)
-                          }`}
-                        >
-                          <div className="space-y-0.5">
-                            <div className="text-xs font-semibold text-[#F7F4ED]">
-                              {child.name}
-                            </div>
-                            <div className="text-[11px] text-[#C9CDD6]">
-                              Class: {child.classroom?.name || "—"}
-                            </div>
-                            <div className="flex flex-wrap gap-1 text-[10px]">
-                              <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[#D7DCE5]">
-                                Fees:{" "}
-                                {outstanding > 0
-                                  ? `Outstanding GHS ${formatMoneyFromPesewas(
-                                      outstanding
-                                    )}`
-                                  : "Up to date"}
-                              </span>
-                              {healthLast?.lastDate && (
-                                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[#D7DCE5]">
-                                  Health: Last screened{" "}
-                                  {formatDateNice(healthLast.lastDate)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-
-            <div className={`${shellCardClass()} p-3 text-xs`}>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h2 className="text-xs font-semibold text-[#F7F4ED]">
-                  Term overview snapshot
-                </h2>
-                <span className="text-[10px] text-[#AEB6C4]">
-                  Term: {term} • Year: {academicYear}
-                </span>
-              </div>
-              {overviewLoading ? (
-                <div className="py-3 text-center text-[11px] text-[#C9CDD6]">
-                  Loading overview…
-                </div>
-              ) : overviewError ? (
-                <div className="rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[11px] text-rose-100">
-                  {overviewError}
-                </div>
-              ) : !overview || overview.students.length === 0 ? (
-                <div className="py-3 text-[11px] text-[#C9CDD6]">
-                  Overview will appear here once assessment, fees and health
-                  records are captured for this term.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {overview.students.map((s) => (
-                    <div
-                      key={s.id}
-                      className="rounded-2xl border border-white/10 bg-[#07111F]/70 px-3 py-2 text-[11px]"
+                  return (
+                    <button
+                      key={child.id}
+                      type="button"
+                      onClick={() => setSelectedChildId(child.id)}
+                      className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                        active
+                          ? "border-[#D4AF37]/45 bg-[#D4AF37]/12 shadow-[0_14px_40px_rgba(212,175,55,0.12)]"
+                          : "border-white/10 bg-[#07111F]/70 hover:border-white/20 hover:bg-white/8"
+                      }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="font-semibold text-[#F7F4ED]">
-                          {s.name}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-[#F7F4ED]">
+                            {child.name || "Unnamed learner"}
+                          </div>
+                          <div className="mt-1 text-[11px] text-[#AEB6C4]">
+                            {classLabel(child)}
+                          </div>
                         </div>
-                        <div className="text-[10px] text-[#AEB6C4]">
-                          Class: {s.classroomName ?? "—"}
-                        </div>
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-[#C9CDD6]">
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
-                          Fees outstanding:{" "}
-                          <span className="font-medium">
-                            GHS{" "}
-                            {formatMoneyFromPesewas(
-                              s.fees.balancePesewas ?? 0
-                            )}
-                          </span>
-                        </span>
-                        {s.health?.lastDate && (
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5">
-                            Last health check: {formatDateNice(s.health.lastDate)}
+
+                        {active && (
+                          <span className="rounded-full bg-[#D4AF37] px-2 py-0.5 text-[10px] font-bold text-[#071A3D]">
+                            Selected
                           </span>
                         )}
                       </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="mt-5 border-t border-white/10 pt-4">
+              <h2 className="text-sm font-semibold text-[#F7F4ED]">
+                2. Select report period
+              </h2>
+
+              <div className="mt-3 grid gap-3">
+                <label className="block">
+                  <span className="text-[11px] font-medium text-[#C9CDD6]">
+                    Term
+                  </span>
+                  <select
+                    value={term}
+                    onChange={(e) => setTerm(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] outline-none ring-0 transition focus:border-[#D4AF37]/55"
+                  >
+                    {TERM_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-[11px] font-medium text-[#C9CDD6]">
+                    Academic year
+                  </span>
+                  <input
+                    value={academicYear}
+                    onChange={(e) => setAcademicYear(e.target.value)}
+                    placeholder="2025/2026"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-xs text-[#F7F4ED] outline-none ring-0 transition placeholder:text-white/30 focus:border-[#D4AF37]/55"
+                  />
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section className={`${shellCardClass()} p-5 sm:p-6`}>
+            <div className="flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[#F7F4ED]">
+                  Report release status
+                </h2>
+                <p className="mt-1 text-xs leading-5 text-[#AEB6C4]">
+                  This page does not load raw results. It only checks whether
+                  the Headteacher has released the selected report.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedChildId) {
+                    void loadReleaseStatus(selectedChildId, term, academicYear);
+                  }
+                }}
+                disabled={!selectedChildId || releaseLoading}
+                className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {releaseLoading ? "Checking…" : "Check again"}
+              </button>
+            </div>
+
+            <div className="mt-5">
+              {!selectedChild ? (
+                <div className="rounded-[24px] border border-dashed border-white/15 bg-white/5 px-5 py-8 text-center">
+                  <div className="text-sm font-semibold text-[#F7F4ED]">
+                    Select a learner first
+                  </div>
+                  <p className="mt-2 text-xs leading-6 text-[#C9CDD6]">
+                    Choose one of your linked children to check whether their
+                    report has been released.
+                  </p>
+                </div>
+              ) : releaseLoading ? (
+                <div className="rounded-[24px] border border-white/10 bg-[#07111F]/70 px-5 py-8 text-center">
+                  <div className="text-sm font-semibold text-[#F7F4ED]">
+                    Checking Headteacher release…
+                  </div>
+                  <p className="mt-2 text-xs text-[#C9CDD6]">
+                    Please wait while EduLife OS checks the official release
+                    record.
+                  </p>
+                </div>
+              ) : releaseError ? (
+                <div className="rounded-[24px] border border-rose-300/20 bg-rose-400/12 px-5 py-5">
+                  <div className="text-sm font-semibold text-rose-100">
+                    Report status could not be confirmed
+                  </div>
+                  <p className="mt-2 text-xs leading-6 text-rose-100/90">
+                    {releaseError}
+                  </p>
+                </div>
+              ) : released ? (
+                <div className="rounded-[24px] border border-emerald-300/20 bg-emerald-400/12 px-5 py-5">
+                  <div className="inline-flex rounded-full border border-emerald-300/25 bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold text-emerald-100">
+                    Released by Headteacher
+                  </div>
+
+                  <h3 className="mt-4 text-xl font-semibold text-[#F7F4ED]">
+                    {selectedChild.name || "Selected learner"}’s report is ready.
+                  </h3>
+
+                  <div className="mt-2 grid gap-2 text-xs text-[#C9CDD6] sm:grid-cols-2">
+                    <div>
+                      <span className="text-[#AEB6C4]">Class: </span>
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {classLabel(selectedChild)}
+                      </span>
                     </div>
-                  ))}
+                    <div>
+                      <span className="text-[#AEB6C4]">Period: </span>
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {term} · {academicYear}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[#AEB6C4]">Release scope: </span>
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {releaseStatus?.release?.scope === "SCHOOL"
+                          ? "Whole school"
+                          : "Classroom"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[#AEB6C4]">Released on: </span>
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {formatReleaseDate(releaseStatus?.release?.releasedAt)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <a
+                      href={releasedHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-2.5 text-xs font-bold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:brightness-105"
+                    >
+                      View Released Report
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[24px] border border-[#D4AF37]/20 bg-[#D4AF37]/10 px-5 py-5">
+                  <div className="inline-flex rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-3 py-1 text-[11px] font-semibold text-[#E8C96A]">
+                    Not released yet
+                  </div>
+
+                  <h3 className="mt-4 text-xl font-semibold text-[#F7F4ED]">
+                    Report not yet released by the Headteacher.
+                  </h3>
+
+                  <p className="mt-2 max-w-2xl text-xs leading-6 text-[#C9CDD6]">
+                    The report for{" "}
+                    <span className="font-semibold text-[#F7F4ED]">
+                      {selectedChild.name || "this learner"}
+                    </span>{" "}
+                    in{" "}
+                    <span className="font-semibold text-[#F7F4ED]">
+                      {term} · {academicYear}
+                    </span>{" "}
+                    is locked until the school officially releases it.
+                  </p>
+
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-[#07111F]/70 px-4 py-3 text-xs leading-6 text-[#C9CDD6]">
+                    This is not an error. It protects academic governance by
+                    ensuring parents only see results after Headteacher approval.
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-xs font-semibold text-[#F7F4ED]">
-                Detailed BECE-Style Term Report
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handlePrintCurrent}
-                  disabled={!report}
-                  className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-[#F7F4ED] shadow-sm transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Print this report
-                </button>
-              </div>
-            </div>
-
-            {!selectedChildId ? (
-              <div className="rounded-[24px] border border-dashed border-white/15 bg-white/5 px-4 py-6 text-center text-[11px] text-[#C9CDD6]">
-                Please select a child from the left to view the full term
-                report.
-              </div>
-            ) : reportLoading ? (
-              <div className={`${shellCardClass()} px-4 py-6 text-center text-[11px] text-[#C9CDD6]`}>
-                Loading term report…
-              </div>
-            ) : reportError ? (
-              <div className="rounded-[24px] border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-[11px] text-rose-100">
-                {reportError}
-              </div>
-            ) : !report ? (
-              <div className="rounded-[24px] border border-dashed border-white/15 bg-white/5 px-4 py-6 text-center text-[11px] text-[#C9CDD6]">
-                No report data available yet for this term.
-              </div>
-            ) : (
-              <>
-                <BeceReportCard report={report} />
-                <div className="mt-3 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void handleDownloadPdf()}
-                    disabled={pdfLoading}
-                    className="inline-flex items-center rounded-xl bg-[linear-gradient(135deg,#1B66D1,#2E7CE6)] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_8px_24px_rgba(27,102,209,0.28)] disabled:opacity-60"
-                  >
-                    {pdfLoading ? "Generating PDF…" : "Download Report Card (PDF)"}
-                  </button>
-                </div>
-                <div className="mt-3">
-                  <ParentResultsCoach report={report} />
-                </div>
-              </>
-            )}
-          </div>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
-};
-
-export default ParentReportPage;
+}
