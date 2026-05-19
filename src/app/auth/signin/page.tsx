@@ -17,14 +17,18 @@ function hasOtpValue(v: string) {
   return v.replace(/\s+/g, "").trim().length > 0;
 }
 
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
 function mapError(raw: string | null): string | null {
-  const e = String(raw ?? "").trim();
+  const e = clean(raw);
   if (!e) return null;
 
   if (e === "NO_ACTIVE_TENANT") return "Select your school (School Code) to continue.";
-  if (e === "FORBIDDEN") return "You don’t have access to this school workspace.";
+  if (e === "FORBIDDEN") return "You don’t have access to this workspace.";
   if (e === "UNAUTHORIZED") return "Please sign in to continue.";
-  if (e === "CredentialsSignin") return "Invalid Staff ID/email or password.";
+  if (e === "CredentialsSignin") return "Invalid email/Staff ID or password.";
 
   return null;
 }
@@ -51,13 +55,28 @@ function SignInInner() {
   const sp = useSearchParams();
   const router = useRouter();
 
-  const rawCb =
-    sp.get("callbackUrl") || sp.get("redirect") || sp.get("redirectTo") || "/app";
+  const modeRaw = clean(sp.get("mode")).toLowerCase();
+  const isGovernanceMode = modeRaw === "governance" || modeRaw === "officer";
 
-  const safeCb = safeInternalPath(rawCb, "/app");
-  const callbackUrl = safeCb.startsWith("/app") ? safeCb : buildAppCallbackUrl(safeCb);
+  const rawCb = sp.get("callbackUrl") || sp.get("redirect") || sp.get("redirectTo") || "/app";
 
-  const tenantPrefill = (sp.get("tenant") || sp.get("tenantId") || sp.get("school") || "").trim();
+  const safeCb = safeInternalPath(
+  rawCb,
+  isGovernanceMode ? "/circuit/dashboard" : "/app"
+);
+
+// Governance users must not be routed through /app because /app is tenant-school centered.
+// School users may still use /app?next=... as the canonical workspace router.
+const callbackUrl = isGovernanceMode
+  ? safeCb
+  : safeCb.startsWith("/app")
+    ? safeCb
+    : buildAppCallbackUrl(safeCb);
+
+  const tenantPrefill = isGovernanceMode
+    ? ""
+    : clean(sp.get("tenant") || sp.get("tenantId") || sp.get("school") || "");
+
   const initialErr = mapError(sp.get("error"));
 
   const [tenant, setTenant] = useState(tenantPrefill);
@@ -79,7 +98,8 @@ function SignInInner() {
 
     const res = await signIn("credentials", {
       redirect: false,
-      tenant: tenant.trim() || undefined,
+      // Critical: governance officers must not submit school/tenant input.
+      tenant: isGovernanceMode ? undefined : tenant.trim() || undefined,
       identifier: identifier.trim(),
       password,
       otp: otp.trim() || undefined,
@@ -94,27 +114,52 @@ function SignInInner() {
     }
 
     if (res.error) {
-      if (res.error === "TENANT_REQUIRED") return setErr("Enter your School Code (tenant) to continue.");
-      if (res.error === "INVALID_TENANT") return setErr("School Code not found. Use the current School Code from your administrator.");
-      if (res.error === "OTP_REQUIRED") return setErr("2FA is enabled. Enter your one-time code (OTP) and sign in again.");
-      if (res.error === "OTP_INVALID") return setErr("Invalid one-time code (OTP). Try again.");
-      if (res.error === "OTP_MISCONFIGURED") return setErr("2FA is misconfigured on this account. Contact the administrator.");
+      if (isGovernanceMode && (res.error === "TENANT_REQUIRED" || res.error === "INVALID_TENANT")) {
+        return setErr(
+          "This governance account could not be matched to an active officer assignment. Ask Superadmin to verify your invite and assignment."
+        );
+      }
+
+      if (res.error === "TENANT_REQUIRED") {
+        return setErr("Enter your School Code to continue.");
+      }
+
+      if (res.error === "INVALID_TENANT") {
+        return setErr("School Code not found. Use the current School Code from your administrator.");
+      }
+
+      if (res.error === "OTP_REQUIRED") {
+        return setErr("2FA is enabled. Enter your one-time code (OTP) and sign in again.");
+      }
+
+      if (res.error === "OTP_INVALID") {
+        return setErr("Invalid one-time code (OTP). Try again.");
+      }
+
+      if (res.error === "OTP_MISCONFIGURED") {
+        return setErr("2FA is misconfigured on this account. Contact the administrator.");
+      }
 
       if (res.error.startsWith("OTP_LOCKED:")) {
         const secs = Number(res.error.split(":")[1] || "60");
         return setErr(`OTP temporarily locked. Try again in ${minutesFromSeconds(secs)} minute(s).`);
       }
+
       if (res.error.startsWith("RATE_LIMIT:")) {
         const secs = Number(res.error.split(":")[1] || "60");
         return setErr(`Too many attempts. Try again in ${minutesFromSeconds(secs)} minute(s).`);
       }
+
       if (res.error.startsWith("ACCOUNT_LOCKED:")) {
         const secs = Number(res.error.split(":")[1] || "60");
         return setErr(`Account temporarily locked. Try again in ${minutesFromSeconds(secs)} minute(s).`);
       }
 
-      if (hasOtpValue(otp)) return setErr("Sign-in failed. Check your password and one-time code, then try again.");
-      return setErr("Invalid Staff ID/email or password.");
+      if (hasOtpValue(otp)) {
+        return setErr("Sign-in failed. Check your password and one-time code, then try again.");
+      }
+
+      return setErr("Invalid email/Staff ID or password.");
     }
 
     router.replace(callbackUrl || "/app");
@@ -126,25 +171,35 @@ function SignInInner() {
         <section className="os-auth-brand hidden rounded-[32px] p-8 lg:flex lg:flex-col lg:justify-between">
           <div>
             <div className="inline-flex items-center rounded-full border border-[#E8C96A]/25 bg-white/6 px-4 py-2 text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
-              Secure Staff Access
+              {isGovernanceMode ? "Secure Governance Access" : "Secure Staff Access"}
             </div>
 
             <h1 className="mt-8 text-4xl font-semibold leading-tight text-[#F7F4ED]">
-              Enter your protected EduLife OS workspace.
+              {isGovernanceMode
+                ? "Enter your protected governance workspace."
+                : "Enter your protected EduLife OS workspace."}
             </h1>
 
             <p className="mt-5 max-w-lg text-sm leading-8 text-[#C9CDD6]">
-              Sign in to access teaching workflows, leadership controls, school operations,
-              and role-scoped portals designed for disciplined execution.
+              {isGovernanceMode
+                ? "Sign in as a verified circuit or district officer. Your access is based on audited jurisdiction assignment, not school tenant membership."
+                : "Sign in to access teaching workflows, leadership controls, school operations, and role-scoped portals designed for disciplined execution."}
             </p>
           </div>
 
           <div className="grid gap-3">
-            {[
-              "Tenant-scoped school access",
-              "Role-based workspace routing",
-              "OTP-ready secure sign-in",
-            ].map((item) => (
+            {(isGovernanceMode
+              ? [
+                  "Jurisdiction-scoped officer access",
+                  "Circuit and district oversight routing",
+                  "Audited governance assignment",
+                ]
+              : [
+                  "Tenant-scoped school access",
+                  "Role-based workspace routing",
+                  "OTP-ready secure sign-in",
+                ]
+            ).map((item) => (
               <div
                 key={item}
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#E5E8EF]"
@@ -156,35 +211,45 @@ function SignInInner() {
         </section>
 
         <section className="os-auth-card rounded-[32px] p-6 sm:p-8">
-          <FormLogo subtitle="Sign in to continue into your school workspace." />
+          <FormLogo
+            subtitle={
+              isGovernanceMode
+                ? "Sign in to continue into your governance dashboard."
+                : "Sign in to continue into your school workspace."
+            }
+          />
 
-          {err ? (
-            <div className="os-error-banner mb-4 rounded-2xl px-4 py-3 text-sm">
-              {err}
-            </div>
-          ) : null}
+          {err ? <div className="os-error-banner mb-4 rounded-2xl px-4 py-3 text-sm">{err}</div> : null}
 
           <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="os-label">
-                School Code <span className="os-helper">(required for Staff ID or multi-school accounts)</span>
-              </label>
-              <input
-                value={tenant}
-                onChange={(e) => setTenant(e.target.value)}
-                className="os-input"
-                placeholder="e.g. SCH-AC4633 or ayitikope-basic"
-                autoComplete="organization"
-              />
-            </div>
+            {!isGovernanceMode ? (
+              <div className="space-y-2">
+                <label className="os-label">
+                  School Code{" "}
+                  <span className="os-helper">(required for Staff ID or multi-school accounts)</span>
+                </label>
+                <input
+                  value={tenant}
+                  onChange={(e) => setTenant(e.target.value)}
+                  className="os-input"
+                  placeholder="e.g. SCH-AC4633 or ayitikope-basic"
+                  autoComplete="organization"
+                />
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-[#E8C96A]/25 bg-[#E8C96A]/10 px-4 py-3 text-xs leading-6 text-[#E8C96A]">
+                Governance officers do not need a School Code. Your dashboard access comes from
+                your accepted jurisdiction assignment.
+              </div>
+            )}
 
             <div className="space-y-2">
-              <label className="os-label">Staff ID or Email</label>
+              <label className="os-label">{isGovernanceMode ? "Official Email" : "Staff ID or Email"}</label>
               <input
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="os-input"
-                placeholder="e.g. AYI-TCH-001 or name@school.com"
+                placeholder={isGovernanceMode ? "officer@district.ges.gov.gh" : "e.g. AYI-TCH-001 or name@school.com"}
                 autoComplete="username"
                 required
               />
@@ -217,23 +282,26 @@ function SignInInner() {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="os-btn-primary w-full px-4 py-3 text-sm"
-            >
+            <button type="submit" disabled={!canSubmit} className="os-btn-primary w-full px-4 py-3 text-sm">
               {loading ? "Signing in..." : "Sign in"}
             </button>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs leading-6 text-[#C9CDD6]">
-              New teacher?{" "}
-              <Link
-                href={`/auth/signup?redirectTo=${encodeURIComponent(callbackUrl || "/app")}`}
-                className="font-semibold text-[#E8C96A] hover:text-white"
-              >
-                Create account
-              </Link>
-            </div>
+            {!isGovernanceMode ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs leading-6 text-[#C9CDD6]">
+                New teacher?{" "}
+                <Link
+                  href={`/auth/signup?redirectTo=${encodeURIComponent(callbackUrl || "/app")}`}
+                  className="font-semibold text-[#E8C96A] hover:text-white"
+                >
+                  Create account
+                </Link>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs leading-6 text-[#C9CDD6]">
+                Need access? Ask Superadmin to issue a governance officer invite for your official
+                circuit, district, or region.
+              </div>
+            )}
           </form>
         </section>
       </div>

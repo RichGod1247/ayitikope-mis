@@ -10,8 +10,19 @@ const PARENT_COOKIE_NAME =
 function buildSignInRedirect(req: NextRequest) {
   const url = req.nextUrl.clone();
   const attempted = `${req.nextUrl.pathname}${req.nextUrl.search}`;
+
   url.pathname = "/auth/signin";
-  url.searchParams.set("callbackUrl", buildAppCallbackUrl(attempted));
+
+  if (
+    req.nextUrl.pathname.startsWith("/circuit") ||
+    req.nextUrl.pathname.startsWith("/district")
+  ) {
+    url.searchParams.set("mode", "governance");
+    url.searchParams.set("callbackUrl", attempted);
+  } else {
+    url.searchParams.set("callbackUrl", buildAppCallbackUrl(attempted));
+  }
+
   return NextResponse.redirect(url);
 }
 
@@ -251,6 +262,11 @@ export const config = {
     "/headteacher/:path*",
     "/teacher/:path*",
     "/admin/:path*",
+
+    "/circuit/:path*",
+    "/district/:path*",
+    "/api/circuit/:path*",
+    "/api/district/:path*",
 
     "/parent-portal/:path*",
     "/parents/:path*",

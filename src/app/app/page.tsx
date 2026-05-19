@@ -23,19 +23,52 @@ function isSafeInternalPath(p: string) {
   return true;
 }
 
+function isCircuitGovernance(role: string) {
+  return role === "SISSO" || role === "CIRCUIT_SUPERVISOR";
+}
+
+function isDistrictGovernance(role: string) {
+  return (
+    role === "DISTRICT_DIRECTOR" ||
+    role === "DISTRICT_MIS_OFFICER" ||
+    role === "DISTRICT_SHEP_OFFICER" ||
+    role === "DISTRICT_ASSESSMENT_OFFICER"
+  );
+}
+
+function isGovernanceRole(role: string) {
+  return isCircuitGovernance(role) || isDistrictGovernance(role) || role === "REGIONAL_VIEWER";
+}
+
 function defaultRouteForRole(role: string) {
   switch (role) {
     case "SUPERADMIN":
       return "/admin/super";
+
+    case "SISSO":
+    case "CIRCUIT_SUPERVISOR":
+      return "/circuit/dashboard";
+
+    case "DISTRICT_DIRECTOR":
+    case "DISTRICT_MIS_OFFICER":
+    case "DISTRICT_SHEP_OFFICER":
+    case "DISTRICT_ASSESSMENT_OFFICER":
+    case "REGIONAL_VIEWER":
+      return "/district/dashboard";
+
     case "SCHOOL_ADMIN":
     case "ADMIN":
       return "/admin/dashboard";
+
     case "HEADTEACHER":
       return "/headteacher/dashboard";
+
     case "TEACHER":
       return "/teacher/dashboard";
+
     case "PARENT":
       return "/parents/my-children";
+
     default:
       return "/auth/signin?error=FORBIDDEN&callbackUrl=%2Fapp";
   }
@@ -59,12 +92,19 @@ export default async function AppEntry(props: { searchParams?: SP | Promise<SP> 
   const next = first(sp, "next");
   const desired = pickDesiredPath(next ? String(next) : null, role);
 
-  // SUPERADMIN can operate even if tenantId is missing
+  // Superadmin can operate without tenant.
   if (role === "SUPERADMIN") {
     redirect(desired || "/admin/super");
   }
 
-  // Non-super must have an active tenant selected
+  // Sprint 10 governance correction:
+  // Governance officers do not authenticate into a school tenant.
+  // They authenticate into a jurisdiction through GovernanceOfficerAssignment.
+  if (isGovernanceRole(role)) {
+    redirect(desired || defaultRouteForRole(role));
+  }
+
+  // School users must still have an active tenant.
   const tenantId = String((ctx as any).tenantId ?? "").trim();
   if (!tenantId) {
     redirect("/auth/signin?error=NO_ACTIVE_TENANT&callbackUrl=%2Fapp");
@@ -77,14 +117,12 @@ export default async function AppEntry(props: { searchParams?: SP | Promise<SP> 
 
   if (!t) redirect("/auth/signin?error=TENANT_NOT_FOUND&callbackUrl=%2Fapp");
 
-  // If tenant isn’t ACTIVE, don’t let them ping-pong into setup/dashboard
   if (t.status !== "ACTIVE") redirect("/pending");
 
-  // Setup enforcement only for SCHOOL_ADMIN
+  // Setup enforcement only for school admin.
   if (role === "SCHOOL_ADMIN" || role === "ADMIN") {
     const complete = await fetchAdminSetupComplete();
 
-    // allow setup route itself while incomplete
     if (!complete && !desired.startsWith("/admin/setup")) {
       const safeNext = isSafeInternalPath(desired) ? desired : "/admin/dashboard";
       redirect(`/admin/setup?next=${encodeURIComponent(safeNext)}`);
