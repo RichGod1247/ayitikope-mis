@@ -1402,10 +1402,17 @@ function classroomExampleFor(subject: string, topic: string) {
 
 /** ----------------------- page ----------------------- */
 
-type PageProps = { params: Promise<{ id: string }> };
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const embedRaw = Array.isArray(sp.embed) ? sp.embed[0] : sp.embed;
+  const isEmbed = clean(embedRaw) === "1" || clean(embedRaw).toLowerCase() === "true";
+
   const noteId = clean(id);
 
   const ctx = await requireServerUserContext({
@@ -2121,19 +2128,23 @@ export default async function Page({ params }: PageProps) {
           </div>
         </section>
 
-        <p className="mt-2 text-center text-[10px] text-zinc-500 print:hidden">
-          Tip: Use your browser&apos;s <span className="font-semibold">Print</span> command
-          (Ctrl+P) to export as PDF.
-        </p>
+                {!isEmbed ? (
+          <>
+            <p className="mt-2 text-center text-[10px] text-zinc-500 print:hidden">
+              Tip: Use your browser&apos;s <span className="font-semibold">Print</span> command
+              (Ctrl+P) to export as PDF.
+            </p>
 
-        <div className="mt-6 rounded-[24px] border border-zinc-200 bg-zinc-50 p-3 print:hidden sm:p-4">
-          <HeadteacherReviewPanel
-            noteId={note.id}
-            tenantId={note.tenantId}
-            initialComment={headteacherComment}
-            currentStatus={String(note.status ?? "")}
-          />
-        </div>
+            <div className="mt-6 rounded-[24px] border border-zinc-200 bg-zinc-50 p-3 print:hidden sm:p-4">
+              <HeadteacherReviewPanel
+                noteId={note.id}
+                tenantId={note.tenantId}
+                initialComment={headteacherComment}
+                currentStatus={String(note.status ?? "")}
+              />
+            </div>
+          </>
+        ) : null}
       </div>
     </main>
   );

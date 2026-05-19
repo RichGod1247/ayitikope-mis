@@ -87,7 +87,7 @@ const btnGhost =
   "inline-flex items-center justify-center text-xs md:text-sm h-9 px-2 rounded-xl text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100";
 
 const textAreaBase =
-  "w-full rounded-xl border border-zinc-300 px-2 py-2 text-xs md:text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black bg-white resize-vertical min-h-24";
+  "w-full min-h-28 resize-vertical rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm leading-6 text-slate-950 shadow-inner placeholder:text-slate-500 focus:border-black focus:outline-none focus:ring-4 focus:ring-black/10 disabled:bg-slate-100 disabled:text-slate-700";
 
 function formatDateTimeShort(iso: string | null) {
   if (!iso) return "—";
@@ -545,15 +545,17 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
   const showCanvas = sigMode === "DRAW" || !savedSigSvg;
 
   return (
-    <main className="min-h-screen bg-zinc-50">
+    <main className="min-h-screen bg-slate-100 text-slate-950">
       <div className="max-w-6xl mx-auto px-4 py-5 md:py-6 space-y-5">
         <div className="flex items-center justify-between gap-3">
           <div className="space-y-1">
             <button type="button" onClick={handleBack} className={btnGhost}>
               ← Back to headteacher list
             </button>
-            <h1 className="text-xl md:text-2xl font-semibold">Lesson Note Review</h1>
-            <p className="text-xs md:text-sm text-zinc-600 max-w-2xl">
+            <h1 className="text-xl font-extrabold tracking-tight text-slate-950 md:text-2xl">
+  Lesson Note Review
+</h1>
+<p className="max-w-2xl text-xs font-medium text-slate-700 md:text-sm">
               Teacher: <span className="font-semibold">{note?.teacherName ?? "—"}</span> · Subject:{" "}
               <span className="font-semibold">{note?.subject ?? "—"}</span>
             </p>
@@ -584,8 +586,8 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
             <section className="space-y-3">
               <div className="border rounded-2xl bg-white p-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900 truncate">Print preview</p>
-                  <p className="text-[11px] text-zinc-500 truncate">
+                  <p className="truncate text-sm font-bold text-slate-950">Print preview</p>
+<p className="truncate text-[12px] font-medium text-slate-700">
                     This is exactly what education officials will accept (print-ready view).
                   </p>
                 </div>
@@ -595,7 +597,13 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
               </div>
 
               <div className="border rounded-2xl bg-white overflow-hidden">
-                <iframe title="Lesson note print preview" src={printEmbedHref} className="w-full h-[720px] md:h-[860px]" />
+                <iframe
+  title="Lesson note print preview"
+  src={printEmbedHref}
+  className="h-[720px] w-full bg-white md:h-[860px]"
+  sandbox="allow-same-origin allow-scripts"
+  referrerPolicy="same-origin"
+/>
               </div>
             </section>
 
@@ -604,8 +612,10 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
               <div className="border rounded-2xl bg-white p-4 md:p-5 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-sm font-semibold">Headteacher review</h2>
-                    <p className="text-xs text-zinc-600">Approve or return. Approval uses your saved signature.</p>
+                    <h2 className="text-sm font-bold text-slate-950">Headteacher review</h2>
+<p className="text-xs font-medium text-slate-700">
+  Approve or return. Approval uses your saved signature.
+</p>
                   </div>
                   <span className="inline-flex items-center justify-center h-8 px-3 rounded-full bg-zinc-900 text-white text-[11px] font-medium">
                     Visible to teacher
@@ -613,7 +623,9 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-zinc-700">Your comment to the teacher</label>
+                  <label className="block text-xs font-bold uppercase tracking-[0.08em] text-slate-700">
+  Your comment to the teacher
+</label>
                   <textarea
                     className={textAreaBase}
                     value={commentDraft}
@@ -621,7 +633,9 @@ export default function HeadteacherLessonNoteReviewClient({ noteId }: { noteId: 
                     placeholder="Be specific: what to improve, where, and how."
                     disabled={!canApprove && !canReturn}
                   />
-                  <p className="text-[11px] text-zinc-500">Returning requires a comment (server-enforced).</p>
+                  <p className="text-[11px] font-medium text-slate-600">
+  Returning requires a comment (server-enforced).
+</p>
                 </div>
 
                 {/* Saved signature panel */}
