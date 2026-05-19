@@ -226,7 +226,15 @@ export async function POST(req: Request) {
     return json(403, { ok: false, error: "EMAIL_MISMATCH" });
   }
 
-  const result = await prisma.$transaction(async (tx) => {
+  let result: {
+  userId: string;
+  assignmentId: string;
+  role: string;
+  zoneName: string;
+};
+
+try {
+  result = await prisma.$transaction(async (tx) => {
     const existing = await tx.user.findFirst({
       where: { email: { equals: emailNorm, mode: "insensitive" } },
       select: {
@@ -352,13 +360,50 @@ export async function POST(req: Request) {
       },
     });
 
-    return {
+        return {
       userId,
       assignmentId: assignment.id,
       role: String(invite.role),
       zoneName: invite.zone.name,
     };
   });
+} catch (err) {
+  const message = err instanceof Error ? err.message : "";
+
+  if (message === "EXISTING_USER_PASSWORD_MISMATCH") {
+    if (ipKey) {
+      await rateLimitRecord({
+        action: "GOVERNANCE_INVITE_ACCEPT_FAIL",
+        key: ipKey,
+        ip,
+        userAgent,
+        metadata: { reason: "EXISTING_USER_PASSWORD_MISMATCH" },
+      });
+    }
+
+    await rateLimitRecord({
+      action: "GOVERNANCE_INVITE_ACCEPT_FAIL",
+      key: tokenKey,
+      ip,
+      userAgent,
+      metadata: { reason: "EXISTING_USER_PASSWORD_MISMATCH" },
+    });
+
+    return json(409, {
+      ok: false,
+      error: "EXISTING_USER_PASSWORD_MISMATCH",
+      message:
+        "This email already has an account. Enter the existing password to link this governance assignment, or ask Superadmin to invite a fresh official email.",
+    });
+  }
+
+  console.error("GOVERNANCE_INVITE_ACCEPT_ERROR", err);
+
+  return json(500, {
+    ok: false,
+    error: "GOVERNANCE_INVITE_ACCEPT_FAILED",
+  });
+}
 
   await writeAuditLog({
     action: "GOVERNANCE_OFFICER_INVITE_ACCEPTED",
