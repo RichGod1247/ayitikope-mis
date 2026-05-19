@@ -930,9 +930,9 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
                   <div className="p-3 text-sm text-slate-700">
                     <div className="font-semibold text-slate-950">No units found.</div>
                     <div className="mt-1 text-xs text-[#8F98A8]">
-                      Try <span className="font-medium text-[#F7F4ED]">Widen: ignore week</span>. If still none, your lesson note scope and scheme scope don’t match.
+                      Try <span className="font-bold text-slate-950">Widen: ignore week</span>. If still none, your lesson note scope and scheme scope don’t match.
                       {unitsMeta?.reason || unitsMeta?.message ? (
-                        <div className="mt-2 whitespace-pre-wrap text-[11px] text-[#AEB6C4]">
+                        <div className="mt-2 whitespace-pre-wrap text-[11px] font-medium text-slate-600">
                           {unitsMeta.message ? unitsMeta.message : null}
                           {!unitsMeta.message && unitsMeta.reason ? `Reason: ${unitsMeta.reason}` : null}
                         </div>
@@ -940,7 +940,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
                     </div>
                   </div>
                 ) : (
-                  <ul className="divide-y divide-white/10">
+                  <ul className="divide-y divide-slate-200">
                     {units.map((u, idx) => {
                       const cs = u.contentStandardCode
                         ? `${u.contentStandardCode}${u.contentStandardDescription ? ` — ${u.contentStandardDescription}` : ""}`
