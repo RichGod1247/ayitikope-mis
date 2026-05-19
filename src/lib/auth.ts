@@ -452,7 +452,7 @@ export const authOptions: NextAuthOptions = {
           lastActiveTenantId: string | null;
         } | null = null;
 
-                let membership: PickedMembership | null = null;
+        let membership: PickedMembership | null = null;
         let governanceRoleName: string | null = null;
 
         if (emailLogin) {
@@ -485,37 +485,62 @@ export const authOptions: NextAuthOptions = {
           }
 
           if (tenantInputInvalid) {
-            try {
-              const m = await pickMembershipForUserStrict(user.id, null);
-              if (!m) {
-                await recordFail("INVALID_TENANT_NO_MEMBERSHIP", user.id);
-                throw new Error("INVALID_TENANT");
-              }
-              membership = m;
+  // Sprint 10 governance correction:
+  // School users still fail invalid school-code login.
+  // Governance officers do not authenticate into a school tenant.
+  governanceRoleName = await pickGovernanceLoginRoleForUser(user.id);
 
-              await safeAudit({
-                user: userConnect(user.id),
-                tenant: tenantConnect(m.tenantId),
-                action: "LOGIN_TENANT_INPUT_INVALID_BYPASSED",
-                resource: "Tenant",
-                resourceId: tenantRaw,
-                ip,
-                userAgent,
-                metadata: {
-                  reason: "INVALID_TENANT_BYPASSED_SINGLE_MEMBERSHIP",
-                  tenantRaw,
-                  chosenTenantId: m.tenantId,
-                } as Prisma.InputJsonValue,
-              });
-            } catch (e: any) {
-              const msg = e?.message || "";
-              if (msg === "TENANT_REQUIRED") {
-                await recordFail("INVALID_TENANT_MULTI_MEMBERSHIP", user.id);
-                throw new Error("INVALID_TENANT");
-              }
-              throw e;
-            }
-          } else {
+  if (governanceRoleName) {
+    await safeAudit({
+      user: userConnect(user.id),
+      action: "GOVERNANCE_LOGIN_TENANT_INPUT_IGNORED",
+      resource: "User",
+      resourceId: user.id,
+      ip,
+      userAgent,
+      metadata: {
+        reason: "GOVERNANCE_OFFICER_DOES_NOT_REQUIRE_SCHOOL_TENANT",
+        tenantRaw,
+        governanceRoleName,
+      } as Prisma.InputJsonValue,
+    });
+  } else {
+    try {
+      const m = await pickMembershipForUserStrict(user.id, null);
+
+      if (!m) {
+        await recordFail("INVALID_TENANT_NO_MEMBERSHIP_OR_GOVERNANCE_ASSIGNMENT", user.id);
+        throw new Error("INVALID_TENANT");
+      }
+
+      membership = m;
+
+      await safeAudit({
+        user: userConnect(user.id),
+        tenant: tenantConnect(m.tenantId),
+        action: "LOGIN_TENANT_INPUT_INVALID_BYPASSED",
+        resource: "Tenant",
+        resourceId: tenantRaw,
+        ip,
+        userAgent,
+        metadata: {
+          reason: "INVALID_TENANT_BYPASSED_SINGLE_MEMBERSHIP",
+          tenantRaw,
+          chosenTenantId: m.tenantId,
+        } as Prisma.InputJsonValue,
+      });
+    } catch (e: any) {
+      const msg = e?.message || "";
+
+      if (msg === "TENANT_REQUIRED") {
+        await recordFail("INVALID_TENANT_MULTI_MEMBERSHIP", user.id);
+        throw new Error("INVALID_TENANT");
+      }
+
+      throw e;
+    }
+  }
+} else {
             try {
               membership = await pickMembershipForUserStrict(user.id, tenantIdHint ?? null);
             } catch (e: unknown) {
@@ -528,18 +553,20 @@ export const authOptions: NextAuthOptions = {
             }
           }
 
-                    if (!membership?.tenantId) {
-            // Governance-only officers do not need school tenant membership.
-            // They must have an active GovernanceOfficerAssignment instead.
-            if (!tenantRaw) {
-              governanceRoleName = await pickGovernanceLoginRoleForUser(user.id);
-            }
+  if (!membership?.tenantId) {
+  // Governance-only officers do not need school tenant membership.
+  // They need an active GovernanceOfficerAssignment.
+  // Do not depend on tenantRaw here because browser autocomplete,
+  // old form state, or school-login UI may accidentally send a value.
+  if (!governanceRoleName) {
+    governanceRoleName = await pickGovernanceLoginRoleForUser(user.id);
+  }
 
-            if (!governanceRoleName) {
-              await recordFail("NO_ACTIVE_MEMBERSHIP_OR_GOVERNANCE_ASSIGNMENT", user.id);
-              return null;
-            }
-          }
+  if (!governanceRoleName) {
+    await recordFail("NO_ACTIVE_MEMBERSHIP_OR_GOVERNANCE_ASSIGNMENT", user.id);
+    return null;
+  }
+}
         } else {
           // Staff ID login
           const staffIdRaw = cleanStr(identifier);
@@ -651,7 +678,7 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-                if (!user?.id || !user.passwordHash || (!membership?.tenantId && !governanceRoleName)) {
+       if (!user?.id || !user.passwordHash || (!membership?.tenantId && !governanceRoleName)) {
           return null;
         }
 

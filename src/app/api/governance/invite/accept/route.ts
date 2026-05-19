@@ -422,7 +422,7 @@ try {
   });
 
   const destination = roleDefaultDestination(result.role);
-  const signInUrl = `/auth/signin?callbackUrl=${encodeURIComponent(destination)}`;
+  const signInUrl = `/auth/signin?mode=governance&callbackUrl=${encodeURIComponent(destination)}`;
 
   return json(200, {
     ok: true,
