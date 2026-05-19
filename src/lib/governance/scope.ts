@@ -2,7 +2,11 @@
 import { Prisma } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireApiUserContext, requireServerUserContext, type ServerUserContext } from "@/lib/serverAuth";
+import {
+  requireApiUserContext,
+  requireServerUserContext,
+  type ServerUserContext,
+} from "@/lib/serverAuth";
 import { normRole } from "@/lib/roleRouting";
 
 export const CIRCUIT_GOVERNANCE_ROLES = ["SISSO", "CIRCUIT_SUPERVISOR"] as const;
@@ -48,6 +52,17 @@ type GovernanceOptions = {
   allowedZoneLevels?: readonly number[];
 };
 
+type SchoolMetricSnapshot = {
+  learners: number;
+  teachers: number;
+  attendanceSessionsToday: number;
+  attendanceMarksToday: number;
+  presentMarksToday: number;
+  healthAlertsToday: number;
+  publishedOrLockedAssessments: number;
+  lessonDeliveriesLast14Days: number;
+};
+
 function jsonNoStore(payload: any, status = 200) {
   return Response.json(payload, {
     status,
@@ -64,6 +79,19 @@ function clean(v: unknown) {
 
 function upper(v: unknown) {
   return clean(v).toUpperCase();
+}
+
+function zeroMetrics(): SchoolMetricSnapshot {
+  return {
+    learners: 0,
+    teachers: 0,
+    attendanceSessionsToday: 0,
+    attendanceMarksToday: 0,
+    presentMarksToday: 0,
+    healthAlertsToday: 0,
+    publishedOrLockedAssessments: 0,
+    lessonDeliveriesLast14Days: 0,
+  };
 }
 
 async function userHasSuperAdminRole(userId: string, sessionRoleName?: string | null) {
@@ -212,11 +240,17 @@ async function loadAssignmentsForUser(userId: string, opts?: GovernanceOptions) 
     });
 }
 
-async function buildGovernanceScope(ctx: ServerUserContext, opts?: GovernanceOptions): Promise<GovernanceScope | null> {
+async function buildGovernanceScope(
+  ctx: ServerUserContext,
+  opts?: GovernanceOptions
+): Promise<GovernanceScope | null> {
   const isSuperAdmin = await userHasSuperAdminRole(ctx.userId, ctx.roleName);
 
   if (isSuperAdmin) {
-    const [zoneIds, tenantIds] = await Promise.all([loadAllActiveZoneIds(), loadAllActiveTenantIds()]);
+    const [zoneIds, tenantIds] = await Promise.all([
+      loadAllActiveZoneIds(),
+      loadAllActiveTenantIds(),
+    ]);
 
     return {
       userId: ctx.userId,
@@ -271,7 +305,9 @@ export async function requireGovernanceApiContext(req: Request, opts?: Governanc
   return { ok: true as const, ctx: auth.ctx, scope };
 }
 
-export async function requireGovernancePageContext(opts?: GovernanceOptions & { redirectTo?: string }) {
+export async function requireGovernancePageContext(
+  opts?: GovernanceOptions & { redirectTo?: string }
+) {
   const ctx = await requireServerUserContext({
     requireTenant: false,
     redirectTo: opts?.redirectTo ?? "/app",
@@ -307,12 +343,108 @@ function todayRangeUtcForGhana() {
   return { start, end };
 }
 
+async function loadSchoolMetrics(args: {
+  tenantId: string;
+  todayStart: Date;
+  todayEnd: Date;
+  fourteenDaysAgo: Date;
+}): Promise<SchoolMetricSnapshot> {
+  const { tenantId, todayStart, todayEnd, fourteenDaysAgo } = args;
+
+  const [
+    learners,
+    teachers,
+    attendanceSessionsToday,
+    attendanceMarksToday,
+    presentMarksToday,
+    healthAlertsToday,
+    publishedOrLockedAssessments,
+    lessonDeliveriesLast14Days,
+  ] = await Promise.all([
+    prisma.student.count({
+      where: {
+        tenantId,
+        status: "ACTIVE",
+      },
+    }),
+
+    prisma.teacherProfile.count({
+      where: {
+        tenantId,
+      },
+    }),
+
+    prisma.attendanceSession.count({
+      where: {
+        tenantId,
+        date: { gte: todayStart, lt: todayEnd },
+      },
+    }),
+
+    prisma.attendanceMark.count({
+      where: {
+        session: {
+          tenantId,
+          date: { gte: todayStart, lt: todayEnd },
+        },
+      },
+    }),
+
+    prisma.attendanceMark.count({
+      where: {
+        status: "PRESENT",
+        session: {
+          tenantId,
+          date: { gte: todayStart, lt: todayEnd },
+        },
+      },
+    }),
+
+    prisma.studentHealthDaily.count({
+      where: {
+        tenantId,
+        date: { gte: todayStart, lt: todayEnd },
+        OR: [
+          { temperatureC: { gte: new Prisma.Decimal("37.5") } },
+          { symptoms: { not: null } },
+        ],
+      },
+    }),
+
+    prisma.assessmentItem.count({
+      where: {
+        tenantId,
+        status: { in: ["PUBLISHED", "LOCKED"] },
+      },
+    }),
+
+    prisma.lessonDelivery.count({
+      where: {
+        tenantId,
+        dateTaught: { gte: fourteenDaysAgo },
+      },
+    }),
+  ]);
+
+  return {
+    learners,
+    teachers,
+    attendanceSessionsToday,
+    attendanceMarksToday,
+    presentMarksToday,
+    healthAlertsToday,
+    publishedOrLockedAssessments,
+    lessonDeliveriesLast14Days,
+  };
+}
+
 export async function buildGovernanceOverview(scope: GovernanceScope) {
   const tenantIds = scope.tenantIds;
 
   if (!tenantIds.length) {
     return {
       schools: [],
+      circuitBreakdown: [],
       totals: {
         schools: 0,
         learners: 0,
@@ -328,6 +460,7 @@ export async function buildGovernanceOverview(scope: GovernanceScope) {
         publishedOrLockedAssessments: 0,
         lessonDeliveriesLast14Days: 0,
       },
+      emptyStates: ["No schools are currently assigned to this governance scope."],
     };
   }
 
@@ -336,18 +469,7 @@ export async function buildGovernanceOverview(scope: GovernanceScope) {
   const fourteenDaysAgo = new Date();
   fourteenDaysAgo.setUTCDate(fourteenDaysAgo.getUTCDate() - 14);
 
-  const [
-    schools,
-    zones,
-    learnerCount,
-    teacherCount,
-    attendanceSessionsToday,
-    attendanceMarksToday,
-    presentMarksToday,
-    healthAlertsToday,
-    publishedOrLockedAssessments,
-    lessonDeliveriesLast14Days,
-  ] = await Promise.all([
+  const [schools, zones] = await Promise.all([
     prisma.tenant.findMany({
       where: {
         id: { in: tenantIds },
@@ -387,77 +509,27 @@ export async function buildGovernanceOverview(scope: GovernanceScope) {
         },
       },
     }),
-
-    prisma.student.count({
-      where: {
-        tenantId: { in: tenantIds },
-        status: "ACTIVE",
-      },
-    }),
-
-    prisma.teacherProfile.count({
-      where: {
-        tenantId: { in: tenantIds },
-      },
-    }),
-
-    prisma.attendanceSession.count({
-      where: {
-        tenantId: { in: tenantIds },
-        date: { gte: start, lt: end },
-      },
-    }),
-
-    prisma.attendanceMark.count({
-      where: {
-        session: {
-          tenantId: { in: tenantIds },
-          date: { gte: start, lt: end },
-        },
-      },
-    }),
-
-    prisma.attendanceMark.count({
-      where: {
-        status: "PRESENT",
-        session: {
-          tenantId: { in: tenantIds },
-          date: { gte: start, lt: end },
-        },
-      },
-    }),
-
-    prisma.studentHealthDaily.count({
-      where: {
-        tenantId: { in: tenantIds },
-        date: { gte: start, lt: end },
-        OR: [
-          { temperatureC: { gte: new Prisma.Decimal("37.5") } },
-          { symptoms: { not: null } },
-        ],
-      },
-    }),
-
-    prisma.assessmentItem.count({
-      where: {
-        tenantId: { in: tenantIds },
-        status: { in: ["PUBLISHED", "LOCKED"] },
-      },
-    }),
-
-    prisma.lessonDelivery.count({
-      where: {
-        tenantId: { in: tenantIds },
-        dateTaught: { gte: fourteenDaysAgo },
-      },
-    }),
   ]);
 
-  const circuitCount = zones.filter((z) => Number(z.zoneType.level) === 1).length;
-  const districtCount = zones.filter((z) => Number(z.zoneType.level) === 2).length;
+  const schoolMetricPairs = await Promise.all(
+    schools.map(async (school) => {
+      const metrics = await loadSchoolMetrics({
+        tenantId: school.id,
+        todayStart: start,
+        todayEnd: end,
+        fourteenDaysAgo,
+      });
 
-  return {
-    schools: schools.map((school) => ({
+      return [school.id, metrics] as const;
+    })
+  );
+
+  const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPairs);
+
+  const mappedSchools = schools.map((school) => {
+    const metrics = metricsByTenantId.get(school.id) ?? zeroMetrics();
+
+    return {
       id: school.id,
       name: school.name,
       schoolCode: school.schoolCode,
@@ -476,21 +548,118 @@ export async function buildGovernanceOverview(scope: GovernanceScope) {
             name: school.zone.parentZone.name,
           }
         : null,
-    })),
+      metrics,
+    };
+  });
+
+  const metricTotals = mappedSchools.reduce(
+    (acc, school) => {
+      acc.learners += school.metrics.learners;
+      acc.teachers += school.metrics.teachers;
+      acc.attendanceSessionsToday += school.metrics.attendanceSessionsToday;
+      acc.attendanceMarksToday += school.metrics.attendanceMarksToday;
+      acc.presentMarksToday += school.metrics.presentMarksToday;
+      acc.healthAlertsToday += school.metrics.healthAlertsToday;
+      acc.publishedOrLockedAssessments += school.metrics.publishedOrLockedAssessments;
+      acc.lessonDeliveriesLast14Days += school.metrics.lessonDeliveriesLast14Days;
+      return acc;
+    },
+    zeroMetrics()
+  );
+
+  const circuitMap = new Map<
+    string,
+    {
+      circuitId: string;
+      circuitName: string;
+      districtId: string | null;
+      districtName: string | null;
+      schools: number;
+      learners: number;
+      teachers: number;
+      attendanceMarksToday: number;
+      presentMarksToday: number;
+      healthAlertsToday: number;
+      publishedOrLockedAssessments: number;
+      lessonDeliveriesLast14Days: number;
+    }
+  >();
+
+  for (const school of mappedSchools) {
+    const key = school.circuit?.id ?? "NO_CIRCUIT";
+
+    const existing =
+      circuitMap.get(key) ??
+      {
+        circuitId: school.circuit?.id ?? "NO_CIRCUIT",
+        circuitName: school.circuit?.name ?? "Unassigned Circuit",
+        districtId: school.district?.id ?? null,
+        districtName: school.district?.name ?? null,
+        schools: 0,
+        learners: 0,
+        teachers: 0,
+        attendanceMarksToday: 0,
+        presentMarksToday: 0,
+        healthAlertsToday: 0,
+        publishedOrLockedAssessments: 0,
+        lessonDeliveriesLast14Days: 0,
+      };
+
+    existing.schools += 1;
+    existing.learners += school.metrics.learners;
+    existing.teachers += school.metrics.teachers;
+    existing.attendanceMarksToday += school.metrics.attendanceMarksToday;
+    existing.presentMarksToday += school.metrics.presentMarksToday;
+    existing.healthAlertsToday += school.metrics.healthAlertsToday;
+    existing.publishedOrLockedAssessments += school.metrics.publishedOrLockedAssessments;
+    existing.lessonDeliveriesLast14Days += school.metrics.lessonDeliveriesLast14Days;
+
+    circuitMap.set(key, existing);
+  }
+
+  const circuitBreakdown = Array.from(circuitMap.values()).sort((a, b) =>
+    a.circuitName.localeCompare(b.circuitName)
+  );
+
+  const circuitCount = zones.filter((z) => Number(z.zoneType.level) === 1).length;
+  const districtCount = zones.filter((z) => Number(z.zoneType.level) === 2).length;
+
+  const emptyStates: string[] = [];
+
+  if (metricTotals.attendanceMarksToday === 0) {
+    emptyStates.push("No attendance marks have been recorded today.");
+  }
+
+  if (metricTotals.healthAlertsToday === 0) {
+    emptyStates.push("No student health alerts have been recorded today.");
+  }
+
+  if (metricTotals.lessonDeliveriesLast14Days === 0) {
+    emptyStates.push("No lesson delivery evidence has been recorded in the last 14 days.");
+  }
+
+  if (metricTotals.publishedOrLockedAssessments === 0) {
+    emptyStates.push("No published or locked assessment items are available yet.");
+  }
+
+  return {
+    schools: mappedSchools,
+    circuitBreakdown,
     totals: {
-      schools: schools.length,
-      learners: learnerCount,
-      teachers: teacherCount,
+      schools: mappedSchools.length,
+      learners: metricTotals.learners,
+      teachers: metricTotals.teachers,
       circuits: circuitCount,
       districts: districtCount,
     },
     signals: {
-      attendanceSessionsToday,
-      attendanceMarksToday,
-      presentMarksToday,
-      healthAlertsToday,
-      publishedOrLockedAssessments,
-      lessonDeliveriesLast14Days,
+      attendanceSessionsToday: metricTotals.attendanceSessionsToday,
+      attendanceMarksToday: metricTotals.attendanceMarksToday,
+      presentMarksToday: metricTotals.presentMarksToday,
+      healthAlertsToday: metricTotals.healthAlertsToday,
+      publishedOrLockedAssessments: metricTotals.publishedOrLockedAssessments,
+      lessonDeliveriesLast14Days: metricTotals.lessonDeliveriesLast14Days,
     },
+    emptyStates,
   };
 }
