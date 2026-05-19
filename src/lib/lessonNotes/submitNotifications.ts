@@ -46,6 +46,32 @@ function shortRef(id: string) {
   return s.slice(-8).toUpperCase();
 }
 
+function smsSafe(v: unknown) {
+  return clean(v)
+    .replace(/[·•]/g, "-")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatTerm(term: unknown) {
+  const t = smsSafe(term);
+  if (!t) return "";
+
+  const lower = t.toLowerCase();
+
+  // If DB already stores "2nd Term", do not produce "Term 2nd Term".
+  if (lower.includes("term")) return t;
+
+  if (lower === "1" || lower === "first" || lower === "1st") return "1st Term";
+  if (lower === "2" || lower === "second" || lower === "2nd") return "2nd Term";
+  if (lower === "3" || lower === "third" || lower === "3rd") return "3rd Term";
+
+  return t;
+}
+
 function lessonContext(note: {
   subject: string | null;
   level: string | null;
@@ -55,21 +81,23 @@ function lessonContext(note: {
 }) {
   const parts: string[] = [];
 
-  if (clean(note.subject)) parts.push(clean(note.subject));
-  if (clean(note.level)) parts.push(clean(note.level));
+  if (smsSafe(note.subject)) parts.push(smsSafe(note.subject));
+  if (smsSafe(note.level)) parts.push(smsSafe(note.level));
   if (note.weekNumber) parts.push(`Week ${note.weekNumber}`);
-  if (clean(note.term)) parts.push(`Term ${clean(note.term)}`);
-  if (clean(note.academicYear)) parts.push(clean(note.academicYear));
 
-  return parts.join(" · ") || "lesson note";
+  const term = formatTerm(note.term);
+  if (term) parts.push(term);
+
+  if (smsSafe(note.academicYear)) parts.push(smsSafe(note.academicYear));
+
+  return parts.join(" - ") || "lesson note";
 }
 
 function buildTeacherMessage(args: {
-  schoolName: string;
   context: string;
   ref: string;
 }) {
-  return `EduLife OS: Your ${args.context} has been submitted for headteacher review at ${args.schoolName}. Ref: ${args.ref}.`;
+  return `EduLife OS: Dear Teacher, your lesson note for ${args.context} has been submitted for Headteacher review. Ref: ${args.ref}.`;
 }
 
 function buildHeadteacherMessage(args: {
@@ -77,7 +105,7 @@ function buildHeadteacherMessage(args: {
   context: string;
   ref: string;
 }) {
-  return `EduLife OS: ${args.teacherName} submitted ${args.context} for review. Open Headteacher Lesson Notes. Ref: ${args.ref}.`;
+  return `EduLife OS: Dear Headteacher, ${args.teacherName} has submitted a lesson note for ${args.context}. Please review. Ref: ${args.ref}.`;
 }
 
 async function findTeacherPhone(args: { tenantId: string; userId: string }) {
@@ -233,20 +261,23 @@ export async function notifyLessonNoteSubmitted(args: LessonNoteSubmitNotificati
       findHeadteachers({ tenantId: args.tenantId }),
     ]);
 
-    const schoolName = clean(note.tenant?.name) || "your school";
     const teacherName = teacherInfo.user ? displayName(teacherInfo.user) : "A teacher";
     const context = lessonContext(note);
     const ref = shortRef(note.id);
 
-    const teacherMessage = buildTeacherMessage({ schoolName, context, ref });
-    const headteacherMessage = buildHeadteacherMessage({ teacherName, context, ref });
+    const teacherMessage = buildTeacherMessage({ context, ref });
+    const headteacherMessage = buildHeadteacherMessage({
+      teacherName: smsSafe(teacherName),
+      context,
+      ref,
+    });
 
     const template = "LESSON_NOTE_SUBMITTED";
     const payload = {
       lessonNoteId: note.id,
       teacherUserId: note.teacherUserId,
       teacherName,
-      schoolName,
+      schoolName: note.tenant?.name ?? null,
       schoolCode: note.tenant?.schoolCode ?? null,
       subject: note.subject,
       level: note.level,
@@ -338,6 +369,7 @@ export async function notifyLessonNoteSubmitted(args: LessonNoteSubmitNotificati
       metadata: {
         template,
         ref,
+        context,
         sends,
         counts: {
           attempted: sends.filter((s) => s.phone).length,
