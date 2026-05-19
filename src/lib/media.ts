@@ -13,8 +13,6 @@ function isAbsoluteUrl(s: string) {
 }
 
 function getMediaBase() {
-  // Prefer explicit public var, but also support server-only vars
-  // when this helper is executed in a server component / route.
   const candidates = [
     process.env.NEXT_PUBLIC_MEDIA_BASE_URL,
     process.env.MEDIA_BASE_URL,
@@ -42,6 +40,36 @@ function splitPathQueryHash(raw: string) {
   return { pathname, suffix };
 }
 
+/**
+ * Converts old DB media keys into the real R2 public key layout.
+ *
+ * Keep this conservative:
+ * - curriculum/jhs/...          -> jhs/...
+ * - curriculum/lower-primary/... -> lower-primary/...
+ * - curriculum/kg1/... and kg2 are intentionally left alone here because
+ *   the lesson-note print page already applies subject-aware KG rewriting.
+ */
+function canonicalizeStorageKey(rawPathname: string) {
+  const p = rawPathname
+    .replace(/\\/g, "/")
+    .replace(/^\.\/+/, "")
+    .replace(/^\/+/, "")
+    .replace(/\/{2,}/g, "/")
+    .trim();
+
+  if (!p) return "";
+
+  if (/^curriculum\/jhs\//i.test(p)) {
+    return p.replace(/^curriculum\//i, "");
+  }
+
+  if (/^curriculum\/lower-primary\//i.test(p)) {
+    return p.replace(/^curriculum\//i, "");
+  }
+
+  return p;
+}
+
 function encodeRelativePath(raw: string) {
   const normalized = raw
     .replace(/\\/g, "/")
@@ -53,8 +81,9 @@ function encodeRelativePath(raw: string) {
   if (!normalized) return "";
 
   const { pathname, suffix } = splitPathQueryHash(normalized);
+  const canonicalPathname = canonicalizeStorageKey(pathname);
 
-  const encodedPath = pathname
+  const encodedPath = canonicalPathname
     .split("/")
     .filter(Boolean)
     .map((seg) => encodeURIComponent(seg))
@@ -67,6 +96,7 @@ function encodeRelativePath(raw: string) {
  * Build a safe media URL:
  * - Absolute URLs are returned unchanged.
  * - Relative storage keys are encoded and joined to media base if configured.
+ * - Known legacy DB keys are mapped to canonical R2 keys.
  * - If no base is configured, fall back to site-relative "/<path>".
  */
 export function mediaUrl(path?: string | null) {
