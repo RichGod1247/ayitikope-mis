@@ -2,18 +2,22 @@
   "name": "ayitikope-mis",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
-  "dev": "next dev",
-  "dev:turbo": "next dev --turbo",
-  "build": "next build",
-  "start": "next start",
-  "lint": "next lint",
-  "typecheck": "tsc -p tsconfig.json --noEmit",
-  "finance:qa": "node scripts/finance-sprint9-qa-gate.mjs",
-  "postinstall": "prisma generate",
-  "seed": "node prisma/seed.cjs",
-  "seed:ts": "ts-node --project tsconfig.seed.json prisma/seed.ts"
-},
+    "dev": "next dev",
+    "dev:turbo": "next dev --turbo",
+    "build": "prisma generate && next build",
+    "start": "next start -H 0.0.0.0",
+    "lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "finance:qa": "node scripts/finance-sprint9-qa-gate.mjs",
+    "postinstall": "prisma generate",
+    "seed": "node prisma/seed.cjs",
+    "seed:ts": "ts-node --project tsconfig.seed.json prisma/seed.ts"
+  },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
     "@node-rs/argon2": "^2.0.0",
