@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
-    "build": "prisma generate && next build",
+    "lfs:pull": "git lfs install --local && git lfs pull --include=\"public/**\"",
+    "build": "npm run lfs:pull && prisma generate && next build",
     "start": "next start -H 0.0.0.0",
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings=0",
