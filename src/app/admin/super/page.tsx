@@ -34,6 +34,16 @@ const superTiles = [
     pill: "Platform view",
     pillCls: "border-fuchsia-300/25 bg-fuchsia-400/14 text-fuchsia-100",
   },
+  {
+    title: "Governance Officers",
+    desc: "Invite and monitor SISSOs, District Directors, MIS/Data Officers, SHEP Officers, and Assessment Officers.",
+    href: "/admin/governance/officers",
+    icon: "🏛️",
+    accent: "from-[#06291F] via-[#0B3D36] to-[#07111F]",
+    border: "border-emerald-300/20",
+    pill: "Circuit & district",
+    pillCls: "border-emerald-300/25 bg-emerald-400/14 text-emerald-100",
+  },
 ];
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -57,7 +67,8 @@ export default function AdminSuperHome() {
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-[#C9CDD6]">
             Platform-level controls for inviting schools, governing tenant approval,
-            and maintaining disciplined visibility across the EduLife OS network.
+            onboarding governance officers, and maintaining disciplined visibility
+            across the EduLife OS network.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -68,7 +79,7 @@ export default function AdminSuperHome() {
               Invite + approval flow
             </span>
             <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-[#F7F4ED]">
-              Platform-wide visibility
+              Circuit + district access
             </span>
           </div>
         </div>
@@ -80,8 +91,9 @@ export default function AdminSuperHome() {
             <h2 className="text-base font-semibold text-[#F7F4ED] md:text-lg">
               Super admin modules
             </h2>
-            <p className="mt-1 text-xs md:text-sm text-[#C9CDD6]">
-              Use these high-control modules to grow the tenant base without losing operational discipline.
+            <p className="mt-1 text-xs text-[#C9CDD6] md:text-sm">
+              Use these high-control modules to grow the platform without losing
+              operational discipline.
             </p>
           </div>
 
@@ -90,7 +102,7 @@ export default function AdminSuperHome() {
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {superTiles.map((tile) => (
             <Link
               key={tile.title}
