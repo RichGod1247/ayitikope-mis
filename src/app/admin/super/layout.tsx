@@ -1,3 +1,4 @@
+//src/app/admin/super/layout.tsx
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getServerUserContextOrNull } from "@/lib/serverAuth";
