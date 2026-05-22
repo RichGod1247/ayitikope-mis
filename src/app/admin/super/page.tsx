@@ -62,9 +62,11 @@ export default function AdminSuperHome() {
           <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
             EduLife OS · Super Admin
           </p>
+
           <h1 className="mt-2 text-2xl font-semibold text-[#F7F4ED] md:text-3xl">
             Platform control center
           </h1>
+
           <p className="mt-2 max-w-3xl text-sm leading-7 text-[#C9CDD6]">
             Platform-level controls for inviting schools, governing tenant approval,
             onboarding governance officers, and maintaining disciplined visibility
@@ -85,19 +87,20 @@ export default function AdminSuperHome() {
         </div>
       </section>
 
-      <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.20)] md:p-6">
+      <section className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.10)] md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-base font-semibold text-[#F7F4ED] md:text-lg">
+            <h2 className="text-base font-bold text-slate-950 md:text-lg">
               Super admin modules
             </h2>
-            <p className="mt-1 text-xs text-[#C9CDD6] md:text-sm">
+
+            <p className="mt-1 max-w-2xl text-xs font-medium leading-6 text-slate-700 md:text-sm">
               Use these high-control modules to grow the platform without losing
               operational discipline.
             </p>
           </div>
 
-          <span className="inline-flex items-center rounded-full border border-emerald-300/25 bg-emerald-400/12 px-3 py-1 text-[11px] font-semibold text-emerald-100">
+          <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-800">
             Protected workspace
           </span>
         </div>
