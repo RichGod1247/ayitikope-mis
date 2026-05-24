@@ -16,7 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "finance:qa": "node scripts/finance-sprint9-qa-gate.mjs",
     "finance:cron:hosted": "node scripts/run-hosted-finance-cron.mjs",
-    "postinstall": "prisma generate",
+    "postinstall": "node scripts/prisma-postinstall.mjs",
     "seed": "node prisma/seed.cjs",
     "seed:ts": "ts-node --project tsconfig.seed.json prisma/seed.ts"
   },
