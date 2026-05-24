@@ -6,6 +6,10 @@ import {
   getFinanceOutboxHealth,
   runFinanceOutboxWorker,
 } from "@/lib/finance/outbox-worker";
+import {
+  getPaystackRefundSyncHealth,
+  runPaystackRefundSyncWorker,
+} from "@/lib/finance/refund-sync-worker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +46,8 @@ function presentedSecrets(req: NextRequest) {
   const bearer = req.headers.get("authorization") ?? "";
   const token = bearer.startsWith("Bearer ") ? bearer.slice(7).trim() : "";
 
-  const headerSecret = req.headers.get("x-finance-outbox-cron-secret")?.trim() ?? "";
+  const headerSecret =
+    req.headers.get("x-finance-outbox-cron-secret")?.trim() ?? "";
 
   return [token, headerSecret].filter(Boolean);
 }
@@ -91,10 +96,24 @@ function unauthorized(reason: string) {
   );
 }
 
-async function readHealth() {
+async function readOutboxHealth() {
   return getFinanceOutboxHealth({
     types: SAFE_CRON_TYPES,
   });
+}
+
+async function readCronHealth() {
+  const [outbox, paystackRefundSync] = await Promise.all([
+    readOutboxHealth(),
+    getPaystackRefundSyncHealth({
+      minAgeMinutes: 2,
+    }),
+  ]);
+
+  return {
+    outbox,
+    paystackRefundSync,
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -104,13 +123,13 @@ export async function GET(req: NextRequest) {
     return unauthorized(auth.reason);
   }
 
-  const health = await readHealth();
+  const health = await readCronHealth();
 
   return jsonNoStore({
     ok: true,
     mode: "HEALTH_ONLY",
     message:
-      "Finance outbox cron is authorized and reachable. GET does not run the worker. Use POST to execute.",
+      "Finance cron is authorized and reachable. GET does not run workers. Use POST to execute.",
     checkedAt: new Date().toISOString(),
     safeTypes: SAFE_CRON_TYPES,
     health,
@@ -124,24 +143,41 @@ export async function POST(req: NextRequest) {
     return unauthorized(auth.reason);
   }
 
-  const before = await readHealth();
+  const before = await readCronHealth();
 
-  const result = await runFinanceOutboxWorker({
-    workerId: "finance-outbox-cron",
+  const outboxFirstPass = await runFinanceOutboxWorker({
+    workerId: "finance-outbox-cron:first-pass",
     limit: 25,
     types: SAFE_CRON_TYPES,
     staleProcessingAfterMinutes: 15,
   });
 
-  const after = await readHealth();
+  const paystackRefundSync = await runPaystackRefundSyncWorker({
+    workerId: "paystack-refund-sync-cron",
+    limit: 20,
+    minAgeMinutes: 2,
+  });
+
+  const outboxAfterRefundSync = await runFinanceOutboxWorker({
+    workerId: "finance-outbox-cron:after-refund-sync",
+    limit: 25,
+    types: SAFE_CRON_TYPES,
+    staleProcessingAfterMinutes: 15,
+  });
+
+  const after = await readCronHealth();
 
   return jsonNoStore({
     ok: true,
-    mode: "WORKER_EXECUTED",
+    mode: "WORKERS_EXECUTED",
     executedAt: new Date().toISOString(),
-    before,
-    result,
-    after,
     safeTypes: SAFE_CRON_TYPES,
+    before,
+    result: {
+      outboxFirstPass,
+      paystackRefundSync,
+      outboxAfterRefundSync,
+    },
+    after,
   });
 }
