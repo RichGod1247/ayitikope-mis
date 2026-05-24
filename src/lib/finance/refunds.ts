@@ -1030,6 +1030,8 @@ async function enqueueRefundFailedSms(
 }
 
 export async function applyPaystackRefundStatus(input: {
+  tenantId?: string | null;
+  expectedRefundId?: string | null;
   eventType: string;
   data: Record<string, unknown>;
   rawPayload?: unknown;
@@ -1037,18 +1039,49 @@ export async function applyPaystackRefundStatus(input: {
   actorUserId?: string | null;
 }) {
   const fields = extractRefundEventFields(input.data);
+  const tenantId = clean(input.tenantId);
+  const expectedRefundId = clean(input.expectedRefundId);
 
-  if (!fields.providerRefundReference && !fields.providerReference) {
+  const rawPayload = input.rawPayload ?? {
+    event: input.eventType,
+    data: input.data,
+    source: "paystack_refund_status_apply",
+  };
+
+  const providerRefundReference = clean(fields.providerRefundReference);
+  const providerReference = clean(fields.providerReference);
+
+  const recordFailedEvent = async (
+    processingError: string,
+    extra?: Record<string, unknown>
+  ) => {
     await recordProviderEventOnly({
+      tenantId: tenantId || null,
       eventType: input.eventType,
-      providerReference: null,
+      providerReference: providerReference || null,
       signature: input.signature,
-      rawPayload: input.rawPayload ?? { event: input.eventType, data: input.data },
+      rawPayload: toJson({
+        ...(typeof rawPayload === "object" && rawPayload !== null
+          ? (rawPayload as Record<string, unknown>)
+          : { rawPayload }),
+        edulifeRefundResolution: {
+          processingError,
+          expectedRefundId: expectedRefundId || null,
+          providerRefundReference: providerRefundReference || null,
+          providerReference: providerReference || null,
+          amountPesewas: fields.amountPesewas,
+          ...(extra ?? {}),
+        },
+      }),
       processingStatus: "FAILED",
-      processingError: "REFUND_REFERENCE_REQUIRED",
+      processingError,
       isSuspicious: true,
-      suspiciousReason: "REFUND_REFERENCE_REQUIRED",
+      suspiciousReason: processingError,
     });
+  };
+
+  if (!providerRefundReference && !providerReference) {
+    await recordFailedEvent("REFUND_REFERENCE_REQUIRED");
 
     return {
       ok: true,
@@ -1057,67 +1090,166 @@ export async function applyPaystackRefundStatus(input: {
     };
   }
 
-  const refund = await prisma.feeRefund.findFirst({
-    where: {
-      provider: PaymentProvider.PAYSTACK,
-      OR: [
-        ...(fields.providerRefundReference
-          ? [{ providerRefundReference: fields.providerRefundReference }]
-          : []),
-        ...(fields.providerReference
-          ? [
-              {
-                providerReference: fields.providerReference,
-                ...(fields.amountPesewas > 0
-                  ? { amountPesewas: fields.amountPesewas }
-                  : {}),
-              },
-            ]
-          : []),
-      ],
-    },
-    select: {
-      id: true,
-      tenantId: true,
-      status: true,
-      amountPesewas: true,
-      providerReference: true,
-      providerRefundReference: true,
-    },
-  });
+  const refundSelect = {
+    id: true,
+    tenantId: true,
+    status: true,
+    amountPesewas: true,
+    providerReference: true,
+    providerRefundReference: true,
+  } satisfies Prisma.FeeRefundSelect;
 
-  if (!refund) {
-    await recordProviderEventOnly({
-      eventType: input.eventType,
-      providerReference: fields.providerReference,
-      signature: input.signature,
-      rawPayload: input.rawPayload ?? { event: input.eventType, data: input.data },
-      processingStatus: "FAILED",
-      processingError: "REFUND_NOT_FOUND",
-      isSuspicious: true,
-      suspiciousReason: "REFUND_NOT_FOUND",
+  let refund: {
+    id: string;
+    tenantId: string;
+    status: RefundStatus;
+    amountPesewas: number;
+    providerReference: string | null;
+    providerRefundReference: string | null;
+  } | null = null;
+
+  if (expectedRefundId) {
+    refund = await prisma.feeRefund.findFirst({
+      where: {
+        id: expectedRefundId,
+        provider: PaymentProvider.PAYSTACK,
+        ...(tenantId ? { tenantId } : {}),
+      },
+      select: refundSelect,
     });
 
-    return {
-      ok: true,
-      skipped: true,
-      reason: "REFUND_NOT_FOUND",
-      providerRefundReference: fields.providerRefundReference,
-      providerReference: fields.providerReference,
-    };
-  }
+    if (!refund) {
+      await recordFailedEvent("EXPECTED_REFUND_NOT_FOUND");
 
-  const rawPayload = input.rawPayload ?? {
-    event: input.eventType,
-    data: input.data,
-    source: "paystack_refund_status_apply",
-  };
+      return {
+        ok: true,
+        skipped: true,
+        reason: "EXPECTED_REFUND_NOT_FOUND",
+        expectedRefundId,
+        providerRefundReference: providerRefundReference || null,
+        providerReference: providerReference || null,
+      };
+    }
+
+    if (
+      providerRefundReference &&
+      refund.providerRefundReference &&
+      refund.providerRefundReference !== providerRefundReference
+    ) {
+      await recordFailedEvent("REFUND_IDENTITY_MISMATCH", {
+        refundId: refund.id,
+        dbProviderRefundReference: refund.providerRefundReference,
+      });
+
+      return {
+        ok: true,
+        skipped: true,
+        reason: "REFUND_IDENTITY_MISMATCH",
+        refundId: refund.id,
+        expectedRefundId,
+        dbProviderRefundReference: refund.providerRefundReference,
+        providerRefundReference,
+      };
+    }
+
+    if (
+      providerReference &&
+      refund.providerReference &&
+      refund.providerReference !== providerReference
+    ) {
+      await recordFailedEvent("REFUND_TRANSACTION_REFERENCE_MISMATCH", {
+        refundId: refund.id,
+        dbProviderReference: refund.providerReference,
+      });
+
+      return {
+        ok: true,
+        skipped: true,
+        reason: "REFUND_TRANSACTION_REFERENCE_MISMATCH",
+        refundId: refund.id,
+        expectedRefundId,
+        dbProviderReference: refund.providerReference,
+        providerReference,
+      };
+    }
+
+    if (fields.amountPesewas > 0 && fields.amountPesewas !== refund.amountPesewas) {
+      await recordFailedEvent("REFUND_AMOUNT_MISMATCH", {
+        refundId: refund.id,
+        expectedPesewas: refund.amountPesewas,
+        actualPesewas: fields.amountPesewas,
+      });
+
+      return {
+        ok: true,
+        skipped: true,
+        reason: "REFUND_AMOUNT_MISMATCH",
+        refundId: refund.id,
+        expectedPesewas: refund.amountPesewas,
+        actualPesewas: fields.amountPesewas,
+      };
+    }
+  } else if (providerRefundReference) {
+    refund = await prisma.feeRefund.findFirst({
+      where: {
+        provider: PaymentProvider.PAYSTACK,
+        providerRefundReference,
+        ...(tenantId ? { tenantId } : {}),
+      },
+      select: refundSelect,
+    });
+
+    if (!refund) {
+      await recordFailedEvent("REFUND_NOT_FOUND_BY_PROVIDER_REFUND_REFERENCE");
+
+      return {
+        ok: true,
+        skipped: true,
+        reason: "REFUND_NOT_FOUND_BY_PROVIDER_REFUND_REFERENCE",
+        providerRefundReference,
+        providerReference: providerReference || null,
+      };
+    }
+  } else {
+    const candidates = await prisma.feeRefund.findMany({
+      where: {
+        provider: PaymentProvider.PAYSTACK,
+        ...(tenantId ? { tenantId } : {}),
+        providerReference,
+        amountPesewas: fields.amountPesewas,
+        providerRefundReference: null,
+        status: {
+          in: [RefundStatus.APPROVED, RefundStatus.PROCESSING],
+        },
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      take: 2,
+      select: refundSelect,
+    });
+
+    if (candidates.length !== 1) {
+      await recordFailedEvent("AMBIGUOUS_REFUND_MATCH", {
+        candidateCount: candidates.length,
+      });
+
+      return {
+        ok: true,
+        skipped: true,
+        reason: "AMBIGUOUS_REFUND_MATCH",
+        candidateCount: candidates.length,
+        providerReference,
+        amountPesewas: fields.amountPesewas,
+      };
+    }
+
+    refund = candidates[0];
+  }
 
   if (fields.amountPesewas > 0 && fields.amountPesewas !== refund.amountPesewas) {
     await recordProviderEventOnly({
       tenantId: refund.tenantId,
       eventType: input.eventType,
-      providerReference: fields.providerReference,
+      providerReference: providerReference || refund.providerReference,
       signature: input.signature,
       rawPayload,
       processingStatus: "FAILED",
@@ -1152,7 +1284,7 @@ export async function applyPaystackRefundStatus(input: {
         where: { id: refund.id },
         data: {
           providerRefundReference:
-            fields.providerRefundReference ?? refund.providerRefundReference,
+            providerRefundReference || refund.providerRefundReference,
           providerRaw: toJson(rawPayload),
         },
       });
@@ -1168,7 +1300,7 @@ export async function applyPaystackRefundStatus(input: {
     await recordProviderEventOnly({
       tenantId: refund.tenantId,
       eventType: input.eventType,
-      providerReference: fields.providerReference ?? refund.providerReference,
+      providerReference: providerReference || refund.providerReference,
       signature: input.signature,
       rawPayload,
       processingStatus: "PROCESSED",
@@ -1194,7 +1326,7 @@ export async function applyPaystackRefundStatus(input: {
           failedAt: new Date(),
           failureReason: "PAYSTACK_REFUND_FAILED",
           providerRefundReference:
-            fields.providerRefundReference ?? refund.providerRefundReference,
+            providerRefundReference || refund.providerRefundReference,
           providerRaw: toJson(rawPayload),
         },
       });
@@ -1211,7 +1343,7 @@ export async function applyPaystackRefundStatus(input: {
     await recordProviderEventOnly({
       tenantId: refund.tenantId,
       eventType: input.eventType,
-      providerReference: fields.providerReference ?? refund.providerReference,
+      providerReference: providerReference || refund.providerReference,
       signature: input.signature,
       rawPayload,
       processingStatus: "PROCESSED",
@@ -1231,7 +1363,7 @@ export async function applyPaystackRefundStatus(input: {
     data: {
       status: RefundStatus.PROCESSING,
       providerRefundReference:
-        fields.providerRefundReference ?? refund.providerRefundReference,
+        providerRefundReference || refund.providerRefundReference,
       providerRaw: toJson(rawPayload),
       processingAt: refund.status === RefundStatus.PROCESSING ? undefined : new Date(),
     },
@@ -1240,7 +1372,7 @@ export async function applyPaystackRefundStatus(input: {
   await recordProviderEventOnly({
     tenantId: refund.tenantId,
     eventType: input.eventType,
-    providerReference: fields.providerReference ?? refund.providerReference,
+    providerReference: providerReference || refund.providerReference,
     signature: input.signature,
     rawPayload,
     processingStatus: "PROCESSED",
@@ -1342,16 +1474,18 @@ export async function syncPaystackRefundStatus(input: {
           : "refund.pending";
 
   return applyPaystackRefundStatus({
-    eventType,
+  tenantId: refund.tenantId,
+  expectedRefundId: refund.id,
+  eventType,
+  data,
+  rawPayload: {
+    event: eventType,
     data,
-    rawPayload: {
-      event: eventType,
-      data,
-      source: "paystack_refund_status_sync",
-      paystackRaw: raw,
-    },
-    actorUserId: input.actorUserId ?? null,
-  });
+    source: "paystack_refund_status_sync",
+    paystackRaw: raw,
+  },
+  actorUserId: input.actorUserId ?? null,
+});
 }
 
 export async function executeApprovedFeeRefund(input: {
