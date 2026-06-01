@@ -105,6 +105,15 @@ model User {
   governanceOfficerInvitesAccepted GovernanceOfficerInvite[] @relation("GovernanceOfficerInviteAcceptedBy")
   governanceOfficerInvitesRevoked  GovernanceOfficerInvite[] @relation("GovernanceOfficerInviteRevokedBy")
 
+  /// ✅ Sprint 10 B.3/B.4 — governance intervention + official notice spine
+  governanceInterventionsCreated   GovernanceInterventionCase[]        @relation("GovernanceInterventionCreatedBy")
+  governanceInterventionsAssigned  GovernanceInterventionCase[]        @relation("GovernanceInterventionAssignedTo")
+  governanceInterventionsResolved  GovernanceInterventionCase[]        @relation("GovernanceInterventionResolvedBy")
+  governanceInterventionsCancelled GovernanceInterventionCase[]        @relation("GovernanceInterventionCancelledBy")
+  governanceInterventionEvents     GovernanceInterventionEvent[]       @relation("GovernanceInterventionEventActor")
+  governanceOfficialNoticesSent    GovernanceOfficialNotice[]          @relation("GovernanceOfficialNoticeSender")
+  governanceNoticeRecipients       GovernanceOfficialNoticeRecipient[] @relation("GovernanceNoticeRecipientUser")
+
   @@index([twoFactorEnabled])
   @@index([lastActiveTenantId])
 }
@@ -192,6 +201,11 @@ model Tenant {
 
   /// Sprint 10 placeholder — keep because current schema already has SchoolRiskSnapshot.
   riskSnapshots SchoolRiskSnapshot[]
+
+  /// ✅ Sprint 10 B.3/B.4 — governance intervention + official notice spine
+  governanceInterventions    GovernanceInterventionCase[]
+  governanceOfficialNotices  GovernanceOfficialNotice[]
+  governanceNoticeRecipients GovernanceOfficialNoticeRecipient[]
 
   @@index([status])
   @@index([schoolCode])
@@ -2067,6 +2081,10 @@ model AdminZone {
   officerAssignments GovernanceOfficerAssignment[]
   officerInvites     GovernanceOfficerInvite[]
 
+  /// ✅ Sprint 10 B.3/B.4 — governance intervention + official notice spine
+  governanceInterventions   GovernanceInterventionCase[]
+  governanceOfficialNotices GovernanceOfficialNotice[]
+
   isActive Boolean @default(true)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
@@ -2203,6 +2221,208 @@ model SchoolRiskSnapshot {
   @@index([tenantId, snapshotDate])
 }
 
+model GovernanceInterventionCase {
+  id String @id @default(cuid())
+
+  tenantId String?
+  zoneId   String?
+
+  scopeType GovernanceInterventionScopeType
+  title     String                          @db.VarChar(180)
+  summary   String                          @db.Text
+
+  priority GovernanceInterventionPriority @default(MEDIUM)
+  status   GovernanceInterventionStatus   @default(OPEN)
+
+  riskScore          Int?
+  riskLevel          String? @db.VarChar(40)
+  riskSnapshot       Json    @default("{}")
+  recommendedActions Json    @default("[]")
+
+  dueAt DateTime? @db.Timestamptz(6)
+
+  createdByUserId   String
+  assignedToUserId  String?
+  resolvedByUserId  String?
+  cancelledByUserId String?
+
+  resolvedAt  DateTime? @db.Timestamptz(6)
+  escalatedAt DateTime? @db.Timestamptz(6)
+  cancelledAt DateTime? @db.Timestamptz(6)
+
+  resolutionNote     String? @db.Text
+  cancellationReason String? @db.Text
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant Tenant?    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  zone   AdminZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  createdBy   User  @relation("GovernanceInterventionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  assignedTo  User? @relation("GovernanceInterventionAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  resolvedBy  User? @relation("GovernanceInterventionResolvedBy", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+  cancelledBy User? @relation("GovernanceInterventionCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+
+  events  GovernanceInterventionEvent[]
+  notices GovernanceOfficialNotice[]
+
+  @@index([tenantId, status], map: "GovernanceIntervention_tenant_status_idx")
+  @@index([zoneId, status], map: "GovernanceIntervention_zone_status_idx")
+  @@index([scopeType, status], map: "GovernanceIntervention_scope_status_idx")
+  @@index([assignedToUserId, status], map: "GovernanceIntervention_assigned_status_idx")
+  @@index([createdByUserId], map: "GovernanceIntervention_createdBy_idx")
+  @@index([dueAt], map: "GovernanceIntervention_dueAt_idx")
+  @@index([createdAt], map: "GovernanceIntervention_createdAt_idx")
+}
+
+model GovernanceInterventionEvent {
+  id     String @id @default(cuid())
+  caseId String
+
+  actorUserId String?
+
+  eventType  GovernanceInterventionEventType
+  fromStatus GovernanceInterventionStatus?
+  toStatus   GovernanceInterventionStatus?
+
+  note     String? @db.Text
+  metadata Json    @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  case  GovernanceInterventionCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actor User?                      @relation("GovernanceInterventionEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([caseId, createdAt], map: "GovernanceInterventionEvent_case_created_idx")
+  @@index([actorUserId], map: "GovernanceInterventionEvent_actor_idx")
+  @@index([eventType], map: "GovernanceInterventionEvent_type_idx")
+}
+
+model GovernanceOfficialNotice {
+  id String @id @default(cuid())
+
+  caseId   String?
+  tenantId String?
+  zoneId   String?
+
+  senderUserId String
+
+  title String @db.VarChar(180)
+  body  String @db.Text
+
+  priority GovernanceInterventionPriority @default(MEDIUM)
+  status   GovernanceOfficialNoticeStatus @default(QUEUED)
+
+  /// Example: ["IN_APP", "SMS", "EMAIL"]
+  channels Json @default("[]")
+
+  audienceSummary String? @db.Text
+
+  metadata Json @default("{}")
+
+  sentAt DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  case   GovernanceInterventionCase? @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  tenant Tenant?                     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  zone   AdminZone?                  @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  sender User                        @relation("GovernanceOfficialNoticeSender", fields: [senderUserId], references: [id], onDelete: Restrict)
+
+  recipients GovernanceOfficialNoticeRecipient[]
+  deliveries GovernanceOfficialNoticeDelivery[]
+
+  @@index([caseId], map: "GovernanceOfficialNotice_case_idx")
+  @@index([tenantId, status], map: "GovernanceOfficialNotice_tenant_status_idx")
+  @@index([zoneId, status], map: "GovernanceOfficialNotice_zone_status_idx")
+  @@index([senderUserId], map: "GovernanceOfficialNotice_sender_idx")
+  @@index([status, createdAt], map: "GovernanceOfficialNotice_status_created_idx")
+}
+
+model GovernanceOfficialNoticeRecipient {
+  id String @id @default(cuid())
+
+  noticeId String
+  tenantId String?
+
+  recipientUserId String?
+
+  recipientType GovernanceOfficialNoticeRecipientType
+
+  displayName String? @db.VarChar(160)
+  roleLabel   String? @db.VarChar(120)
+
+  phone String? @db.VarChar(32)
+  email String? @db.VarChar(320)
+
+  inAppVisible Boolean @default(true)
+
+  readAt          DateTime? @db.Timestamptz(6)
+  acknowledgedAt  DateTime? @db.Timestamptz(6)
+  acknowledgeNote String?   @db.Text
+
+  respondedAt  DateTime? @db.Timestamptz(6)
+  responseBody String?   @db.Text
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  notice        GovernanceOfficialNotice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  tenant        Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  recipientUser User?                    @relation("GovernanceNoticeRecipientUser", fields: [recipientUserId], references: [id], onDelete: SetNull)
+
+  deliveries GovernanceOfficialNoticeDelivery[]
+
+  @@index([noticeId], map: "GovernanceNoticeRecipient_notice_idx")
+  @@index([tenantId], map: "GovernanceNoticeRecipient_tenant_idx")
+  @@index([recipientUserId, readAt], map: "GovernanceNoticeRecipient_user_read_idx")
+  @@index([recipientType], map: "GovernanceNoticeRecipient_type_idx")
+  @@index([createdAt], map: "GovernanceNoticeRecipient_created_idx")
+}
+
+model GovernanceOfficialNoticeDelivery {
+  id String @id @default(cuid())
+
+  noticeId    String
+  recipientId String
+
+  channel GovernanceOfficialNoticeChannel
+  status  GovernanceOfficialNoticeDeliveryStatus @default(PENDING)
+
+  toAddress String? @db.VarChar(320)
+
+  provider                  String? @db.VarChar(80)
+  providerMessageId         String? @db.VarChar(160)
+  providerStatus            Int?
+  providerStatusDescription String?
+  providerRaw               Json?
+
+  attempts Int @default(0)
+
+  lastError String? @db.Text
+
+  lastAttemptAt DateTime? @db.Timestamptz(6)
+  sentAt        DateTime? @db.Timestamptz(6)
+  deliveredAt   DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  notice    GovernanceOfficialNotice          @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  recipient GovernanceOfficialNoticeRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([recipientId, channel], map: "GovernanceNoticeDelivery_recipient_channel_unique")
+  @@index([noticeId, channel], map: "GovernanceNoticeDelivery_notice_channel_idx")
+  @@index([status, channel], map: "GovernanceNoticeDelivery_status_channel_idx")
+  @@index([lastAttemptAt], map: "GovernanceNoticeDelivery_lastAttempt_idx")
+}
+
 enum GovernanceOfficerRole {
   SISSO
   CIRCUIT_SUPERVISOR
@@ -2224,6 +2444,70 @@ enum GovernanceOfficerInviteStatus {
   ACCEPTED
   REVOKED
   EXPIRED
+}
+
+enum GovernanceInterventionScopeType {
+  SCHOOL
+  CIRCUIT
+  DISTRICT
+}
+
+enum GovernanceInterventionStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  ESCALATED
+  CANCELLED
+}
+
+enum GovernanceInterventionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum GovernanceInterventionEventType {
+  CREATED
+  ASSIGNED
+  STATUS_CHANGED
+  COMMENT
+  NOTICE_SENT
+  RESOLVED
+  ESCALATED
+  CANCELLED
+  REOPENED
+}
+
+enum GovernanceOfficialNoticeStatus {
+  DRAFT
+  QUEUED
+  SENT
+  PARTIALLY_FAILED
+  FAILED
+  CANCELLED
+}
+
+enum GovernanceOfficialNoticeRecipientType {
+  GOVERNANCE_OFFICER
+  SCHOOL_ADMIN
+  HEADTEACHER
+  TEACHER
+  PARENT
+  CUSTOM
+}
+
+enum GovernanceOfficialNoticeChannel {
+  IN_APP
+  SMS
+  EMAIL
+}
+
+enum GovernanceOfficialNoticeDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
 }
 
 enum AttendanceStatus {
