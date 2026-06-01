@@ -1,3 +1,4 @@
+// src/app/api/admin/notification-contacts/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
