@@ -4,15 +4,55 @@
 import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 
+type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
 type SchoolMetrics = {
-  learners: number;
-  teachers: number;
-  attendanceSessionsToday: number;
-  attendanceMarksToday: number;
-  presentMarksToday: number;
-  healthAlertsToday: number;
-  publishedOrLockedAssessments: number;
-  lessonDeliveriesLast14Days: number;
+  learners?: number;
+  teachers?: number;
+  classrooms?: number;
+
+  attendanceSessionsToday?: number;
+  attendanceMarksToday?: number;
+  presentMarksToday?: number;
+  absentMarksToday?: number;
+  lateMarksToday?: number;
+  excusedMarksToday?: number;
+  attendanceRateToday?: number;
+  attendanceCompletionRateToday?: number;
+  missingAttendanceMarksToday?: number;
+
+  healthAlertsToday?: number;
+  highTemperatureToday?: number;
+  symptomReportsToday?: number;
+
+  publishedOrLockedAssessments?: number;
+  assessmentScoresLast14Days?: number;
+  assessmentItemsTotal?: number;
+  assessmentItemsDraft?: number;
+  assessmentItemsWithScores?: number;
+  assessmentItemsWithoutScores?: number;
+  assessmentItemsWithoutLessonDelivery?: number;
+  assessmentItemsWithoutCurriculumUnit?: number;
+  assessmentCompletionRate?: number;
+  assessmentLinkCoverageRate?: number;
+
+  lessonDeliveriesLast14Days?: number;
+  lessonNotesSubmittedLast14Days?: number;
+  lessonNotesApprovedLast14Days?: number;
+  lessonNotesReturnedLast14Days?: number;
+  lessonNotesPendingReview?: number;
+
+  approvedLessonNotesLast14Days?: number;
+  deliveredApprovedLessonNotesLast14Days?: number;
+  orphanedLessonNotesLast14Days?: number;
+  lessonDeliveriesLinkedToApprovedNotesLast14Days?: number;
+  orphanedDeliveriesLast14Days?: number;
+  lessonDeliveryComplianceRate?: number;
+
+  riskScore?: number;
+  riskLevel?: RiskLevel | string;
+  riskReasons?: string[];
+  recommendedActions?: string[];
 };
 
 type SchoolRow = {
@@ -33,6 +73,16 @@ type SchoolRow = {
   metrics?: SchoolMetrics;
 };
 
+type SchoolDrivingRisk = {
+  schoolId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  riskScore: number;
+  riskLevel: RiskLevel | string;
+  reasons: string[];
+  recommendedActions: string[];
+};
+
 type CircuitBreakdownRow = {
   circuitId: string;
   circuitName: string;
@@ -41,11 +91,89 @@ type CircuitBreakdownRow = {
   schools: number;
   learners: number;
   teachers: number;
+  classrooms?: number;
+
   attendanceMarksToday: number;
   presentMarksToday: number;
+  absentMarksToday?: number;
+  lateMarksToday?: number;
+  missingAttendanceMarksToday?: number;
+  attendanceRateToday?: number;
+  attendanceCompletionRateToday?: number;
+
   healthAlertsToday: number;
+
   publishedOrLockedAssessments: number;
+  assessmentScoresLast14Days?: number;
+  assessmentItemsTotal?: number;
+  assessmentItemsDraft?: number;
+  assessmentItemsWithScores?: number;
+  assessmentItemsWithoutScores?: number;
+  assessmentItemsWithoutLessonDelivery?: number;
+  assessmentItemsWithoutCurriculumUnit?: number;
+  assessmentCompletionRate?: number;
+  assessmentLinkCoverageRate?: number;
+
   lessonDeliveriesLast14Days: number;
+  lessonNotesPendingReview?: number;
+  approvedLessonNotesLast14Days?: number;
+  deliveredApprovedLessonNotesLast14Days?: number;
+  orphanedLessonNotesLast14Days?: number;
+  lessonDeliveriesLinkedToApprovedNotesLast14Days?: number;
+  orphanedDeliveriesLast14Days?: number;
+  lessonDeliveryComplianceRate?: number;
+
+  highRiskSchools?: number;
+  criticalRiskSchools?: number;
+  highestRiskScore?: number;
+  schoolsDrivingRisk?: SchoolDrivingRisk[];
+  directorRecommendedActions?: string[];
+};
+
+type InterventionQueueItem = {
+  schoolId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  circuitName: string;
+  districtName: string | null;
+  riskScore: number;
+  riskLevel: RiskLevel | string;
+  reasons: string[];
+  recommendedActions: string[];
+  metrics?: {
+    attendanceRateToday?: number;
+    attendanceCompletionRateToday?: number;
+    healthAlertsToday?: number;
+    lessonDeliveriesLast14Days?: number;
+    lessonNotesPendingReview?: number;
+    publishedOrLockedAssessments?: number;
+
+    assessmentItemsTotal?: number;
+    assessmentItemsDraft?: number;
+    assessmentItemsWithoutScores?: number;
+    assessmentItemsWithoutLessonDelivery?: number;
+    assessmentItemsWithoutCurriculumUnit?: number;
+    assessmentCompletionRate?: number;
+    assessmentLinkCoverageRate?: number;
+
+    orphanedLessonNotesLast14Days?: number;
+    orphanedDeliveriesLast14Days?: number;
+    lessonDeliveryComplianceRate?: number;
+  };
+};
+
+type RiskSummary = {
+  low?: number;
+  medium?: number;
+  high?: number;
+  critical?: number;
+  highestRiskScore?: number;
+  highestRiskSchool?: {
+    id: string;
+    name: string;
+    riskScore: number;
+    riskLevel: RiskLevel | string;
+  } | null;
 };
 
 type OverviewResponse = {
@@ -67,9 +195,12 @@ type OverviewResponse = {
   overview?: {
     schools?: SchoolRow[];
     circuitBreakdown?: CircuitBreakdownRow[];
+    interventionQueue?: InterventionQueueItem[];
+    riskSummary?: RiskSummary;
     totals?: Record<string, number>;
     signals?: Record<string, number>;
     emptyStates?: string[];
+    generatedAt?: string;
   };
 };
 
@@ -102,19 +233,122 @@ function numberValue(v: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function percentValue(v: unknown) {
+  return `${Math.round(numberValue(v))}%`;
+}
+
 function pct(numerator: number, denominator: number) {
   if (!denominator) return "0%";
   return `${Math.round((numerator / denominator) * 100)}%`;
 }
 
+function isPercentKey(key: string) {
+  return (
+    key === "attendanceRateToday" ||
+    key === "attendanceCompletionRateToday" ||
+    key === "assessmentCompletionRate" ||
+    key === "assessmentLinkCoverageRate" ||
+    key === "lessonDeliveryComplianceRate"
+  );
+}
+
+function formatSignalValue(key: string, value: unknown) {
+  if (isPercentKey(key)) return percentValue(value);
+  return numberValue(value).toLocaleString();
+}
+
 function roleLabel(role: string) {
-  if (role === "SISSO") return "SISO";
+  if (role === "SISSO") return "SISSO";
   if (role === "CIRCUIT_SUPERVISOR") return "Circuit Supervisor";
   if (role === "DISTRICT_DIRECTOR") return "District Director";
   if (role === "DISTRICT_MIS_OFFICER") return "District MIS/Data Officer";
   if (role === "DISTRICT_SHEP_OFFICER") return "District SHEP/Health Officer";
   if (role === "DISTRICT_ASSESSMENT_OFFICER") return "District Assessment Officer";
   return role.replaceAll("_", " ");
+}
+
+function riskBadgeClass(level?: string) {
+  if (level === "CRITICAL") return "border-red-300/30 bg-red-500/15 text-red-100";
+  if (level === "HIGH") return "border-orange-300/30 bg-orange-500/15 text-orange-100";
+  if (level === "MEDIUM") return "border-amber-300/30 bg-amber-400/15 text-amber-100";
+  return "border-emerald-300/30 bg-emerald-400/15 text-emerald-100";
+}
+
+function riskDotClass(level?: string) {
+  if (level === "CRITICAL") return "bg-red-300";
+  if (level === "HIGH") return "bg-orange-300";
+  if (level === "MEDIUM") return "bg-amber-300";
+  return "bg-emerald-300";
+}
+
+function compactDateTime(value?: string) {
+  if (!value) return null;
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+function MetricPill({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "default" | "danger" | "warning" | "success";
+}) {
+  const toneClass =
+    tone === "danger"
+      ? "border-red-300/20 bg-red-500/10 text-red-100"
+      : tone === "warning"
+        ? "border-amber-300/20 bg-amber-400/10 text-amber-100"
+        : tone === "success"
+          ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+          : "border-white/10 bg-white/5 text-slate-300";
+
+  return (
+    <span className={`rounded-xl border px-3 py-2 text-xs ${toneClass}`}>
+      {label}: <b className="text-white">{value}</b>
+    </span>
+  );
+}
+
+function SectionHeading({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-white">{title}</h2>
+      <p className="mt-1 text-sm leading-6 text-slate-300">{description}</p>
+    </div>
+  );
+}
+
+function AssessmentIntegrityGrid({ metrics }: { metrics?: SchoolMetrics | InterventionQueueItem["metrics"] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 md:grid-cols-4">
+      <MetricPill label="Items" value={numberValue(metrics?.assessmentItemsTotal)} />
+      <MetricPill label="Draft" value={numberValue(metrics?.assessmentItemsDraft)} tone={numberValue(metrics?.assessmentItemsDraft) ? "warning" : "success"} />
+      <MetricPill label="No scores" value={numberValue(metrics?.assessmentItemsWithoutScores)} tone={numberValue(metrics?.assessmentItemsWithoutScores) ? "danger" : "success"} />
+      <MetricPill label="No delivery link" value={numberValue(metrics?.assessmentItemsWithoutLessonDelivery)} tone={numberValue(metrics?.assessmentItemsWithoutLessonDelivery) ? "warning" : "success"} />
+      <MetricPill label="No curriculum link" value={numberValue(metrics?.assessmentItemsWithoutCurriculumUnit)} tone={numberValue(metrics?.assessmentItemsWithoutCurriculumUnit) ? "warning" : "success"} />
+      <MetricPill label="Scoring" value={percentValue(metrics?.assessmentCompletionRate)} tone={numberValue(metrics?.assessmentCompletionRate) < 60 ? "danger" : "success"} />
+      <MetricPill label="Link coverage" value={percentValue(metrics?.assessmentLinkCoverageRate)} tone={numberValue(metrics?.assessmentLinkCoverageRate) < 70 ? "warning" : "success"} />
+      <MetricPill label="Orphan notes" value={numberValue(metrics?.orphanedLessonNotesLast14Days)} tone={numberValue(metrics?.orphanedLessonNotesLast14Days) ? "danger" : "success"} />
+    </div>
+  );
 }
 
 export default function GovernanceDashboardClient({
@@ -141,10 +375,14 @@ export default function GovernanceDashboardClient({
         headers: { Accept: "application/json" },
       });
 
-      const json = (await res.json().catch(() => null)) as OverviewResponse | ErrorResponse | null;
+      const json = (await res.json().catch(() => null)) as
+        | OverviewResponse
+        | ErrorResponse
+        | null;
 
       if (!res.ok || !json?.ok) {
-        const e = json && !json.ok ? json.error : `Failed to load dashboard (${res.status})`;
+        const e =
+          json && !json.ok ? json.error : `Failed to load dashboard (${res.status})`;
         setData(null);
         setError(e);
         return;
@@ -167,30 +405,52 @@ export default function GovernanceDashboardClient({
   const assignments = data?.scope?.assignments ?? [];
   const schools = data?.overview?.schools ?? [];
   const circuitBreakdown = data?.overview?.circuitBreakdown ?? [];
+  const interventionQueue = data?.overview?.interventionQueue ?? [];
+  const riskSummary = data?.overview?.riskSummary ?? {};
   const totals = data?.overview?.totals ?? {};
   const signals = data?.overview?.signals ?? {};
   const emptyStates = data?.overview?.emptyStates ?? [];
+  const generatedAt = compactDateTime(data?.overview?.generatedAt);
 
   const primaryAssignment = assignments[0] ?? null;
 
   const totalCards = useMemo(() => {
     const preferred = isDistrictView
-      ? ["districts", "circuits", "schools", "learners", "teachers"]
-      : ["circuits", "schools", "learners", "teachers"];
+      ? ["districts", "circuits", "schools", "learners", "teachers", "classrooms"]
+      : ["circuits", "schools", "learners", "teachers", "classrooms"];
 
     return preferred
       .filter((key) => Object.prototype.hasOwnProperty.call(totals, key))
-      .map((key) => ({ key, label: formatLabel(key), value: numberValue(totals[key]) }));
+      .map((key) => ({
+        key,
+        label: formatLabel(key),
+        value: numberValue(totals[key]),
+      }));
   }, [totals, isDistrictView]);
 
   const signalCards = useMemo(() => {
     const preferred = [
+      "attendanceRateToday",
+      "attendanceCompletionRateToday",
       "attendanceSessionsToday",
       "attendanceMarksToday",
-      "presentMarksToday",
+      "missingAttendanceMarksToday",
+      "absentMarksToday",
+      "lateMarksToday",
       "healthAlertsToday",
-      "publishedOrLockedAssessments",
-      "lessonDeliveriesLast14Days",
+      "lessonNotesPendingReview",
+      "orphanedLessonNotesLast14Days",
+      "orphanedDeliveriesLast14Days",
+      "lessonDeliveryComplianceRate",
+      "assessmentItemsTotal",
+      "assessmentItemsDraft",
+      "assessmentItemsWithoutScores",
+      "assessmentItemsWithoutLessonDelivery",
+      "assessmentItemsWithoutCurriculumUnit",
+      "assessmentCompletionRate",
+      "assessmentLinkCoverageRate",
+      "criticalRiskSchools",
+      "highRiskSchools",
     ];
 
     return preferred
@@ -198,8 +458,63 @@ export default function GovernanceDashboardClient({
       .map((key) => ({
         key,
         label: formatLabel(key),
-        value: numberValue(signals[key]),
+        value: formatSignalValue(key, signals[key]),
       }));
+  }, [signals]);
+
+  const topRiskSchools = useMemo(() => {
+    return [...schools]
+      .sort((a, b) => numberValue(b.metrics?.riskScore) - numberValue(a.metrics?.riskScore))
+      .slice(0, 5);
+  }, [schools]);
+
+  const highestRiskCircuits = useMemo(() => {
+    return [...circuitBreakdown]
+      .sort((a, b) => {
+        const criticalDiff = numberValue(b.criticalRiskSchools) - numberValue(a.criticalRiskSchools);
+        if (criticalDiff !== 0) return criticalDiff;
+
+        const highDiff = numberValue(b.highRiskSchools) - numberValue(a.highRiskSchools);
+        if (highDiff !== 0) return highDiff;
+
+        return numberValue(b.highestRiskScore) - numberValue(a.highestRiskScore);
+      })
+      .slice(0, 6);
+  }, [circuitBreakdown]);
+
+  const assessmentSummary = useMemo(() => {
+    return [
+      {
+        key: "assessmentItemsTotal",
+        label: "Assessment Items",
+        value: numberValue(signals.assessmentItemsTotal),
+      },
+      {
+        key: "assessmentItemsWithoutScores",
+        label: "Items Without Scores",
+        value: numberValue(signals.assessmentItemsWithoutScores),
+      },
+      {
+        key: "assessmentItemsWithoutLessonDelivery",
+        label: "Items Without Delivery Link",
+        value: numberValue(signals.assessmentItemsWithoutLessonDelivery),
+      },
+      {
+        key: "orphanedLessonNotesLast14Days",
+        label: "Orphaned Approved Notes",
+        value: numberValue(signals.orphanedLessonNotesLast14Days),
+      },
+      {
+        key: "assessmentCompletionRate",
+        label: "Assessment Completion",
+        value: percentValue(signals.assessmentCompletionRate),
+      },
+      {
+        key: "lessonDeliveryComplianceRate",
+        label: "Delivery Compliance",
+        value: percentValue(signals.lessonDeliveryComplianceRate),
+      },
+    ];
   }, [signals]);
 
   function logout() {
@@ -229,12 +544,22 @@ export default function GovernanceDashboardClient({
                 {description}
               </p>
 
-              {primaryAssignment ? (
-                <div className="mt-4 inline-flex flex-wrap rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                  {roleLabel(primaryAssignment.role)} · {primaryAssignment.zoneName}
-                  {primaryAssignment.parentZoneName ? ` · ${primaryAssignment.parentZoneName}` : ""}
-                </div>
-              ) : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {primaryAssignment ? (
+                  <div className="inline-flex rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
+                    {roleLabel(primaryAssignment.role)} · {primaryAssignment.zoneName}
+                    {primaryAssignment.parentZoneName
+                      ? ` · ${primaryAssignment.parentZoneName}`
+                      : ""}
+                  </div>
+                ) : null}
+
+                {generatedAt ? (
+                  <div className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+                    Updated: {generatedAt}
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -264,10 +589,13 @@ export default function GovernanceDashboardClient({
           </section>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           {totalCards.length ? (
             totalCards.map((c) => (
-              <div key={c.key} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+              <div
+                key={c.key}
+                className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"
+              >
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                   {c.label}
                 </p>
@@ -281,24 +609,258 @@ export default function GovernanceDashboardClient({
           )}
         </section>
 
+        {isDistrictView ? (
+          <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-200">
+                  District Command View
+                </p>
+                <h2 className="mt-2 text-xl font-bold text-white">
+                  Highest-risk circuits first
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-red-100/80">
+                  Director-level action should flow through the SISSO or Circuit Supervisor, then down to schools.
+                </p>
+              </div>
+              <p className="text-xs text-red-100/70">
+                {highestRiskCircuits.length} circuit(s) in scope
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {loading ? (
+                <div className="text-sm text-red-100">Loading circuit priorities...</div>
+              ) : highestRiskCircuits.length ? (
+                highestRiskCircuits.map((circuit, idx) => (
+                  <div
+                    key={circuit.circuitId}
+                    className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+                  >
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                            #{idx + 1}
+                          </span>
+                          <span className="rounded-full border border-red-300/30 bg-red-500/15 px-3 py-1 text-xs font-semibold text-red-100">
+                            Highest risk {numberValue(circuit.highestRiskScore)}
+                          </span>
+                          <span className="rounded-full border border-orange-300/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-100">
+                            Critical {numberValue(circuit.criticalRiskSchools)} · High{" "}
+                            {numberValue(circuit.highRiskSchools)}
+                          </span>
+                        </div>
+
+                        <p className="mt-3 text-lg font-bold text-white">
+                          {circuit.circuitName}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-300">
+                          {circuit.schools} school(s) · {circuit.learners} learners ·{" "}
+                          {circuit.teachers} teachers
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[520px]">
+                        <MetricPill label="Attendance completion" value={percentValue(circuit.attendanceCompletionRateToday)} tone={numberValue(circuit.attendanceCompletionRateToday) < 75 ? "danger" : "success"} />
+                        <MetricPill label="Lesson compliance" value={percentValue(circuit.lessonDeliveryComplianceRate)} tone={numberValue(circuit.lessonDeliveryComplianceRate) < 70 ? "danger" : "success"} />
+                        <MetricPill label="Assessment scoring" value={percentValue(circuit.assessmentCompletionRate)} tone={numberValue(circuit.assessmentCompletionRate) < 60 ? "danger" : "success"} />
+                        <MetricPill label="Assessment link coverage" value={percentValue(circuit.assessmentLinkCoverageRate)} tone={numberValue(circuit.assessmentLinkCoverageRate) < 70 ? "warning" : "success"} />
+                        <MetricPill label="Orphan notes" value={numberValue(circuit.orphanedLessonNotesLast14Days)} tone={numberValue(circuit.orphanedLessonNotesLast14Days) ? "danger" : "success"} />
+                        <MetricPill label="No-score items" value={numberValue(circuit.assessmentItemsWithoutScores)} tone={numberValue(circuit.assessmentItemsWithoutScores) ? "danger" : "success"} />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          Director action
+                        </p>
+                        <ul className="mt-2 space-y-2 text-sm text-slate-200">
+                          {(circuit.directorRecommendedActions ?? []).slice(0, 3).map((action) => (
+                            <li key={action} className="flex gap-2">
+                              <span className="mt-2 h-2 w-2 rounded-full bg-emerald-300" />
+                              <span>{action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          Schools driving this circuit risk
+                        </p>
+                        <div className="mt-2 space-y-2">
+                          {(circuit.schoolsDrivingRisk ?? []).slice(0, 3).map((school) => (
+                            <div
+                              key={school.schoolId}
+                              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-sm font-semibold text-white">
+                                  {school.schoolName}
+                                </p>
+                                <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${riskBadgeClass(school.riskLevel)}`}>
+                                  {school.riskLevel} · {school.riskScore}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-slate-300">
+                                {school.reasons[0] ?? "No reason provided."}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+                  No high-risk circuit detected from current signals.
+                </div>
+              )}
+            </div>
+          </section>
+        ) : null}
+
+        {!isDistrictView ? (
+          <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+            <div className="rounded-3xl border border-red-300/20 bg-red-500/10 p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-200">
+                Intervention Command Centre
+              </p>
+              <h2 className="mt-2 text-xl font-bold text-white">
+                Schools needing attention first
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-red-100/80">
+                This is the SISSO supervision queue. It turns raw school data into action priorities.
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <MetricPill label="Critical schools" value={numberValue(riskSummary.critical)} tone="danger" />
+                <MetricPill label="High risk schools" value={numberValue(riskSummary.high)} tone="warning" />
+                <MetricPill label="Medium risk" value={numberValue(riskSummary.medium)} tone="warning" />
+                <MetricPill label="Highest score" value={numberValue(riskSummary.highestRiskScore)} />
+              </div>
+
+              {riskSummary.highestRiskSchool ? (
+                <div className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-200">
+                    Highest Risk School
+                  </p>
+                  <p className="mt-2 font-bold text-white">
+                    {riskSummary.highestRiskSchool.name}
+                  </p>
+                  <p className="mt-1 text-sm text-red-100">
+                    {riskSummary.highestRiskSchool.riskLevel} · Score{" "}
+                    {riskSummary.highestRiskSchool.riskScore}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+              <SectionHeading
+                title="Intervention Queue"
+                description="The first schools the SISSO should call, visit, or follow up."
+              />
+
+              <div className="mt-5 space-y-3">
+                {loading ? (
+                  <div className="text-sm text-slate-300">Loading intervention queue...</div>
+                ) : interventionQueue.length ? (
+                  interventionQueue.slice(0, 5).map((item, idx) => (
+                    <div
+                      key={`${item.schoolId}-${idx}`}
+                      className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+                    >
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                              #{idx + 1}
+                            </span>
+                            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel)}`}>
+                              {item.riskLevel} · {item.riskScore}
+                            </span>
+                          </div>
+
+                          <p className="mt-3 font-bold text-white">{item.schoolName}</p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {item.schoolCode || "No school code"} · {item.circuitName}
+                            {item.districtName ? ` · ${item.districtName}` : ""}
+                          </p>
+                        </div>
+
+                        <div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+                          <MetricPill label="Attendance" value={percentValue(item.metrics?.attendanceCompletionRateToday)} tone={numberValue(item.metrics?.attendanceCompletionRateToday) < 75 ? "danger" : "success"} />
+                          <MetricPill label="Assessment" value={percentValue(item.metrics?.assessmentCompletionRate)} tone={numberValue(item.metrics?.assessmentCompletionRate) < 60 ? "danger" : "success"} />
+                          <MetricPill label="Orphan notes" value={numberValue(item.metrics?.orphanedLessonNotesLast14Days)} tone={numberValue(item.metrics?.orphanedLessonNotesLast14Days) ? "danger" : "success"} />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            Why flagged
+                          </p>
+                          <ul className="mt-2 space-y-2 text-sm text-slate-200">
+                            {item.reasons.slice(0, 5).map((reason) => (
+                              <li key={reason} className="flex gap-2">
+                                <span className={`mt-2 h-2 w-2 rounded-full ${riskDotClass(item.riskLevel)}`} />
+                                <span>{reason}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            SISSO recommended action
+                          </p>
+                          <ul className="mt-2 space-y-2 text-sm text-slate-200">
+                            {item.recommendedActions.slice(0, 5).map((action) => (
+                              <li key={action} className="flex gap-2">
+                                <span className="mt-2 h-2 w-2 rounded-full bg-emerald-300" />
+                                <span>{action}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+                    No urgent intervention item detected from current signals.
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-            <h2 className="text-lg font-bold text-white">
-              {isDistrictView ? "Circuit Breakdown" : "Schools in This Circuit"}
-            </h2>
-            <p className="mt-1 text-sm text-slate-300">
-              {isDistrictView
-                ? "Compare circuits inside this district before deciding where to intervene first."
-                : "Only schools inside this officer’s authorized circuit should appear here."}
-            </p>
+            <SectionHeading
+              title={isDistrictView ? "Circuit Risk Breakdown" : "Schools in This Circuit"}
+              description={
+                isDistrictView
+                  ? "Circuits are sorted by risk so the Director knows which SISSO/Circuit Supervisor to follow up first."
+                  : "Only schools inside this officer’s authorized circuit should appear here."
+              }
+            />
 
             <div className="mt-5 space-y-3">
               {loading ? (
                 <div className="text-sm text-slate-300">Loading...</div>
               ) : isDistrictView && circuitBreakdown.length ? (
                 circuitBreakdown.map((row) => (
-                  <div key={row.circuitId} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div
+                    key={row.circuitId}
+                    className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+                  >
+                    <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                       <div>
                         <p className="font-semibold text-white">{row.circuitName}</p>
                         <p className="mt-1 text-xs text-slate-400">
@@ -310,31 +872,37 @@ export default function GovernanceDashboardClient({
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
-                        <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                          Health alerts: <b className="text-white">{row.healthAlertsToday}</b>
-                        </span>
-                        <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                          Lessons: <b className="text-white">{row.lessonDeliveriesLast14Days}</b>
-                        </span>
-                        <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                          Assessments: <b className="text-white">{row.publishedOrLockedAssessments}</b>
-                        </span>
-                        <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                          Attendance: <b className="text-white">{row.attendanceMarksToday}</b>
-                        </span>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 md:grid-cols-4">
+                        <MetricPill label="Critical" value={numberValue(row.criticalRiskSchools)} tone="danger" />
+                        <MetricPill label="High" value={numberValue(row.highRiskSchools)} tone="warning" />
+                        <MetricPill label="Completion" value={percentValue(row.attendanceCompletionRateToday)} />
+                        <MetricPill label="Highest risk" value={numberValue(row.highestRiskScore)} />
+                        <MetricPill label="No-score items" value={numberValue(row.assessmentItemsWithoutScores)} tone={numberValue(row.assessmentItemsWithoutScores) ? "danger" : "success"} />
+                        <MetricPill label="No delivery link" value={numberValue(row.assessmentItemsWithoutLessonDelivery)} tone={numberValue(row.assessmentItemsWithoutLessonDelivery) ? "warning" : "success"} />
+                        <MetricPill label="Orphan notes" value={numberValue(row.orphanedLessonNotesLast14Days)} tone={numberValue(row.orphanedLessonNotesLast14Days) ? "danger" : "success"} />
+                        <MetricPill label="Delivery compliance" value={percentValue(row.lessonDeliveryComplianceRate)} tone={numberValue(row.lessonDeliveryComplianceRate) < 70 ? "danger" : "success"} />
                       </div>
                     </div>
                   </div>
                 ))
               ) : schools.length ? (
                 schools.map((school) => {
-                  const m = school.metrics;
+                  const m = school.metrics ?? {};
+                  const riskLevel = String(m.riskLevel ?? "LOW");
                   return (
-                    <div key={school.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                    <div
+                      key={school.id}
+                      className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+                    >
                       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                         <div>
-                          <p className="font-semibold text-white">{school.name}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-white">{school.name}</p>
+                            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}>
+                              {riskLevel} · {numberValue(m.riskScore)}
+                            </span>
+                          </div>
+
                           <p className="mt-1 text-xs text-slate-400">
                             {school.schoolCode || "No school code"} · {school.status}
                           </p>
@@ -342,34 +910,32 @@ export default function GovernanceDashboardClient({
                             Circuit: {school.circuit?.name || "—"} · District:{" "}
                             {school.district?.name || "—"}
                           </p>
+
+                          {m.riskReasons?.length ? (
+                            <p className="mt-3 text-sm text-slate-200">
+                              <span className="font-semibold text-amber-200">Main reason:</span>{" "}
+                              {m.riskReasons[0]}
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 md:grid-cols-4">
-                          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                            Learners: <b className="text-white">{m?.learners ?? 0}</b>
-                          </span>
-                          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                            Teachers: <b className="text-white">{m?.teachers ?? 0}</b>
-                          </span>
-                          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                            Present: <b className="text-white">{m?.presentMarksToday ?? 0}</b>
-                          </span>
-                          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                            Alerts: <b className="text-white">{m?.healthAlertsToday ?? 0}</b>
-                          </span>
-                          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                            Lessons: <b className="text-white">{m?.lessonDeliveriesLast14Days ?? 0}</b>
-                          </span>
-                          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                            Assessments: <b className="text-white">{m?.publishedOrLockedAssessments ?? 0}</b>
-                          </span>
-                          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                            Attendance: <b className="text-white">{m?.attendanceMarksToday ?? 0}</b>
-                          </span>
-                          <span className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-emerald-100">
-                            In scope
-                          </span>
+                          <MetricPill label="Learners" value={numberValue(m.learners)} />
+                          <MetricPill label="Teachers" value={numberValue(m.teachers)} />
+                          <MetricPill label="Attendance" value={percentValue(m.attendanceRateToday)} />
+                          <MetricPill label="Completion" value={percentValue(m.attendanceCompletionRateToday)} />
+                          <MetricPill label="Missing" value={numberValue(m.missingAttendanceMarksToday)} tone={numberValue(m.missingAttendanceMarksToday) ? "warning" : "success"} />
+                          <MetricPill label="Alerts" value={numberValue(m.healthAlertsToday)} tone={numberValue(m.healthAlertsToday) ? "danger" : "success"} />
+                          <MetricPill label="Pending notes" value={numberValue(m.lessonNotesPendingReview)} tone={numberValue(m.lessonNotesPendingReview) ? "warning" : "success"} />
+                          <MetricPill label="Assessments" value={numberValue(m.assessmentItemsTotal)} />
                         </div>
+                      </div>
+
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          Assessment & lesson-delivery integrity
+                        </p>
+                        <AssessmentIntegrityGrid metrics={m} />
                       </div>
                     </div>
                   );
@@ -384,10 +950,29 @@ export default function GovernanceDashboardClient({
 
           <div className="space-y-6">
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-              <h2 className="text-lg font-bold text-white">Live Signals</h2>
-              <p className="mt-1 text-sm text-slate-300">
-                Early oversight signals from attendance, health, assessment, and lesson delivery.
-              </p>
+              <SectionHeading
+                title="Assessment & Lesson Integrity"
+                description="Shows whether teachers are connecting curriculum, approved lesson notes, lesson delivery, assessments, and scores."
+              />
+
+              <div className="mt-5 grid gap-3">
+                {assessmentSummary.map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
+                  >
+                    <span className="text-sm text-slate-300">{item.label}</span>
+                    <span className="text-lg font-bold text-white">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+              <SectionHeading
+                title="Live Signals"
+                description="Early oversight signals from attendance, health, assessment, lesson delivery, and risk scoring."
+              />
 
               <div className="mt-5 grid gap-3">
                 {loading ? (
@@ -411,10 +996,49 @@ export default function GovernanceDashboardClient({
             </div>
 
             <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-              <h2 className="text-lg font-bold text-white">Launch-Safe Notes</h2>
-              <p className="mt-1 text-sm text-slate-300">
-                These notes explain zero values without making the system look broken.
-              </p>
+              <SectionHeading
+                title="Top Risk Schools"
+                description="Quick ranking for supervision planning."
+              />
+
+              <div className="mt-5 space-y-3">
+                {topRiskSchools.length ? (
+                  topRiskSchools.map((school, idx) => {
+                    const m = school.metrics ?? {};
+                    const riskLevel = String(m.riskLevel ?? "LOW");
+
+                    return (
+                      <div
+                        key={school.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {idx + 1}. {school.name}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {school.circuit?.name || "No circuit"} · {school.schoolCode || "No code"}
+                          </p>
+                        </div>
+                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}>
+                          {numberValue(m.riskScore)}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-300">
+                    No schools available for ranking.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+              <SectionHeading
+                title="Launch-Safe Notes"
+                description="These notes explain zero values without making the system look broken."
+              />
 
               <div className="mt-5 space-y-3">
                 {loading ? (
@@ -440,27 +1064,52 @@ export default function GovernanceDashboardClient({
 
         {isDistrictView ? (
           <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-            <h2 className="text-lg font-bold text-white">Schools in District Scope</h2>
-            <p className="mt-1 text-sm text-slate-300">
-              This confirms the district director’s school-level jurisdiction without allowing cross-district leakage.
-            </p>
+            <SectionHeading
+              title="Schools in District Scope"
+              description="School-level evidence is visible to the Director, but Director action should be routed through the responsible SISSO/Circuit Supervisor."
+            />
 
             <div className="mt-5 grid gap-3 lg:grid-cols-2">
               {schools.length ? (
-                schools.map((school) => (
-                  <div key={school.id} className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
-                    <p className="font-semibold text-white">{school.name}</p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {school.schoolCode || "No school code"} · {school.circuit?.name || "No circuit"}
-                    </p>
-                  </div>
-                ))
+                schools.map((school) => {
+                  const m = school.metrics ?? {};
+                  const riskLevel = String(m.riskLevel ?? "LOW");
+
+                  return (
+                    <div
+                      key={school.id}
+                      className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-white">{school.name}</p>
+                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}>
+                          {riskLevel} · {numberValue(m.riskScore)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {school.schoolCode || "No school code"} · {school.circuit?.name || "No circuit"}
+                      </p>
+                      {m.riskReasons?.[0] ? (
+                        <p className="mt-3 text-sm text-slate-200">
+                          <span className="font-semibold text-amber-200">Evidence:</span>{" "}
+                          {m.riskReasons[0]}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-300">
                   No schools found.
                 </div>
               )}
             </div>
+          </section>
+        ) : null}
+
+        {isCircuitView ? (
+          <section className="rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-5 text-sm text-emerald-100">
+            This is a read-only supervision dashboard. Officers can see risk and evidence, but they cannot edit school records from this view.
           </section>
         ) : null}
       </div>
