@@ -15,7 +15,11 @@ export default function CircuitDashboardPage() {
         description="Monitor schools, learners, teachers, attendance signals, health alerts, assessments, and lesson delivery inside your authorized circuit."
       />
 
-      <GovernanceSentNoticeAccountabilityClient />
+      <GovernanceSentNoticeAccountabilityClient
+        mode="jurisdiction"
+        title="Circuit notice accountability"
+        description="Track official notices sent inside your authorized circuit, including sender identity, delivery status, and acknowledgement follow-up."
+      />
     </div>
   );
 }

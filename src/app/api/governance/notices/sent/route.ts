@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
       input: {
         caseId: searchParams.get("caseId"),
         take: searchParams.get("take"),
+        mode: searchParams.get("mode"),
       },
     });
 
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
       ok: true,
       items,
       count: items.length,
+      mode: searchParams.get("mode") === "jurisdiction" ? "jurisdiction" : "mine",
     });
   } catch (err) {
     if (err instanceof GovernanceNoticeError) {

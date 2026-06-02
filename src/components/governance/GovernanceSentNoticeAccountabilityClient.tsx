@@ -3,6 +3,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+type AccountabilityMode = "mine" | "jurisdiction";
+
 type DeliverySummary = Record<
   string,
   {
@@ -19,6 +21,7 @@ type SentNotice = {
   caseId: string | null;
   tenantId: string | null;
   zoneId: string | null;
+  senderUserId: string;
   title: string;
   body: string;
   priority: string;
@@ -28,6 +31,11 @@ type SentNotice = {
   sentAt: string | null;
   createdAt: string;
   updatedAt: string;
+  sender: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
   case: {
     id: string;
     title: string;
@@ -56,6 +64,7 @@ type SentNotice = {
     createdAt: string;
   }>;
   accountability: {
+    mode?: AccountabilityMode;
     totalRecipients: number;
     readRecipients: number;
     unreadRecipients: number;
@@ -67,8 +76,14 @@ type SentNotice = {
 };
 
 type SentResponse =
-  | { ok: true; items: SentNotice[]; count: number }
+  | { ok: true; items: SentNotice[]; count: number; mode?: AccountabilityMode }
   | { ok: false; error: string };
+
+type Props = {
+  mode?: AccountabilityMode;
+  title?: string;
+  description?: string;
+};
 
 function dateLabel(value: string | null) {
   if (!value) return "Not yet";
@@ -104,7 +119,11 @@ function statusClass(value: string) {
   return "border-white/10 bg-white/5 text-slate-200";
 }
 
-export default function GovernanceSentNoticeAccountabilityClient() {
+export default function GovernanceSentNoticeAccountabilityClient({
+  mode = "mine",
+  title = "Sent official notices",
+  description = "Track who received official notices, who acknowledged, and which cases still need follow-up.",
+}: Props) {
   const [items, setItems] = useState<SentNotice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,8 +132,12 @@ export default function GovernanceSentNoticeAccountabilityClient() {
     setLoading(true);
     setError(null);
 
+    const params = new URLSearchParams();
+    params.set("take", "10");
+    params.set("mode", mode);
+
     try {
-      const res = await fetch("/api/governance/notices/sent?take=10", {
+      const res = await fetch(`/api/governance/notices/sent?${params.toString()}`, {
         method: "GET",
         credentials: "include",
         cache: "no-store",
@@ -136,7 +159,7 @@ export default function GovernanceSentNoticeAccountabilityClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
     void load();
@@ -155,30 +178,31 @@ export default function GovernanceSentNoticeAccountabilityClient() {
     );
   }, [items]);
 
+  const modeLabel =
+    mode === "jurisdiction" ? "Jurisdiction-wide" : "My sent notices";
+
   return (
     <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.20)]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">
-            Notice Accountability
+            Notice Accountability · {modeLabel}
           </p>
-          <h2 className="mt-2 text-xl font-bold text-white">
-            Sent official notices
-          </h2>
+          <h2 className="mt-2 text-xl font-bold text-white">{title}</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-            Track who received official notices, who acknowledged, and which cases still need follow-up.
+            {description}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2 text-xs">
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
-            Sent: <b className="text-white">{totals.sent}</b>
+            Notices: <b className="text-white">{totals.sent}</b>
           </span>
           <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-emerald-100">
             Acknowledged: <b>{totals.acknowledged}</b>
           </span>
           <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-red-100">
-            Unacknowledged: <b>{totals.unacknowledged}</b>
+            Pending: <b>{totals.unacknowledged}</b>
           </span>
           <button
             type="button"
@@ -192,7 +216,7 @@ export default function GovernanceSentNoticeAccountabilityClient() {
 
       {loading ? (
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
-          Loading sent notice accountability...
+          Loading notice accountability...
         </div>
       ) : null}
 
@@ -204,7 +228,7 @@ export default function GovernanceSentNoticeAccountabilityClient() {
 
       {!loading && !items.length && !error ? (
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
-          No official notices sent yet.
+          No official notices found for this view yet.
         </div>
       ) : null}
 
@@ -243,6 +267,14 @@ export default function GovernanceSentNoticeAccountabilityClient() {
                     Sent {dateLabel(item.sentAt ?? item.createdAt)}
                     {item.tenant?.name ? ` · ${item.tenant.name}` : ""}
                     {item.case?.title ? ` · Case: ${item.case.title}` : ""}
+                  </p>
+
+                  <p className="mt-2 text-xs text-slate-400">
+                    Sent by:{" "}
+                    <span className="font-semibold text-slate-200">
+                      {item.sender?.name ?? item.sender?.email ?? "Unknown sender"}
+                    </span>
+                    {item.sender?.email ? ` · ${item.sender.email}` : ""}
                   </p>
                 </div>
 

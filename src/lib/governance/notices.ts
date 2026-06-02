@@ -1307,10 +1307,18 @@ export async function acknowledgeGovernanceNotice(args: {
   return updated;
 }
 
+type SentNoticeMode = "mine" | "jurisdiction";
+
 type SentNoticeInput = {
   caseId?: unknown;
   take?: unknown;
+  mode?: unknown;
 };
+
+function normalizeSentNoticeMode(value: unknown): SentNoticeMode {
+  const v = upper(value);
+  return v === "JURISDICTION" ? "jurisdiction" : "mine";
+}
 
 function scopedNoticeWhere(scope: GovernanceScope): Prisma.GovernanceOfficialNoticeWhereInput {
   if (scope.isSuperAdmin) return {};
@@ -1424,11 +1432,17 @@ export async function listGovernanceSentNoticeAccountability(args: {
   const takeRaw = intOrNull(args.input.take);
   const take = clamp(takeRaw ?? 25, 1, MAX_NOTICE_TAKE);
   const caseId = clean(args.input.caseId);
+  const mode = normalizeSentNoticeMode(args.input.mode);
 
   const andWhere: Prisma.GovernanceOfficialNoticeWhereInput[] = [
-    { senderUserId: args.actorUserId },
     scopedNoticeWhere(args.scope),
   ];
+
+  // Default behavior remains "mine" to preserve existing B.5C.2 proof.
+  // Jurisdiction mode allows officers to see notices inside their authorized scope.
+  if (mode === "mine") {
+    andWhere.push({ senderUserId: args.actorUserId });
+  }
 
   if (caseId) {
     andWhere.push({ caseId });
@@ -1445,6 +1459,7 @@ export async function listGovernanceSentNoticeAccountability(args: {
       caseId: true,
       tenantId: true,
       zoneId: true,
+      senderUserId: true,
       title: true,
       body: true,
       priority: true,
@@ -1454,6 +1469,13 @@ export async function listGovernanceSentNoticeAccountability(args: {
       sentAt: true,
       createdAt: true,
       updatedAt: true,
+      sender: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
       case: {
         select: {
           id: true,
@@ -1576,6 +1598,7 @@ export async function listGovernanceSentNoticeAccountability(args: {
     return {
       ...row,
       accountability: {
+        mode,
         totalRecipients,
         readRecipients,
         unreadRecipients: Math.max(0, totalRecipients - readRecipients),

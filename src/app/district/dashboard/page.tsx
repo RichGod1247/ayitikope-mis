@@ -15,7 +15,11 @@ export default function DistrictDashboardPage() {
         description="Monitor schools, circuits, learners, teachers, attendance signals, health alerts, assessments, and intervention priorities inside your authorized district."
       />
 
-      <GovernanceSentNoticeAccountabilityClient />
+      <GovernanceSentNoticeAccountabilityClient
+        mode="jurisdiction"
+        title="District-wide notice accountability"
+        description="Track official notices sent across your authorized district, including which officer sent them, who acknowledged, and what follow-up remains."
+      />
     </div>
   );
 }
