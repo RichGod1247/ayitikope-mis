@@ -9,11 +9,18 @@ import LogoutButton from "@/components/LogoutButton";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// Effective roles (ADMIN already maps to SCHOOL_ADMIN in serverAuth)
-const ALLOWED_TEACHER_ROLES = new Set(["TEACHER", "HEADTEACHER", "SCHOOL_ADMIN"]);
+const ALLOWED_TEACHER_ROLES = new Set([
+  "TEACHER",
+  "HEADTEACHER",
+  "SCHOOL_ADMIN",
+  "SCHOOLADMIN",
+]);
 
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
+function normalizeRole(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]/g, "_");
 }
 
 function navLinkClass() {
@@ -27,7 +34,7 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
     redirect(`/auth/signin?callbackUrl=${encodeURIComponent("/teacher/dashboard")}`);
   }
 
-  const role = (ctx.roleName ?? "").trim();
+  const role = normalizeRole(ctx.roleName);
   if (!ALLOWED_TEACHER_ROLES.has(role)) redirect("/app");
 
   const tenant = await prisma.tenant.findUnique({
@@ -50,7 +57,10 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
                 EduLife OS · Teacher
               </p>
               <p className="mt-1 truncate text-sm font-semibold text-[#F7F4ED]">
-                {tenant.name} <span className="text-[#8F98A8]">({tenant.schoolCode})</span>
+                {tenant.name}
+                {tenant.schoolCode ? (
+                  <span className="ml-1 text-[#8F98A8]">({tenant.schoolCode})</span>
+                ) : null}
               </p>
             </div>
 
@@ -59,14 +69,26 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
                 <Link className={navLinkClass()} href="/teacher/dashboard">
                   Dashboard
                 </Link>
+
+                <Link className={navLinkClass()} href="/teacher/notices">
+                  Notices
+                </Link>
+
                 <Link className={navLinkClass()} href="/teacher/attendance">
                   Attendance
                 </Link>
+
                 <Link className={navLinkClass()} href="/teacher/health">
                   Health
                 </Link>
 
-                {role === "SCHOOL_ADMIN" || role === "HEADTEACHER" ? (
+                <Link className={navLinkClass()} href="/teacher/lesson-notes">
+                  Lesson Notes
+                </Link>
+
+                {role === "SCHOOL_ADMIN" ||
+                role === "SCHOOLADMIN" ||
+                role === "HEADTEACHER" ? (
                   <Link className={navLinkClass()} href="/admin/dashboard">
                     Admin
                   </Link>

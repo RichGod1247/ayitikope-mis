@@ -45,7 +45,7 @@ export default async function HeadteacherLayout({ children }: { children: ReactN
 
   if (!tenant || tenant.status !== "ACTIVE") redirect("/pending");
 
-  const roleKey = normRoleKey((ctx as any).roleKey ?? (ctx as any).roleName);
+  const roleKey = normRoleKey(ctx.roleKey ?? ctx.roleName);
   const showAdmin =
     roleKey === "SUPERADMIN" ||
     roleKey === "ADMIN" ||
@@ -81,6 +81,10 @@ export default async function HeadteacherLayout({ children }: { children: ReactN
               <nav className="flex flex-wrap items-center gap-2">
                 <Link className={navLinkClass()} href="/headteacher/dashboard">
                   Dashboard
+                </Link>
+
+                <Link className={navLinkClass()} href="/headteacher/notices">
+                  Notices
                 </Link>
 
                 <Link className={navLinkClass()} href="/headteacher/reports">
