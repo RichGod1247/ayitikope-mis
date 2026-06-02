@@ -62,6 +62,13 @@ type AcknowledgeInput = {
   note?: unknown;
 };
 
+type RespondNoticeInput = {
+  recipientId?: unknown;
+  noticeId?: unknown;
+  responseBody?: unknown;
+  metadata?: unknown;
+};
+
 type NoticeTarget = {
   caseId: string | null;
   tenantId: string | null;
@@ -1307,6 +1314,144 @@ export async function acknowledgeGovernanceNotice(args: {
   return updated;
 }
 
+export async function respondGovernanceNotice(args: {
+  actorUserId: string;
+  input: RespondNoticeInput;
+  ip?: string | null;
+  userAgent?: string | null;
+}) {
+  const recipientId = clean(args.input.recipientId);
+  const noticeId = clean(args.input.noticeId);
+  const responseBody = clean(args.input.responseBody);
+
+  if (!recipientId && !noticeId) {
+    throw new GovernanceNoticeError(400, "RECIPIENT_ID_OR_NOTICE_ID_REQUIRED");
+  }
+
+  if (responseBody.length < 20) {
+    throw new GovernanceNoticeError(400, "RESPONSE_BODY_TOO_SHORT");
+  }
+
+  const recipient = await prisma.governanceOfficialNoticeRecipient.findFirst({
+    where: {
+      recipientUserId: args.actorUserId,
+      inAppVisible: true,
+      ...(recipientId ? { id: recipientId } : { noticeId }),
+    },
+    select: {
+      id: true,
+      noticeId: true,
+      tenantId: true,
+      readAt: true,
+      acknowledgedAt: true,
+      respondedAt: true,
+      notice: {
+        select: {
+          id: true,
+          title: true,
+          caseId: true,
+          tenantId: true,
+          zoneId: true,
+        },
+      },
+    },
+  });
+
+  if (!recipient) {
+    throw new GovernanceNoticeError(404, "NOTICE_RECIPIENT_NOT_FOUND");
+  }
+
+  const now = new Date();
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.governanceOfficialNoticeRecipient.update({
+      where: { id: recipient.id },
+      data: {
+        readAt: recipient.readAt ?? now,
+        acknowledgedAt: recipient.acknowledgedAt ?? now,
+        ...(recipient.acknowledgedAt
+          ? {}
+          : {
+              acknowledgeNote:
+                "Corrective response submitted; acknowledgement captured automatically.",
+            }),
+        respondedAt: now,
+        responseBody,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        recipientType: true,
+        displayName: true,
+        roleLabel: true,
+        readAt: true,
+        acknowledgedAt: true,
+        acknowledgeNote: true,
+        respondedAt: true,
+        responseBody: true,
+        notice: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            caseId: true,
+            senderUserId: true,
+          },
+        },
+        deliveries: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            channel: true,
+            status: true,
+            provider: true,
+            providerStatusDescription: true,
+            sentAt: true,
+          },
+        },
+      },
+    });
+
+    if (recipient.notice.caseId) {
+      await tx.governanceInterventionEvent.create({
+        data: {
+          caseId: recipient.notice.caseId,
+          actorUserId: args.actorUserId,
+          eventType: GovernanceInterventionEventType.COMMENT,
+          note: `Corrective response submitted for official notice: ${recipient.notice.title}`,
+          metadata: jsonObject({
+            source: "governance-notice-response",
+            noticeId: recipient.noticeId,
+            recipientId: recipient.id,
+            respondedAt: now.toISOString(),
+            responseBody,
+            extra: args.input.metadata,
+          }),
+        },
+      });
+    }
+
+    return row;
+  }, NOTICE_TX_OPTIONS);
+
+  await writeAuditLog({
+    action: "GOVERNANCE_OFFICIAL_NOTICE_RESPONDED",
+    tenantId: recipient.tenantId ?? recipient.notice.tenantId ?? undefined,
+    userId: args.actorUserId,
+    resource: "GovernanceOfficialNoticeRecipient",
+    resourceId: recipient.id,
+    ip: args.ip,
+    userAgent: args.userAgent,
+    metadata: {
+      noticeId: recipient.noticeId,
+      caseId: recipient.notice.caseId,
+      responseBody,
+    },
+  });
+
+  return updated;
+}
+
 type SentNoticeMode = "mine" | "jurisdiction";
 
 type SentNoticeInput = {
@@ -1517,8 +1662,10 @@ export async function listGovernanceSentNoticeAccountability(args: {
           inAppVisible: true,
           readAt: true,
           acknowledgedAt: true,
-          acknowledgeNote: true,
-          createdAt: true,
+acknowledgeNote: true,
+respondedAt: true,
+responseBody: true,
+createdAt: true,
           deliveries: {
             orderBy: { createdAt: "asc" },
             select: {
