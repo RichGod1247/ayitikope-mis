@@ -214,12 +214,47 @@ type GovernanceCase = {
       email: string;
     } | null;
   }>;
+    resolutionNote?: string | null;
+  dueAt?: string | null;
   notices?: Array<{
     id: string;
     title: string;
     status: string;
+    priority?: string;
     sentAt: string | null;
     createdAt: string;
+    idempotencyKey?: string | null;
+    idempotencyScope?: string | null;
+    recipients?: Array<{
+      id: string;
+      recipientType: string;
+      displayName: string | null;
+      roleLabel: string | null;
+      readAt: string | null;
+      acknowledgedAt: string | null;
+      acknowledgeNote?: string | null;
+      respondedAt: string | null;
+      responseBody: string | null;
+      createdAt: string;
+      deliveries?: Array<{
+        id: string;
+        channel: string;
+        status: string;
+        sentAt: string | null;
+        deliveredAt: string | null;
+        lastError: string | null;
+        createdAt: string;
+      }>;
+    }>;
+    deliveries?: Array<{
+      id: string;
+      channel: string;
+      status: string;
+      sentAt: string | null;
+      deliveredAt: string | null;
+      lastError: string | null;
+      createdAt: string;
+    }>;
   }>;
 };
 
@@ -367,6 +402,195 @@ function compactDateTime(value?: string) {
     day: "2-digit",
     month: "short",
   });
+}
+
+function closureEvidenceForCase(item: GovernanceCase) {
+  const notices = item.notices ?? [];
+
+  const officialNotices = notices.filter((notice) => {
+    const scope = String(notice.idempotencyScope ?? "").toLowerCase();
+    const key = String(notice.idempotencyKey ?? "").toLowerCase();
+    const title = String(notice.title ?? "").toLowerCase();
+
+    return (
+      scope.includes("official-intervention") ||
+      key.includes("official-intervention") ||
+      title.includes("official intervention")
+    );
+  });
+
+  const evidenceNotices = officialNotices.length ? officialNotices : notices;
+
+  const recipients = evidenceNotices.flatMap((notice) =>
+    (notice.recipients ?? []).map((recipient) => ({
+      notice,
+      recipient,
+    }))
+  );
+
+  const acknowledgedRecipients = recipients.filter(({ recipient }) =>
+    Boolean(recipient.acknowledgedAt)
+  );
+
+  const respondedRecipients = recipients.filter(
+    ({ recipient }) =>
+      Boolean(recipient.respondedAt) && Boolean(recipient.responseBody)
+  );
+
+  const latestResponse = [...respondedRecipients].sort((a, b) => {
+    const bd = b.recipient.respondedAt
+      ? new Date(b.recipient.respondedAt).getTime()
+      : 0;
+    const ad = a.recipient.respondedAt
+      ? new Date(a.recipient.respondedAt).getTime()
+      : 0;
+
+    return bd - ad;
+  })[0];
+
+  const warnings: string[] = [];
+
+  if (!evidenceNotices.length) {
+    warnings.push("No official intervention notice has been sent.");
+  }
+
+  if (evidenceNotices.length && !recipients.length) {
+    warnings.push("The official notice has no recipient evidence.");
+  }
+
+  if (recipients.length && !acknowledgedRecipients.length) {
+    warnings.push("No recipient has acknowledged the official notice.");
+  }
+
+  if (!respondedRecipients.length) {
+    warnings.push("No corrective response has been submitted yet.");
+  }
+
+  const hasOfficialNotice = evidenceNotices.length > 0;
+  const hasCorrectiveResponse = respondedRecipients.length > 0;
+
+  return {
+    hasOfficialNotice,
+    hasAcknowledgement: acknowledgedRecipients.length > 0,
+    hasCorrectiveResponse,
+    canResolve: hasOfficialNotice && hasCorrectiveResponse,
+    noticeCount: evidenceNotices.length,
+    recipientCount: recipients.length,
+    acknowledgedRecipients: acknowledgedRecipients.length,
+    respondedRecipients: respondedRecipients.length,
+    latestResponseBy:
+      latestResponse?.recipient.displayName ||
+      latestResponse?.recipient.roleLabel ||
+      null,
+    latestRespondedAt: latestResponse?.recipient.respondedAt ?? null,
+    latestResponseBody: latestResponse?.recipient.responseBody ?? null,
+    warnings,
+  };
+}
+
+function buildResolutionNote(item: GovernanceCase) {
+  const evidence = closureEvidenceForCase(item);
+
+  return [
+    "Case resolved after official notice response evidence.",
+    item.tenant?.name ? `School: ${item.tenant.name}.` : "",
+    evidence.latestResponseBy ? `Respondent: ${evidence.latestResponseBy}.` : "",
+    evidence.latestRespondedAt
+      ? `Responded: ${
+          compactDateTime(evidence.latestRespondedAt) ??
+          evidence.latestRespondedAt
+        }.`
+      : "",
+    evidence.latestResponseBody
+      ? `Corrective response: ${evidence.latestResponseBody.slice(0, 260)}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function CaseClosureEvidencePanel({ item }: { item: GovernanceCase }) {
+  const evidence = closureEvidenceForCase(item);
+
+  return (
+    <div
+      className={`rounded-2xl border p-3 ${
+        evidence.canResolve
+          ? "border-emerald-300/20 bg-emerald-400/10"
+          : "border-amber-300/20 bg-amber-400/10"
+      }`}
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+            Closure evidence
+          </p>
+          <p className="mt-1 text-sm font-semibold text-white">
+            {evidence.canResolve
+              ? "Ready for evidence-based closure"
+              : "Not ready for closure"}
+          </p>
+        </div>
+
+        <span
+          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+            evidence.canResolve
+              ? "border-emerald-300/30 bg-emerald-400/10 text-emerald-100"
+              : "border-amber-300/30 bg-amber-400/10 text-amber-100"
+          }`}
+        >
+          {evidence.canResolve ? "Evidence complete" : "Evidence missing"}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2 text-xs sm:grid-cols-4">
+        <MetricPill
+          label="Notices"
+          value={evidence.noticeCount}
+          tone={evidence.hasOfficialNotice ? "success" : "warning"}
+        />
+        <MetricPill
+          label="Recipients"
+          value={evidence.recipientCount}
+          tone={evidence.recipientCount ? "success" : "warning"}
+        />
+        <MetricPill
+          label="Acknowledged"
+          value={evidence.acknowledgedRecipients}
+          tone={evidence.hasAcknowledgement ? "success" : "warning"}
+        />
+        <MetricPill
+          label="Responses"
+          value={evidence.respondedRecipients}
+          tone={evidence.hasCorrectiveResponse ? "success" : "danger"}
+        />
+      </div>
+
+      {evidence.latestResponseBody ? (
+        <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+            Latest corrective response
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {evidence.latestResponseBy || "Recipient"} ·{" "}
+            {compactDateTime(evidence.latestRespondedAt ?? undefined) ??
+              "Time not available"}
+          </p>
+          <p className="mt-2 line-clamp-4 text-sm leading-6 text-slate-100">
+            {evidence.latestResponseBody}
+          </p>
+        </div>
+      ) : null}
+
+      {evidence.warnings.length ? (
+        <ul className="mt-3 space-y-1 text-xs text-amber-100">
+          {evidence.warnings.map((warning) => (
+            <li key={warning}>• {warning}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
 }
 
 function MetricPill({
@@ -583,11 +807,28 @@ export default function GovernanceDashboardClient({
     }
   }
 
-  async function updateCaseStatus(
+    async function updateCaseStatus(
     item: GovernanceCase,
     status: Exclude<GovernanceCaseStatus, "OPEN" | "CANCELLED">,
     note: string
   ) {
+    const closureEvidence =
+      status === "RESOLVED" ? closureEvidenceForCase(item) : null;
+
+    if (
+      status === "RESOLVED" &&
+      closureEvidence &&
+      !closureEvidence.canResolve
+    ) {
+      setCaseAction(null);
+      setCaseError(
+        `Cannot resolve yet: ${closureEvidence.warnings.join(" ")}`
+      );
+      return;
+    }
+
+    const finalNote = status === "RESOLVED" ? buildResolutionNote(item) : note;
+
     setBusyCaseKey(`status:${item.id}:${status}`);
     setCaseAction(null);
     setCaseError(null);
@@ -601,9 +842,10 @@ export default function GovernanceDashboardClient({
           caseId: item.id,
           action: "STATUS",
           status,
-          note,
+          note: finalNote,
           metadata: {
-            source: "B5A-governance-dashboard",
+            source: "B5E-evidence-based-case-closure",
+            closureEvidence,
           },
         }),
       });
@@ -1159,6 +1401,7 @@ await loadCases();
                                     : "Send official notice"}
                                 </button>
                               </div>
+                              <CaseClosureEvidencePanel item={existingCase} />
 
                               <div className="flex flex-wrap gap-2">
                                 <button
@@ -1196,7 +1439,7 @@ await loadCases();
                                   Escalate
                                 </button>
 
-                                <button
+                                                                <button
                                   type="button"
                                   onClick={() =>
                                     void updateCaseStatus(
@@ -1206,11 +1449,14 @@ await loadCases();
                                     )
                                   }
                                   disabled={
+                                    !closureEvidenceForCase(existingCase).canResolve ||
                                     busyCaseKey === `status:${existingCase.id}:RESOLVED`
                                   }
                                   className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-400/15 disabled:opacity-50"
                                 >
-                                  Resolve
+                                  {closureEvidenceForCase(existingCase).canResolve
+                                    ? "Resolve with evidence"
+                                    : "Awaiting response"}
                                 </button>
                               </div>
 
