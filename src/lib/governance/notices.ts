@@ -1098,7 +1098,7 @@ export async function sendGovernanceOfficialNotice(args: {
   const txResult = await prisma.$transaction(async (tx) => {
     // Bank-grade no-schema concurrency guard:
     // prevents two near-simultaneous requests with the same key from both dispatching SMS/email.
-    await tx.$queryRaw`select pg_advisory_xact_lock(hashtext(${idempotencyKey}))`;
+    await tx.$queryRaw`select pg_advisory_xact_lock(hashtext(${idempotencyKey})::bigint)`;
 
     if (!allowDuplicate) {
       const candidates = await tx.governanceOfficialNotice.findMany({
