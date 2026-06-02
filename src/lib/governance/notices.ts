@@ -1306,3 +1306,290 @@ export async function acknowledgeGovernanceNotice(args: {
 
   return updated;
 }
+
+type SentNoticeInput = {
+  caseId?: unknown;
+  take?: unknown;
+};
+
+function scopedNoticeWhere(scope: GovernanceScope): Prisma.GovernanceOfficialNoticeWhereInput {
+  if (scope.isSuperAdmin) return {};
+
+  return {
+    OR: [
+      {
+        tenantId: {
+          in: scope.tenantIds.length ? scope.tenantIds : ["__none__"],
+        },
+      },
+      {
+        zoneId: {
+          in: scope.zoneIds.length ? scope.zoneIds : ["__none__"],
+        },
+      },
+    ],
+  };
+}
+
+export async function getGovernanceNoticeInboxSummary(args: {
+  actorUserId: string;
+}) {
+  const where: Prisma.GovernanceOfficialNoticeRecipientWhereInput = {
+    recipientUserId: args.actorUserId,
+    inAppVisible: true,
+  };
+
+  const [total, unread, unacknowledged, latest] = await prisma.$transaction([
+    prisma.governanceOfficialNoticeRecipient.count({
+      where,
+    }),
+
+    prisma.governanceOfficialNoticeRecipient.count({
+      where: {
+        ...where,
+        readAt: null,
+      },
+    }),
+
+    prisma.governanceOfficialNoticeRecipient.count({
+      where: {
+        ...where,
+        acknowledgedAt: null,
+      },
+    }),
+
+    prisma.governanceOfficialNoticeRecipient.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        readAt: true,
+        acknowledgedAt: true,
+        createdAt: true,
+        notice: {
+          select: {
+            id: true,
+            title: true,
+            priority: true,
+            status: true,
+            sentAt: true,
+            createdAt: true,
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            tenant: {
+              select: {
+                id: true,
+                name: true,
+                schoolCode: true,
+              },
+            },
+            zone: {
+              select: {
+                id: true,
+                name: true,
+                zoneType: {
+                  select: {
+                    name: true,
+                    level: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    total,
+    unread,
+    unacknowledged,
+    acknowledged: Math.max(0, total - unacknowledged),
+    latest,
+  };
+}
+
+export async function listGovernanceSentNoticeAccountability(args: {
+  scope: GovernanceScope;
+  actorUserId: string;
+  input: SentNoticeInput;
+}) {
+  const takeRaw = intOrNull(args.input.take);
+  const take = clamp(takeRaw ?? 25, 1, MAX_NOTICE_TAKE);
+  const caseId = clean(args.input.caseId);
+
+  const andWhere: Prisma.GovernanceOfficialNoticeWhereInput[] = [
+    { senderUserId: args.actorUserId },
+    scopedNoticeWhere(args.scope),
+  ];
+
+  if (caseId) {
+    andWhere.push({ caseId });
+  }
+
+  const rows = await prisma.governanceOfficialNotice.findMany({
+    where: {
+      AND: andWhere,
+    },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: {
+      id: true,
+      caseId: true,
+      tenantId: true,
+      zoneId: true,
+      title: true,
+      body: true,
+      priority: true,
+      status: true,
+      channels: true,
+      audienceSummary: true,
+      sentAt: true,
+      createdAt: true,
+      updatedAt: true,
+      case: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          tenantId: true,
+          zoneId: true,
+        },
+      },
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          schoolCode: true,
+        },
+      },
+      zone: {
+        select: {
+          id: true,
+          name: true,
+          zoneType: {
+            select: {
+              name: true,
+              level: true,
+            },
+          },
+        },
+      },
+      recipients: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          recipientUserId: true,
+          recipientType: true,
+          displayName: true,
+          roleLabel: true,
+          phone: true,
+          email: true,
+          inAppVisible: true,
+          readAt: true,
+          acknowledgedAt: true,
+          acknowledgeNote: true,
+          createdAt: true,
+          deliveries: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              channel: true,
+              status: true,
+              toAddress: true,
+              provider: true,
+              attempts: true,
+              lastError: true,
+              sentAt: true,
+              deliveredAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      },
+      deliveries: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          channel: true,
+          status: true,
+          provider: true,
+          attempts: true,
+          lastError: true,
+          sentAt: true,
+          deliveredAt: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+
+  return rows.map((row) => {
+    const totalRecipients = row.recipients.length;
+    const readRecipients = row.recipients.filter((r) => Boolean(r.readAt)).length;
+    const acknowledgedRecipients = row.recipients.filter((r) =>
+      Boolean(r.acknowledgedAt)
+    ).length;
+
+    const deliverySummary = row.deliveries.reduce<
+      Record<
+        string,
+        {
+          total: number;
+          sent: number;
+          failed: number;
+          skipped: number;
+          pending: number;
+        }
+      >
+    >((acc, delivery) => {
+      const channel = String(delivery.channel);
+      const status = String(delivery.status).toUpperCase();
+
+      if (!acc[channel]) {
+        acc[channel] = {
+          total: 0,
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          pending: 0,
+        };
+      }
+
+      acc[channel].total += 1;
+
+      if (status === "SENT") acc[channel].sent += 1;
+      else if (status === "FAILED") acc[channel].failed += 1;
+      else if (status === "SKIPPED") acc[channel].skipped += 1;
+      else acc[channel].pending += 1;
+
+      return acc;
+    }, {});
+
+    return {
+      ...row,
+      accountability: {
+        totalRecipients,
+        readRecipients,
+        unreadRecipients: Math.max(0, totalRecipients - readRecipients),
+        acknowledgedRecipients,
+        unacknowledgedRecipients: Math.max(
+          0,
+          totalRecipients - acknowledgedRecipients
+        ),
+        acknowledgementRate:
+          totalRecipients > 0
+            ? Math.round((acknowledgedRecipients / totalRecipients) * 100)
+            : null,
+        deliverySummary,
+      },
+    };
+  });
+}
