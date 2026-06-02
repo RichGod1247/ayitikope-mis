@@ -1,4 +1,5 @@
 // src/lib/governance/notices.ts
+import { createHash } from "crypto";
 import {
   GovernanceInterventionEventType,
   GovernanceInterventionPriority,
@@ -48,6 +49,18 @@ type SendNoticeInput = {
   targetRoles?: unknown;
   recipients?: unknown;
   metadata?: unknown;
+
+  /**
+   * Prevents duplicate SMS/email dispatch for the same official notice intent.
+   * Used by SISSO/Director dashboards.
+   */
+  idempotencyKey?: unknown;
+
+  /**
+   * Reserved for future reminder/escalation flows.
+   * Normal official notice sends should NOT set this.
+   */
+  allowDuplicate?: unknown;
 };
 
 type InboxInput = {
@@ -141,6 +154,73 @@ function jsonObject(value: unknown): Prisma.InputJsonValue {
 function jsonArray(value: unknown): Prisma.InputJsonValue {
   if (!Array.isArray(value)) return jsonValue([], []);
   return jsonValue(value, []);
+}
+
+function inputObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+
+  const obj = value as Record<string, unknown>;
+  const keys = Object.keys(obj).sort();
+
+  return `{${keys
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(obj[key])}`)
+    .join(",")}}`;
+}
+
+function sha256(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function metadataIdempotencyKey(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  return clean((value as Record<string, unknown>).idempotencyKey);
+}
+
+function normalizeIntentText(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function buildNoticeIdempotencyKey(args: {
+  input: SendNoticeInput;
+  target: NoticeTarget;
+  recipients: NormalizedRecipient[];
+  channels: GovernanceOfficialNoticeChannel[];
+  title: string;
+  body: string;
+  priority: GovernanceInterventionPriority;
+}) {
+  const explicit = clean(args.input.idempotencyKey);
+  if (explicit) return explicit;
+
+  const metadata = inputObject(args.input.metadata);
+  const metadataKey = clean(metadata.idempotencyKey);
+  if (metadataKey) return metadataKey;
+
+  const payload = {
+    version: "governance-official-notice-v1",
+    caseId: args.target.caseId,
+    tenantId: args.target.tenantId,
+    zoneId: args.target.zoneId,
+    title: normalizeIntentText(args.title),
+    body: normalizeIntentText(args.body),
+    priority: args.priority,
+    channels: args.channels.map(String).sort(),
+    targetRoles: targetRolesArray(args.input.targetRoles).map(normKey).sort(),
+    recipients: args.recipients.map((r) => recipientKey(r)).sort(),
+  };
+
+  return `gov-notice:${sha256(stableStringify(payload))}`;
 }
 
 function normalizePriority(value: unknown): GovernanceInterventionPriority {
@@ -1002,8 +1082,52 @@ export async function sendGovernanceOfficialNotice(args: {
   }
 
   const audienceSummary = buildAudienceSummary(recipients);
+  const allowDuplicate = boolish(input.allowDuplicate);
 
-  const created = await prisma.$transaction(async (tx) => {
+  const metadataInput = inputObject(input.metadata);
+  const idempotencyKey = buildNoticeIdempotencyKey({
+    input,
+    target,
+    recipients,
+    channels,
+    title,
+    body,
+    priority,
+  });
+
+  const txResult = await prisma.$transaction(async (tx) => {
+    // Bank-grade no-schema concurrency guard:
+    // prevents two near-simultaneous requests with the same key from both dispatching SMS/email.
+    await tx.$queryRaw`select pg_advisory_xact_lock(hashtext(${idempotencyKey}))`;
+
+    if (!allowDuplicate) {
+      const candidates = await tx.governanceOfficialNotice.findMany({
+        where: {
+          caseId: target.caseId,
+          tenantId: target.tenantId,
+          zoneId: target.zoneId,
+          title,
+          body,
+          audienceSummary,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: noticeSelect,
+      });
+
+      const existing = candidates.find(
+        (notice) => metadataIdempotencyKey(notice.metadata) === idempotencyKey
+      );
+
+      if (existing) {
+        return {
+          reused: true,
+          noticeId: existing.id,
+          notice: existing,
+        };
+      }
+    }
+
     const notice = await tx.governanceOfficialNotice.create({
       data: {
         caseId: target.caseId,
@@ -1017,10 +1141,11 @@ export async function sendGovernanceOfficialNotice(args: {
         channels: jsonArray(channels),
         audienceSummary,
         metadata: jsonObject({
-          ...(input.metadata && typeof input.metadata === "object" && !Array.isArray(input.metadata)
-            ? input.metadata
-            : {}),
+          ...metadataInput,
           targetLabel: target.label,
+          idempotencyKey,
+          idempotencyScope: "sendGovernanceOfficialNotice:v1",
+          allowDuplicate,
         }),
       },
       select: { id: true },
@@ -1064,6 +1189,7 @@ export async function sendGovernanceOfficialNotice(args: {
               source: "governance-official-notice",
               initialStatus: status,
               description,
+              idempotencyKey,
             }),
           },
         });
@@ -1082,22 +1208,56 @@ export async function sendGovernanceOfficialNotice(args: {
             channels,
             recipientCount: recipients.length,
             audienceSummary,
+            idempotencyKey,
           }),
         },
       });
     }
 
-    return notice;
+    return {
+      reused: false,
+      noticeId: notice.id,
+      notice: null,
+    };
   }, NOTICE_TX_OPTIONS);
 
-  await dispatchNoticeDeliveries(created.id, actorUserId);
+  if (txResult.reused) {
+    await writeAuditLog({
+      action: "GOVERNANCE_OFFICIAL_NOTICE_SEND_DEDUPED",
+      tenantId: target.tenantId ?? undefined,
+      userId: actorUserId,
+      resource: "GovernanceOfficialNotice",
+      resourceId: txResult.noticeId,
+      ip: args.ip,
+      userAgent: args.userAgent,
+      metadata: {
+        caseId: target.caseId,
+        zoneId: target.zoneId,
+        channels,
+        recipientCount: recipients.length,
+        audienceSummary,
+        idempotencyKey,
+        duplicateSafe: true,
+        message: "Duplicate official notice send suppressed; no SMS/email dispatched.",
+      },
+    });
+
+    return {
+      ...txResult.notice,
+      reused: true,
+      duplicateSafe: true,
+      idempotencyKey,
+    };
+  }
+
+  await dispatchNoticeDeliveries(txResult.noticeId, actorUserId);
 
   await writeAuditLog({
     action: "GOVERNANCE_OFFICIAL_NOTICE_SENT",
     tenantId: target.tenantId ?? undefined,
     userId: actorUserId,
     resource: "GovernanceOfficialNotice",
-    resourceId: created.id,
+    resourceId: txResult.noticeId,
     ip: args.ip,
     userAgent: args.userAgent,
     metadata: {
@@ -1106,13 +1266,21 @@ export async function sendGovernanceOfficialNotice(args: {
       channels,
       recipientCount: recipients.length,
       audienceSummary,
+      idempotencyKey,
     },
   });
 
-  return prisma.governanceOfficialNotice.findUniqueOrThrow({
-    where: { id: created.id },
+  const fresh = await prisma.governanceOfficialNotice.findUniqueOrThrow({
+    where: { id: txResult.noticeId },
     select: noticeSelect,
   });
+
+  return {
+    ...fresh,
+    reused: false,
+    duplicateSafe: true,
+    idempotencyKey,
+  };
 }
 
 export async function listGovernanceNoticeInbox(args: {

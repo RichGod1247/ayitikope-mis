@@ -232,7 +232,7 @@ type CaseWriteResponse =
   | { ok: false; error: string };
 
 type NoticeSendResponse =
-  | { ok: true; item: { id: string; status?: string } }
+  | { ok: true; item: any; reused?: boolean; duplicateSafe?: boolean }
   | { ok: false; error: string };
 
 type RiskSummary = {
@@ -639,17 +639,21 @@ export default function GovernanceDashboardClient({
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          caseId: item.id,
-          title: `Official intervention notice: ${schoolLabel}`,
+  caseId: item.id,
+  idempotencyKey: `governance-notice:case:${item.id}:official-intervention:HEADTEACHER:v1`,
+  title: `Official intervention notice: ${schoolLabel}`,
           body:
             "EduLife OS has flagged this school for immediate supervision follow-up. Kindly review attendance capture, lesson delivery evidence, and assessment scoring evidence, then respond to the SISSO with corrective action taken.",
           priority: item.priority,
           channels: ["IN_APP", "SMS", "EMAIL"],
           targetRoles: ["HEADTEACHER"],
           metadata: {
-            source: "B5A-governance-dashboard",
-            caseId: item.id,
-          },
+  source: "B5A-governance-dashboard",
+  caseId: item.id,
+  noticeIntent: "official-intervention",
+  targetAudience: "HEADTEACHER",
+  idempotencyKey: `governance-notice:case:${item.id}:official-intervention:HEADTEACHER:v1`,
+},
         }),
       });
 
@@ -662,8 +666,15 @@ export default function GovernanceDashboardClient({
         return;
       }
 
-      setCaseAction(`Official notice sent for ${schoolLabel}.`);
-      await loadCases();
+      const reused = Boolean(json.reused || json.item?.reused);
+
+setCaseAction(
+  reused
+    ? `Official notice already exists for ${schoolLabel}; no duplicate SMS/email sent.`
+    : `Official notice sent for ${schoolLabel}.`
+);
+
+await loadCases();
     } catch {
       setCaseError("Network/server error while sending official notice.");
     } finally {

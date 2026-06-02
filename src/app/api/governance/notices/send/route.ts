@@ -48,7 +48,14 @@ export async function POST(req: NextRequest) {
       userAgent: req.headers.get("user-agent"),
     });
 
-    return json(201, { ok: true, item });
+    const reused = Boolean((item as any)?.reused);
+
+    return json(reused ? 200 : 201, {
+      ok: true,
+      item,
+      reused,
+      duplicateSafe: Boolean((item as any)?.duplicateSafe),
+    });
   } catch (err) {
     if (err instanceof GovernanceNoticeError) {
       return json(err.status, { ok: false, error: err.code });
