@@ -93,6 +93,16 @@ type AckResponse =
       error: string;
     };
 
+type RespondResponse =
+  | {
+      ok: true;
+      item: unknown;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
 type Props = {
   portalLabel: string;
   title: string;
@@ -207,6 +217,7 @@ export default function OfficialNoticeInboxClient({
   const [action, setAction] = useState<string | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [unacknowledgedOnly, setUnacknowledgedOnly] = useState(false);
+  const [responseDrafts, setResponseDrafts] = useState<Record<string, string>>({});
 
   const unreadCount = useMemo(
     () => items.filter((item) => !item.readAt).length,
@@ -215,6 +226,11 @@ export default function OfficialNoticeInboxClient({
 
   const unacknowledgedCount = useMemo(
     () => items.filter((item) => !item.acknowledgedAt).length,
+    [items]
+  );
+
+  const unrespondedCount = useMemo(
+    () => items.filter((item) => !item.respondedAt).length,
     [items]
   );
 
@@ -257,7 +273,8 @@ export default function OfficialNoticeInboxClient({
   }, [loadInbox]);
 
   async function acknowledgeNotice(item: NoticeInboxItem) {
-    setBusyId(item.id);
+    const key = `ack:${item.id}`;
+    setBusyId(key);
     setError(null);
     setAction(null);
 
@@ -283,6 +300,56 @@ export default function OfficialNoticeInboxClient({
       await loadInbox();
     } catch {
       setError("Network/server error while acknowledging notice.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function submitResponse(item: NoticeInboxItem) {
+    const key = `respond:${item.id}`;
+    const responseBody = String(responseDrafts[item.id] ?? "").trim();
+
+    if (responseBody.length < 20) {
+      setError("Corrective response must be at least 20 characters.");
+      return;
+    }
+
+    setBusyId(key);
+    setError(null);
+    setAction(null);
+
+    try {
+      const res = await fetch("/api/governance/notices/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          recipientId: item.id,
+          responseBody,
+          metadata: {
+            source: "official-notice-inbox-ui",
+            portalLabel,
+          },
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as RespondResponse | null;
+
+      if (!res.ok || !json?.ok) {
+        setError(json && !json.ok ? json.error : `Failed to submit response (${res.status})`);
+        return;
+      }
+
+      setResponseDrafts((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+
+      setAction("Corrective response submitted successfully.");
+      await loadInbox();
+    } catch {
+      setError("Network/server error while submitting corrective response.");
     } finally {
       setBusyId(null);
     }
@@ -316,6 +383,9 @@ export default function OfficialNoticeInboxClient({
             <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-red-100">
               Unacknowledged: <b>{unacknowledgedCount}</b>
             </span>
+            <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-blue-100">
+              Awaiting response: <b>{unrespondedCount}</b>
+            </span>
           </div>
         </div>
       </section>
@@ -325,7 +395,7 @@ export default function OfficialNoticeInboxClient({
           <div>
             <h2 className="text-lg font-semibold text-white">Notice Inbox</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Review official instructions, delivery evidence, and acknowledgement status.
+              Review official instructions, acknowledge receipt, and submit corrective action evidence.
             </p>
           </div>
 
@@ -394,6 +464,11 @@ export default function OfficialNoticeInboxClient({
           {items.map((item) => {
             const channels = normalizeChannels(item.notice.channels);
             const acknowledged = Boolean(item.acknowledgedAt);
+            const responded = Boolean(item.respondedAt);
+            const ackKey = `ack:${item.id}`;
+            const respondKey = `respond:${item.id}`;
+            const responseDraft = responseDrafts[item.id] ?? "";
+            const responseReady = responseDraft.trim().length >= 20;
 
             return (
               <article
@@ -416,6 +491,15 @@ export default function OfficialNoticeInboxClient({
                       ) : (
                         <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-100">
                           ACTION NEEDED
+                        </span>
+                      )}
+                      {responded ? (
+                        <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-[11px] font-semibold text-blue-100">
+                          RESPONDED
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold text-amber-100">
+                          RESPONSE PENDING
                         </span>
                       )}
                     </div>
@@ -481,21 +565,90 @@ export default function OfficialNoticeInboxClient({
                         <span className="text-slate-500">Acknowledged:</span>{" "}
                         {cleanDate(item.acknowledgedAt)}
                       </p>
+                      <p className="mt-2">
+                        <span className="text-slate-500">Responded:</span>{" "}
+                        {cleanDate(item.respondedAt)}
+                      </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => void acknowledgeNotice(item)}
-                      disabled={acknowledged || busyId === item.id}
+                      disabled={acknowledged || busyId === ackKey}
                       className="mt-3 w-full rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-55"
                     >
                       {acknowledged
                         ? "Already acknowledged"
-                        : busyId === item.id
+                        : busyId === ackKey
                           ? "Acknowledging..."
                           : "Acknowledge notice"}
                     </button>
                   </div>
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-blue-300/15 bg-blue-400/[0.055] p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-100">
+                        Corrective Response
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-slate-300">
+                        Submit the action taken by the school. This becomes visible to the SISSO and is recorded on the intervention case evidence chain.
+                      </p>
+                    </div>
+
+                    {responded ? (
+                      <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-100">
+                        Submitted
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold text-amber-100">
+                        Required
+                      </span>
+                    )}
+                  </div>
+
+                  {responded ? (
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-[#05070B] p-3">
+                      <p className="text-xs text-slate-500">
+                        Submitted:{" "}
+                        <span className="text-slate-200">{cleanDate(item.respondedAt)}</span>
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-200">
+                        {item.responseBody}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 space-y-3">
+                      <textarea
+                        value={responseDraft}
+                        onChange={(e) =>
+                          setResponseDrafts((prev) => ({
+                            ...prev,
+                            [item.id]: e.target.value,
+                          }))
+                        }
+                        rows={4}
+                        placeholder="Example: Corrective action taken: attendance capture has been reviewed, lesson delivery evidence has been updated, and assessment scoring will be monitored daily..."
+                        className="w-full rounded-2xl border border-white/10 bg-[#05070B] px-3 py-3 text-sm leading-6 text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-blue-300/40"
+                      />
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-xs text-slate-400">
+                          Minimum 20 characters. Current: {responseDraft.trim().length}
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => void submitResponse(item)}
+                          disabled={!responseReady || busyId === respondKey}
+                          className="rounded-full border border-blue-300/25 bg-blue-400/10 px-4 py-2 text-xs font-semibold text-blue-100 transition hover:bg-blue-400/15 disabled:cursor-not-allowed disabled:opacity-55"
+                        >
+                          {busyId === respondKey ? "Submitting..." : "Submit corrective response"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-3">
@@ -519,43 +672,43 @@ export default function OfficialNoticeInboxClient({
                         </div>
 
                         <div className="mt-3 space-y-1 text-slate-400">
-  <p>
-    Proof:{" "}
-    <span className="text-slate-200">
-      {deliveryStatusLabel(delivery)}
-    </span>
-  </p>
+                          <p>
+                            Proof:{" "}
+                            <span className="text-slate-200">
+                              {deliveryStatusLabel(delivery)}
+                            </span>
+                          </p>
 
-  <p>
-    Provider:{" "}
-    <span className="text-slate-200">
-      {delivery.provider ?? "EduLife OS"}
-    </span>
-  </p>
+                          <p>
+                            Provider:{" "}
+                            <span className="text-slate-200">
+                              {delivery.provider ?? "EduLife OS"}
+                            </span>
+                          </p>
 
-  <p>
-    To:{" "}
-    <span className="text-slate-200">
-      {delivery.toAddress ?? "In-app inbox"}
-    </span>
-  </p>
+                          <p>
+                            To:{" "}
+                            <span className="text-slate-200">
+                              {delivery.toAddress ?? "In-app inbox"}
+                            </span>
+                          </p>
 
-  <p>
-    Attempts:{" "}
-    <span className="text-slate-200">{delivery.attempts}</span>
-  </p>
+                          <p>
+                            Attempts:{" "}
+                            <span className="text-slate-200">{delivery.attempts}</span>
+                          </p>
 
-  <p>
-    Sent:{" "}
-    <span className="text-slate-200">
-      {cleanDate(delivery.sentAt)}
-    </span>
-  </p>
+                          <p>
+                            Sent:{" "}
+                            <span className="text-slate-200">
+                              {cleanDate(delivery.sentAt)}
+                            </span>
+                          </p>
 
-  {delivery.lastError ? (
-    <p className="text-red-200">Error: {delivery.lastError}</p>
-  ) : null}
-</div>
+                          {delivery.lastError ? (
+                            <p className="text-red-200">Error: {delivery.lastError}</p>
+                          ) : null}
+                        </div>
                       </div>
                     ))}
                   </div>

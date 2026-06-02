@@ -61,6 +61,8 @@ type SentNotice = {
     readAt: string | null;
     acknowledgedAt: string | null;
     acknowledgeNote: string | null;
+    respondedAt: string | null;
+    responseBody: string | null;
     createdAt: string;
   }>;
   accountability: {
@@ -119,6 +121,25 @@ function statusClass(value: string) {
   return "border-white/10 bg-white/5 text-slate-200";
 }
 
+function responseStatusLabel(recipient: SentNotice["recipients"][number]) {
+  if (recipient.respondedAt) return "Responded";
+  if (recipient.acknowledgedAt) return "Acknowledged · awaiting response";
+  if (recipient.readAt) return "Read · awaiting acknowledgement";
+  return "Pending";
+}
+
+function responseStatusClass(recipient: SentNotice["recipients"][number]) {
+  if (recipient.respondedAt) {
+    return "border-blue-300/25 bg-blue-400/10 text-blue-100";
+  }
+
+  if (recipient.acknowledgedAt) {
+    return "border-amber-300/25 bg-amber-400/10 text-amber-100";
+  }
+
+  return "border-red-300/25 bg-red-500/10 text-red-100";
+}
+
 export default function GovernanceSentNoticeAccountabilityClient({
   mode = "mine",
   title = "Sent official notices",
@@ -168,13 +189,25 @@ export default function GovernanceSentNoticeAccountabilityClient({
   const totals = useMemo(() => {
     return items.reduce(
       (acc, item) => {
+        const responded = item.recipients.filter((r) => Boolean(r.respondedAt)).length;
+
         acc.sent += 1;
         acc.recipients += item.accountability.totalRecipients;
         acc.unacknowledged += item.accountability.unacknowledgedRecipients;
         acc.acknowledged += item.accountability.acknowledgedRecipients;
+        acc.responded += responded;
+        acc.awaitingResponse += Math.max(0, item.recipients.length - responded);
+
         return acc;
       },
-      { sent: 0, recipients: 0, acknowledged: 0, unacknowledged: 0 }
+      {
+        sent: 0,
+        recipients: 0,
+        acknowledged: 0,
+        unacknowledged: 0,
+        responded: 0,
+        awaitingResponse: 0,
+      }
     );
   }, [items]);
 
@@ -201,8 +234,11 @@ export default function GovernanceSentNoticeAccountabilityClient({
           <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-emerald-100">
             Acknowledged: <b>{totals.acknowledged}</b>
           </span>
+          <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-blue-100">
+            Responded: <b>{totals.responded}</b>
+          </span>
           <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-red-100">
-            Pending: <b>{totals.unacknowledged}</b>
+            Pending response: <b>{totals.awaitingResponse}</b>
           </span>
           <button
             type="button"
@@ -236,6 +272,8 @@ export default function GovernanceSentNoticeAccountabilityClient({
         {items.map((item) => {
           const unack = item.accountability.unacknowledgedRecipients;
           const ackRate = item.accountability.acknowledgementRate ?? 0;
+          const respondedCount = item.recipients.filter((r) => Boolean(r.respondedAt)).length;
+          const awaitingResponse = Math.max(0, item.recipients.length - respondedCount);
 
           return (
             <article
@@ -253,11 +291,16 @@ export default function GovernanceSentNoticeAccountabilityClient({
                     </span>
                     {unack > 0 ? (
                       <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-100">
-                        Follow-up needed
+                        Acknowledgement pending
+                      </span>
+                    ) : null}
+                    {awaitingResponse > 0 ? (
+                      <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold text-amber-100">
+                        Response follow-up needed
                       </span>
                     ) : (
-                      <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-100">
-                        Fully acknowledged
+                      <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-[11px] font-semibold text-blue-100">
+                        Response received
                       </span>
                     )}
                   </div>
@@ -287,13 +330,13 @@ export default function GovernanceSentNoticeAccountabilityClient({
                     Ack rate<br />
                     <b className="text-lg">{ackRate}%</b>
                   </span>
-                  <span className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3 text-emerald-100">
-                    Acknowledged<br />
-                    <b className="text-lg">{item.accountability.acknowledgedRecipients}</b>
+                  <span className="rounded-2xl border border-blue-300/20 bg-blue-400/10 p-3 text-blue-100">
+                    Responded<br />
+                    <b className="text-lg">{respondedCount}</b>
                   </span>
-                  <span className="rounded-2xl border border-red-300/20 bg-red-500/10 p-3 text-red-100">
-                    Pending<br />
-                    <b className="text-lg">{unack}</b>
+                  <span className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3 text-amber-100">
+                    Awaiting response<br />
+                    <b className="text-lg">{awaitingResponse}</b>
                   </span>
                 </div>
               </div>
@@ -314,15 +357,9 @@ export default function GovernanceSentNoticeAccountabilityClient({
                         </p>
                       </div>
 
-                      {recipient.acknowledgedAt ? (
-                        <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 font-semibold text-emerald-100">
-                          Acknowledged
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 font-semibold text-red-100">
-                          Pending
-                        </span>
-                      )}
+                      <span className={`rounded-full border px-3 py-1 font-semibold ${responseStatusClass(recipient)}`}>
+                        {responseStatusLabel(recipient)}
+                      </span>
                     </div>
 
                     <p className="mt-3 text-slate-400">
@@ -332,6 +369,21 @@ export default function GovernanceSentNoticeAccountabilityClient({
                       Acknowledged:{" "}
                       <span className="text-slate-200">{dateLabel(recipient.acknowledgedAt)}</span>
                     </p>
+                    <p className="mt-1 text-slate-400">
+                      Responded:{" "}
+                      <span className="text-slate-200">{dateLabel(recipient.respondedAt)}</span>
+                    </p>
+
+                    {recipient.responseBody ? (
+                      <div className="mt-3 rounded-2xl border border-blue-300/15 bg-blue-400/[0.06] p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-100">
+                          Corrective response
+                        </p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-200">
+                          {recipient.responseBody}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
