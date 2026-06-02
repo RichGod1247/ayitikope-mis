@@ -2321,6 +2321,12 @@ model GovernanceOfficialNotice {
 
   audienceSummary String? @db.Text
 
+  /// Bank-grade duplicate protection.
+  /// Normal official intervention notices must reuse the same idempotencyKey.
+  /// Reminder/escalation notices must use a different intentional key.
+  idempotencyKey   String? @unique(map: "GovernanceOfficialNotice_idempotencyKey_unique") @db.VarChar(220)
+  idempotencyScope String? @db.VarChar(80)
+
   metadata Json @default("{}")
 
   sentAt DateTime? @db.Timestamptz(6)
@@ -2341,6 +2347,9 @@ model GovernanceOfficialNotice {
   @@index([zoneId, status], map: "GovernanceOfficialNotice_zone_status_idx")
   @@index([senderUserId], map: "GovernanceOfficialNotice_sender_idx")
   @@index([status, createdAt], map: "GovernanceOfficialNotice_status_created_idx")
+  @@index([caseId, idempotencyScope], map: "GovernanceOfficialNotice_case_idempotencyScope_idx")
+  @@index([tenantId, idempotencyScope], map: "GovernanceOfficialNotice_tenant_idempotencyScope_idx")
+  @@index([zoneId, idempotencyScope], map: "GovernanceOfficialNotice_zone_idempotencyScope_idx")
 }
 
 model GovernanceOfficialNoticeRecipient {
