@@ -162,6 +162,79 @@ type InterventionQueueItem = {
   };
 };
 
+
+type GovernanceCaseStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "RESOLVED"
+  | "ESCALATED"
+  | "CANCELLED";
+
+type GovernanceCasePriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+type GovernanceCase = {
+  id: string;
+  tenantId: string | null;
+  zoneId: string | null;
+  scopeType: "SCHOOL" | "CIRCUIT" | "DISTRICT";
+  title: string;
+  summary: string;
+  priority: GovernanceCasePriority;
+  status: GovernanceCaseStatus;
+  riskScore: number | null;
+  riskLevel: string | null;
+  createdAt: string;
+  updatedAt: string;
+  tenant?: {
+    id: string;
+    name: string;
+    schoolCode: string | null;
+  } | null;
+  zone?: {
+    id: string;
+    name: string;
+    zoneType?: { name: string; level: number } | null;
+    parentZone?: { id: string; name: string } | null;
+  } | null;
+  createdBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+  events?: Array<{
+    id: string;
+    eventType: string;
+    fromStatus: GovernanceCaseStatus | null;
+    toStatus: GovernanceCaseStatus | null;
+    note: string | null;
+    createdAt: string;
+    actor?: {
+      id: string;
+      name: string | null;
+      email: string;
+    } | null;
+  }>;
+  notices?: Array<{
+    id: string;
+    title: string;
+    status: string;
+    sentAt: string | null;
+    createdAt: string;
+  }>;
+};
+
+type CaseListResponse =
+  | { ok: true; items: GovernanceCase[]; count: number }
+  | { ok: false; error: string };
+
+type CaseWriteResponse =
+  | { ok: true; item: GovernanceCase }
+  | { ok: false; error: string };
+
+type NoticeSendResponse =
+  | { ok: true; item: { id: string; status?: string } }
+  | { ok: false; error: string };
+
 type RiskSummary = {
   low?: number;
   medium?: number;
@@ -361,6 +434,11 @@ export default function GovernanceDashboardClient({
   const [data, setData] = useState<OverviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cases, setCases] = useState<GovernanceCase[]>([]);
+  const [casesLoading, setCasesLoading] = useState(false);
+  const [caseAction, setCaseAction] = useState<string | null>(null);
+  const [caseError, setCaseError] = useState<string | null>(null);
+  const [busyCaseKey, setBusyCaseKey] = useState<string | null>(null);
 
   const isDistrictView = endpoint.includes("/district/");
   const isCircuitView = endpoint.includes("/circuit/");
@@ -397,22 +475,228 @@ export default function GovernanceDashboardClient({
     }
   }
 
+  async function loadCases() {
+    setCasesLoading(true);
+    setCaseError(null);
+
+    try {
+      const res = await fetch("/api/governance/interventions/list?take=25", {
+        cache: "no-store",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+
+      const json = (await res.json().catch(() => null)) as CaseListResponse | null;
+
+      if (!res.ok || !json?.ok) {
+        setCases([]);
+        setCaseError(
+          json && !json.ok ? json.error : `Failed to load cases (${res.status})`
+        );
+        return;
+      }
+
+      setCases(json.items ?? []);
+    } catch {
+      setCases([]);
+      setCaseError("Network/server error while loading intervention cases.");
+    } finally {
+      setCasesLoading(false);
+    }
+  }
+
+  function activeCaseForSchool(schoolId: string) {
+    return cases.find(
+      (c) =>
+        c.tenantId === schoolId &&
+        c.scopeType === "SCHOOL" &&
+        c.status !== "RESOLVED" &&
+        c.status !== "CANCELLED"
+    );
+  }
+
+  async function openCaseFromQueue(item: InterventionQueueItem) {
+    const existing = activeCaseForSchool(item.schoolId);
+
+    if (existing) {
+      setCaseAction(`Existing open case found for ${item.schoolName}.`);
+      setCaseError(null);
+      return;
+    }
+
+    setBusyCaseKey(`open:${item.schoolId}`);
+    setCaseAction(null);
+    setCaseError(null);
+
+    try {
+      const res = await fetch("/api/governance/interventions/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          scopeType: "SCHOOL",
+          tenantId: item.schoolId,
+          title: `${item.schoolName} intervention`,
+          summary:
+            item.reasons?.[0] ??
+            "School is showing supervision risk from current governance dashboard signals.",
+          priority:
+            item.riskLevel === "CRITICAL"
+              ? "CRITICAL"
+              : item.riskLevel === "HIGH"
+                ? "HIGH"
+                : "MEDIUM",
+          riskScore: item.riskScore,
+          riskLevel: item.riskLevel,
+          riskSnapshot: {
+            source: "governance-dashboard-ui",
+            riskScore: item.riskScore,
+            riskLevel: item.riskLevel,
+            metrics: item.metrics ?? {},
+          },
+          recommendedActions: item.recommendedActions ?? [],
+          metadata: {
+            source: "B5A-governance-dashboard",
+            schoolName: item.schoolName,
+            schoolCode: item.schoolCode,
+            circuitName: item.circuitName,
+            districtName: item.districtName,
+          },
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as CaseWriteResponse | null;
+
+      if (!res.ok || !json?.ok) {
+        setCaseError(
+          json && !json.ok ? json.error : `Failed to open case (${res.status})`
+        );
+        return;
+      }
+
+      setCaseAction(`Opened intervention case for ${item.schoolName}.`);
+      await loadCases();
+    } catch {
+      setCaseError("Network/server error while opening intervention case.");
+    } finally {
+      setBusyCaseKey(null);
+    }
+  }
+
+  async function updateCaseStatus(
+    item: GovernanceCase,
+    status: Exclude<GovernanceCaseStatus, "OPEN" | "CANCELLED">,
+    note: string
+  ) {
+    setBusyCaseKey(`status:${item.id}:${status}`);
+    setCaseAction(null);
+    setCaseError(null);
+
+    try {
+      const res = await fetch("/api/governance/interventions/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          caseId: item.id,
+          action: "STATUS",
+          status,
+          note,
+          metadata: {
+            source: "B5A-governance-dashboard",
+          },
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as CaseWriteResponse | null;
+
+      if (!res.ok || !json?.ok) {
+        setCaseError(
+          json && !json.ok ? json.error : `Failed to update case (${res.status})`
+        );
+        return;
+      }
+
+      setCaseAction(`Case updated to ${status.replaceAll("_", " ")}.`);
+      await loadCases();
+    } catch {
+      setCaseError("Network/server error while updating intervention case.");
+    } finally {
+      setBusyCaseKey(null);
+    }
+  }
+
+  async function sendHeadteacherNotice(item: GovernanceCase) {
+    setBusyCaseKey(`notice:${item.id}`);
+    setCaseAction(null);
+    setCaseError(null);
+
+    try {
+      const schoolLabel = item.tenant?.name ?? item.title ?? "the selected school";
+
+      const res = await fetch("/api/governance/notices/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          caseId: item.id,
+          title: `Official intervention notice: ${schoolLabel}`,
+          body:
+            "EduLife OS has flagged this school for immediate supervision follow-up. Kindly review attendance capture, lesson delivery evidence, and assessment scoring evidence, then respond to the SISSO with corrective action taken.",
+          priority: item.priority,
+          channels: ["IN_APP", "SMS", "EMAIL"],
+          targetRoles: ["HEADTEACHER"],
+          metadata: {
+            source: "B5A-governance-dashboard",
+            caseId: item.id,
+          },
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as NoticeSendResponse | null;
+
+      if (!res.ok || !json?.ok) {
+        setCaseError(
+          json && !json.ok ? json.error : `Failed to send notice (${res.status})`
+        );
+        return;
+      }
+
+      setCaseAction(`Official notice sent for ${schoolLabel}.`);
+      await loadCases();
+    } catch {
+      setCaseError("Network/server error while sending official notice.");
+    } finally {
+      setBusyCaseKey(null);
+    }
+  }
+
   useEffect(() => {
-    load();
+    void load();
+    void loadCases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
-  const assignments = data?.scope?.assignments ?? [];
-  const schools = data?.overview?.schools ?? [];
-  const circuitBreakdown = data?.overview?.circuitBreakdown ?? [];
-  const interventionQueue = data?.overview?.interventionQueue ?? [];
-  const riskSummary = data?.overview?.riskSummary ?? {};
-  const totals = data?.overview?.totals ?? {};
-  const signals = data?.overview?.signals ?? {};
-  const emptyStates = data?.overview?.emptyStates ?? [];
+  const assignments = useMemo(() => data?.scope?.assignments ?? [], [data]);
+  const schools = useMemo(() => data?.overview?.schools ?? [], [data]);
+  const circuitBreakdown = useMemo(
+    () => data?.overview?.circuitBreakdown ?? [],
+    [data]
+  );
+  const interventionQueue = useMemo(
+    () => data?.overview?.interventionQueue ?? [],
+    [data]
+  );
+  const riskSummary = useMemo(() => data?.overview?.riskSummary ?? {}, [data]);
+  const totals = useMemo(() => data?.overview?.totals ?? {}, [data]);
+  const signals = useMemo(() => data?.overview?.signals ?? {}, [data]);
+  const emptyStates = useMemo(() => data?.overview?.emptyStates ?? [], [data]);
   const generatedAt = compactDateTime(data?.overview?.generatedAt);
 
   const primaryAssignment = assignments[0] ?? null;
+  const activeCaseCount = cases.filter(
+    (c) => c.status !== "RESOLVED" && c.status !== "CANCELLED"
+  ).length;
 
   const totalCards = useMemo(() => {
     const preferred = isDistrictView
@@ -565,11 +849,14 @@ export default function GovernanceDashboardClient({
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={load}
-                disabled={loading}
+                onClick={() => {
+                  void load();
+                  void loadCases();
+                }}
+                disabled={loading || casesLoading}
                 className="h-10 rounded-xl border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-60"
               >
-                {loading ? "Loading..." : "Reload"}
+                {loading || casesLoading ? "Loading..." : "Reload"}
               </button>
 
               <button
@@ -827,6 +1114,130 @@ export default function GovernanceDashboardClient({
                             ))}
                           </ul>
                         </div>
+                      </div>
+
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                        {(() => {
+                          const existingCase = activeCaseForSchool(item.schoolId);
+
+                          return existingCase ? (
+                            <div className="space-y-3">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                                    Active intervention case
+                                  </p>
+                                  <p className="mt-1 text-sm font-semibold text-white">
+                                    {existingCase.status.replaceAll("_", " ")} ·{" "}
+                                    {existingCase.priority}
+                                  </p>
+                                  <p className="mt-1 text-xs text-slate-400">
+                                    Case ID: {existingCase.id.slice(0, 10)}… · Notices:{" "}
+                                    {existingCase.notices?.length ?? 0}
+                                  </p>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => void sendHeadteacherNotice(existingCase)}
+                                  disabled={busyCaseKey === `notice:${existingCase.id}`}
+                                  className="rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-400/15 disabled:opacity-60"
+                                >
+                                  {busyCaseKey === `notice:${existingCase.id}`
+                                    ? "Sending..."
+                                    : "Send official notice"}
+                                </button>
+                              </div>
+
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void updateCaseStatus(
+                                      existingCase,
+                                      "IN_PROGRESS",
+                                      "SISSO has started follow-up from the governance dashboard."
+                                    )
+                                  }
+                                  disabled={
+                                    existingCase.status === "IN_PROGRESS" ||
+                                    busyCaseKey === `status:${existingCase.id}:IN_PROGRESS`
+                                  }
+                                  className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-slate-100 hover:bg-white/10 disabled:opacity-50"
+                                >
+                                  Mark in progress
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void updateCaseStatus(
+                                      existingCase,
+                                      "ESCALATED",
+                                      "Case escalated from the governance dashboard for higher-level follow-up."
+                                    )
+                                  }
+                                  disabled={
+                                    busyCaseKey === `status:${existingCase.id}:ESCALATED`
+                                  }
+                                  className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-2 text-[11px] font-semibold text-red-100 hover:bg-red-500/15 disabled:opacity-50"
+                                >
+                                  Escalate
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void updateCaseStatus(
+                                      existingCase,
+                                      "RESOLVED",
+                                      "Case marked resolved from the governance dashboard after follow-up."
+                                    )
+                                  }
+                                  disabled={
+                                    busyCaseKey === `status:${existingCase.id}:RESOLVED`
+                                  }
+                                  className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-400/15 disabled:opacity-50"
+                                >
+                                  Resolve
+                                </button>
+                              </div>
+
+                              {existingCase.events?.[0] ? (
+                                <p className="text-xs leading-5 text-slate-400">
+                                  Latest evidence:{" "}
+                                  {existingCase.events[0].eventType.replaceAll("_", " ")}
+                                  {existingCase.events[0].note
+                                    ? ` — ${existingCase.events[0].note}`
+                                    : ""}
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                  No active case yet
+                                </p>
+                                <p className="mt-1 text-sm text-slate-300">
+                                  Open a formal intervention case before sending official
+                                  notices.
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => void openCaseFromQueue(item)}
+                                disabled={busyCaseKey === `open:${item.schoolId}`}
+                                className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/15 disabled:opacity-60"
+                              >
+                                {busyCaseKey === `open:${item.schoolId}`
+                                  ? "Opening..."
+                                  : "Open case"}
+                              </button>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   ))
