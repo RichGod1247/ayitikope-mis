@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import OfficialNoticeSummaryCard from "@/components/governance/OfficialNoticeSummaryCard";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -97,7 +98,7 @@ export default async function TeacherDashboardPage() {
   const year = settings?.currentAcademicYear ?? "—";
 
   const normalizedRole = normalizeRole(safe.roleName);
-const isTeacherOnly = normalizedRole === "TEACHER";
+  const isTeacherOnly = normalizedRole === "TEACHER";
 
   const tiles: Array<{
     title: string;
@@ -248,6 +249,13 @@ const isTeacherOnly = normalizedRole === "TEACHER";
           </div>
         </div>
       </div>
+
+      {isTeacherOnly ? (
+  <OfficialNoticeSummaryCard
+    href="/teacher/notices"
+    portalLabel="Teacher"
+  />
+) : null}
 
       <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">

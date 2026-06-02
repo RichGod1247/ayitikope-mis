@@ -1,6 +1,7 @@
 // src/app/headteacher/dashboard/page.tsx
 import { redirect } from "next/navigation";
 import { requireHeadteacherContext } from "@/lib/headteacherAuth";
+import OfficialNoticeSummaryCard from "@/components/governance/OfficialNoticeSummaryCard";
 import HeadteacherDashboardClient from "./ui";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,11 @@ export default async function HeadteacherDashboardPage() {
           </p>
         </div>
       </div>
+
+      <OfficialNoticeSummaryCard
+        href="/headteacher/notices"
+        portalLabel="Headteacher"
+      />
 
       <HeadteacherDashboardClient />
     </div>
