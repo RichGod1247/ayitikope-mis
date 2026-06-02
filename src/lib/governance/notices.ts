@@ -51,14 +51,19 @@ type SendNoticeInput = {
   metadata?: unknown;
 
   /**
-   * Prevents duplicate SMS/email dispatch for the same official notice intent.
-   * Used by SISSO/Director dashboards.
+   * DB-backed duplicate protection.
+   * Normal SISSO/Director official intervention notices must reuse this key.
    */
   idempotencyKey?: unknown;
 
   /**
-   * Reserved for future reminder/escalation flows.
-   * Normal official notice sends should NOT set this.
+   * Human-readable category for analytics and indexes.
+   */
+  idempotencyScope?: unknown;
+
+  /**
+   * Reserved for intentional reminder/escalation flows.
+   * Normal official notice sends should not set this.
    */
   allowDuplicate?: unknown;
 };
@@ -182,13 +187,14 @@ function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function metadataIdempotencyKey(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
-  return clean((value as Record<string, unknown>).idempotencyKey);
-}
-
 function normalizeIntentText(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function normalizeNoticeIdempotencyScope(value: unknown) {
+  const v = upper(value);
+  if (v) return v.slice(0, 80);
+  return "OFFICIAL_INTERVENTION_NOTICE";
 }
 
 function buildNoticeIdempotencyKey(args: {
@@ -201,11 +207,26 @@ function buildNoticeIdempotencyKey(args: {
   priority: GovernanceInterventionPriority;
 }) {
   const explicit = clean(args.input.idempotencyKey);
-  if (explicit) return explicit;
+  if (explicit) return explicit.slice(0, 220);
 
   const metadata = inputObject(args.input.metadata);
   const metadataKey = clean(metadata.idempotencyKey);
-  if (metadataKey) return metadataKey;
+  if (metadataKey) return metadataKey.slice(0, 220);
+
+  const roles = targetRolesArray(args.input.targetRoles).map(normKey).sort();
+
+  // For ordinary official intervention notices, caseId gives the strongest operational lock:
+  // one official HEADTEACHER intervention notice per case.
+  if (
+    args.target.caseId &&
+    roles.includes("HEADTEACHER") &&
+    normalizeIntentText(args.title).startsWith("official intervention notice:")
+  ) {
+    return `governance-notice:case:${args.target.caseId}:official-intervention:HEADTEACHER:v1`.slice(
+      0,
+      220
+    );
+  }
 
   const payload = {
     version: "governance-official-notice-v1",
@@ -216,11 +237,18 @@ function buildNoticeIdempotencyKey(args: {
     body: normalizeIntentText(args.body),
     priority: args.priority,
     channels: args.channels.map(String).sort(),
-    targetRoles: targetRolesArray(args.input.targetRoles).map(normKey).sort(),
+    targetRoles: roles,
     recipients: args.recipients.map((r) => recipientKey(r)).sort(),
   };
 
-  return `gov-notice:${sha256(stableStringify(payload))}`;
+  return `gov-notice:${sha256(stableStringify(payload))}`.slice(0, 220);
+}
+
+function isUniqueConstraintError(err: unknown) {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === "P2002"
+  );
 }
 
 function normalizePriority(value: unknown): GovernanceInterventionPriority {
@@ -774,6 +802,8 @@ const noticeSelect = {
   status: true,
   channels: true,
   audienceSummary: true,
+  idempotencyKey: true,
+  idempotencyScope: true,
   metadata: true,
   sentAt: true,
   createdAt: true,
@@ -829,6 +859,7 @@ const noticeSelect = {
       acknowledgedAt: true,
       acknowledgeNote: true,
       respondedAt: true,
+      responseBody: true,
       createdAt: true,
       deliveries: {
         orderBy: { createdAt: "asc" as const },
@@ -1082,182 +1113,203 @@ export async function sendGovernanceOfficialNotice(args: {
   }
 
   const audienceSummary = buildAudienceSummary(recipients);
+  const metadataInput = inputObject(input.metadata);
   const allowDuplicate = boolish(input.allowDuplicate);
 
-  const metadataInput = inputObject(input.metadata);
-  const idempotencyKey = buildNoticeIdempotencyKey({
-    input,
-    target,
-    recipients,
-    channels,
-    title,
-    body,
-    priority,
-  });
+  const idempotencyScope = normalizeNoticeIdempotencyScope(
+    input.idempotencyScope ?? metadataInput.idempotencyScope
+  );
 
-  const txResult = await prisma.$transaction(async (tx) => {
-    // Bank-grade no-schema concurrency guard:
-    // prevents two near-simultaneous requests with the same key from both dispatching SMS/email.
-    await tx.$queryRaw`select pg_advisory_xact_lock(hashtext(${idempotencyKey})::bigint)`;
-
-    if (!allowDuplicate) {
-      const candidates = await tx.governanceOfficialNotice.findMany({
-        where: {
-          caseId: target.caseId,
-          tenantId: target.tenantId,
-          zoneId: target.zoneId,
-          title,
-          body,
-          audienceSummary,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        select: noticeSelect,
-      });
-
-      const existing = candidates.find(
-        (notice) => metadataIdempotencyKey(notice.metadata) === idempotencyKey
-      );
-
-      if (existing) {
-        return {
-          reused: true,
-          noticeId: existing.id,
-          notice: existing,
-        };
-      }
-    }
-
-    const notice = await tx.governanceOfficialNotice.create({
-      data: {
-        caseId: target.caseId,
-        tenantId: target.tenantId,
-        zoneId: target.zoneId,
-        senderUserId: actorUserId,
+  const idempotencyKey = allowDuplicate
+    ? null
+    : buildNoticeIdempotencyKey({
+        input,
+        target,
+        recipients,
+        channels,
         title,
         body,
         priority,
-        status: GovernanceOfficialNoticeStatus.QUEUED,
-        channels: jsonArray(channels),
-        audienceSummary,
-        metadata: jsonObject({
-          ...metadataInput,
-          targetLabel: target.label,
-          idempotencyKey,
-          idempotencyScope: "sendGovernanceOfficialNotice:v1",
-          allowDuplicate,
-        }),
-      },
-      select: { id: true },
+      });
+
+  if (idempotencyKey) {
+    const existing = await prisma.governanceOfficialNotice.findUnique({
+      where: { idempotencyKey },
+      select: noticeSelect,
     });
 
-    for (const recipient of recipients) {
-      const row = await tx.governanceOfficialNoticeRecipient.create({
+    if (existing) {
+      await writeAuditLog({
+        action: "GOVERNANCE_OFFICIAL_NOTICE_SEND_DEDUPED",
+        tenantId: existing.tenantId ?? target.tenantId ?? undefined,
+        userId: actorUserId,
+        resource: "GovernanceOfficialNotice",
+        resourceId: existing.id,
+        ip: args.ip,
+        userAgent: args.userAgent,
+        metadata: {
+          caseId: existing.caseId ?? target.caseId,
+          zoneId: existing.zoneId ?? target.zoneId,
+          idempotencyKey,
+          idempotencyScope,
+          duplicateSafe: true,
+          message: "Duplicate official notice send suppressed before dispatch.",
+        },
+      });
+
+      return {
+        ...existing,
+        reused: true,
+        duplicateSafe: true,
+      };
+    }
+  }
+
+  let created: { id: string };
+
+  try {
+    created = await prisma.$transaction(async (tx) => {
+      const notice = await tx.governanceOfficialNotice.create({
         data: {
-          noticeId: notice.id,
-          tenantId: recipient.tenantId,
-          recipientUserId: recipient.recipientUserId,
-          recipientType: recipient.recipientType,
-          displayName: recipient.displayName,
-          roleLabel: recipient.roleLabel,
-          phone: recipient.phone,
-          email: recipient.email,
-          inAppVisible: channels.includes(GovernanceOfficialNoticeChannel.IN_APP),
-          metadata: recipient.metadata,
+          caseId: target.caseId,
+          tenantId: target.tenantId,
+          zoneId: target.zoneId,
+          senderUserId: actorUserId,
+          title,
+          body,
+          priority,
+          status: GovernanceOfficialNoticeStatus.QUEUED,
+          channels: jsonArray(channels),
+          audienceSummary,
+          idempotencyKey,
+          idempotencyScope: idempotencyKey ? idempotencyScope : null,
+          metadata: jsonObject({
+            ...metadataInput,
+            targetLabel: target.label,
+            idempotencyKey,
+            idempotencyScope: idempotencyKey ? idempotencyScope : null,
+            allowDuplicate,
+          }),
         },
         select: { id: true },
       });
 
-      for (const channel of channels) {
-        const status = initialDeliveryStatus(channel, recipient);
-        const description = initialDeliveryDescription(channel, recipient);
-        const now = new Date();
-
-        await tx.governanceOfficialNoticeDelivery.create({
+      for (const recipient of recipients) {
+        const row = await tx.governanceOfficialNoticeRecipient.create({
           data: {
             noticeId: notice.id,
-            recipientId: row.id,
-            channel,
-            status,
-            toAddress: deliveryToAddress(channel, recipient),
-            provider: channel === GovernanceOfficialNoticeChannel.IN_APP ? "EDULIFE_OS" : null,
-            providerStatusDescription: description,
-            attempts: channel === GovernanceOfficialNoticeChannel.IN_APP ? 1 : 0,
-            lastAttemptAt: channel === GovernanceOfficialNoticeChannel.IN_APP ? now : null,
-            sentAt: channel === GovernanceOfficialNoticeChannel.IN_APP ? now : null,
-            providerRaw: jsonObject({
-              source: "governance-official-notice",
-              initialStatus: status,
-              description,
+            tenantId: recipient.tenantId,
+            recipientUserId: recipient.recipientUserId,
+            recipientType: recipient.recipientType,
+            displayName: recipient.displayName,
+            roleLabel: recipient.roleLabel,
+            phone: recipient.phone,
+            email: recipient.email,
+            inAppVisible: channels.includes(GovernanceOfficialNoticeChannel.IN_APP),
+            metadata: recipient.metadata,
+          },
+          select: { id: true },
+        });
+
+        for (const channel of channels) {
+          const status = initialDeliveryStatus(channel, recipient);
+          const description = initialDeliveryDescription(channel, recipient);
+          const now = new Date();
+
+          await tx.governanceOfficialNoticeDelivery.create({
+            data: {
+              noticeId: notice.id,
+              recipientId: row.id,
+              channel,
+              status,
+              toAddress: deliveryToAddress(channel, recipient),
+              provider:
+                channel === GovernanceOfficialNoticeChannel.IN_APP
+                  ? "EDULIFE_OS"
+                  : null,
+              providerStatusDescription: description,
+              attempts: channel === GovernanceOfficialNoticeChannel.IN_APP ? 1 : 0,
+              lastAttemptAt:
+                channel === GovernanceOfficialNoticeChannel.IN_APP ? now : null,
+              sentAt: channel === GovernanceOfficialNoticeChannel.IN_APP ? now : null,
+              providerRaw: jsonObject({
+                source: "governance-official-notice",
+                initialStatus: status,
+                description,
+                idempotencyKey,
+              }),
+            },
+          });
+        }
+      }
+
+      if (target.caseId) {
+        await tx.governanceInterventionEvent.create({
+          data: {
+            caseId: target.caseId,
+            actorUserId,
+            eventType: GovernanceInterventionEventType.NOTICE_SENT,
+            note: `Official notice sent: ${title}`,
+            metadata: jsonObject({
+              noticeId: notice.id,
+              channels,
+              recipientCount: recipients.length,
+              audienceSummary,
               idempotencyKey,
+              idempotencyScope: idempotencyKey ? idempotencyScope : null,
             }),
           },
         });
       }
-    }
 
-    if (target.caseId) {
-      await tx.governanceInterventionEvent.create({
-        data: {
-          caseId: target.caseId,
-          actorUserId,
-          eventType: GovernanceInterventionEventType.NOTICE_SENT,
-          note: `Official notice sent: ${title}`,
-          metadata: jsonObject({
-            noticeId: notice.id,
-            channels,
-            recipientCount: recipients.length,
-            audienceSummary,
-            idempotencyKey,
-          }),
-        },
+      return notice;
+    }, NOTICE_TX_OPTIONS);
+  } catch (err) {
+    if (idempotencyKey && isUniqueConstraintError(err)) {
+      const existing = await prisma.governanceOfficialNotice.findUnique({
+        where: { idempotencyKey },
+        select: noticeSelect,
       });
+
+      if (existing) {
+        await writeAuditLog({
+          action: "GOVERNANCE_OFFICIAL_NOTICE_SEND_DEDUPED_RACE",
+          tenantId: existing.tenantId ?? target.tenantId ?? undefined,
+          userId: actorUserId,
+          resource: "GovernanceOfficialNotice",
+          resourceId: existing.id,
+          ip: args.ip,
+          userAgent: args.userAgent,
+          metadata: {
+            caseId: existing.caseId ?? target.caseId,
+            zoneId: existing.zoneId ?? target.zoneId,
+            idempotencyKey,
+            idempotencyScope,
+            duplicateSafe: true,
+            message:
+              "Duplicate official notice send suppressed by DB unique constraint.",
+          },
+        });
+
+        return {
+          ...existing,
+          reused: true,
+          duplicateSafe: true,
+        };
+      }
     }
 
-    return {
-      reused: false,
-      noticeId: notice.id,
-      notice: null,
-    };
-  }, NOTICE_TX_OPTIONS);
-
-  if (txResult.reused) {
-    await writeAuditLog({
-      action: "GOVERNANCE_OFFICIAL_NOTICE_SEND_DEDUPED",
-      tenantId: target.tenantId ?? undefined,
-      userId: actorUserId,
-      resource: "GovernanceOfficialNotice",
-      resourceId: txResult.noticeId,
-      ip: args.ip,
-      userAgent: args.userAgent,
-      metadata: {
-        caseId: target.caseId,
-        zoneId: target.zoneId,
-        channels,
-        recipientCount: recipients.length,
-        audienceSummary,
-        idempotencyKey,
-        duplicateSafe: true,
-        message: "Duplicate official notice send suppressed; no SMS/email dispatched.",
-      },
-    });
-
-    return {
-      ...txResult.notice,
-      reused: true,
-      duplicateSafe: true,
-      idempotencyKey,
-    };
+    throw err;
   }
 
-  await dispatchNoticeDeliveries(txResult.noticeId, actorUserId);
+  await dispatchNoticeDeliveries(created.id, actorUserId);
 
   await writeAuditLog({
     action: "GOVERNANCE_OFFICIAL_NOTICE_SENT",
     tenantId: target.tenantId ?? undefined,
     userId: actorUserId,
     resource: "GovernanceOfficialNotice",
-    resourceId: txResult.noticeId,
+    resourceId: created.id,
     ip: args.ip,
     userAgent: args.userAgent,
     metadata: {
@@ -1267,19 +1319,19 @@ export async function sendGovernanceOfficialNotice(args: {
       recipientCount: recipients.length,
       audienceSummary,
       idempotencyKey,
+      idempotencyScope: idempotencyKey ? idempotencyScope : null,
     },
   });
 
   const fresh = await prisma.governanceOfficialNotice.findUniqueOrThrow({
-    where: { id: txResult.noticeId },
+    where: { id: created.id },
     select: noticeSelect,
   });
 
   return {
     ...fresh,
     reused: false,
-    duplicateSafe: true,
-    idempotencyKey,
+    duplicateSafe: Boolean(idempotencyKey),
   };
 }
 
