@@ -6,13 +6,6 @@ import { getServerUserContextOrNull } from "@/lib/serverAuth";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ALLOWED_TEACHER_ROLES = new Set([
-  "TEACHER",
-  "HEADTEACHER",
-  "SCHOOL_ADMIN",
-  "SCHOOLADMIN",
-]);
-
 function normalizeRole(value: unknown) {
   return String(value ?? "")
     .trim()
@@ -28,13 +21,19 @@ export default async function TeacherNoticesPage() {
   }
 
   const role = normalizeRole(ctx.roleName);
-  if (!ALLOWED_TEACHER_ROLES.has(role)) redirect("/app");
+
+  // Bank-grade rule:
+  // Teacher notices are for users whose effective role is TEACHER only.
+  // Headteachers and school admins must use their own notice surfaces.
+  if (role !== "TEACHER") {
+    redirect("/app");
+  }
 
   return (
     <OfficialNoticeInboxClient
       portalLabel="Teacher"
       title="Official Notice Inbox"
-      description="Receive, review, and acknowledge official school and governance notices with delivery evidence and acknowledgement history."
+      description="Receive, review, and acknowledge official notices sent specifically to you as a teacher, with clear delivery and acknowledgement evidence."
     />
   );
 }

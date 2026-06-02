@@ -15,6 +15,13 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+function normalizeRole(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]/g, "_");
+}
+
 export default async function TeacherDashboardPage() {
   const safe = await requireServerUserContext({
     redirectTo: "/teacher/dashboard",
@@ -89,6 +96,9 @@ export default async function TeacherDashboardPage() {
   const term = settings?.currentTerm ?? "—";
   const year = settings?.currentAcademicYear ?? "—";
 
+  const normalizedRole = normalizeRole(safe.roleName);
+const isTeacherOnly = normalizedRole === "TEACHER";
+
   const tiles: Array<{
     title: string;
     subtitle: string;
@@ -139,6 +149,24 @@ export default async function TeacherDashboardPage() {
       pillCls: "border-amber-300/25 bg-amber-400/16 text-amber-100",
       rightNote: "MVP: stub allowed",
     },
+
+    ...(isTeacherOnly
+  ? [
+      {
+        title: "Official Notices",
+        subtitle: "Read · Acknowledge · Keep evidence",
+        desc: "View official notices sent specifically to you and acknowledge them from the teacher inbox.",
+        pill: "Official",
+        icon: "📨",
+        href: "/teacher/notices",
+        enabled: true,
+        grad: "from-[#16112E] via-[#211A44] to-[#0C1320]",
+        border: "border-violet-300/20",
+        pillCls: "border-violet-300/25 bg-violet-400/14 text-violet-100",
+      },
+    ]
+  : []),
+
     {
       title: "Attendance & Daily Work",
       subtitle: "Fast register + smart follow-ups",

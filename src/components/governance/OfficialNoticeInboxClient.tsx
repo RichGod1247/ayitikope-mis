@@ -172,6 +172,29 @@ function channelClass(channel: string) {
   return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
 }
 
+function deliveryStatusLabel(delivery: NoticeDelivery) {
+  const channel = delivery.channel.toUpperCase();
+  const status = delivery.status.toUpperCase();
+
+  if (status === "SENT") {
+    if (channel === "IN_APP") return "Visible in EduLife OS";
+    if (channel === "SMS") return "SMS sent";
+    if (channel === "EMAIL") return "Email sent";
+    return "Sent";
+  }
+
+  if (status === "SKIPPED") {
+    if (channel === "SMS" && !delivery.toAddress) return "Skipped: no phone number";
+    if (channel === "EMAIL" && !delivery.toAddress) return "Skipped: no email address";
+    return "Skipped";
+  }
+
+  if (status === "FAILED") return "Failed";
+  if (status === "PENDING") return "Pending";
+
+  return status.replaceAll("_", " ");
+}
+
 export default function OfficialNoticeInboxClient({
   portalLabel,
   title,
@@ -496,40 +519,43 @@ export default function OfficialNoticeInboxClient({
                         </div>
 
                         <div className="mt-3 space-y-1 text-slate-400">
-                          <p>
-                            Provider:{" "}
-                            <span className="text-slate-200">
-                              {delivery.provider ?? "Not applicable"}
-                            </span>
-                          </p>
-                          <p>
-                            To:{" "}
-                            <span className="text-slate-200">
-                              {delivery.toAddress ?? "In-app"}
-                            </span>
-                          </p>
-                          <p>
-                            Attempts:{" "}
-                            <span className="text-slate-200">{delivery.attempts}</span>
-                          </p>
-                          <p>
-                            Provider status:{" "}
-                            <span className="text-slate-200">
-                              {delivery.providerStatusDescription ?? "None"}
-                            </span>
-                          </p>
-                          {delivery.providerMessageId ? (
-                            <p>
-                              Message ID:{" "}
-                              <span className="break-all text-slate-200">
-                                {delivery.providerMessageId}
-                              </span>
-                            </p>
-                          ) : null}
-                          {delivery.lastError ? (
-                            <p className="text-red-200">Error: {delivery.lastError}</p>
-                          ) : null}
-                        </div>
+  <p>
+    Proof:{" "}
+    <span className="text-slate-200">
+      {deliveryStatusLabel(delivery)}
+    </span>
+  </p>
+
+  <p>
+    Provider:{" "}
+    <span className="text-slate-200">
+      {delivery.provider ?? "EduLife OS"}
+    </span>
+  </p>
+
+  <p>
+    To:{" "}
+    <span className="text-slate-200">
+      {delivery.toAddress ?? "In-app inbox"}
+    </span>
+  </p>
+
+  <p>
+    Attempts:{" "}
+    <span className="text-slate-200">{delivery.attempts}</span>
+  </p>
+
+  <p>
+    Sent:{" "}
+    <span className="text-slate-200">
+      {cleanDate(delivery.sentAt)}
+    </span>
+  </p>
+
+  {delivery.lastError ? (
+    <p className="text-red-200">Error: {delivery.lastError}</p>
+  ) : null}
+</div>
                       </div>
                     ))}
                   </div>

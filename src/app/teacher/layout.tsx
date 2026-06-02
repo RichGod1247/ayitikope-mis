@@ -9,7 +9,7 @@ import LogoutButton from "@/components/LogoutButton";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const ALLOWED_TEACHER_ROLES = new Set([
+const ALLOWED_TEACHER_PORTAL_ROLES = new Set([
   "TEACHER",
   "HEADTEACHER",
   "SCHOOL_ADMIN",
@@ -35,7 +35,10 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
   }
 
   const role = normalizeRole(ctx.roleName);
-  if (!ALLOWED_TEACHER_ROLES.has(role)) redirect("/app");
+
+  if (!ALLOWED_TEACHER_PORTAL_ROLES.has(role)) {
+    redirect("/app");
+  }
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: ctx.tenantId },
@@ -43,6 +46,9 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
   });
 
   if (!tenant || tenant.status !== "ACTIVE") redirect("/pending");
+
+  const isTeacherOnly = role === "TEACHER";
+  const showAdmin = role === "SCHOOL_ADMIN" || role === "SCHOOLADMIN" || role === "HEADTEACHER";
 
   return (
     <div className="min-h-screen bg-[#05070B] text-[#F7F4ED]">
@@ -70,9 +76,11 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
                   Dashboard
                 </Link>
 
-                <Link className={navLinkClass()} href="/teacher/notices">
-                  Notices
-                </Link>
+                {isTeacherOnly ? (
+                  <Link className={navLinkClass()} href="/teacher/notices">
+                    Notices
+                  </Link>
+                ) : null}
 
                 <Link className={navLinkClass()} href="/teacher/attendance">
                   Attendance
@@ -86,9 +94,7 @@ export default async function TeacherLayout({ children }: { children: ReactNode 
                   Lesson Notes
                 </Link>
 
-                {role === "SCHOOL_ADMIN" ||
-                role === "SCHOOLADMIN" ||
-                role === "HEADTEACHER" ? (
+                {showAdmin ? (
                   <Link className={navLinkClass()} href="/admin/dashboard">
                     Admin
                   </Link>
