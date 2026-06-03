@@ -1133,7 +1133,13 @@ function EscalationLogbookCard({ note }: { note: string }) {
   );
 }
 
-function DistrictCaseActionQueue({ cases }: { cases: GovernanceCase[] }) {
+function DistrictCaseActionQueue({
+  cases,
+  onOpenDirectorDirective,
+}: {
+  cases: GovernanceCase[];
+  onOpenDirectorDirective: (item: GovernanceCase) => void;
+}) {
   const actionCases = [...cases]
     .filter((item) => !isClosedCase(item))
     .sort((a, b) => districtCaseActionScore(b) - districtCaseActionScore(a))
@@ -1210,6 +1216,15 @@ function DistrictCaseActionQueue({ cases }: { cases: GovernanceCase[] }) {
                     <p className="mt-3 text-sm leading-6 text-red-100/90">
                       {districtCaseActionReason(item)}
                     </p>
+                                        {item.status === "ESCALATED" ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenDirectorDirective(item)}
+                        className="mt-4 rounded-full border border-sky-300/25 bg-sky-500/10 px-4 py-2 text-xs font-semibold text-sky-100 hover:bg-sky-500/20"
+                      >
+                        Issue Director directive
+                      </button>
+                    ) : null}
                   </div>
 
                   <div className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[520px]">
@@ -1252,14 +1267,27 @@ function DistrictCaseActionQueue({ cases }: { cases: GovernanceCase[] }) {
                   </div>
                 ) : null}
 
-                                                {item.status === "ESCALATED" && item.events?.[0]?.note ? (
-                  <EscalationLogbookCard note={item.events[0].note} />
-                ) : item.events?.[0] ? (
-                  <p className="mt-3 text-xs leading-5 text-slate-400">
-                    Latest event: {item.events[0].eventType.replaceAll("_", " ")}
-                    {item.events[0].note ? ` — ${item.events[0].note}` : ""}
-                  </p>
-                ) : null}
+                                                                                {(() => {
+                  const latestEvent = item.events?.[0];
+
+                  if (!latestEvent) return null;
+
+                  if (latestEvent.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) {
+                    return <DirectorDirectiveCard note={latestEvent.note} />;
+                  }
+
+                  if (item.status === "ESCALATED" && latestEvent.note) {
+                    return <EscalationLogbookCard note={latestEvent.note} />;
+                  }
+
+                  return (
+                    <p className="mt-3 text-xs leading-5 text-slate-400">
+                      Latest event:{" "}
+                      {latestEvent.eventType.replaceAll("_", " ")}
+                      {latestEvent.note ? ` — ${latestEvent.note}` : ""}
+                    </p>
+                  );
+                })()}
               </div>
             );
           })
@@ -1270,6 +1298,162 @@ function DistrictCaseActionQueue({ cases }: { cases: GovernanceCase[] }) {
         )}
       </div>
     </section>
+  );
+}
+
+function cleanDirectiveValue(value: string | null) {
+  if (!value) return null;
+
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\.$/, "")
+    .trim();
+}
+
+function parseDirectiveLineMap(section: string) {
+  const map = new Map<string, string>();
+
+  for (const rawLine of section.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const colonIndex = line.indexOf(":");
+    if (colonIndex < 0) continue;
+
+    const label = line.slice(0, colonIndex).trim();
+    const value = line.slice(colonIndex + 1).trim();
+
+    if (!label || !value) continue;
+    if (!map.has(label)) {
+      map.set(label, cleanDirectiveValue(value) ?? value);
+    }
+  }
+
+  return map;
+}
+
+function parseDirectorDirectiveNote(note?: string | null) {
+  if (!note) return null;
+
+  const instructionMarker = "DIRECTOR INSTRUCTION";
+  const instructionIndex = note.indexOf(instructionMarker);
+
+  const evidenceSection =
+    instructionIndex >= 0 ? note.slice(0, instructionIndex) : note;
+
+  const instruction =
+    instructionIndex >= 0
+      ? note.slice(instructionIndex + instructionMarker.length).trim()
+      : null;
+
+  const fields = parseDirectiveLineMap(evidenceSection);
+
+  return {
+    raw: note,
+    school: fields.get("School") ?? null,
+    schoolCode: fields.get("School code") ?? null,
+    circuit: fields.get("Circuit") ?? null,
+    caseTitle: fields.get("Case") ?? null,
+    currentStatus: fields.get("Current status") ?? null,
+    priority: fields.get("Priority") ?? null,
+    riskLevel: fields.get("Risk level") ?? null,
+    riskScore: fields.get("Risk score") ?? null,
+    officialNoticeSent: fields.get("Official notice sent") ?? null,
+    acknowledgements: fields.get("Acknowledgements") ?? null,
+    correctiveResponses: fields.get("Corrective responses") ?? null,
+    instruction: cleanDirectiveValue(instruction),
+  };
+}
+
+function DirectorDirectiveCard({ note }: { note: string }) {
+  const parsed = parseDirectorDirectiveNote(note);
+
+  if (!parsed?.instruction) {
+    return (
+      <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-500/10 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
+          Director directive
+        </p>
+        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-sky-100">
+          {note}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-500/10 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
+        Director directive
+      </p>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            School details
+          </p>
+          <dl className="mt-2 space-y-1 text-sm text-slate-200">
+            <div>
+              <dt className="text-xs text-slate-500">School</dt>
+              <dd>{parsed.school ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">School code</dt>
+              <dd>{parsed.schoolCode ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Circuit</dt>
+              <dd>{parsed.circuit ?? "—"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Case evidence
+          </p>
+          <dl className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-200">
+            <div>
+              <dt className="text-xs text-slate-500">Status before directive</dt>
+              <dd>{parsed.currentStatus ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Priority</dt>
+              <dd>{parsed.priority ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Risk</dt>
+              <dd>
+                {parsed.riskLevel ?? "—"}
+                {parsed.riskScore ? ` · ${parsed.riskScore}` : ""}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Notice sent</dt>
+              <dd>{parsed.officialNoticeSent ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Acknowledgements</dt>
+              <dd>{parsed.acknowledgements ?? "0"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Responses</dt>
+              <dd>{parsed.correctiveResponses ?? "0"}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-500/10 p-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-200">
+          Director instruction
+        </p>
+        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-sky-100">
+          {parsed.instruction}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -1349,6 +1533,13 @@ export default function GovernanceDashboardClient({
   );
   const [escalationReason, setEscalationReason] = useState("");
   const [escalationError, setEscalationError] = useState<string | null>(null);
+
+  const [directorDirectiveCase, setDirectorDirectiveCase] =
+    useState<GovernanceCase | null>(null);
+  const [directorDirective, setDirectorDirective] = useState("");
+  const [directorDirectiveError, setDirectorDirectiveError] = useState<
+    string | null
+  >(null);
 
   const isDistrictView = endpoint.includes("/district/");
   const isCircuitView = endpoint.includes("/circuit/");
@@ -1670,6 +1861,119 @@ export default function GovernanceDashboardClient({
       await loadCases();
     } catch {
       setEscalationError("Network/server error while escalating case.");
+    } finally {
+      setBusyCaseKey(null);
+    }
+  }
+
+  function openDirectorDirectiveDialog(item: GovernanceCase) {
+    setDirectorDirectiveCase(item);
+    setDirectorDirective("");
+    setDirectorDirectiveError(null);
+    setCaseAction(null);
+    setCaseError(null);
+  }
+
+  function closeDirectorDirectiveDialog() {
+    if (busyCaseKey?.startsWith("director-directive:")) return;
+
+    setDirectorDirectiveCase(null);
+    setDirectorDirective("");
+    setDirectorDirectiveError(null);
+  }
+
+  function buildDirectorDirectiveNote(item: GovernanceCase, directive: string) {
+    const evidence = closureEvidenceForCase(item);
+
+    return [
+      "DIRECTOR REVIEW DIRECTIVE",
+      "",
+      "SCHOOL DETAILS",
+      item.tenant?.name ? `School: ${item.tenant.name}` : "",
+      item.tenant?.schoolCode ? `School code: ${item.tenant.schoolCode}` : "",
+      item.zone?.name ? `Circuit: ${item.zone.name}` : "",
+      "",
+      "CASE EVIDENCE",
+      `Case: ${item.title}`,
+      `Current status: ${item.status}`,
+      `Priority: ${item.priority}`,
+      item.riskLevel ? `Risk level: ${item.riskLevel}` : "",
+      item.riskScore !== null && item.riskScore !== undefined
+        ? `Risk score: ${item.riskScore}`
+        : "",
+      `Official notice sent: ${evidence.hasOfficialNotice ? "Yes" : "No"}`,
+      `Acknowledgements: ${evidence.acknowledgedRecipients}`,
+      `Corrective responses: ${evidence.respondedRecipients}`,
+      "",
+      "DIRECTOR INSTRUCTION",
+      directive.trim(),
+    ]
+      .filter((line) => line !== "")
+      .join("\n");
+  }
+
+  async function submitDirectorDirective() {
+    const item = directorDirectiveCase;
+    const directive = directorDirective.trim();
+
+    if (!item) return;
+
+    if (directive.length < 40) {
+      setDirectorDirectiveError(
+        "Write a fuller Director directive. Minimum 40 characters. This should tell the SISSO what to do next."
+      );
+      return;
+    }
+
+    setBusyCaseKey(`director-directive:${item.id}`);
+    setDirectorDirectiveError(null);
+    setCaseAction(null);
+    setCaseError(null);
+
+    try {
+      const note = buildDirectorDirectiveNote(item, directive);
+      const evidence = closureEvidenceForCase(item);
+
+      const res = await fetch("/api/governance/interventions/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          caseId: item.id,
+          action: "STATUS",
+          status: "IN_PROGRESS",
+          note,
+          metadata: {
+            source: "B6D-director-escalation-directive",
+            directorDirective: directive,
+            closureEvidence: evidence,
+          },
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as
+        | CaseWriteResponse
+        | null;
+
+      if (!res.ok || !json?.ok) {
+        setDirectorDirectiveError(
+          json && !json.ok
+            ? json.error
+            : `Failed to save Director directive (${res.status})`
+        );
+        return;
+      }
+
+      setCaseAction(
+        "Director directive saved. Case returned to in-progress follow-up."
+      );
+      setDirectorDirectiveCase(null);
+      setDirectorDirective("");
+      await loadCases();
+    } catch {
+      setDirectorDirectiveError(
+        "Network/server error while saving Director directive."
+      );
     } finally {
       setBusyCaseKey(null);
     }
@@ -2026,7 +2330,106 @@ await loadCases();
             </div>
           </section>
         ) : null}
+        {directorDirectiveCase ? (
+          <section className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+            <div className="w-full max-w-2xl rounded-3xl border border-sky-300/25 bg-slate-950 p-5 shadow-2xl shadow-black/60">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
+                    Director Review Directive
+                  </p>
+                  <h2 className="mt-2 text-xl font-bold text-white">
+                    Give official instruction for this escalated case
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-300">
+                    This directive will become part of the intervention evidence
+                    chain and return the case to in-progress follow-up.
+                  </p>
+                </div>
 
+                <button
+                  type="button"
+                  onClick={closeDirectorDirectiveDialog}
+                  disabled={
+                    busyCaseKey ===
+                    `director-directive:${directorDirectiveCase.id}`
+                  }
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-sm font-semibold text-white">
+                  {directorDirectiveCase.tenant?.name ??
+                    directorDirectiveCase.title}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {directorDirectiveCase.tenant?.schoolCode || "No school code"} ·{" "}
+                  {directorDirectiveCase.zone?.name || "No circuit"} ·{" "}
+                  {directorDirectiveCase.priority} priority
+                </p>
+              </div>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                  Director directive
+                </span>
+                <textarea
+                  value={directorDirective}
+                  onChange={(event) => {
+                    setDirectorDirective(event.target.value);
+                    setDirectorDirectiveError(null);
+                  }}
+                  rows={7}
+                  placeholder="Example: SISSO should visit the school within 48 hours, meet the headteacher, verify lesson note preparation and attendance punctuality records, then submit follow-up evidence by Friday noon. If no improvement is seen, prepare a formal district-level meeting with the headteacher."
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-sky-300/50"
+                />
+              </label>
+
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
+                <span>{directorDirective.trim().length} characters</span>
+                <span>Minimum: 40 characters</span>
+              </div>
+
+              {directorDirectiveError ? (
+                <div className="mt-3 rounded-2xl border border-red-300/20 bg-red-500/10 p-3 text-sm text-red-100">
+                  {directorDirectiveError}
+                </div>
+              ) : null}
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeDirectorDirectiveDialog}
+                  disabled={
+                    busyCaseKey ===
+                    `director-directive:${directorDirectiveCase.id}`
+                  }
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void submitDirectorDirective()}
+                  disabled={
+                    busyCaseKey ===
+                    `director-directive:${directorDirectiveCase.id}`
+                  }
+                  className="rounded-full border border-sky-300/25 bg-sky-500/15 px-4 py-2 text-sm font-semibold text-sky-100 hover:bg-sky-500/25 disabled:opacity-50"
+                >
+                  {busyCaseKey ===
+                  `director-directive:${directorDirectiveCase.id}`
+                    ? "Saving directive..."
+                    : "Save Director directive"}
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           {totalCards.length ? (
             totalCards.map((c) => (
@@ -2049,8 +2452,11 @@ await loadCases();
         {isDistrictView ? (
           <DistrictCaseCommandPanel cases={cases} />
         ) : null}
-        {isDistrictView ? (
-          <DistrictCaseActionQueue cases={cases} />
+                {isDistrictView ? (
+          <DistrictCaseActionQueue
+            cases={cases}
+            onOpenDirectorDirective={openDirectorDirectiveDialog}
+          />
         ) : null}
         {isDistrictView ? (
           <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-5">
@@ -2359,20 +2765,30 @@ await loadCases();
                                 </button>
                               </div>
 
-                                                            {existingCase.status === "ESCALATED" &&
-                              existingCase.events?.[0]?.note ? (
-                                <EscalationLogbookCard
-                                  note={existingCase.events[0].note}
-                                />
-                              ) : existingCase.events?.[0] ? (
-                                <p className="text-xs leading-5 text-slate-400">
-                                  Latest evidence:{" "}
-                                  {existingCase.events[0].eventType.replaceAll("_", " ")}
-                                  {existingCase.events[0].note
-                                    ? ` — ${existingCase.events[0].note}`
-                                    : ""}
-                                </p>
-                              ) : null}
+{(() => {
+  const latestEvent = existingCase.events?.[0];
+
+  if (!latestEvent) return null;
+
+  if (latestEvent.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) {
+    return <DirectorDirectiveCard note={latestEvent.note} />;
+  }
+
+  if (
+    existingCase.status === "ESCALATED" &&
+    latestEvent.note
+  ) {
+    return <EscalationLogbookCard note={latestEvent.note} />;
+  }
+
+  return (
+    <p className="text-xs leading-5 text-slate-400">
+      Latest evidence:{" "}
+      {latestEvent.eventType.replaceAll("_", " ")}
+      {latestEvent.note ? ` — ${latestEvent.note}` : ""}
+    </p>
+  );
+})()}
                             </div>
                           ) : (
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
