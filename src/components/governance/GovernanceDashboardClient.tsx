@@ -965,6 +965,174 @@ function districtCaseActionTone(item: GovernanceCase) {
   return "default";
 }
 
+function cleanEscalationValue(value: string | null) {
+  if (!value) return null;
+
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\.$/, "")
+    .trim();
+}
+
+function extractEscalationField(
+  note: string,
+  label: string,
+  nextLabels: string[]
+) {
+  const startToken = `${label}:`;
+  const start = note.indexOf(startToken);
+
+  if (start < 0) return null;
+
+  const contentStart = start + startToken.length;
+  let end = note.length;
+
+  for (const nextLabel of nextLabels) {
+    const nextIndex = note.indexOf(`${nextLabel}:`, contentStart);
+    if (nextIndex >= 0 && nextIndex < end) {
+      end = nextIndex;
+    }
+  }
+
+  return cleanEscalationValue(note.slice(contentStart, end));
+}
+
+function parseEscalationLogbookNote(note?: string | null) {
+  if (!note) return null;
+
+  const labels = [
+    "School",
+    "School code",
+    "Circuit",
+    "Case",
+    "Current status",
+    "Priority",
+    "Risk level",
+    "Risk score",
+    "Due date",
+    "Official notice sent",
+    "Acknowledgements",
+    "Corrective responses",
+    "Escalation reason",
+  ];
+
+  const field = (label: string) =>
+    extractEscalationField(
+      note,
+      label,
+      labels.filter((item) => item !== label)
+    );
+
+  return {
+    raw: note,
+    school: field("School"),
+    schoolCode: field("School code"),
+    circuit: field("Circuit"),
+    caseTitle: field("Case"),
+    currentStatus: field("Current status"),
+    priority: field("Priority"),
+    riskLevel: field("Risk level"),
+    riskScore: field("Risk score"),
+    dueDate: field("Due date"),
+    officialNoticeSent: field("Official notice sent"),
+    acknowledgements: field("Acknowledgements"),
+    correctiveResponses: field("Corrective responses"),
+    reason: field("Escalation reason"),
+  };
+}
+
+function EscalationLogbookCard({ note }: { note: string }) {
+  const parsed = parseEscalationLogbookNote(note);
+
+  if (!parsed?.reason) {
+    return (
+      <div className="mt-4 rounded-xl border border-red-300/15 bg-red-500/10 p-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
+          Escalation reason
+        </p>
+        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-red-100/90">
+          {note}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-red-300/15 bg-red-500/10 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
+        Escalation logbook entry
+      </p>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            School details
+          </p>
+          <dl className="mt-2 space-y-1 text-sm text-slate-200">
+            <div>
+              <dt className="text-xs text-slate-500">School</dt>
+              <dd>{parsed.school ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">School code</dt>
+              <dd>{parsed.schoolCode ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Circuit</dt>
+              <dd>{parsed.circuit ?? "—"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Case evidence
+          </p>
+          <dl className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-200">
+            <div>
+              <dt className="text-xs text-slate-500">Status</dt>
+              <dd>{parsed.currentStatus ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Priority</dt>
+              <dd>{parsed.priority ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Risk</dt>
+              <dd>
+                {parsed.riskLevel ?? "—"}
+                {parsed.riskScore ? ` · ${parsed.riskScore}` : ""}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Notice sent</dt>
+              <dd>{parsed.officialNoticeSent ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Acknowledgements</dt>
+              <dd>{parsed.acknowledgements ?? "0"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Responses</dt>
+              <dd>{parsed.correctiveResponses ?? "0"}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-red-300/15 bg-red-500/10 p-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-200">
+          Reason for escalation
+        </p>
+        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-red-100">
+          {parsed.reason}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function DistrictCaseActionQueue({ cases }: { cases: GovernanceCase[] }) {
   const actionCases = [...cases]
     .filter((item) => !isClosedCase(item))
@@ -1084,7 +1252,9 @@ function DistrictCaseActionQueue({ cases }: { cases: GovernanceCase[] }) {
                   </div>
                 ) : null}
 
-                {item.events?.[0] ? (
+                                                {item.status === "ESCALATED" && item.events?.[0]?.note ? (
+                  <EscalationLogbookCard note={item.events[0].note} />
+                ) : item.events?.[0] ? (
                   <p className="mt-3 text-xs leading-5 text-slate-400">
                     Latest event: {item.events[0].eventType.replaceAll("_", " ")}
                     {item.events[0].note ? ` — ${item.events[0].note}` : ""}
@@ -1174,6 +1344,12 @@ export default function GovernanceDashboardClient({
   const [caseError, setCaseError] = useState<string | null>(null);
   const [busyCaseKey, setBusyCaseKey] = useState<string | null>(null);
 
+  const [escalationCase, setEscalationCase] = useState<GovernanceCase | null>(
+    null
+  );
+  const [escalationReason, setEscalationReason] = useState("");
+  const [escalationError, setEscalationError] = useState<string | null>(null);
+
   const isDistrictView = endpoint.includes("/district/");
   const isCircuitView = endpoint.includes("/circuit/");
 
@@ -1214,13 +1390,16 @@ export default function GovernanceDashboardClient({
     setCaseError(null);
 
     try {
-      const caseLimit = isDistrictView ? 100 : 25;
+            const caseLimit = isDistrictView ? 100 : 25;
 
-const res = await fetch(`/api/governance/interventions/list?take=${caseLimit}`, {
-        cache: "no-store",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
+      const res = await fetch(
+        `/api/governance/interventions/list?take=${caseLimit}`,
+        {
+          cache: "no-store",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        }
+      );
 
       const json = (await res.json().catch(() => null)) as CaseListResponse | null;
 
@@ -1375,6 +1554,122 @@ const res = await fetch(`/api/governance/interventions/list?take=${caseLimit}`, 
       await loadCases();
     } catch {
       setCaseError("Network/server error while updating intervention case.");
+    } finally {
+      setBusyCaseKey(null);
+    }
+  }
+
+    function openEscalationDialog(item: GovernanceCase) {
+    setEscalationCase(item);
+    setEscalationReason("");
+    setEscalationError(null);
+    setCaseAction(null);
+    setCaseError(null);
+  }
+
+  function closeEscalationDialog() {
+    if (busyCaseKey?.startsWith("escalate:")) return;
+
+    setEscalationCase(null);
+    setEscalationReason("");
+    setEscalationError(null);
+  }
+
+    function buildEscalationLogbookNote(item: GovernanceCase, reason: string) {
+    const evidence = closureEvidenceForCase(item);
+
+    const schoolDetails = [
+      item.tenant?.name ? `School: ${item.tenant.name}` : "",
+      item.tenant?.schoolCode ? `School code: ${item.tenant.schoolCode}` : "",
+      item.zone?.name ? `Circuit: ${item.zone.name}` : "",
+    ].filter(Boolean);
+
+    const caseEvidence = [
+      `Case: ${item.title}`,
+      `Current status: ${item.status}`,
+      `Priority: ${item.priority}`,
+      item.riskLevel ? `Risk level: ${item.riskLevel}` : "",
+      item.riskScore !== null && item.riskScore !== undefined
+        ? `Risk score: ${item.riskScore}`
+        : "",
+      item.dueAt ? `Due date: ${compactDateTime(item.dueAt) ?? item.dueAt}` : "",
+      `Official notice sent: ${evidence.hasOfficialNotice ? "Yes" : "No"}`,
+      `Acknowledgements: ${evidence.acknowledgedRecipients}`,
+      `Corrective responses: ${evidence.respondedRecipients}`,
+    ].filter(Boolean);
+
+    return [
+      "ESCALATION LOGBOOK ENTRY",
+      "",
+      "SCHOOL DETAILS",
+      ...schoolDetails,
+      "",
+      "CASE EVIDENCE",
+      ...caseEvidence,
+      "",
+      "ESCALATION REASON",
+      `Escalation reason: ${reason.trim()}`,
+    ].join("\n");
+  }
+
+  async function submitEscalationReason() {
+    const item = escalationCase;
+    const reason = escalationReason.trim();
+
+    if (!item) return;
+
+    if (reason.length < 40) {
+      setEscalationError(
+        "Write a fuller escalation reason. Minimum 40 characters. This should read like a supervision logbook entry."
+      );
+      return;
+    }
+
+    setBusyCaseKey(`escalate:${item.id}`);
+    setEscalationError(null);
+    setCaseAction(null);
+    setCaseError(null);
+
+    try {
+      const note = buildEscalationLogbookNote(item, reason);
+      const evidence = closureEvidenceForCase(item);
+
+      const res = await fetch("/api/governance/interventions/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          caseId: item.id,
+          action: "STATUS",
+          status: "ESCALATED",
+          note,
+          metadata: {
+            source: "B6C-escalation-logbook-entry",
+            escalationReason: reason,
+            closureEvidence: evidence,
+          },
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as
+        | CaseWriteResponse
+        | null;
+
+      if (!res.ok || !json?.ok) {
+        setEscalationError(
+          json && !json.ok
+            ? json.error
+            : `Failed to escalate case (${res.status})`
+        );
+        return;
+      }
+
+      setCaseAction("Case escalated with detailed logbook reason.");
+      setEscalationCase(null);
+      setEscalationReason("");
+      await loadCases();
+    } catch {
+      setEscalationError("Network/server error while escalating case.");
     } finally {
       setBusyCaseKey(null);
     }
@@ -1638,6 +1933,97 @@ await loadCases();
         {error ? (
           <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-5 text-sm text-red-100">
             {error}
+          </section>
+        ) : null}
+
+        {escalationCase ? (
+          <section className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+            <div className="w-full max-w-2xl rounded-3xl border border-red-300/25 bg-slate-950 p-5 shadow-2xl shadow-black/60">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-200">
+                    Escalation Logbook Entry
+                  </p>
+                  <h2 className="mt-2 text-xl font-bold text-white">
+                    Explain why this case must go to the Director
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-300">
+                    This reason becomes part of the official intervention event
+                    history. Write it like a supervision logbook entry, not a
+                    casual note.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeEscalationDialog}
+                  disabled={busyCaseKey === `escalate:${escalationCase.id}`}
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-sm font-semibold text-white">
+                  {escalationCase.tenant?.name ?? escalationCase.title}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {escalationCase.tenant?.schoolCode || "No school code"} ·{" "}
+                  {escalationCase.zone?.name || "No circuit"} ·{" "}
+                  {escalationCase.priority} priority
+                </p>
+              </div>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                  Reason for escalation
+                </span>
+                <textarea
+                  value={escalationReason}
+                  onChange={(event) => {
+                    setEscalationReason(event.target.value);
+                    setEscalationError(null);
+                  }}
+                  rows={7}
+                  placeholder="Example: I contacted the headteacher twice and sent an official notice, but the school has still not submitted corrective evidence. Attendance capture remains incomplete and assessment records are still missing. I am escalating because the situation may affect circuit performance if not addressed immediately."
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-red-300/50"
+                />
+              </label>
+
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
+                <span>{escalationReason.trim().length} characters</span>
+                <span>Minimum: 40 characters</span>
+              </div>
+
+              {escalationError ? (
+                <div className="mt-3 rounded-2xl border border-red-300/20 bg-red-500/10 p-3 text-sm text-red-100">
+                  {escalationError}
+                </div>
+              ) : null}
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeEscalationDialog}
+                  disabled={busyCaseKey === `escalate:${escalationCase.id}`}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void submitEscalationReason()}
+                  disabled={busyCaseKey === `escalate:${escalationCase.id}`}
+                  className="rounded-full border border-red-300/25 bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-100 hover:bg-red-500/25 disabled:opacity-50"
+                >
+                  {busyCaseKey === `escalate:${escalationCase.id}`
+                    ? "Escalating..."
+                    : "Escalate to Director"}
+                </button>
+              </div>
+            </div>
           </section>
         ) : null}
 
@@ -1939,21 +2325,17 @@ await loadCases();
                                   Mark in progress
                                 </button>
 
-                                <button
+                                                                <button
                                   type="button"
-                                  onClick={() =>
-                                    void updateCaseStatus(
-                                      existingCase,
-                                      "ESCALATED",
-                                      "Case escalated from the governance dashboard for higher-level follow-up."
-                                    )
-                                  }
+                                  onClick={() => openEscalationDialog(existingCase)}
                                   disabled={
-                                    busyCaseKey === `status:${existingCase.id}:ESCALATED`
+                                    busyCaseKey ===
+                                      `status:${existingCase.id}:ESCALATED` ||
+                                    busyCaseKey === `escalate:${existingCase.id}`
                                   }
                                   className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-2 text-[11px] font-semibold text-red-100 hover:bg-red-500/15 disabled:opacity-50"
                                 >
-                                  Escalate
+                                  Escalate with reason
                                 </button>
 
                                                                 <button
@@ -1977,7 +2359,12 @@ await loadCases();
                                 </button>
                               </div>
 
-                              {existingCase.events?.[0] ? (
+                                                            {existingCase.status === "ESCALATED" &&
+                              existingCase.events?.[0]?.note ? (
+                                <EscalationLogbookCard
+                                  note={existingCase.events[0].note}
+                                />
+                              ) : existingCase.events?.[0] ? (
                                 <p className="text-xs leading-5 text-slate-400">
                                   Latest evidence:{" "}
                                   {existingCase.events[0].eventType.replaceAll("_", " ")}
