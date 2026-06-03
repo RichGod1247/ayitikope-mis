@@ -905,6 +905,204 @@ function DistrictCaseCommandPanel({ cases }: { cases: GovernanceCase[] }) {
   );
 }
 
+function districtCaseActionScore(item: GovernanceCase) {
+  const evidence = closureEvidenceForCase(item);
+  const riskScore = numberValue(item.riskScore);
+
+  if (isOverdueIntervention(item)) return 1000 + riskScore;
+  if (item.status === "ESCALATED") return 900 + riskScore;
+  if (!evidence.hasOfficialNotice) return 800 + riskScore;
+  if (evidence.hasOfficialNotice && !evidence.hasAcknowledgement) {
+    return 700 + riskScore;
+  }
+  if (evidence.hasOfficialNotice && !evidence.hasCorrectiveResponse) {
+    return 600 + riskScore;
+  }
+  if (item.status === "IN_PROGRESS") return 500 + riskScore;
+  if (item.status === "OPEN") return 400 + riskScore;
+
+  return riskScore;
+}
+
+function districtCaseActionReason(item: GovernanceCase) {
+  const evidence = closureEvidenceForCase(item);
+
+  if (isOverdueIntervention(item)) {
+    return "Overdue case — Director should demand immediate SISSO follow-up.";
+  }
+
+  if (item.status === "ESCALATED") {
+    return "Escalated case — requires higher-level governance attention.";
+  }
+
+  if (!evidence.hasOfficialNotice) {
+    return "No official notice sent — SISSO must formally notify the school.";
+  }
+
+  if (evidence.hasOfficialNotice && !evidence.hasAcknowledgement) {
+    return "Official notice sent but not acknowledged.";
+  }
+
+  if (evidence.hasOfficialNotice && !evidence.hasCorrectiveResponse) {
+    return "Notice acknowledged or delivered, but corrective response is still missing.";
+  }
+
+  if (item.status === "IN_PROGRESS") {
+    return "Follow-up started — Director should check whether response evidence is coming.";
+  }
+
+  return "Monitor case until evidence-based closure is complete.";
+}
+
+function districtCaseActionTone(item: GovernanceCase) {
+  const evidence = closureEvidenceForCase(item);
+
+  if (isOverdueIntervention(item)) return "danger";
+  if (item.status === "ESCALATED") return "danger";
+  if (!evidence.hasOfficialNotice) return "danger";
+  if (!evidence.hasCorrectiveResponse) return "warning";
+
+  return "default";
+}
+
+function DistrictCaseActionQueue({ cases }: { cases: GovernanceCase[] }) {
+  const actionCases = [...cases]
+    .filter((item) => !isClosedCase(item))
+    .sort((a, b) => districtCaseActionScore(b) - districtCaseActionScore(a))
+    .slice(0, 8);
+
+  return (
+    <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-200">
+            District Action Queue
+          </p>
+          <h2 className="mt-2 text-xl font-bold text-white">
+            Cases requiring the Director’s next follow-up
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-red-100/80">
+            This converts intervention data into a practical leadership queue:
+            overdue cases first, escalated cases next, then cases missing notices,
+            acknowledgements, or corrective responses.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-200">
+          Active queue:{" "}
+          <span className="font-bold text-white">{actionCases.length}</span>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {actionCases.length ? (
+          actionCases.map((item, idx) => {
+            const evidence = closureEvidenceForCase(item);
+            const tone = districtCaseActionTone(item);
+
+            return (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-white/10 bg-slate-950/55 p-4"
+              >
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                        #{idx + 1}
+                      </span>
+
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                          tone === "danger"
+                            ? "border-red-300/30 bg-red-500/15 text-red-100"
+                            : tone === "warning"
+                              ? "border-amber-300/30 bg-amber-400/15 text-amber-100"
+                              : "border-white/10 bg-white/5 text-slate-200"
+                        }`}
+                      >
+                        {item.status.replaceAll("_", " ")}
+                      </span>
+
+                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel ?? item.priority)}`}>
+                        {item.riskLevel ?? item.priority} · {numberValue(item.riskScore)}
+                      </span>
+                    </div>
+
+                    <p className="mt-3 text-base font-bold text-white">
+                      {item.tenant?.name ?? item.title}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      {item.tenant?.schoolCode || "No school code"} ·{" "}
+                      {item.zone?.name || "No circuit assigned"} · Created{" "}
+                      {compactDateTime(item.createdAt) ?? item.createdAt}
+                    </p>
+
+                    <p className="mt-3 text-sm leading-6 text-red-100/90">
+                      {districtCaseActionReason(item)}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[520px]">
+                    <MetricPill
+                      label="Official notice"
+                      value={evidence.hasOfficialNotice ? "Yes" : "No"}
+                      tone={evidence.hasOfficialNotice ? "success" : "danger"}
+                    />
+                    <MetricPill
+                      label="Acknowledged"
+                      value={evidence.acknowledgedRecipients}
+                      tone={evidence.hasAcknowledgement ? "success" : "warning"}
+                    />
+                    <MetricPill
+                      label="Responses"
+                      value={evidence.respondedRecipients}
+                      tone={evidence.hasCorrectiveResponse ? "success" : "danger"}
+                    />
+                    <MetricPill
+                      label="Overdue"
+                      value={isOverdueIntervention(item) ? "Yes" : "No"}
+                      tone={isOverdueIntervention(item) ? "danger" : "success"}
+                    />
+                  </div>
+                </div>
+
+                {evidence.latestResponseBody ? (
+                  <div className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-400/10 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+                      Latest response evidence
+                    </p>
+                    <p className="mt-1 text-xs text-emerald-100/80">
+                      {evidence.latestResponseBy || "Recipient"} ·{" "}
+                      {compactDateTime(evidence.latestRespondedAt ?? undefined) ??
+                        "Time not available"}
+                    </p>
+                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-100">
+                      {evidence.latestResponseBody}
+                    </p>
+                  </div>
+                ) : null}
+
+                {item.events?.[0] ? (
+                  <p className="mt-3 text-xs leading-5 text-slate-400">
+                    Latest event: {item.events[0].eventType.replaceAll("_", " ")}
+                    {item.events[0].note ? ` — ${item.events[0].note}` : ""}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })
+        ) : (
+          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+            No active district intervention cases require follow-up right now.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function MetricPill({
   label,
   value,
@@ -1464,6 +1662,9 @@ await loadCases();
         </section>
         {isDistrictView ? (
           <DistrictCaseCommandPanel cases={cases} />
+        ) : null}
+        {isDistrictView ? (
+          <DistrictCaseActionQueue cases={cases} />
         ) : null}
         {isDistrictView ? (
           <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-5">
