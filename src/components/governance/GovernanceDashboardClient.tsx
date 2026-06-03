@@ -1825,7 +1825,7 @@ export default function GovernanceDashboardClient({
     receiptKeysRef.current.add(receiptKey);
 
     try {
-      await fetch("/api/governance/interventions/update", {
+      const res = await fetch("/api/governance/interventions/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -1839,8 +1839,23 @@ export default function GovernanceDashboardClient({
           },
         }),
       });
+
+      const json = (await res.json().catch(() => null)) as CaseWriteResponse | null;
+
+      if (!res.ok || !json?.ok) {
+        receiptKeysRef.current.delete(receiptKey);
+        setCaseError(
+          json && !json.ok
+            ? `Read receipt failed: ${json.error}`
+            : `Read receipt failed (${res.status})`
+        );
+        return;
+      }
+
+      await loadCases();
     } catch {
-      // Do not block dashboard rendering because of a receipt write failure.
+      receiptKeysRef.current.delete(receiptKey);
+      setCaseError("Network/server error while saving governance read receipt.");
     }
   }
 
@@ -1922,7 +1937,7 @@ export default function GovernanceDashboardClient({
     }
   }
 
-    async function updateCaseStatus(
+  async function updateCaseStatus(
     item: GovernanceCase,
     status: Exclude<GovernanceCaseStatus, "OPEN" | "CANCELLED">,
     note: string
@@ -1983,7 +1998,7 @@ export default function GovernanceDashboardClient({
     }
   }
 
-    function openEscalationDialog(item: GovernanceCase) {
+  function openEscalationDialog(item: GovernanceCase) {
     setEscalationCase(item);
     setEscalationReason("");
     setEscalationError(null);
@@ -1999,7 +2014,7 @@ export default function GovernanceDashboardClient({
     setEscalationError(null);
   }
 
-    function buildEscalationLogbookNote(item: GovernanceCase, reason: string) {
+  function buildEscalationLogbookNote(item: GovernanceCase, reason: string) {
     const evidence = closureEvidenceForCase(item);
 
     const schoolDetails = [
@@ -2274,7 +2289,7 @@ await loadCases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!cases.length) return;
 
     for (const item of cases) {

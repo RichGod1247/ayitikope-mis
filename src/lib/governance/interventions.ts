@@ -875,6 +875,79 @@ export async function updateGovernanceInterventionCase(args: {
     });
   }
 
+if (action === "RECEIPT") {
+    const receiptKind = normalizeReceiptKind(input.receiptKind);
+    const messageEventId = clean(input.messageEventId);
+
+    if (!messageEventId) {
+      throw new GovernanceInterventionError(400, "MESSAGE_EVENT_ID_REQUIRED");
+    }
+
+    const targetEvent = await prisma.governanceInterventionEvent.findFirst({
+      where: {
+        id: messageEventId,
+        caseId,
+      },
+      select: {
+        id: true,
+        eventType: true,
+        note: true,
+        createdAt: true,
+      },
+    });
+
+    if (!targetEvent) {
+      throw new GovernanceInterventionError(404, "MESSAGE_EVENT_NOT_FOUND");
+    }
+
+    const possibleReceipts = await prisma.governanceInterventionEvent.findMany({
+      where: {
+        caseId,
+        actorUserId,
+        eventType: GovernanceInterventionEventType.COMMENT,
+      },
+      select: {
+        id: true,
+        metadata: true,
+      },
+      take: 100,
+    });
+
+    const alreadyRecorded = possibleReceipts.some((event) => {
+      return (
+        metadataString(event.metadata, "kind") === "READ_RECEIPT" &&
+        metadataString(event.metadata, "receiptKind") === receiptKind &&
+        metadataString(event.metadata, "messageEventId") === messageEventId
+      );
+    });
+
+    if (!alreadyRecorded) {
+      await prisma.governanceInterventionEvent.create({
+        data: {
+          caseId,
+          actorUserId,
+          eventType: GovernanceInterventionEventType.COMMENT,
+          fromStatus: row.status,
+          toStatus: row.status,
+          note: "Read receipt recorded.",
+          metadata: jsonObject({
+            kind: "READ_RECEIPT",
+            receiptKind,
+            messageEventId,
+            seenAt: new Date().toISOString(),
+            source: "B6E-governance-read-receipt",
+            extra: input.metadata,
+          }),
+        },
+      });
+    }
+
+    return prisma.governanceInterventionCase.findUniqueOrThrow({
+      where: { id: caseId },
+      select: interventionSelect,
+    });
+  }
+
   if (action === "ASSIGN") {
     if (!assignedToUserId) {
       throw new GovernanceInterventionError(400, "ASSIGNEE_REQUIRED");
