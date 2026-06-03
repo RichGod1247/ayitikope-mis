@@ -593,6 +593,318 @@ function CaseClosureEvidencePanel({ item }: { item: GovernanceCase }) {
   );
 }
 
+function isClosedCase(item: GovernanceCase) {
+  return item.status === "RESOLVED" || item.status === "CANCELLED";
+}
+
+function isOverdueIntervention(item: GovernanceCase) {
+  if (!item.dueAt || isClosedCase(item)) return false;
+
+  const due = new Date(item.dueAt);
+  if (Number.isNaN(due.getTime())) return false;
+
+  return due.getTime() < Date.now();
+}
+
+function districtCaseCommandSummary(cases: GovernanceCase[]) {
+  const activeCases = cases.filter((item) => !isClosedCase(item));
+  const resolvedCases = cases.filter((item) => item.status === "RESOLVED");
+
+  const noNoticeCases = activeCases.filter(
+    (item) => !closureEvidenceForCase(item).hasOfficialNotice
+  );
+
+  const awaitingAckCases = activeCases.filter((item) => {
+    const evidence = closureEvidenceForCase(item);
+    return evidence.hasOfficialNotice && !evidence.hasAcknowledgement;
+  });
+
+  const awaitingResponseCases = activeCases.filter((item) => {
+    const evidence = closureEvidenceForCase(item);
+    return evidence.hasOfficialNotice && !evidence.hasCorrectiveResponse;
+  });
+
+  const resolvedWithEvidenceCases = resolvedCases.filter(
+    (item) => closureEvidenceForCase(item).hasCorrectiveResponse
+  );
+
+  const overdueCases = activeCases.filter(isOverdueIntervention);
+  const escalatedCases = cases.filter((item) => item.status === "ESCALATED");
+
+  const criticalCases = activeCases.filter(
+    (item) => item.priority === "CRITICAL" || item.riskLevel === "CRITICAL"
+  );
+
+  const highCases = activeCases.filter(
+    (item) => item.priority === "HIGH" || item.riskLevel === "HIGH"
+  );
+
+  const circuitMap = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      total: number;
+      active: number;
+      overdue: number;
+      escalated: number;
+      awaitingResponse: number;
+      resolvedWithEvidence: number;
+      highestRiskScore: number;
+      latestCaseAt: string | null;
+    }
+  >();
+
+  for (const item of cases) {
+    const key = item.zone?.id ?? item.tenantId ?? "unknown";
+    const name =
+      item.zone?.name ??
+      item.tenant?.name ??
+      "Unassigned circuit / school";
+
+    const existing =
+      circuitMap.get(key) ??
+      {
+        id: key,
+        name,
+        total: 0,
+        active: 0,
+        overdue: 0,
+        escalated: 0,
+        awaitingResponse: 0,
+        resolvedWithEvidence: 0,
+        highestRiskScore: 0,
+        latestCaseAt: null,
+      };
+
+    const evidence = closureEvidenceForCase(item);
+
+    existing.total += 1;
+
+    if (!isClosedCase(item)) existing.active += 1;
+    if (isOverdueIntervention(item)) existing.overdue += 1;
+    if (item.status === "ESCALATED") existing.escalated += 1;
+    if (!isClosedCase(item) && evidence.hasOfficialNotice && !evidence.hasCorrectiveResponse) {
+      existing.awaitingResponse += 1;
+    }
+    if (item.status === "RESOLVED" && evidence.hasCorrectiveResponse) {
+      existing.resolvedWithEvidence += 1;
+    }
+
+    existing.highestRiskScore = Math.max(
+      existing.highestRiskScore,
+      numberValue(item.riskScore)
+    );
+
+    if (
+      !existing.latestCaseAt ||
+      new Date(item.createdAt).getTime() >
+        new Date(existing.latestCaseAt).getTime()
+    ) {
+      existing.latestCaseAt = item.createdAt;
+    }
+
+    circuitMap.set(key, existing);
+  }
+
+  const circuitRows = [...circuitMap.values()].sort((a, b) => {
+    const activeDiff = b.active - a.active;
+    if (activeDiff !== 0) return activeDiff;
+
+    const overdueDiff = b.overdue - a.overdue;
+    if (overdueDiff !== 0) return overdueDiff;
+
+    return b.highestRiskScore - a.highestRiskScore;
+  });
+
+  return {
+    totalCases: cases.length,
+    activeCases,
+    resolvedCases,
+    noNoticeCases,
+    awaitingAckCases,
+    awaitingResponseCases,
+    resolvedWithEvidenceCases,
+    overdueCases,
+    escalatedCases,
+    criticalCases,
+    highCases,
+    circuitRows,
+  };
+}
+
+function DistrictCaseCommandPanel({ cases }: { cases: GovernanceCase[] }) {
+  const summary = districtCaseCommandSummary(cases);
+
+  const closureRate = summary.resolvedCases.length
+    ? Math.round(
+        (summary.resolvedWithEvidenceCases.length /
+          summary.resolvedCases.length) *
+          100
+      )
+    : 0;
+
+  const topCircuit = summary.circuitRows[0] ?? null;
+
+  return (
+    <section className="rounded-3xl border border-amber-300/20 bg-amber-400/10 p-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-200">
+            District Case Command
+          </p>
+          <h2 className="mt-2 text-xl font-bold text-white">
+            Intervention accountability across circuits
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-amber-100/80">
+            This tells the Director whether supervision cases are only being opened,
+            or whether officers are driving them to acknowledged, responded, evidence-based closure.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-200">
+          Evidence closure rate:{" "}
+          <span className="font-bold text-white">{closureRate}%</span>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricPill
+          label="Total cases"
+          value={summary.totalCases}
+          tone={summary.totalCases ? "default" : "success"}
+        />
+        <MetricPill
+          label="Active"
+          value={summary.activeCases.length}
+          tone={summary.activeCases.length ? "warning" : "success"}
+        />
+        <MetricPill
+          label="Overdue"
+          value={summary.overdueCases.length}
+          tone={summary.overdueCases.length ? "danger" : "success"}
+        />
+        <MetricPill
+          label="Escalated"
+          value={summary.escalatedCases.length}
+          tone={summary.escalatedCases.length ? "danger" : "success"}
+        />
+        <MetricPill
+          label="No official notice"
+          value={summary.noNoticeCases.length}
+          tone={summary.noNoticeCases.length ? "danger" : "success"}
+        />
+        <MetricPill
+          label="Awaiting ACK"
+          value={summary.awaitingAckCases.length}
+          tone={summary.awaitingAckCases.length ? "warning" : "success"}
+        />
+        <MetricPill
+          label="Awaiting response"
+          value={summary.awaitingResponseCases.length}
+          tone={summary.awaitingResponseCases.length ? "danger" : "success"}
+        />
+        <MetricPill
+          label="Closed with evidence"
+          value={summary.resolvedWithEvidenceCases.length}
+          tone={summary.resolvedWithEvidenceCases.length ? "success" : "default"}
+        />
+      </div>
+
+      {topCircuit ? (
+        <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-200">
+            Director’s first follow-up
+          </p>
+          <p className="mt-2 text-base font-bold text-white">
+            {topCircuit.name}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-red-100/80">
+            {topCircuit.active} active case(s), {topCircuit.overdue} overdue,
+            {topCircuit.awaitingResponse} awaiting corrective response.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mt-5 space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+          Circuits ranked by unresolved intervention burden
+        </p>
+
+        {summary.circuitRows.length ? (
+          summary.circuitRows.slice(0, 6).map((row, idx) => (
+            <div
+              key={row.id}
+              className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                      #{idx + 1}
+                    </span>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                        row.active
+                          ? "border-red-300/30 bg-red-500/10 text-red-100"
+                          : "border-emerald-300/30 bg-emerald-400/10 text-emerald-100"
+                      }`}
+                    >
+                      {row.active ? "Needs follow-up" : "Clear"}
+                    </span>
+                  </div>
+
+                  <p className="mt-3 font-bold text-white">{row.name}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Latest case: {compactDateTime(row.latestCaseAt ?? undefined) ?? "—"}
+                  </p>
+                </div>
+
+                <div className="grid gap-2 text-xs sm:grid-cols-3 lg:min-w-[520px]">
+                  <MetricPill
+                    label="Active"
+                    value={row.active}
+                    tone={row.active ? "warning" : "success"}
+                  />
+                  <MetricPill
+                    label="Overdue"
+                    value={row.overdue}
+                    tone={row.overdue ? "danger" : "success"}
+                  />
+                  <MetricPill
+                    label="Escalated"
+                    value={row.escalated}
+                    tone={row.escalated ? "danger" : "success"}
+                  />
+                  <MetricPill
+                    label="Awaiting response"
+                    value={row.awaitingResponse}
+                    tone={row.awaitingResponse ? "danger" : "success"}
+                  />
+                  <MetricPill
+                    label="Closed with evidence"
+                    value={row.resolvedWithEvidence}
+                    tone={row.resolvedWithEvidence ? "success" : "default"}
+                  />
+                  <MetricPill
+                    label="Highest risk"
+                    value={row.highestRiskScore}
+                    tone={row.highestRiskScore >= 80 ? "danger" : "default"}
+                  />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+            No intervention cases found in this district scope yet.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function MetricPill({
   label,
   value,
@@ -704,7 +1016,9 @@ export default function GovernanceDashboardClient({
     setCaseError(null);
 
     try {
-      const res = await fetch("/api/governance/interventions/list?take=25", {
+      const caseLimit = isDistrictView ? 100 : 25;
+
+const res = await fetch(`/api/governance/interventions/list?take=${caseLimit}`, {
         cache: "no-store",
         credentials: "include",
         headers: { Accept: "application/json" },
@@ -1148,7 +1462,9 @@ await loadCases();
             </div>
           )}
         </section>
-
+        {isDistrictView ? (
+          <DistrictCaseCommandPanel cases={cases} />
+        ) : null}
         {isDistrictView ? (
           <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
