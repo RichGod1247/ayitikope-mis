@@ -53,6 +53,8 @@ type UpdateInterventionInput = {
   note?: unknown;
   assignedToUserId?: unknown;
   dueAt?: unknown;
+  receiptKind?: unknown;
+  messageEventId?: unknown;
   metadata?: unknown;
 };
 
@@ -111,6 +113,33 @@ function jsonObject(value: unknown): Prisma.InputJsonValue {
 function jsonArray(value: unknown): Prisma.InputJsonValue {
   if (!Array.isArray(value)) return jsonValue([], []);
   return jsonValue(value, []);
+}
+
+type GovernanceWorkflowReceiptKind =
+  | "SISSO_ESCALATION_SEEN_BY_DIRECTOR"
+  | "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO";
+
+function normalizeReceiptKind(value: unknown): GovernanceWorkflowReceiptKind {
+  const v = upper(value);
+
+  if (v === "SISSO_ESCALATION_SEEN_BY_DIRECTOR") {
+    return "SISSO_ESCALATION_SEEN_BY_DIRECTOR";
+  }
+
+  if (v === "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO") {
+    return "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO";
+  }
+
+  throw new GovernanceInterventionError(400, "INVALID_RECEIPT_KIND");
+}
+
+function metadataString(metadata: unknown, key: string) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return "";
+  }
+
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
 }
 
 function normalizeScopeType(value: unknown): GovernanceInterventionScopeType {
@@ -582,7 +611,7 @@ const interventionSelect = {
   },
   events: {
     orderBy: { createdAt: "desc" as const },
-    take: 5,
+    take: 20,
     select: {
       id: true,
       eventType: true,

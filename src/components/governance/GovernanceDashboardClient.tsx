@@ -2,7 +2,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -207,6 +207,7 @@ type GovernanceCase = {
     fromStatus: GovernanceCaseStatus | null;
     toStatus: GovernanceCaseStatus | null;
     note: string | null;
+    metadata?: Record<string, unknown> | null;
     createdAt: string;
     actor?: {
       id: string;
@@ -1042,15 +1043,24 @@ function parseEscalationLogbookNote(note?: string | null) {
   };
 }
 
-function EscalationLogbookCard({ note }: { note: string }) {
+function EscalationLogbookCard({
+  note,
+  receiptState,
+}: {
+  note: string;
+  receiptState?: WorkflowReceiptState;
+}) {
   const parsed = parseEscalationLogbookNote(note);
 
   if (!parsed?.reason) {
     return (
       <div className="mt-4 rounded-xl border border-red-300/15 bg-red-500/10 p-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
-          Escalation reason
-        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
+    Escalation reason
+  </p>
+  {receiptState ? <WorkflowTicks state={receiptState} /> : null}
+</div>
         <p className="mt-2 whitespace-pre-line text-sm leading-6 text-red-100/90">
           {note}
         </p>
@@ -1060,9 +1070,12 @@ function EscalationLogbookCard({ note }: { note: string }) {
 
   return (
     <div className="mt-4 rounded-xl border border-red-300/15 bg-red-500/10 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
-        Escalation logbook entry
-      </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
+    Escalation logbook entry
+  </p>
+  {receiptState ? <WorkflowTicks state={receiptState} /> : null}
+</div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
@@ -1267,27 +1280,36 @@ function DistrictCaseActionQueue({
                   </div>
                 ) : null}
 
-                                                                                {(() => {
-                  const latestEvent = item.events?.[0];
+{(() => {
+  const latestEvent = latestMeaningfulEvent(item);
 
-                  if (!latestEvent) return null;
+  if (!latestEvent) return null;
 
-                  if (latestEvent.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) {
-                    return <DirectorDirectiveCard note={latestEvent.note} />;
-                  }
+  if (latestEvent.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) {
+    return (
+      <DirectorDirectiveCard
+        note={latestEvent.note}
+        receiptState={directiveReceiptState(item, latestEvent)}
+      />
+    );
+  }
 
-                  if (item.status === "ESCALATED" && latestEvent.note) {
-                    return <EscalationLogbookCard note={latestEvent.note} />;
-                  }
+  if (latestEvent.note?.startsWith("ESCALATION LOGBOOK ENTRY")) {
+    return (
+      <EscalationLogbookCard
+        note={latestEvent.note}
+        receiptState={escalationReceiptState(item, latestEvent)}
+      />
+    );
+  }
 
-                  return (
-                    <p className="mt-3 text-xs leading-5 text-slate-400">
-                      Latest event:{" "}
-                      {latestEvent.eventType.replaceAll("_", " ")}
-                      {latestEvent.note ? ` — ${latestEvent.note}` : ""}
-                    </p>
-                  );
-                })()}
+  return (
+    <p className="mt-3 text-xs leading-5 text-slate-400">
+      Latest event: {latestEvent.eventType.replaceAll("_", " ")}
+      {latestEvent.note ? ` — ${latestEvent.note}` : ""}
+    </p>
+  );
+})()}
               </div>
             );
           })
@@ -1366,15 +1388,24 @@ function parseDirectorDirectiveNote(note?: string | null) {
   };
 }
 
-function DirectorDirectiveCard({ note }: { note: string }) {
+function DirectorDirectiveCard({
+  note,
+  receiptState,
+}: {
+  note: string;
+  receiptState?: WorkflowReceiptState;
+}) {
   const parsed = parseDirectorDirectiveNote(note);
 
   if (!parsed?.instruction) {
     return (
       <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-500/10 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
-          Director directive
-        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
+    Director directive
+  </p>
+  {receiptState ? <WorkflowTicks state={receiptState} /> : null}
+</div>
         <p className="mt-3 whitespace-pre-line text-sm leading-6 text-sky-100">
           {note}
         </p>
@@ -1384,9 +1415,12 @@ function DirectorDirectiveCard({ note }: { note: string }) {
 
   return (
     <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-500/10 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
-        Director directive
-      </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
+    Director directive
+  </p>
+  {receiptState ? <WorkflowTicks state={receiptState} /> : null}
+</div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
@@ -1454,6 +1488,172 @@ function DirectorDirectiveCard({ note }: { note: string }) {
         </p>
       </div>
     </div>
+  );
+}
+
+type WorkflowReceiptState = "SENT" | "SEEN" | "RESPONDED";
+
+type GovernanceEvent = NonNullable<GovernanceCase["events"]>[number];
+
+function eventTimeMs(event?: GovernanceEvent | null) {
+  if (!event?.createdAt) return 0;
+
+  const t = new Date(event.createdAt).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+function eventMetadataString(event: GovernanceEvent | null | undefined, key: string) {
+  const metadata = event?.metadata;
+
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return "";
+  }
+
+  const value = metadata[key];
+  return typeof value === "string" ? value : "";
+}
+
+function isReadReceiptEvent(event: GovernanceEvent | null | undefined) {
+  return eventMetadataString(event, "kind") === "READ_RECEIPT";
+}
+
+function meaningfulEvents(item: GovernanceCase) {
+  return (item.events ?? []).filter((event) => !isReadReceiptEvent(event));
+}
+
+function latestMeaningfulEvent(item: GovernanceCase) {
+  return meaningfulEvents(item)[0] ?? null;
+}
+
+function latestEscalationMessageEvent(item: GovernanceCase) {
+  return meaningfulEvents(item).find((event) =>
+    event.note?.startsWith("ESCALATION LOGBOOK ENTRY")
+  );
+}
+
+function latestDirectorDirectiveMessageEvent(item: GovernanceCase) {
+  return meaningfulEvents(item).find((event) =>
+    event.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")
+  );
+}
+
+function hasReadReceipt(
+  item: GovernanceCase,
+  receiptKind: string,
+  messageEventId: string
+) {
+  return (item.events ?? []).some((event) => {
+    return (
+      isReadReceiptEvent(event) &&
+      eventMetadataString(event, "receiptKind") === receiptKind &&
+      eventMetadataString(event, "messageEventId") === messageEventId
+    );
+  });
+}
+
+function hasDirectorDirectiveAfterEscalation(
+  item: GovernanceCase,
+  escalationEvent: GovernanceEvent
+) {
+  const escalationTime = eventTimeMs(escalationEvent);
+
+  return meaningfulEvents(item).some((event) => {
+    return (
+      eventTimeMs(event) > escalationTime &&
+      event.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")
+    );
+  });
+}
+
+function hasSissoActionAfterDirectorDirective(
+  item: GovernanceCase,
+  directiveEvent: GovernanceEvent
+) {
+  const directiveTime = eventTimeMs(directiveEvent);
+
+  return meaningfulEvents(item).some((event) => {
+    if (event.id === directiveEvent.id) return false;
+    if (eventTimeMs(event) <= directiveTime) return false;
+    if (event.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) return false;
+    return true;
+  });
+}
+
+function escalationReceiptState(
+  item: GovernanceCase,
+  escalationEvent: GovernanceEvent
+): WorkflowReceiptState {
+  if (hasDirectorDirectiveAfterEscalation(item, escalationEvent)) {
+    return "RESPONDED";
+  }
+
+  if (
+    hasReadReceipt(
+      item,
+      "SISSO_ESCALATION_SEEN_BY_DIRECTOR",
+      escalationEvent.id
+    )
+  ) {
+    return "SEEN";
+  }
+
+  return "SENT";
+}
+
+function directiveReceiptState(
+  item: GovernanceCase,
+  directiveEvent: GovernanceEvent
+): WorkflowReceiptState {
+  if (hasSissoActionAfterDirectorDirective(item, directiveEvent)) {
+    return "RESPONDED";
+  }
+
+  if (
+    hasReadReceipt(
+      item,
+      "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO",
+      directiveEvent.id
+    )
+  ) {
+    return "SEEN";
+  }
+
+  return "SENT";
+}
+
+function WorkflowTicks({
+  state,
+  label,
+}: {
+  state: WorkflowReceiptState;
+  label?: string;
+}) {
+  const isResponded = state === "RESPONDED";
+  const isSeen = state === "SEEN";
+
+  const text =
+    state === "RESPONDED"
+      ? "Seen and responded"
+      : state === "SEEN"
+        ? "Seen"
+        : "Sent";
+
+  return (
+    <span
+      title={text}
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold ${
+        isResponded
+          ? "border-emerald-300/30 bg-emerald-400/10 text-emerald-100"
+          : isSeen
+            ? "border-sky-300/30 bg-sky-500/10 text-sky-100"
+            : "border-slate-300/20 bg-white/5 text-slate-300"
+      }`}
+    >
+      <span className="text-sm leading-none">
+        {state === "SENT" ? "✓" : "✓✓"}
+      </span>
+      <span>{label ?? text}</span>
+    </span>
   );
 }
 
@@ -1527,6 +1727,7 @@ export default function GovernanceDashboardClient({
   const [caseAction, setCaseAction] = useState<string | null>(null);
   const [caseError, setCaseError] = useState<string | null>(null);
   const [busyCaseKey, setBusyCaseKey] = useState<string | null>(null);
+  const receiptKeysRef = useRef<Set<string>>(new Set());
 
   const [escalationCase, setEscalationCase] = useState<GovernanceCase | null>(
     null
@@ -1608,6 +1809,38 @@ export default function GovernanceDashboardClient({
       setCaseError("Network/server error while loading intervention cases.");
     } finally {
       setCasesLoading(false);
+    }
+  }
+
+  async function markWorkflowMessageSeen(args: {
+    caseId: string;
+    messageEventId: string;
+    receiptKind:
+      | "SISSO_ESCALATION_SEEN_BY_DIRECTOR"
+      | "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO";
+  }) {
+    const receiptKey = `${args.caseId}:${args.messageEventId}:${args.receiptKind}`;
+
+    if (receiptKeysRef.current.has(receiptKey)) return;
+    receiptKeysRef.current.add(receiptKey);
+
+    try {
+      await fetch("/api/governance/interventions/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          caseId: args.caseId,
+          action: "RECEIPT",
+          receiptKind: args.receiptKind,
+          messageEventId: args.messageEventId,
+          metadata: {
+            source: "B6E-dashboard-read-receipt",
+          },
+        }),
+      });
+    } catch {
+      // Do not block dashboard rendering because of a receipt write failure.
     }
   }
 
@@ -2040,6 +2273,51 @@ await loadCases();
     void loadCases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
+
+    useEffect(() => {
+    if (!cases.length) return;
+
+    for (const item of cases) {
+      if (isDistrictView) {
+        const escalationEvent = latestEscalationMessageEvent(item);
+
+        if (
+          escalationEvent &&
+          !hasReadReceipt(
+            item,
+            "SISSO_ESCALATION_SEEN_BY_DIRECTOR",
+            escalationEvent.id
+          )
+        ) {
+          void markWorkflowMessageSeen({
+            caseId: item.id,
+            messageEventId: escalationEvent.id,
+            receiptKind: "SISSO_ESCALATION_SEEN_BY_DIRECTOR",
+          });
+        }
+      }
+
+      if (isCircuitView) {
+        const directiveEvent = latestDirectorDirectiveMessageEvent(item);
+
+        if (
+          directiveEvent &&
+          !hasReadReceipt(
+            item,
+            "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO",
+            directiveEvent.id
+          )
+        ) {
+          void markWorkflowMessageSeen({
+            caseId: item.id,
+            messageEventId: directiveEvent.id,
+            receiptKind: "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO",
+          });
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cases, isDistrictView, isCircuitView]);
 
   const assignments = useMemo(() => data?.scope?.assignments ?? [], [data]);
   const schools = useMemo(() => data?.overview?.schools ?? [], [data]);
@@ -2766,25 +3044,31 @@ await loadCases();
                               </div>
 
 {(() => {
-  const latestEvent = existingCase.events?.[0];
+  const latestEvent = latestMeaningfulEvent(existingCase);
 
   if (!latestEvent) return null;
 
   if (latestEvent.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) {
-    return <DirectorDirectiveCard note={latestEvent.note} />;
+    return (
+      <DirectorDirectiveCard
+        note={latestEvent.note}
+        receiptState={directiveReceiptState(existingCase, latestEvent)}
+      />
+    );
   }
 
-  if (
-    existingCase.status === "ESCALATED" &&
-    latestEvent.note
-  ) {
-    return <EscalationLogbookCard note={latestEvent.note} />;
+  if (latestEvent.note?.startsWith("ESCALATION LOGBOOK ENTRY")) {
+    return (
+      <EscalationLogbookCard
+        note={latestEvent.note}
+        receiptState={escalationReceiptState(existingCase, latestEvent)}
+      />
+    );
   }
 
   return (
     <p className="text-xs leading-5 text-slate-400">
-      Latest evidence:{" "}
-      {latestEvent.eventType.replaceAll("_", " ")}
+      Latest evidence: {latestEvent.eventType.replaceAll("_", " ")}
       {latestEvent.note ? ` — ${latestEvent.note}` : ""}
     </p>
   );
