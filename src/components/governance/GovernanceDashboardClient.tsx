@@ -2458,6 +2458,478 @@ function AssessmentIntegrityGrid({ metrics }: { metrics?: SchoolMetrics | Interv
   );
 }
 
+type OfficialNoticeTargetRole = "SISSO" | "HEADTEACHER" | "TEACHER";
+type OfficialNoticePriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+type OfficialNoticeScopeMode = "ZONE" | "SCHOOL";
+type OfficialNoticeKind =
+  | "INFORMATION_ONLY"
+  | "ACKNOWLEDGEMENT_REQUIRED"
+  | "RESPONSE_REQUIRED"
+  | "URGENT_DIRECTIVE";
+
+type GovernanceAssignmentSummary = NonNullable<
+  NonNullable<OverviewResponse["scope"]>["assignments"]
+>[number];
+
+function makeOfficialNoticeDraftKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function officialNoticeTargetLabel(role: OfficialNoticeTargetRole) {
+  if (role === "SISSO") return "SISSOs / Circuit Supervisors";
+  if (role === "HEADTEACHER") return "Headteachers";
+  return "Teachers";
+}
+
+function officialNoticeKindLabel(kind: OfficialNoticeKind) {
+  if (kind === "INFORMATION_ONLY") return "Information only";
+  if (kind === "ACKNOWLEDGEMENT_REQUIRED") return "Acknowledgement required";
+  if (kind === "RESPONSE_REQUIRED") return "Response required";
+  return "Urgent directive";
+}
+
+function officialNoticeKindNeedsResponse(kind: OfficialNoticeKind) {
+  return kind === "RESPONSE_REQUIRED" || kind === "URGENT_DIRECTIVE";
+}
+
+function officialNoticeKindNeedsAck(kind: OfficialNoticeKind) {
+  return kind !== "INFORMATION_ONLY";
+}
+
+function OfficialGovernanceNoticeComposer({
+  isDistrictView,
+  isCircuitView,
+  assignments,
+  schools,
+}: {
+  isDistrictView: boolean;
+  isCircuitView: boolean;
+  assignments: GovernanceAssignmentSummary[];
+  schools: SchoolRow[];
+}) {
+  const targetRoles = useMemo<OfficialNoticeTargetRole[]>(
+    () =>
+      isDistrictView
+        ? ["SISSO", "HEADTEACHER", "TEACHER"]
+        : ["HEADTEACHER", "TEACHER"],
+    [isDistrictView]
+  );
+
+  const [targetRole, setTargetRole] = useState<OfficialNoticeTargetRole>(
+    isDistrictView ? "SISSO" : "HEADTEACHER"
+  );
+  const [scopeMode, setScopeMode] = useState<OfficialNoticeScopeMode>("ZONE");
+  const [targetZoneId, setTargetZoneId] = useState("");
+  const [selectedSchoolId, setSelectedSchoolId] = useState("");
+  const [priority, setPriority] = useState<OfficialNoticePriority>("MEDIUM");
+  const [noticeKind, setNoticeKind] =
+    useState<OfficialNoticeKind>("ACKNOWLEDGEMENT_REQUIRED");
+  const [deadlineAt, setDeadlineAt] = useState("");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [draftKey, setDraftKey] = useState(makeOfficialNoticeDraftKey);
+  const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendSuccess, setSendSuccess] = useState<string | null>(null);
+
+  const assignmentOptions = assignments.filter((assignment) =>
+    Boolean(assignment.zoneId)
+  );
+
+  const selectedAssignment =
+    assignmentOptions.find((assignment) => assignment.zoneId === targetZoneId) ??
+    assignmentOptions[0] ??
+    null;
+
+  const schoolOptions = schools
+    .filter((school) => school.status !== "ARCHIVED")
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const selectedSchool =
+    schoolOptions.find((school) => school.id === selectedSchoolId) ?? null;
+
+  const canTargetSchool = targetRole !== "SISSO" && schoolOptions.length > 0;
+  const requiresAcknowledgement = officialNoticeKindNeedsAck(noticeKind);
+  const requiresResponse = officialNoticeKindNeedsResponse(noticeKind);
+
+  useEffect(() => {
+    if (!targetRoles.includes(targetRole)) {
+      setTargetRole(targetRoles[0] ?? "HEADTEACHER");
+    }
+  }, [targetRole, targetRoles]);
+
+  useEffect(() => {
+    if (!targetZoneId && assignmentOptions[0]?.zoneId) {
+      setTargetZoneId(assignmentOptions[0].zoneId);
+    }
+  }, [assignmentOptions, targetZoneId]);
+
+  useEffect(() => {
+    if (targetRole === "SISSO") {
+      setScopeMode("ZONE");
+      setSelectedSchoolId("");
+    }
+  }, [targetRole]);
+
+  const targetSummary =
+    scopeMode === "SCHOOL" && selectedSchool
+      ? `${selectedSchool.name} (${selectedSchool.schoolCode ?? "no code"})`
+      : selectedAssignment
+        ? `${selectedAssignment.zoneName} ${selectedAssignment.zoneTypeName}`
+        : "your authorized scope";
+
+  async function sendOfficialGovernanceNotice() {
+    setSendError(null);
+    setSendSuccess(null);
+
+    const cleanTitle = title.trim();
+    const cleanBody = body.trim();
+
+    if (!cleanTitle || cleanTitle.length < 6) {
+      setSendError("Write a clear notice title of at least 6 characters.");
+      return;
+    }
+
+    if (!cleanBody || cleanBody.length < 20) {
+      setSendError("Write a fuller official notice body of at least 20 characters.");
+      return;
+    }
+
+    if (scopeMode === "ZONE" && !targetZoneId) {
+      setSendError("No authorized governance zone is available for this notice.");
+      return;
+    }
+
+    if (scopeMode === "SCHOOL" && !selectedSchoolId) {
+      setSendError("Select the school that should receive this official notice.");
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const scopeLabel =
+        isDistrictView ? "DISTRICT" : isCircuitView ? "CIRCUIT" : "GOVERNANCE";
+
+      const targetId =
+        scopeMode === "SCHOOL"
+          ? selectedSchoolId
+          : targetZoneId || selectedAssignment?.zoneId || "scope";
+
+      const idempotencyKey = `b7-official:${scopeLabel}:${targetRole}:${scopeMode}:${targetId}:${draftKey}`.slice(
+        0,
+        220
+      );
+
+      const payload = {
+        tenantId: scopeMode === "SCHOOL" ? selectedSchoolId : undefined,
+        zoneId: scopeMode === "ZONE" ? targetZoneId : undefined,
+        title: cleanTitle,
+        body: cleanBody,
+        priority,
+        channels: ["IN_APP", "SMS", "EMAIL"],
+        targetRoles: [targetRole],
+        idempotencyKey,
+        idempotencyScope: "B7_OFFICIAL_COMMUNICATION",
+        metadata: {
+          source: "B7-official-governance-communication",
+          noticeIntent: "OFFICIAL_COMMUNICATION",
+          composer: "B7C-governance-dashboard-composer",
+          scopeLabel,
+          scopeMode,
+          targetAudience: targetRole,
+          targetLabel: targetSummary,
+          noticeKind,
+          requiresAcknowledgement,
+          requiresResponse,
+          deadlineAt: deadlineAt || null,
+          securityRule:
+            "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without matching EduLife OS notice reference.",
+        },
+      };
+
+      const res = await fetch("/api/governance/notices/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      const json = (await res.json().catch(() => null)) as
+        | NoticeSendResponse
+        | null;
+
+      if (!res.ok || !json?.ok) {
+        setSendError(
+          json && !json.ok
+            ? json.error
+            : `Failed to send official notice (${res.status})`
+        );
+        return;
+      }
+
+      const reused = Boolean(json.reused || json.item?.reused);
+      const recipientCount = Array.isArray(json.item?.recipients)
+        ? json.item.recipients.length
+        : null;
+
+      setSendSuccess(
+        reused
+          ? "This official notice was already sent; duplicate SMS/email was safely suppressed."
+          : `Official notice sent to ${officialNoticeTargetLabel(targetRole)}${
+              recipientCount !== null ? ` (${recipientCount} recipient(s))` : ""
+            }.`
+      );
+
+      setTitle("");
+      setBody("");
+      setDeadlineAt("");
+      setDraftKey(makeOfficialNoticeDraftKey());
+    } catch {
+      setSendError("Network/server error while sending official notice.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-indigo-300/20 bg-indigo-500/10 p-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200">
+            Official Communication Spine
+          </p>
+          <h2 className="mt-2 text-xl font-bold text-white">
+            Send verified EduLife OS official notice
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-indigo-100/80">
+            Use this for Director/SISSO official instructions. SMS and email are
+            alerts; EduLife OS remains the source of truth. WhatsApp copies are
+            not authoritative.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-xs leading-5 text-slate-200">
+          <b className="text-white">Scope:</b> {targetSummary}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+            Target recipients
+          </span>
+          <select
+            value={targetRole}
+            onChange={(event) =>
+              setTargetRole(event.target.value as OfficialNoticeTargetRole)
+            }
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50"
+          >
+            {targetRoles.map((role) => (
+              <option key={role} value={role}>
+                {officialNoticeTargetLabel(role)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+            Scope
+          </span>
+          <select
+            value={scopeMode}
+            onChange={(event) =>
+              setScopeMode(event.target.value as OfficialNoticeScopeMode)
+            }
+            disabled={targetRole === "SISSO"}
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50 disabled:opacity-60"
+          >
+            <option value="ZONE">
+              {isDistrictView ? "Authorized district scope" : "Authorized circuit scope"}
+            </option>
+            {canTargetSchool ? <option value="SCHOOL">Selected school only</option> : null}
+          </select>
+        </label>
+
+        {scopeMode === "ZONE" ? (
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+              Authorized zone
+            </span>
+            <select
+              value={targetZoneId}
+              onChange={(event) => setTargetZoneId(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50"
+            >
+              {assignmentOptions.length ? (
+                assignmentOptions.map((assignment) => (
+                  <option key={assignment.zoneId} value={assignment.zoneId}>
+                    {assignment.zoneName} · {roleLabel(assignment.role)}
+                  </option>
+                ))
+              ) : (
+                <option value="">No governance assignment found</option>
+              )}
+            </select>
+          </label>
+        ) : (
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+              School
+            </span>
+            <select
+              value={selectedSchoolId}
+              onChange={(event) => setSelectedSchoolId(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50"
+            >
+              <option value="">Select school</option>
+              {schoolOptions.map((school) => (
+                <option key={school.id} value={school.id}>
+                  {school.name} · {school.schoolCode ?? "no code"}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+            Notice type
+          </span>
+          <select
+            value={noticeKind}
+            onChange={(event) =>
+              setNoticeKind(event.target.value as OfficialNoticeKind)
+            }
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50"
+          >
+            {(
+              [
+                "INFORMATION_ONLY",
+                "ACKNOWLEDGEMENT_REQUIRED",
+                "RESPONSE_REQUIRED",
+                "URGENT_DIRECTIVE",
+              ] as OfficialNoticeKind[]
+            ).map((kind) => (
+              <option key={kind} value={kind}>
+                {officialNoticeKindLabel(kind)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+            Priority
+          </span>
+          <select
+            value={priority}
+            onChange={(event) =>
+              setPriority(event.target.value as OfficialNoticePriority)
+            }
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50"
+          >
+            {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as OfficialNoticePriority[]).map(
+              (p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              )
+            )}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+            Deadline / expected action date
+          </span>
+          <input
+            type="date"
+            value={deadlineAt}
+            onChange={(event) => setDeadlineAt(event.target.value)}
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50"
+          />
+        </label>
+      </div>
+
+      <label className="mt-4 block">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+          Official notice title
+        </span>
+        <input
+          value={title}
+          onChange={(event) => {
+            setTitle(event.target.value);
+            setSendError(null);
+            setSendSuccess(null);
+          }}
+          placeholder="Example: Urgent directive on attendance punctuality"
+          className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-indigo-300/50"
+        />
+      </label>
+
+      <label className="mt-4 block">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+          Official notice body
+        </span>
+        <textarea
+          value={body}
+          onChange={(event) => {
+            setBody(event.target.value);
+            setSendError(null);
+            setSendSuccess(null);
+          }}
+          rows={6}
+          placeholder="Write the official instruction clearly. Avoid vague language. State what must be done, by whom, and by when."
+          className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-indigo-300/50"
+        />
+      </label>
+
+      <div className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
+        <MetricPill label="In-app" value="Source of truth" tone="success" />
+        <MetricPill label="SMS" value="Alert only" tone="warning" />
+        <MetricPill label="Email" value="Copy / alert" tone="warning" />
+      </div>
+
+      {sendError ? (
+        <div className="mt-4 rounded-2xl border border-red-300/20 bg-red-500/10 p-3 text-sm text-red-100">
+          {sendError}
+        </div>
+      ) : null}
+
+      {sendSuccess ? (
+        <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3 text-sm text-emerald-100">
+          {sendSuccess}
+        </div>
+      ) : null}
+
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs leading-5 text-slate-400">
+          No manual phone, email, or custom recipient is allowed here. Recipients
+          are resolved from verified EduLife OS roles inside your authorized scope.
+        </p>
+
+        <button
+          type="button"
+          onClick={() => void sendOfficialGovernanceNotice()}
+          disabled={busy}
+          className="rounded-full border border-indigo-300/25 bg-indigo-500/20 px-5 py-2 text-sm font-semibold text-indigo-100 hover:bg-indigo-500/30 disabled:opacity-50"
+        >
+          {busy ? "Sending official notice..." : "Send official notice"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function GovernanceDashboardClient({
   endpoint,
   title,
@@ -3767,6 +4239,13 @@ await loadCases();
             </div>
           </section>
         ) : null}
+
+        <OfficialGovernanceNoticeComposer
+          isDistrictView={isDistrictView}
+          isCircuitView={isCircuitView}
+          assignments={assignments}
+          schools={schools}
+        />
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           {totalCards.length ? (
