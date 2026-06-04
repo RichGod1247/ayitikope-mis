@@ -875,7 +875,7 @@ export async function updateGovernanceInterventionCase(args: {
     });
   }
 
-if (action === "RECEIPT") {
+    if (action === "RECEIPT") {
     const receiptKind = normalizeReceiptKind(input.receiptKind);
     const messageEventId = clean(input.messageEventId);
 
@@ -910,7 +910,7 @@ if (action === "RECEIPT") {
         id: true,
         metadata: true,
       },
-      take: 100,
+      take: 50,
     });
 
     const alreadyRecorded = possibleReceipts.some((event) => {
