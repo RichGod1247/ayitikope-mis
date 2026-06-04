@@ -1285,19 +1285,25 @@ function DistrictCaseActionQueue({
 
   if (!latestEvent) return null;
 
-  if (latestEvent.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) {
+  const note = eventNote(latestEvent);
+
+  if (eventNoteHasMarker(latestEvent, SISSO_IMPLEMENTATION_RESPONSE_MARKER)) {
+    return <DirectiveImplementationResponseCard note={note} />;
+  }
+
+  if (eventNoteHasMarker(latestEvent, DIRECTOR_DIRECTIVE_MARKER)) {
     return (
       <DirectorDirectiveCard
-        note={latestEvent.note}
+        note={note}
         receiptState={directiveReceiptState(item, latestEvent)}
       />
     );
   }
 
-  if (latestEvent.note?.startsWith("ESCALATION LOGBOOK ENTRY")) {
+  if (eventNoteHasMarker(latestEvent, ESCALATION_LOGBOOK_MARKER)) {
     return (
       <EscalationLogbookCard
-        note={latestEvent.note}
+        note={note}
         receiptState={escalationReceiptState(item, latestEvent)}
       />
     );
@@ -1491,9 +1497,158 @@ function DirectorDirectiveCard({
   );
 }
 
+function parseSectionAfterMarker(note: string, marker: string, nextMarkers: string[]) {
+  const start = note.indexOf(marker);
+  if (start < 0) return null;
+
+  const contentStart = start + marker.length;
+  let end = note.length;
+
+  for (const next of nextMarkers) {
+    const idx = note.indexOf(next, contentStart);
+    if (idx >= 0 && idx < end) end = idx;
+  }
+
+  return note.slice(contentStart, end).trim() || null;
+}
+
+function parseDirectiveImplementationResponse(note?: string | null) {
+  if (!note) return null;
+
+  const raw = note.replace(/^\uFEFF/, "").trimStart();
+  const markerIndex = raw.indexOf(SISSO_IMPLEMENTATION_RESPONSE_MARKER);
+
+  if (markerIndex < 0) return null;
+
+  const body = raw.slice(markerIndex);
+  const fields = parseDirectiveLineMap(body);
+
+  const actionTaken = parseSectionAfterMarker(body, "ACTION TAKEN", [
+    "EVIDENCE / NEXT ACTION",
+  ]);
+
+  const evidenceOrNextAction = parseSectionAfterMarker(
+    body,
+    "EVIDENCE / NEXT ACTION",
+    []
+  );
+
+  return {
+    raw: body,
+    school: fields.get("School") ?? null,
+    schoolCode: fields.get("School code") ?? null,
+    circuit: fields.get("Circuit") ?? null,
+    directiveEventId: fields.get("Director directive event") ?? null,
+    actionTaken: cleanDirectiveValue(actionTaken),
+    evidenceOrNextAction: cleanDirectiveValue(evidenceOrNextAction),
+  };
+}
+
+function DirectiveImplementationResponseCard({
+  note,
+}: {
+  note: string;
+}) {
+  const parsed = parseDirectiveImplementationResponse(note);
+
+  if (!parsed?.actionTaken) {
+    return (
+      <div className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-400/10 p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+            SISSO directive response
+          </p>
+          <WorkflowTicks state="RESPONDED" />
+        </div>
+        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-emerald-100">
+          {note}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-emerald-300/15 bg-emerald-400/10 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+          SISSO directive implementation response
+        </p>
+        <WorkflowTicks state="RESPONDED" label="SISSO responded" />
+      </div>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            School details
+          </p>
+          <dl className="mt-2 space-y-1 text-sm text-slate-200">
+            <div>
+              <dt className="text-xs text-slate-500">School</dt>
+              <dd>{parsed.school ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">School code</dt>
+              <dd>{parsed.schoolCode ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-slate-500">Circuit</dt>
+              <dd>{parsed.circuit ?? "—"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Directive reference
+          </p>
+          <p className="mt-2 break-all text-sm text-slate-200">
+            {parsed.directiveEventId ?? "—"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-emerald-300/15 bg-emerald-400/10 p-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-200">
+          Action taken
+        </p>
+        <p className="mt-2 whitespace-pre-line text-sm leading-6 text-emerald-100">
+          {parsed.actionTaken}
+        </p>
+      </div>
+
+      {parsed.evidenceOrNextAction ? (
+        <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+            Evidence / next action
+          </p>
+          <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-200">
+            {parsed.evidenceOrNextAction}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 type WorkflowReceiptState = "SENT" | "SEEN" | "RESPONDED";
 
 type GovernanceEvent = NonNullable<GovernanceCase["events"]>[number];
+
+const ESCALATION_LOGBOOK_MARKER = "ESCALATION LOGBOOK ENTRY";
+const DIRECTOR_DIRECTIVE_MARKER = "DIRECTOR REVIEW DIRECTIVE";
+const SISSO_IMPLEMENTATION_RESPONSE_MARKER =
+  "SISSO DIRECTIVE IMPLEMENTATION RESPONSE";
+
+function eventNote(event?: GovernanceEvent | null) {
+  return event?.note?.replace(/^\uFEFF/, "").trimStart() ?? "";
+}
+
+function eventNoteHasMarker(
+  event: GovernanceEvent | null | undefined,
+  marker: string
+) {
+  return eventNote(event).includes(marker);
+}
 
 function eventTimeMs(event?: GovernanceEvent | null) {
   if (!event?.createdAt) return 0;
@@ -1527,13 +1682,13 @@ function latestMeaningfulEvent(item: GovernanceCase) {
 
 function latestEscalationMessageEvent(item: GovernanceCase) {
   return meaningfulEvents(item).find((event) =>
-    event.note?.startsWith("ESCALATION LOGBOOK ENTRY")
+    eventNoteHasMarker(event, ESCALATION_LOGBOOK_MARKER)
   );
 }
 
 function latestDirectorDirectiveMessageEvent(item: GovernanceCase) {
   return meaningfulEvents(item).find((event) =>
-    event.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")
+    eventNoteHasMarker(event, DIRECTOR_DIRECTIVE_MARKER)
   );
 }
 
@@ -1560,7 +1715,7 @@ function hasDirectorDirectiveAfterEscalation(
   return meaningfulEvents(item).some((event) => {
     return (
       eventTimeMs(event) > escalationTime &&
-      event.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")
+      eventNoteHasMarker(event, DIRECTOR_DIRECTIVE_MARKER)
     );
   });
 }
@@ -1574,8 +1729,25 @@ function hasSissoActionAfterDirectorDirective(
   return meaningfulEvents(item).some((event) => {
     if (event.id === directiveEvent.id) return false;
     if (eventTimeMs(event) <= directiveTime) return false;
-    if (event.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) return false;
-    return true;
+
+    return eventNoteHasMarker(event, SISSO_IMPLEMENTATION_RESPONSE_MARKER);
+  });
+}
+
+function latestSissoDirectiveResponseEvent(
+  item: GovernanceCase,
+  directiveEvent?: GovernanceEvent | null
+) {
+  const directiveTime = eventTimeMs(directiveEvent);
+
+  return meaningfulEvents(item).find((event) => {
+    if (!eventNoteHasMarker(event, SISSO_IMPLEMENTATION_RESPONSE_MARKER)) {
+      return false;
+    }
+
+    if (!directiveEvent) return true;
+
+    return eventTimeMs(event) > directiveTime;
   });
 }
 
@@ -1739,6 +1911,16 @@ export default function GovernanceDashboardClient({
     useState<GovernanceCase | null>(null);
   const [directorDirective, setDirectorDirective] = useState("");
   const [directorDirectiveError, setDirectorDirectiveError] = useState<
+    string | null
+  >(null);
+
+  const [directiveResponseCase, setDirectiveResponseCase] =
+    useState<GovernanceCase | null>(null);
+  const [directiveResponseEvent, setDirectiveResponseEvent] =
+    useState<GovernanceEvent | null>(null);
+  const [directiveResponseBody, setDirectiveResponseBody] = useState("");
+  const [directiveResponseEvidence, setDirectiveResponseEvidence] = useState("");
+  const [directiveResponseError, setDirectiveResponseError] = useState<
     string | null
   >(null);
 
@@ -2221,6 +2403,139 @@ export default function GovernanceDashboardClient({
     } catch {
       setDirectorDirectiveError(
         "Network/server error while saving Director directive."
+      );
+    } finally {
+      setBusyCaseKey(null);
+    }
+  }
+
+  function openDirectiveResponseDialog(item: GovernanceCase) {
+    const directiveEvent = latestDirectorDirectiveMessageEvent(item);
+
+    if (!directiveEvent) {
+      setCaseError("No Director directive found for this case yet.");
+      return;
+    }
+
+    setDirectiveResponseCase(item);
+    setDirectiveResponseEvent(directiveEvent);
+    setDirectiveResponseBody("");
+    setDirectiveResponseEvidence("");
+    setDirectiveResponseError(null);
+    setCaseAction(null);
+    setCaseError(null);
+  }
+
+  function closeDirectiveResponseDialog() {
+    if (busyCaseKey?.startsWith("directive-response:")) return;
+
+    setDirectiveResponseCase(null);
+    setDirectiveResponseEvent(null);
+    setDirectiveResponseBody("");
+    setDirectiveResponseEvidence("");
+    setDirectiveResponseError(null);
+  }
+
+  function buildDirectiveImplementationResponseNote(args: {
+    item: GovernanceCase;
+    directiveEvent: GovernanceEvent;
+    response: string;
+    evidence: string;
+  }) {
+    const { item, directiveEvent, response, evidence } = args;
+
+    return [
+      "SISSO DIRECTIVE IMPLEMENTATION RESPONSE",
+      "",
+      "SCHOOL DETAILS",
+      item.tenant?.name ? `School: ${item.tenant.name}` : "",
+      item.tenant?.schoolCode ? `School code: ${item.tenant.schoolCode}` : "",
+      item.zone?.name ? `Circuit: ${item.zone.name}` : "",
+      "",
+      "DIRECTOR DIRECTIVE",
+      `Director directive event: ${directiveEvent.id}`,
+      directiveEvent.createdAt
+        ? `Directive issued: ${compactDateTime(directiveEvent.createdAt) ?? directiveEvent.createdAt}`
+        : "",
+      "",
+      "ACTION TAKEN",
+      response.trim(),
+      "",
+      "EVIDENCE / NEXT ACTION",
+      evidence.trim() || "No additional evidence or next action recorded.",
+    ]
+      .filter((line) => line !== "")
+      .join("\n");
+  }
+
+  async function submitDirectiveImplementationResponse() {
+    const item = directiveResponseCase;
+    const directiveEvent = directiveResponseEvent;
+    const response = directiveResponseBody.trim();
+    const evidence = directiveResponseEvidence.trim();
+
+    if (!item || !directiveEvent) return;
+
+    if (response.length < 40) {
+      setDirectiveResponseError(
+        "Write a fuller implementation response. Minimum 40 characters. State what you actually did after receiving the Director’s directive."
+      );
+      return;
+    }
+
+    setBusyCaseKey(`directive-response:${item.id}`);
+    setDirectiveResponseError(null);
+    setCaseAction(null);
+    setCaseError(null);
+
+    try {
+      const note = buildDirectiveImplementationResponseNote({
+        item,
+        directiveEvent,
+        response,
+        evidence,
+      });
+
+      const res = await fetch("/api/governance/interventions/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          caseId: item.id,
+          action: "COMMENT",
+          note,
+          metadata: {
+            source: "B6E2-sisso-directive-implementation-response",
+            directiveEventId: directiveEvent.id,
+            response,
+            evidence,
+            closureEvidence: closureEvidenceForCase(item),
+          },
+        }),
+      });
+
+      const json = (await res.json().catch(() => null)) as
+        | CaseWriteResponse
+        | null;
+
+      if (!res.ok || !json?.ok) {
+        setDirectiveResponseError(
+          json && !json.ok
+            ? json.error
+            : `Failed to save SISSO response (${res.status})`
+        );
+        return;
+      }
+
+      setCaseAction("SISSO implementation response saved.");
+      setDirectiveResponseCase(null);
+      setDirectiveResponseEvent(null);
+      setDirectiveResponseBody("");
+      setDirectiveResponseEvidence("");
+      await loadCases();
+    } catch {
+      setDirectiveResponseError(
+        "Network/server error while saving SISSO directive response."
       );
     } finally {
       setBusyCaseKey(null);
@@ -2723,6 +3038,114 @@ await loadCases();
             </div>
           </section>
         ) : null}
+                {directiveResponseCase && directiveResponseEvent ? (
+          <section className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+            <div className="w-full max-w-2xl rounded-3xl border border-emerald-300/25 bg-slate-950 p-5 shadow-2xl shadow-black/60">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                    SISSO Implementation Response
+                  </p>
+                  <h2 className="mt-2 text-xl font-bold text-white">
+                    Record action taken on the Director’s directive
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-300">
+                    This becomes part of the official case evidence chain. Write
+                    what you actually did, not a vague acknowledgement.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeDirectiveResponseDialog}
+                  disabled={
+                    busyCaseKey === `directive-response:${directiveResponseCase.id}`
+                  }
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-sm font-semibold text-white">
+                  {directiveResponseCase.tenant?.name ?? directiveResponseCase.title}
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {directiveResponseCase.tenant?.schoolCode || "No school code"} ·{" "}
+                  {directiveResponseCase.zone?.name || "No circuit"} · Directive{" "}
+                  {directiveResponseEvent.id.slice(0, 10)}…
+                </p>
+              </div>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                  Action taken
+                </span>
+                <textarea
+                  value={directiveResponseBody}
+                  onChange={(event) => {
+                    setDirectiveResponseBody(event.target.value);
+                    setDirectiveResponseError(null);
+                  }}
+                  rows={6}
+                  placeholder="Example: I visited the school on Thursday morning, met the headteacher and staff, reviewed the lesson note book, checked attendance punctuality records, and instructed the headteacher to submit corrective evidence by Friday noon."
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-emerald-300/50"
+                />
+              </label>
+
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-400">
+                <span>{directiveResponseBody.trim().length} characters</span>
+                <span>Minimum: 40 characters</span>
+              </div>
+
+              <label className="mt-4 block">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+                  Evidence / next action
+                </span>
+                <textarea
+                  value={directiveResponseEvidence}
+                  onChange={(event) => setDirectiveResponseEvidence(event.target.value)}
+                  rows={4}
+                  placeholder="Example: Lesson note register checked. Attendance record for the week reviewed. I will revisit in two weeks if performance does not improve."
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-emerald-300/50"
+                />
+              </label>
+
+              {directiveResponseError ? (
+                <div className="mt-3 rounded-2xl border border-red-300/20 bg-red-500/10 p-3 text-sm text-red-100">
+                  {directiveResponseError}
+                </div>
+              ) : null}
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeDirectiveResponseDialog}
+                  disabled={
+                    busyCaseKey === `directive-response:${directiveResponseCase.id}`
+                  }
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void submitDirectiveImplementationResponse()}
+                  disabled={
+                    busyCaseKey === `directive-response:${directiveResponseCase.id}`
+                  }
+                  className="rounded-full border border-emerald-300/25 bg-emerald-400/15 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-400/25 disabled:opacity-50"
+                >
+                  {busyCaseKey === `directive-response:${directiveResponseCase.id}`
+                    ? "Saving response..."
+                    : "Save implementation response"}
+                </button>
+              </div>
+            </div>
+          </section>
+        ) : null}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           {totalCards.length ? (
             totalCards.map((c) => (
@@ -3024,7 +3447,7 @@ await loadCases();
                                   Mark in progress
                                 </button>
 
-                                                                <button
+                                <button
                                   type="button"
                                   onClick={() => openEscalationDialog(existingCase)}
                                   disabled={
@@ -3037,7 +3460,7 @@ await loadCases();
                                   Escalate with reason
                                 </button>
 
-                                                                <button
+                                <button
                                   type="button"
                                   onClick={() =>
                                     void updateCaseStatus(
@@ -3063,19 +3486,58 @@ await loadCases();
 
   if (!latestEvent) return null;
 
-  if (latestEvent.note?.startsWith("DIRECTOR REVIEW DIRECTIVE")) {
+  const note = eventNote(latestEvent);
+
+  if (eventNoteHasMarker(latestEvent, SISSO_IMPLEMENTATION_RESPONSE_MARKER)) {
+    return <DirectiveImplementationResponseCard note={note} />;
+  }
+
+  if (eventNoteHasMarker(latestEvent, DIRECTOR_DIRECTIVE_MARKER)) {
+    const alreadyResponded = latestSissoDirectiveResponseEvent(
+      existingCase,
+      latestEvent
+    );
+
     return (
-      <DirectorDirectiveCard
-        note={latestEvent.note}
-        receiptState={directiveReceiptState(existingCase, latestEvent)}
-      />
+      <div className="space-y-3">
+        <DirectorDirectiveCard
+          note={note}
+          receiptState={directiveReceiptState(existingCase, latestEvent)}
+        />
+
+        {!alreadyResponded ? (
+          <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                  Director follow-up required
+                </p>
+                <p className="mt-1 text-xs leading-5 text-emerald-100/80">
+                  Record what you did after receiving this directive.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => openDirectiveResponseDialog(existingCase)}
+                disabled={
+                  busyCaseKey === `directive-response:${existingCase.id}`
+                }
+                className="rounded-full border border-emerald-300/25 bg-emerald-400/15 px-4 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/25 disabled:opacity-50"
+              >
+                Respond to Director directive
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
     );
   }
 
-  if (latestEvent.note?.startsWith("ESCALATION LOGBOOK ENTRY")) {
+  if (eventNoteHasMarker(latestEvent, ESCALATION_LOGBOOK_MARKER)) {
     return (
       <EscalationLogbookCard
-        note={latestEvent.note}
+        note={note}
         receiptState={escalationReceiptState(existingCase, latestEvent)}
       />
     );
