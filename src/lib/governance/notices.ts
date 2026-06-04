@@ -9,6 +9,7 @@ import {
   GovernanceOfficialNoticeStatus,
   GovernanceOfficerRole,
   Prisma,
+  TenantStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { GovernanceScope } from "@/lib/governance/scope";
@@ -365,6 +366,173 @@ function scopedCaseWhere(
   };
 }
 
+function scopeRoleKeys(scope: GovernanceScope) {
+  return new Set(scope.assignments.map((a) => upper(a.role)));
+}
+
+function isOfficialCommunicationInput(input: SendNoticeInput) {
+  const metadata = inputObject(input.metadata);
+  const source = upper(metadata.source);
+  const noticeIntent = upper(metadata.noticeIntent);
+  const idempotencyScope = upper(input.idempotencyScope ?? metadata.idempotencyScope);
+
+  return (
+    source === "B7-OFFICIAL-GOVERNANCE-COMMUNICATION" ||
+    source === "OFFICIAL-GOVERNANCE-COMMUNICATION" ||
+    noticeIntent === "OFFICIAL_COMMUNICATION" ||
+    noticeIntent === "GOVERNANCE_OFFICIAL_COMMUNICATION" ||
+    idempotencyScope.includes("OFFICIAL_COMMUNICATION")
+  );
+}
+
+function normalizeB7TargetRole(value: unknown) {
+  const role = normKey(value);
+
+  if (role === "SISSOS") return "SISSO";
+  if (role === "CIRCUITSUPERVISORS") return "CIRCUITSUPERVISOR";
+  if (role === "CIRCUIT_SUPERVISOR") return "CIRCUITSUPERVISOR";
+  if (role === "HEADTEACHERS") return "HEADTEACHER";
+  if (role === "HEADMASTER") return "HEADTEACHER";
+  if (role === "HEADMASTERS") return "HEADTEACHER";
+  if (role === "TEACHERS") return "TEACHER";
+
+  return role;
+}
+
+function b7RequestedRoleKeys(input: SendNoticeInput) {
+  return targetRolesArray(input.targetRoles)
+    .map(normalizeB7TargetRole)
+    .filter(Boolean);
+}
+
+function hasExplicitRecipientInput(input: SendNoticeInput) {
+  return Array.isArray(input.recipients) && input.recipients.length > 0;
+}
+
+function assertOfficialCommunicationAuthority(args: {
+  scope: GovernanceScope;
+  input: SendNoticeInput;
+}) {
+  const { scope, input } = args;
+
+  if (!isOfficialCommunicationInput(input)) return;
+
+  if (hasExplicitRecipientInput(input)) {
+    throw new GovernanceNoticeError(403, "CUSTOM_RECIPIENTS_BLOCKED_FOR_OFFICIAL_COMMUNICATION");
+  }
+
+  const roles = b7RequestedRoleKeys(input);
+
+  if (!roles.length) {
+    throw new GovernanceNoticeError(400, "OFFICIAL_COMMUNICATION_TARGET_ROLES_REQUIRED");
+  }
+
+  const senderRoles = scopeRoleKeys(scope);
+
+  const isDistrictDirector =
+    scope.isSuperAdmin || senderRoles.has("DISTRICT_DIRECTOR");
+
+  const isCircuitOfficer =
+    scope.isSuperAdmin ||
+    senderRoles.has("SISSO") ||
+    senderRoles.has("CIRCUIT_SUPERVISOR");
+
+  const districtAllowed = new Set([
+    "SISSO",
+    "CIRCUITSUPERVISOR",
+    "HEADTEACHER",
+    "TEACHER",
+  ]);
+
+  const circuitAllowed = new Set(["HEADTEACHER", "TEACHER"]);
+
+  if (isDistrictDirector) {
+    const invalid = roles.find((role) => !districtAllowed.has(role));
+    if (invalid) {
+      throw new GovernanceNoticeError(403, "DISTRICT_NOTICE_TARGET_ROLE_FORBIDDEN");
+    }
+
+    return;
+  }
+
+  if (isCircuitOfficer) {
+    const invalid = roles.find((role) => !circuitAllowed.has(role));
+    if (invalid) {
+      throw new GovernanceNoticeError(403, "CIRCUIT_NOTICE_TARGET_ROLE_FORBIDDEN");
+    }
+
+    return;
+  }
+
+  throw new GovernanceNoticeError(403, "OFFICIAL_COMMUNICATION_SENDER_FORBIDDEN");
+}
+
+async function collectNoticeDescendantZoneIds(seedZoneId: string) {
+  const seen = new Set([seedZoneId].filter(Boolean));
+  let frontier = Array.from(seen);
+
+  for (let depth = 0; depth < 8 && frontier.length > 0; depth += 1) {
+    const children = await prisma.adminZone.findMany({
+      where: {
+        parentZoneId: { in: frontier },
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    frontier = [];
+
+    for (const child of children) {
+      if (!seen.has(child.id)) {
+        seen.add(child.id);
+        frontier.push(child.id);
+      }
+    }
+  }
+
+  return Array.from(seen);
+}
+
+async function noticeTargetZoneIds(target: NoticeTarget, scope: GovernanceScope) {
+  if (!target.zoneId) return [];
+
+  const descendants = await collectNoticeDescendantZoneIds(target.zoneId);
+
+  if (scope.isSuperAdmin) return descendants;
+
+  const allowed = new Set(scope.zoneIds);
+  return descendants.filter((zoneId) => allowed.has(zoneId));
+}
+
+async function noticeTargetTenantIds(target: NoticeTarget, scope: GovernanceScope) {
+  if (target.tenantId) {
+    assertTenantInScope(scope, target.tenantId);
+    return [target.tenantId];
+  }
+
+  if (!target.zoneId) return [];
+
+  const zoneIds = await noticeTargetZoneIds(target, scope);
+  if (!zoneIds.length) return [];
+
+  const where: Prisma.TenantWhereInput = {
+    zoneId: { in: zoneIds },
+    status: TenantStatus.ACTIVE,
+  };
+
+  if (!scope.isSuperAdmin) {
+    where.id = { in: scope.tenantIds.length ? scope.tenantIds : ["__none__"] };
+  }
+
+  const tenants = await prisma.tenant.findMany({
+    where,
+    select: { id: true },
+    orderBy: { name: "asc" },
+  });
+
+  return tenants.map((tenant) => tenant.id);
+}
+
 async function resolveNoticeTarget(
   scope: GovernanceScope,
   input: SendNoticeInput
@@ -560,18 +728,28 @@ async function explicitRecipients(input: SendNoticeInput): Promise<NormalizedRec
 
 async function schoolRoleRecipients(
   target: NoticeTarget,
-  requestedRoles: string[]
+  requestedRoles: string[],
+  scope: GovernanceScope
 ): Promise<NormalizedRecipient[]> {
-  if (!target.tenantId) return [];
+  const tenantIds = await noticeTargetTenantIds(target, scope);
+  if (!tenantIds.length) return [];
 
   const memberships = await prisma.membership.findMany({
     where: {
-      tenantId: target.tenantId,
+      tenantId: { in: tenantIds },
       status: "ACTIVE",
     },
     select: {
       tenantId: true,
       role: { select: { name: true } },
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          schoolCode: true,
+          zoneId: true,
+        },
+      },
       user: {
         select: {
           id: true,
@@ -607,6 +785,10 @@ async function schoolRoleRecipients(
         metadata: jsonObject({
           source: "membership-role",
           roleName,
+          tenantId: m.tenant.id,
+          schoolName: m.tenant.name,
+          schoolCode: m.tenant.schoolCode,
+          zoneId: m.tenant.zoneId,
         }),
       };
     });
@@ -614,23 +796,31 @@ async function schoolRoleRecipients(
 
 async function governanceOfficerRecipients(
   target: NoticeTarget,
-  requestedRoles: string[]
+  requestedRoles: string[],
+  scope: GovernanceScope
 ): Promise<NormalizedRecipient[]> {
   if (!target.zoneId) return [];
 
   const shouldLoad = requestedRoles.some((r) => {
     const v = upper(r);
+    const normalized = normalizeB7TargetRole(v);
+
     return (
       v === "GOVERNANCE_OFFICERS" ||
+      normalized === "SISSO" ||
+      normalized === "CIRCUITSUPERVISOR" ||
       (Object.values(GovernanceOfficerRole) as string[]).includes(v)
     );
   });
 
   if (!shouldLoad) return [];
 
+  const zoneIds = await noticeTargetZoneIds(target, scope);
+  if (!zoneIds.length) return [];
+
   const assignments = await prisma.governanceOfficerAssignment.findMany({
     where: {
-      zoneId: target.zoneId,
+      zoneId: { in: zoneIds },
       status: "ACTIVE",
       revokedAt: null,
     },
@@ -649,7 +839,16 @@ async function governanceOfficerRecipients(
         },
       },
       zone: {
-        select: { name: true },
+        select: {
+          id: true,
+          name: true,
+          zoneType: {
+            select: {
+              name: true,
+              level: true,
+            },
+          },
+        },
       },
     },
     orderBy: { createdAt: "asc" },
@@ -668,26 +867,36 @@ async function governanceOfficerRecipients(
       metadata: jsonObject({
         source: "governance-assignment",
         role: String(a.role),
+        zoneId: a.zone.id,
         zoneName: a.zone.name,
+        zoneTypeName: a.zone.zoneType.name,
+        zoneLevel: a.zone.zoneType.level,
       }),
     }));
 }
 
-async function resolveRecipients(
-  target: NoticeTarget,
-  input: SendNoticeInput
-): Promise<NormalizedRecipient[]> {
-  const explicit = await explicitRecipients(input);
+async function resolveRecipients(args: {
+  scope: GovernanceScope;
+  target: NoticeTarget;
+  input: SendNoticeInput;
+}): Promise<NormalizedRecipient[]> {
+  const { scope, target, input } = args;
+
+  const strictOfficialCommunication = isOfficialCommunicationInput(input);
   const requestedRoles = targetRolesArray(input.targetRoles);
 
+  const explicit = strictOfficialCommunication
+    ? []
+    : await explicitRecipients(input);
+
   const schoolRoles =
-    requestedRoles.length || target.tenantId
-      ? await schoolRoleRecipients(target, requestedRoles)
+    requestedRoles.length || target.tenantId || target.zoneId
+      ? await schoolRoleRecipients(target, requestedRoles, scope)
       : [];
 
   const governanceRoles =
     requestedRoles.length && target.zoneId
-      ? await governanceOfficerRecipients(target, requestedRoles)
+      ? await governanceOfficerRecipients(target, requestedRoles, scope)
       : [];
 
   const merged = [...explicit, ...schoolRoles, ...governanceRoles];
@@ -699,6 +908,18 @@ async function resolveRecipients(
   }
 
   const recipients = Array.from(deduped.values());
+
+  if (strictOfficialCommunication) {
+    const custom = recipients.find(
+      (recipient) =>
+        recipient.recipientType === GovernanceOfficialNoticeRecipientType.CUSTOM ||
+        !recipient.recipientUserId
+    );
+
+    if (custom) {
+      throw new GovernanceNoticeError(403, "CUSTOM_RECIPIENTS_BLOCKED_FOR_OFFICIAL_COMMUNICATION");
+    }
+  }
 
   if (!recipients.length) {
     throw new GovernanceNoticeError(400, "NO_NOTICE_RECIPIENTS");
@@ -760,9 +981,12 @@ function initialDeliveryDescription(
 
 function buildSmsBody(args: { noticeId: string; title: string; body: string }) {
   const ref = args.noticeId.slice(-8).toUpperCase();
+
   return truncate(
-    smsSafe(`EduLife OS Official Notice: ${args.title}. ${args.body} Ref: ${ref}`),
-    480
+    smsSafe(
+      `EduLife OS Official Notice. Ref: ${ref}. Log in to EduLife OS to view and acknowledge. Do not rely on WhatsApp copies without this reference.`
+    ),
+    240
   );
 }
 
@@ -777,14 +1001,19 @@ function buildEmailText(args: {
   return [
     "EduLife OS Official Governance Notice",
     "",
+    `Reference: ${ref}`,
+    args.senderName ? `Verified sender: ${args.senderName}` : "",
+    "",
     `Title: ${args.title}`,
     "",
     args.body,
     "",
-    `Reference: ${ref}`,
-    args.senderName ? `Sent by: ${args.senderName}` : "",
+    "Security note:",
+    "EduLife OS portal is the source of truth for official instructions.",
+    "SMS and email are delivery alerts/copies.",
+    "Do not rely on WhatsApp screenshots, forwards, or copied text unless the notice exists in EduLife OS with the same reference.",
     "",
-    "Please sign in to EduLife OS to read and acknowledge this notice where required.",
+    "Please sign in to EduLife OS to read, acknowledge, and respond where required.",
   ]
     .filter((line) => line !== "")
     .join("\n");
@@ -1094,10 +1323,22 @@ export async function sendGovernanceOfficialNotice(args: {
   ip?: string | null;
   userAgent?: string | null;
 }) {
-  const { scope, actorUserId, input } = args;
+   const { scope, actorUserId, input } = args;
 
   const target = await resolveNoticeTarget(scope, input);
-  const recipients = await resolveRecipients(target, input);
+  const metadataInput = inputObject(input.metadata);
+
+  assertOfficialCommunicationAuthority({
+    scope,
+    input,
+  });
+
+  const recipients = await resolveRecipients({
+    scope,
+    target,
+    input,
+  });
+
   const channels = normalizeChannels(input.channels);
 
   const title = clean(input.title);
@@ -1113,7 +1354,6 @@ export async function sendGovernanceOfficialNotice(args: {
   }
 
   const audienceSummary = buildAudienceSummary(recipients);
-  const metadataInput = inputObject(input.metadata);
   const allowDuplicate = boolish(input.allowDuplicate);
 
   const idempotencyScope = normalizeNoticeIdempotencyScope(
@@ -1183,9 +1423,19 @@ export async function sendGovernanceOfficialNotice(args: {
           audienceSummary,
           idempotencyKey,
           idempotencyScope: idempotencyKey ? idempotencyScope : null,
-          metadata: jsonObject({
+                    metadata: jsonObject({
             ...metadataInput,
+            source: metadataInput.source ?? "governance-official-notice",
             targetLabel: target.label,
+            senderUserId: actorUserId,
+            senderScope: {
+              isSuperAdmin: scope.isSuperAdmin,
+              assignments: scope.assignments,
+              zoneCount: scope.zoneIds.length,
+              tenantCount: scope.tenantIds.length,
+            },
+            officialCommunication: isOfficialCommunicationInput(input),
+            targetRoles: targetRolesArray(input.targetRoles),
             idempotencyKey,
             idempotencyScope: idempotencyKey ? idempotencyScope : null,
             allowDuplicate,
