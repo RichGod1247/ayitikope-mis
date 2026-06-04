@@ -1316,6 +1316,7 @@ function DistrictCaseActionQueue({
     </p>
   );
 })()}
+<GovernanceCaseAuditLogbookCard item={item} />
               </div>
             );
           })
@@ -1829,6 +1830,579 @@ function WorkflowTicks({
   );
 }
 
+type AuditLogbookTone =
+  | "default"
+  | "info"
+  | "warning"
+  | "danger"
+  | "success";
+
+type AuditLogbookEntry = {
+  id: string;
+  at: string | null;
+  title: string;
+  actor: string;
+  description: string;
+  status?: string | null;
+  tone: AuditLogbookTone;
+};
+
+function auditActorLabel(
+  actor?: { name: string | null; email: string } | null
+) {
+  return actor?.name || actor?.email || "System / unknown actor";
+}
+
+function eventActorLabel(event: GovernanceEvent) {
+  return auditActorLabel(event.actor);
+}
+
+function shortAuditText(value?: string | null, max = 280) {
+  const text = String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return "No note recorded.";
+  if (text.length <= max) return text;
+
+  return `${text.slice(0, max).trim()}…`;
+}
+
+function auditToneClass(tone: AuditLogbookTone) {
+  if (tone === "danger") return "border-red-300/25 bg-red-500/10 text-red-100";
+  if (tone === "warning") {
+    return "border-amber-300/25 bg-amber-400/10 text-amber-100";
+  }
+  if (tone === "success") {
+    return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
+  }
+  if (tone === "info") return "border-sky-300/25 bg-sky-500/10 text-sky-100";
+
+  return "border-white/10 bg-white/5 text-slate-200";
+}
+
+function auditDotClass(tone: AuditLogbookTone) {
+  if (tone === "danger") return "bg-red-300";
+  if (tone === "warning") return "bg-amber-300";
+  if (tone === "success") return "bg-emerald-300";
+  if (tone === "info") return "bg-sky-300";
+
+  return "bg-slate-300";
+}
+
+function auditEventTitle(event: GovernanceEvent) {
+  const note = eventNote(event);
+
+  if (eventNoteHasMarker(event, ESCALATION_LOGBOOK_MARKER)) {
+    return "Escalated with logbook reason";
+  }
+
+  if (eventNoteHasMarker(event, DIRECTOR_DIRECTIVE_MARKER)) {
+    return "Director issued directive";
+  }
+
+  if (eventNoteHasMarker(event, SISSO_IMPLEMENTATION_RESPONSE_MARKER)) {
+    return "SISSO submitted implementation response";
+  }
+
+  if (isReadReceiptEvent(event)) {
+    const receiptKind = eventMetadataString(event, "receiptKind");
+
+    if (receiptKind === "SISSO_ESCALATION_SEEN_BY_DIRECTOR") {
+      return "Director saw SISSO escalation";
+    }
+
+    if (receiptKind === "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO") {
+      return "SISSO saw Director directive";
+    }
+
+    return "Read receipt recorded";
+  }
+
+  if (event.eventType === "CREATED") return "Case opened";
+  if (event.eventType === "ASSIGNED") return "Case assigned";
+  if (event.eventType === "NOTICE_SENT") return "Official notice event";
+  if (event.eventType === "RESOLVED") return "Case resolved";
+  if (event.eventType === "ESCALATED") return "Case escalated";
+  if (event.eventType === "CANCELLED") return "Case cancelled";
+  if (event.eventType === "REOPENED") return "Case reopened";
+
+  if (event.eventType === "STATUS_CHANGED") {
+    const from = event.fromStatus ?? "UNKNOWN";
+    const to = event.toStatus ?? "UNKNOWN";
+    return `Status changed: ${from.replaceAll("_", " ")} → ${to.replaceAll("_", " ")}`;
+  }
+
+  if (event.eventType === "COMMENT") return "Case comment / evidence";
+
+  return event.eventType.replaceAll("_", " ");
+}
+
+function auditEventTone(event: GovernanceEvent): AuditLogbookTone {
+  const note = eventNote(event);
+
+  if (eventNoteHasMarker(event, ESCALATION_LOGBOOK_MARKER)) return "danger";
+  if (eventNoteHasMarker(event, DIRECTOR_DIRECTIVE_MARKER)) return "info";
+  if (eventNoteHasMarker(event, SISSO_IMPLEMENTATION_RESPONSE_MARKER)) {
+    return "success";
+  }
+
+  if (isReadReceiptEvent(event)) return "info";
+
+  if (event.toStatus === "RESOLVED" || event.eventType === "RESOLVED") {
+    return "success";
+  }
+
+  if (event.toStatus === "ESCALATED" || event.eventType === "ESCALATED") {
+    return "danger";
+  }
+
+  if (event.toStatus === "CANCELLED" || event.eventType === "CANCELLED") {
+    return "warning";
+  }
+
+  if (event.eventType === "NOTICE_SENT") return "info";
+  if (event.eventType === "COMMENT") return "default";
+
+  return "default";
+}
+
+function auditEventDescription(event: GovernanceEvent) {
+  const note = eventNote(event);
+
+  if (isReadReceiptEvent(event)) {
+    const receiptKind = eventMetadataString(event, "receiptKind");
+    const seenAt = eventMetadataString(event, "seenAt");
+
+    if (receiptKind === "SISSO_ESCALATION_SEEN_BY_DIRECTOR") {
+      return seenAt
+        ? `Director opened the escalation evidence at ${compactDateTime(seenAt) ?? seenAt}.`
+        : "Director opened the escalation evidence.";
+    }
+
+    if (receiptKind === "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO") {
+      return seenAt
+        ? `SISSO opened the Director’s directive at ${compactDateTime(seenAt) ?? seenAt}.`
+        : "SISSO opened the Director’s directive.";
+    }
+
+    return "Read receipt was recorded.";
+  }
+
+  if (eventNoteHasMarker(event, ESCALATION_LOGBOOK_MARKER)) {
+    const parsed = parseEscalationLogbookNote(note);
+    return parsed?.reason
+      ? shortAuditText(parsed.reason)
+      : shortAuditText(note);
+  }
+
+  if (eventNoteHasMarker(event, DIRECTOR_DIRECTIVE_MARKER)) {
+    const parsed = parseDirectorDirectiveNote(note);
+    return parsed?.instruction
+      ? shortAuditText(parsed.instruction)
+      : shortAuditText(note);
+  }
+
+  if (eventNoteHasMarker(event, SISSO_IMPLEMENTATION_RESPONSE_MARKER)) {
+    const parsed = parseDirectiveImplementationResponse(note);
+    const action = parsed?.actionTaken ?? "";
+    const evidence = parsed?.evidenceOrNextAction ?? "";
+
+    return shortAuditText(
+      [action, evidence ? `Evidence / next action: ${evidence}` : ""]
+        .filter(Boolean)
+        .join(" ")
+    );
+  }
+
+  return shortAuditText(note);
+}
+
+function noticeDeliveryStatusSummary(
+  deliveries?: Array<{
+    channel: string;
+    status: string;
+    sentAt: string | null;
+    deliveredAt: string | null;
+    lastError: string | null;
+  }>
+) {
+  const rows = deliveries ?? [];
+
+  if (!rows.length) return "No delivery records.";
+
+  return rows
+    .map((delivery) => {
+      const time =
+        compactDateTime(delivery.deliveredAt ?? delivery.sentAt ?? undefined) ??
+        "";
+      const error = delivery.lastError ? ` Error: ${delivery.lastError}` : "";
+
+      return `${delivery.channel}: ${delivery.status}${time ? ` at ${time}` : ""}.${error}`;
+    })
+    .join(" ");
+}
+
+function buildNoticeAuditEntries(item: GovernanceCase): AuditLogbookEntry[] {
+  const entries: AuditLogbookEntry[] = [];
+
+  for (const notice of item.notices ?? []) {
+    const noticeTime = notice.sentAt ?? notice.createdAt;
+
+    entries.push({
+      id: `notice:${notice.id}`,
+      at: noticeTime,
+      title: "Official notice created / sent",
+      actor: "Governance notice system",
+      status: notice.status,
+      tone:
+        notice.status === "SENT"
+          ? "info"
+          : notice.status === "FAILED" || notice.status === "PARTIALLY_FAILED"
+            ? "danger"
+            : "warning",
+      description: [
+        notice.title,
+        notice.priority ? `Priority: ${notice.priority}.` : "",
+        notice.recipients?.length
+          ? `Recipients: ${notice.recipients.length}.`
+          : "No recipients recorded.",
+        noticeDeliveryStatusSummary(notice.deliveries),
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+
+    for (const recipient of notice.recipients ?? []) {
+      if (recipient.readAt) {
+        entries.push({
+          id: `notice-read:${recipient.id}`,
+          at: recipient.readAt,
+          title: "Notice read in portal",
+          actor:
+            recipient.displayName ||
+            recipient.roleLabel ||
+            recipient.recipientType,
+          status: "READ",
+          tone: "info",
+          description: `Recipient opened the notice: ${notice.title}.`,
+        });
+      }
+
+      if (recipient.acknowledgedAt) {
+        entries.push({
+          id: `notice-ack:${recipient.id}`,
+          at: recipient.acknowledgedAt,
+          title: "Notice acknowledged",
+          actor:
+            recipient.displayName ||
+            recipient.roleLabel ||
+            recipient.recipientType,
+          status: "ACKNOWLEDGED",
+          tone: "success",
+          description:
+            recipient.acknowledgeNote ||
+            `Recipient acknowledged the official notice: ${notice.title}.`,
+        });
+      }
+
+      if (recipient.respondedAt && recipient.responseBody) {
+        entries.push({
+          id: `notice-response:${recipient.id}`,
+          at: recipient.respondedAt,
+          title: "Corrective response submitted",
+          actor:
+            recipient.displayName ||
+            recipient.roleLabel ||
+            recipient.recipientType,
+          status: "RESPONDED",
+          tone: "success",
+          description: shortAuditText(recipient.responseBody, 420),
+        });
+      }
+
+      for (const delivery of recipient.deliveries ?? []) {
+        entries.push({
+          id: `notice-delivery:${recipient.id}:${delivery.id}`,
+          at: delivery.deliveredAt ?? delivery.sentAt ?? delivery.createdAt,
+          title: `${delivery.channel} delivery ${delivery.status.toLowerCase()}`,
+          actor:
+            recipient.displayName ||
+            recipient.roleLabel ||
+            recipient.recipientType,
+          status: delivery.status,
+          tone:
+            delivery.status === "SENT"
+              ? "success"
+              : delivery.status === "FAILED"
+                ? "danger"
+                : "warning",
+          description:
+            delivery.lastError ||
+            `${delivery.channel} delivery status for official notice: ${delivery.status}.`,
+        });
+      }
+    }
+  }
+
+  return entries;
+}
+
+function buildCaseAuditLogbookEntries(item: GovernanceCase) {
+  const entries: AuditLogbookEntry[] = [
+    {
+      id: `case-created:${item.id}`,
+      at: item.createdAt,
+      title: "Intervention case opened",
+      actor: auditActorLabel(item.createdBy),
+      status: item.status,
+      tone:
+        item.priority === "CRITICAL" || item.riskLevel === "CRITICAL"
+          ? "danger"
+          : item.priority === "HIGH" || item.riskLevel === "HIGH"
+            ? "warning"
+            : "default",
+      description: [
+        item.summary,
+        item.riskLevel ? `Risk: ${item.riskLevel}` : "",
+        item.riskScore !== null && item.riskScore !== undefined
+          ? `Score: ${item.riskScore}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    },
+  ];
+
+  for (const event of item.events ?? []) {
+    entries.push({
+      id: `event:${event.id}`,
+      at: event.createdAt,
+      title: auditEventTitle(event),
+      actor: eventActorLabel(event),
+      status: event.toStatus ?? event.eventType,
+      tone: auditEventTone(event),
+      description: auditEventDescription(event),
+    });
+  }
+
+  entries.push(...buildNoticeAuditEntries(item));
+
+  if (item.resolutionNote) {
+    entries.push({
+      id: `resolution-note:${item.id}`,
+      at: item.updatedAt,
+      title: "Resolution note recorded",
+      actor: "Governance closure evidence",
+      status: "RESOLUTION_NOTE",
+      tone: item.status === "RESOLVED" ? "success" : "default",
+      description: shortAuditText(item.resolutionNote, 420),
+    });
+  }
+
+  const seen = new Set<string>();
+
+  return entries
+    .filter((entry) => {
+      if (seen.has(entry.id)) return false;
+      seen.add(entry.id);
+      return true;
+    })
+    .sort((a, b) => {
+      const ad = a.at ? new Date(a.at).getTime() : 0;
+      const bd = b.at ? new Date(b.at).getTime() : 0;
+      return ad - bd;
+    });
+}
+
+function latestCaseAuditAt(item: GovernanceCase) {
+  const latestEventAt = (item.events ?? [])
+    .map((event) => new Date(event.createdAt).getTime())
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)[0];
+
+  const latestNoticeAt = (item.notices ?? [])
+    .flatMap((notice) => [
+      notice.sentAt,
+      notice.createdAt,
+      ...(notice.recipients ?? []).flatMap((recipient) => [
+        recipient.readAt,
+        recipient.acknowledgedAt,
+        recipient.respondedAt,
+        ...(recipient.deliveries ?? []).flatMap((delivery) => [
+          delivery.deliveredAt,
+          delivery.sentAt,
+          delivery.createdAt,
+        ]),
+      ]),
+      ...(notice.deliveries ?? []).flatMap((delivery) => [
+        delivery.deliveredAt,
+        delivery.sentAt,
+        delivery.createdAt,
+      ]),
+    ])
+    .map((value) => (value ? new Date(value).getTime() : 0))
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)[0];
+
+  return Math.max(
+    new Date(item.updatedAt ?? item.createdAt).getTime(),
+    latestEventAt ?? 0,
+    latestNoticeAt ?? 0
+  );
+}
+
+function GovernanceCaseAuditLogbookCard({ item }: { item: GovernanceCase }) {
+  const entries = buildCaseAuditLogbookEntries(item);
+  const latest = entries[entries.length - 1] ?? null;
+
+  return (
+    <details className="mt-4 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+      <summary className="cursor-pointer list-none">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+              Governance audit logbook
+            </p>
+            <p className="mt-1 text-sm font-bold text-white">
+              {entries.length} evidence event(s) recorded
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              Latest: {latest?.title ?? "No evidence yet"}
+              {latest?.at
+                ? ` · ${compactDateTime(latest.at) ?? latest.at}`
+                : ""}
+            </p>
+          </div>
+
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200">
+            Open logbook
+          </span>
+        </div>
+      </summary>
+
+      <div className="mt-4 space-y-3">
+        {entries.map((entry, idx) => (
+          <div
+            key={entry.id}
+            className={`rounded-2xl border p-3 ${auditToneClass(entry.tone)}`}
+          >
+            <div className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <span
+                  className={`mt-1 h-3 w-3 rounded-full ${auditDotClass(entry.tone)}`}
+                />
+                {idx < entries.length - 1 ? (
+                  <span className="mt-2 h-full min-h-8 w-px bg-white/10" />
+                ) : null}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-white">
+                      {entry.title}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {entry.at
+                        ? compactDateTime(entry.at) ?? entry.at
+                        : "Time not recorded"}{" "}
+                      · {entry.actor}
+                    </p>
+                  </div>
+
+                  {entry.status ? (
+                    <span className="w-fit rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-200">
+                      {String(entry.status).replaceAll("_", " ")}
+                    </span>
+                  ) : null}
+                </div>
+
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-100">
+                  {entry.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function GovernanceAuditLogbookPanel({
+  cases,
+  title,
+  description,
+}: {
+  cases: GovernanceCase[];
+  title: string;
+  description: string;
+}) {
+  const auditCases = [...cases]
+    .sort((a, b) => latestCaseAuditAt(b) - latestCaseAuditAt(a))
+    .slice(0, 10);
+
+  return (
+    <section className="rounded-3xl border border-sky-300/20 bg-sky-500/10 p-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
+            Governance Logbook
+          </p>
+          <h2 className="mt-2 text-xl font-bold text-white">{title}</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-sky-100/80">
+            {description}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-200">
+          Cases tracked: <span className="font-bold text-white">{cases.length}</span>
+        </div>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {auditCases.length ? (
+          auditCases.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-white">
+                    {item.tenant?.name ?? item.title}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {item.tenant?.schoolCode || "No school code"} ·{" "}
+                    {item.zone?.name || "No circuit"} · Case{" "}
+                    {item.id.slice(0, 10)}…
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel ?? item.priority)}`}>
+                    {item.riskLevel ?? item.priority} · {numberValue(item.riskScore)}
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                    {item.status.replaceAll("_", " ")}
+                  </span>
+                </div>
+              </div>
+
+              <GovernanceCaseAuditLogbookCard item={item} />
+            </div>
+          ))
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+            No intervention cases are available for the current governance scope.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function MetricPill({
   label,
   value,
@@ -1899,6 +2473,7 @@ export default function GovernanceDashboardClient({
   const [caseAction, setCaseAction] = useState<string | null>(null);
   const [caseError, setCaseError] = useState<string | null>(null);
   const [busyCaseKey, setBusyCaseKey] = useState<string | null>(null);
+    const [isGovernanceLogbookOpen, setIsGovernanceLogbookOpen] = useState(false);
   const receiptKeysRef = useRef<Set<string>>(new Set());
 
   const [escalationCase, setEscalationCase] = useState<GovernanceCase | null>(
@@ -3146,6 +3721,53 @@ await loadCases();
             </div>
           </section>
         ) : null}
+
+        {isGovernanceLogbookOpen ? (
+          <section className="fixed inset-0 z-50 overflow-y-auto bg-black/75 px-4 py-6">
+            <div className="mx-auto w-full max-w-7xl rounded-3xl border border-sky-300/25 bg-slate-950 p-5 shadow-2xl shadow-black/70">
+              <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
+                    Governance Logbook
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold text-white">
+                    {isDistrictView
+                      ? "District intervention evidence timeline"
+                      : "Circuit intervention evidence timeline"}
+                  </h2>
+                  <p className="mt-1 max-w-4xl text-sm leading-6 text-sky-100/80">
+                    {isDistrictView
+                      ? "Role-aware district view: this logbook uses only the intervention cases already returned for your authorized district scope. It does not expose cases outside the Director’s assigned district."
+                      : "Role-aware circuit view: this logbook uses only the intervention cases already returned for your authorized circuit scope. It does not expose another SISSO’s circuit cases."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsGovernanceLogbookOpen(false)}
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10"
+                >
+                  Close logbook
+                </button>
+              </div>
+
+              <GovernanceAuditLogbookPanel
+                cases={cases}
+                title={
+                  isDistrictView
+                    ? "District intervention evidence timeline"
+                    : "Circuit intervention evidence timeline"
+                }
+                description={
+                  isDistrictView
+                    ? "A referenceable record of cases, notices, acknowledgements, responses, escalations, Director directives, SISSO responses, and closure evidence across your authorized district scope."
+                    : "A referenceable supervision record for cases, official notices, acknowledgements, corrective responses, escalations, Director directives, SISSO responses, and closure evidence inside your authorized circuit scope."
+                }
+              />
+            </div>
+          </section>
+        ) : null}
+
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
           {totalCards.length ? (
             totalCards.map((c) => (
@@ -3173,6 +3795,41 @@ await loadCases();
             cases={cases}
             onOpenDirectorDirective={openDirectorDirectiveDialog}
           />
+        ) : null}
+                        {cases.length ? (
+          <section className="rounded-3xl border border-sky-300/20 bg-sky-500/10 p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
+                  Governance Logbook
+                </p>
+                <h2 className="mt-2 text-xl font-bold text-white">
+                  {isDistrictView
+                    ? "District intervention logbook"
+                    : "Circuit intervention logbook"}
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-sky-100/80">
+                  {isDistrictView
+                    ? "Open only when you need the full reference record of cases, notices, acknowledgements, responses, escalations, Director directives, SISSO responses, and closure evidence across your authorized district."
+                    : "Open only when you need the full reference record of cases, notices, acknowledgements, responses, escalations, Director directives, SISSO responses, and closure evidence inside your authorized circuit."}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <span className="rounded-full border border-white/10 bg-slate-950/40 px-4 py-2 text-xs font-semibold text-slate-200">
+                  {cases.length} scoped case(s)
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setIsGovernanceLogbookOpen(true)}
+                  className="rounded-full border border-sky-300/25 bg-sky-500/15 px-5 py-2 text-sm font-semibold text-sky-100 hover:bg-sky-500/25"
+                >
+                  Open logbook
+                </button>
+              </div>
+            </div>
+          </section>
         ) : null}
         {isDistrictView ? (
           <section className="rounded-3xl border border-red-300/20 bg-red-500/10 p-5">
@@ -3550,6 +4207,7 @@ await loadCases();
     </p>
   );
 })()}
+<GovernanceCaseAuditLogbookCard item={existingCase} />
                             </div>
                           ) : (
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
