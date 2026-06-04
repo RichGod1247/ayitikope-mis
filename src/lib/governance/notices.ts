@@ -245,6 +245,35 @@ function buildNoticeIdempotencyKey(args: {
   return `gov-notice:${sha256(stableStringify(payload))}`.slice(0, 220);
 }
 
+function officialNoticeRefFromId(noticeId: string) {
+  return `GOV-${noticeId.slice(-8).toUpperCase()}`;
+}
+
+function buildNoticeAuthenticityFingerprint(args: {
+  senderUserId: string;
+  target: NoticeTarget;
+  recipients: NormalizedRecipient[];
+  channels: GovernanceOfficialNoticeChannel[];
+  title: string;
+  body: string;
+  priority: GovernanceInterventionPriority;
+}) {
+  return sha256(
+    stableStringify({
+      version: "governance-official-notice-authenticity-v1",
+      senderUserId: args.senderUserId,
+      caseId: args.target.caseId,
+      tenantId: args.target.tenantId,
+      zoneId: args.target.zoneId,
+      title: normalizeIntentText(args.title),
+      body: normalizeIntentText(args.body),
+      priority: args.priority,
+      channels: args.channels.map(String).sort(),
+      recipients: args.recipients.map((r) => recipientKey(r)).sort(),
+    })
+  );
+}
+
 function isUniqueConstraintError(err: unknown) {
   return (
     err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -1372,6 +1401,16 @@ export async function sendGovernanceOfficialNotice(args: {
         priority,
       });
 
+  const noticeFingerprint = buildNoticeAuthenticityFingerprint({
+    senderUserId: actorUserId,
+    target,
+    recipients,
+    channels,
+    title,
+    body,
+    priority,
+  });
+
   if (idempotencyKey) {
     const existing = await prisma.governanceOfficialNotice.findUnique({
       where: { idempotencyKey },
@@ -1436,6 +1475,13 @@ export async function sendGovernanceOfficialNotice(args: {
             },
             officialCommunication: isOfficialCommunicationInput(input),
             targetRoles: targetRolesArray(input.targetRoles),
+            noticeFingerprint,
+            fingerprintAlgorithm: "sha256",
+            fingerprintVersion: "governance-official-notice-authenticity-v1",
+            officialReferenceRule:
+              "Official reference is derived from the final notice id as GOV-{last8}.",
+            securityRule:
+              "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference.",
             idempotencyKey,
             idempotencyScope: idempotencyKey ? idempotencyScope : null,
             allowDuplicate,
@@ -1570,6 +1616,10 @@ export async function sendGovernanceOfficialNotice(args: {
       audienceSummary,
       idempotencyKey,
       idempotencyScope: idempotencyKey ? idempotencyScope : null,
+      noticeFingerprint,
+      fingerprintAlgorithm: "sha256",
+      securityRule:
+        "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference.",
     },
   });
 
@@ -1631,8 +1681,11 @@ export async function listGovernanceNoticeInbox(args: {
           body: true,
           priority: true,
           status: true,
-          channels: true,
+                    channels: true,
           audienceSummary: true,
+          idempotencyKey: true,
+          idempotencyScope: true,
+          metadata: true,
           sentAt: true,
           createdAt: true,
           sender: {
@@ -1995,7 +2048,10 @@ export async function getGovernanceNoticeInboxSummary(args: {
             id: true,
             title: true,
             priority: true,
-            status: true,
+                        status: true,
+            idempotencyKey: true,
+            idempotencyScope: true,
+            metadata: true,
             sentAt: true,
             createdAt: true,
             sender: {
@@ -2079,8 +2135,11 @@ export async function listGovernanceSentNoticeAccountability(args: {
       body: true,
       priority: true,
       status: true,
-      channels: true,
+            channels: true,
       audienceSummary: true,
+      idempotencyKey: true,
+      idempotencyScope: true,
+      metadata: true,
       sentAt: true,
       createdAt: true,
       updatedAt: true,
