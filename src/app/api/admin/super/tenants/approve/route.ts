@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
       name: true,
       schoolCode: true,
       status: true,
+      schoolSector: true,
       settingsJson: true,
       contactEmail: true,
       contactPhoneNorm: true,
@@ -86,7 +87,8 @@ export async function POST(req: NextRequest) {
         `Hello,\n\n` +
         `Your school is now approved and ACTIVE on EduLife OS.\n\n` +
         `School: ${t.name}\n` +
-        `School Code: ${t.schoolCode}\n\n` +
+        `School Code: ${t.schoolCode}\n` +
+        `School Sector: ${t.schoolSector}\n\n` +
         `You can sign in and continue setup.\n`,
     });
   }
@@ -99,11 +101,17 @@ export async function POST(req: NextRequest) {
           `EduLifeOS\n` +
           `School APPROVED\n` +
           `Code: ${t.schoolCode}\n` +
+          `Sector: ${t.schoolSector}\n` +
           `You can sign in now.`,
         brand: "EDULIFEOS",
         tenantId: undefined,
         actorId: auth.ctx.userId,
-        meta: { category: "TENANT_APPROVED", tenantId, schoolCode: t.schoolCode },
+        meta: {
+          category: "TENANT_APPROVED",
+          tenantId,
+          schoolCode: t.schoolCode,
+          schoolSector: t.schoolSector,
+        },
       });
       delivery.sms = { ok: true, to: t.contactPhoneNorm, brand: "EDULIFEOS" };
     } catch (e: any) {

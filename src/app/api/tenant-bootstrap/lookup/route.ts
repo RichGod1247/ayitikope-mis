@@ -1,3 +1,4 @@
+//src/app/api/tenant-bootstrap/lookup/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
       contactPhoneNorm: true,
       reservedSlug: true,
       reservedSchoolCode: true,
+      schoolSector: true,
       expiresAt: true,
       usedAt: true,
     },
@@ -49,6 +51,7 @@ export async function GET(req: NextRequest) {
     schoolName: row.schoolName,
     reservedSchoolCode: row.reservedSchoolCode,
     reservedSlug: row.reservedSlug,
+    schoolSector: row.schoolSector,
     contactEmail: row.contactEmail,
     contactPhoneNorm: row.contactPhoneNorm,
     expiresAt: row.expiresAt.toISOString(),

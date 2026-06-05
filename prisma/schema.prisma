@@ -129,6 +129,7 @@ model Tenant {
   settingsJson Json         @default("{}") @map("settings")
   schoolCode   String       @unique
   status       TenantStatus @default(PENDING)
+  schoolSector SchoolSector @default(PUBLIC)
   emisCode     String?      @unique
   gpsAddress   String?
   district     String?
@@ -208,6 +209,7 @@ model Tenant {
   governanceNoticeRecipients GovernanceOfficialNoticeRecipient[]
 
   @@index([status])
+  @@index([schoolSector])
   @@index([schoolCode])
   @@index([contactPhoneNorm])
   @@index([contactEmail])
@@ -273,6 +275,7 @@ model TenantBootstrapInvite {
 
   // What the school provided
   schoolName       String?
+  schoolSector     SchoolSector @default(PUBLIC)
   contactEmail     String
   contactPhone     String?
   contactPhoneNorm String?
@@ -297,6 +300,7 @@ model TenantBootstrapInvite {
   @@index([reservedSlug])
   @@index([contactPhoneNorm])
   @@index([contactEmail])
+  @@index([schoolSector])
 }
 
 model HeadteacherSignature {
@@ -2544,6 +2548,11 @@ enum SchemeStatus {
   SUBMITTED
   APPROVED
   RETURNED
+}
+
+enum SchoolSector {
+  PUBLIC
+  PRIVATE
 }
 
 enum TenantStatus {

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import type { Prisma } from "@prisma/client";
+import { SchoolSector, type Prisma } from "@prisma/client";
 import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
 
 export const runtime = "nodejs";
@@ -45,6 +45,11 @@ function onlinePaymentPreference(v: unknown): "YES" | "NO" {
   return cleanStr(v).toUpperCase() === "YES" ? "YES" : "NO";
 }
 
+function schoolSectorFrom(value: unknown): SchoolSector {
+  const v = cleanStr(value).toUpperCase();
+  return v === "PRIVATE" ? SchoolSector.PRIVATE : SchoolSector.PUBLIC;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
@@ -70,6 +75,7 @@ export async function POST(req: Request) {
         contactPhoneNorm: true,
         reservedSlug: true,
         reservedSchoolCode: true,
+        schoolSector: true,
         expiresAt: true,
       },
     });
@@ -88,6 +94,10 @@ export async function POST(req: Request) {
     const password = cleanStr(body.password);
     const onlinePaymentsPreference = onlinePaymentPreference(
       body.onlinePaymentsPreference
+    );
+
+    const schoolSector = schoolSectorFrom(
+      body.schoolSector || invite.schoolSector
     );
 
     if (!tenantName) {
@@ -175,6 +185,7 @@ export async function POST(req: Request) {
             slug,
             schoolCode: invite.reservedSchoolCode,
             status: "PENDING",
+            schoolSector,
 
             emisCode,
             gpsAddress,
@@ -191,6 +202,7 @@ export async function POST(req: Request) {
             settingsJson: {
               bootstrapInviteId: invite.id,
               bootstrapSubmittedAt: submittedAtIso,
+              schoolSector,
               bootstrapAutoActivateAfterHours: AUTO_ACTIVATE_HOURS,
               finance: {
                 onlineFeePaymentsPreference: onlinePaymentsPreference,
@@ -203,7 +215,13 @@ export async function POST(req: Request) {
               },
             },
           },
-          select: { id: true, slug: true, schoolCode: true, status: true },
+          select: {
+            id: true,
+            slug: true,
+            schoolCode: true,
+            status: true,
+            schoolSector: true,
+          },
         });
 
         await tx.tenantSettings.create({
@@ -267,6 +285,7 @@ export async function POST(req: Request) {
           slug: tenant.slug,
           schoolCode: tenant.schoolCode,
           status: tenant.status,
+          schoolSector: tenant.schoolSector,
         };
       },
       { maxWait: 10_000, timeout: 30_000 }
@@ -279,6 +298,7 @@ export async function POST(req: Request) {
       slug: result.slug,
       schoolCode: result.schoolCode,
       status: result.status,
+      schoolSector: result.schoolSector,
       autoActivateAfterHours: AUTO_ACTIVATE_HOURS,
       autoActivateAt,
       portalUrl: "/pending",
