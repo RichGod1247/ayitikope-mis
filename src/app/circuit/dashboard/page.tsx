@@ -18,7 +18,7 @@ export default function CircuitDashboardPage() {
       <GovernanceSentNoticeAccountabilityClient
         mode="jurisdiction"
         title="Circuit notice accountability"
-        description="Track official notices sent inside your authorized circuit, including sender identity, delivery status, and acknowledgement follow-up."
+        description="Track official notices sent inside your authorized circuit, including SISSO-to-headteacher and SISSO-to-teacher communications, delivery status, acknowledgements, and responses."
       />
     </div>
   );

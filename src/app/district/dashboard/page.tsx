@@ -17,8 +17,8 @@ export default function DistrictDashboardPage() {
 
       <GovernanceSentNoticeAccountabilityClient
         mode="jurisdiction"
-        title="District-wide notice accountability"
-        description="Track official notices sent across your authorized district, including which officer sent them, who acknowledged, and what follow-up remains."
+        title="District command notice accountability"
+        description="Track official notices personally issued by the Director and escalated governance notices that require district attention. Routine SISSO-to-school notices remain inside the circuit unless escalated."
       />
     </div>
   );

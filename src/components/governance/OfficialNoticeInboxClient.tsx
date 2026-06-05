@@ -42,7 +42,10 @@ type NoticeInboxItem = {
     priority: string;
     status: string;
     channels: unknown;
-    audienceSummary: string | null;
+        audienceSummary: string | null;
+    idempotencyKey?: string | null;
+    idempotencyScope?: string | null;
+    metadata?: Record<string, unknown> | null;
     sentAt: string | null;
     createdAt: string;
     sender: {
@@ -203,6 +206,169 @@ function deliveryStatusLabel(delivery: NoticeDelivery) {
   if (status === "PENDING") return "Pending";
 
   return status.replaceAll("_", " ");
+}
+
+function metadataString(
+  metadata: Record<string, unknown> | null | undefined,
+  key: string
+) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return "";
+  }
+
+  const value = metadata[key];
+  return typeof value === "string" ? value : "";
+}
+
+function metadataBoolean(
+  metadata: Record<string, unknown> | null | undefined,
+  key: string
+) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return false;
+  }
+
+  return metadata[key] === true;
+}
+
+function officialNoticeRef(notice: NoticeInboxItem["notice"]) {
+  return `GOV-${notice.id.slice(-8).toUpperCase()}`;
+}
+
+function shortFingerprint(value: string) {
+  if (!value) return "Not available";
+  return `${value.slice(0, 12)}…${value.slice(-8)}`;
+}
+
+function noticeScopeLabel(notice: NoticeInboxItem["notice"]) {
+  if (notice.tenant) {
+    return `${notice.tenant.name}${
+      notice.tenant.schoolCode ? ` · ${notice.tenant.schoolCode}` : ""
+    }`;
+  }
+
+  if (notice.zone) {
+    return `${notice.zone.name}${
+      notice.zone.zoneType?.name ? ` · ${notice.zone.zoneType.name}` : ""
+    }`;
+  }
+
+  return "General governance scope";
+}
+
+function noticeSenderLabel(notice: NoticeInboxItem["notice"]) {
+  return notice.sender?.name || notice.sender?.email || "Verified system sender";
+}
+
+function noticeSecurityRule(notice: NoticeInboxItem["notice"]) {
+  return (
+    metadataString(notice.metadata, "securityRule") ||
+    "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference."
+  );
+}
+
+function AuthenticityBanner({
+  notice,
+  compact = false,
+}: {
+  notice: NoticeInboxItem["notice"];
+  compact?: boolean;
+}) {
+  const fingerprint = metadataString(notice.metadata, "noticeFingerprint");
+  const officialCommunication = metadataBoolean(
+    notice.metadata,
+    "officialCommunication"
+  );
+  const targetLabel =
+    metadataString(notice.metadata, "targetLabel") || noticeScopeLabel(notice);
+  const noticeKind = metadataString(notice.metadata, "noticeKind");
+  const requiresAcknowledgement = metadataBoolean(
+    notice.metadata,
+    "requiresAcknowledgement"
+  );
+  const requiresResponse = metadataBoolean(notice.metadata, "requiresResponse");
+
+  return (
+    <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
+            Verified EduLife OS Official Notice
+          </p>
+          <p className="mt-1 text-sm leading-6 text-emerald-100">
+            This notice is authoritative only inside EduLife OS. SMS and email
+            are alerts/copies. WhatsApp screenshots or forwarded text are not
+            authoritative unless they match this reference.
+          </p>
+        </div>
+
+        <span className="w-fit rounded-full border border-emerald-300/25 bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-100">
+          {officialNoticeRef(notice)}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs text-slate-400">Verified sender</p>
+          <p className="mt-1 text-sm font-semibold text-white">
+            {noticeSenderLabel(notice)}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs text-slate-400">Scope / audience</p>
+          <p className="mt-1 text-sm font-semibold text-white">{targetLabel}</p>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs text-slate-400">Issued</p>
+          <p className="mt-1 text-sm font-semibold text-white">
+            {cleanDate(notice.sentAt ?? notice.createdAt)}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+          <p className="text-xs text-slate-400">Fingerprint</p>
+          <p className="mt-1 break-all text-sm font-semibold text-white">
+            {shortFingerprint(fingerprint)}
+          </p>
+        </div>
+      </div>
+
+      {!compact ? (
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+            <p className="text-xs text-slate-400">Notice type</p>
+            <p className="mt-1 text-sm font-semibold text-white">
+              {noticeKind ? noticeKind.replaceAll("_", " ") : "Not specified"}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+            <p className="text-xs text-slate-400">Required action</p>
+            <p className="mt-1 text-sm font-semibold text-white">
+              {requiresResponse
+                ? "Response required"
+                : requiresAcknowledgement
+                  ? "Acknowledgement required"
+                  : "Information only"}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+            <p className="text-xs text-slate-400">Idempotency scope</p>
+            <p className="mt-1 break-all text-sm font-semibold text-white">
+              {notice.idempotencyScope || "Not recorded"}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <p className="mt-3 text-xs leading-5 text-emerald-100/80">
+        {noticeSecurityRule(notice)}
+      </p>
+    </div>
+  );
 }
 
 export default function OfficialNoticeInboxClient({

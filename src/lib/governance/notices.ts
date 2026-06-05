@@ -1988,6 +1988,62 @@ function normalizeSentNoticeMode(value: unknown): SentNoticeMode {
   return v === "JURISDICTION" ? "jurisdiction" : "mine";
 }
 
+function governanceScopeHasDistrictCommand(scope: GovernanceScope) {
+  if (scope.isSuperAdmin) return true;
+
+  return scope.assignments.some((assignment) => {
+    const role = upper(assignment.role);
+    const level = Number(assignment.zoneLevel ?? 0);
+
+    return role === "DISTRICT_DIRECTOR" || level >= 2;
+  });
+}
+
+function governanceScopeHasCircuitCommand(scope: GovernanceScope) {
+  if (scope.isSuperAdmin) return true;
+
+  return scope.assignments.some((assignment) => {
+    const role = upper(assignment.role);
+    const level = Number(assignment.zoneLevel ?? 0);
+
+    return role === "SISSO" || role === "CIRCUIT_SUPERVISOR" || level === 1;
+  });
+}
+
+function jurisdictionSentNoticeVisibilityWhere(args: {
+  scope: GovernanceScope;
+  actorUserId: string;
+}): Prisma.GovernanceOfficialNoticeWhereInput {
+  const { scope, actorUserId } = args;
+
+  if (scope.isSuperAdmin) {
+    return {};
+  }
+
+  if (governanceScopeHasDistrictCommand(scope)) {
+    return {
+      OR: [
+        {
+          senderUserId: actorUserId,
+        },
+        {
+          case: {
+            status: "ESCALATED",
+          },
+        },
+      ],
+    };
+  }
+
+  if (governanceScopeHasCircuitCommand(scope)) {
+    return {};
+  }
+
+  return {
+    senderUserId: actorUserId,
+  };
+}
+
 function scopedNoticeWhere(scope: GovernanceScope): Prisma.GovernanceOfficialNoticeWhereInput {
   if (scope.isSuperAdmin) return {};
 
@@ -2109,10 +2165,20 @@ export async function listGovernanceSentNoticeAccountability(args: {
     scopedNoticeWhere(args.scope),
   ];
 
-  // Default behavior remains "mine" to preserve existing B.5C.2 proof.
-  // Jurisdiction mode allows officers to see notices inside their authorized scope.
+    // Default behavior remains "mine" to preserve existing B.5C.2 proof.
+  // Jurisdiction mode is command-level aware:
+  // - circuit officers see their authorized circuit notice accountability
+  // - district directors see their own sent notices plus escalated case notices only
+  //   ordinary SISSO-to-head/teacher internal notices stay inside the circuit
   if (mode === "mine") {
     andWhere.push({ senderUserId: args.actorUserId });
+  } else {
+    andWhere.push(
+      jurisdictionSentNoticeVisibilityWhere({
+        scope: args.scope,
+        actorUserId: args.actorUserId,
+      })
+    );
   }
 
   if (caseId) {
