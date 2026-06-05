@@ -42,7 +42,7 @@ type NoticeInboxItem = {
     priority: string;
     status: string;
     channels: unknown;
-        audienceSummary: string | null;
+    audienceSummary: string | null;
     idempotencyKey?: string | null;
     idempotencyScope?: string | null;
     metadata?: Record<string, unknown> | null;
@@ -73,6 +73,11 @@ type NoticeInboxItem = {
     } | null;
   };
   deliveries: NoticeDelivery[];
+    actionRequirement?: {
+    noticeKind: string;
+    requiresAcknowledgement: boolean;
+    requiresResponse: boolean;
+  };
 };
 
 type InboxResponse =
@@ -267,6 +272,95 @@ function noticeSecurityRule(notice: NoticeInboxItem["notice"]) {
   );
 }
 
+function noticeActionRequirement(item: NoticeInboxItem) {
+  const noticeKind =
+    item.actionRequirement?.noticeKind ||
+    metadataString(item.notice.metadata, "noticeKind");
+
+  const hasMetadataAck =
+    item.notice.metadata &&
+    typeof item.notice.metadata === "object" &&
+    !Array.isArray(item.notice.metadata) &&
+    Object.prototype.hasOwnProperty.call(item.notice.metadata, "requiresAcknowledgement");
+
+  const hasMetadataResponse =
+    item.notice.metadata &&
+    typeof item.notice.metadata === "object" &&
+    !Array.isArray(item.notice.metadata) &&
+    Object.prototype.hasOwnProperty.call(item.notice.metadata, "requiresResponse");
+
+  if (item.actionRequirement) {
+    return item.actionRequirement;
+  }
+
+  if (noticeKind === "INFORMATION_ONLY") {
+    return {
+      noticeKind: "INFORMATION_ONLY",
+      requiresAcknowledgement: false,
+      requiresResponse: false,
+    };
+  }
+
+  if (noticeKind === "ACKNOWLEDGEMENT_REQUIRED") {
+    return {
+      noticeKind: "ACKNOWLEDGEMENT_REQUIRED",
+      requiresAcknowledgement: true,
+      requiresResponse: false,
+    };
+  }
+
+  if (noticeKind === "RESPONSE_REQUIRED" || noticeKind === "URGENT_DIRECTIVE") {
+    return {
+      noticeKind,
+      requiresAcknowledgement: true,
+      requiresResponse: true,
+    };
+  }
+
+  if (hasMetadataAck || hasMetadataResponse) {
+    const requiresResponse = metadataBoolean(item.notice.metadata, "requiresResponse");
+    const requiresAcknowledgement =
+      metadataBoolean(item.notice.metadata, "requiresAcknowledgement") ||
+      requiresResponse;
+
+    return {
+      noticeKind: requiresResponse
+        ? "RESPONSE_REQUIRED"
+        : requiresAcknowledgement
+          ? "ACKNOWLEDGEMENT_REQUIRED"
+          : "INFORMATION_ONLY",
+      requiresAcknowledgement,
+      requiresResponse,
+    };
+  }
+
+  if (
+    item.notice.caseId ||
+    item.notice.title.toLowerCase().includes("intervention")
+  ) {
+    return {
+      noticeKind: "LEGACY_INTERVENTION",
+      requiresAcknowledgement: true,
+      requiresResponse: true,
+    };
+  }
+
+  return {
+    noticeKind: "INFORMATION_ONLY",
+    requiresAcknowledgement: false,
+    requiresResponse: false,
+  };
+}
+
+function noticeKindLabel(kind: string) {
+  if (kind === "INFORMATION_ONLY") return "Information only";
+  if (kind === "ACKNOWLEDGEMENT_REQUIRED") return "Acknowledgement required";
+  if (kind === "RESPONSE_REQUIRED") return "Response required";
+  if (kind === "URGENT_DIRECTIVE") return "Urgent directive";
+  if (kind === "LEGACY_INTERVENTION") return "Intervention response required";
+  return kind.replaceAll("_", " ");
+}
+
 function AuthenticityBanner({
   notice,
   compact = false,
@@ -391,12 +485,20 @@ export default function OfficialNoticeInboxClient({
   );
 
   const unacknowledgedCount = useMemo(
-    () => items.filter((item) => !item.acknowledgedAt).length,
+    () =>
+      items.filter((item) => {
+        const requirement = noticeActionRequirement(item);
+        return requirement.requiresAcknowledgement && !item.acknowledgedAt;
+      }).length,
     [items]
   );
 
   const unrespondedCount = useMemo(
-    () => items.filter((item) => !item.respondedAt).length,
+    () =>
+      items.filter((item) => {
+        const requirement = noticeActionRequirement(item);
+        return requirement.requiresResponse && !item.respondedAt;
+      }).length,
     [items]
   );
 
@@ -462,7 +564,11 @@ export default function OfficialNoticeInboxClient({
         return;
       }
 
-      setAction("Notice acknowledged successfully.");
+      setAction(
+        noticeActionRequirement(item).requiresAcknowledgement
+          ? "Notice acknowledged successfully."
+          : "Notice marked as read."
+      );
       await loadInbox();
     } catch {
       setError("Network/server error while acknowledging notice.");
@@ -476,7 +582,7 @@ export default function OfficialNoticeInboxClient({
     const responseBody = String(responseDrafts[item.id] ?? "").trim();
 
     if (responseBody.length < 20) {
-      setError("Corrective response must be at least 20 characters.");
+      setError("Response must be at least 20 characters.");
       return;
     }
 
@@ -512,7 +618,7 @@ export default function OfficialNoticeInboxClient({
         return next;
       });
 
-      setAction("Corrective response submitted successfully.");
+      setAction("Response submitted successfully.");
       await loadInbox();
     } catch {
       setError("Network/server error while submitting corrective response.");
@@ -629,7 +735,13 @@ export default function OfficialNoticeInboxClient({
         <div className="mt-5 space-y-4">
           {items.map((item) => {
             const channels = normalizeChannels(item.notice.channels);
+            const requirement = noticeActionRequirement(item);
+            const requiresAcknowledgement = requirement.requiresAcknowledgement;
+            const requiresResponse = requirement.requiresResponse;
+            const informationOnly =
+              !requiresAcknowledgement && !requiresResponse;
             const acknowledged = Boolean(item.acknowledgedAt);
+            const read = Boolean(item.readAt);
             const responded = Boolean(item.respondedAt);
             const ackKey = `ack:${item.id}`;
             const respondKey = `respond:${item.id}`;
@@ -650,24 +762,37 @@ export default function OfficialNoticeInboxClient({
                       <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${statusClass(item.notice.status)}`}>
                         {item.notice.status.replaceAll("_", " ")}
                       </span>
-                      {acknowledged ? (
-                        <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-100">
-                          ACKNOWLEDGED
+                      <span className="rounded-full border border-sky-300/25 bg-sky-500/10 px-3 py-1 text-[11px] font-semibold text-sky-100">
+                        {noticeKindLabel(requirement.noticeKind)}
+                      </span>
+
+                      {informationOnly ? (
+                        <span className="rounded-full border border-slate-300/20 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200">
+                          {read ? "READ" : "UNREAD"}
                         </span>
-                      ) : (
-                        <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-100">
-                          ACTION NEEDED
-                        </span>
-                      )}
-                      {responded ? (
-                        <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-[11px] font-semibold text-blue-100">
-                          RESPONDED
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold text-amber-100">
-                          RESPONSE PENDING
-                        </span>
-                      )}
+                      ) : requiresAcknowledgement ? (
+                        acknowledged ? (
+                          <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-100">
+                            ACKNOWLEDGED
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-100">
+                            ACKNOWLEDGEMENT NEEDED
+                          </span>
+                        )
+                      ) : null}
+
+                      {requiresResponse ? (
+                        responded ? (
+                          <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-[11px] font-semibold text-blue-100">
+                            RESPONDED
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold text-amber-100">
+                            RESPONSE PENDING
+                          </span>
+                        )
+                      ) : null}
                     </div>
 
                     <h3 className="mt-3 text-lg font-semibold text-white">
@@ -705,6 +830,8 @@ export default function OfficialNoticeInboxClient({
                       </div>
                     </div>
 
+                    <AuthenticityBanner notice={item.notice} />
+
                     <div className="mt-4 flex flex-wrap gap-2">
                       {channels.map((channel) => (
                         <span
@@ -727,39 +854,59 @@ export default function OfficialNoticeInboxClient({
                         <span className="text-slate-500">Read:</span>{" "}
                         {cleanDate(item.readAt)}
                       </p>
-                      <p className="mt-2">
-                        <span className="text-slate-500">Acknowledged:</span>{" "}
-                        {cleanDate(item.acknowledgedAt)}
-                      </p>
-                      <p className="mt-2">
-                        <span className="text-slate-500">Responded:</span>{" "}
-                        {cleanDate(item.respondedAt)}
-                      </p>
+                      {requiresAcknowledgement ? (
+                        <p className="mt-2">
+                          <span className="text-slate-500">Acknowledged:</span>{" "}
+                          {cleanDate(item.acknowledgedAt)}
+                        </p>
+                      ) : null}
+
+                      {requiresResponse ? (
+                        <p className="mt-2">
+                          <span className="text-slate-500">Responded:</span>{" "}
+                          {cleanDate(item.respondedAt)}
+                        </p>
+                      ) : null}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => void acknowledgeNotice(item)}
-                      disabled={acknowledged || busyId === ackKey}
-                      className="mt-3 w-full rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-55"
-                    >
-                      {acknowledged
-                        ? "Already acknowledged"
-                        : busyId === ackKey
-                          ? "Acknowledging..."
-                          : "Acknowledge notice"}
-                    </button>
+                    {requiresAcknowledgement ? (
+                      <button
+                        type="button"
+                        onClick={() => void acknowledgeNotice(item)}
+                        disabled={acknowledged || busyId === ackKey}
+                        className="mt-3 w-full rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-55"
+                      >
+                        {acknowledged
+                          ? "Already acknowledged"
+                          : busyId === ackKey
+                            ? "Acknowledging..."
+                            : "Acknowledge notice"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void acknowledgeNotice(item)}
+                        disabled={read || busyId === ackKey}
+                        className="mt-3 w-full rounded-full border border-slate-300/20 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-55"
+                      >
+                        {read
+                          ? "Already read"
+                          : busyId === ackKey
+                            ? "Marking read..."
+                            : "Mark as read"}
+                      </button>
+                    )}
                   </div>
                 </div>
-
+                {requiresResponse ? (
                 <div className="mt-5 rounded-2xl border border-blue-300/15 bg-blue-400/[0.055] p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-100">
-                        Corrective Response
+                        Required Response
                       </p>
                       <p className="mt-1 text-xs leading-5 text-slate-300">
-                        Submit the action taken by the school. This becomes visible to the SISSO and is recorded on the intervention case evidence chain.
+                        Submit the action or feedback required by this official notice. For intervention notices, this becomes part of the governance evidence chain.
                       </p>
                     </div>
 
@@ -810,13 +957,22 @@ export default function OfficialNoticeInboxClient({
                           disabled={!responseReady || busyId === respondKey}
                           className="rounded-full border border-blue-300/25 bg-blue-400/10 px-4 py-2 text-xs font-semibold text-blue-100 transition hover:bg-blue-400/15 disabled:cursor-not-allowed disabled:opacity-55"
                         >
-                          {busyId === respondKey ? "Submitting..." : "Submit corrective response"}
+                          {busyId === respondKey ? "Submitting..." : "Submit response"}
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
-
+                ) : informationOnly ? (
+                  <div className="mt-5 rounded-2xl border border-slate-300/15 bg-white/[0.035] p-4 text-sm leading-6 text-slate-300">
+                    This is an information-only official notice. No acknowledgement
+                    or response is required. Use “Mark as read” after reviewing it.
+                  </div>
+                ) : (
+                  <div className="mt-5 rounded-2xl border border-emerald-300/15 bg-emerald-400/[0.06] p-4 text-sm leading-6 text-emerald-100">
+                    This notice only requires acknowledgement. No written response is required.
+                  </div>
+                )}
                 <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                     Delivery Evidence

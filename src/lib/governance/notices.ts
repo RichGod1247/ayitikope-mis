@@ -274,6 +274,120 @@ function buildNoticeAuthenticityFingerprint(args: {
   );
 }
 
+function metadataStringValue(metadata: unknown, key: string) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return "";
+  }
+
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
+}
+
+function metadataBooleanValue(metadata: unknown, key: string) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return false;
+  }
+
+  return (metadata as Record<string, unknown>)[key] === true;
+}
+
+type NoticeActionRequirement = {
+  noticeKind:
+    | "INFORMATION_ONLY"
+    | "ACKNOWLEDGEMENT_REQUIRED"
+    | "RESPONSE_REQUIRED"
+    | "URGENT_DIRECTIVE"
+    | "LEGACY_INTERVENTION";
+  requiresAcknowledgement: boolean;
+  requiresResponse: boolean;
+};
+
+function noticeActionRequirement(args: {
+  metadata: unknown;
+  caseId?: string | null;
+  title?: string | null;
+}): NoticeActionRequirement {
+  const rawKind = upper(metadataStringValue(args.metadata, "noticeKind"));
+  const hasAckFlag =
+    !!args.metadata &&
+    typeof args.metadata === "object" &&
+    !Array.isArray(args.metadata) &&
+    Object.prototype.hasOwnProperty.call(args.metadata, "requiresAcknowledgement");
+
+  const hasResponseFlag =
+    !!args.metadata &&
+    typeof args.metadata === "object" &&
+    !Array.isArray(args.metadata) &&
+    Object.prototype.hasOwnProperty.call(args.metadata, "requiresResponse");
+
+  const ackFlag = metadataBooleanValue(args.metadata, "requiresAcknowledgement");
+  const responseFlag = metadataBooleanValue(args.metadata, "requiresResponse");
+
+  if (rawKind === "INFORMATION_ONLY") {
+    return {
+      noticeKind: "INFORMATION_ONLY",
+      requiresAcknowledgement: false,
+      requiresResponse: false,
+    };
+  }
+
+  if (rawKind === "ACKNOWLEDGEMENT_REQUIRED") {
+    return {
+      noticeKind: "ACKNOWLEDGEMENT_REQUIRED",
+      requiresAcknowledgement: true,
+      requiresResponse: false,
+    };
+  }
+
+  if (rawKind === "RESPONSE_REQUIRED") {
+    return {
+      noticeKind: "RESPONSE_REQUIRED",
+      requiresAcknowledgement: true,
+      requiresResponse: true,
+    };
+  }
+
+  if (rawKind === "URGENT_DIRECTIVE") {
+    return {
+      noticeKind: "URGENT_DIRECTIVE",
+      requiresAcknowledgement: true,
+      requiresResponse: true,
+    };
+  }
+
+  if (hasAckFlag || hasResponseFlag) {
+    return {
+      noticeKind: responseFlag
+        ? "RESPONSE_REQUIRED"
+        : ackFlag
+          ? "ACKNOWLEDGEMENT_REQUIRED"
+          : "INFORMATION_ONLY",
+      requiresAcknowledgement: ackFlag || responseFlag,
+      requiresResponse: responseFlag,
+    };
+  }
+
+  const title = normalizeIntentText(args.title ?? "");
+
+  if (
+    args.caseId ||
+    title.startsWith("official intervention notice:") ||
+    title.includes("intervention")
+  ) {
+    return {
+      noticeKind: "LEGACY_INTERVENTION",
+      requiresAcknowledgement: true,
+      requiresResponse: true,
+    };
+  }
+
+  return {
+    noticeKind: "INFORMATION_ONLY",
+    requiresAcknowledgement: false,
+    requiresResponse: false,
+  };
+}
+
 function isUniqueConstraintError(err: unknown) {
   return (
     err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -1352,7 +1466,7 @@ export async function sendGovernanceOfficialNotice(args: {
   ip?: string | null;
   userAgent?: string | null;
 }) {
-   const { scope, actorUserId, input } = args;
+  const { scope, actorUserId, input } = args;
 
   const target = await resolveNoticeTarget(scope, input);
   const metadataInput = inputObject(input.metadata);
@@ -1474,6 +1588,31 @@ export async function sendGovernanceOfficialNotice(args: {
               tenantCount: scope.tenantIds.length,
             },
             officialCommunication: isOfficialCommunicationInput(input),
+                        noticeKind:
+              metadataInput.noticeKind ??
+              (isOfficialCommunicationInput(input)
+                ? "ACKNOWLEDGEMENT_REQUIRED"
+                : target.caseId
+                  ? "LEGACY_INTERVENTION"
+                  : "INFORMATION_ONLY"),
+            requiresAcknowledgement:
+              metadataInput.requiresAcknowledgement ??
+              Boolean(
+                noticeActionRequirement({
+                  metadata: metadataInput,
+                  caseId: target.caseId,
+                  title,
+                }).requiresAcknowledgement
+              ),
+            requiresResponse:
+              metadataInput.requiresResponse ??
+              Boolean(
+                noticeActionRequirement({
+                  metadata: metadataInput,
+                  caseId: target.caseId,
+                  title,
+                }).requiresResponse
+              ),
             targetRoles: targetRolesArray(input.targetRoles),
             noticeFingerprint,
             fingerprintAlgorithm: "sha256",
@@ -1651,14 +1790,10 @@ export async function listGovernanceNoticeInbox(args: {
     where.readAt = null;
   }
 
-  if (boolish(args.input.unacknowledgedOnly)) {
-    where.acknowledgedAt = null;
-  }
-
-  return prisma.governanceOfficialNoticeRecipient.findMany({
+  const rows = await prisma.governanceOfficialNoticeRecipient.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    take,
+    take: MAX_NOTICE_TAKE,
     select: {
       id: true,
       tenantId: true,
@@ -1681,7 +1816,7 @@ export async function listGovernanceNoticeInbox(args: {
           body: true,
           priority: true,
           status: true,
-                    channels: true,
+          channels: true,
           audienceSummary: true,
           idempotencyKey: true,
           idempotencyScope: true,
@@ -1744,6 +1879,31 @@ export async function listGovernanceNoticeInbox(args: {
       },
     },
   });
+
+  const filtered = boolish(args.input.unacknowledgedOnly)
+    ? rows.filter((row) => {
+        const requirement = noticeActionRequirement({
+          metadata: row.notice.metadata,
+          caseId: row.notice.caseId,
+          title: row.notice.title,
+        });
+
+        return requirement.requiresAcknowledgement && !row.acknowledgedAt;
+      })
+    : rows;
+
+  return filtered.slice(0, take).map((row) => {
+    const requirement = noticeActionRequirement({
+      metadata: row.notice.metadata,
+      caseId: row.notice.caseId,
+      title: row.notice.title,
+    });
+
+    return {
+      ...row,
+      actionRequirement: requirement,
+    };
+  });
 }
 
 export async function acknowledgeGovernanceNotice(args: {
@@ -1772,6 +1932,16 @@ export async function acknowledgeGovernanceNotice(args: {
       tenantId: true,
       readAt: true,
       acknowledgedAt: true,
+      notice: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          caseId: true,
+          senderUserId: true,
+          metadata: true,
+        },
+      },
     },
   });
 
@@ -1779,14 +1949,25 @@ export async function acknowledgeGovernanceNotice(args: {
     throw new GovernanceNoticeError(404, "NOTICE_RECIPIENT_NOT_FOUND");
   }
 
+  const requirement = noticeActionRequirement({
+    metadata: recipient.notice.metadata,
+    caseId: recipient.notice.caseId,
+    title: recipient.notice.title,
+  });
+
   const now = new Date();
+  const shouldAcknowledge = requirement.requiresAcknowledgement;
 
   const updated = await prisma.governanceOfficialNoticeRecipient.update({
     where: { id: recipient.id },
     data: {
       readAt: recipient.readAt ?? now,
-      acknowledgedAt: recipient.acknowledgedAt ?? now,
-      acknowledgeNote: note || null,
+      ...(shouldAcknowledge
+        ? {
+            acknowledgedAt: recipient.acknowledgedAt ?? now,
+            acknowledgeNote: note || null,
+          }
+        : {}),
     },
     select: {
       id: true,
@@ -1804,6 +1985,7 @@ export async function acknowledgeGovernanceNotice(args: {
           status: true,
           caseId: true,
           senderUserId: true,
+          metadata: true,
         },
       },
       deliveries: {
@@ -1821,7 +2003,9 @@ export async function acknowledgeGovernanceNotice(args: {
   });
 
   await writeAuditLog({
-    action: "GOVERNANCE_OFFICIAL_NOTICE_ACKNOWLEDGED",
+    action: shouldAcknowledge
+      ? "GOVERNANCE_OFFICIAL_NOTICE_ACKNOWLEDGED"
+      : "GOVERNANCE_OFFICIAL_NOTICE_READ",
     tenantId: recipient.tenantId ?? undefined,
     userId: args.actorUserId,
     resource: "GovernanceOfficialNoticeRecipient",
@@ -1831,6 +2015,9 @@ export async function acknowledgeGovernanceNotice(args: {
     metadata: {
       noticeId: recipient.noticeId,
       note: note || null,
+      noticeKind: requirement.noticeKind,
+      requiresAcknowledgement: requirement.requiresAcknowledgement,
+      requiresResponse: requirement.requiresResponse,
     },
   });
 
@@ -1875,6 +2062,7 @@ export async function respondGovernanceNotice(args: {
           caseId: true,
           tenantId: true,
           zoneId: true,
+          metadata: true,
         },
       },
     },
@@ -1882,6 +2070,16 @@ export async function respondGovernanceNotice(args: {
 
   if (!recipient) {
     throw new GovernanceNoticeError(404, "NOTICE_RECIPIENT_NOT_FOUND");
+  }
+
+  const requirement = noticeActionRequirement({
+    metadata: recipient.notice.metadata,
+    caseId: recipient.notice.caseId,
+    title: recipient.notice.title,
+  });
+
+  if (!requirement.requiresResponse) {
+    throw new GovernanceNoticeError(400, "NOTICE_RESPONSE_NOT_REQUIRED");
   }
 
   const now = new Date();
@@ -1896,7 +2094,7 @@ export async function respondGovernanceNotice(args: {
           ? {}
           : {
               acknowledgeNote:
-                "Corrective response submitted; acknowledgement captured automatically.",
+                "Response submitted; acknowledgement captured automatically.",
             }),
         respondedAt: now,
         responseBody,
@@ -1919,6 +2117,7 @@ export async function respondGovernanceNotice(args: {
             status: true,
             caseId: true,
             senderUserId: true,
+            metadata: true,
           },
         },
         deliveries: {
@@ -1948,6 +2147,9 @@ export async function respondGovernanceNotice(args: {
             recipientId: recipient.id,
             respondedAt: now.toISOString(),
             responseBody,
+            noticeKind: requirement.noticeKind,
+            requiresAcknowledgement: requirement.requiresAcknowledgement,
+            requiresResponse: requirement.requiresResponse,
             extra: args.input.metadata,
           }),
         },
@@ -1969,6 +2171,9 @@ export async function respondGovernanceNotice(args: {
       noticeId: recipient.noticeId,
       caseId: recipient.notice.caseId,
       responseBody,
+      noticeKind: requirement.noticeKind,
+      requiresAcknowledgement: requirement.requiresAcknowledgement,
+      requiresResponse: requirement.requiresResponse,
     },
   });
 
