@@ -303,6 +303,67 @@ model TenantBootstrapInvite {
   @@index([schoolSector])
 }
 
+model OnboardingApplication {
+  id String @id @default(cuid())
+
+  type   OnboardingApplicationType
+  status OnboardingApplicationStatus @default(PENDING)
+
+  applicantName  String?
+  applicantTitle String?
+
+  email     String @db.VarChar(320)
+  emailNorm String @db.VarChar(320)
+
+  phone     String? @db.VarChar(32)
+  phoneNorm String? @db.VarChar(16)
+
+  schoolName     String?
+  schoolSector   SchoolSector?
+  officialId     String?       @db.VarChar(120)
+  officialIdNorm String?       @db.VarChar(120)
+
+  gpsAddress String?
+  region     String?
+  district   String?
+  circuit    String?
+
+  governanceRole GovernanceOfficerRole?
+  zoneId         String?
+  title          String?
+
+  notes  String? @db.Text
+  source String  @default("PUBLIC_APPLICATION") @db.VarChar(80)
+
+  ip        String?
+  userAgent String?
+
+  reviewedByUserId String?
+  reviewedAt       DateTime? @db.Timestamptz(6)
+  reviewReason     String?   @db.Text
+
+  convertedByUserId String?
+  convertedAt       DateTime? @db.Timestamptz(6)
+
+  convertedTenantBootstrapInviteId   String?
+  convertedGovernanceOfficerInviteId String?
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([type, status])
+  @@index([status, createdAt])
+  @@index([emailNorm])
+  @@index([phoneNorm])
+  @@index([officialIdNorm])
+  @@index([zoneId])
+  @@index([governanceRole])
+  @@index([convertedTenantBootstrapInviteId])
+  @@index([convertedGovernanceOfficerInviteId])
+}
+
 model HeadteacherSignature {
   id       String @id @default(cuid())
   tenantId String
@@ -2559,6 +2620,19 @@ enum TenantStatus {
   PENDING
   ACTIVE
   SUSPENDED
+  ARCHIVED
+}
+
+enum OnboardingApplicationType {
+  SCHOOL
+  GOVERNANCE_OFFICER
+}
+
+enum OnboardingApplicationStatus {
+  PENDING
+  UNDER_REVIEW
+  REJECTED
+  CONVERTED
   ARCHIVED
 }
 
