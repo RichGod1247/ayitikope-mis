@@ -9,6 +9,7 @@ import {
   GovernanceOfficialNoticeStatus,
   GovernanceOfficerRole,
   Prisma,
+  SchoolSector,
   TenantStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -106,6 +107,8 @@ type NormalizedRecipient = {
   metadata: Prisma.InputJsonValue;
 };
 
+type NoticeSectorTarget = "PUBLIC" | "PRIVATE" | "ALL_AUTHORIZED";
+
 const NOTICE_TX_OPTIONS = {
   maxWait: 10_000,
   timeout: 30_000,
@@ -128,6 +131,36 @@ function normKey(value: unknown) {
 function boolish(value: unknown) {
   const v = upper(value);
   return v === "1" || v === "TRUE" || v === "YES";
+}
+
+function normalizeNoticeSectorTarget(input: SendNoticeInput): NoticeSectorTarget {
+  const metadata = inputObject(input.metadata);
+
+  const raw = upper(
+    metadata.governanceSectorTarget ??
+      metadata.schoolSectorTarget ??
+      metadata.sectorTarget
+  );
+
+  if (raw === "PRIVATE") return "PRIVATE";
+  if (raw === "PUBLIC") return "PUBLIC";
+  if (raw === "ALL" || raw === "ALL_AUTHORIZED" || raw === "AUTHORIZED") {
+    return "ALL_AUTHORIZED";
+  }
+
+  // Bank-grade default:
+  // Ordinary official command must not silently include private schools.
+  return isOfficialCommunicationInput(input) ? "PUBLIC" : "ALL_AUTHORIZED";
+}
+
+function noticeSectorAllowsTenant(
+  tenantSector: SchoolSector | null | undefined,
+  sectorTarget: NoticeSectorTarget
+) {
+  if (sectorTarget === "ALL_AUTHORIZED") return true;
+  if (sectorTarget === "PUBLIC") return tenantSector === SchoolSector.PUBLIC;
+  if (sectorTarget === "PRIVATE") return tenantSector === SchoolSector.PRIVATE;
+  return false;
 }
 
 function intOrNull(value: unknown) {
@@ -647,10 +680,32 @@ async function noticeTargetZoneIds(target: NoticeTarget, scope: GovernanceScope)
   return descendants.filter((zoneId) => allowed.has(zoneId));
 }
 
-async function noticeTargetTenantIds(target: NoticeTarget, scope: GovernanceScope) {
+async function noticeTargetTenantIds(
+  target: NoticeTarget,
+  scope: GovernanceScope,
+  sectorTarget: NoticeSectorTarget
+) {
   if (target.tenantId) {
     assertTenantInScope(scope, target.tenantId);
-    return [target.tenantId];
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: target.tenantId },
+      select: {
+        id: true,
+        schoolSector: true,
+        status: true,
+      },
+    });
+
+    if (!tenant || tenant.status !== TenantStatus.ACTIVE) {
+      throw new GovernanceNoticeError(404, "SCHOOL_NOT_FOUND_OR_INACTIVE");
+    }
+
+    if (!noticeSectorAllowsTenant(tenant.schoolSector, sectorTarget)) {
+      throw new GovernanceNoticeError(403, "SCHOOL_SECTOR_NOT_ALLOWED_FOR_NOTICE_TARGET");
+    }
+
+    return [tenant.id];
   }
 
   if (!target.zoneId) return [];
@@ -663,13 +718,24 @@ async function noticeTargetTenantIds(target: NoticeTarget, scope: GovernanceScop
     status: TenantStatus.ACTIVE,
   };
 
+  if (sectorTarget === "PUBLIC") {
+    where.schoolSector = SchoolSector.PUBLIC;
+  }
+
+  if (sectorTarget === "PRIVATE") {
+    where.schoolSector = SchoolSector.PRIVATE;
+  }
+
   if (!scope.isSuperAdmin) {
     where.id = { in: scope.tenantIds.length ? scope.tenantIds : ["__none__"] };
   }
 
   const tenants = await prisma.tenant.findMany({
     where,
-    select: { id: true },
+    select: {
+      id: true,
+      schoolSector: true,
+    },
     orderBy: { name: "asc" },
   });
 
@@ -872,9 +938,10 @@ async function explicitRecipients(input: SendNoticeInput): Promise<NormalizedRec
 async function schoolRoleRecipients(
   target: NoticeTarget,
   requestedRoles: string[],
-  scope: GovernanceScope
+  scope: GovernanceScope,
+  sectorTarget: NoticeSectorTarget
 ): Promise<NormalizedRecipient[]> {
-  const tenantIds = await noticeTargetTenantIds(target, scope);
+  const tenantIds = await noticeTargetTenantIds(target, scope, sectorTarget);
   if (!tenantIds.length) return [];
 
   const memberships = await prisma.membership.findMany({
@@ -890,6 +957,7 @@ async function schoolRoleRecipients(
           id: true,
           name: true,
           schoolCode: true,
+          schoolSector: true,
           zoneId: true,
         },
       },
@@ -931,6 +999,8 @@ async function schoolRoleRecipients(
           tenantId: m.tenant.id,
           schoolName: m.tenant.name,
           schoolCode: m.tenant.schoolCode,
+          schoolSector: m.tenant.schoolSector,
+          governanceSectorTarget: sectorTarget,
           zoneId: m.tenant.zoneId,
         }),
       };
@@ -1026,6 +1096,7 @@ async function resolveRecipients(args: {
   const { scope, target, input } = args;
 
   const strictOfficialCommunication = isOfficialCommunicationInput(input);
+  const sectorTarget = normalizeNoticeSectorTarget(input);
   const requestedRoles = targetRolesArray(input.targetRoles);
 
   const explicit = strictOfficialCommunication
@@ -1034,7 +1105,7 @@ async function resolveRecipients(args: {
 
   const schoolRoles =
     requestedRoles.length || target.tenantId || target.zoneId
-      ? await schoolRoleRecipients(target, requestedRoles, scope)
+      ? await schoolRoleRecipients(target, requestedRoles, scope, sectorTarget)
       : [];
 
   const governanceRoles =
@@ -1470,6 +1541,7 @@ export async function sendGovernanceOfficialNotice(args: {
 
   const target = await resolveNoticeTarget(scope, input);
   const metadataInput = inputObject(input.metadata);
+  const sectorTarget = normalizeNoticeSectorTarget(input);
 
   assertOfficialCommunicationAuthority({
     scope,
@@ -1588,6 +1660,9 @@ export async function sendGovernanceOfficialNotice(args: {
               tenantCount: scope.tenantIds.length,
             },
             officialCommunication: isOfficialCommunicationInput(input),
+                        governanceSectorTarget: sectorTarget,
+            governanceSectorRule:
+              "PUBLIC targets only public schools. PRIVATE targets only private schools. ALL_AUTHORIZED targets all schools already inside the verified governance scope.",
                         noticeKind:
               metadataInput.noticeKind ??
               (isOfficialCommunicationInput(input)
@@ -1756,6 +1831,7 @@ export async function sendGovernanceOfficialNotice(args: {
       idempotencyKey,
       idempotencyScope: idempotencyKey ? idempotencyScope : null,
       noticeFingerprint,
+      governanceSectorTarget: sectorTarget,
       fingerprintAlgorithm: "sha256",
       securityRule:
         "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference.",

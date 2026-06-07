@@ -4,6 +4,7 @@ import {
   AttendanceStatus,
   ClassroomStatus,
   Prisma,
+  SchoolSector,
   StudentStatus,
   TenantStatus,
 } from "@prisma/client";
@@ -116,6 +117,7 @@ type MappedSchool = {
   name: string;
   schoolCode: string | null;
   status: string;
+  schoolSector: SchoolSector;
   circuit: {
     id: string;
     name: string;
@@ -1039,11 +1041,12 @@ export async function buildGovernanceOverview(scope: GovernanceScope) {
         status: TenantStatus.ACTIVE,
       },
       select: {
-        id: true,
-        name: true,
-        schoolCode: true,
-        status: true,
-        zone: {
+  id: true,
+  name: true,
+  schoolCode: true,
+  status: true,
+  schoolSector: true,
+  zone: {
           select: {
             id: true,
             name: true,
@@ -1098,11 +1101,12 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
       const metrics = metricsByTenantId.get(school.id) ?? zeroMetrics();
 
       return {
-        id: school.id,
-        name: school.name,
-        schoolCode: school.schoolCode,
-        status: school.status,
-        circuit: school.zone
+  id: school.id,
+  name: school.name,
+  schoolCode: school.schoolCode,
+  status: school.status,
+  schoolSector: school.schoolSector,
+  circuit: school.zone
           ? {
               id: school.zone.id,
               name: school.zone.name,
@@ -1206,6 +1210,43 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
     }
   );
 
+    const publicSchools = mappedSchools.filter(
+    (school) => school.schoolSector === SchoolSector.PUBLIC
+  );
+
+  const privateSchools = mappedSchools.filter(
+    (school) => school.schoolSector === SchoolSector.PRIVATE
+  );
+
+  const sectorRiskSummary = {
+    public: {
+      schools: publicSchools.length,
+      highRiskSchools: publicSchools.filter((school) => school.metrics.riskLevel === "HIGH")
+        .length,
+      criticalRiskSchools: publicSchools.filter(
+        (school) => school.metrics.riskLevel === "CRITICAL"
+      ).length,
+      highestRiskScore: publicSchools.reduce(
+        (max, school) => Math.max(max, school.metrics.riskScore),
+        0
+      ),
+    },
+    private: {
+      schools: privateSchools.length,
+      highRiskSchools: privateSchools.filter((school) => school.metrics.riskLevel === "HIGH")
+        .length,
+      criticalRiskSchools: privateSchools.filter(
+        (school) => school.metrics.riskLevel === "CRITICAL"
+      ).length,
+      highestRiskScore: privateSchools.reduce(
+        (max, school) => Math.max(max, school.metrics.riskScore),
+        0
+      ),
+    },
+    governanceRule:
+      "Public schools are normal GES governance targets. Private schools must be distinguished and should only be included in official command where explicitly authorized.",
+  };
+
   const circuitMap = new Map<
     string,
     {
@@ -1213,9 +1254,11 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
       circuitName: string;
       districtId: string | null;
       districtName: string | null;
-      schools: number;
-      learners: number;
-      teachers: number;
+schools: number;
+publicSchools: number;
+privateSchools: number;
+learners: number;
+teachers: number;
       classrooms: number;
       attendanceMarksToday: number;
       presentMarksToday: number;
@@ -1247,14 +1290,15 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
       criticalRiskSchools: number;
       highestRiskScore: number;
       schoolsDrivingRisk: Array<{
-        schoolId: string;
-        schoolName: string;
-        schoolCode: string | null;
-        riskScore: number;
-        riskLevel: RiskLevel;
-        reasons: string[];
-        recommendedActions: string[];
-      }>;
+  schoolId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector: SchoolSector;
+  riskScore: number;
+  riskLevel: RiskLevel;
+  reasons: string[];
+  recommendedActions: string[];
+}>;
       directorRecommendedActions: string[];
     }
   >();
@@ -1270,8 +1314,10 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
         districtId: school.district?.id ?? null,
         districtName: school.district?.name ?? null,
         schools: 0,
-        learners: 0,
-        teachers: 0,
+publicSchools: 0,
+privateSchools: 0,
+learners: 0,
+teachers: 0,
         classrooms: 0,
         attendanceMarksToday: 0,
         presentMarksToday: 0,
@@ -1306,8 +1352,10 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
         directorRecommendedActions: [],
       };
 
-    existing.schools += 1;
-    existing.learners += school.metrics.learners;
+existing.schools += 1;
+if (school.schoolSector === SchoolSector.PUBLIC) existing.publicSchools += 1;
+if (school.schoolSector === SchoolSector.PRIVATE) existing.privateSchools += 1;
+existing.learners += school.metrics.learners;
     existing.teachers += school.metrics.teachers;
     existing.classrooms += school.metrics.classrooms;
     existing.attendanceMarksToday += school.metrics.attendanceMarksToday;
@@ -1337,15 +1385,16 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
     existing.orphanedDeliveriesLast14Days += school.metrics.orphanedDeliveriesLast14Days;
 
     if (school.metrics.riskLevel !== "LOW") {
-      existing.schoolsDrivingRisk.push({
-        schoolId: school.id,
-        schoolName: school.name,
-        schoolCode: school.schoolCode,
-        riskScore: school.metrics.riskScore,
-        riskLevel: school.metrics.riskLevel,
-        reasons: school.metrics.riskReasons,
-        recommendedActions: school.metrics.recommendedActions,
-      });
+existing.schoolsDrivingRisk.push({
+  schoolId: school.id,
+  schoolName: school.name,
+  schoolCode: school.schoolCode,
+  schoolSector: school.schoolSector,
+  riskScore: school.metrics.riskScore,
+  riskLevel: school.metrics.riskLevel,
+  reasons: school.metrics.riskReasons,
+  recommendedActions: school.metrics.recommendedActions,
+});
     }
 
     if (school.metrics.riskLevel === "HIGH") existing.highRiskSchools += 1;
@@ -1400,10 +1449,11 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
     .filter((school) => school.metrics.riskLevel !== "LOW")
     .slice(0, 10)
     .map((school) => ({
-      schoolId: school.id,
-      schoolName: school.name,
-      schoolCode: school.schoolCode,
-      circuitName: school.circuit?.name ?? "Unassigned Circuit",
+  schoolId: school.id,
+  schoolName: school.name,
+  schoolCode: school.schoolCode,
+  schoolSector: school.schoolSector,
+  circuitName: school.circuit?.name ?? "Unassigned Circuit",
       districtName: school.district?.name ?? null,
       riskScore: school.metrics.riskScore,
       riskLevel: school.metrics.riskLevel,
@@ -1480,14 +1530,17 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
     emptyStates.push("No high-priority intervention school detected from current signals.");
   }
 
-  return {
-    schools: mappedSchools,
-    circuitBreakdown,
-    interventionQueue,
-    riskSummary,
-    totals: {
-      schools: mappedSchools.length,
-      learners: metricTotals.learners,
+ return {
+  schools: mappedSchools,
+  circuitBreakdown,
+  interventionQueue,
+  riskSummary,
+  sectorSummary: sectorRiskSummary,
+  totals: {
+  schools: mappedSchools.length,
+  publicSchools: publicSchools.length,
+  privateSchools: privateSchools.length,
+  learners: metricTotals.learners,
       teachers: metricTotals.teachers,
       classrooms: metricTotals.classrooms,
       circuits: circuitCount || zones.filter((z) => z.zoneType.level === 1).length,

@@ -60,6 +60,7 @@ type SchoolRow = {
   name: string;
   schoolCode: string | null;
   status: string;
+  schoolSector?: "PUBLIC" | "PRIVATE" | string;
   circuit?: {
     id: string;
     name: string;
@@ -77,6 +78,7 @@ type SchoolDrivingRisk = {
   schoolId: string;
   schoolName: string;
   schoolCode: string | null;
+  schoolSector?: "PUBLIC" | "PRIVATE" | string;
   riskScore: number;
   riskLevel: RiskLevel | string;
   reasons: string[];
@@ -89,6 +91,8 @@ type CircuitBreakdownRow = {
   districtId: string | null;
   districtName: string | null;
   schools: number;
+  publicSchools?: number;
+  privateSchools?: number;
   learners: number;
   teachers: number;
   classrooms?: number;
@@ -134,6 +138,7 @@ type InterventionQueueItem = {
   schoolId: string;
   schoolName: string;
   schoolCode: string | null;
+  schoolSector?: "PUBLIC" | "PRIVATE" | string;
   circuitName: string;
   districtName: string | null;
   riskScore: number;
@@ -161,7 +166,6 @@ type InterventionQueueItem = {
     lessonDeliveryComplianceRate?: number;
   };
 };
-
 
 type GovernanceCaseStatus =
   | "OPEN"
@@ -215,7 +219,7 @@ type GovernanceCase = {
       email: string;
     } | null;
   }>;
-    resolutionNote?: string | null;
+  resolutionNote?: string | null;
   dueAt?: string | null;
   notices?: Array<{
     id: string;
@@ -271,6 +275,22 @@ type NoticeSendResponse =
   | { ok: true; item: any; reused?: boolean; duplicateSafe?: boolean }
   | { ok: false; error: string };
 
+type SectorSummary = {
+  public?: {
+    schools: number;
+    highRiskSchools: number;
+    criticalRiskSchools: number;
+    highestRiskScore: number;
+  };
+  private?: {
+    schools: number;
+    highRiskSchools: number;
+    criticalRiskSchools: number;
+    highestRiskScore: number;
+  };
+  governanceRule?: string;
+};
+
 type RiskSummary = {
   low?: number;
   medium?: number;
@@ -306,6 +326,7 @@ type OverviewResponse = {
     circuitBreakdown?: CircuitBreakdownRow[];
     interventionQueue?: InterventionQueueItem[];
     riskSummary?: RiskSummary;
+    sectorSummary?: SectorSummary;
     totals?: Record<string, number>;
     signals?: Record<string, number>;
     emptyStates?: string[];
@@ -366,20 +387,42 @@ function formatSignalValue(key: string, value: unknown) {
   return numberValue(value).toLocaleString();
 }
 
+function schoolSectorLabel(value?: string | null) {
+  if (value === "PRIVATE") return "Private";
+  if (value === "PUBLIC") return "Public";
+  return "Unspecified sector";
+}
+
+function schoolSectorBadgeClass(value?: string | null) {
+  if (value === "PRIVATE") {
+    return "border-purple-300/25 bg-purple-400/10 text-purple-100";
+  }
+
+  if (value === "PUBLIC") {
+    return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
+  }
+
+  return "border-white/10 bg-white/5 text-slate-200";
+}
+
 function roleLabel(role: string) {
   if (role === "SISSO") return "SISSO";
   if (role === "CIRCUIT_SUPERVISOR") return "Circuit Supervisor";
   if (role === "DISTRICT_DIRECTOR") return "District Director";
   if (role === "DISTRICT_MIS_OFFICER") return "District MIS/Data Officer";
   if (role === "DISTRICT_SHEP_OFFICER") return "District SHEP/Health Officer";
-  if (role === "DISTRICT_ASSESSMENT_OFFICER") return "District Assessment Officer";
+  if (role === "DISTRICT_ASSESSMENT_OFFICER")
+    return "District Assessment Officer";
   return role.replaceAll("_", " ");
 }
 
 function riskBadgeClass(level?: string) {
-  if (level === "CRITICAL") return "border-red-300/30 bg-red-500/15 text-red-100";
-  if (level === "HIGH") return "border-orange-300/30 bg-orange-500/15 text-orange-100";
-  if (level === "MEDIUM") return "border-amber-300/30 bg-amber-400/15 text-amber-100";
+  if (level === "CRITICAL")
+    return "border-red-300/30 bg-red-500/15 text-red-100";
+  if (level === "HIGH")
+    return "border-orange-300/30 bg-orange-500/15 text-orange-100";
+  if (level === "MEDIUM")
+    return "border-amber-300/30 bg-amber-400/15 text-amber-100";
   return "border-emerald-300/30 bg-emerald-400/15 text-emerald-100";
 }
 
@@ -426,16 +469,16 @@ function closureEvidenceForCase(item: GovernanceCase) {
     (notice.recipients ?? []).map((recipient) => ({
       notice,
       recipient,
-    }))
+    })),
   );
 
   const acknowledgedRecipients = recipients.filter(({ recipient }) =>
-    Boolean(recipient.acknowledgedAt)
+    Boolean(recipient.acknowledgedAt),
   );
 
   const respondedRecipients = recipients.filter(
     ({ recipient }) =>
-      Boolean(recipient.respondedAt) && Boolean(recipient.responseBody)
+      Boolean(recipient.respondedAt) && Boolean(recipient.responseBody),
   );
 
   const latestResponse = [...respondedRecipients].sort((a, b) => {
@@ -495,7 +538,9 @@ function buildResolutionNote(item: GovernanceCase) {
   return [
     "Case resolved after official notice response evidence.",
     item.tenant?.name ? `School: ${item.tenant.name}.` : "",
-    evidence.latestResponseBy ? `Respondent: ${evidence.latestResponseBy}.` : "",
+    evidence.latestResponseBy
+      ? `Respondent: ${evidence.latestResponseBy}.`
+      : "",
     evidence.latestRespondedAt
       ? `Responded: ${
           compactDateTime(evidence.latestRespondedAt) ??
@@ -612,7 +657,7 @@ function districtCaseCommandSummary(cases: GovernanceCase[]) {
   const resolvedCases = cases.filter((item) => item.status === "RESOLVED");
 
   const noNoticeCases = activeCases.filter(
-    (item) => !closureEvidenceForCase(item).hasOfficialNotice
+    (item) => !closureEvidenceForCase(item).hasOfficialNotice,
   );
 
   const awaitingAckCases = activeCases.filter((item) => {
@@ -626,18 +671,18 @@ function districtCaseCommandSummary(cases: GovernanceCase[]) {
   });
 
   const resolvedWithEvidenceCases = resolvedCases.filter(
-    (item) => closureEvidenceForCase(item).hasCorrectiveResponse
+    (item) => closureEvidenceForCase(item).hasCorrectiveResponse,
   );
 
   const overdueCases = activeCases.filter(isOverdueIntervention);
   const escalatedCases = cases.filter((item) => item.status === "ESCALATED");
 
   const criticalCases = activeCases.filter(
-    (item) => item.priority === "CRITICAL" || item.riskLevel === "CRITICAL"
+    (item) => item.priority === "CRITICAL" || item.riskLevel === "CRITICAL",
   );
 
   const highCases = activeCases.filter(
-    (item) => item.priority === "HIGH" || item.riskLevel === "HIGH"
+    (item) => item.priority === "HIGH" || item.riskLevel === "HIGH",
   );
 
   const circuitMap = new Map<
@@ -659,24 +704,20 @@ function districtCaseCommandSummary(cases: GovernanceCase[]) {
   for (const item of cases) {
     const key = item.zone?.id ?? item.tenantId ?? "unknown";
     const name =
-      item.zone?.name ??
-      item.tenant?.name ??
-      "Unassigned circuit / school";
+      item.zone?.name ?? item.tenant?.name ?? "Unassigned circuit / school";
 
-    const existing =
-      circuitMap.get(key) ??
-      {
-        id: key,
-        name,
-        total: 0,
-        active: 0,
-        overdue: 0,
-        escalated: 0,
-        awaitingResponse: 0,
-        resolvedWithEvidence: 0,
-        highestRiskScore: 0,
-        latestCaseAt: null,
-      };
+    const existing = circuitMap.get(key) ?? {
+      id: key,
+      name,
+      total: 0,
+      active: 0,
+      overdue: 0,
+      escalated: 0,
+      awaitingResponse: 0,
+      resolvedWithEvidence: 0,
+      highestRiskScore: 0,
+      latestCaseAt: null,
+    };
 
     const evidence = closureEvidenceForCase(item);
 
@@ -685,7 +726,11 @@ function districtCaseCommandSummary(cases: GovernanceCase[]) {
     if (!isClosedCase(item)) existing.active += 1;
     if (isOverdueIntervention(item)) existing.overdue += 1;
     if (item.status === "ESCALATED") existing.escalated += 1;
-    if (!isClosedCase(item) && evidence.hasOfficialNotice && !evidence.hasCorrectiveResponse) {
+    if (
+      !isClosedCase(item) &&
+      evidence.hasOfficialNotice &&
+      !evidence.hasCorrectiveResponse
+    ) {
       existing.awaitingResponse += 1;
     }
     if (item.status === "RESOLVED" && evidence.hasCorrectiveResponse) {
@@ -694,7 +739,7 @@ function districtCaseCommandSummary(cases: GovernanceCase[]) {
 
     existing.highestRiskScore = Math.max(
       existing.highestRiskScore,
-      numberValue(item.riskScore)
+      numberValue(item.riskScore),
     );
 
     if (
@@ -741,7 +786,7 @@ function DistrictCaseCommandPanel({ cases }: { cases: GovernanceCase[] }) {
     ? Math.round(
         (summary.resolvedWithEvidenceCases.length /
           summary.resolvedCases.length) *
-          100
+          100,
       )
     : 0;
 
@@ -758,8 +803,9 @@ function DistrictCaseCommandPanel({ cases }: { cases: GovernanceCase[] }) {
             Intervention accountability across circuits
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-amber-100/80">
-            This tells the Director whether supervision cases are only being opened,
-            or whether officers are driving them to acknowledged, responded, evidence-based closure.
+            This tells the Director whether supervision cases are only being
+            opened, or whether officers are driving them to acknowledged,
+            responded, evidence-based closure.
           </p>
         </div>
 
@@ -808,7 +854,9 @@ function DistrictCaseCommandPanel({ cases }: { cases: GovernanceCase[] }) {
         <MetricPill
           label="Closed with evidence"
           value={summary.resolvedWithEvidenceCases.length}
-          tone={summary.resolvedWithEvidenceCases.length ? "success" : "default"}
+          tone={
+            summary.resolvedWithEvidenceCases.length ? "success" : "default"
+          }
         />
       </div>
 
@@ -857,7 +905,8 @@ function DistrictCaseCommandPanel({ cases }: { cases: GovernanceCase[] }) {
 
                   <p className="mt-3 font-bold text-white">{row.name}</p>
                   <p className="mt-1 text-xs text-slate-400">
-                    Latest case: {compactDateTime(row.latestCaseAt ?? undefined) ?? "—"}
+                    Latest case:{" "}
+                    {compactDateTime(row.latestCaseAt ?? undefined) ?? "—"}
                   </p>
                 </div>
 
@@ -969,17 +1018,13 @@ function districtCaseActionTone(item: GovernanceCase) {
 function cleanEscalationValue(value: string | null) {
   if (!value) return null;
 
-  return value
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/\.$/, "")
-    .trim();
+  return value.trim().replace(/\s+/g, " ").replace(/\.$/, "").trim();
 }
 
 function extractEscalationField(
   note: string,
   label: string,
-  nextLabels: string[]
+  nextLabels: string[],
 ) {
   const startToken = `${label}:`;
   const start = note.indexOf(startToken);
@@ -1022,7 +1067,7 @@ function parseEscalationLogbookNote(note?: string | null) {
     extractEscalationField(
       note,
       label,
-      labels.filter((item) => item !== label)
+      labels.filter((item) => item !== label),
     );
 
   return {
@@ -1056,11 +1101,11 @@ function EscalationLogbookCard({
     return (
       <div className="mt-4 rounded-xl border border-red-300/15 bg-red-500/10 p-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
-    Escalation reason
-  </p>
-  {receiptState ? <WorkflowTicks state={receiptState} /> : null}
-</div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
+            Escalation reason
+          </p>
+          {receiptState ? <WorkflowTicks state={receiptState} /> : null}
+        </div>
         <p className="mt-2 whitespace-pre-line text-sm leading-6 text-red-100/90">
           {note}
         </p>
@@ -1071,11 +1116,11 @@ function EscalationLogbookCard({
   return (
     <div className="mt-4 rounded-xl border border-red-300/15 bg-red-500/10 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
-    Escalation logbook entry
-  </p>
-  {receiptState ? <WorkflowTicks state={receiptState} /> : null}
-</div>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
+          Escalation logbook entry
+        </p>
+        {receiptState ? <WorkflowTicks state={receiptState} /> : null}
+      </div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
@@ -1170,8 +1215,8 @@ function DistrictCaseActionQueue({
           </h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-red-100/80">
             This converts intervention data into a practical leadership queue:
-            overdue cases first, escalated cases next, then cases missing notices,
-            acknowledgements, or corrective responses.
+            overdue cases first, escalated cases next, then cases missing
+            notices, acknowledgements, or corrective responses.
           </p>
         </div>
 
@@ -1211,8 +1256,11 @@ function DistrictCaseActionQueue({
                         {item.status.replaceAll("_", " ")}
                       </span>
 
-                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel ?? item.priority)}`}>
-                        {item.riskLevel ?? item.priority} · {numberValue(item.riskScore)}
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel ?? item.priority)}`}
+                      >
+                        {item.riskLevel ?? item.priority} ·{" "}
+                        {numberValue(item.riskScore)}
                       </span>
                     </div>
 
@@ -1229,7 +1277,7 @@ function DistrictCaseActionQueue({
                     <p className="mt-3 text-sm leading-6 text-red-100/90">
                       {districtCaseActionReason(item)}
                     </p>
-                                        {item.status === "ESCALATED" ? (
+                    {item.status === "ESCALATED" ? (
                       <button
                         type="button"
                         onClick={() => onOpenDirectorDirective(item)}
@@ -1254,7 +1302,9 @@ function DistrictCaseActionQueue({
                     <MetricPill
                       label="Responses"
                       value={evidence.respondedRecipients}
-                      tone={evidence.hasCorrectiveResponse ? "success" : "danger"}
+                      tone={
+                        evidence.hasCorrectiveResponse ? "success" : "danger"
+                      }
                     />
                     <MetricPill
                       label="Overdue"
@@ -1271,8 +1321,9 @@ function DistrictCaseActionQueue({
                     </p>
                     <p className="mt-1 text-xs text-emerald-100/80">
                       {evidence.latestResponseBy || "Recipient"} ·{" "}
-                      {compactDateTime(evidence.latestRespondedAt ?? undefined) ??
-                        "Time not available"}
+                      {compactDateTime(
+                        evidence.latestRespondedAt ?? undefined,
+                      ) ?? "Time not available"}
                     </p>
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-100">
                       {evidence.latestResponseBody}
@@ -1280,43 +1331,52 @@ function DistrictCaseActionQueue({
                   </div>
                 ) : null}
 
-{(() => {
-  const latestEvent = latestMeaningfulEvent(item);
+                {(() => {
+                  const latestEvent = latestMeaningfulEvent(item);
 
-  if (!latestEvent) return null;
+                  if (!latestEvent) return null;
 
-  const note = eventNote(latestEvent);
+                  const note = eventNote(latestEvent);
 
-  if (eventNoteHasMarker(latestEvent, SISSO_IMPLEMENTATION_RESPONSE_MARKER)) {
-    return <DirectiveImplementationResponseCard note={note} />;
-  }
+                  if (
+                    eventNoteHasMarker(
+                      latestEvent,
+                      SISSO_IMPLEMENTATION_RESPONSE_MARKER,
+                    )
+                  ) {
+                    return <DirectiveImplementationResponseCard note={note} />;
+                  }
 
-  if (eventNoteHasMarker(latestEvent, DIRECTOR_DIRECTIVE_MARKER)) {
-    return (
-      <DirectorDirectiveCard
-        note={note}
-        receiptState={directiveReceiptState(item, latestEvent)}
-      />
-    );
-  }
+                  if (
+                    eventNoteHasMarker(latestEvent, DIRECTOR_DIRECTIVE_MARKER)
+                  ) {
+                    return (
+                      <DirectorDirectiveCard
+                        note={note}
+                        receiptState={directiveReceiptState(item, latestEvent)}
+                      />
+                    );
+                  }
 
-  if (eventNoteHasMarker(latestEvent, ESCALATION_LOGBOOK_MARKER)) {
-    return (
-      <EscalationLogbookCard
-        note={note}
-        receiptState={escalationReceiptState(item, latestEvent)}
-      />
-    );
-  }
+                  if (
+                    eventNoteHasMarker(latestEvent, ESCALATION_LOGBOOK_MARKER)
+                  ) {
+                    return (
+                      <EscalationLogbookCard
+                        note={note}
+                        receiptState={escalationReceiptState(item, latestEvent)}
+                      />
+                    );
+                  }
 
-  return (
-    <p className="mt-3 text-xs leading-5 text-slate-400">
-      Latest event: {latestEvent.eventType.replaceAll("_", " ")}
-      {latestEvent.note ? ` — ${latestEvent.note}` : ""}
-    </p>
-  );
-})()}
-<GovernanceCaseAuditLogbookCard item={item} />
+                  return (
+                    <p className="mt-3 text-xs leading-5 text-slate-400">
+                      Latest event: {latestEvent.eventType.replaceAll("_", " ")}
+                      {latestEvent.note ? ` — ${latestEvent.note}` : ""}
+                    </p>
+                  );
+                })()}
+                <GovernanceCaseAuditLogbookCard item={item} />
               </div>
             );
           })
@@ -1333,11 +1393,7 @@ function DistrictCaseActionQueue({
 function cleanDirectiveValue(value: string | null) {
   if (!value) return null;
 
-  return value
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/\.$/, "")
-    .trim();
+  return value.trim().replace(/\s+/g, " ").replace(/\.$/, "").trim();
 }
 
 function parseDirectiveLineMap(section: string) {
@@ -1408,11 +1464,11 @@ function DirectorDirectiveCard({
     return (
       <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-500/10 p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
-    Director directive
-  </p>
-  {receiptState ? <WorkflowTicks state={receiptState} /> : null}
-</div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
+            Director directive
+          </p>
+          {receiptState ? <WorkflowTicks state={receiptState} /> : null}
+        </div>
         <p className="mt-3 whitespace-pre-line text-sm leading-6 text-sky-100">
           {note}
         </p>
@@ -1423,11 +1479,11 @@ function DirectorDirectiveCard({
   return (
     <div className="mt-4 rounded-xl border border-sky-300/15 bg-sky-500/10 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
-    Director directive
-  </p>
-  {receiptState ? <WorkflowTicks state={receiptState} /> : null}
-</div>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
+          Director directive
+        </p>
+        {receiptState ? <WorkflowTicks state={receiptState} /> : null}
+      </div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
@@ -1456,7 +1512,9 @@ function DirectorDirectiveCard({
           </p>
           <dl className="mt-2 grid grid-cols-2 gap-2 text-sm text-slate-200">
             <div>
-              <dt className="text-xs text-slate-500">Status before directive</dt>
+              <dt className="text-xs text-slate-500">
+                Status before directive
+              </dt>
               <dd>{parsed.currentStatus ?? "—"}</dd>
             </div>
             <div>
@@ -1498,7 +1556,11 @@ function DirectorDirectiveCard({
   );
 }
 
-function parseSectionAfterMarker(note: string, marker: string, nextMarkers: string[]) {
+function parseSectionAfterMarker(
+  note: string,
+  marker: string,
+  nextMarkers: string[],
+) {
   const start = note.indexOf(marker);
   if (start < 0) return null;
 
@@ -1531,7 +1593,7 @@ function parseDirectiveImplementationResponse(note?: string | null) {
   const evidenceOrNextAction = parseSectionAfterMarker(
     body,
     "EVIDENCE / NEXT ACTION",
-    []
+    [],
   );
 
   return {
@@ -1545,11 +1607,7 @@ function parseDirectiveImplementationResponse(note?: string | null) {
   };
 }
 
-function DirectiveImplementationResponseCard({
-  note,
-}: {
-  note: string;
-}) {
+function DirectiveImplementationResponseCard({ note }: { note: string }) {
   const parsed = parseDirectiveImplementationResponse(note);
 
   if (!parsed?.actionTaken) {
@@ -1646,7 +1704,7 @@ function eventNote(event?: GovernanceEvent | null) {
 
 function eventNoteHasMarker(
   event: GovernanceEvent | null | undefined,
-  marker: string
+  marker: string,
 ) {
   return eventNote(event).includes(marker);
 }
@@ -1658,7 +1716,10 @@ function eventTimeMs(event?: GovernanceEvent | null) {
   return Number.isFinite(t) ? t : 0;
 }
 
-function eventMetadataString(event: GovernanceEvent | null | undefined, key: string) {
+function eventMetadataString(
+  event: GovernanceEvent | null | undefined,
+  key: string,
+) {
   const metadata = event?.metadata;
 
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
@@ -1683,20 +1744,20 @@ function latestMeaningfulEvent(item: GovernanceCase) {
 
 function latestEscalationMessageEvent(item: GovernanceCase) {
   return meaningfulEvents(item).find((event) =>
-    eventNoteHasMarker(event, ESCALATION_LOGBOOK_MARKER)
+    eventNoteHasMarker(event, ESCALATION_LOGBOOK_MARKER),
   );
 }
 
 function latestDirectorDirectiveMessageEvent(item: GovernanceCase) {
   return meaningfulEvents(item).find((event) =>
-    eventNoteHasMarker(event, DIRECTOR_DIRECTIVE_MARKER)
+    eventNoteHasMarker(event, DIRECTOR_DIRECTIVE_MARKER),
   );
 }
 
 function hasReadReceipt(
   item: GovernanceCase,
   receiptKind: string,
-  messageEventId: string
+  messageEventId: string,
 ) {
   return (item.events ?? []).some((event) => {
     return (
@@ -1709,7 +1770,7 @@ function hasReadReceipt(
 
 function hasDirectorDirectiveAfterEscalation(
   item: GovernanceCase,
-  escalationEvent: GovernanceEvent
+  escalationEvent: GovernanceEvent,
 ) {
   const escalationTime = eventTimeMs(escalationEvent);
 
@@ -1723,7 +1784,7 @@ function hasDirectorDirectiveAfterEscalation(
 
 function hasSissoActionAfterDirectorDirective(
   item: GovernanceCase,
-  directiveEvent: GovernanceEvent
+  directiveEvent: GovernanceEvent,
 ) {
   const directiveTime = eventTimeMs(directiveEvent);
 
@@ -1737,7 +1798,7 @@ function hasSissoActionAfterDirectorDirective(
 
 function latestSissoDirectiveResponseEvent(
   item: GovernanceCase,
-  directiveEvent?: GovernanceEvent | null
+  directiveEvent?: GovernanceEvent | null,
 ) {
   const directiveTime = eventTimeMs(directiveEvent);
 
@@ -1754,7 +1815,7 @@ function latestSissoDirectiveResponseEvent(
 
 function escalationReceiptState(
   item: GovernanceCase,
-  escalationEvent: GovernanceEvent
+  escalationEvent: GovernanceEvent,
 ): WorkflowReceiptState {
   if (hasDirectorDirectiveAfterEscalation(item, escalationEvent)) {
     return "RESPONDED";
@@ -1764,7 +1825,7 @@ function escalationReceiptState(
     hasReadReceipt(
       item,
       "SISSO_ESCALATION_SEEN_BY_DIRECTOR",
-      escalationEvent.id
+      escalationEvent.id,
     )
   ) {
     return "SEEN";
@@ -1775,18 +1836,14 @@ function escalationReceiptState(
 
 function directiveReceiptState(
   item: GovernanceCase,
-  directiveEvent: GovernanceEvent
+  directiveEvent: GovernanceEvent,
 ): WorkflowReceiptState {
   if (hasSissoActionAfterDirectorDirective(item, directiveEvent)) {
     return "RESPONDED";
   }
 
   if (
-    hasReadReceipt(
-      item,
-      "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO",
-      directiveEvent.id
-    )
+    hasReadReceipt(item, "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO", directiveEvent.id)
   ) {
     return "SEEN";
   }
@@ -1830,12 +1887,7 @@ function WorkflowTicks({
   );
 }
 
-type AuditLogbookTone =
-  | "default"
-  | "info"
-  | "warning"
-  | "danger"
-  | "success";
+type AuditLogbookTone = "default" | "info" | "warning" | "danger" | "success";
 
 type AuditLogbookEntry = {
   id: string;
@@ -1848,7 +1900,7 @@ type AuditLogbookEntry = {
 };
 
 function auditActorLabel(
-  actor?: { name: string | null; email: string } | null
+  actor?: { name: string | null; email: string } | null,
 ) {
   return actor?.name || actor?.email || "System / unknown actor";
 }
@@ -2011,7 +2063,7 @@ function auditEventDescription(event: GovernanceEvent) {
     return shortAuditText(
       [action, evidence ? `Evidence / next action: ${evidence}` : ""]
         .filter(Boolean)
-        .join(" ")
+        .join(" "),
     );
   }
 
@@ -2025,7 +2077,7 @@ function noticeDeliveryStatusSummary(
     sentAt: string | null;
     deliveredAt: string | null;
     lastError: string | null;
-  }>
+  }>,
 ) {
   const rows = deliveries ?? [];
 
@@ -2248,7 +2300,7 @@ function latestCaseAuditAt(item: GovernanceCase) {
   return Math.max(
     new Date(item.updatedAt ?? item.createdAt).getTime(),
     latestEventAt ?? 0,
-    latestNoticeAt ?? 0
+    latestNoticeAt ?? 0,
   );
 }
 
@@ -2305,7 +2357,7 @@ function GovernanceCaseAuditLogbookCard({ item }: { item: GovernanceCase }) {
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
                       {entry.at
-                        ? compactDateTime(entry.at) ?? entry.at
+                        ? (compactDateTime(entry.at) ?? entry.at)
                         : "Time not recorded"}{" "}
                       · {entry.actor}
                     </p>
@@ -2357,7 +2409,8 @@ function GovernanceAuditLogbookPanel({
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-200">
-          Cases tracked: <span className="font-bold text-white">{cases.length}</span>
+          Cases tracked:{" "}
+          <span className="font-bold text-white">{cases.length}</span>
         </div>
       </div>
 
@@ -2381,8 +2434,11 @@ function GovernanceAuditLogbookPanel({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel ?? item.priority)}`}>
-                    {item.riskLevel ?? item.priority} · {numberValue(item.riskScore)}
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel ?? item.priority)}`}
+                  >
+                    {item.riskLevel ?? item.priority} ·{" "}
+                    {numberValue(item.riskScore)}
                   </span>
                   <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
                     {item.status.replaceAll("_", " ")}
@@ -2395,7 +2451,8 @@ function GovernanceAuditLogbookPanel({
           ))
         ) : (
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
-            No intervention cases are available for the current governance scope.
+            No intervention cases are available for the current governance
+            scope.
           </div>
         )}
       </div>
@@ -2443,17 +2500,78 @@ function SectionHeading({
   );
 }
 
-function AssessmentIntegrityGrid({ metrics }: { metrics?: SchoolMetrics | InterventionQueueItem["metrics"] }) {
+function AssessmentIntegrityGrid({
+  metrics,
+}: {
+  metrics?: SchoolMetrics | InterventionQueueItem["metrics"];
+}) {
   return (
     <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 md:grid-cols-4">
-      <MetricPill label="Items" value={numberValue(metrics?.assessmentItemsTotal)} />
-      <MetricPill label="Draft" value={numberValue(metrics?.assessmentItemsDraft)} tone={numberValue(metrics?.assessmentItemsDraft) ? "warning" : "success"} />
-      <MetricPill label="No scores" value={numberValue(metrics?.assessmentItemsWithoutScores)} tone={numberValue(metrics?.assessmentItemsWithoutScores) ? "danger" : "success"} />
-      <MetricPill label="No delivery link" value={numberValue(metrics?.assessmentItemsWithoutLessonDelivery)} tone={numberValue(metrics?.assessmentItemsWithoutLessonDelivery) ? "warning" : "success"} />
-      <MetricPill label="No curriculum link" value={numberValue(metrics?.assessmentItemsWithoutCurriculumUnit)} tone={numberValue(metrics?.assessmentItemsWithoutCurriculumUnit) ? "warning" : "success"} />
-      <MetricPill label="Scoring" value={percentValue(metrics?.assessmentCompletionRate)} tone={numberValue(metrics?.assessmentCompletionRate) < 60 ? "danger" : "success"} />
-      <MetricPill label="Link coverage" value={percentValue(metrics?.assessmentLinkCoverageRate)} tone={numberValue(metrics?.assessmentLinkCoverageRate) < 70 ? "warning" : "success"} />
-      <MetricPill label="Orphan notes" value={numberValue(metrics?.orphanedLessonNotesLast14Days)} tone={numberValue(metrics?.orphanedLessonNotesLast14Days) ? "danger" : "success"} />
+      <MetricPill
+        label="Items"
+        value={numberValue(metrics?.assessmentItemsTotal)}
+      />
+      <MetricPill
+        label="Draft"
+        value={numberValue(metrics?.assessmentItemsDraft)}
+        tone={
+          numberValue(metrics?.assessmentItemsDraft) ? "warning" : "success"
+        }
+      />
+      <MetricPill
+        label="No scores"
+        value={numberValue(metrics?.assessmentItemsWithoutScores)}
+        tone={
+          numberValue(metrics?.assessmentItemsWithoutScores)
+            ? "danger"
+            : "success"
+        }
+      />
+      <MetricPill
+        label="No delivery link"
+        value={numberValue(metrics?.assessmentItemsWithoutLessonDelivery)}
+        tone={
+          numberValue(metrics?.assessmentItemsWithoutLessonDelivery)
+            ? "warning"
+            : "success"
+        }
+      />
+      <MetricPill
+        label="No curriculum link"
+        value={numberValue(metrics?.assessmentItemsWithoutCurriculumUnit)}
+        tone={
+          numberValue(metrics?.assessmentItemsWithoutCurriculumUnit)
+            ? "warning"
+            : "success"
+        }
+      />
+      <MetricPill
+        label="Scoring"
+        value={percentValue(metrics?.assessmentCompletionRate)}
+        tone={
+          numberValue(metrics?.assessmentCompletionRate) < 60
+            ? "danger"
+            : "success"
+        }
+      />
+      <MetricPill
+        label="Link coverage"
+        value={percentValue(metrics?.assessmentLinkCoverageRate)}
+        tone={
+          numberValue(metrics?.assessmentLinkCoverageRate) < 70
+            ? "warning"
+            : "success"
+        }
+      />
+      <MetricPill
+        label="Orphan notes"
+        value={numberValue(metrics?.orphanedLessonNotesLast14Days)}
+        tone={
+          numberValue(metrics?.orphanedLessonNotesLast14Days)
+            ? "danger"
+            : "success"
+        }
+      />
     </div>
   );
 }
@@ -2461,6 +2579,7 @@ function AssessmentIntegrityGrid({ metrics }: { metrics?: SchoolMetrics | Interv
 type OfficialNoticeTargetRole = "SISSO" | "HEADTEACHER" | "TEACHER";
 type OfficialNoticePriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 type OfficialNoticeScopeMode = "ZONE" | "SCHOOL";
+type OfficialNoticeSectorTarget = "PUBLIC" | "PRIVATE" | "ALL_AUTHORIZED";
 type OfficialNoticeKind =
   | "INFORMATION_ONLY"
   | "ACKNOWLEDGEMENT_REQUIRED"
@@ -2500,6 +2619,12 @@ function officialNoticeKindNeedsAck(kind: OfficialNoticeKind) {
   return kind !== "INFORMATION_ONLY";
 }
 
+function officialNoticeSectorTargetLabel(target: OfficialNoticeSectorTarget) {
+  if (target === "PUBLIC") return "Public schools only";
+  if (target === "PRIVATE") return "Private schools only";
+  return "All authorized schools";
+}
+
 function OfficialGovernanceNoticeComposer({
   isDistrictView,
   isCircuitView,
@@ -2516,18 +2641,21 @@ function OfficialGovernanceNoticeComposer({
       isDistrictView
         ? ["SISSO", "HEADTEACHER", "TEACHER"]
         : ["HEADTEACHER", "TEACHER"],
-    [isDistrictView]
+    [isDistrictView],
   );
 
   const [targetRole, setTargetRole] = useState<OfficialNoticeTargetRole>(
-    isDistrictView ? "SISSO" : "HEADTEACHER"
+    isDistrictView ? "SISSO" : "HEADTEACHER",
   );
   const [scopeMode, setScopeMode] = useState<OfficialNoticeScopeMode>("ZONE");
+  const [sectorTarget, setSectorTarget] =
+    useState<OfficialNoticeSectorTarget>("PUBLIC");
   const [targetZoneId, setTargetZoneId] = useState("");
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
   const [priority, setPriority] = useState<OfficialNoticePriority>("MEDIUM");
-  const [noticeKind, setNoticeKind] =
-    useState<OfficialNoticeKind>("ACKNOWLEDGEMENT_REQUIRED");
+  const [noticeKind, setNoticeKind] = useState<OfficialNoticeKind>(
+    "ACKNOWLEDGEMENT_REQUIRED",
+  );
   const [deadlineAt, setDeadlineAt] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -2537,16 +2665,22 @@ function OfficialGovernanceNoticeComposer({
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
 
   const assignmentOptions = assignments.filter((assignment) =>
-    Boolean(assignment.zoneId)
+    Boolean(assignment.zoneId),
   );
 
   const selectedAssignment =
-    assignmentOptions.find((assignment) => assignment.zoneId === targetZoneId) ??
+    assignmentOptions.find(
+      (assignment) => assignment.zoneId === targetZoneId,
+    ) ??
     assignmentOptions[0] ??
     null;
 
   const schoolOptions = schools
     .filter((school) => school.status !== "ARCHIVED")
+    .filter((school) => {
+      if (sectorTarget === "ALL_AUTHORIZED") return true;
+      return school.schoolSector === sectorTarget;
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const selectedSchool =
@@ -2575,6 +2709,15 @@ function OfficialGovernanceNoticeComposer({
     }
   }, [targetRole]);
 
+  useEffect(() => {
+    if (!selectedSchoolId) return;
+
+    const stillAllowed = schoolOptions.some(
+      (school) => school.id === selectedSchoolId,
+    );
+    if (!stillAllowed) setSelectedSchoolId("");
+  }, [schoolOptions, selectedSchoolId]);
+
   const targetSummary =
     scopeMode === "SCHOOL" && selectedSchool
       ? `${selectedSchool.name} (${selectedSchool.schoolCode ?? "no code"})`
@@ -2595,35 +2738,45 @@ function OfficialGovernanceNoticeComposer({
     }
 
     if (!cleanBody || cleanBody.length < 20) {
-      setSendError("Write a fuller official notice body of at least 20 characters.");
+      setSendError(
+        "Write a fuller official notice body of at least 20 characters.",
+      );
       return;
     }
 
     if (scopeMode === "ZONE" && !targetZoneId) {
-      setSendError("No authorized governance zone is available for this notice.");
+      setSendError(
+        "No authorized governance zone is available for this notice.",
+      );
       return;
     }
 
     if (scopeMode === "SCHOOL" && !selectedSchoolId) {
-      setSendError("Select the school that should receive this official notice.");
+      setSendError(
+        "Select the school that should receive this official notice.",
+      );
       return;
     }
 
     setBusy(true);
 
     try {
-      const scopeLabel =
-        isDistrictView ? "DISTRICT" : isCircuitView ? "CIRCUIT" : "GOVERNANCE";
+      const scopeLabel = isDistrictView
+        ? "DISTRICT"
+        : isCircuitView
+          ? "CIRCUIT"
+          : "GOVERNANCE";
 
       const targetId =
         scopeMode === "SCHOOL"
           ? selectedSchoolId
           : targetZoneId || selectedAssignment?.zoneId || "scope";
 
-      const idempotencyKey = `b7-official:${scopeLabel}:${targetRole}:${scopeMode}:${targetId}:${draftKey}`.slice(
-        0,
-        220
-      );
+      const idempotencyKey =
+        `b7-official:${scopeLabel}:${targetRole}:${scopeMode}:${sectorTarget}:${targetId}:${draftKey}`.slice(
+          0,
+          220,
+        );
 
       const payload = {
         tenantId: scopeMode === "SCHOOL" ? selectedSchoolId : undefined,
@@ -2643,6 +2796,11 @@ function OfficialGovernanceNoticeComposer({
           scopeMode,
           targetAudience: targetRole,
           targetLabel: targetSummary,
+          governanceSectorTarget: sectorTarget,
+          schoolSectorTarget: sectorTarget,
+          sectorTarget,
+          sectorRule:
+            "Public/private targeting is enforced server-side before recipients are created.",
           noticeKind,
           requiresAcknowledgement,
           requiresResponse,
@@ -2659,15 +2817,15 @@ function OfficialGovernanceNoticeComposer({
         body: JSON.stringify(payload),
       });
 
-      const json = (await res.json().catch(() => null)) as
-        | NoticeSendResponse
-        | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as NoticeSendResponse | null;
 
       if (!res.ok || !json?.ok) {
         setSendError(
           json && !json.ok
             ? json.error
-            : `Failed to send official notice (${res.status})`
+            : `Failed to send official notice (${res.status})`,
         );
         return;
       }
@@ -2682,7 +2840,7 @@ function OfficialGovernanceNoticeComposer({
           ? "This official notice was already sent; duplicate SMS/email was safely suppressed."
           : `Official notice sent to ${officialNoticeTargetLabel(targetRole)}${
               recipientCount !== null ? ` (${recipientCount} recipient(s))` : ""
-            }.`
+            }.`,
       );
 
       setTitle("");
@@ -2718,7 +2876,7 @@ function OfficialGovernanceNoticeComposer({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+      <div className="mt-5 grid gap-4 lg:grid-cols-4">
         <label className="block">
           <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
             Target recipients
@@ -2751,10 +2909,37 @@ function OfficialGovernanceNoticeComposer({
             className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50 disabled:opacity-60"
           >
             <option value="ZONE">
-              {isDistrictView ? "Authorized district scope" : "Authorized circuit scope"}
+              {isDistrictView
+                ? "Authorized district scope"
+                : "Authorized circuit scope"}
             </option>
-            {canTargetSchool ? <option value="SCHOOL">Selected school only</option> : null}
+            {canTargetSchool ? (
+              <option value="SCHOOL">Selected school only</option>
+            ) : null}
           </select>
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+            School sector target
+          </span>
+          <select
+            value={sectorTarget}
+            onChange={(event) =>
+              setSectorTarget(event.target.value as OfficialNoticeSectorTarget)
+            }
+            disabled={targetRole === "SISSO"}
+            className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50 disabled:opacity-60"
+          >
+            <option value="PUBLIC">Public schools only</option>
+            <option value="PRIVATE">Private schools only</option>
+            <option value="ALL_AUTHORIZED">All authorized schools</option>
+          </select>
+          <p className="mt-1 text-[11px] leading-4 text-slate-500">
+            {targetRole === "SISSO"
+              ? "Sector filtering applies to school recipients, not SISSO recipients."
+              : officialNoticeSectorTargetLabel(sectorTarget)}
+          </p>
         </label>
 
         {scopeMode === "ZONE" ? (
@@ -2791,7 +2976,8 @@ function OfficialGovernanceNoticeComposer({
               <option value="">Select school</option>
               {schoolOptions.map((school) => (
                 <option key={school.id} value={school.id}>
-                  {school.name} · {school.schoolCode ?? "no code"}
+                  {school.name} · {school.schoolCode ?? "no code"} ·{" "}
+                  {schoolSectorLabel(school.schoolSector)}
                 </option>
               ))}
             </select>
@@ -2837,13 +3023,13 @@ function OfficialGovernanceNoticeComposer({
             }
             className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50"
           >
-            {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as OfficialNoticePriority[]).map(
-              (p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              )
-            )}
+            {(
+              ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as OfficialNoticePriority[]
+            ).map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -2913,8 +3099,9 @@ function OfficialGovernanceNoticeComposer({
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-5 text-slate-400">
-          No manual phone, email, or custom recipient is allowed here. Recipients
-          are resolved from verified EduLife OS roles inside your authorized scope.
+          No manual phone, email, or custom recipient is allowed here.
+          Recipients are resolved from verified EduLife OS roles inside your
+          authorized scope.
         </p>
 
         <button
@@ -2945,11 +3132,11 @@ export default function GovernanceDashboardClient({
   const [caseAction, setCaseAction] = useState<string | null>(null);
   const [caseError, setCaseError] = useState<string | null>(null);
   const [busyCaseKey, setBusyCaseKey] = useState<string | null>(null);
-    const [isGovernanceLogbookOpen, setIsGovernanceLogbookOpen] = useState(false);
+  const [isGovernanceLogbookOpen, setIsGovernanceLogbookOpen] = useState(false);
   const receiptKeysRef = useRef<Set<string>>(new Set());
 
   const [escalationCase, setEscalationCase] = useState<GovernanceCase | null>(
-    null
+    null,
   );
   const [escalationReason, setEscalationReason] = useState("");
   const [escalationError, setEscalationError] = useState<string | null>(null);
@@ -2966,7 +3153,8 @@ export default function GovernanceDashboardClient({
   const [directiveResponseEvent, setDirectiveResponseEvent] =
     useState<GovernanceEvent | null>(null);
   const [directiveResponseBody, setDirectiveResponseBody] = useState("");
-  const [directiveResponseEvidence, setDirectiveResponseEvidence] = useState("");
+  const [directiveResponseEvidence, setDirectiveResponseEvidence] =
+    useState("");
   const [directiveResponseError, setDirectiveResponseError] = useState<
     string | null
   >(null);
@@ -2991,7 +3179,9 @@ export default function GovernanceDashboardClient({
 
       if (!res.ok || !json?.ok) {
         const e =
-          json && !json.ok ? json.error : `Failed to load dashboard (${res.status})`;
+          json && !json.ok
+            ? json.error
+            : `Failed to load dashboard (${res.status})`;
         setData(null);
         setError(e);
         return;
@@ -3011,7 +3201,7 @@ export default function GovernanceDashboardClient({
     setCaseError(null);
 
     try {
-            const caseLimit = isDistrictView ? 100 : 25;
+      const caseLimit = isDistrictView ? 100 : 25;
 
       const res = await fetch(
         `/api/governance/interventions/list?take=${caseLimit}`,
@@ -3019,15 +3209,19 @@ export default function GovernanceDashboardClient({
           cache: "no-store",
           credentials: "include",
           headers: { Accept: "application/json" },
-        }
+        },
       );
 
-      const json = (await res.json().catch(() => null)) as CaseListResponse | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as CaseListResponse | null;
 
       if (!res.ok || !json?.ok) {
         setCases([]);
         setCaseError(
-          json && !json.ok ? json.error : `Failed to load cases (${res.status})`
+          json && !json.ok
+            ? json.error
+            : `Failed to load cases (${res.status})`,
         );
         return;
       }
@@ -3069,14 +3263,16 @@ export default function GovernanceDashboardClient({
         }),
       });
 
-      const json = (await res.json().catch(() => null)) as CaseWriteResponse | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as CaseWriteResponse | null;
 
       if (!res.ok || !json?.ok) {
         receiptKeysRef.current.delete(receiptKey);
         setCaseError(
           json && !json.ok
             ? `Read receipt failed: ${json.error}`
-            : `Read receipt failed (${res.status})`
+            : `Read receipt failed (${res.status})`,
         );
         return;
       }
@@ -3084,7 +3280,9 @@ export default function GovernanceDashboardClient({
       await loadCases();
     } catch {
       receiptKeysRef.current.delete(receiptKey);
-      setCaseError("Network/server error while saving governance read receipt.");
+      setCaseError(
+        "Network/server error while saving governance read receipt.",
+      );
     }
   }
 
@@ -3094,7 +3292,7 @@ export default function GovernanceDashboardClient({
         c.tenantId === schoolId &&
         c.scopeType === "SCHOOL" &&
         c.status !== "RESOLVED" &&
-        c.status !== "CANCELLED"
+        c.status !== "CANCELLED",
     );
   }
 
@@ -3148,11 +3346,13 @@ export default function GovernanceDashboardClient({
         }),
       });
 
-      const json = (await res.json().catch(() => null)) as CaseWriteResponse | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as CaseWriteResponse | null;
 
       if (!res.ok || !json?.ok) {
         setCaseError(
-          json && !json.ok ? json.error : `Failed to open case (${res.status})`
+          json && !json.ok ? json.error : `Failed to open case (${res.status})`,
         );
         return;
       }
@@ -3169,7 +3369,7 @@ export default function GovernanceDashboardClient({
   async function updateCaseStatus(
     item: GovernanceCase,
     status: Exclude<GovernanceCaseStatus, "OPEN" | "CANCELLED">,
-    note: string
+    note: string,
   ) {
     const closureEvidence =
       status === "RESOLVED" ? closureEvidenceForCase(item) : null;
@@ -3180,9 +3380,7 @@ export default function GovernanceDashboardClient({
       !closureEvidence.canResolve
     ) {
       setCaseAction(null);
-      setCaseError(
-        `Cannot resolve yet: ${closureEvidence.warnings.join(" ")}`
-      );
+      setCaseError(`Cannot resolve yet: ${closureEvidence.warnings.join(" ")}`);
       return;
     }
 
@@ -3209,11 +3407,15 @@ export default function GovernanceDashboardClient({
         }),
       });
 
-      const json = (await res.json().catch(() => null)) as CaseWriteResponse | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as CaseWriteResponse | null;
 
       if (!res.ok || !json?.ok) {
         setCaseError(
-          json && !json.ok ? json.error : `Failed to update case (${res.status})`
+          json && !json.ok
+            ? json.error
+            : `Failed to update case (${res.status})`,
         );
         return;
       }
@@ -3260,7 +3462,9 @@ export default function GovernanceDashboardClient({
       item.riskScore !== null && item.riskScore !== undefined
         ? `Risk score: ${item.riskScore}`
         : "",
-      item.dueAt ? `Due date: ${compactDateTime(item.dueAt) ?? item.dueAt}` : "",
+      item.dueAt
+        ? `Due date: ${compactDateTime(item.dueAt) ?? item.dueAt}`
+        : "",
       `Official notice sent: ${evidence.hasOfficialNotice ? "Yes" : "No"}`,
       `Acknowledgements: ${evidence.acknowledgedRecipients}`,
       `Corrective responses: ${evidence.respondedRecipients}`,
@@ -3288,7 +3492,7 @@ export default function GovernanceDashboardClient({
 
     if (reason.length < 40) {
       setEscalationError(
-        "Write a fuller escalation reason. Minimum 40 characters. This should read like a supervision logbook entry."
+        "Write a fuller escalation reason. Minimum 40 characters. This should read like a supervision logbook entry.",
       );
       return;
     }
@@ -3319,15 +3523,15 @@ export default function GovernanceDashboardClient({
         }),
       });
 
-      const json = (await res.json().catch(() => null)) as
-        | CaseWriteResponse
-        | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as CaseWriteResponse | null;
 
       if (!res.ok || !json?.ok) {
         setEscalationError(
           json && !json.ok
             ? json.error
-            : `Failed to escalate case (${res.status})`
+            : `Failed to escalate case (${res.status})`,
         );
         return;
       }
@@ -3397,7 +3601,7 @@ export default function GovernanceDashboardClient({
 
     if (directive.length < 40) {
       setDirectorDirectiveError(
-        "Write a fuller Director directive. Minimum 40 characters. This should tell the SISSO what to do next."
+        "Write a fuller Director directive. Minimum 40 characters. This should tell the SISSO what to do next.",
       );
       return;
     }
@@ -3428,28 +3632,28 @@ export default function GovernanceDashboardClient({
         }),
       });
 
-      const json = (await res.json().catch(() => null)) as
-        | CaseWriteResponse
-        | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as CaseWriteResponse | null;
 
       if (!res.ok || !json?.ok) {
         setDirectorDirectiveError(
           json && !json.ok
             ? json.error
-            : `Failed to save Director directive (${res.status})`
+            : `Failed to save Director directive (${res.status})`,
         );
         return;
       }
 
       setCaseAction(
-        "Director directive saved. Case returned to in-progress follow-up."
+        "Director directive saved. Case returned to in-progress follow-up.",
       );
       setDirectorDirectiveCase(null);
       setDirectorDirective("");
       await loadCases();
     } catch {
       setDirectorDirectiveError(
-        "Network/server error while saving Director directive."
+        "Network/server error while saving Director directive.",
       );
     } finally {
       setBusyCaseKey(null);
@@ -3525,7 +3729,7 @@ export default function GovernanceDashboardClient({
 
     if (response.length < 40) {
       setDirectiveResponseError(
-        "Write a fuller implementation response. Minimum 40 characters. State what you actually did after receiving the Director’s directive."
+        "Write a fuller implementation response. Minimum 40 characters. State what you actually did after receiving the Director’s directive.",
       );
       return;
     }
@@ -3561,15 +3765,15 @@ export default function GovernanceDashboardClient({
         }),
       });
 
-      const json = (await res.json().catch(() => null)) as
-        | CaseWriteResponse
-        | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as CaseWriteResponse | null;
 
       if (!res.ok || !json?.ok) {
         setDirectiveResponseError(
           json && !json.ok
             ? json.error
-            : `Failed to save SISSO response (${res.status})`
+            : `Failed to save SISSO response (${res.status})`,
         );
         return;
       }
@@ -3582,7 +3786,7 @@ export default function GovernanceDashboardClient({
       await loadCases();
     } catch {
       setDirectiveResponseError(
-        "Network/server error while saving SISSO directive response."
+        "Network/server error while saving SISSO directive response.",
       );
     } finally {
       setBusyCaseKey(null);
@@ -3595,49 +3799,53 @@ export default function GovernanceDashboardClient({
     setCaseError(null);
 
     try {
-      const schoolLabel = item.tenant?.name ?? item.title ?? "the selected school";
+      const schoolLabel =
+        item.tenant?.name ?? item.title ?? "the selected school";
 
       const res = await fetch("/api/governance/notices/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-  caseId: item.id,
-  idempotencyKey: `governance-notice:case:${item.id}:official-intervention:HEADTEACHER:v1`,
-  title: `Official intervention notice: ${schoolLabel}`,
-          body:
-            "EduLife OS has flagged this school for immediate supervision follow-up. Kindly review attendance capture, lesson delivery evidence, and assessment scoring evidence, then respond to the SISSO with corrective action taken.",
+          caseId: item.id,
+          idempotencyKey: `governance-notice:case:${item.id}:official-intervention:HEADTEACHER:v1`,
+          title: `Official intervention notice: ${schoolLabel}`,
+          body: "EduLife OS has flagged this school for immediate supervision follow-up. Kindly review attendance capture, lesson delivery evidence, and assessment scoring evidence, then respond to the SISSO with corrective action taken.",
           priority: item.priority,
           channels: ["IN_APP", "SMS", "EMAIL"],
           targetRoles: ["HEADTEACHER"],
           metadata: {
-  source: "B5A-governance-dashboard",
-  caseId: item.id,
-  noticeIntent: "official-intervention",
-  targetAudience: "HEADTEACHER",
-  idempotencyKey: `governance-notice:case:${item.id}:official-intervention:HEADTEACHER:v1`,
-},
+            source: "B5A-governance-dashboard",
+            caseId: item.id,
+            noticeIntent: "official-intervention",
+            targetAudience: "HEADTEACHER",
+            idempotencyKey: `governance-notice:case:${item.id}:official-intervention:HEADTEACHER:v1`,
+          },
         }),
       });
 
-      const json = (await res.json().catch(() => null)) as NoticeSendResponse | null;
+      const json = (await res
+        .json()
+        .catch(() => null)) as NoticeSendResponse | null;
 
       if (!res.ok || !json?.ok) {
         setCaseError(
-          json && !json.ok ? json.error : `Failed to send notice (${res.status})`
+          json && !json.ok
+            ? json.error
+            : `Failed to send notice (${res.status})`,
         );
         return;
       }
 
       const reused = Boolean(json.reused || json.item?.reused);
 
-setCaseAction(
-  reused
-    ? `Official notice already exists for ${schoolLabel}; no duplicate SMS/email sent.`
-    : `Official notice sent for ${schoolLabel}.`
-);
+      setCaseAction(
+        reused
+          ? `Official notice already exists for ${schoolLabel}; no duplicate SMS/email sent.`
+          : `Official notice sent for ${schoolLabel}.`,
+      );
 
-await loadCases();
+      await loadCases();
     } catch {
       setCaseError("Network/server error while sending official notice.");
     } finally {
@@ -3663,7 +3871,7 @@ await loadCases();
           !hasReadReceipt(
             item,
             "SISSO_ESCALATION_SEEN_BY_DIRECTOR",
-            escalationEvent.id
+            escalationEvent.id,
           )
         ) {
           void markWorkflowMessageSeen({
@@ -3682,7 +3890,7 @@ await loadCases();
           !hasReadReceipt(
             item,
             "DIRECTOR_DIRECTIVE_SEEN_BY_SISSO",
-            directiveEvent.id
+            directiveEvent.id,
           )
         ) {
           void markWorkflowMessageSeen({
@@ -3700,13 +3908,17 @@ await loadCases();
   const schools = useMemo(() => data?.overview?.schools ?? [], [data]);
   const circuitBreakdown = useMemo(
     () => data?.overview?.circuitBreakdown ?? [],
-    [data]
+    [data],
   );
   const interventionQueue = useMemo(
     () => data?.overview?.interventionQueue ?? [],
-    [data]
+    [data],
   );
   const riskSummary = useMemo(() => data?.overview?.riskSummary ?? {}, [data]);
+  const sectorSummary = useMemo(
+    () => data?.overview?.sectorSummary ?? {},
+    [data],
+  );
   const totals = useMemo(() => data?.overview?.totals ?? {}, [data]);
   const signals = useMemo(() => data?.overview?.signals ?? {}, [data]);
   const emptyStates = useMemo(() => data?.overview?.emptyStates ?? [], [data]);
@@ -3714,12 +3926,19 @@ await loadCases();
 
   const primaryAssignment = assignments[0] ?? null;
   const activeCaseCount = cases.filter(
-    (c) => c.status !== "RESOLVED" && c.status !== "CANCELLED"
+    (c) => c.status !== "RESOLVED" && c.status !== "CANCELLED",
   ).length;
 
   const totalCards = useMemo(() => {
     const preferred = isDistrictView
-      ? ["districts", "circuits", "schools", "learners", "teachers", "classrooms"]
+      ? [
+          "districts",
+          "circuits",
+          "schools",
+          "learners",
+          "teachers",
+          "classrooms",
+        ]
       : ["circuits", "schools", "learners", "teachers", "classrooms"];
 
     return preferred
@@ -3767,20 +3986,28 @@ await loadCases();
 
   const topRiskSchools = useMemo(() => {
     return [...schools]
-      .sort((a, b) => numberValue(b.metrics?.riskScore) - numberValue(a.metrics?.riskScore))
+      .sort(
+        (a, b) =>
+          numberValue(b.metrics?.riskScore) - numberValue(a.metrics?.riskScore),
+      )
       .slice(0, 5);
   }, [schools]);
 
   const highestRiskCircuits = useMemo(() => {
     return [...circuitBreakdown]
       .sort((a, b) => {
-        const criticalDiff = numberValue(b.criticalRiskSchools) - numberValue(a.criticalRiskSchools);
+        const criticalDiff =
+          numberValue(b.criticalRiskSchools) -
+          numberValue(a.criticalRiskSchools);
         if (criticalDiff !== 0) return criticalDiff;
 
-        const highDiff = numberValue(b.highRiskSchools) - numberValue(a.highRiskSchools);
+        const highDiff =
+          numberValue(b.highRiskSchools) - numberValue(a.highRiskSchools);
         if (highDiff !== 0) return highDiff;
 
-        return numberValue(b.highestRiskScore) - numberValue(a.highestRiskScore);
+        return (
+          numberValue(b.highestRiskScore) - numberValue(a.highestRiskScore)
+        );
       })
       .slice(0, 6);
   }, [circuitBreakdown]);
@@ -3850,7 +4077,8 @@ await loadCases();
               <div className="mt-4 flex flex-wrap gap-2">
                 {primaryAssignment ? (
                   <div className="inline-flex rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                    {roleLabel(primaryAssignment.role)} · {primaryAssignment.zoneName}
+                    {roleLabel(primaryAssignment.role)} ·{" "}
+                    {primaryAssignment.zoneName}
                     {primaryAssignment.parentZoneName
                       ? ` · ${primaryAssignment.parentZoneName}`
                       : ""}
@@ -4021,8 +4249,8 @@ await loadCases();
                     directorDirectiveCase.title}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  {directorDirectiveCase.tenant?.schoolCode || "No school code"} ·{" "}
-                  {directorDirectiveCase.zone?.name || "No circuit"} ·{" "}
+                  {directorDirectiveCase.tenant?.schoolCode || "No school code"}{" "}
+                  · {directorDirectiveCase.zone?.name || "No circuit"} ·{" "}
                   {directorDirectiveCase.priority} priority
                 </p>
               </div>
@@ -4085,7 +4313,7 @@ await loadCases();
             </div>
           </section>
         ) : null}
-                {directiveResponseCase && directiveResponseEvent ? (
+        {directiveResponseCase && directiveResponseEvent ? (
           <section className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
             <div className="w-full max-w-2xl rounded-3xl border border-emerald-300/25 bg-slate-950 p-5 shadow-2xl shadow-black/60">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -4106,7 +4334,8 @@ await loadCases();
                   type="button"
                   onClick={closeDirectiveResponseDialog}
                   disabled={
-                    busyCaseKey === `directive-response:${directiveResponseCase.id}`
+                    busyCaseKey ===
+                    `directive-response:${directiveResponseCase.id}`
                   }
                   className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-50"
                 >
@@ -4116,12 +4345,13 @@ await loadCases();
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                 <p className="text-sm font-semibold text-white">
-                  {directiveResponseCase.tenant?.name ?? directiveResponseCase.title}
+                  {directiveResponseCase.tenant?.name ??
+                    directiveResponseCase.title}
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  {directiveResponseCase.tenant?.schoolCode || "No school code"} ·{" "}
-                  {directiveResponseCase.zone?.name || "No circuit"} · Directive{" "}
-                  {directiveResponseEvent.id.slice(0, 10)}…
+                  {directiveResponseCase.tenant?.schoolCode || "No school code"}{" "}
+                  · {directiveResponseCase.zone?.name || "No circuit"} ·
+                  Directive {directiveResponseEvent.id.slice(0, 10)}…
                 </p>
               </div>
 
@@ -4152,7 +4382,9 @@ await loadCases();
                 </span>
                 <textarea
                   value={directiveResponseEvidence}
-                  onChange={(event) => setDirectiveResponseEvidence(event.target.value)}
+                  onChange={(event) =>
+                    setDirectiveResponseEvidence(event.target.value)
+                  }
                   rows={4}
                   placeholder="Example: Lesson note register checked. Attendance record for the week reviewed. I will revisit in two weeks if performance does not improve."
                   className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-emerald-300/50"
@@ -4170,7 +4402,8 @@ await loadCases();
                   type="button"
                   onClick={closeDirectiveResponseDialog}
                   disabled={
-                    busyCaseKey === `directive-response:${directiveResponseCase.id}`
+                    busyCaseKey ===
+                    `directive-response:${directiveResponseCase.id}`
                   }
                   className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-50"
                 >
@@ -4181,11 +4414,13 @@ await loadCases();
                   type="button"
                   onClick={() => void submitDirectiveImplementationResponse()}
                   disabled={
-                    busyCaseKey === `directive-response:${directiveResponseCase.id}`
+                    busyCaseKey ===
+                    `directive-response:${directiveResponseCase.id}`
                   }
                   className="rounded-full border border-emerald-300/25 bg-emerald-400/15 px-4 py-2 text-sm font-semibold text-emerald-100 hover:bg-emerald-400/25 disabled:opacity-50"
                 >
-                  {busyCaseKey === `directive-response:${directiveResponseCase.id}`
+                  {busyCaseKey ===
+                  `directive-response:${directiveResponseCase.id}`
                     ? "Saving response..."
                     : "Save implementation response"}
                 </button>
@@ -4266,16 +4501,68 @@ await loadCases();
             </div>
           )}
         </section>
+
+        <section className="rounded-3xl border border-purple-300/20 bg-purple-500/10 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-200">
+                Sector-aware governance boundary
+              </p>
+              <h2 className="mt-2 text-xl font-bold text-white">
+                Public and private schools are separated
+              </h2>
+              <p className="mt-1 max-w-4xl text-sm leading-6 text-purple-100/80">
+                {sectorSummary.governanceRule ||
+                  "Public schools are normal governance targets. Private schools must be distinguished and included only where authorized."}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-xs leading-5 text-slate-200">
+              Default command posture:{" "}
+              <span className="font-bold text-white">Public schools first</span>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricPill
+              label="Public schools"
+              value={numberValue(sectorSummary.public?.schools)}
+              tone="success"
+            />
+            <MetricPill
+              label="Public critical"
+              value={numberValue(sectorSummary.public?.criticalRiskSchools)}
+              tone={
+                numberValue(sectorSummary.public?.criticalRiskSchools)
+                  ? "danger"
+                  : "success"
+              }
+            />
+            <MetricPill
+              label="Private schools"
+              value={numberValue(sectorSummary.private?.schools)}
+              tone="warning"
+            />
+            <MetricPill
+              label="Private critical"
+              value={numberValue(sectorSummary.private?.criticalRiskSchools)}
+              tone={
+                numberValue(sectorSummary.private?.criticalRiskSchools)
+                  ? "danger"
+                  : "success"
+              }
+            />
+          </div>
+        </section>
+
+        {isDistrictView ? <DistrictCaseCommandPanel cases={cases} /> : null}
         {isDistrictView ? (
-          <DistrictCaseCommandPanel cases={cases} />
-        ) : null}
-                {isDistrictView ? (
           <DistrictCaseActionQueue
             cases={cases}
             onOpenDirectorDirective={openDirectorDirectiveDialog}
           />
         ) : null}
-                        {cases.length ? (
+        {cases.length ? (
           <section className="rounded-3xl border border-sky-300/20 bg-sky-500/10 p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -4321,7 +4608,8 @@ await loadCases();
                   Highest-risk circuits first
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-red-100/80">
-                  Director-level action should flow through the SISSO or Circuit Supervisor, then down to schools.
+                  Director-level action should flow through the SISSO or Circuit
+                  Supervisor, then down to schools.
                 </p>
               </div>
               <p className="text-xs text-red-100/70">
@@ -4331,7 +4619,9 @@ await loadCases();
 
             <div className="mt-5 space-y-4">
               {loading ? (
-                <div className="text-sm text-red-100">Loading circuit priorities...</div>
+                <div className="text-sm text-red-100">
+                  Loading circuit priorities...
+                </div>
               ) : highestRiskCircuits.length ? (
                 highestRiskCircuits.map((circuit, idx) => (
                   <div
@@ -4348,8 +4638,8 @@ await loadCases();
                             Highest risk {numberValue(circuit.highestRiskScore)}
                           </span>
                           <span className="rounded-full border border-orange-300/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-100">
-                            Critical {numberValue(circuit.criticalRiskSchools)} · High{" "}
-                            {numberValue(circuit.highRiskSchools)}
+                            Critical {numberValue(circuit.criticalRiskSchools)}{" "}
+                            · High {numberValue(circuit.highRiskSchools)}
                           </span>
                         </div>
 
@@ -4357,18 +4647,81 @@ await loadCases();
                           {circuit.circuitName}
                         </p>
                         <p className="mt-1 text-sm text-slate-300">
-                          {circuit.schools} school(s) · {circuit.learners} learners ·{" "}
-                          {circuit.teachers} teachers
+                          {circuit.schools} school(s) · Public{" "}
+                          {numberValue(circuit.publicSchools)} · Private{" "}
+                          {numberValue(circuit.privateSchools)} ·{" "}
+                          {circuit.learners} learners · {circuit.teachers}{" "}
+                          teachers
                         </p>
                       </div>
 
                       <div className="grid gap-2 text-xs sm:grid-cols-2 xl:min-w-[520px]">
-                        <MetricPill label="Attendance completion" value={percentValue(circuit.attendanceCompletionRateToday)} tone={numberValue(circuit.attendanceCompletionRateToday) < 75 ? "danger" : "success"} />
-                        <MetricPill label="Lesson compliance" value={percentValue(circuit.lessonDeliveryComplianceRate)} tone={numberValue(circuit.lessonDeliveryComplianceRate) < 70 ? "danger" : "success"} />
-                        <MetricPill label="Assessment scoring" value={percentValue(circuit.assessmentCompletionRate)} tone={numberValue(circuit.assessmentCompletionRate) < 60 ? "danger" : "success"} />
-                        <MetricPill label="Assessment link coverage" value={percentValue(circuit.assessmentLinkCoverageRate)} tone={numberValue(circuit.assessmentLinkCoverageRate) < 70 ? "warning" : "success"} />
-                        <MetricPill label="Orphan notes" value={numberValue(circuit.orphanedLessonNotesLast14Days)} tone={numberValue(circuit.orphanedLessonNotesLast14Days) ? "danger" : "success"} />
-                        <MetricPill label="No-score items" value={numberValue(circuit.assessmentItemsWithoutScores)} tone={numberValue(circuit.assessmentItemsWithoutScores) ? "danger" : "success"} />
+                        <MetricPill
+                          label="Attendance completion"
+                          value={percentValue(
+                            circuit.attendanceCompletionRateToday,
+                          )}
+                          tone={
+                            numberValue(circuit.attendanceCompletionRateToday) <
+                            75
+                              ? "danger"
+                              : "success"
+                          }
+                        />
+                        <MetricPill
+                          label="Lesson compliance"
+                          value={percentValue(
+                            circuit.lessonDeliveryComplianceRate,
+                          )}
+                          tone={
+                            numberValue(circuit.lessonDeliveryComplianceRate) <
+                            70
+                              ? "danger"
+                              : "success"
+                          }
+                        />
+                        <MetricPill
+                          label="Assessment scoring"
+                          value={percentValue(circuit.assessmentCompletionRate)}
+                          tone={
+                            numberValue(circuit.assessmentCompletionRate) < 60
+                              ? "danger"
+                              : "success"
+                          }
+                        />
+                        <MetricPill
+                          label="Assessment link coverage"
+                          value={percentValue(
+                            circuit.assessmentLinkCoverageRate,
+                          )}
+                          tone={
+                            numberValue(circuit.assessmentLinkCoverageRate) < 70
+                              ? "warning"
+                              : "success"
+                          }
+                        />
+                        <MetricPill
+                          label="Orphan notes"
+                          value={numberValue(
+                            circuit.orphanedLessonNotesLast14Days,
+                          )}
+                          tone={
+                            numberValue(circuit.orphanedLessonNotesLast14Days)
+                              ? "danger"
+                              : "success"
+                          }
+                        />
+                        <MetricPill
+                          label="No-score items"
+                          value={numberValue(
+                            circuit.assessmentItemsWithoutScores,
+                          )}
+                          tone={
+                            numberValue(circuit.assessmentItemsWithoutScores)
+                              ? "danger"
+                              : "success"
+                          }
+                        />
                       </div>
                     </div>
 
@@ -4378,12 +4731,14 @@ await loadCases();
                           Director action
                         </p>
                         <ul className="mt-2 space-y-2 text-sm text-slate-200">
-                          {(circuit.directorRecommendedActions ?? []).slice(0, 3).map((action) => (
-                            <li key={action} className="flex gap-2">
-                              <span className="mt-2 h-2 w-2 rounded-full bg-emerald-300" />
-                              <span>{action}</span>
-                            </li>
-                          ))}
+                          {(circuit.directorRecommendedActions ?? [])
+                            .slice(0, 3)
+                            .map((action) => (
+                              <li key={action} className="flex gap-2">
+                                <span className="mt-2 h-2 w-2 rounded-full bg-emerald-300" />
+                                <span>{action}</span>
+                              </li>
+                            ))}
                         </ul>
                       </div>
 
@@ -4392,24 +4747,28 @@ await loadCases();
                           Schools driving this circuit risk
                         </p>
                         <div className="mt-2 space-y-2">
-                          {(circuit.schoolsDrivingRisk ?? []).slice(0, 3).map((school) => (
-                            <div
-                              key={school.schoolId}
-                              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-white">
-                                  {school.schoolName}
+                          {(circuit.schoolsDrivingRisk ?? [])
+                            .slice(0, 3)
+                            .map((school) => (
+                              <div
+                                key={school.schoolId}
+                                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <p className="text-sm font-semibold text-white">
+                                    {school.schoolName}
+                                  </p>
+                                  <span
+                                    className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${riskBadgeClass(school.riskLevel)}`}
+                                  >
+                                    {school.riskLevel} · {school.riskScore}
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-xs text-slate-300">
+                                  {school.reasons[0] ?? "No reason provided."}
                                 </p>
-                                <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${riskBadgeClass(school.riskLevel)}`}>
-                                  {school.riskLevel} · {school.riskScore}
-                                </span>
                               </div>
-                              <p className="mt-1 text-xs text-slate-300">
-                                {school.reasons[0] ?? "No reason provided."}
-                              </p>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       </div>
                     </div>
@@ -4434,14 +4793,30 @@ await loadCases();
                 Schools needing attention first
               </h2>
               <p className="mt-1 text-sm leading-6 text-red-100/80">
-                This is the SISSO supervision queue. It turns raw school data into action priorities.
+                This is the SISSO supervision queue. It turns raw school data
+                into action priorities.
               </p>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <MetricPill label="Critical schools" value={numberValue(riskSummary.critical)} tone="danger" />
-                <MetricPill label="High risk schools" value={numberValue(riskSummary.high)} tone="warning" />
-                <MetricPill label="Medium risk" value={numberValue(riskSummary.medium)} tone="warning" />
-                <MetricPill label="Highest score" value={numberValue(riskSummary.highestRiskScore)} />
+                <MetricPill
+                  label="Critical schools"
+                  value={numberValue(riskSummary.critical)}
+                  tone="danger"
+                />
+                <MetricPill
+                  label="High risk schools"
+                  value={numberValue(riskSummary.high)}
+                  tone="warning"
+                />
+                <MetricPill
+                  label="Medium risk"
+                  value={numberValue(riskSummary.medium)}
+                  tone="warning"
+                />
+                <MetricPill
+                  label="Highest score"
+                  value={numberValue(riskSummary.highestRiskScore)}
+                />
               </div>
 
               {riskSummary.highestRiskSchool ? (
@@ -4468,7 +4843,9 @@ await loadCases();
 
               <div className="mt-5 space-y-3">
                 {loading ? (
-                  <div className="text-sm text-slate-300">Loading intervention queue...</div>
+                  <div className="text-sm text-slate-300">
+                    Loading intervention queue...
+                  </div>
                 ) : interventionQueue.length ? (
                   interventionQueue.slice(0, 5).map((item, idx) => (
                     <div
@@ -4481,22 +4858,64 @@ await loadCases();
                             <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
                               #{idx + 1}
                             </span>
-                            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel)}`}>
+                            <span
+                              className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(item.riskLevel)}`}
+                            >
                               {item.riskLevel} · {item.riskScore}
                             </span>
                           </div>
 
-                          <p className="mt-3 font-bold text-white">{item.schoolName}</p>
+                          <p className="mt-3 font-bold text-white">
+                            {item.schoolName}
+                          </p>
                           <p className="mt-1 text-xs text-slate-400">
-                            {item.schoolCode || "No school code"} · {item.circuitName}
+                            {item.schoolCode || "No school code"} ·{" "}
+                            {schoolSectorLabel(item.schoolSector)} ·{" "}
+                            {item.circuitName}
                             {item.districtName ? ` · ${item.districtName}` : ""}
                           </p>
                         </div>
 
                         <div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
-                          <MetricPill label="Attendance" value={percentValue(item.metrics?.attendanceCompletionRateToday)} tone={numberValue(item.metrics?.attendanceCompletionRateToday) < 75 ? "danger" : "success"} />
-                          <MetricPill label="Assessment" value={percentValue(item.metrics?.assessmentCompletionRate)} tone={numberValue(item.metrics?.assessmentCompletionRate) < 60 ? "danger" : "success"} />
-                          <MetricPill label="Orphan notes" value={numberValue(item.metrics?.orphanedLessonNotesLast14Days)} tone={numberValue(item.metrics?.orphanedLessonNotesLast14Days) ? "danger" : "success"} />
+                          <MetricPill
+                            label="Attendance"
+                            value={percentValue(
+                              item.metrics?.attendanceCompletionRateToday,
+                            )}
+                            tone={
+                              numberValue(
+                                item.metrics?.attendanceCompletionRateToday,
+                              ) < 75
+                                ? "danger"
+                                : "success"
+                            }
+                          />
+                          <MetricPill
+                            label="Assessment"
+                            value={percentValue(
+                              item.metrics?.assessmentCompletionRate,
+                            )}
+                            tone={
+                              numberValue(
+                                item.metrics?.assessmentCompletionRate,
+                              ) < 60
+                                ? "danger"
+                                : "success"
+                            }
+                          />
+                          <MetricPill
+                            label="Orphan notes"
+                            value={numberValue(
+                              item.metrics?.orphanedLessonNotesLast14Days,
+                            )}
+                            tone={
+                              numberValue(
+                                item.metrics?.orphanedLessonNotesLast14Days,
+                              )
+                                ? "danger"
+                                : "success"
+                            }
+                          />
                         </div>
                       </div>
 
@@ -4508,7 +4927,9 @@ await loadCases();
                           <ul className="mt-2 space-y-2 text-sm text-slate-200">
                             {item.reasons.slice(0, 5).map((reason) => (
                               <li key={reason} className="flex gap-2">
-                                <span className={`mt-2 h-2 w-2 rounded-full ${riskDotClass(item.riskLevel)}`} />
+                                <span
+                                  className={`mt-2 h-2 w-2 rounded-full ${riskDotClass(item.riskLevel)}`}
+                                />
                                 <span>{reason}</span>
                               </li>
                             ))}
@@ -4520,19 +4941,23 @@ await loadCases();
                             SISSO recommended action
                           </p>
                           <ul className="mt-2 space-y-2 text-sm text-slate-200">
-                            {item.recommendedActions.slice(0, 5).map((action) => (
-                              <li key={action} className="flex gap-2">
-                                <span className="mt-2 h-2 w-2 rounded-full bg-emerald-300" />
-                                <span>{action}</span>
-                              </li>
-                            ))}
+                            {item.recommendedActions
+                              .slice(0, 5)
+                              .map((action) => (
+                                <li key={action} className="flex gap-2">
+                                  <span className="mt-2 h-2 w-2 rounded-full bg-emerald-300" />
+                                  <span>{action}</span>
+                                </li>
+                              ))}
                           </ul>
                         </div>
                       </div>
 
                       <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                         {(() => {
-                          const existingCase = activeCaseForSchool(item.schoolId);
+                          const existingCase = activeCaseForSchool(
+                            item.schoolId,
+                          );
 
                           return existingCase ? (
                             <div className="space-y-3">
@@ -4546,15 +4971,19 @@ await loadCases();
                                     {existingCase.priority}
                                   </p>
                                   <p className="mt-1 text-xs text-slate-400">
-                                    Case ID: {existingCase.id.slice(0, 10)}… · Notices:{" "}
-                                    {existingCase.notices?.length ?? 0}
+                                    Case ID: {existingCase.id.slice(0, 10)}… ·
+                                    Notices: {existingCase.notices?.length ?? 0}
                                   </p>
                                 </div>
 
                                 <button
                                   type="button"
-                                  onClick={() => void sendHeadteacherNotice(existingCase)}
-                                  disabled={busyCaseKey === `notice:${existingCase.id}`}
+                                  onClick={() =>
+                                    void sendHeadteacherNotice(existingCase)
+                                  }
+                                  disabled={
+                                    busyCaseKey === `notice:${existingCase.id}`
+                                  }
                                   className="rounded-full border border-amber-300/30 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-400/15 disabled:opacity-60"
                                 >
                                   {busyCaseKey === `notice:${existingCase.id}`
@@ -4571,12 +5000,13 @@ await loadCases();
                                     void updateCaseStatus(
                                       existingCase,
                                       "IN_PROGRESS",
-                                      "SISSO has started follow-up from the governance dashboard."
+                                      "SISSO has started follow-up from the governance dashboard.",
                                     )
                                   }
                                   disabled={
                                     existingCase.status === "IN_PROGRESS" ||
-                                    busyCaseKey === `status:${existingCase.id}:IN_PROGRESS`
+                                    busyCaseKey ===
+                                      `status:${existingCase.id}:IN_PROGRESS`
                                   }
                                   className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-slate-100 hover:bg-white/10 disabled:opacity-50"
                                 >
@@ -4585,11 +5015,14 @@ await loadCases();
 
                                 <button
                                   type="button"
-                                  onClick={() => openEscalationDialog(existingCase)}
+                                  onClick={() =>
+                                    openEscalationDialog(existingCase)
+                                  }
                                   disabled={
                                     busyCaseKey ===
                                       `status:${existingCase.id}:ESCALATED` ||
-                                    busyCaseKey === `escalate:${existingCase.id}`
+                                    busyCaseKey ===
+                                      `escalate:${existingCase.id}`
                                   }
                                   className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-2 text-[11px] font-semibold text-red-100 hover:bg-red-500/15 disabled:opacity-50"
                                 >
@@ -4602,91 +5035,132 @@ await loadCases();
                                     void updateCaseStatus(
                                       existingCase,
                                       "RESOLVED",
-                                      "Case marked resolved from the governance dashboard after follow-up."
+                                      "Case marked resolved from the governance dashboard after follow-up.",
                                     )
                                   }
                                   disabled={
-                                    !closureEvidenceForCase(existingCase).canResolve ||
-                                    busyCaseKey === `status:${existingCase.id}:RESOLVED`
+                                    !closureEvidenceForCase(existingCase)
+                                      .canResolve ||
+                                    busyCaseKey ===
+                                      `status:${existingCase.id}:RESOLVED`
                                   }
                                   className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-2 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-400/15 disabled:opacity-50"
                                 >
-                                  {closureEvidenceForCase(existingCase).canResolve
+                                  {closureEvidenceForCase(existingCase)
+                                    .canResolve
                                     ? "Resolve with evidence"
                                     : "Awaiting response"}
                                 </button>
                               </div>
 
-{(() => {
-  const latestEvent = latestMeaningfulEvent(existingCase);
+                              {(() => {
+                                const latestEvent =
+                                  latestMeaningfulEvent(existingCase);
 
-  if (!latestEvent) return null;
+                                if (!latestEvent) return null;
 
-  const note = eventNote(latestEvent);
+                                const note = eventNote(latestEvent);
 
-  if (eventNoteHasMarker(latestEvent, SISSO_IMPLEMENTATION_RESPONSE_MARKER)) {
-    return <DirectiveImplementationResponseCard note={note} />;
-  }
+                                if (
+                                  eventNoteHasMarker(
+                                    latestEvent,
+                                    SISSO_IMPLEMENTATION_RESPONSE_MARKER,
+                                  )
+                                ) {
+                                  return (
+                                    <DirectiveImplementationResponseCard
+                                      note={note}
+                                    />
+                                  );
+                                }
 
-  if (eventNoteHasMarker(latestEvent, DIRECTOR_DIRECTIVE_MARKER)) {
-    const alreadyResponded = latestSissoDirectiveResponseEvent(
-      existingCase,
-      latestEvent
-    );
+                                if (
+                                  eventNoteHasMarker(
+                                    latestEvent,
+                                    DIRECTOR_DIRECTIVE_MARKER,
+                                  )
+                                ) {
+                                  const alreadyResponded =
+                                    latestSissoDirectiveResponseEvent(
+                                      existingCase,
+                                      latestEvent,
+                                    );
 
-    return (
-      <div className="space-y-3">
-        <DirectorDirectiveCard
-          note={note}
-          receiptState={directiveReceiptState(existingCase, latestEvent)}
-        />
+                                  return (
+                                    <div className="space-y-3">
+                                      <DirectorDirectiveCard
+                                        note={note}
+                                        receiptState={directiveReceiptState(
+                                          existingCase,
+                                          latestEvent,
+                                        )}
+                                      />
 
-        {!alreadyResponded ? (
-          <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 p-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-200">
-                  Director follow-up required
-                </p>
-                <p className="mt-1 text-xs leading-5 text-emerald-100/80">
-                  Record what you did after receiving this directive.
-                </p>
-              </div>
+                                      {!alreadyResponded ? (
+                                        <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 p-3">
+                                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                                                Director follow-up required
+                                              </p>
+                                              <p className="mt-1 text-xs leading-5 text-emerald-100/80">
+                                                Record what you did after
+                                                receiving this directive.
+                                              </p>
+                                            </div>
 
-              <button
-                type="button"
-                onClick={() => openDirectiveResponseDialog(existingCase)}
-                disabled={
-                  busyCaseKey === `directive-response:${existingCase.id}`
-                }
-                className="rounded-full border border-emerald-300/25 bg-emerald-400/15 px-4 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/25 disabled:opacity-50"
-              >
-                Respond to Director directive
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                openDirectiveResponseDialog(
+                                                  existingCase,
+                                                )
+                                              }
+                                              disabled={
+                                                busyCaseKey ===
+                                                `directive-response:${existingCase.id}`
+                                              }
+                                              className="rounded-full border border-emerald-300/25 bg-emerald-400/15 px-4 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/25 disabled:opacity-50"
+                                            >
+                                              Respond to Director directive
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  );
+                                }
 
-  if (eventNoteHasMarker(latestEvent, ESCALATION_LOGBOOK_MARKER)) {
-    return (
-      <EscalationLogbookCard
-        note={note}
-        receiptState={escalationReceiptState(existingCase, latestEvent)}
-      />
-    );
-  }
+                                if (
+                                  eventNoteHasMarker(
+                                    latestEvent,
+                                    ESCALATION_LOGBOOK_MARKER,
+                                  )
+                                ) {
+                                  return (
+                                    <EscalationLogbookCard
+                                      note={note}
+                                      receiptState={escalationReceiptState(
+                                        existingCase,
+                                        latestEvent,
+                                      )}
+                                    />
+                                  );
+                                }
 
-  return (
-    <p className="text-xs leading-5 text-slate-400">
-      Latest evidence: {latestEvent.eventType.replaceAll("_", " ")}
-      {latestEvent.note ? ` — ${latestEvent.note}` : ""}
-    </p>
-  );
-})()}
-<GovernanceCaseAuditLogbookCard item={existingCase} />
+                                return (
+                                  <p className="text-xs leading-5 text-slate-400">
+                                    Latest evidence:{" "}
+                                    {latestEvent.eventType.replaceAll("_", " ")}
+                                    {latestEvent.note
+                                      ? ` — ${latestEvent.note}`
+                                      : ""}
+                                  </p>
+                                );
+                              })()}
+                              <GovernanceCaseAuditLogbookCard
+                                item={existingCase}
+                              />
                             </div>
                           ) : (
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -4695,15 +5169,17 @@ await loadCases();
                                   No active case yet
                                 </p>
                                 <p className="mt-1 text-sm text-slate-300">
-                                  Open a formal intervention case before sending official
-                                  notices.
+                                  Open a formal intervention case before sending
+                                  official notices.
                                 </p>
                               </div>
 
                               <button
                                 type="button"
                                 onClick={() => void openCaseFromQueue(item)}
-                                disabled={busyCaseKey === `open:${item.schoolId}`}
+                                disabled={
+                                  busyCaseKey === `open:${item.schoolId}`
+                                }
                                 className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/15 disabled:opacity-60"
                               >
                                 {busyCaseKey === `open:${item.schoolId}`
@@ -4729,7 +5205,11 @@ await loadCases();
         <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
             <SectionHeading
-              title={isDistrictView ? "Circuit Risk Breakdown" : "Schools in This Circuit"}
+              title={
+                isDistrictView
+                  ? "Circuit Risk Breakdown"
+                  : "Schools in This Circuit"
+              }
               description={
                 isDistrictView
                   ? "Circuits are sorted by risk so the Director knows which SISSO/Circuit Supervisor to follow up first."
@@ -4748,25 +5228,82 @@ await loadCases();
                   >
                     <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                       <div>
-                        <p className="font-semibold text-white">{row.circuitName}</p>
+                        <p className="font-semibold text-white">
+                          {row.circuitName}
+                        </p>
                         <p className="mt-1 text-xs text-slate-400">
-                          {row.schools} school(s) · {row.learners} learners · {row.teachers} teachers
+                          {row.schools} school(s) · {row.learners} learners ·{" "}
+                          {row.teachers} teachers
                         </p>
                         <p className="mt-2 text-xs text-slate-300">
-                          Present today: {row.presentMarksToday}/{row.attendanceMarksToday} (
-                          {pct(row.presentMarksToday, row.attendanceMarksToday)})
+                          Present today: {row.presentMarksToday}/
+                          {row.attendanceMarksToday} (
+                          {pct(row.presentMarksToday, row.attendanceMarksToday)}
+                          )
                         </p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 md:grid-cols-4">
-                        <MetricPill label="Critical" value={numberValue(row.criticalRiskSchools)} tone="danger" />
-                        <MetricPill label="High" value={numberValue(row.highRiskSchools)} tone="warning" />
-                        <MetricPill label="Completion" value={percentValue(row.attendanceCompletionRateToday)} />
-                        <MetricPill label="Highest risk" value={numberValue(row.highestRiskScore)} />
-                        <MetricPill label="No-score items" value={numberValue(row.assessmentItemsWithoutScores)} tone={numberValue(row.assessmentItemsWithoutScores) ? "danger" : "success"} />
-                        <MetricPill label="No delivery link" value={numberValue(row.assessmentItemsWithoutLessonDelivery)} tone={numberValue(row.assessmentItemsWithoutLessonDelivery) ? "warning" : "success"} />
-                        <MetricPill label="Orphan notes" value={numberValue(row.orphanedLessonNotesLast14Days)} tone={numberValue(row.orphanedLessonNotesLast14Days) ? "danger" : "success"} />
-                        <MetricPill label="Delivery compliance" value={percentValue(row.lessonDeliveryComplianceRate)} tone={numberValue(row.lessonDeliveryComplianceRate) < 70 ? "danger" : "success"} />
+                        <MetricPill
+                          label="Critical"
+                          value={numberValue(row.criticalRiskSchools)}
+                          tone="danger"
+                        />
+                        <MetricPill
+                          label="High"
+                          value={numberValue(row.highRiskSchools)}
+                          tone="warning"
+                        />
+                        <MetricPill
+                          label="Completion"
+                          value={percentValue(
+                            row.attendanceCompletionRateToday,
+                          )}
+                        />
+                        <MetricPill
+                          label="Highest risk"
+                          value={numberValue(row.highestRiskScore)}
+                        />
+                        <MetricPill
+                          label="No-score items"
+                          value={numberValue(row.assessmentItemsWithoutScores)}
+                          tone={
+                            numberValue(row.assessmentItemsWithoutScores)
+                              ? "danger"
+                              : "success"
+                          }
+                        />
+                        <MetricPill
+                          label="No delivery link"
+                          value={numberValue(
+                            row.assessmentItemsWithoutLessonDelivery,
+                          )}
+                          tone={
+                            numberValue(
+                              row.assessmentItemsWithoutLessonDelivery,
+                            )
+                              ? "warning"
+                              : "success"
+                          }
+                        />
+                        <MetricPill
+                          label="Orphan notes"
+                          value={numberValue(row.orphanedLessonNotesLast14Days)}
+                          tone={
+                            numberValue(row.orphanedLessonNotesLast14Days)
+                              ? "danger"
+                              : "success"
+                          }
+                        />
+                        <MetricPill
+                          label="Delivery compliance"
+                          value={percentValue(row.lessonDeliveryComplianceRate)}
+                          tone={
+                            numberValue(row.lessonDeliveryComplianceRate) < 70
+                              ? "danger"
+                              : "success"
+                          }
+                        />
                       </div>
                     </div>
                   </div>
@@ -4783,14 +5320,20 @@ await loadCases();
                       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold text-white">{school.name}</p>
-                            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}>
+                            <p className="font-semibold text-white">
+                              {school.name}
+                            </p>
+                            <span
+                              className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}
+                            >
                               {riskLevel} · {numberValue(m.riskScore)}
                             </span>
                           </div>
 
                           <p className="mt-1 text-xs text-slate-400">
-                            {school.schoolCode || "No school code"} · {school.status}
+                            {school.schoolCode || "No school code"} ·{" "}
+                            {school.status} ·{" "}
+                            {schoolSectorLabel(school.schoolSector)}
                           </p>
                           <p className="mt-2 text-xs text-slate-300">
                             Circuit: {school.circuit?.name || "—"} · District:{" "}
@@ -4799,21 +5342,64 @@ await loadCases();
 
                           {m.riskReasons?.length ? (
                             <p className="mt-3 text-sm text-slate-200">
-                              <span className="font-semibold text-amber-200">Main reason:</span>{" "}
+                              <span className="font-semibold text-amber-200">
+                                Main reason:
+                              </span>{" "}
                               {m.riskReasons[0]}
                             </p>
                           ) : null}
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 md:grid-cols-4">
-                          <MetricPill label="Learners" value={numberValue(m.learners)} />
-                          <MetricPill label="Teachers" value={numberValue(m.teachers)} />
-                          <MetricPill label="Attendance" value={percentValue(m.attendanceRateToday)} />
-                          <MetricPill label="Completion" value={percentValue(m.attendanceCompletionRateToday)} />
-                          <MetricPill label="Missing" value={numberValue(m.missingAttendanceMarksToday)} tone={numberValue(m.missingAttendanceMarksToday) ? "warning" : "success"} />
-                          <MetricPill label="Alerts" value={numberValue(m.healthAlertsToday)} tone={numberValue(m.healthAlertsToday) ? "danger" : "success"} />
-                          <MetricPill label="Pending notes" value={numberValue(m.lessonNotesPendingReview)} tone={numberValue(m.lessonNotesPendingReview) ? "warning" : "success"} />
-                          <MetricPill label="Assessments" value={numberValue(m.assessmentItemsTotal)} />
+                          <MetricPill
+                            label="Learners"
+                            value={numberValue(m.learners)}
+                          />
+                          <MetricPill
+                            label="Teachers"
+                            value={numberValue(m.teachers)}
+                          />
+                          <MetricPill
+                            label="Attendance"
+                            value={percentValue(m.attendanceRateToday)}
+                          />
+                          <MetricPill
+                            label="Completion"
+                            value={percentValue(
+                              m.attendanceCompletionRateToday,
+                            )}
+                          />
+                          <MetricPill
+                            label="Missing"
+                            value={numberValue(m.missingAttendanceMarksToday)}
+                            tone={
+                              numberValue(m.missingAttendanceMarksToday)
+                                ? "warning"
+                                : "success"
+                            }
+                          />
+                          <MetricPill
+                            label="Alerts"
+                            value={numberValue(m.healthAlertsToday)}
+                            tone={
+                              numberValue(m.healthAlertsToday)
+                                ? "danger"
+                                : "success"
+                            }
+                          />
+                          <MetricPill
+                            label="Pending notes"
+                            value={numberValue(m.lessonNotesPendingReview)}
+                            tone={
+                              numberValue(m.lessonNotesPendingReview)
+                                ? "warning"
+                                : "success"
+                            }
+                          />
+                          <MetricPill
+                            label="Assessments"
+                            value={numberValue(m.assessmentItemsTotal)}
+                          />
                         </div>
                       </div>
 
@@ -4848,7 +5434,9 @@ await loadCases();
                     className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
                   >
                     <span className="text-sm text-slate-300">{item.label}</span>
-                    <span className="text-lg font-bold text-white">{item.value}</span>
+                    <span className="text-lg font-bold text-white">
+                      {item.value}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -4862,7 +5450,9 @@ await loadCases();
 
               <div className="mt-5 grid gap-3">
                 {loading ? (
-                  <div className="text-sm text-slate-300">Loading signals...</div>
+                  <div className="text-sm text-slate-300">
+                    Loading signals...
+                  </div>
                 ) : signalCards.length ? (
                   signalCards.map((s) => (
                     <div
@@ -4870,7 +5460,9 @@ await loadCases();
                       className="flex items-center justify-between rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3"
                     >
                       <span className="text-sm text-slate-300">{s.label}</span>
-                      <span className="text-lg font-bold text-white">{s.value}</span>
+                      <span className="text-lg font-bold text-white">
+                        {s.value}
+                      </span>
                     </div>
                   ))
                 ) : (
@@ -4903,10 +5495,13 @@ await loadCases();
                             {idx + 1}. {school.name}
                           </p>
                           <p className="mt-1 text-xs text-slate-400">
-                            {school.circuit?.name || "No circuit"} · {school.schoolCode || "No code"}
+                            {school.circuit?.name || "No circuit"} ·{" "}
+                            {school.schoolCode || "No code"}
                           </p>
                         </div>
-                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}
+                        >
                           {numberValue(m.riskScore)}
                         </span>
                       </div>
@@ -4967,17 +5562,29 @@ await loadCases();
                       className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
                     >
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-white">{school.name}</p>
-                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}>
+                        <p className="font-semibold text-white">
+                          {school.name}
+                        </p>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${schoolSectorBadgeClass(school.schoolSector)}`}
+                        >
+                          {schoolSectorLabel(school.schoolSector)}
+                        </span>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${riskBadgeClass(riskLevel)}`}
+                        >
                           {riskLevel} · {numberValue(m.riskScore)}
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-slate-400">
-                        {school.schoolCode || "No school code"} · {school.circuit?.name || "No circuit"}
+                        {school.schoolCode || "No school code"} ·{" "}
+                        {school.circuit?.name || "No circuit"}
                       </p>
                       {m.riskReasons?.[0] ? (
                         <p className="mt-3 text-sm text-slate-200">
-                          <span className="font-semibold text-amber-200">Evidence:</span>{" "}
+                          <span className="font-semibold text-amber-200">
+                            Evidence:
+                          </span>{" "}
                           {m.riskReasons[0]}
                         </p>
                       ) : null}
@@ -4995,7 +5602,8 @@ await loadCases();
 
         {isCircuitView ? (
           <section className="rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-5 text-sm text-emerald-100">
-            This is a read-only supervision dashboard. Officers can see risk and evidence, but they cannot edit school records from this view.
+            This is a read-only supervision dashboard. Officers can see risk and
+            evidence, but they cannot edit school records from this view.
           </section>
         ) : null}
       </div>
