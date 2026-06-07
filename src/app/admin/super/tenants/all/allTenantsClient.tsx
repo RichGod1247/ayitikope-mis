@@ -6,6 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 type TenantStatus = "PENDING" | "ACTIVE" | "SUSPENDED" | "ARCHIVED";
 type StatusFilter = "ALL" | TenantStatus;
 type SectorFilter = "ALL" | "PUBLIC" | "PRIVATE";
+type RegistryView = "SCHOOLS" | "GOVERNANCE";
+type GovernanceView = "CIRCUIT" | "DISTRICT" | "REGIONAL" | "INVITES";
+type GovernanceStatusFilter = "ALL" | "ACTIVE" | "SUSPENDED" | "REVOKED" | "PENDING" | "ACCEPTED" | "EXPIRED";
 
 type Person = {
   id: string;
@@ -16,6 +19,7 @@ type Person = {
 type ZoneSummary = {
   id: string;
   name: string;
+  code?: string | null;
   zoneType: { name: string; level: number };
   parentZone: { id: string; name: string } | null;
 };
@@ -70,12 +74,12 @@ type GovernanceAssignment = {
   title: string | null;
   phone: string | null;
   status: string;
-  startsAt: string | null;
-  endsAt: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
   createdAt: string;
-  updatedAt: string;
-  revokedAt: string | null;
-  revokeReason: string | null;
+  updatedAt?: string | null;
+  revokedAt?: string | null;
+  revokeReason?: string | null;
   metadata?: Record<string, unknown> | null;
   user: Person;
   zone: ZoneSummary;
@@ -86,6 +90,31 @@ type GovernanceAssignment = {
 type GovernanceState = {
   invites: GovernanceInvite[];
   assignments: GovernanceAssignment[];
+};
+
+type TenantsResponse = {
+  ok: boolean;
+  items?: TenantItem[];
+  error?: string;
+  message?: string;
+};
+
+type GovernanceListResponse = {
+  ok: boolean;
+  zones?: ZoneSummary[];
+  invites?: GovernanceInvite[];
+  assignments?: GovernanceAssignment[];
+  error?: string;
+  message?: string;
+};
+
+type ActionResponse = {
+  ok: boolean;
+  item?: unknown;
+  oldAssignment?: unknown;
+  newAssignment?: unknown;
+  error?: string;
+  message?: string;
 };
 
 type GovernanceLifecycleAction =
@@ -104,14 +133,7 @@ function officialIdentifierLabel(sector: TenantItem["schoolSector"]) {
     : "EMIS code";
 }
 
-function statusBadgeClass(status: TenantStatus) {
-  if (status === "ACTIVE") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (status === "PENDING") return "border-amber-200 bg-amber-50 text-amber-700";
-  if (status === "SUSPENDED") return "border-orange-200 bg-orange-50 text-orange-700";
-  return "border-slate-300 bg-slate-100 text-slate-700";
-}
-
-function governanceStatusBadgeClass(status: string) {
+function statusBadgeClass(status: string) {
   if (status === "ACTIVE" || status === "ACCEPTED") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
@@ -131,6 +153,19 @@ function governanceStatusBadgeClass(status: string) {
   return "border-slate-300 bg-slate-100 text-slate-700";
 }
 
+function soft(value: string | null | undefined) {
+  return value && value.trim() ? value : "—";
+}
+
+function dateLabel(value?: string | null) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleString();
+}
+
 function actionLabel(action: string) {
   return action.replaceAll("_", " ").toLowerCase();
 }
@@ -140,20 +175,46 @@ function personLabel(person?: Person | null) {
   return person.name || person.email;
 }
 
-function dateLabel(value?: string | null) {
-  if (!value) return "—";
-
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-
-  return d.toLocaleString();
-}
-
 function zoneLabel(zone: ZoneSummary) {
-  return `${zone.name} (${zone.zoneType.name})`;
+  const parent = zone.parentZone ? ` • ${zone.parentZone.name}` : "";
+  return `${zone.name} (${zone.zoneType.name})${parent}`;
 }
 
-function lifecycleButtonClass(tone: "warning" | "danger" | "success") {
+function haystack(value: Array<string | null | undefined>) {
+  return value.join(" ").toLowerCase();
+}
+
+function roleExpectedZoneLevel(role: string) {
+  const r = String(role || "").toUpperCase();
+
+  if (r === "SISSO" || r === "CIRCUIT_SUPERVISOR") return 1;
+
+  if (
+    r === "DISTRICT_DIRECTOR" ||
+    r === "DISTRICT_MIS_OFFICER" ||
+    r === "DISTRICT_SHEP_OFFICER" ||
+    r === "DISTRICT_ASSESSMENT_OFFICER"
+  ) {
+    return 2;
+  }
+
+  if (r === "REGIONAL_VIEWER") return 3;
+
+  return null;
+}
+
+function reassignZoneOptions(assignment: GovernanceAssignment, zones: ZoneSummary[]) {
+  const expectedLevel = roleExpectedZoneLevel(assignment.role);
+
+  if (!expectedLevel) return [];
+
+  return zones
+    .filter((zone) => zone.zoneType.level === expectedLevel)
+    .filter((zone) => zone.id !== assignment.zone.id)
+    .sort((a, b) => zoneLabel(a).localeCompare(zoneLabel(b)));
+}
+
+function lifecycleButtonClass(tone: "warning" | "danger" | "success" | "info") {
   if (tone === "danger") {
     return "h-8 rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60";
   }
@@ -162,15 +223,33 @@ function lifecycleButtonClass(tone: "warning" | "danger" | "success") {
     return "h-8 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60";
   }
 
+  if (tone === "info") {
+    return "h-8 rounded-xl border border-indigo-200 bg-indigo-50 px-3 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-60";
+  }
+
   return "h-8 rounded-xl border border-orange-200 bg-orange-50 px-3 text-xs font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-60";
 }
 
+function viewButtonClass(active: boolean) {
+  return active
+    ? "rounded-2xl border border-black bg-black px-4 py-2 text-sm font-semibold text-white"
+    : "rounded-2xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-50";
+}
+
 export default function AllTenantsClient() {
+  const [registryView, setRegistryView] = useState<RegistryView>("SCHOOLS");
+  const [governanceView, setGovernanceView] = useState<GovernanceView>("CIRCUIT");
+
   const [status, setStatus] = useState<StatusFilter>("ALL");
   const [sector, setSector] = useState<SectorFilter>("ALL");
   const [q, setQ] = useState("");
 
+  const [govStatus, setGovStatus] = useState<GovernanceStatusFilter>("ALL");
+  const [govQ, setGovQ] = useState("");
+  const [govRole, setGovRole] = useState("ALL");
+
   const [items, setItems] = useState<TenantItem[]>([]);
+  const [governanceZones, setGovernanceZones] = useState<ZoneSummary[]>([]);
   const [governance, setGovernance] = useState<GovernanceState>({
     invites: [],
     assignments: [],
@@ -182,16 +261,44 @@ export default function AllTenantsClient() {
   const [govMsg, setGovMsg] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const canSearch = useMemo(() => true, []);
+  const roles = useMemo(() => {
+    const found = new Set<string>();
+
+    for (const assignment of governance.assignments) found.add(assignment.role);
+    for (const invite of governance.invites) found.add(invite.role);
+
+    return Array.from(found).sort();
+  }, [governance.assignments, governance.invites]);
+
+  const schoolCounts = useMemo(() => {
+    return items.reduce(
+      (acc, item) => {
+        acc.total += 1;
+        acc[item.status] = (acc[item.status] ?? 0) + 1;
+        acc[item.schoolSector] = (acc[item.schoolSector] ?? 0) + 1;
+        return acc;
+      },
+      {
+        total: 0,
+        ACTIVE: 0,
+        PENDING: 0,
+        SUSPENDED: 0,
+        ARCHIVED: 0,
+        PUBLIC: 0,
+        PRIVATE: 0,
+      } as Record<string, number>
+    );
+  }, [items]);
 
   const assignmentCounts = useMemo(() => {
     return governance.assignments.reduce(
       (acc, item) => {
         const key = item.status.toUpperCase();
         acc[key] = (acc[key] ?? 0) + 1;
+        acc.total += 1;
         return acc;
       },
-      {} as Record<string, number>
+      { total: 0 } as Record<string, number>
     );
   }, [governance.assignments]);
 
@@ -200,11 +307,89 @@ export default function AllTenantsClient() {
       (acc, item) => {
         const key = item.status.toUpperCase();
         acc[key] = (acc[key] ?? 0) + 1;
+        acc.total += 1;
         return acc;
       },
-      {} as Record<string, number>
+      { total: 0 } as Record<string, number>
     );
   }, [governance.invites]);
+
+  const filteredSchools = useMemo(() => {
+    const term = q.trim().toLowerCase();
+
+    if (!term) return items;
+
+    return items.filter((school) => {
+      return haystack([
+        school.name,
+        school.schoolCode,
+        school.slug,
+        school.emisCode,
+        school.contactEmail,
+        school.contactPhoneNorm,
+        school.region,
+        school.district,
+        school.circuit,
+        school.zone?.name,
+        school.zone?.parentZone?.name,
+      ]).includes(term);
+    });
+  }, [items, q]);
+
+  const filteredAssignments = useMemo(() => {
+    const term = govQ.trim().toLowerCase();
+
+    return governance.assignments.filter((assignment) => {
+      if (governanceView === "CIRCUIT" && assignment.zone.zoneType.level !== 1) return false;
+      if (governanceView === "DISTRICT" && assignment.zone.zoneType.level !== 2) return false;
+      if (governanceView === "REGIONAL" && assignment.zone.zoneType.level !== 3) return false;
+
+      if (govStatus !== "ALL" && assignment.status !== govStatus) return false;
+      if (govRole !== "ALL" && assignment.role !== govRole) return false;
+
+      if (!term) return true;
+
+      return haystack([
+        assignment.user.name,
+        assignment.user.email,
+        assignment.role,
+        assignment.title,
+        assignment.phone,
+        assignment.status,
+        assignment.zone.name,
+        assignment.zone.zoneType.name,
+        assignment.zone.parentZone?.name,
+        assignment.revokeReason,
+      ]).includes(term);
+    });
+  }, [governance.assignments, governanceView, govQ, govRole, govStatus]);
+
+  const filteredInvites = useMemo(() => {
+    const term = govQ.trim().toLowerCase();
+
+    return governance.invites.filter((invite) => {
+      if (govStatus !== "ALL" && invite.status !== govStatus) return false;
+      if (govRole !== "ALL" && invite.role !== govRole) return false;
+
+      if (!term) return true;
+
+      return haystack([
+        invite.email,
+        invite.phone,
+        invite.role,
+        invite.status,
+        invite.zone.name,
+        invite.zone.zoneType.name,
+        invite.zone.parentZone?.name,
+        invite.createdBy?.email,
+        invite.createdBy?.name,
+        invite.acceptedBy?.email,
+        invite.acceptedBy?.name,
+        invite.revokedBy?.email,
+        invite.revokedBy?.name,
+      ]).includes(term);
+    });
+  }, [governance.invites, govQ, govRole, govStatus]);
 
   async function loadTenants() {
     setLoading(true);
@@ -216,21 +401,22 @@ export default function AllTenantsClient() {
         `&sector=${encodeURIComponent(sector)}` +
         `&q=${encodeURIComponent(q.trim())}`;
 
-      const r = await fetch(url, {
+      const response = await fetch(url, {
         cache: "no-store",
         credentials: "include",
       });
-      const j = await r.json().catch(() => ({} as any));
 
-      if (!r.ok || !j?.ok) {
-        setMsg(j?.error || `Failed (${r.status})`);
+      const data = (await response.json().catch(() => null)) as TenantsResponse | null;
+
+      if (!response.ok || !data?.ok) {
+        setMsg(data?.message || data?.error || `Failed (${response.status})`);
         setItems([]);
         return;
       }
 
-      setItems(j.items || []);
+      setItems(data.items || []);
     } catch {
-      setMsg("Network/server error.");
+      setMsg("Network/server error loading schools.");
       setItems([]);
     } finally {
       setLoading(false);
@@ -242,25 +428,29 @@ export default function AllTenantsClient() {
     setGovMsg(null);
 
     try {
-      const r = await fetch("/api/admin/governance/officers/list", {
+      const response = await fetch("/api/admin/governance/officers/list", {
         cache: "no-store",
         credentials: "include",
       });
-      const j = await r.json().catch(() => ({} as any));
 
-      if (!r.ok || !j?.ok) {
-        setGovMsg(j?.error || `Governance load failed (${r.status})`);
+      const data = (await response.json().catch(() => null)) as GovernanceListResponse | null;
+
+      if (!response.ok || !data?.ok) {
+        setGovMsg(data?.message || data?.error || `Governance load failed (${response.status})`);
         setGovernance({ invites: [], assignments: [] });
+        setGovernanceZones([]);
         return;
       }
 
       setGovernance({
-        invites: j.invites || [],
-        assignments: j.assignments || [],
+        invites: data.invites || [],
+        assignments: data.assignments || [],
       });
+      setGovernanceZones(data.zones || []);
     } catch {
-      setGovMsg("Network/server error loading governance onboarding.");
+      setGovMsg("Network/server error loading governance registry.");
       setGovernance({ invites: [], assignments: [] });
+      setGovernanceZones([]);
     } finally {
       setGovLoading(false);
     }
@@ -298,7 +488,7 @@ export default function AllTenantsClient() {
     setMsg(null);
 
     try {
-      const r = await fetch("/api/admin/super/tenants/status", {
+      const response = await fetch("/api/admin/super/tenants/status", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
@@ -309,10 +499,10 @@ export default function AllTenantsClient() {
         }),
       });
 
-      const j = await r.json().catch(() => ({} as any));
+      const data = (await response.json().catch(() => null)) as ActionResponse | null;
 
-      if (!r.ok || !j?.ok) {
-        setMsg(j?.message || j?.error || `Action failed (${r.status})`);
+      if (!response.ok || !data?.ok) {
+        setMsg(data?.message || data?.error || `Action failed (${response.status})`);
         return;
       }
 
@@ -357,7 +547,7 @@ export default function AllTenantsClient() {
     setGovMsg(null);
 
     try {
-      const r = await fetch("/api/admin/governance/officers/lifecycle", {
+      const response = await fetch("/api/admin/governance/officers/lifecycle", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
@@ -369,10 +559,10 @@ export default function AllTenantsClient() {
         }),
       });
 
-      const j = await r.json().catch(() => ({} as any));
+      const data = (await response.json().catch(() => null)) as ActionResponse | null;
 
-      if (!r.ok || !j?.ok) {
-        setGovMsg(j?.message || j?.error || `Governance lifecycle action failed (${r.status})`);
+      if (!response.ok || !data?.ok) {
+        setGovMsg(data?.message || data?.error || `Governance lifecycle action failed (${response.status})`);
         return;
       }
 
@@ -385,6 +575,88 @@ export default function AllTenantsClient() {
     }
   }
 
+  async function reassignGovernanceAssignment(assignment: GovernanceAssignment) {
+    if (assignment.status !== "ACTIVE" || assignment.revokedAt) {
+      setGovMsg("Only active assignments can be reassigned.");
+      return;
+    }
+
+    const options = reassignZoneOptions(assignment, governanceZones);
+
+    if (!options.length) {
+      setGovMsg("No eligible target zone is available for this officer role.");
+      return;
+    }
+
+    const optionText = options
+      .slice(0, 50)
+      .map((zone, index) => `${index + 1}. ${zoneLabel(zone)}`)
+      .join("\n");
+
+    const selectedRaw = window.prompt(
+      `Select new zone for ${assignment.user.name || assignment.user.email}:\n\n${optionText}\n\nEnter option number.`
+    );
+
+    if (selectedRaw === null) return;
+
+    const selectedIndex = Number(selectedRaw.trim()) - 1;
+    const selectedZone = options[selectedIndex];
+
+    if (!selectedZone) {
+      setGovMsg("Invalid reassignment zone selection.");
+      return;
+    }
+
+    const enteredReason = window.prompt(
+      `Reason for reassigning ${assignment.user.name || assignment.user.email} from ${assignment.zone.name} to ${selectedZone.name}:\n\nThis will be written into the audit log.`
+    );
+
+    if (enteredReason === null) return;
+
+    const reason = enteredReason.trim();
+
+    if (reason.length < 10) {
+      setGovMsg("Provide a clear reassignment reason of at least 10 characters.");
+      return;
+    }
+
+    const ok = window.confirm(
+      `Confirm reassignment?\n\nOfficer: ${assignment.user.name || assignment.user.email}\nRole: ${assignment.role}\nFrom: ${assignment.zone.name}\nTo: ${selectedZone.name}`
+    );
+
+    if (!ok) return;
+
+    setBusyId(`gov:REASSIGN_ASSIGNMENT:${assignment.id}`);
+    setGovMsg(null);
+
+    try {
+      const response = await fetch("/api/admin/governance/officers/reassign", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          assignmentId: assignment.id,
+          newZoneId: selectedZone.id,
+          reason,
+        }),
+      });
+
+      const data = (await response.json().catch(() => null)) as ActionResponse | null;
+
+      if (!response.ok || !data?.ok) {
+        setGovMsg(data?.message || data?.error || `Governance reassignment failed (${response.status})`);
+        return;
+      }
+
+      setGovMsg(`Governance reassignment completed: ${assignment.zone.name} → ${selectedZone.name}.`);
+      await loadGovernance();
+    } catch {
+      setGovMsg("Network/server error reassigning governance officer.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   useEffect(() => {
     void loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -392,447 +664,501 @@ export default function AllTenantsClient() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border bg-white p-5 shadow-sm space-y-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <select
-            className="h-10 rounded-xl border px-3 text-sm"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as StatusFilter)}
-          >
-            <option value="ALL">All statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="PENDING">Pending</option>
-            <option value="SUSPENDED">Suspended</option>
-            <option value="ARCHIVED">Archived</option>
-          </select>
-
-          <select
-            className="h-10 rounded-xl border px-3 text-sm"
-            value={sector}
-            onChange={(e) => setSector(e.target.value as SectorFilter)}
-          >
-            <option value="ALL">All sectors</option>
-            <option value="PUBLIC">Public schools</option>
-            <option value="PRIVATE">Private schools</option>
-          </select>
-
-          <input
-            className="h-10 flex-1 rounded-xl border px-3 text-sm"
-            placeholder="Search by name, code, slug, official ID, email, phone…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-
-          <button
-            disabled={!canSearch}
-            onClick={() => void loadTenants()}
-            className="h-10 rounded-xl border border-black bg-black px-4 text-sm text-white hover:bg-zinc-800 disabled:opacity-60"
-          >
-            Search
-          </button>
-
-          {msg ? <div className="text-sm text-zinc-700">{msg}</div> : null}
-        </div>
-
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3">
-          <div className="text-sm font-semibold text-indigo-950">
-            School tenant registry
-          </div>
-          <p className="mt-1 text-xs text-indigo-900/80">
-            These are school workspaces. Governance officers are shown separately below
-            so tenant onboarding and governance onboarding are not mixed.
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="text-sm text-zinc-600">Loading tenants…</div>
-        ) : items.length === 0 ? (
-          <div className="text-sm text-zinc-600">No tenants found.</div>
-        ) : (
-          <div className="space-y-3">
-            {items.map((t) => {
-              const busy = busyId === t.id;
-
-              return (
-                <div key={t.id} className="rounded-xl border p-4">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0 space-y-2">
-                      <div className="font-medium text-zinc-900">
-                        {t.name}{" "}
-                        <span className="text-xs text-zinc-500">({t.schoolCode})</span>
-                        <span
-                          className={`ml-2 inline-flex rounded-full border px-2 py-1 text-[10px] ${statusBadgeClass(
-                            t.status
-                          )}`}
-                        >
-                          {t.status}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-zinc-600">
-                        Sector:{" "}
-                        <span className="font-semibold">
-                          {schoolSectorLabel(t.schoolSector)}
-                        </span>{" "}
-                        • {officialIdentifierLabel(t.schoolSector)}:{" "}
-                        <span className="font-mono font-semibold">
-                          {t.emisCode || "—"}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-zinc-600">
-                        Created: {dateLabel(t.createdAt)} • slug:{" "}
-                        <span className="font-mono">{t.slug}</span>
-                      </div>
-
-                      <div className="text-xs text-zinc-600">
-                        Contact: {t.contactEmail || "—"} • {t.contactPhoneNorm || "—"}
-                      </div>
-
-                      <div className="text-xs text-zinc-600">
-                        Location: {t.region || "—"} / {t.district || "—"} /{" "}
-                        {t.circuit || "—"}
-                      </div>
-
-                      <div className="grid gap-2 text-xs text-zinc-700 sm:grid-cols-3 lg:grid-cols-6">
-                        <Stat label="Users" value={t.usage.memberships} />
-                        <Stat label="Students" value={t.usage.students} />
-                        <Stat label="Teachers" value={t.usage.teachers} />
-                        <Stat label="Lesson notes" value={t.usage.lessonNotes} />
-                        <Stat label="Invoices" value={t.usage.feeInvoices} />
-                        <Stat label="Gov cases" value={t.usage.governanceCases} />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {t.status !== "ACTIVE" ? (
-                        <button
-                          disabled={busy}
-                          onClick={() => void updateTenantStatus(t, "ACTIVATE")}
-                          className="h-9 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
-                        >
-                          Activate
-                        </button>
-                      ) : null}
-
-                      {t.status !== "SUSPENDED" && t.status !== "ARCHIVED" ? (
-                        <button
-                          disabled={busy}
-                          onClick={() => void updateTenantStatus(t, "SUSPEND")}
-                          className="h-9 rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm text-orange-700 hover:bg-orange-100 disabled:opacity-60"
-                        >
-                          Suspend
-                        </button>
-                      ) : null}
-
-                      {t.status !== "ARCHIVED" ? (
-                        <button
-                          disabled={busy}
-                          onClick={() => void updateTenantStatus(t, "ARCHIVE")}
-                          className="h-9 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-                        >
-                          Archive
-                        </button>
-                      ) : (
-                        <button
-                          disabled={busy}
-                          onClick={() => void updateTenantStatus(t, "RESTORE_TO_PENDING")}
-                          className="h-9 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm text-amber-700 hover:bg-amber-100 disabled:opacity-60"
-                        >
-                          Restore to pending
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-2xl border bg-white p-5 shadow-sm space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="text-sm font-semibold text-zinc-950">
-              Governance officer lifecycle registry
-            </div>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-zinc-600">
-              Governance officers are not school tenants. They are jurisdiction officers
-              assigned to circuits, districts, regions, or national zones. This registry
-              shows current authority and historical authority so suspended or revoked
-              officers do not disappear.
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Superadmin Control Center
+            </p>
+            <h2 className="mt-1 text-xl font-semibold text-zinc-950">
+              Schools and governance authority
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-zinc-600">
+              Schools are workspaces. Governance officers are authority assignments. Keep them separate, searchable, and auditable.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void loadGovernance()}
-            disabled={govLoading}
-            className="h-9 rounded-xl border border-zinc-300 bg-white px-3 text-sm text-zinc-800 hover:bg-zinc-50 disabled:opacity-60"
-          >
-            {govLoading ? "Reloading…" : "Reload governance"}
-          </button>
-        </div>
-
-        <div className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-6">
-          <GovStat label="Assignments" value={governance.assignments.length} />
-          <GovStat label="Active" value={assignmentCounts.ACTIVE ?? 0} tone="success" />
-          <GovStat label="Suspended" value={assignmentCounts.SUSPENDED ?? 0} tone="warning" />
-          <GovStat label="Revoked" value={assignmentCounts.REVOKED ?? 0} tone="danger" />
-          <GovStat label="Pending invites" value={inviteCounts.PENDING ?? 0} tone="warning" />
-          <GovStat label="Accepted invites" value={inviteCounts.ACCEPTED ?? 0} tone="success" />
-        </div>
-
-        {govMsg ? (
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
-            {govMsg}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setRegistryView("SCHOOLS")}
+              className={viewButtonClass(registryView === "SCHOOLS")}
+            >
+              Schools
+            </button>
+            <button
+              type="button"
+              onClick={() => setRegistryView("GOVERNANCE")}
+              className={viewButtonClass(registryView === "GOVERNANCE")}
+            >
+              Governance officers
+            </button>
           </div>
-        ) : null}
+        </div>
 
-        {govLoading ? (
-          <div className="text-sm text-zinc-600">Loading governance onboarding…</div>
-        ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            <div className="rounded-xl border p-4">
-              <div className="text-sm font-semibold text-zinc-900">
-                Governance assignments
-              </div>
-              <div className="mt-1 text-xs text-zinc-500">
-                {governance.assignments.length} recent assignment record(s)
-              </div>
+        <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-6">
+          <MiniStat label="Schools" value={schoolCounts.total} />
+          <MiniStat label="Active schools" value={schoolCounts.ACTIVE} tone="success" />
+          <MiniStat label="Pending schools" value={schoolCounts.PENDING} tone="warning" />
+          <MiniStat label="Assignments" value={assignmentCounts.total} />
+          <MiniStat label="Active officers" value={assignmentCounts.ACTIVE ?? 0} tone="success" />
+          <MiniStat label="Pending invites" value={inviteCounts.PENDING ?? 0} tone="warning" />
+        </div>
+      </section>
 
-              <div className="mt-3 space-y-2">
-                {governance.assignments.length === 0 ? (
-                  <div className="text-xs text-zinc-500">No governance assignments.</div>
-                ) : (
-                  governance.assignments.slice(0, 30).map((a) => {
-                    const busy =
-                      busyId === `gov:SUSPEND_ASSIGNMENT:${a.id}` ||
-                      busyId === `gov:REVOKE_ASSIGNMENT:${a.id}` ||
-                      busyId === `gov:REACTIVATE_ASSIGNMENT:${a.id}`;
+      {registryView === "SCHOOLS" ? (
+        <section className="rounded-2xl border bg-white p-5 shadow-sm space-y-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <select
+              className="h-10 rounded-xl border px-3 text-sm"
+              value={status}
+              onChange={(event) => setStatus(event.target.value as StatusFilter)}
+            >
+              <option value="ALL">All statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="PENDING">Pending</option>
+              <option value="SUSPENDED">Suspended</option>
+              <option value="ARCHIVED">Archived</option>
+            </select>
 
-                    return (
-                      <div key={a.id} className="rounded-lg border bg-zinc-50 p-3 text-xs">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-semibold text-zinc-900">
-                                {a.user.name || a.user.email}
-                              </span>
-                              <span
-                                className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${governanceStatusBadgeClass(
-                                  a.status
-                                )}`}
-                              >
-                                {a.status}
-                              </span>
-                            </div>
+            <select
+              className="h-10 rounded-xl border px-3 text-sm"
+              value={sector}
+              onChange={(event) => setSector(event.target.value as SectorFilter)}
+            >
+              <option value="ALL">All sectors</option>
+              <option value="PUBLIC">Public schools</option>
+              <option value="PRIVATE">Private schools</option>
+            </select>
 
-                            <div className="text-zinc-600">
-                              {a.role} • {zoneLabel(a.zone)}
-                              {a.zone.parentZone ? ` • ${a.zone.parentZone.name}` : ""}
-                            </div>
+            <input
+              className="h-10 flex-1 rounded-xl border px-3 text-sm"
+              placeholder="Search school, circuit, district, code, official ID, email, phone…"
+              value={q}
+              onChange={(event) => setQ(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void loadTenants();
+              }}
+            />
 
-                            {a.title ? (
-                              <div className="text-zinc-600">Title: {a.title}</div>
-                            ) : null}
+            <button
+              type="button"
+              onClick={() => void loadTenants()}
+              className="h-10 rounded-xl border border-black bg-black px-4 text-sm text-white hover:bg-zinc-800 disabled:opacity-60"
+            >
+              Search schools
+            </button>
+          </div>
 
-                            <div className="text-zinc-500">
-                              Created: {dateLabel(a.createdAt)} • Updated:{" "}
-                              {dateLabel(a.updatedAt)}
-                            </div>
+          {msg ? (
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+              {msg}
+            </div>
+          ) : null}
 
-                            <div className="text-zinc-500">
-                              Starts: {dateLabel(a.startsAt)} • Ends: {dateLabel(a.endsAt)}
-                            </div>
+          {loading ? (
+            <div className="text-sm text-zinc-600">Loading schools…</div>
+          ) : filteredSchools.length === 0 ? (
+            <div className="text-sm text-zinc-600">No schools found.</div>
+          ) : (
+            <div className="space-y-3">
+              {filteredSchools.map((school) => {
+                const busy = busyId === school.id;
 
-                            <div className="text-zinc-500">
-                              Created by: {personLabel(a.createdBy)} • Revoked by:{" "}
-                              {personLabel(a.revokedBy)}
-                            </div>
+                return (
+                  <div key={school.id} className="rounded-xl border p-4">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-zinc-950">{school.name}</span>
+                          <span className="text-xs text-zinc-500">({school.schoolCode})</span>
+                          <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${statusBadgeClass(school.status)}`}>
+                            {school.status}
+                          </span>
+                          <span className="inline-flex rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700">
+                            {schoolSectorLabel(school.schoolSector)}
+                          </span>
+                        </div>
 
-                            {a.revokedAt ? (
-                              <div className="text-red-700">
-                                Revoked: {dateLabel(a.revokedAt)}
-                              </div>
-                            ) : null}
+                        <div className="text-xs text-zinc-600">
+                          {officialIdentifierLabel(school.schoolSector)}:{" "}
+                          <span className="font-mono font-semibold">{school.emisCode || "—"}</span>
+                        </div>
 
-                            {a.revokeReason ? (
-                              <div className="rounded-lg border border-orange-100 bg-orange-50 px-2 py-1 text-orange-800">
-                                Reason: {a.revokeReason}
-                              </div>
-                            ) : null}
-                          </div>
+                        <div className="text-xs text-zinc-600">
+                          Location: {soft(school.region)} / {soft(school.district)} / {soft(school.circuit)}
+                        </div>
 
-                          <div className="flex flex-wrap gap-2">
-                            {a.status === "ACTIVE" ? (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void updateGovernanceLifecycle({
-                                      action: "SUSPEND_ASSIGNMENT",
-                                      assignment: a,
-                                    })
-                                  }
-                                  className={lifecycleButtonClass("warning")}
-                                >
-                                  Suspend
-                                </button>
+                        <div className="text-xs text-zinc-600">
+                          Governance zone: {school.zone ? zoneLabel(school.zone) : "—"}
+                        </div>
 
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void updateGovernanceLifecycle({
-                                      action: "REVOKE_ASSIGNMENT",
-                                      assignment: a,
-                                    })
-                                  }
-                                  className={lifecycleButtonClass("danger")}
-                                >
-                                  Revoke
-                                </button>
-                              </>
-                            ) : null}
+                        <div className="text-xs text-zinc-600">
+                          Contact: {soft(school.contactEmail)} • {soft(school.contactPhoneNorm)} • slug:{" "}
+                          <span className="font-mono">{school.slug}</span>
+                        </div>
 
-                            {a.status === "SUSPENDED" ? (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void updateGovernanceLifecycle({
-                                      action: "REACTIVATE_ASSIGNMENT",
-                                      assignment: a,
-                                    })
-                                  }
-                                  className={lifecycleButtonClass("success")}
-                                >
-                                  Reactivate
-                                </button>
-
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    void updateGovernanceLifecycle({
-                                      action: "REVOKE_ASSIGNMENT",
-                                      assignment: a,
-                                    })
-                                  }
-                                  className={lifecycleButtonClass("danger")}
-                                >
-                                  Revoke
-                                </button>
-                              </>
-                            ) : null}
-
-                            {a.status === "REVOKED" ? (
-                              <span className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[11px] font-semibold text-zinc-500">
-                                Historical record
-                              </span>
-                            ) : null}
-                          </div>
+                        <div className="grid gap-2 text-xs text-zinc-700 sm:grid-cols-3 lg:grid-cols-6">
+                          <Stat label="Users" value={school.usage.memberships} />
+                          <Stat label="Students" value={school.usage.students} />
+                          <Stat label="Teachers" value={school.usage.teachers} />
+                          <Stat label="Lesson notes" value={school.usage.lessonNotes} />
+                          <Stat label="Invoices" value={school.usage.feeInvoices} />
+                          <Stat label="Gov cases" value={school.usage.governanceCases} />
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {school.status !== "ACTIVE" ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void updateTenantStatus(school, "ACTIVATE")}
+                            className="h-9 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+                          >
+                            Activate
+                          </button>
+                        ) : null}
+
+                        {school.status !== "SUSPENDED" && school.status !== "ARCHIVED" ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void updateTenantStatus(school, "SUSPEND")}
+                            className="h-9 rounded-xl border border-orange-200 bg-orange-50 px-3 text-sm font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-60"
+                          >
+                            Suspend
+                          </button>
+                        ) : null}
+
+                        {school.status !== "ARCHIVED" ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void updateTenantStatus(school, "ARCHIVE")}
+                            className="h-9 rounded-xl border border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                          >
+                            Archive
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void updateTenantStatus(school, "RESTORE_TO_PENDING")}
+                            className="h-9 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+                          >
+                            Restore to pending
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      ) : (
+        <section className="rounded-2xl border bg-white p-5 shadow-sm space-y-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setGovernanceView("CIRCUIT")}
+                className={viewButtonClass(governanceView === "CIRCUIT")}
+              >
+                Circuit / SISSO
+              </button>
+              <button
+                type="button"
+                onClick={() => setGovernanceView("DISTRICT")}
+                className={viewButtonClass(governanceView === "DISTRICT")}
+              >
+                District directorate
+              </button>
+              <button
+                type="button"
+                onClick={() => setGovernanceView("REGIONAL")}
+                className={viewButtonClass(governanceView === "REGIONAL")}
+              >
+                Regional
+              </button>
+              <button
+                type="button"
+                onClick={() => setGovernanceView("INVITES")}
+                className={viewButtonClass(governanceView === "INVITES")}
+              >
+                Invites
+              </button>
             </div>
 
-            <div className="rounded-xl border p-4">
-              <div className="text-sm font-semibold text-zinc-900">
-                Governance invites
-              </div>
-              <div className="mt-1 text-xs text-zinc-500">
-                {governance.invites.length} recent invite record(s)
-              </div>
+            <button
+              type="button"
+              onClick={() => void loadGovernance()}
+              disabled={govLoading}
+              className="h-10 rounded-xl border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+            >
+              {govLoading ? "Reloading…" : "Reload governance"}
+            </button>
+          </div>
 
-              <div className="mt-3 space-y-2">
-                {governance.invites.length === 0 ? (
-                  <div className="text-xs text-zinc-500">No governance invites.</div>
-                ) : (
-                  governance.invites.slice(0, 30).map((i) => {
-                    const busy = busyId === `gov:REVOKE_INVITE:${i.id}`;
-                    const canRevoke =
-                      i.status === "PENDING" && !i.acceptedAt && !i.revokedAt;
+          <div className="grid gap-3 xl:grid-cols-[180px_220px_1fr]">
+            <select
+              className="h-10 rounded-xl border px-3 text-sm"
+              value={govStatus}
+              onChange={(event) => setGovStatus(event.target.value as GovernanceStatusFilter)}
+            >
+              <option value="ALL">All statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="SUSPENDED">Suspended</option>
+              <option value="REVOKED">Revoked</option>
+              <option value="PENDING">Pending</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="EXPIRED">Expired</option>
+            </select>
 
-                    return (
-                      <div key={i.id} className="rounded-lg border bg-zinc-50 p-3 text-xs">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-semibold text-zinc-900">{i.email}</span>
-                              <span
-                                className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${governanceStatusBadgeClass(
-                                  i.status
-                                )}`}
-                              >
-                                {i.status}
-                              </span>
-                            </div>
+            <select
+              className="h-10 rounded-xl border px-3 text-sm"
+              value={govRole}
+              onChange={(event) => setGovRole(event.target.value)}
+            >
+              <option value="ALL">All roles</option>
+              {roles.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
 
-                            <div className="text-zinc-600">
-                              {i.role} • {zoneLabel(i.zone)}
-                              {i.zone.parentZone ? ` • ${i.zone.parentZone.name}` : ""}
-                            </div>
+            <input
+              className="h-10 rounded-xl border px-3 text-sm"
+              placeholder="Search officer, email, role, circuit, district, reason…"
+              value={govQ}
+              onChange={(event) => setGovQ(event.target.value)}
+            />
+          </div>
 
-                            <div className="text-zinc-500">
-                              Created: {dateLabel(i.createdAt)} • Expires:{" "}
-                              {dateLabel(i.expiresAt)}
-                            </div>
+          {govMsg ? (
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+              {govMsg}
+            </div>
+          ) : null}
 
-                            <div className="text-zinc-500">
-                              Accepted: {dateLabel(i.acceptedAt)} • Revoked:{" "}
-                              {dateLabel(i.revokedAt)}
-                            </div>
+          {govLoading ? (
+            <div className="text-sm text-zinc-600">Loading governance registry…</div>
+          ) : governanceView === "INVITES" ? (
+            <div className="space-y-3">
+              {filteredInvites.length === 0 ? (
+                <div className="text-sm text-zinc-600">No matching governance invites.</div>
+              ) : (
+                filteredInvites.map((invite) => {
+                  const busy = busyId === `gov:REVOKE_INVITE:${invite.id}`;
+                  const canRevoke = invite.status === "PENDING" && !invite.acceptedAt && !invite.revokedAt;
 
-                            <div className="text-zinc-500">
-                              Created by: {personLabel(i.createdBy)} • Accepted by:{" "}
-                              {personLabel(i.acceptedBy)} • Revoked by:{" "}
-                              {personLabel(i.revokedBy)}
-                            </div>
-
-                            {i.phone ? (
-                              <div className="text-zinc-500">Phone: {i.phone}</div>
-                            ) : null}
+                  return (
+                    <div key={invite.id} className="rounded-xl border p-4">
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="space-y-1 text-xs">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-zinc-950">{invite.email}</span>
+                            <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${statusBadgeClass(invite.status)}`}>
+                              {invite.status}
+                            </span>
                           </div>
 
-                          <div className="flex flex-wrap gap-2">
-                            {canRevoke ? (
+                          <div className="text-zinc-600">
+                            {invite.role} • {zoneLabel(invite.zone)}
+                          </div>
+
+                          <div className="text-zinc-500">
+                            Created: {dateLabel(invite.createdAt)} • Expires: {dateLabel(invite.expiresAt)}
+                          </div>
+
+                          <div className="text-zinc-500">
+                            Accepted: {dateLabel(invite.acceptedAt)} • Revoked: {dateLabel(invite.revokedAt)}
+                          </div>
+
+                          <div className="text-zinc-500">
+                            Created by: {personLabel(invite.createdBy)} • Accepted by: {personLabel(invite.acceptedBy)} • Revoked by: {personLabel(invite.revokedBy)}
+                          </div>
+
+                          {invite.phone ? <div className="text-zinc-500">Phone: {invite.phone}</div> : null}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {canRevoke ? (
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() =>
+                                void updateGovernanceLifecycle({
+                                  action: "REVOKE_INVITE",
+                                  invite,
+                                })
+                              }
+                              className={lifecycleButtonClass("danger")}
+                            >
+                              Revoke invite
+                            </button>
+                          ) : (
+                            <span className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-500">
+                              No pending action
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredAssignments.length === 0 ? (
+                <div className="text-sm text-zinc-600">No matching governance assignments.</div>
+              ) : (
+                filteredAssignments.map((assignment) => {
+                  const busy =
+                    busyId === `gov:SUSPEND_ASSIGNMENT:${assignment.id}` ||
+                    busyId === `gov:REVOKE_ASSIGNMENT:${assignment.id}` ||
+                    busyId === `gov:REACTIVATE_ASSIGNMENT:${assignment.id}` ||
+                    busyId === `gov:REASSIGN_ASSIGNMENT:${assignment.id}`;
+
+                  return (
+                    <div key={assignment.id} className="rounded-xl border p-4">
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="space-y-1 text-xs">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-zinc-950">
+                              {assignment.user.name || assignment.user.email}
+                            </span>
+                            <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold ${statusBadgeClass(assignment.status)}`}>
+                              {assignment.status}
+                            </span>
+                          </div>
+
+                          <div className="text-zinc-600">
+                            {assignment.role} • {zoneLabel(assignment.zone)}
+                          </div>
+
+                          {assignment.title ? <div className="text-zinc-600">Title: {assignment.title}</div> : null}
+
+                          <div className="text-zinc-500">
+                            Email: {assignment.user.email} • Phone: {soft(assignment.phone)}
+                          </div>
+
+                          <div className="text-zinc-500">
+                            Created: {dateLabel(assignment.createdAt)} • Updated: {dateLabel(assignment.updatedAt)}
+                          </div>
+
+                          <div className="text-zinc-500">
+                            Starts: {dateLabel(assignment.startsAt)} • Ends: {dateLabel(assignment.endsAt)}
+                          </div>
+
+                          <div className="text-zinc-500">
+                            Created by: {personLabel(assignment.createdBy)} • Revoked by: {personLabel(assignment.revokedBy)}
+                          </div>
+
+                          {assignment.revokedAt ? (
+                            <div className="text-red-700">Revoked: {dateLabel(assignment.revokedAt)}</div>
+                          ) : null}
+
+                          {assignment.revokeReason ? (
+                            <div className="mt-2 rounded-lg border border-orange-100 bg-orange-50 px-2 py-1 text-orange-800">
+                              Reason: {assignment.revokeReason}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {assignment.status === "ACTIVE" ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => void reassignGovernanceAssignment(assignment)}
+                                className={lifecycleButtonClass("info")}
+                              >
+                                Reassign
+                              </button>
+
                               <button
                                 type="button"
                                 disabled={busy}
                                 onClick={() =>
                                   void updateGovernanceLifecycle({
-                                    action: "REVOKE_INVITE",
-                                    invite: i,
+                                    action: "SUSPEND_ASSIGNMENT",
+                                    assignment,
+                                  })
+                                }
+                                className={lifecycleButtonClass("warning")}
+                              >
+                                Suspend
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void updateGovernanceLifecycle({
+                                    action: "REVOKE_ASSIGNMENT",
+                                    assignment,
                                   })
                                 }
                                 className={lifecycleButtonClass("danger")}
                               >
-                                Revoke invite
+                                Revoke
                               </button>
-                            ) : (
-                              <span className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[11px] font-semibold text-zinc-500">
-                                No pending action
-                              </span>
-                            )}
-                          </div>
+                            </>
+                          ) : null}
+
+                          {assignment.status === "SUSPENDED" ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void updateGovernanceLifecycle({
+                                    action: "REACTIVATE_ASSIGNMENT",
+                                    assignment,
+                                  })
+                                }
+                                className={lifecycleButtonClass("success")}
+                              >
+                                Reactivate
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  void updateGovernanceLifecycle({
+                                    action: "REVOKE_ASSIGNMENT",
+                                    assignment,
+                                  })
+                                }
+                                className={lifecycleButtonClass("danger")}
+                              >
+                                Revoke
+                              </button>
+                            </>
+                          ) : null}
+
+                          {assignment.status === "REVOKED" ? (
+                            <span className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-500">
+                              Historical record
+                            </span>
+                          ) : null}
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          </div>
-        )}
-      </section>
+          )}
+        </section>
+      )}
     </div>
   );
 }
@@ -848,7 +1174,7 @@ function Stat(props: { label: string; value: number }) {
   );
 }
 
-function GovStat(props: {
+function MiniStat(props: {
   label: string;
   value: number;
   tone?: "default" | "success" | "warning" | "danger";
@@ -863,7 +1189,7 @@ function GovStat(props: {
           : "border-zinc-200 bg-zinc-50 text-zinc-700";
 
   return (
-    <div className={`rounded-lg border px-3 py-2 ${toneClass}`}>
+    <div className={`rounded-xl border px-3 py-2 ${toneClass}`}>
       <div className="font-semibold">{props.value}</div>
       <div className="text-[10px] uppercase tracking-wide">{props.label}</div>
     </div>
