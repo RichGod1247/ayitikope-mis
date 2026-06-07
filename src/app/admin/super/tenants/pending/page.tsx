@@ -1,8 +1,15 @@
+import { requireServerUserContext } from "@/lib/serverAuth";
 import PendingTenantsClient from "./PendingTenantsClient";
 
 export const dynamic = "force-dynamic";
 
-export default function PendingTenantsPage() {
+export default async function PendingTenantsPage() {
+  await requireServerUserContext({
+    requireTenant: false,
+    requireRoleNames: ["SUPERADMIN"],
+    redirectTo: "/admin/super/tenants/pending",
+  });
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm">

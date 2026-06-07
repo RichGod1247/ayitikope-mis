@@ -7,12 +7,14 @@ import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
 import { sendViaHubtel, BrandName } from "@/lib/sms/hubtel";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { getIpFromHeaders, getUserAgentFromHeaders, rateLimitCheck, rateLimitRecord } from "@/lib/rateLimit";
+import { SchoolSector } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Body = {
   schoolName?: string;
+  schoolSector?: string;
   contactEmail: string;
   contactPhone?: string;
   brand?: string;
@@ -89,6 +91,15 @@ function resolveBrand(input?: string): (typeof BrandName)[number] {
   return "EDULIFEOS";
 }
 
+function schoolSectorFrom(value: unknown): SchoolSector {
+  const v = cleanStr(value).toUpperCase();
+  return v === "PRIVATE" ? SchoolSector.PRIVATE : SchoolSector.PUBLIC;
+}
+
+function schoolSectorLabel(value: SchoolSector) {
+  return value === SchoolSector.PRIVATE ? "Private School" : "Public School";
+}
+
 /**
  * ✅ Bank-grade base URL:
  * - prod: env only
@@ -120,6 +131,7 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as Body;
 
   const schoolName = cleanStr(body.schoolName);
+  const schoolSector = schoolSectorFrom(body.schoolSector);
   const contactEmail = cleanEmail(body.contactEmail);
   const contactPhoneRaw = cleanStr(body.contactPhone);
   const brand = resolveBrand(body.brand);
@@ -191,6 +203,7 @@ export async function POST(req: NextRequest) {
     data: {
       tokenHash,
       schoolName: schoolName || null,
+      schoolSector,
       contactEmail,
       contactPhone: contactPhoneRaw || null,
       contactPhoneNorm: contactPhoneNorm || null,
@@ -199,7 +212,13 @@ export async function POST(req: NextRequest) {
       expiresAt,
       createdByUserId: actorId,
     },
-    select: { id: true, expiresAt: true, reservedSlug: true, reservedSchoolCode: true },
+    select: {
+      id: true,
+      expiresAt: true,
+      reservedSlug: true,
+      reservedSchoolCode: true,
+      schoolSector: true,
+    },
   });
 
   const base = getBaseUrl(req);
@@ -210,6 +229,7 @@ export async function POST(req: NextRequest) {
     `Hello,\n\n` +
     `You have been invited to onboard your school on EduLife OS.\n\n` +
     `School Code: ${reservedSchoolCode}\n` +
+    `School Sector: ${schoolSectorLabel(schoolSector)}\n` +
     (schoolName ? `School Name: ${schoolName}\n` : "") +
     `Expires: ${exp}\n\n` +
     (link ? `Enrollment link:\n${link}\n\n` : `Invite token:\n${token}\n\n`) +
@@ -232,6 +252,7 @@ export async function POST(req: NextRequest) {
       `EduLifeOS\n` +
       `School onboarding invite\n` +
       `School Code: ${reservedSchoolCode}\n` +
+      `Sector: ${schoolSector}\n` +
       `Expires: ${exp}\n` +
       (link ? `Enroll: ${link}` : `Token: ${token}`);
 
@@ -242,7 +263,12 @@ export async function POST(req: NextRequest) {
             tenantId: auth.ctx.tenantId ?? null,
             toPhone: contactPhoneNorm,
             template: "TENANT_BOOTSTRAP_INVITE",
-            payload: { reservedSchoolCode, expiresAt: expiresAt.toISOString(), brand },
+            payload: {
+              reservedSchoolCode,
+              schoolSector,
+              expiresAt: expiresAt.toISOString(),
+              brand,
+            },
           },
         });
       } catch {}
@@ -253,7 +279,12 @@ export async function POST(req: NextRequest) {
         brand,
         tenantId: auth.ctx.tenantId ?? undefined,
         actorId,
-        meta: { category: "TENANT_BOOTSTRAP_INVITE", reservedSchoolCode, expiresAt: expiresAt.toISOString() },
+        meta: {
+          category: "TENANT_BOOTSTRAP_INVITE",
+          reservedSchoolCode,
+          schoolSector,
+          expiresAt: expiresAt.toISOString(),
+        },
       });
 
       sms = { ok: true, to: contactPhoneNorm, brand };
@@ -276,6 +307,7 @@ export async function POST(req: NextRequest) {
         metadata: {
           reservedSchoolCode,
           reservedSlug,
+          schoolSector,
           contactEmail,
           smsRequested: Boolean(contactPhoneNorm),
           expiresAt: expiresAt.toISOString(),
@@ -292,6 +324,7 @@ export async function POST(req: NextRequest) {
     ok: true,
     reservedSchoolCode,
     reservedSlug,
+    schoolSector,
     expiresAt: row.expiresAt.toISOString(),
     inviteUrl: link || null,
     inviteToken: link ? null : token,

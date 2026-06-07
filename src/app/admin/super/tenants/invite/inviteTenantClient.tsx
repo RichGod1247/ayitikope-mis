@@ -3,8 +3,11 @@
 
 import { useMemo, useState } from "react";
 
+type SchoolSector = "PUBLIC" | "PRIVATE";
+
 export default function InviteTenantClient() {
   const [schoolName, setSchoolName] = useState("");
+  const [schoolSector, setSchoolSector] = useState<SchoolSector>("PUBLIC");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
 
@@ -38,6 +41,7 @@ export default function InviteTenantClient() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           schoolName: schoolName.trim() || undefined,
+          schoolSector,
           contactEmail: contactEmail.trim(),
           contactPhone: contactPhone.trim() || undefined,
           sendEmail,
@@ -55,6 +59,10 @@ export default function InviteTenantClient() {
 
       setResult(j);
       setMsg("Invite created and delivery attempted.");
+      setSchoolName("");
+      setSchoolSector("PUBLIC");
+      setContactEmail("");
+      setContactPhone("");
     } catch {
       setMsg("Network/server error.");
     } finally {
@@ -80,6 +88,20 @@ export default function InviteTenantClient() {
             value={schoolName}
             onChange={(e) => setSchoolName(e.target.value)}
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 mb-1">
+            School sector
+          </label>
+          <select
+            className="w-full border rounded-xl p-2 h-10 bg-white text-zinc-950"
+            value={schoolSector}
+            onChange={(e) => setSchoolSector(e.target.value as SchoolSector)}
+          >
+            <option value="PUBLIC">Public School</option>
+            <option value="PRIVATE">Private School</option>
+          </select>
         </div>
 
         <div>
@@ -158,6 +180,12 @@ export default function InviteTenantClient() {
           <div className="text-sm font-semibold text-zinc-900">Created</div>
           <div className="text-sm text-zinc-700">
             School Code: <span className="font-mono">{result.reservedSchoolCode}</span>
+          </div>
+          <div className="text-sm text-zinc-700">
+            Sector:{" "}
+            <span className="font-semibold">
+              {result.schoolSector === "PRIVATE" ? "Private School" : "Public School"}
+            </span>
           </div>
           <div className="text-sm text-zinc-700">
             Slug: <span className="font-mono">{result.reservedSlug}</span>

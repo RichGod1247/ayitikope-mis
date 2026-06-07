@@ -4,11 +4,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+type SchoolSector = "PUBLIC" | "PRIVATE";
+
 type Lookup = {
   ok: true;
   schoolName: string | null;
   reservedSchoolCode: string;
   reservedSlug: string;
+  schoolSector: SchoolSector;
   contactEmail: string;
   contactPhoneNorm: string | null;
   expiresAt: string;
@@ -22,6 +25,7 @@ type EnrollResult = {
   slug: string;
   schoolCode: string;
   status: "PENDING" | "ACTIVE";
+  schoolSector: SchoolSector;
   autoActivateAfterHours: number;
   autoActivateAt: string;
   portalUrl: string;
@@ -31,6 +35,14 @@ type EnrollResult = {
 function clean(v: string | null | undefined) {
   return String(v ?? "").trim();
 }
+
+function schoolSectorLabel(value: SchoolSector | null | undefined) {
+  return value === "PRIVATE" ? "Private School" : "Public School";
+}
+
+const inputClass =
+  "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+
 
 export default function TenantEnrollClient() {
   const sp = useSearchParams();
@@ -127,6 +139,7 @@ export default function TenantEnrollClient() {
           inviteToken: token,
 
           tenantName: tenantName.trim(),
+          schoolSector: lookup.schoolSector,
           emisCode: emisCode.trim() || null,
           gpsAddress: gpsAddress.trim() || null,
           district: district.trim() || null,
@@ -211,6 +224,13 @@ export default function TenantEnrollClient() {
             </div>
 
             <div className="text-sm text-slate-700">
+              School Sector:{" "}
+              <span className="font-semibold">
+                {schoolSectorLabel(done.schoolSector)}
+              </span>
+            </div>
+
+            <div className="text-sm text-slate-700">
               Auto-activation: if not approved within{" "}
               <b>{done.autoActivateAfterHours}</b> hours, it becomes ACTIVE on
               the first system touch after:{" "}
@@ -271,6 +291,13 @@ export default function TenantEnrollClient() {
             <span className="font-mono">{lookup.reservedSlug}</span>
           </div>
 
+          <div className="text-sm text-slate-700">
+            School Sector:{" "}
+            <span className="font-semibold">
+              {schoolSectorLabel(lookup.schoolSector)}
+            </span>
+          </div>
+
           <div className="text-xs text-slate-500">
             Expires: {new Date(lookup.expiresAt).toLocaleString()} • Remaining ~
             {Math.floor(lookup.remainingSeconds / 60)} min
@@ -288,7 +315,7 @@ export default function TenantEnrollClient() {
                 School name
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={tenantName}
                 onChange={(e) => setTenantName(e.target.value)}
               />
@@ -299,7 +326,7 @@ export default function TenantEnrollClient() {
                 EMIS code (optional)
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={emisCode}
                 onChange={(e) => setEmisCode(e.target.value)}
               />
@@ -310,7 +337,7 @@ export default function TenantEnrollClient() {
                 District
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
               />
@@ -321,7 +348,7 @@ export default function TenantEnrollClient() {
                 Circuit
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={circuit}
                 onChange={(e) => setCircuit(e.target.value)}
               />
@@ -332,7 +359,7 @@ export default function TenantEnrollClient() {
                 Region
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
               />
@@ -343,7 +370,7 @@ export default function TenantEnrollClient() {
                 GhanaPost GPS address
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={gpsAddress}
                 onChange={(e) => setGpsAddress(e.target.value)}
               />
@@ -362,7 +389,7 @@ export default function TenantEnrollClient() {
                 First name
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
               />
@@ -373,7 +400,7 @@ export default function TenantEnrollClient() {
                 Last name
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
               />
@@ -384,7 +411,7 @@ export default function TenantEnrollClient() {
                 Email (locked to invite)
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm bg-slate-50"
+                className={`${inputClass} bg-slate-100 text-slate-700`}
                 value={lookup.contactEmail}
                 disabled
               />
@@ -395,7 +422,7 @@ export default function TenantEnrollClient() {
                 Phone (optional)
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="e.g. 0553690424"
@@ -407,7 +434,7 @@ export default function TenantEnrollClient() {
                 Password
               </label>
               <input
-                className="w-full rounded-xl border px-3 py-2 text-sm"
+                className={inputClass}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type="password"

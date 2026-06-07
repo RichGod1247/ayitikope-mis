@@ -3,11 +3,13 @@
 
 import { useMemo, useState } from "react";
 
+type SchoolSector = "PUBLIC" | "PRIVATE";
 type Resp =
   | {
       ok: true;
       reservedSchoolCode: string;
       reservedSlug: string;
+      schoolSector: SchoolSector;
       expiresAt: string;
       inviteUrl: string | null;
       inviteToken: string | null;
@@ -25,6 +27,7 @@ function cleanEmail(v: unknown) {
 
 export default function InviteSchoolClient() {
   const [schoolName, setSchoolName] = useState("");
+  const [schoolSector, setSchoolSector] = useState<SchoolSector>("PUBLIC");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
 
@@ -42,6 +45,7 @@ export default function InviteSchoolClient() {
 
     const payload = {
       schoolName: clean(schoolName) || undefined,
+      schoolSector,
       contactEmail: cleanEmail(contactEmail),
       contactPhone: clean(contactPhone) || undefined,
       brand: "EDULIFEOS",
@@ -68,6 +72,7 @@ export default function InviteSchoolClient() {
       setCreated(j);
       setContactPhone("");
       setSchoolName("");
+      setSchoolSector("PUBLIC");
       setContactEmail("");
     } catch {
       setMsg("Network error. Try again.");
@@ -98,6 +103,18 @@ export default function InviteSchoolClient() {
             value={schoolName}
             onChange={(e) => setSchoolName(e.target.value)}
           />
+        </div>
+
+        <div>
+          <label className="text-sm text-zinc-700">School sector</label>
+          <select
+            className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            value={schoolSector}
+            onChange={(e) => setSchoolSector(e.target.value as SchoolSector)}
+          >
+            <option value="PUBLIC">Public School</option>
+            <option value="PRIVATE">Private School</option>
+          </select>
         </div>
 
         <div>
@@ -138,6 +155,14 @@ export default function InviteSchoolClient() {
           <div className="text-sm font-semibold text-zinc-900">
             Invite sent for <span className="font-mono">{created.reservedSchoolCode}</span>
           </div>
+
+          <div className="text-xs text-zinc-600">
+            Sector:{" "}
+            <span className="font-medium">
+              {created.schoolSector === "PRIVATE" ? "Private School" : "Public School"}
+            </span>
+          </div>
+
           <div className="text-xs text-zinc-600">
             Expires:{" "}
             <span className="font-medium">

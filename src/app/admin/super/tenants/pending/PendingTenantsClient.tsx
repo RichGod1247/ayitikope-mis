@@ -11,12 +11,17 @@ type Item = {
   createdAt: string;
   contactEmail: string | null;
   contactPhoneNorm: string | null;
-  status: string;
+    status: string;
+  schoolSector: "PUBLIC" | "PRIVATE";
   autoActivateAt?: string | null;
   autoActivateInMinutes?: number | null;
   rejectedAt?: string | null;
   rejectReason?: string | null;
 };
+
+function schoolSectorLabel(sector: Item["schoolSector"]) {
+  return sector === "PRIVATE" ? "Private School" : "Public School";
+}
 
 export default function PendingTenantsClient() {
   const [items, setItems] = useState<Item[]>([]);
@@ -151,6 +156,13 @@ export default function PendingTenantsClient() {
                     <div className="text-xs text-zinc-600">
                       Created: {new Date(t.createdAt).toLocaleString()} • slug:{" "}
                       <span className="font-mono">{t.slug}</span>
+                    </div>
+
+                    <div className="text-xs text-zinc-600">
+                      Sector:{" "}
+                      <span className="font-semibold">
+                        {schoolSectorLabel(t.schoolSector)}
+                      </span>
                     </div>
 
                     <div className="text-xs text-zinc-600">
