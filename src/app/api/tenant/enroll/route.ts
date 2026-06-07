@@ -9,8 +9,7 @@ import { normalizeGhPhoneE164 } from "@/lib/phoneNormGH";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const AUTO_ACTIVATE_HOURS =
-  Number(process.env.TENANT_AUTO_ACTIVATE_AFTER_HOURS || 12) || 12;
+
 
 function cleanStr(v: unknown) {
   return String(v ?? "").trim();
@@ -48,6 +47,12 @@ function onlinePaymentPreference(v: unknown): "YES" | "NO" {
 function schoolSectorFrom(value: unknown): SchoolSector {
   const v = cleanStr(value).toUpperCase();
   return v === "PRIVATE" ? SchoolSector.PRIVATE : SchoolSector.PUBLIC;
+}
+
+function officialIdentifierLabel(sector: SchoolSector) {
+  return sector === SchoolSector.PRIVATE
+    ? "EMIS / NaSIA / official registration code"
+    : "EMIS code";
 }
 
 export async function POST(req: Request) {
@@ -132,7 +137,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const emisCode = cleanStr(body.emisCode) || null;
+    const emisCode = cleanStr(body.emisCode).toUpperCase();
+
+    if (!emisCode) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "OFFICIAL_SCHOOL_IDENTIFIER_REQUIRED",
+          message: `${officialIdentifierLabel(schoolSector)} is required.`,
+        },
+        { status: 400 }
+      );
+    }
     const gpsAddress = cleanStr(body.gpsAddress) || null;
     const district = cleanStr(body.district) || null;
     const circuit = cleanStr(body.circuit) || null;
@@ -165,9 +181,6 @@ export async function POST(req: Request) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const submittedAtIso = new Date().toISOString();
-    const autoActivateAt = new Date(
-      Date.now() + AUTO_ACTIVATE_HOURS * 60 * 60 * 1000
-    ).toISOString();
 
     const result = await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -203,7 +216,7 @@ export async function POST(req: Request) {
               bootstrapInviteId: invite.id,
               bootstrapSubmittedAt: submittedAtIso,
               schoolSector,
-              bootstrapAutoActivateAfterHours: AUTO_ACTIVATE_HOURS,
+              bootstrapApprovalRequired: true,
               finance: {
                 onlineFeePaymentsPreference: onlinePaymentsPreference,
                 onlineFeePaymentsStatus:
@@ -299,8 +312,7 @@ export async function POST(req: Request) {
       schoolCode: result.schoolCode,
       status: result.status,
       schoolSector: result.schoolSector,
-      autoActivateAfterHours: AUTO_ACTIVATE_HOURS,
-      autoActivateAt,
+      approvalRequired: true,
       portalUrl: "/pending",
       next: "/auth/signin",
     });

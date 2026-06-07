@@ -26,8 +26,7 @@ type EnrollResult = {
   schoolCode: string;
   status: "PENDING" | "ACTIVE";
   schoolSector: SchoolSector;
-  autoActivateAfterHours: number;
-  autoActivateAt: string;
+  approvalRequired: boolean;
   portalUrl: string;
   next: string;
 };
@@ -38,6 +37,12 @@ function clean(v: string | null | undefined) {
 
 function schoolSectorLabel(value: SchoolSector | null | undefined) {
   return value === "PRIVATE" ? "Private School" : "Public School";
+}
+
+function officialIdentifierLabel(value: SchoolSector) {
+  return value === "PRIVATE"
+    ? "EMIS / NaSIA / official registration code"
+    : "EMIS code";
 }
 
 const inputClass =
@@ -129,6 +134,11 @@ export default function TenantEnrollClient() {
       return;
     }
 
+    if (!emisCode.trim()) {
+      setErr(`${officialIdentifierLabel(lookup.schoolSector)} is required.`);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -140,7 +150,7 @@ export default function TenantEnrollClient() {
 
           tenantName: tenantName.trim(),
           schoolSector: lookup.schoolSector,
-          emisCode: emisCode.trim() || null,
+          emisCode: emisCode.trim(),
           gpsAddress: gpsAddress.trim() || null,
           district: district.trim() || null,
           circuit: circuit.trim() || null,
@@ -230,13 +240,9 @@ export default function TenantEnrollClient() {
               </span>
             </div>
 
-            <div className="text-sm text-slate-700">
-              Auto-activation: if not approved within{" "}
-              <b>{done.autoActivateAfterHours}</b> hours, it becomes ACTIVE on
-              the first system touch after:{" "}
-              <span className="font-mono">
-                {new Date(done.autoActivateAt).toLocaleString()}
-              </span>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              Your school is awaiting superadmin approval. You will receive an
+              SMS/email after approval.
             </div>
 
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
@@ -252,8 +258,8 @@ export default function TenantEnrollClient() {
                   in with your email.
                 </li>
                 <li>
-                  If still pending, you’ll see the pending screen until approved
-                  or auto-activated after the window.
+                  If still pending, you’ll see the pending screen until a
+                  superadmin approves the school.
                 </li>
               </ul>
             </div>
@@ -323,12 +329,18 @@ export default function TenantEnrollClient() {
 
             <div>
               <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                EMIS code (optional)
+                {officialIdentifierLabel(lookup.schoolSector)}{" "}
+                <span className="text-red-600">*</span>
               </label>
               <input
                 className={inputClass}
                 value={emisCode}
                 onChange={(e) => setEmisCode(e.target.value)}
+                placeholder={
+                  lookup.schoolSector === "PRIVATE"
+                    ? "Enter EMIS / NaSIA / registration code"
+                    : "Enter EMIS code"
+                }
               />
             </div>
 

@@ -1,4 +1,3 @@
-// src/app/admin/super/tenants/pending/PendingTenantsClient.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,16 +10,22 @@ type Item = {
   createdAt: string;
   contactEmail: string | null;
   contactPhoneNorm: string | null;
-    status: string;
+  status: string;
   schoolSector: "PUBLIC" | "PRIVATE";
-  autoActivateAt?: string | null;
-  autoActivateInMinutes?: number | null;
+  emisCode: string | null;
+  approvalRequired?: boolean;
   rejectedAt?: string | null;
   rejectReason?: string | null;
 };
 
 function schoolSectorLabel(sector: Item["schoolSector"]) {
   return sector === "PRIVATE" ? "Private School" : "Public School";
+}
+
+function officialIdentifierLabel(sector: Item["schoolSector"]) {
+  return sector === "PRIVATE"
+    ? "EMIS / NaSIA / registration code"
+    : "EMIS code";
 }
 
 export default function PendingTenantsClient() {
@@ -166,17 +171,20 @@ export default function PendingTenantsClient() {
                     </div>
 
                     <div className="text-xs text-zinc-600">
+                      {officialIdentifierLabel(t.schoolSector)}:{" "}
+                      <span className="font-mono font-semibold">
+                        {t.emisCode || "—"}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-zinc-600">
                       Contact: {t.contactEmail || "—"} • {t.contactPhoneNorm || "—"}
                     </div>
 
-                    {t.autoActivateAt ? (
-                      <div className="text-xs text-zinc-600">
-                        Auto-activates: {new Date(t.autoActivateAt).toLocaleString()}
-                        {typeof t.autoActivateInMinutes === "number"
-                          ? ` (in ~${t.autoActivateInMinutes} min)`
-                          : ""}
-                      </div>
-                    ) : null}
+                    <div className="text-xs text-amber-700">
+                      Approval required: this school remains pending until a
+                      superadmin approves it.
+                    </div>
                   </div>
 
                   <div className="flex gap-2">
@@ -206,7 +214,9 @@ export default function PendingTenantsClient() {
                     Online fee payments are optional
                   </div>
                   <p className="text-xs text-emerald-900/80 mt-1">
-                    Approve the school first. They can enable parent online fee payments later from their admin dashboard.
+                    Verify the school sector and official identifier before approval.
+                    Online parent fee payments can be enabled later from the school
+                    admin dashboard.
                   </p>
                 </div>
 
