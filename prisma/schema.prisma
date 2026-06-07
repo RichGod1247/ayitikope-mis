@@ -2558,6 +2558,8 @@ enum SchoolSector {
 enum TenantStatus {
   PENDING
   ACTIVE
+  SUSPENDED
+  ARCHIVED
 }
 
 enum ClassroomStatus {
