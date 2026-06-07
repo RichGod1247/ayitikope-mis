@@ -42,9 +42,24 @@ const financeNav: NavItem[] = [
   { label: "Ledger Trail", href: "/admin/fees/ledger" },
   { label: "Audit Trail", href: "/admin/fees/audit" },
   { label: "Reconciliation", href: "/admin/fees/reconciliation" },
-  { label: "Reconciliation History", href: "/admin/fees/reconciliation/history" },
+  {
+    label: "Reconciliation History",
+    href: "/admin/fees/reconciliation/history",
+  },
   { label: "Disputes", href: "/admin/fees/disputes" },
   { label: "Arrears", href: "/admin/fees/arrears" },
+];
+
+const superAdminNav: NavItem[] = [
+  { label: "Super Command", href: "/admin/super" },
+  { label: "Applications", href: "/admin/super/applications" },
+  { label: "Support Cockpit", href: "/admin/super/support" },
+  { label: "Tenant Registry", href: "/admin/super/tenants/all" },
+  { label: "Invite School", href: "/admin/super/tenants/invite" },
+  { label: "Pending Approvals", href: "/admin/super/tenants/pending" },
+  { label: "Governance Officers", href: "/admin/governance/officers" },
+  { label: "School Apply Link", href: "/apply/school" },
+  { label: "Governance Apply Link", href: "/apply/governance" },
 ];
 
 const navSections: NavSection[] = [
@@ -53,7 +68,7 @@ const navSections: NavSection[] = [
   { title: "Finance", items: financeNav },
 ];
 
-function SidebarLink({ href, label }: { href: string; label: string }) {
+function SidebarLink({ href, label }: NavItem) {
   return (
     <Link
       href={href}
@@ -64,7 +79,13 @@ function SidebarLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-function MobileNavLink({ href, children }: { href: string; children: ReactNode }) {
+function MobileNavLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: ReactNode;
+}) {
   return (
     <Link
       href={href}
@@ -75,7 +96,11 @@ function MobileNavLink({ href, children }: { href: string; children: ReactNode }
   );
 }
 
-export default async function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const safe = await requireServerUserContext({
     redirectTo: "/admin/dashboard",
     requireTenant: true,
@@ -87,10 +112,19 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     select: { id: true, name: true, schoolCode: true, status: true },
   });
 
-  if (!tenant) redirect("/auth/signin?error=TENANT_NOT_FOUND&callbackUrl=/app");
-  if (tenant.status !== "ACTIVE") redirect("/pending");
+  if (!tenant) {
+    redirect("/auth/signin?error=TENANT_NOT_FOUND&callbackUrl=/app");
+  }
 
-  const isSuper = String((safe as any).roleName ?? "").toUpperCase() === "SUPERADMIN";
+  if (tenant.status !== "ACTIVE") {
+    redirect("/pending");
+  }
+
+  const isSuper = String(safe.roleName ?? "").toUpperCase() === "SUPERADMIN";
+
+  const visibleNavSections: NavSection[] = isSuper
+    ? [...navSections, { title: "Super Admin", items: superAdminNav }]
+    : navSections;
 
   return (
     <div className="min-h-screen bg-[#05070B] text-[#F7F4ED]">
@@ -112,20 +146,22 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
 
           <div className="flex items-center gap-3">
-            {isSuper && (
+            {isSuper ? (
               <Link
                 href="/admin/super"
                 className="rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-1.5 text-xs font-semibold text-[#071A3D]"
               >
                 Super Admin
               </Link>
-            )}
+            ) : null}
+
             <Link
               href="/app"
               className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#C9CDD6] hover:bg-white/10 hover:text-[#F7F4ED]"
             >
               Portal
             </Link>
+
             <LogoutButton className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#F7F4ED] transition hover:bg-white/10" />
           </div>
         </div>
@@ -133,15 +169,20 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
       <div className="relative flex min-h-[calc(100vh-56px)]">
         <aside className="hidden w-56 shrink-0 border-r border-white/8 bg-[rgba(7,17,31,0.60)] backdrop-blur-md lg:block">
-          <nav className="sticky top-0 max-h-screen overflow-y-auto flex flex-col gap-6 px-3 py-6 scrollbar-none">
-            {navSections.map((section) => (
+          <nav className="sticky top-0 flex max-h-screen flex-col gap-6 overflow-y-auto px-3 py-6 scrollbar-none">
+            {visibleNavSections.map((section) => (
               <div key={section.title}>
                 <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#E8C96A]">
                   {section.title}
                 </p>
+
                 <div className="flex flex-col gap-0.5">
                   {section.items.map((item) => (
-                    <SidebarLink key={item.href} href={item.href} label={item.label} />
+                    <SidebarLink
+                      key={item.href}
+                      href={item.href}
+                      label={item.label}
+                    />
                   ))}
                 </div>
               </div>
@@ -156,16 +197,41 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <MobileNavLink href="/admin/fees/invoices">Invoices</MobileNavLink>
             <MobileNavLink href="/admin/fees/receipts">Receipts</MobileNavLink>
             <MobileNavLink href="/admin/fees/refunds">Refunds</MobileNavLink>
-            <MobileNavLink href="/admin/fees/online-payments">Online Pay</MobileNavLink>
-            <MobileNavLink href="/admin/fees/provider-events">Provider Events</MobileNavLink>
+            <MobileNavLink href="/admin/fees/online-payments">
+              Online Pay
+            </MobileNavLink>
+            <MobileNavLink href="/admin/fees/provider-events">
+              Provider Events
+            </MobileNavLink>
             <MobileNavLink href="/admin/fees/outbox">SMS Outbox</MobileNavLink>
-            <MobileNavLink href="/admin/fees/structures">Structures</MobileNavLink>
+            <MobileNavLink href="/admin/fees/structures">
+              Structures
+            </MobileNavLink>
             <MobileNavLink href="/admin/fees/overview">Overview</MobileNavLink>
             <MobileNavLink href="/admin/fees/ledger">Ledger</MobileNavLink>
-            <MobileNavLink href="/admin/fees/reconciliation">Reconciliation</MobileNavLink>
+            <MobileNavLink href="/admin/fees/reconciliation">
+              Reconciliation
+            </MobileNavLink>
             <MobileNavLink href="/admin/fees/disputes">Disputes</MobileNavLink>
-            <MobileNavLink href="/admin/scholarships">Scholarships</MobileNavLink>
+            <MobileNavLink href="/admin/scholarships">
+              Scholarships
+            </MobileNavLink>
             <MobileNavLink href="/admin/teachers">Teachers</MobileNavLink>
+
+            {isSuper ? (
+              <>
+                <MobileNavLink href="/admin/super">Super</MobileNavLink>
+                <MobileNavLink href="/admin/super/applications">
+                  Applications
+                </MobileNavLink>
+                <MobileNavLink href="/admin/super/support">
+                  Support
+                </MobileNavLink>
+                <MobileNavLink href="/admin/governance/officers">
+                  Officers
+                </MobileNavLink>
+              </>
+            ) : null}
           </div>
         </div>
 

@@ -5,44 +5,104 @@ export const dynamic = "force-dynamic";
 
 const superTiles = [
   {
-    title: "Invite School",
-    desc: "Send onboarding invites through the controlled tenant activation pipeline.",
-    href: "/admin/super/tenants/invite",
-    icon: "📨",
+    title: "Onboarding Applications",
+    desc: "Review school, SISSO, and directorate applications, then convert verified demand into official invites.",
+    href: "/admin/super/applications",
+    icon: "📥",
     accent: "from-[#0C1730] via-[#10244A] to-[#07111F]",
     border: "border-sky-300/20",
-    pill: "Onboarding",
+    pill: "Demand pipeline",
     pillCls: "border-sky-300/25 bg-sky-400/14 text-sky-100",
   },
   {
-    title: "Pending Approvals",
-    desc: "Review and approve or reject schools before activation goes live.",
-    href: "/admin/super/tenants/pending",
-    icon: "🛡️",
-    accent: "from-[#271408] via-[#362111] to-[#0C1320]",
-    border: "border-amber-300/20",
-    pill: "Governance",
-    pillCls: "border-amber-300/25 bg-amber-400/14 text-amber-100",
+    title: "Support Cockpit",
+    desc: "Track tenant usage, risk, activity, SMS/outbox health, and operational support signals.",
+    href: "/admin/super/support",
+    icon: "🧭",
+    accent: "from-[#071F18] via-[#0D3B2E] to-[#07111F]",
+    border: "border-emerald-300/20",
+    pill: "Usage intelligence",
+    pillCls: "border-emerald-300/25 bg-emerald-400/14 text-emerald-100",
   },
   {
     title: "All Tenants",
-    desc: "Track active and pending tenants and monitor the platform-wide school map.",
+    desc: "Control school lifecycle, sector classification, approvals, suspensions, and platform-wide school visibility.",
     href: "/admin/super/tenants/all",
     icon: "🌍",
     accent: "from-[#1A1034] via-[#231A4B] to-[#0A1120]",
     border: "border-fuchsia-300/20",
-    pill: "Platform view",
+    pill: "Tenant registry",
     pillCls: "border-fuchsia-300/25 bg-fuchsia-400/14 text-fuchsia-100",
   },
   {
+    title: "Pending Approvals",
+    desc: "Approve or reject schools after tenant enrollment before they become active.",
+    href: "/admin/super/tenants/pending",
+    icon: "🛡️",
+    accent: "from-[#271408] via-[#362111] to-[#0C1320]",
+    border: "border-amber-300/20",
+    pill: "Activation gate",
+    pillCls: "border-amber-300/25 bg-amber-400/14 text-amber-100",
+  },
+  {
+    title: "Invite School",
+    desc: "Create controlled school bootstrap invites when superadmin wants to onboard directly.",
+    href: "/admin/super/tenants/invite",
+    icon: "📨",
+    accent: "from-[#09223A] via-[#12365C] to-[#07111F]",
+    border: "border-cyan-300/20",
+    pill: "Direct invite",
+    pillCls: "border-cyan-300/25 bg-cyan-400/14 text-cyan-100",
+  },
+  {
     title: "Governance Officers",
-    desc: "Invite and monitor SISSOs, District Directors, MIS/Data Officers, SHEP Officers, and Assessment Officers.",
+    desc: "Invite, suspend, revoke, restore, and reassign SISSOs, directors, and district officers.",
     href: "/admin/governance/officers",
     icon: "🏛️",
     accent: "from-[#06291F] via-[#0B3D36] to-[#07111F]",
     border: "border-emerald-300/20",
-    pill: "Circuit & district",
+    pill: "Authority control",
     pillCls: "border-emerald-300/25 bg-emerald-400/14 text-emerald-100",
+  },
+  {
+    title: "Circuit Dashboard",
+    desc: "Open the circuit governance dashboard to inspect sector-aware school risk and official communication.",
+    href: "/circuit/dashboard",
+    icon: "🧩",
+    accent: "from-[#1E1B4B] via-[#312E81] to-[#07111F]",
+    border: "border-indigo-300/20",
+    pill: "SISSO view",
+    pillCls: "border-indigo-300/25 bg-indigo-400/14 text-indigo-100",
+  },
+  {
+    title: "District Dashboard",
+    desc: "Open district command intelligence for circuits, schools, interventions, and sector-aware notices.",
+    href: "/district/dashboard",
+    icon: "🏢",
+    accent: "from-[#351A19] via-[#512522] to-[#07111F]",
+    border: "border-rose-300/20",
+    pill: "Director view",
+    pillCls: "border-rose-300/25 bg-rose-400/14 text-rose-100",
+  },
+  {
+    title: "Public School Application",
+    desc: "Copy this link for headteachers to apply through the public onboarding pipeline.",
+    href: "/apply/school",
+    icon: "🏫",
+    accent: "from-[#18230F] via-[#2E3B16] to-[#07111F]",
+    border: "border-lime-300/20",
+    pill: "Public link",
+    pillCls: "border-lime-300/25 bg-lime-400/14 text-lime-100",
+  },
+  {
+    title: "Governance Application",
+    desc: "Copy this link for SISSOs, directors, and officers to apply without superadmin retyping.",
+    href: "/apply/governance",
+    icon: "🪪",
+    accent: "from-[#2A1534] via-[#421E55] to-[#07111F]",
+    border: "border-purple-300/20",
+    pill: "Officer intake",
+    pillCls: "border-purple-300/25 bg-purple-400/14 text-purple-100",
   },
 ];
 
@@ -68,9 +128,9 @@ export default function AdminSuperHome() {
           </h1>
 
           <p className="mt-2 max-w-3xl text-sm leading-7 text-[#C9CDD6]">
-            Platform-level controls for inviting schools, governing tenant approval,
-            onboarding governance officers, and maintaining disciplined visibility
-            across the EduLife OS network.
+            Platform-level controls for inviting schools, governing tenant
+            approval, onboarding governance officers, and maintaining
+            disciplined visibility across the EduLife OS network.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -105,7 +165,7 @@ export default function AdminSuperHome() {
           </span>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
           {superTiles.map((tile) => (
             <Link
               key={tile.title}
@@ -113,7 +173,7 @@ export default function AdminSuperHome() {
               className={cx(
                 "group relative overflow-hidden rounded-[28px] border bg-gradient-to-br p-5 shadow-[0_12px_36px_rgba(0,0,0,0.20)] transition hover:-translate-y-1",
                 tile.accent,
-                tile.border
+                tile.border,
               )}
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_36%)]" />
@@ -129,7 +189,7 @@ export default function AdminSuperHome() {
                 <span
                   className={cx(
                     "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
-                    tile.pillCls
+                    tile.pillCls,
                   )}
                 >
                   {tile.pill}
