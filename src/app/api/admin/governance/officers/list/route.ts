@@ -16,6 +16,11 @@ function json(status: number, payload: any) {
   });
 }
 
+function iso(value: Date | string | null | undefined) {
+  if (!value) return null;
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
 export async function GET(req: Request) {
   const auth = await requireApiUserContext(req, {
     requireTenant: false,
@@ -27,7 +32,7 @@ export async function GET(req: Request) {
   const [invites, assignments, zones] = await Promise.all([
     prisma.governanceOfficerInvite.findMany({
       orderBy: { createdAt: "desc" },
-      take: 100,
+      take: 150,
       select: {
         id: true,
         email: true,
@@ -38,6 +43,8 @@ export async function GET(req: Request) {
         acceptedAt: true,
         revokedAt: true,
         createdAt: true,
+        updatedAt: true,
+        metadata: true,
         zone: {
           select: {
             id: true,
@@ -48,20 +55,26 @@ export async function GET(req: Request) {
         },
         createdBy: { select: { id: true, email: true, name: true } },
         acceptedBy: { select: { id: true, email: true, name: true } },
+        revokedBy: { select: { id: true, email: true, name: true } },
       },
     }),
 
     prisma.governanceOfficerAssignment.findMany({
-      where: { status: "ACTIVE", revokedAt: null },
-      orderBy: { createdAt: "desc" },
-      take: 100,
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      take: 150,
       select: {
         id: true,
         role: true,
         title: true,
         phone: true,
         status: true,
+        startsAt: true,
+        endsAt: true,
         createdAt: true,
+        updatedAt: true,
+        revokedAt: true,
+        revokeReason: true,
+        metadata: true,
         user: { select: { id: true, email: true, name: true } },
         zone: {
           select: {
@@ -71,6 +84,8 @@ export async function GET(req: Request) {
             parentZone: { select: { id: true, name: true } },
           },
         },
+        createdBy: { select: { id: true, email: true, name: true } },
+        revokedBy: { select: { id: true, email: true, name: true } },
       },
     }),
 
@@ -92,14 +107,19 @@ export async function GET(req: Request) {
     zones,
     invites: invites.map((i) => ({
       ...i,
-      expiresAt: i.expiresAt.toISOString(),
-      acceptedAt: i.acceptedAt?.toISOString() ?? null,
-      revokedAt: i.revokedAt?.toISOString() ?? null,
-      createdAt: i.createdAt.toISOString(),
+      expiresAt: iso(i.expiresAt),
+      acceptedAt: iso(i.acceptedAt),
+      revokedAt: iso(i.revokedAt),
+      createdAt: iso(i.createdAt),
+      updatedAt: iso(i.updatedAt),
     })),
     assignments: assignments.map((a) => ({
       ...a,
-      createdAt: a.createdAt.toISOString(),
+      startsAt: iso(a.startsAt),
+      endsAt: iso(a.endsAt),
+      createdAt: iso(a.createdAt),
+      updatedAt: iso(a.updatedAt),
+      revokedAt: iso(a.revokedAt),
     })),
   });
 }

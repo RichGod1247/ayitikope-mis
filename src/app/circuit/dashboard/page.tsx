@@ -1,17 +1,27 @@
 // src/app/circuit/dashboard/page.tsx
 import GovernanceDashboardClient from "@/components/governance/GovernanceDashboardClient";
 import GovernanceSentNoticeAccountabilityClient from "@/components/governance/GovernanceSentNoticeAccountabilityClient";
+import {
+  CIRCUIT_GOVERNANCE_ROLES,
+  requireGovernancePageContext,
+} from "@/lib/governance/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default function CircuitDashboardPage() {
+export default async function CircuitDashboardPage() {
+  await requireGovernancePageContext({
+    allowedRoles: CIRCUIT_GOVERNANCE_ROLES,
+    allowedZoneLevels: [1],
+    redirectTo: "/circuit/dashboard",
+  });
+
   return (
     <div className="space-y-6">
       <GovernanceDashboardClient
         endpoint="/api/circuit/overview"
         eyebrow="Circuit Oversight"
-        title="SISO Circuit Dashboard"
+        title="SISSO Circuit Dashboard"
         description="Monitor schools, learners, teachers, attendance signals, health alerts, assessments, and lesson delivery inside your authorized circuit."
       />
 
