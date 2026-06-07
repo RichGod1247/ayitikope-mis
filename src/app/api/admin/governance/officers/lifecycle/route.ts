@@ -116,9 +116,23 @@ async function revokeInvite(args: {
       throw new ApiError(404, "GOVERNANCE_INVITE_NOT_FOUND");
     }
 
-    if (invite.status !== "PENDING" || invite.acceptedAt || invite.revokedAt) {
-      throw new ApiError(409, "INVITE_NOT_PENDING");
+    if (invite.acceptedAt || invite.status === "ACCEPTED") {
+      throw new ApiError(409, "ACCEPTED_INVITE_CANNOT_BE_REVOKED_HERE");
     }
+
+    if (invite.revokedAt || invite.status === "REVOKED") {
+      return {
+        id: invite.id,
+        email: invite.email,
+        role: invite.role,
+        status: invite.status,
+        revokedAt: invite.revokedAt,
+        alreadyRevoked: true,
+      };
+    }
+
+    const wasExpiredByTime = invite.expiresAt.getTime() < now.getTime();
+    const previousStatus = invite.status;
 
     const updated = await tx.governanceOfficerInvite.update({
       where: { id: invite.id },
@@ -130,8 +144,10 @@ async function revokeInvite(args: {
           ...objectFromJson(invite.metadata),
           lifecycle: {
             lastAction: "REVOKE_INVITE",
-            previousStatus: invite.status,
+            previousStatus,
             nextStatus: "REVOKED",
+            wasExpiredByTime,
+            expiresAt: invite.expiresAt.toISOString(),
             reason: args.reason,
             actorUserId: args.actorUserId,
             actedAt: now.toISOString(),
@@ -165,8 +181,10 @@ async function revokeInvite(args: {
           zoneType: invite.zone.zoneType.name,
           zoneLevel: invite.zone.zoneType.level,
           reason: args.reason,
-          previousStatus: invite.status,
+          previousStatus,
           nextStatus: "REVOKED",
+          wasExpiredByTime,
+          expiresAt: invite.expiresAt.toISOString(),
         }),
       },
     });
