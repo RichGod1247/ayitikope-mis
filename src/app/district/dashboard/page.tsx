@@ -1,6 +1,5 @@
 // src/app/district/dashboard/page.tsx
-import GovernanceDashboardClient from "@/components/governance/GovernanceDashboardClient";
-import GovernanceSentNoticeAccountabilityClient from "@/components/governance/GovernanceSentNoticeAccountabilityClient";
+import GovernanceCommandDashboardClient from "@/components/governance/GovernanceCommandDashboardClient";
 import {
   DISTRICT_GOVERNANCE_ROLES,
   requireGovernancePageContext,
@@ -17,19 +16,13 @@ export default async function DistrictDashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <GovernanceDashboardClient
-        endpoint="/api/district/overview"
-        eyebrow="District Oversight"
-        title="District Education Dashboard"
-        description="Monitor schools, circuits, learners, teachers, attendance signals, health alerts, assessments, and intervention priorities inside your authorized district."
-      />
-
-      <GovernanceSentNoticeAccountabilityClient
-        mode="jurisdiction"
-        title="District command notice accountability"
-        description="Track official notices personally issued by the Director and escalated governance notices that require district attention. Routine SISSO-to-school notices remain inside the circuit unless escalated."
-      />
-    </div>
+    <GovernanceCommandDashboardClient
+      endpoint="/api/district/overview"
+      eyebrow="District Oversight"
+      title="District Education Command"
+      description="A lean district command center for circuits, schools, risk, attendance, lesson delivery, assessment evidence, sector-aware governance, official notices, and intervention accountability."
+      accountabilityTitle="District command notice accountability"
+      accountabilityDescription="Track official notices personally issued by the Director and escalated governance notices that require district attention. Routine SISSO-to-school notices remain inside the circuit unless escalated."
+    />
   );
 }

@@ -1,0 +1,1008 @@
+// src/components/governance/GovernanceCommandDashboardClient.tsx
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import GovernanceDashboardClient from "@/components/governance/GovernanceDashboardClient";
+import GovernanceSentNoticeAccountabilityClient from "@/components/governance/GovernanceSentNoticeAccountabilityClient";
+
+type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+type SchoolMetrics = {
+  learners?: number;
+  teachers?: number;
+  classrooms?: number;
+  attendanceRateToday?: number;
+  attendanceCompletionRateToday?: number;
+  missingAttendanceMarksToday?: number;
+  healthAlertsToday?: number;
+  lessonDeliveriesLast14Days?: number;
+  lessonNotesPendingReview?: number;
+  publishedOrLockedAssessments?: number;
+  assessmentCompletionRate?: number;
+  assessmentLinkCoverageRate?: number;
+  lessonDeliveryComplianceRate?: number;
+  riskScore?: number;
+  riskLevel?: RiskLevel | string;
+  riskReasons?: string[];
+  recommendedActions?: string[];
+};
+
+type SchoolRow = {
+  id: string;
+  name: string;
+  schoolCode: string | null;
+  status: string;
+  schoolSector?: "PUBLIC" | "PRIVATE" | string;
+  circuit?: { id: string; name: string; type?: string; level?: number } | null;
+  district?: { id: string; name: string } | null;
+  metrics?: SchoolMetrics;
+};
+
+type InterventionQueueItem = {
+  schoolId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector?: "PUBLIC" | "PRIVATE" | string;
+  circuitName: string;
+  districtName: string | null;
+  riskScore: number;
+  riskLevel: RiskLevel | string;
+  reasons: string[];
+  recommendedActions: string[];
+  metrics?: SchoolMetrics;
+};
+
+type CircuitBreakdownRow = {
+  circuitId: string;
+  circuitName: string;
+  districtId: string | null;
+  districtName: string | null;
+  schools: number;
+  publicSchools?: number;
+  privateSchools?: number;
+  learners: number;
+  teachers: number;
+  attendanceRateToday?: number;
+  attendanceCompletionRateToday?: number;
+  healthAlertsToday: number;
+  lessonDeliveriesLast14Days: number;
+  lessonNotesPendingReview?: number;
+  publishedOrLockedAssessments: number;
+  assessmentCompletionRate?: number;
+  lessonDeliveryComplianceRate?: number;
+  highRiskSchools?: number;
+  criticalRiskSchools?: number;
+  highestRiskScore?: number;
+};
+
+type SectorSummary = {
+  public?: {
+    schools: number;
+    highRiskSchools: number;
+    criticalRiskSchools: number;
+    highestRiskScore: number;
+  };
+  private?: {
+    schools: number;
+    highRiskSchools: number;
+    criticalRiskSchools: number;
+    highestRiskScore: number;
+  };
+  governanceRule?: string;
+};
+
+type RiskSummary = {
+  low?: number;
+  medium?: number;
+  high?: number;
+  critical?: number;
+  highestRiskScore?: number;
+  highestRiskSchool?: {
+    id: string;
+    name: string;
+    riskScore: number;
+    riskLevel: RiskLevel | string;
+  } | null;
+};
+
+type OverviewResponse =
+  | {
+      ok: true;
+      scope?: {
+        isSuperAdmin?: boolean;
+        zoneCount?: number;
+        tenantCount?: number;
+        assignments?: Array<{
+          id: string;
+          role: string;
+          zoneId: string;
+          zoneName: string;
+          zoneLevel: number;
+          zoneTypeName: string;
+          parentZoneName?: string | null;
+        }>;
+      };
+      overview?: {
+        schools?: SchoolRow[];
+        circuitBreakdown?: CircuitBreakdownRow[];
+        interventionQueue?: InterventionQueueItem[];
+        riskSummary?: RiskSummary;
+        sectorSummary?: SectorSummary;
+        totals?: Record<string, number>;
+        signals?: Record<string, number>;
+        emptyStates?: string[];
+        generatedAt?: string;
+      };
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
+type Props = {
+  endpoint: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  accountabilityTitle: string;
+  accountabilityDescription: string;
+};
+
+type PanelKey =
+  | "risk"
+  | "attendance"
+  | "lesson"
+  | "assessment"
+  | "sector"
+  | "notices"
+  | "accountability"
+  | "advanced";
+
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function numberValue(value: unknown) {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function percentValue(value: unknown) {
+  return `${Math.round(numberValue(value))}%`;
+}
+
+function compactDateTime(value?: string) {
+  if (!value) return "Not generated yet";
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-GH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Accra",
+  }).format(d);
+}
+
+function riskBadgeClass(level?: string) {
+  if (level === "CRITICAL") {
+    return "border-red-300/30 bg-red-500/15 text-red-100";
+  }
+
+  if (level === "HIGH") {
+    return "border-orange-300/30 bg-orange-500/15 text-orange-100";
+  }
+
+  if (level === "MEDIUM") {
+    return "border-amber-300/30 bg-amber-400/15 text-amber-100";
+  }
+
+  return "border-emerald-300/30 bg-emerald-400/15 text-emerald-100";
+}
+
+function sectorBadgeClass(value?: string | null) {
+  if (value === "PRIVATE") {
+    return "border-purple-300/25 bg-purple-400/10 text-purple-100";
+  }
+
+  if (value === "PUBLIC") {
+    return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
+  }
+
+  return "border-white/10 bg-white/5 text-slate-200";
+}
+
+function sectorLabel(value?: string | null) {
+  if (value === "PRIVATE") return "Private";
+  if (value === "PUBLIC") return "Public";
+  return "Unspecified";
+}
+
+function toneClass(
+  tone: "default" | "success" | "warning" | "danger" | "info",
+) {
+  if (tone === "success") return "border-emerald-300/20 bg-emerald-400/10";
+  if (tone === "warning") return "border-amber-300/20 bg-amber-400/10";
+  if (tone === "danger") return "border-red-300/20 bg-red-500/10";
+  if (tone === "info") return "border-sky-300/20 bg-sky-500/10";
+  return "border-white/10 bg-white/[0.04]";
+}
+
+function smallToneText(
+  tone: "default" | "success" | "warning" | "danger" | "info",
+) {
+  if (tone === "success") return "text-emerald-100";
+  if (tone === "warning") return "text-amber-100";
+  if (tone === "danger") return "text-red-100";
+  if (tone === "info") return "text-sky-100";
+  return "text-slate-200";
+}
+
+function StatCard({
+  label,
+  value,
+  helper,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  helper?: string;
+  tone?: "default" | "success" | "warning" | "danger" | "info";
+}) {
+  return (
+    <div className={cx("rounded-[24px] border p-4", toneClass(tone))}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+      {helper ? (
+        <p className={cx("mt-1 text-xs leading-5", smallToneText(tone))}>
+          {helper}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function CommandTile({
+  icon,
+  title,
+  description,
+  value,
+  tone = "default",
+  active,
+  onClick,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  value?: string | number;
+  tone?: "default" | "success" | "warning" | "danger" | "info";
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "group rounded-[24px] border p-4 text-left transition hover:-translate-y-0.5",
+        toneClass(tone),
+        active ? "ring-2 ring-white/20" : "",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-xl">{icon}</span>
+        {value !== undefined ? (
+          <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-white">
+            {value}
+          </span>
+        ) : null}
+      </div>
+
+      <p className="mt-3 text-sm font-bold text-white">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-300">{description}</p>
+      <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 group-hover:text-white">
+        Open
+      </p>
+    </button>
+  );
+}
+
+export default function GovernanceCommandDashboardClient({
+  endpoint,
+  eyebrow,
+  title,
+  description,
+  accountabilityTitle,
+  accountabilityDescription,
+}: Props) {
+  const [data, setData] = useState<OverviewResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activePanel, setActivePanel] = useState<PanelKey>("risk");
+
+  const isDistrictView = endpoint.includes("/district/");
+  const isCircuitView = endpoint.includes("/circuit/");
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(endpoint, {
+        cache: "no-store",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+
+      const json = (await res
+        .json()
+        .catch(() => null)) as OverviewResponse | null;
+
+      if (!res.ok || !json?.ok) {
+        setData(null);
+        setError(
+          json && !json.ok
+            ? json.error
+            : `Failed to load governance summary (${res.status})`,
+        );
+        return;
+      }
+
+      setData(json);
+    } catch {
+      setData(null);
+      setError("Network/server error while loading governance summary.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint]);
+
+  const overview = data?.ok ? data.overview : null;
+  const scope = data?.ok ? data.scope : null;
+
+  const schools = useMemo(() => overview?.schools ?? [], [overview]);
+  const circuits = useMemo(() => overview?.circuitBreakdown ?? [], [overview]);
+  const queue = useMemo(() => overview?.interventionQueue ?? [], [overview]);
+  const totals = overview?.totals ?? {};
+  const signals = overview?.signals ?? {};
+  const riskSummary = overview?.riskSummary ?? {};
+  const sectorSummary = overview?.sectorSummary ?? {};
+
+  const highestRiskSchools = useMemo(() => {
+    const queueRows = queue.map((item) => ({
+      id: item.schoolId,
+      name: item.schoolName,
+      schoolCode: item.schoolCode,
+      schoolSector: item.schoolSector,
+      circuitName: item.circuitName,
+      riskScore: numberValue(item.riskScore),
+      riskLevel: String(item.riskLevel ?? "LOW"),
+      reason: item.reasons?.[0] ?? "Risk evidence available.",
+      action:
+        item.recommendedActions?.[0] ?? "Review school evidence and follow up.",
+    }));
+
+    if (queueRows.length) {
+      return queueRows.sort((a, b) => b.riskScore - a.riskScore).slice(0, 5);
+    }
+
+    return schools
+      .map((school) => ({
+        id: school.id,
+        name: school.name,
+        schoolCode: school.schoolCode,
+        schoolSector: school.schoolSector,
+        circuitName: school.circuit?.name ?? "No circuit",
+        riskScore: numberValue(school.metrics?.riskScore),
+        riskLevel: String(school.metrics?.riskLevel ?? "LOW"),
+        reason: school.metrics?.riskReasons?.[0] ?? "No major risk reason.",
+        action:
+          school.metrics?.recommendedActions?.[0] ??
+          "Keep monitoring school evidence.",
+      }))
+      .sort((a, b) => b.riskScore - a.riskScore)
+      .slice(0, 5);
+  }, [queue, schools]);
+
+  const publicSchools =
+    numberValue(totals.publicSchools) ||
+    numberValue(sectorSummary.public?.schools) ||
+    schools.filter((school) => school.schoolSector === "PUBLIC").length;
+
+  const privateSchools =
+    numberValue(totals.privateSchools) ||
+    numberValue(sectorSummary.private?.schools) ||
+    schools.filter((school) => school.schoolSector === "PRIVATE").length;
+
+  const schoolCount =
+    numberValue(totals.schools) || schools.length || scope?.tenantCount || 0;
+
+  const criticalRisk =
+    numberValue(riskSummary.critical) +
+    numberValue(sectorSummary.public?.criticalRiskSchools) +
+    numberValue(sectorSummary.private?.criticalRiskSchools);
+
+  const highRisk =
+    numberValue(riskSummary.high) +
+    numberValue(sectorSummary.public?.highRiskSchools) +
+    numberValue(sectorSummary.private?.highRiskSchools);
+
+  const attendanceRate =
+    numberValue(signals.attendanceRateToday) ||
+    numberValue(totals.attendanceRateToday);
+
+  const attendanceCompletion =
+    numberValue(signals.attendanceCompletionRateToday) ||
+    numberValue(totals.attendanceCompletionRateToday);
+
+  const lessonCompliance =
+    numberValue(signals.lessonDeliveryComplianceRate) ||
+    numberValue(totals.lessonDeliveryComplianceRate);
+
+  const assessmentCompletion =
+    numberValue(signals.assessmentCompletionRate) ||
+    numberValue(totals.assessmentCompletionRate);
+
+  const generatedAt = compactDateTime(overview?.generatedAt);
+
+  const riskTone = criticalRisk ? "danger" : highRisk ? "warning" : "success";
+
+  return (
+    <main className="space-y-5">
+      <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.94),rgba(7,26,61,0.94),rgba(5,7,11,0.97))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
+        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:64px_64px]" />
+        <div className="absolute -left-16 top-0 h-48 w-48 rounded-full bg-[#1B66D1]/20 blur-3xl" />
+        <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-[#D4AF37]/14 blur-3xl" />
+
+        <div className="relative">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#E8C96A]">
+                {eyebrow}
+              </p>
+
+              <h1 className="mt-2 text-2xl font-semibold text-[#F7F4ED] md:text-3xl">
+                {title}
+              </h1>
+
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-[#C9CDD6]">
+                {description}
+              </p>
+
+              <p className="mt-3 text-xs text-slate-400">
+                Last generated: {generatedAt}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:bg-white/10 disabled:opacity-50"
+            >
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+
+          {error ? (
+            <div className="mt-5 rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-100">
+              {error}
+            </div>
+          ) : null}
+
+          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard
+              label="Schools"
+              value={schoolCount}
+              helper={`${publicSchools} public · ${privateSchools} private`}
+              tone="info"
+            />
+            <StatCard
+              label="Attendance today"
+              value={attendanceRate ? percentValue(attendanceRate) : "0%"}
+              helper={`${percentValue(attendanceCompletion)} completion`}
+              tone={attendanceRate < 70 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Risk load"
+              value={criticalRisk + highRisk}
+              helper={`${criticalRisk} critical · ${highRisk} high`}
+              tone={riskTone}
+            />
+            <StatCard
+              label="Active queue"
+              value={queue.length}
+              helper={
+                queue.length
+                  ? "Schools need supervision follow-up"
+                  : "No current queue pressure"
+              }
+              tone={queue.length ? "warning" : "success"}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+        <CommandTile
+          icon="🔥"
+          title="Risk board"
+          description="Top schools needing follow-up."
+          value={criticalRisk + highRisk}
+          tone={riskTone}
+          active={activePanel === "risk"}
+          onClick={() => setActivePanel("risk")}
+        />
+        <CommandTile
+          icon="✅"
+          title="Attendance"
+          description="Today's capture signal."
+          value={attendanceRate ? percentValue(attendanceRate) : "0%"}
+          tone={attendanceRate < 70 ? "warning" : "success"}
+          active={activePanel === "attendance"}
+          onClick={() => setActivePanel("attendance")}
+        />
+        <CommandTile
+          icon="📘"
+          title="Lesson delivery"
+          description="Teaching evidence health."
+          value={lessonCompliance ? percentValue(lessonCompliance) : "—"}
+          tone={lessonCompliance && lessonCompliance < 70 ? "warning" : "info"}
+          active={activePanel === "lesson"}
+          onClick={() => setActivePanel("lesson")}
+        />
+        <CommandTile
+          icon="📊"
+          title="Assessment"
+          description="Scoring and assessment proof."
+          value={
+            assessmentCompletion ? percentValue(assessmentCompletion) : "—"
+          }
+          tone={
+            assessmentCompletion && assessmentCompletion < 60
+              ? "warning"
+              : "info"
+          }
+          active={activePanel === "assessment"}
+          onClick={() => setActivePanel("assessment")}
+        />
+        <CommandTile
+          icon="🏛️"
+          title="Sector boundary"
+          description="Public/private command scope."
+          value={`${publicSchools}/${privateSchools}`}
+          tone="default"
+          active={activePanel === "sector"}
+          onClick={() => setActivePanel("sector")}
+        />
+        <CommandTile
+          icon="📨"
+          title="Notices"
+          description="Send official notice."
+          tone="info"
+          active={activePanel === "notices"}
+          onClick={() => setActivePanel("notices")}
+        />
+        <CommandTile
+          icon="📬"
+          title="Accountability"
+          description="Read, ACK, response trail."
+          tone="default"
+          active={activePanel === "accountability"}
+          onClick={() => setActivePanel("accountability")}
+        />
+        <CommandTile
+          icon="🧰"
+          title="Advanced"
+          description="Full old workbench."
+          tone="default"
+          active={activePanel === "advanced"}
+          onClick={() => setActivePanel("advanced")}
+        />
+      </section>
+
+      {activePanel === "risk" ? (
+        <section className="rounded-[28px] border border-red-300/20 bg-red-500/10 p-4 md:p-5">
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-200">
+                Priority risk board
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-white">
+                First schools to inspect
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-red-100/80">
+                This board shows the schools most likely to need immediate
+                supervision attention.
+              </p>
+            </div>
+
+            <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold text-white">
+              {highestRiskSchools.length} shown
+            </span>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {highestRiskSchools.length ? (
+              highestRiskSchools.map((school, index) => (
+                <article
+                  key={school.id}
+                  className="rounded-2xl border border-white/10 bg-slate-950/55 p-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                          #{index + 1}
+                        </span>
+                        <span
+                          className={cx(
+                            "rounded-full border px-3 py-1 text-xs font-semibold",
+                            riskBadgeClass(school.riskLevel),
+                          )}
+                        >
+                          {school.riskLevel} · {school.riskScore}
+                        </span>
+                        <span
+                          className={cx(
+                            "rounded-full border px-3 py-1 text-xs font-semibold",
+                            sectorBadgeClass(school.schoolSector),
+                          )}
+                        >
+                          {sectorLabel(school.schoolSector)}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-3 text-base font-bold text-white">
+                        {school.name}
+                      </h3>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        {school.schoolCode || "No school code"} ·{" "}
+                        {school.circuitName || "No circuit"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-100">
+                    <span className="font-semibold text-amber-200">
+                      Evidence:
+                    </span>{" "}
+                    {school.reason}
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-emerald-100">
+                    <span className="font-semibold">Recommended action:</span>{" "}
+                    {school.action}
+                  </p>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+                No risk queue is available for this governance scope.
+              </div>
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {activePanel === "attendance" ? (
+        <section className="rounded-[28px] border border-emerald-300/20 bg-emerald-400/10 p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
+            Attendance command signal
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-white">
+            Today’s capture health
+          </h2>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <StatCard
+              label="Rate"
+              value={percentValue(attendanceRate)}
+              tone={attendanceRate < 70 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Completion"
+              value={percentValue(attendanceCompletion)}
+              tone={attendanceCompletion < 70 ? "warning" : "success"}
+            />
+            <StatCard label="Schools" value={schoolCount} tone="info" />
+            <StatCard
+              label="Missing marks"
+              value={
+                numberValue(signals.missingAttendanceMarksToday) ||
+                numberValue(totals.missingAttendanceMarksToday)
+              }
+              tone={
+                numberValue(signals.missingAttendanceMarksToday) ||
+                numberValue(totals.missingAttendanceMarksToday)
+                  ? "warning"
+                  : "success"
+              }
+            />
+          </div>
+        </section>
+      ) : null}
+
+      {activePanel === "lesson" ? (
+        <section className="rounded-[28px] border border-sky-300/20 bg-sky-500/10 p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
+            Lesson delivery command signal
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-white">
+            Teaching evidence health
+          </h2>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <StatCard
+              label="Compliance"
+              value={lessonCompliance ? percentValue(lessonCompliance) : "—"}
+              tone={lessonCompliance < 70 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Deliveries"
+              value={
+                numberValue(signals.lessonDeliveriesLast14Days) ||
+                numberValue(totals.lessonDeliveriesLast14Days)
+              }
+              tone="info"
+            />
+            <StatCard
+              label="Pending notes"
+              value={
+                numberValue(signals.lessonNotesPendingReview) ||
+                numberValue(totals.lessonNotesPendingReview)
+              }
+              tone={
+                numberValue(signals.lessonNotesPendingReview) ||
+                numberValue(totals.lessonNotesPendingReview)
+                  ? "warning"
+                  : "success"
+              }
+            />
+            <StatCard label="Schools" value={schoolCount} tone="default" />
+          </div>
+        </section>
+      ) : null}
+
+      {activePanel === "assessment" ? (
+        <section className="rounded-[28px] border border-indigo-300/20 bg-indigo-500/10 p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200">
+            Assessment command signal
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-white">
+            Assessment proof and scoring health
+          </h2>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <StatCard
+              label="Scoring"
+              value={
+                assessmentCompletion ? percentValue(assessmentCompletion) : "—"
+              }
+              tone={assessmentCompletion < 60 ? "warning" : "success"}
+            />
+            <StatCard
+              label="Published/locked"
+              value={
+                numberValue(signals.publishedOrLockedAssessments) ||
+                numberValue(totals.publishedOrLockedAssessments)
+              }
+              tone="info"
+            />
+            <StatCard
+              label="Link coverage"
+              value={
+                signals.assessmentLinkCoverageRate !== undefined ||
+                totals.assessmentLinkCoverageRate !== undefined
+                  ? percentValue(
+                      signals.assessmentLinkCoverageRate ??
+                        totals.assessmentLinkCoverageRate,
+                    )
+                  : "—"
+              }
+              tone="default"
+            />
+            <StatCard label="Schools" value={schoolCount} tone="default" />
+          </div>
+        </section>
+      ) : null}
+
+      {activePanel === "sector" ? (
+        <section className="rounded-[28px] border border-purple-300/20 bg-purple-500/10 p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-purple-200">
+            Sector-aware governance boundary
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-white">
+            Public and private school command scope
+          </h2>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <StatCard
+              label="Public schools"
+              value={publicSchools}
+              helper={`${numberValue(sectorSummary.public?.criticalRiskSchools)} critical · ${numberValue(
+                sectorSummary.public?.highRiskSchools,
+              )} high`}
+              tone="success"
+            />
+            <StatCard
+              label="Private schools"
+              value={privateSchools}
+              helper={`${numberValue(sectorSummary.private?.criticalRiskSchools)} critical · ${numberValue(
+                sectorSummary.private?.highRiskSchools,
+              )} high`}
+              tone="info"
+            />
+          </div>
+
+          <p className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-purple-100/90">
+            {sectorSummary.governanceRule ??
+              "Public schools are normal GES governance targets. Private schools must only be included where explicitly authorized."}
+          </p>
+        </section>
+      ) : null}
+
+      {activePanel === "notices" ? (
+        <section className="rounded-[28px] border border-indigo-300/20 bg-indigo-500/10 p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200">
+            Official notice tools
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-white">
+            Use advanced workbench to send notices
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-indigo-100/80">
+            The notice composer is kept inside the advanced governance workbench
+            because it performs protected recipient resolution, idempotency,
+            SMS, email, and in-app delivery.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setActivePanel("advanced")}
+            className="mt-4 rounded-full border border-indigo-300/25 bg-indigo-500/20 px-5 py-2 text-sm font-semibold text-indigo-100 hover:bg-indigo-500/30"
+          >
+            Open advanced notice workbench
+          </button>
+        </section>
+      ) : null}
+
+      {activePanel === "accountability" ? (
+        <section className="space-y-4">
+          <GovernanceSentNoticeAccountabilityClient
+            mode="jurisdiction"
+            title={accountabilityTitle}
+            description={accountabilityDescription}
+          />
+        </section>
+      ) : null}
+
+      {activePanel === "advanced" ? (
+        <section className="space-y-4 rounded-[28px] border border-white/10 bg-white/[0.03] p-3 md:p-4">
+          <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+              Advanced governance workbench
+            </p>
+            <p className="mt-1 text-sm leading-6 text-amber-100/85">
+              This opens the full legacy governance dashboard with intervention
+              actions, official notice composer, logbook, escalation, and
+              director/SISSO workflow tools.
+            </p>
+          </div>
+
+          <GovernanceDashboardClient
+            endpoint={endpoint}
+            eyebrow={eyebrow}
+            title={`${title} · Advanced workbench`}
+            description={description}
+          />
+        </section>
+      ) : null}
+
+      {isDistrictView && circuits.length ? (
+        <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            District circuit snapshot
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-white">
+            Circuits ranked for quick review
+          </h2>
+
+          <div className="mt-4 space-y-3">
+            {circuits.slice(0, 5).map((row) => (
+              <article
+                key={row.circuitId}
+                className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="font-bold text-white">{row.circuitName}</p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {row.schools} school(s) · {row.learners} learner(s) ·{" "}
+                      {row.teachers} teacher(s)
+                    </p>
+                  </div>
+
+                  <span
+                    className={cx(
+                      "w-fit rounded-full border px-3 py-1 text-xs font-semibold",
+                      riskBadgeClass(
+                        numberValue(row.criticalRiskSchools)
+                          ? "CRITICAL"
+                          : numberValue(row.highRiskSchools)
+                            ? "HIGH"
+                            : "LOW",
+                      ),
+                    )}
+                  >
+                    Risk: {numberValue(row.highestRiskScore)}
+                  </span>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+                  <StatCard
+                    label="Public"
+                    value={numberValue(row.publicSchools)}
+                    tone="success"
+                  />
+                  <StatCard
+                    label="Private"
+                    value={numberValue(row.privateSchools)}
+                    tone="info"
+                  />
+                  <StatCard
+                    label="Attendance"
+                    value={percentValue(row.attendanceRateToday)}
+                    tone={
+                      numberValue(row.attendanceRateToday) < 70
+                        ? "warning"
+                        : "success"
+                    }
+                  />
+                  <StatCard
+                    label="Alerts"
+                    value={numberValue(row.healthAlertsToday)}
+                    tone={row.healthAlertsToday ? "warning" : "success"}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {loading ? (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-slate-300">
+          Loading governance command dashboard...
+        </div>
+      ) : null}
+
+      {!loading && !error && overview?.emptyStates?.length ? (
+        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Empty state notes
+          </p>
+          <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-300">
+            {overview.emptyStates.map((item) => (
+              <li key={item}>• {item}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {isCircuitView ? (
+        <section className="rounded-3xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-100">
+          This is a supervision dashboard. Officers can see risk and evidence,
+          but they cannot edit school records from this view.
+        </section>
+      ) : null}
+    </main>
+  );
+}

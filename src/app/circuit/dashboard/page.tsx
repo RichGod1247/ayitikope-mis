@@ -1,6 +1,5 @@
 // src/app/circuit/dashboard/page.tsx
-import GovernanceDashboardClient from "@/components/governance/GovernanceDashboardClient";
-import GovernanceSentNoticeAccountabilityClient from "@/components/governance/GovernanceSentNoticeAccountabilityClient";
+import GovernanceCommandDashboardClient from "@/components/governance/GovernanceCommandDashboardClient";
 import {
   CIRCUIT_GOVERNANCE_ROLES,
   requireGovernancePageContext,
@@ -17,19 +16,13 @@ export default async function CircuitDashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <GovernanceDashboardClient
-        endpoint="/api/circuit/overview"
-        eyebrow="Circuit Oversight"
-        title="SISSO Circuit Dashboard"
-        description="Monitor schools, learners, teachers, attendance signals, health alerts, assessments, and lesson delivery inside your authorized circuit."
-      />
-
-      <GovernanceSentNoticeAccountabilityClient
-        mode="jurisdiction"
-        title="Circuit notice accountability"
-        description="Track official notices sent inside your authorized circuit, including SISSO-to-headteacher and SISSO-to-teacher communications, delivery status, acknowledgements, and responses."
-      />
-    </div>
+    <GovernanceCommandDashboardClient
+      endpoint="/api/circuit/overview"
+      eyebrow="Circuit Oversight"
+      title="SISSO Circuit Command"
+      description="A lean supervision command center for risk, attendance, lesson delivery, assessment evidence, sector boundaries, official notices, and accountability inside your authorized circuit."
+      accountabilityTitle="Circuit notice accountability"
+      accountabilityDescription="Track official notices sent inside your authorized circuit, including SISSO-to-headteacher and SISSO-to-teacher communications, delivery status, acknowledgements, and responses."
+    />
   );
 }
