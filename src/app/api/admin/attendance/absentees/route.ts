@@ -1,5 +1,6 @@
 // src/app/api/admin/attendance/absentees/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { AttendanceStatus, StudentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { assertNoTenantOverride } from "@/lib/tenantGuard";
@@ -7,24 +8,29 @@ import { assertNoTenantOverride } from "@/lib/tenantGuard";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonNoStore(payload: any, status = 200) {
+type SmsEligibility = "SMS_ELIGIBLE" | "NO_SMS_OPT_IN" | "NO_PHONE";
+
+function jsonNoStore(payload: unknown, status = 200) {
   return NextResponse.json(payload, {
     status,
-    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }
 
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
 function normalizeRoleName(role: unknown) {
-  return String(role ?? "")
-    .trim()
+  return clean(role)
     .toUpperCase()
     .replace(/\s+/g, "_")
     .replace(/[^A-Z_]/g, "");
 }
 
-// Legacy compat:
-// - ADMIN behaves as SCHOOL_ADMIN
-// - HEADMASTER behaves as HEADTEACHER
 function roleEffective(role: unknown) {
   const r = normalizeRoleName(role);
   if (r === "ADMIN") return "SCHOOL_ADMIN";
@@ -37,63 +43,163 @@ function isAdminLike(role: unknown) {
   return r === "SCHOOL_ADMIN" || r === "HEADTEACHER" || r.includes("OWNER") || r.includes("SUPER");
 }
 
-async function requireAdminLike(tenantId: string, userId: string) {
-  const m = await prisma.membership.findUnique({
+async function requireAdminLike(tenantId: string, userId: string, fallbackRoleName?: string | null) {
+  const membership = await prisma.membership.findUnique({
     where: { userId_tenantId: { userId, tenantId } },
     select: { status: true, role: { select: { name: true } } },
   });
 
-  if (!m || m.status !== "ACTIVE") return { ok: false as const, status: 403, error: "FORBIDDEN" };
-  if (!isAdminLike(m.role?.name ?? "")) return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  const roleName = membership?.role?.name ?? fallbackRoleName ?? null;
+
+  if (!membership || membership.status !== "ACTIVE") {
+    return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  }
+
+  if (!isAdminLike(roleName)) {
+    return { ok: false as const, status: 403, error: "FORBIDDEN" };
+  }
+
   return { ok: true as const };
 }
 
 function parseDayUtc(dateParam: string) {
-  // YYYY-MM-DD
-  const d = new Date(`${dateParam}T00:00:00.000Z`);
-  if (Number.isNaN(d.getTime())) return null;
-  const end = new Date(d);
-  end.setUTCDate(end.getUTCDate() + 1);
-  return { start: d, endExclusive: end };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return null;
+
+  const start = new Date(`${dateParam}T00:00:00.000Z`);
+  if (Number.isNaN(start.getTime())) return null;
+
+  const endExclusive = new Date(start);
+  endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+
+  return { start, endExclusive };
+}
+
+function classLabel(c: { name?: string | null; grade?: string | null; arm?: string | null }) {
+  const name = clean(c.name);
+  const gradeArm = [clean(c.grade), clean(c.arm)].filter(Boolean).join(" ");
+  return name || gradeArm || "Unknown class";
+}
+
+function studentName(s: { firstName?: string | null; lastName?: string | null }) {
+  return [clean(s.firstName), clean(s.lastName)].filter(Boolean).join(" ") || "Unnamed learner";
+}
+
+function smsEligibility(student: {
+  guardianSmsOptIn: boolean | null;
+  guardianPhone?: string | null;
+  guardianPhoneNorm?: string | null;
+}): SmsEligibility {
+  if (!student.guardianSmsOptIn) return "NO_SMS_OPT_IN";
+  if (!clean(student.guardianPhoneNorm) && !clean(student.guardianPhone)) return "NO_PHONE";
+  return "SMS_ELIGIBLE";
 }
 
 export async function GET(req: NextRequest) {
-  // ✅ Cookie-session auth (NextAuth)
-  let ctx: { tenantId: string; userId: string };
+  let ctx: { tenantId: string; userId: string; roleName?: string | null };
+
   try {
-    const c = await requireServerUserContext({ requireTenant: true });
-    ctx = { tenantId: c.tenantId, userId: c.userId };
+    const safe = await requireServerUserContext({ requireTenant: true });
+    ctx = {
+      tenantId: safe.tenantId,
+      userId: safe.userId,
+      roleName: safe.roleName ?? null,
+    };
   } catch {
     return jsonNoStore({ ok: false, error: "UNAUTHORIZED" }, 401);
   }
 
-  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId);
+  const roleOk = await requireAdminLike(ctx.tenantId, ctx.userId, ctx.roleName ?? null);
   if (!roleOk.ok) return jsonNoStore({ ok: false, error: roleOk.error }, roleOk.status);
 
   const { searchParams } = new URL(req.url);
 
-  // Back-compat: tenantId may be passed by legacy UI, must match session tenant
   const guard = assertNoTenantOverride(searchParams.get("tenantId"), ctx.tenantId);
   if (!guard.ok) return jsonNoStore({ ok: false, error: guard.error }, guard.status);
 
-  const dateParam = (searchParams.get("date") ?? "").trim(); // YYYY-MM-DD
-  if (!dateParam) return jsonNoStore({ ok: false, error: "date (YYYY-MM-DD) is required." }, 400);
+  const dateParam = clean(searchParams.get("date"));
+  if (!dateParam) {
+    return jsonNoStore({ ok: false, error: "date (YYYY-MM-DD) is required." }, 400);
+  }
 
   const day = parseDayUtc(dateParam);
-  if (!day) return jsonNoStore({ ok: false, error: "Invalid date format. Use YYYY-MM-DD." }, 400);
+  if (!day) {
+    return jsonNoStore({ ok: false, error: "Invalid date format. Use YYYY-MM-DD." }, 400);
+  }
+
+  const classroomId = clean(searchParams.get("classroomId"));
+  const classQuery = clean(searchParams.get("class"));
 
   try {
+    const classrooms = await prisma.classroom.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        ...(classroomId ? { id: classroomId } : {}),
+        ...(classQuery
+          ? {
+              OR: [
+                { name: { contains: classQuery, mode: "insensitive" } },
+                { grade: { contains: classQuery, mode: "insensitive" } },
+                { arm: { contains: classQuery, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        grade: true,
+        arm: true,
+      },
+      orderBy: [{ grade: "asc" }, { arm: "asc" }, { name: "asc" }],
+    });
+
+    const classroomIds = classrooms.map((classroom) => classroom.id);
+
+    if (!classroomIds.length) {
+      return jsonNoStore(
+        {
+          ok: true,
+          items: [],
+          count: 0,
+          date: dateParam,
+          tenantId: ctx.tenantId,
+          summary: {
+            absentCount: 0,
+            smsEligible: 0,
+            skippedNoOptIn: 0,
+            skippedNoPhone: 0,
+          },
+        },
+        200
+      );
+    }
+
     const sessions = await prisma.attendanceSession.findMany({
       where: {
         tenantId: ctx.tenantId,
+        classroomId: { in: classroomIds },
         date: { gte: day.start, lt: day.endExclusive },
       },
       select: {
         id: true,
         date: true,
-        classroom: { select: { name: true, grade: true, arm: true } },
+        classroomId: true,
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            arm: true,
+          },
+        },
         marks: {
-          where: { status: "ABSENT" },
+          where: {
+            status: AttendanceStatus.ABSENT,
+            student: {
+              tenantId: ctx.tenantId,
+              status: StudentStatus.ACTIVE,
+            },
+          },
           select: {
             id: true,
             note: true,
@@ -105,67 +211,82 @@ export async function GET(req: NextRequest) {
                 lastName: true,
                 guardianName: true,
                 guardianPhone: true,
+                guardianPhoneNorm: true,
+                guardianSmsOptIn: true,
                 classroomId: true,
               },
             },
           },
         },
       },
-      orderBy: { date: "asc" },
+      orderBy: [{ date: "asc" }],
       take: 2000,
     });
 
-    type AbsenteeItem = {
-      markId: string;
-      studentId: string;
-      studentName: string;
-      classLabel: string;
-      guardianName?: string | null;
-      guardianPhone?: string | null;
-      note?: string | null;
-      date: string;
-      sessionId: string;
-    };
+    const items = sessions.flatMap((session) => {
+      const label = classLabel(session.classroom);
+      const dateISO = session.date.toISOString().slice(0, 10);
 
-    const items: AbsenteeItem[] = [];
+      return session.marks.map((mark) => {
+        const eligibility = smsEligibility(mark.student);
 
-    for (const session of sessions as any[]) {
-      const grade = (session.classroom?.grade as string | undefined) ?? "";
-      const arm = (session.classroom?.arm as string | undefined) ?? "";
-      const name = (session.classroom?.name as string | undefined) ?? "";
+        return {
+          markId: mark.id,
+          studentId: mark.student.id,
+          studentName: studentName(mark.student),
+          classLabel: label,
+          classroomId: session.classroomId,
+          guardianName: mark.student.guardianName ?? null,
+          guardianPhone: mark.student.guardianPhone ?? null,
+          guardianPhoneNorm: mark.student.guardianPhoneNorm ?? null,
+          guardianSmsOptIn: !!mark.student.guardianSmsOptIn,
+          smsEligibility: eligibility,
+          smsEligible: eligibility === "SMS_ELIGIBLE",
+          note: mark.note ?? null,
+          markedAt: mark.createdAt.toISOString(),
+          date: dateISO,
+          sessionId: session.id,
+        };
+      });
+    });
 
-      const classLabel =
-        name && name.trim()
-          ? name.trim()
-          : ([grade, arm].filter(Boolean).join(" ").trim() || "Unknown class");
+    const summary = items.reduce(
+      (acc, item) => {
+        acc.absentCount += 1;
 
-      const sessionDateIso =
-        session.date instanceof Date ? session.date.toISOString() : new Date(day.start).toISOString();
+        if (item.smsEligibility === "SMS_ELIGIBLE") acc.smsEligible += 1;
+        if (item.smsEligibility === "NO_SMS_OPT_IN") acc.skippedNoOptIn += 1;
+        if (item.smsEligibility === "NO_PHONE") acc.skippedNoPhone += 1;
 
-      for (const m of session.marks as any[]) {
-        const s = m.student;
-        const studentId = String(s?.id ?? "").trim();
-        if (!studentId) continue;
-
-        const studentName = [s?.firstName, s?.lastName].filter(Boolean).join(" ").trim() || "Unnamed learner";
-
-        items.push({
-          markId: String(m.id),
-          studentId,
-          studentName,
-          classLabel,
-          guardianName: s?.guardianName ?? null,
-          guardianPhone: s?.guardianPhone ?? null,
-          note: m.note ?? null,
-          date: sessionDateIso,
-          sessionId: String(session.id),
-        });
+        return acc;
+      },
+      {
+        absentCount: 0,
+        smsEligible: 0,
+        skippedNoOptIn: 0,
+        skippedNoPhone: 0,
       }
-    }
+    );
 
-    return jsonNoStore({ ok: true, items, count: items.length, date: dateParam, tenantId: ctx.tenantId }, 200);
-  } catch (err: any) {
+    return jsonNoStore(
+      {
+        ok: true,
+        items,
+        count: items.length,
+        date: dateParam,
+        tenantId: ctx.tenantId,
+        summary,
+      },
+      200
+    );
+  } catch (err: unknown) {
     console.error("[ADMIN_ABSENTEES_ERROR]", err);
-    return jsonNoStore({ ok: false, error: err?.message || "Failed to load absentees. Please try again." }, 500);
+    return jsonNoStore(
+      {
+        ok: false,
+        error: err instanceof Error ? err.message : "Failed to load absentees. Please try again.",
+      },
+      500
+    );
   }
 }
