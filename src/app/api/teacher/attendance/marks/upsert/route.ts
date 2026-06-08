@@ -4,36 +4,107 @@ import { prisma } from "@/lib/prisma";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
 import { AttendanceStatus, StudentStatus } from "@prisma/client";
 import { z } from "zod";
-import { requireTenantContext, assertTenantParamMatches, toHttpError } from "@/lib/server/tenantScope";
+import { writeAuditLog } from "@/lib/audit";
+import {
+  requireTenantContext,
+  assertTenantParamMatches,
+  toHttpError,
+} from "@/lib/server/tenantScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function noStoreJson(status: number, payload: any) {
-  return NextResponse.json(payload, {
-    status,
-    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
-  });
-}
-
 const STATUS = ["PRESENT", "ABSENT", "LATE", "EXCUSED"] as const;
 
 const ItemSchema = z.object({
-  studentId: z.string().min(1),
+  studentId: z.string().trim().min(1, "studentId is required."),
   status: z.enum(STATUS),
-  note: z.string().optional().nullable(),
+  note: z.string().max(280, "Note is too long.").optional().nullable(),
 });
 
 const BodySchema = z
   .object({
-    tenantId: z.string().optional(), // legacy compat
-    sessionId: z.string().min(1),
-    items: z.array(ItemSchema).min(1).max(800, "Too many items."),
+    tenantId: z.string().optional(), // legacy compatibility only
+    sessionId: z.string().trim().min(1, "sessionId is required."),
+    items: z.array(ItemSchema).min(1, "At least one attendance mark is required.").max(800, "Too many items."),
   })
   .strict();
 
+type DesiredMark = {
+  studentId: string;
+  status: AttendanceStatus;
+  note: string | null;
+};
+
+type ExistingMark = {
+  id: string;
+  studentId: string;
+  status: AttendanceStatus;
+  note: string | null;
+};
+
+type AuditChange = {
+  studentId: string;
+  from: {
+    status: AttendanceStatus | null;
+    note: string | null;
+  };
+  to: {
+    status: AttendanceStatus;
+    note: string | null;
+  };
+};
+
+function noStoreJson(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
 function isIdLike(id: string) {
   return /^[a-zA-Z0-9_-]{10,100}$/.test(id);
+}
+
+function clientIp(req: Request) {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
+}
+
+function userAgent(req: Request) {
+  return req.headers.get("user-agent") || null;
+}
+
+function cleanNote(v: string | null | undefined) {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s ? s : null;
+}
+
+function isAdminLike(roleName: string | null | undefined) {
+  const r = String(roleName ?? "").toUpperCase();
+  return r.includes("ADMIN") || r.includes("HEAD") || r.includes("OWNER") || r === "SUPERADMIN";
+}
+
+async function loadActiveRoleName(userId: string, tenantId: string) {
+  const membership = await prisma.membership.findFirst({
+    where: { tenantId, userId, status: "ACTIVE" },
+    select: { role: { select: { name: true } } },
+  });
+
+  if (!membership) {
+    const err = new Error("FORBIDDEN");
+    (err as { status?: number }).status = 403;
+    throw err;
+  }
+
+  return membership.role?.name ?? null;
+}
+
+function sameMark(existing: ExistingMark, desired: DesiredMark) {
+  return existing.status === desired.status && (existing.note ?? null) === (desired.note ?? null);
 }
 
 export async function POST(req: Request) {
@@ -43,59 +114,107 @@ export async function POST(req: Request) {
 
     const ct = req.headers.get("content-type") || "";
     if (!ct.toLowerCase().includes("application/json")) {
-      return noStoreJson(415, { ok: false, error: "Content-Type must be application/json." });
+      return noStoreJson(415, {
+        ok: false,
+        error: "Content-Type must be application/json.",
+      });
     }
 
     const raw = await req.json().catch(() => null);
     const parsed = BodySchema.safeParse(raw);
+
     if (!parsed.success) {
-      return noStoreJson(400, { ok: false, error: parsed.error.issues[0]?.message || "Invalid body." });
+      return noStoreJson(400, {
+        ok: false,
+        error: parsed.error.issues[0]?.message || "Invalid body.",
+      });
     }
 
     const { sessionId, items, tenantId: tenantIdParam } = parsed.data;
 
     const sessionIdClean = sessionId.trim();
-    if (!isIdLike(sessionIdClean)) return noStoreJson(400, { ok: false, error: "Invalid sessionId." });
+    if (!isIdLike(sessionIdClean)) {
+      return noStoreJson(400, { ok: false, error: "Invalid sessionId." });
+    }
 
-    // Backward compat: if tenantId provided, must match session tenant
-    const suppliedTenantId = tenantIdParam ? String(tenantIdParam).trim() || null : null;
+    const suppliedTenantId = tenantIdParam?.trim() || null;
     assertTenantParamMatches(safe.tenantId, suppliedTenantId);
 
-    // Dedupe by studentId (last write wins)
-    const byStudent = new Map<string, { status: (typeof STATUS)[number]; note: string | null }>();
-    for (const it of items) {
-      const sid = it.studentId.trim();
-      if (!sid) continue;
-      const note = typeof it.note === "string" ? it.note.trim() || null : null;
-      byStudent.set(sid, { status: it.status, note });
+    // Last write wins inside one request, but duplicate IDs are not allowed to create duplicate DB rows.
+    const desiredByStudent = new Map<string, DesiredMark>();
+
+    for (const item of items) {
+      const studentId = item.studentId.trim();
+      if (!studentId) continue;
+
+      desiredByStudent.set(studentId, {
+        studentId,
+        status: item.status as AttendanceStatus,
+        note: cleanNote(item.note),
+      });
     }
 
-    const studentIds = Array.from(byStudent.keys());
-    if (studentIds.length === 0) return noStoreJson(400, { ok: false, error: "No valid students provided." });
+    const desired = Array.from(desiredByStudent.values());
 
-    const session = await prisma.attendanceSession.findFirst({
-      where: { id: sessionIdClean, tenantId: safe.tenantId },
-      select: {
-        id: true,
-        classroomId: true,
-        isClosed: true,
-        certifiedAt: true,
-        takenByUserId: true,
-      },
+    if (!desired.length) {
+      return noStoreJson(400, { ok: false, error: "No valid students provided." });
+    }
+
+    const studentIds = desired.map((item) => item.studentId);
+
+    const [roleName, session] = await Promise.all([
+      loadActiveRoleName(safe.userId, safe.tenantId),
+      prisma.attendanceSession.findFirst({
+        where: {
+          id: sessionIdClean,
+          tenantId: safe.tenantId,
+        },
+        select: {
+          id: true,
+          tenantId: true,
+          classroomId: true,
+          date: true,
+          isClosed: true,
+          certifiedAt: true,
+          takenByUserId: true,
+          classroom: { select: { name: true, grade: true, arm: true } },
+        },
+      }),
+    ]);
+
+    if (!session) {
+      return noStoreJson(404, { ok: false, error: "Session not found." });
+    }
+
+    if (session.certifiedAt) {
+      return noStoreJson(409, {
+        ok: false,
+        error: "Session is certified and cannot be edited.",
+      });
+    }
+
+    if (session.isClosed) {
+      return noStoreJson(409, {
+        ok: false,
+        error: "Session is closed. Reopen it before editing.",
+      });
+    }
+
+    await assertCanAccessClassroom({
+      ...safe,
+      classroomId: session.classroomId,
     });
 
-    if (!session) return noStoreJson(404, { ok: false, error: "Session not found." });
-    if (session.certifiedAt) return noStoreJson(409, { ok: false, error: "Session is certified and cannot be edited." });
-    if (session.isClosed) return noStoreJson(409, { ok: false, error: "Session is closed. Reopen it before editing." });
+    const adminLike = isAdminLike(roleName);
 
-    await assertCanAccessClassroom({ ...safe, classroomId: session.classroomId });
-
-    if (session.takenByUserId && session.takenByUserId !== safe.userId) {
-      return noStoreJson(403, { ok: false, error: "This session is owned by another user." });
+    if (!adminLike && session.takenByUserId && session.takenByUserId !== safe.userId) {
+      return noStoreJson(403, {
+        ok: false,
+        error: "This session is owned by another user.",
+      });
     }
 
-    // ✅ Only ACTIVE students in this class are valid
-    const allowed = await prisma.student.findMany({
+    const activeStudents = await prisma.student.findMany({
       where: {
         tenantId: safe.tenantId,
         classroomId: session.classroomId,
@@ -105,29 +224,151 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
-    if (allowed.length !== studentIds.length) {
+    const activeSet = new Set(activeStudents.map((student) => student.id));
+
+    if (activeSet.size !== studentIds.length) {
       return noStoreJson(400, {
         ok: false,
-        error: "One or more learners do not belong to this class (or are archived).",
+        error: "One or more learners do not belong to this class or are archived.",
       });
     }
 
-    const rows = studentIds.map((studentId) => {
-      const v = byStudent.get(studentId)!;
-      return {
+    const existingRows = await prisma.attendanceMark.findMany({
+      where: {
         sessionId: session.id,
-        studentId,
-        status: v.status as unknown as AttendanceStatus,
-        note: v.note,
-      };
+        studentId: { in: studentIds },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        status: true,
+        note: true,
+      },
     });
+
+    const existingByStudent = new Map<string, ExistingMark>(
+      existingRows.map((mark) => [
+        mark.studentId,
+        {
+          id: mark.id,
+          studentId: mark.studentId,
+          status: mark.status,
+          note: mark.note ?? null,
+        },
+      ])
+    );
+
+    const auditChanges: AuditChange[] = [];
+    let createdCount = 0;
+    let updatedCount = 0;
+    let unchangedCount = 0;
 
     await prisma.$transaction(async (tx) => {
-      await tx.attendanceMark.deleteMany({ where: { sessionId: session.id, studentId: { in: studentIds } } });
-      await tx.attendanceMark.createMany({ data: rows });
+      for (const desiredMark of desired) {
+        const existing = existingByStudent.get(desiredMark.studentId);
+
+        if (existing && sameMark(existing, desiredMark)) {
+          unchangedCount += 1;
+          continue;
+        }
+
+        if (existing) {
+          await tx.attendanceMark.update({
+            where: { id: existing.id },
+            data: {
+              status: desiredMark.status,
+              note: desiredMark.note,
+            },
+          });
+
+          updatedCount += 1;
+
+          auditChanges.push({
+            studentId: desiredMark.studentId,
+            from: {
+              status: existing.status,
+              note: existing.note,
+            },
+            to: {
+              status: desiredMark.status,
+              note: desiredMark.note,
+            },
+          });
+
+          continue;
+        }
+
+        await tx.attendanceMark.upsert({
+          where: {
+            sessionId_studentId: {
+              sessionId: session.id,
+              studentId: desiredMark.studentId,
+            },
+          },
+          create: {
+            sessionId: session.id,
+            studentId: desiredMark.studentId,
+            status: desiredMark.status,
+            note: desiredMark.note,
+          },
+          update: {
+            status: desiredMark.status,
+            note: desiredMark.note,
+          },
+          select: { id: true },
+        });
+
+        createdCount += 1;
+
+        auditChanges.push({
+          studentId: desiredMark.studentId,
+          from: {
+            status: null,
+            note: null,
+          },
+          to: {
+            status: desiredMark.status,
+            note: desiredMark.note,
+          },
+        });
+      }
     });
 
-    return noStoreJson(200, { ok: true, count: rows.length });
+    if (createdCount || updatedCount) {
+      await writeAuditLog({
+        action: "ATTENDANCE_MARKS_UPSERTED",
+        tenantId: safe.tenantId,
+        userId: safe.userId,
+        resource: "AttendanceSession",
+        resourceId: session.id,
+        ip: clientIp(req),
+        userAgent: userAgent(req),
+        metadata: {
+          classroomId: session.classroomId,
+          classroomName: session.classroom?.name ?? null,
+          dateISO: session.date.toISOString().slice(0, 10),
+          roleName,
+          adminLike,
+          requestedCount: items.length,
+          dedupedCount: desired.length,
+          createdCount,
+          updatedCount,
+          unchangedCount,
+          correctionCount: updatedCount,
+          changes: auditChanges.slice(0, 100),
+          changesTruncated: auditChanges.length > 100,
+        },
+      });
+    }
+
+    return noStoreJson(200, {
+      ok: true,
+      count: desired.length,
+      createdCount,
+      updatedCount,
+      unchangedCount,
+      correctionCount: updatedCount,
+    });
   } catch (e) {
     const { status, msg } = toHttpError(e);
     return noStoreJson(status, { ok: false, error: msg });

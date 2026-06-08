@@ -1,6 +1,6 @@
 // src/app/api/teacher/attendance/sessions/summary/route.ts
 import { NextResponse } from "next/server";
-import { AttendanceStatus } from "@prisma/client";
+import { AttendanceStatus, StudentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   requireTenantContext,
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 type SummaryState = "NONE" | "OPEN" | "CLOSED" | "CERTIFIED";
 
-function noStoreJson(status: number, body: any) {
+function noStoreJson(status: number, body: unknown) {
   return NextResponse.json(body, {
     status,
     headers: {
@@ -28,8 +28,10 @@ function parseDateISO(dateISO: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     throw new Error("Invalid dateISO. Use YYYY-MM-DD.");
   }
+
   const d = new Date(`${dateISO}T00:00:00.000Z`);
   if (Number.isNaN(d.getTime())) throw new Error("Invalid dateISO.");
+
   return d;
 }
 
@@ -40,66 +42,99 @@ function toState(session: { isClosed: boolean; certifiedAt: Date | null } | null
   return "OPEN";
 }
 
+function pct(numerator: number, denominator: number) {
+  if (!denominator) return 0;
+  return Math.round((numerator / denominator) * 100);
+}
+
 export async function GET(req: Request) {
   try {
     const ctx = await requireTenantContext();
-    const safe: { userId: string; tenantId: string } = {
-      userId: ctx.userId,
-      tenantId: ctx.tenantId,
-    };
+    const safe = { userId: ctx.userId, tenantId: ctx.tenantId };
 
     const url = new URL(req.url);
 
-    // Backward-compat only: if tenantId is supplied, it MUST match session tenant.
     const suppliedTenantId = (url.searchParams.get("tenantId") || "").trim() || null;
     assertTenantParamMatches(safe.tenantId, suppliedTenantId);
 
     const classroomId = (url.searchParams.get("classroomId") || "").trim();
     const dateISO = (url.searchParams.get("dateISO") || url.searchParams.get("date") || "").trim();
+
     if (!classroomId || !dateISO) {
-      return noStoreJson(400, { ok: false, error: "classroomId and dateISO/date are required." });
+      return noStoreJson(400, {
+        ok: false,
+        error: "classroomId and dateISO/date are required.",
+      });
     }
 
     let date: Date;
     try {
       date = parseDateISO(dateISO);
-    } catch (e: any) {
-      return noStoreJson(400, { ok: false, error: String(e?.message || "Invalid dateISO.") });
+    } catch (e) {
+      return noStoreJson(400, {
+        ok: false,
+        error: e instanceof Error ? e.message : "Invalid dateISO.",
+      });
     }
 
-    // Classroom access gate (teacher assignments, etc.)
-    await assertCanAccessClassroom({ ...safe, classroomId });
+    await assertCanAccessClassroom({
+      ...safe,
+      classroomId,
+    });
 
     const [studentCount, session] = await Promise.all([
-      prisma.student.count({ where: { tenantId: safe.tenantId, classroomId } }),
+      prisma.student.count({
+        where: {
+          tenantId: safe.tenantId,
+          classroomId,
+          status: StudentStatus.ACTIVE,
+        },
+      }),
       prisma.attendanceSession.findFirst({
-        where: { tenantId: safe.tenantId, classroomId, date },
-        select: { id: true, isClosed: true, certifiedAt: true },
+        where: {
+          tenantId: safe.tenantId,
+          classroomId,
+          date,
+        },
+        select: {
+          id: true,
+          isClosed: true,
+          certifiedAt: true,
+          takenByUserId: true,
+          closedAt: true,
+          certifiedByUserId: true,
+        },
       }),
     ]);
 
-    let absent = 0;
-    let late = 0;
-    let excused = 0;
+    const counts: Record<AttendanceStatus, number> = {
+      PRESENT: 0,
+      ABSENT: 0,
+      LATE: 0,
+      EXCUSED: 0,
+    };
 
     if (session) {
-      const [abs, lt, exc] = await Promise.all([
-        prisma.attendanceMark.count({
-          where: { sessionId: session.id, status: AttendanceStatus.ABSENT },
-        }),
-        prisma.attendanceMark.count({
-          where: { sessionId: session.id, status: AttendanceStatus.LATE },
-        }),
-        prisma.attendanceMark.count({
-          where: { sessionId: session.id, status: AttendanceStatus.EXCUSED },
-        }),
-      ]);
-      absent = abs;
-      late = lt;
-      excused = exc;
+      const grouped = await prisma.attendanceMark.groupBy({
+        by: ["status"],
+        where: {
+          sessionId: session.id,
+          student: {
+            tenantId: safe.tenantId,
+            classroomId,
+            status: StudentStatus.ACTIVE,
+          },
+        },
+        _count: { _all: true },
+      });
+
+      for (const group of grouped) {
+        counts[group.status] = group._count._all;
+      }
     }
 
-    const present = Math.max(0, studentCount - absent - late - excused);
+    const marked = counts.PRESENT + counts.ABSENT + counts.LATE + counts.EXCUSED;
+    const unmarked = Math.max(0, studentCount - marked);
 
     return noStoreJson(200, {
       ok: true,
@@ -109,7 +144,22 @@ export async function GET(req: Request) {
         date: dateISO,
         dateISO,
         classroomId,
-        totals: { students: studentCount, present, absent, late, excused },
+        takenByUserId: session?.takenByUserId ?? null,
+        closedAt: session?.closedAt ? session.closedAt.toISOString() : null,
+        certifiedAt: session?.certifiedAt ? session.certifiedAt.toISOString() : null,
+        certifiedByUserId: session?.certifiedByUserId ?? null,
+        totals: {
+          students: studentCount,
+          total: studentCount,
+          marked,
+          unmarked,
+          present: counts.PRESENT,
+          absent: counts.ABSENT,
+          late: counts.LATE,
+          excused: counts.EXCUSED,
+          completionPct: pct(marked, studentCount),
+          presentPct: pct(counts.PRESENT, studentCount),
+        },
       },
     });
   } catch (e) {

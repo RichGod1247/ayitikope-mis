@@ -1,158 +1,217 @@
 // src/app/api/teacher/attendance/sessions/get/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireServerUserContext } from "@/lib/serverAuth";
-import { z } from "zod";
 import type { AttendanceStatus } from "@prisma/client";
 import { StudentStatus } from "@prisma/client";
+import { z } from "zod";
 import { assertCanAccessClassroom } from "@/lib/teacherClassroomAccess";
+import {
+  requireTenantContext,
+  assertTenantParamMatches,
+  toHttpError,
+} from "@/lib/server/tenantScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type AttendanceDisplayStatus = AttendanceStatus | "UNMARKED";
+
 const QuerySchema = z
   .object({
     sessionId: z.string().min(1, "Missing sessionId."),
-    tenantId: z.string().optional(), // legacy
+    tenantId: z.string().optional(), // legacy compatibility only
   })
   .strict();
 
-function jsonErr(status: number, error: string) {
-  return NextResponse.json(
-    { ok: false, error },
-    { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
-  );
+function noStoreJson(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 
 function toISODateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function dateAtUtcMidnight(dateISO: string): Date {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) throw new Error("Invalid dateISO.");
-  const d = new Date(`${dateISO}T00:00:00.000Z`);
-  if (Number.isNaN(d.getTime())) throw new Error("Invalid dateISO.");
-  return d;
-}
-
-function toNumber(v: any): number | null {
-  if (v == null) return null;
-  if (typeof v === "number") return Number.isFinite(v) ? v : null;
-  if (typeof v === "string") {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  }
-  if (typeof v === "object" && typeof v.toNumber === "function") return v.toNumber();
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+function compactName(firstName?: string | null, lastName?: string | null) {
+  return [firstName, lastName].filter(Boolean).join(" ").trim();
 }
 
 export async function GET(req: Request) {
-  let safe: { userId: string; tenantId: string };
   try {
-    safe = await requireServerUserContext({ requireTenant: true });
-  } catch {
-    return jsonErr(401, "Unauthorized.");
-  }
+    const ctx = await requireTenantContext();
+    const safe = { userId: ctx.userId, tenantId: ctx.tenantId };
 
-  const url = new URL(req.url);
-  const raw = {
-    sessionId: url.searchParams.get("sessionId") ?? "",
-    tenantId: url.searchParams.get("tenantId") ?? undefined,
-  };
+    const url = new URL(req.url);
+    const parsed = QuerySchema.safeParse({
+      sessionId: url.searchParams.get("sessionId") ?? "",
+      tenantId: url.searchParams.get("tenantId") ?? undefined,
+    });
 
-  const parsed = QuerySchema.safeParse(raw);
-  if (!parsed.success) return jsonErr(400, parsed.error.issues[0]?.message || "Invalid query.");
+    if (!parsed.success) {
+      return noStoreJson(400, {
+        ok: false,
+        error: parsed.error.issues[0]?.message || "Invalid query.",
+      });
+    }
 
-  if (parsed.data.tenantId && parsed.data.tenantId !== safe.tenantId) {
-    return jsonErr(403, "Forbidden (tenant mismatch).");
-  }
+    const suppliedTenantId = parsed.data.tenantId?.trim() || null;
+    assertTenantParamMatches(safe.tenantId, suppliedTenantId);
 
-  const session = await prisma.attendanceSession.findFirst({
-    where: { id: parsed.data.sessionId, tenantId: safe.tenantId },
-    select: {
-      id: true,
-      tenantId: true,
-      classroomId: true,
-      date: true,
-      isClosed: true,
-      closedAt: true,
-      certifiedAt: true,
-      takenByUserId: true,
-      classroom: { select: { id: true, name: true, grade: true, arm: true } },
-    },
-  });
-
-  if (!session) return jsonErr(404, "Attendance session not found.");
-
-  try {
-    await assertCanAccessClassroom({ ...safe, classroomId: session.classroomId });
-  } catch (e: any) {
-    return jsonErr(Number(e?.status) || 403, String(e?.message || "Forbidden."));
-  }
-
-  const dateISO = toISODateOnly(session.date);
-  let dayKey: Date;
-  try {
-    dayKey = dateAtUtcMidnight(dateISO);
-  } catch {
-    return jsonErr(500, "Invalid session date stored.");
-  }
-
-  const [students, marks, health] = await prisma.$transaction([
-    prisma.student.findMany({
-      where: { tenantId: safe.tenantId, classroomId: session.classroomId, status: StudentStatus.ACTIVE },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    const session = await prisma.attendanceSession.findFirst({
+      where: {
+        id: parsed.data.sessionId.trim(),
+        tenantId: safe.tenantId,
+      },
       select: {
         id: true,
-        firstName: true,
-        lastName: true,
-        guardianName: true,
-        guardianPhone: true,
-        guardianSmsOptIn: true,
-        healthConsentAt: true,
+        tenantId: true,
+        classroomId: true,
+        date: true,
+        isClosed: true,
+        closedAt: true,
+        certifiedAt: true,
+        certifiedByUserId: true,
+        takenByUserId: true,
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            arm: true,
+          },
+        },
       },
-    }),
-    prisma.attendanceMark.findMany({
-      where: { sessionId: session.id },
-      select: { studentId: true, status: true, note: true },
-    }),
-    prisma.studentHealthDaily.findMany({
-      where: { tenantId: safe.tenantId, classroomId: session.classroomId, date: dayKey },
-      select: { studentId: true, temperatureC: true, symptoms: true, notes: true, sentToParentAt: true },
-    }),
-  ]);
+    });
 
-  const marksByStudent = new Map(
-    marks.map((m) => [m.studentId, { status: m.status as AttendanceStatus, note: m.note ?? null }])
-  );
+    if (!session) {
+      return noStoreJson(404, { ok: false, error: "Attendance session not found." });
+    }
 
-  const healthByStudent = new Map(
-    health.map((h) => [
-      h.studentId,
-      {
-        temperatureC: toNumber(h.temperatureC),
-        symptoms: h.symptoms ?? null,
-        notes: h.notes ?? null,
-        sentToParentAt: h.sentToParentAt ? h.sentToParentAt.toISOString() : null,
-      },
-    ])
-  );
+    await assertCanAccessClassroom({
+      ...safe,
+      classroomId: session.classroomId,
+    });
 
-  const classroom = session.classroom
-    ? { id: session.classroom.id, name: session.classroom.name, grade: session.classroom.grade, arm: session.classroom.arm }
-    : null;
+    const [students, marks] = await prisma.$transaction([
+      prisma.student.findMany({
+        where: {
+          tenantId: safe.tenantId,
+          classroomId: session.classroomId,
+          status: StudentStatus.ACTIVE,
+        },
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          guardianName: true,
+          guardianPhone: true,
+          guardianSmsOptIn: true,
+          healthConsentAt: true,
+        },
+      }),
+      prisma.attendanceMark.findMany({
+        where: { sessionId: session.id },
+        select: {
+          id: true,
+          studentId: true,
+          status: true,
+          note: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+    ]);
 
-  const classLabel = [
-    session.classroom?.name ?? "Class",
-    session.classroom?.grade ? `${session.classroom.grade}${session.classroom.arm ? ` ${session.classroom.arm}` : ""}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
+    const marksByStudent = new Map(
+      marks.map((mark) => [
+        mark.studentId,
+        {
+          id: mark.id,
+          status: mark.status,
+          note: mark.note ?? null,
+          createdAt: mark.createdAt.toISOString(),
+          updatedAt: mark.updatedAt.toISOString(),
+        },
+      ])
+    );
 
-  return NextResponse.json(
-    {
+    const dateISO = toISODateOnly(session.date);
+
+    const classroom = session.classroom
+      ? {
+          id: session.classroom.id,
+          name: session.classroom.name,
+          grade: session.classroom.grade,
+          arm: session.classroom.arm,
+        }
+      : null;
+
+    const classLabel = [
+      session.classroom?.name ?? "Class",
+      session.classroom?.grade
+        ? `${session.classroom.grade}${session.classroom.arm ? ` ${session.classroom.arm}` : ""}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    let present = 0;
+    let absent = 0;
+    let late = 0;
+    let excused = 0;
+    let unmarked = 0;
+
+    const studentRows = students.map((student) => {
+      const mark = marksByStudent.get(student.id) ?? null;
+      const status: AttendanceDisplayStatus = mark?.status ?? "UNMARKED";
+
+      if (status === "PRESENT") present += 1;
+      else if (status === "ABSENT") absent += 1;
+      else if (status === "LATE") late += 1;
+      else if (status === "EXCUSED") excused += 1;
+      else unmarked += 1;
+
+      return {
+        id: student.id,
+        firstName: student.firstName ?? "",
+        lastName: student.lastName ?? "",
+        name: compactName(student.firstName, student.lastName) || "Unnamed learner",
+        guardianName: student.guardianName ?? null,
+        guardianPhone: student.guardianPhone ?? null,
+        guardianSmsOptIn: !!student.guardianSmsOptIn,
+        healthConsentAt: student.healthConsentAt ? student.healthConsentAt.toISOString() : null,
+
+        attendance: {
+          markId: mark?.id ?? null,
+          isMarked: !!mark,
+          status,
+          note: mark?.note ?? null,
+          createdAt: mark?.createdAt ?? null,
+          updatedAt: mark?.updatedAt ?? null,
+        },
+
+        // Compatibility shell only.
+        // Manual attendance must not capture health in C.1.
+        health: {
+          enabled: false,
+          temperatureC: null,
+          symptoms: null,
+          notes: null,
+          sentToParentAt: null,
+        },
+      };
+    });
+
+    return noStoreJson(200, {
       ok: true,
+      mode: "ATTENDANCE_ONLY",
+      healthCaptureEnabled: false,
       session: {
         id: session.id,
         tenantId: session.tenantId,
@@ -162,32 +221,25 @@ export async function GET(req: Request) {
         isClosed: session.isClosed,
         closedAt: session.closedAt ? session.closedAt.toISOString() : null,
         certifiedAt: session.certifiedAt ? session.certifiedAt.toISOString() : null,
+        certifiedByUserId: session.certifiedByUserId ?? null,
         takenByUserId: session.takenByUserId ?? null,
       },
       classroom,
       classLabel,
-      students: students.map((s) => {
-        const m = marksByStudent.get(s.id) ?? { status: "PRESENT" as AttendanceStatus, note: null };
-        const h = healthByStudent.get(s.id) ?? { temperatureC: null, symptoms: null, notes: null, sentToParentAt: null };
-
-        return {
-          id: s.id,
-          firstName: s.firstName ?? "",
-          lastName: s.lastName ?? "",
-          guardianName: s.guardianName ?? null,
-          guardianPhone: s.guardianPhone ?? null,
-          guardianSmsOptIn: !!s.guardianSmsOptIn,
-          healthConsentAt: s.healthConsentAt ? s.healthConsentAt.toISOString() : null,
-          attendance: { status: m.status, note: m.note },
-          health: {
-            temperatureC: h.temperatureC,
-            symptoms: h.symptoms,
-            notes: h.notes,
-            sentToParentAt: h.sentToParentAt,
-          },
-        };
-      }),
-    },
-    { headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } }
-  );
+      summary: {
+        students: students.length,
+        total: students.length,
+        marked: students.length - unmarked,
+        unmarked,
+        present,
+        absent,
+        late,
+        excused,
+      },
+      students: studentRows,
+    });
+  } catch (e) {
+    const { status, msg } = toHttpError(e);
+    return noStoreJson(status, { ok: false, error: msg });
+  }
 }

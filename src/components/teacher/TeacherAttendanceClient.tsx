@@ -21,10 +21,15 @@ type Summary = {
   classroomId: string;
   totals: {
     students: number;
+    total?: number;
+    marked?: number;
+    unmarked?: number;
     present: number;
     absent: number;
     late: number;
     excused: number;
+    completionPct?: number;
+    presentPct?: number;
   };
 };
 
@@ -48,7 +53,21 @@ type CloseResponse =
   | ApiErr;
 
 type NotifyResponse =
-  | ApiOk<{ total: number; successCount: number; brand?: string; testMode?: boolean; note?: string }>
+  | ApiOk<{
+      absentCount: number;
+      eligibleCount: number;
+      successCount: number;
+      sentCount?: number;
+      skippedCount: number;
+      failedCount: number;
+      skippedNoOptIn: number;
+      skippedNoPhone: number;
+      brand?: string;
+      testMode?: boolean;
+      summaryText?: string;
+      note?: string;
+      alreadyNotified?: boolean;
+    }>
   | ApiErr;
 
 const shellCard =
@@ -84,6 +103,17 @@ function buildClassLabel(c: Classroom | null | undefined): string {
   return [c.name, c.grade, c.arm].filter(Boolean).join(" • ");
 }
 
+function notifyLine(j: Extract<NotifyResponse, { ok: true }>) {
+  if (j.alreadyNotified) return "Parents were already notified for this session.";
+
+  const sent = j.sentCount ?? j.successCount;
+
+  return (
+    j.summaryText ||
+    `Absent: ${j.absentCount}. SMS eligible: ${j.eligibleCount}. Sent: ${sent}. Skipped: ${j.skippedCount}. Failed: ${j.failedCount}.`
+  );
+}
+
 function StatChip(props: { label: string; value: number; tone?: "neutral" | "good" | "warn" | "bad" }) {
   let cls = "border-white/10 bg-white/5 text-[#D7DCE5]";
   if (props.tone === "good") cls = "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
@@ -110,7 +140,7 @@ export default function TeacherAttendanceClient({
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [classroomId, setClassroomId] = useState<string>("");
   const [dateISO, setDateISO] = useState<string>(todayISO());
-  const [brand, setBrand] = useState<string>((initialBrand || "EDULIFE").trim() || "EDULIFE");
+  const [brand, setBrand] = useState<string>((initialBrand || "EDULIFEOS").trim() || "EDULIFEOS");
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -139,6 +169,7 @@ export default function TeacherAttendanceClient({
 
   const hasAssignment = classrooms.length > 0 && !!classroomId;
   const canChooseClassroom = classrooms.length > 1;
+  const unmarked = summary?.totals.unmarked ?? 0;
 
   async function loadClassrooms() {
     setLoading(true);
@@ -158,8 +189,8 @@ export default function TeacherAttendanceClient({
 
       const stillValid = classroomId && list.some((c) => c.id === classroomId);
       if (!stillValid) setClassroomId(list[0]?.id || "");
-    } catch (e: any) {
-      setErr(safeText(e?.message) || "Failed to load classrooms.");
+    } catch (e: unknown) {
+      setErr(safeText((e as { message?: unknown })?.message) || "Failed to load classrooms.");
       setClassrooms([]);
       setClassroomId("");
     } finally {
@@ -177,9 +208,9 @@ export default function TeacherAttendanceClient({
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) throw new Error("Invalid date.");
 
       const r = await fetch(
-        `/api/teacher/attendance/sessions/summary?classroomId=${encodeURIComponent(classroomId)}&dateISO=${encodeURIComponent(
-          dateISO
-        )}`,
+        `/api/teacher/attendance/sessions/summary?classroomId=${encodeURIComponent(
+          classroomId
+        )}&dateISO=${encodeURIComponent(dateISO)}`,
         { cache: "no-store" }
       );
 
@@ -191,8 +222,8 @@ export default function TeacherAttendanceClient({
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
 
       setSummary(j.summary);
-    } catch (e: any) {
-      setSummaryErr(safeText(e?.message) || "Failed to load summary.");
+    } catch (e: unknown) {
+      setSummaryErr(safeText((e as { message?: unknown })?.message) || "Failed to load summary.");
     } finally {
       setSummaryLoading(false);
     }
@@ -202,7 +233,7 @@ export default function TeacherAttendanceClient({
     const qp =
       `?className=${encodeURIComponent(classLabel || "Class")}` +
       `&date=${encodeURIComponent(dateISO)}` +
-      `&brand=${encodeURIComponent(brand || "EDULIFE")}`;
+      `&brand=${encodeURIComponent(brand || "EDULIFEOS")}`;
     return `/teacher/attendance/${encodeURIComponent(sessionId)}${qp}`;
   }
 
@@ -233,8 +264,8 @@ export default function TeacherAttendanceClient({
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
 
       router.push(sessionHref(j.sessionId));
-    } catch (e: any) {
-      setOpenErr(safeText(e?.message) || "Failed to open session.");
+    } catch (e: unknown) {
+      setOpenErr(safeText((e as { message?: unknown })?.message) || "Failed to open session.");
     } finally {
       setOpening(false);
     }
@@ -260,19 +291,13 @@ export default function TeacherAttendanceClient({
         error: "Failed to parse notify response.",
       }));
 
-      if (!r.ok || !j.ok) {
-        throw new Error(j.ok ? `Notify failed (HTTP ${r.status}).` : j.error);
-      }
+      if (!r.ok || !j.ok) throw new Error(j.ok ? `Notify failed (HTTP ${r.status}).` : j.error);
 
-      setNotifyOk(
-        `Notifications: ${safeNum(j.successCount)}/${safeNum(j.total)}${j.testMode ? " (TEST MODE)" : ""}${
-          j.note ? ` — ${j.note}` : ""
-        }`
-      );
+      setNotifyOk(`${notifyLine(j)}${j.testMode ? " (TEST MODE)" : ""}`);
 
       await loadSummary();
-    } catch (e: any) {
-      setNotifyErr(safeText(e?.message) || "Failed to notify parents.");
+    } catch (e: unknown) {
+      setNotifyErr(safeText((e as { message?: unknown })?.message) || "Failed to notify parents.");
       await loadSummary().catch(() => null);
     } finally {
       setNotifying(false);
@@ -289,6 +314,7 @@ export default function TeacherAttendanceClient({
     try {
       const sessionId = summary?.sessionId ? String(summary.sessionId) : "";
       if (!sessionId) throw new Error("No session to close.");
+      if (unmarked > 0) throw new Error(`${unmarked} learner(s) are still unmarked. Open the session and mark all learners first.`);
 
       const r1 = await fetch("/api/teacher/attendance/sessions/close", {
         method: "POST",
@@ -316,19 +342,13 @@ export default function TeacherAttendanceClient({
         error: "Failed to parse notify response.",
       }));
 
-      if (!r2.ok || !j2.ok) {
-        throw new Error(j2.ok ? `Notify failed (HTTP ${r2.status}).` : j2.error);
-      }
+      if (!r2.ok || !j2.ok) throw new Error(j2.ok ? `Notify failed (HTTP ${r2.status}).` : j2.error);
 
-      setNotifyOk(
-        `Notifications: ${safeNum(j2.successCount)}/${safeNum(j2.total)}${j2.testMode ? " (TEST MODE)" : ""}${
-          j2.note ? ` — ${j2.note}` : ""
-        }`
-      );
+      setNotifyOk(`${notifyLine(j2)}${j2.testMode ? " (TEST MODE)" : ""}`);
 
       await loadSummary();
-    } catch (e: any) {
-      setCloseErr(safeText(e?.message) || "Failed to close and notify.");
+    } catch (e: unknown) {
+      setCloseErr(safeText((e as { message?: unknown })?.message) || "Failed to close and notify.");
       await loadSummary().catch(() => null);
     } finally {
       setClosing(false);
@@ -359,7 +379,7 @@ export default function TeacherAttendanceClient({
     !!summary?.sessionId && (summary.state === "CLOSED" || summary.state === "CERTIFIED") && !closing && !notifying;
 
   const canCloseAndNotifyUi =
-    !!summary?.sessionId && summary.state === "OPEN" && !closing && !notifying;
+    !!summary?.sessionId && summary.state === "OPEN" && !closing && !notifying && unmarked === 0;
 
   return (
     <section className="space-y-6">
@@ -371,28 +391,19 @@ export default function TeacherAttendanceClient({
             </div>
 
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED]">
-                Attendance
-              </h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED]">Attendance</h1>
               <p className="mt-1 text-sm text-[#C9CDD6]">
-                Open a session, mark attendance and health, close or certify it, then notify parents.
+                Open a session, mark all learners, close the register, then notify eligible parents.
               </p>
             </div>
 
             {teacherUserId ? (
-              <p className="text-[11px] font-mono text-[#8F98A8]">
-                Teacher: {teacherUserId.slice(0, 8)}…
-              </p>
+              <p className="text-[11px] font-mono text-[#8F98A8]">Teacher: {teacherUserId.slice(0, 8)}…</p>
             ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void loadClassrooms()}
-              className={ghostBtn}
-              disabled={loading}
-            >
+            <button type="button" onClick={() => void loadClassrooms()} className={ghostBtn} disabled={loading}>
               Refresh
             </button>
 
@@ -447,13 +458,13 @@ export default function TeacherAttendanceClient({
           </div>
 
           <div className="space-y-1">
-            <label className={labelClass}>Brand (Sender ID)</label>
+            <label className={labelClass}>Brand/Sender ID</label>
             <input
               type="text"
               className={fieldClass}
               value={brand}
               onChange={(e) => setBrand(e.target.value)}
-              placeholder="EDULIFE"
+              placeholder="EDULIFEOS"
               disabled={loading}
             />
           </div>
@@ -503,9 +514,7 @@ export default function TeacherAttendanceClient({
         <div className={`${innerCard} p-4`}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-sm font-semibold text-[#F7F4ED]">
-                {classLabel || "Unassigned"}
-              </div>
+              <div className="text-sm font-semibold text-[#F7F4ED]">{classLabel || "Unassigned"}</div>
               <div className="text-[11px] text-[#AEB6C4]">{dateISO}</div>
             </div>
 
@@ -518,17 +527,30 @@ export default function TeacherAttendanceClient({
                 <span className={statePill(summary.state)}>{summary.state}</span>
 
                 <StatChip label="Total" value={summary.totals.students} />
+                <StatChip label="Marked" value={safeNum(summary.totals.marked)} />
+                <StatChip
+                  label="Unmarked"
+                  value={safeNum(summary.totals.unmarked)}
+                  tone={safeNum(summary.totals.unmarked) ? "warn" : "good"}
+                />
                 <StatChip label="Present" value={summary.totals.present} tone="good" />
                 <StatChip label="Late" value={summary.totals.late} tone="warn" />
                 <StatChip label="Absent" value={summary.totals.absent} tone="bad" />
                 <StatChip label="Excused" value={summary.totals.excused} />
 
-                {canCloseAndNotifyUi ? (
+                {summary.sessionId && summary.state === "OPEN" && unmarked > 0 ? (
+                  <span className="rounded-full border border-amber-300/20 bg-amber-400/12 px-3 py-1 text-amber-100">
+                    Mark all learners before closing
+                  </span>
+                ) : null}
+
+                {summary.sessionId && summary.state === "OPEN" ? (
                   <button
                     type="button"
                     onClick={() => void closeThenNotify()}
                     disabled={!canCloseAndNotifyUi}
                     className={`${ghostBtn} h-auto px-3 py-1.5 text-[11px]`}
+                    title={unmarked > 0 ? "Mark all learners before closing." : "Close and notify eligible parents"}
                   >
                     {closing ? "Closing…" : "Close + Notify parents"}
                   </button>
@@ -540,7 +562,7 @@ export default function TeacherAttendanceClient({
                     onClick={() => void notifyOnly()}
                     disabled={!canNotifyUi}
                     className={`${ghostBtn} h-auto px-3 py-1.5 text-[11px]`}
-                    title="Notify parents after the session has been closed or certified"
+                    title="Notify eligible parents after the session has been closed or certified"
                   >
                     {notifying ? "Notifying…" : "Notify parents"}
                   </button>

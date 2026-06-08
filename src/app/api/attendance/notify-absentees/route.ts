@@ -1,6 +1,6 @@
 // src/app/api/attendance/notify-absentees/route.ts
 import { NextResponse } from "next/server";
-import { AttendanceStatus } from "@prisma/client";
+import { AttendanceStatus, StudentStatus } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
@@ -10,15 +10,24 @@ import { sendSms } from "@/lib/sms";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_FEVER_THRESHOLD = 37.8;
 const MAX_NOTIFICATIONS_PER_REQUEST = 120;
 
 type NotifyRequestBody = {
   tenantId?: string; // legacy/back-compat only
   classroomId?: string;
   date?: string; // YYYY-MM-DD
-  alerts?: Array<{ studentId?: string }>;
   studentIds?: string[];
+};
+
+type ResultRow = {
+  studentId: string;
+  studentName: string;
+  kind: "ABSENT";
+  ok: boolean;
+  skipped: boolean;
+  skipReason?: "NO_SMS_OPT_IN" | "NO_PHONE" | "NOT_ACTIVE_OR_NOT_FOUND";
+  to?: string;
+  error?: string;
 };
 
 function json(status: number, payload: unknown) {
@@ -43,10 +52,7 @@ function parseDateISO(v: string): Date {
   }
 
   const d = new Date(`${s}T00:00:00.000Z`);
-
-  if (Number.isNaN(d.getTime())) {
-    throw new Error("Invalid date.");
-  }
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid date.");
 
   return d;
 }
@@ -59,11 +65,23 @@ function studentName(s: { firstName?: string | null; lastName?: string | null })
   return [s.firstName, s.lastName].map(clean).filter(Boolean).join(" ") || "Your child";
 }
 
-function guardianPhone(s: {
-  guardianPhoneNorm?: string | null;
-  guardianPhone?: string | null;
-}) {
+function guardianPhone(s: { guardianPhoneNorm?: string | null; guardianPhone?: string | null }) {
   return clean(s.guardianPhoneNorm) || clean(s.guardianPhone) || null;
+}
+
+function classLabel(c: { name?: string | null; grade?: string | null; arm?: string | null }) {
+  const name = clean(c.name);
+  const gradeArm = [clean(c.grade), clean(c.arm)].filter(Boolean).join(" ");
+  return name || gradeArm || "your child's class";
+}
+
+function smsBody(params: {
+  schoolName: string;
+  studentName: string;
+  classLabel: string;
+  date: string;
+}) {
+  return `${params.schoolName}: ${params.studentName} was marked ABSENT in ${params.classLabel} on ${params.date}. If this is incorrect, please contact the school.`;
 }
 
 export async function POST(request: Request) {
@@ -91,18 +109,17 @@ export async function POST(request: Request) {
   if (!classroomId || !dateStr) {
     return json(400, {
       ok: false,
-      error: "classroomId and date are required",
+      error: "classroomId and date are required.",
     });
   }
 
   let date: Date;
-
   try {
     date = parseDateISO(dateStr);
   } catch (e) {
     return json(400, {
       ok: false,
-      error: e instanceof Error ? e.message : "Invalid date",
+      error: e instanceof Error ? e.message : "Invalid date.",
     });
   }
 
@@ -112,7 +129,7 @@ export async function POST(request: Request) {
   });
 
   if (!classroom) {
-    return json(404, { ok: false, error: "Classroom not found" });
+    return json(404, { ok: false, error: "Classroom not found." });
   }
 
   if (roleName === "TEACHER") {
@@ -133,22 +150,23 @@ export async function POST(request: Request) {
   const session = await prisma.attendanceSession.findFirst({
     where: { tenantId, classroomId, date },
     orderBy: { createdAt: "desc" },
-    select: { id: true, isClosed: true, certifiedAt: true },
+    select: {
+      id: true,
+      isClosed: true,
+      certifiedAt: true,
+      notifiedAt: true,
+      notifiedByUserId: true,
+    },
   });
 
   if (!session) {
     return json(400, {
       ok: false,
-      error:
-        "No attendance session found for this class/date. Open, mark, save, then close or certify before notifying.",
+      error: "No attendance session found for this class/date.",
     });
   }
 
-  const sessionState = session.certifiedAt
-    ? "CERTIFIED"
-    : session.isClosed
-      ? "CLOSED"
-      : "OPEN";
+  const sessionState = session.certifiedAt ? "CERTIFIED" : session.isClosed ? "CLOSED" : "OPEN";
 
   if (sessionState !== "CLOSED" && sessionState !== "CERTIFIED") {
     return json(400, {
@@ -158,246 +176,248 @@ export async function POST(request: Request) {
     });
   }
 
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { name: true },
-  });
-
-  const ts = await prisma.tenantSettings.findUnique({
-    where: { tenantId },
-    select: { feverThreshold: true },
-  });
-
-  const feverThreshold =
-    ts?.feverThreshold != null ? Number(ts.feverThreshold) : DEFAULT_FEVER_THRESHOLD;
-
-  const filterIds = new Set<string>();
-
-  for (const x of Array.isArray(body.studentIds) ? body.studentIds : []) {
-    const id = clean(x);
-    if (id) filterIds.add(id);
+  const requestedFilter = new Set<string>();
+  for (const id of Array.isArray(body.studentIds) ? body.studentIds : []) {
+    const cleanId = clean(id);
+    if (cleanId) requestedFilter.add(cleanId);
   }
 
-  for (const alert of Array.isArray(body.alerts) ? body.alerts : []) {
-    const id = clean(alert?.studentId);
-    if (id) filterIds.add(id);
-  }
-
-  const hasFilter = filterIds.size > 0;
+  const hasFilter = requestedFilter.size > 0;
 
   const absentMarks = await prisma.attendanceMark.findMany({
     where: {
       sessionId: session.id,
       status: AttendanceStatus.ABSENT,
+      ...(hasFilter ? { studentId: { in: Array.from(requestedFilter) } } : {}),
     },
-    select: { studentId: true },
-  });
-
-  const absentIds = new Set(absentMarks.map((m) => m.studentId));
-
-  const healthRows = await prisma.studentHealthDaily.findMany({
-    where: { tenantId, classroomId, date },
     select: {
       studentId: true,
-      temperatureC: true,
-      symptoms: true,
+      student: {
+        select: {
+          id: true,
+          status: true,
+          firstName: true,
+          lastName: true,
+          guardianPhone: true,
+          guardianPhoneNorm: true,
+          guardianSmsOptIn: true,
+        },
+      },
+    },
+    orderBy: {
+      student: {
+        lastName: "asc",
+      },
     },
   });
 
-  const feverByStudentId = new Map<
-    string,
-    { temp: number; symptoms?: string | null }
-  >();
-
-  for (const row of healthRows) {
-    const temp = row.temperatureC != null ? Number(row.temperatureC) : NaN;
-
-    if (Number.isFinite(temp) && temp >= feverThreshold) {
-      feverByStudentId.set(row.studentId, {
-        temp,
-        symptoms: row.symptoms ?? null,
-      });
-    }
-  }
-
-  const candidateSet = new Set<string>([
-    ...absentIds,
-    ...feverByStudentId.keys(),
-  ]);
-
-  let candidateIds = Array.from(candidateSet);
-
-  if (hasFilter) {
-    candidateIds = candidateIds.filter((id) => filterIds.has(id));
-  }
-
-  if (!candidateIds.length) {
-    return json(400, {
-      ok: false,
-      error: "No DB-verified absentees or fever cases to notify for this class/date.",
-    });
-  }
-
-  if (candidateIds.length > MAX_NOTIFICATIONS_PER_REQUEST) {
-    return json(400, {
-      ok: false,
-      error: `Too many notifications in one request. Maximum is ${MAX_NOTIFICATIONS_PER_REQUEST}.`,
-    });
-  }
-
-  const students = await prisma.student.findMany({
-    where: {
+  if (!absentMarks.length) {
+    return json(200, {
+      ok: true,
       tenantId,
-      id: { in: candidateIds },
-      status: "ACTIVE",
-    },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      guardianPhone: true,
-      guardianPhoneNorm: true,
-    },
+      classroomId,
+      date: dateStr,
+      sessionId: session.id,
+      total: 0,
+      absentCount: 0,
+      eligibleCount: 0,
+      successCount: 0,
+      skippedCount: 0,
+      failedCount: 0,
+      skippedNoOptIn: 0,
+      skippedNoPhone: 0,
+      results: [],
+      summaryText: "No absent learners found for this class/date.",
+    });
+  }
+
+  if (absentMarks.length > MAX_NOTIFICATIONS_PER_REQUEST) {
+    return json(400, {
+      ok: false,
+      error: `Too many absentee notifications in one request. Maximum is ${MAX_NOTIFICATIONS_PER_REQUEST}.`,
+      absentCount: absentMarks.length,
+    });
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true },
   });
 
-  const studentById = new Map(students.map((s) => [s.id, s]));
+  const schoolName = tenant?.name ?? "Your school";
+  const label = classLabel(classroom);
 
-  const classLabel =
-    clean(classroom.name) ||
-    [clean(classroom.grade), clean(classroom.arm)].filter(Boolean).join(" ") ||
-    "your child's class";
+  const results: ResultRow[] = [];
 
-  const results: Array<{
-    studentId: string;
-    studentName?: string;
-    kind: "ABSENT" | "FEVER";
-    ok: boolean;
-    to?: string;
-    error?: string;
-  }> = [];
-
+  let eligibleCount = 0;
   let successCount = 0;
+  let failedCount = 0;
+  let skippedNoOptIn = 0;
+  let skippedNoPhone = 0;
+  let skippedNotActive = 0;
 
-  for (const studentId of candidateIds) {
-    const s = studentById.get(studentId);
-    const fullName = s ? studentName(s) : "Your child";
-    const to = s ? guardianPhone(s) : null;
+  for (const mark of absentMarks) {
+    const student = mark.student;
+    const name = studentName(student);
 
-    const isAbsent = absentIds.has(studentId);
-    const fever = feverByStudentId.get(studentId);
-    const kind: "ABSENT" | "FEVER" = isAbsent ? "ABSENT" : "FEVER";
-
-    if (!s) {
+    if (!student || student.status !== StudentStatus.ACTIVE) {
+      skippedNotActive += 1;
       results.push({
-        studentId,
-        studentName: fullName,
-        kind,
+        studentId: mark.studentId,
+        studentName: name,
+        kind: "ABSENT",
         ok: false,
-        error: "Student is not active or does not belong to this tenant.",
+        skipped: true,
+        skipReason: "NOT_ACTIVE_OR_NOT_FOUND",
+        error: "Student is not active or was not found.",
       });
       continue;
     }
 
-    if (!to) {
+    if (!student.guardianSmsOptIn) {
+      skippedNoOptIn += 1;
       results.push({
-        studentId,
-        studentName: fullName,
-        kind,
+        studentId: student.id,
+        studentName: name,
+        kind: "ABSENT",
         ok: false,
+        skipped: true,
+        skipReason: "NO_SMS_OPT_IN",
+        error: "Guardian has not opted in for SMS alerts.",
+      });
+      continue;
+    }
+
+    const to = guardianPhone(student);
+
+    if (!to) {
+      skippedNoPhone += 1;
+      results.push({
+        studentId: student.id,
+        studentName: name,
+        kind: "ABSENT",
+        ok: false,
+        skipped: true,
+        skipReason: "NO_PHONE",
         error: "Guardian phone is missing.",
       });
       continue;
     }
 
-    const schoolName = tenant?.name ?? "Your school";
-
-    const line =
-      kind === "ABSENT"
-        ? `${fullName} was marked absent from ${classLabel} today (${dateStr}).`
-        : `${fullName} recorded a temperature of ${Number(
-            fever?.temp ?? 0
-          ).toFixed(1)}°C in ${classLabel} today (${dateStr}).`;
-
-    const symptoms = fever?.symptoms
-      ? ` Reported symptoms: ${clean(fever.symptoms)}.`
-      : "";
-
-    const message =
-      `${schoolName}: ${line}${symptoms} ` +
-      "This message is for your awareness. Please contact the class teacher if needed.";
+    eligibleCount += 1;
 
     try {
       const smsResult = await sendSms({
         tenantId,
         actorId: ctx.userId,
         to,
-        message,
-        template: "ATTENDANCE_HEALTH_ALERT",
+        message: smsBody({
+          schoolName,
+          studentName: name,
+          classLabel: label,
+          date: dateStr,
+        }),
+        template: "ATTENDANCE_ABSENCE_ALERT",
         payload: {
-          purpose: "attendance_health_alert",
-          studentId,
-          studentName: fullName,
-          kind,
-          temperatureC: kind === "FEVER" ? fever?.temp ?? null : null,
+          purpose: "attendance_absence_alert",
+          studentId: student.id,
+          studentName: name,
           classroomId,
+          classLabel: label,
           date: dateStr,
           sessionId: session.id,
         },
       });
 
-      if (smsResult.ok) successCount++;
+      if (smsResult.ok) {
+        successCount += 1;
+      } else {
+        failedCount += 1;
+      }
 
       results.push({
-        studentId,
-        studentName: fullName,
-        kind,
+        studentId: student.id,
+        studentName: name,
+        kind: "ABSENT",
         ok: smsResult.ok,
+        skipped: false,
         to: smsResult.to ?? to,
         ...(smsResult.ok ? {} : { error: smsResult.error ?? "SMS was not accepted." }),
       });
     } catch (e) {
+      failedCount += 1;
       results.push({
-        studentId,
-        studentName: fullName,
-        kind,
+        studentId: student.id,
+        studentName: name,
+        kind: "ABSENT",
         ok: false,
+        skipped: false,
         to,
-        error: e instanceof Error ? e.message : "Send failed",
+        error: e instanceof Error ? e.message : "Send failed.",
       });
     }
   }
+
+  const absentCount = absentMarks.length;
+  const skippedCount = skippedNoOptIn + skippedNoPhone + skippedNotActive;
 
   try {
     await prisma.auditLog.create({
       data: {
         tenantId,
         userId: ctx.userId,
-        action: "ATTENDANCE_NOTIFY_SENT",
+        action: "ATTENDANCE_ABSENTEE_NOTIFY_ATTEMPTED",
         resource: "AttendanceSession",
         resourceId: session.id,
         metadata: {
           classroomId,
           date: dateStr,
-          total: candidateIds.length,
+          absentCount,
+          eligibleCount,
           successCount,
-          feverThreshold,
+          failedCount,
+          skippedCount,
+          skippedNoOptIn,
+          skippedNoPhone,
+          skippedNotActive,
           brand: "EDULIFEOS",
           smsTestMode: process.env.SMS_TEST_MODE === "true",
+          results: results.map((r) => ({
+            studentId: r.studentId,
+            studentName: r.studentName,
+            ok: r.ok,
+            skipped: r.skipped,
+            skipReason: r.skipReason ?? null,
+            error: r.error ?? null,
+          })),
         } as Prisma.JsonObject,
       },
     });
-  } catch {}
+  } catch {
+    // Do not block notification flow because audit failed.
+  }
+
+  const fullySuccessful = failedCount === 0;
 
   return json(200, {
-    ok: successCount === results.length,
+    ok: fullySuccessful,
     tenantId,
     classroomId,
     date: dateStr,
     sessionId: session.id,
-    feverThreshold,
-    total: candidateIds.length,
+    total: absentCount,
+    absentCount,
+    eligibleCount,
     successCount,
+    sentCount: successCount,
+    skippedCount,
+    failedCount,
+    skippedNoOptIn,
+    skippedNoPhone,
+    skippedNotActive,
     brand: "EDULIFEOS",
+    testMode: process.env.SMS_TEST_MODE === "true",
+    summaryText: `${successCount}/${absentCount} absentee alert(s) sent. ${skippedCount} skipped, ${failedCount} failed.`,
     results,
   });
 }
