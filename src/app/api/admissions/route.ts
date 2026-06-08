@@ -1,34 +1,47 @@
-import { NextResponse } from "next/server";
+// src/app/api/admissions/route.ts
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  try {
-    const form = await req.json();
-    const url = process.env.GAS_WEBAPP_URL!;
-    if (!url) {
-      return NextResponse.json(
-        { ok: false, error: "Missing GAS_WEBAPP_URL" },
-        { status: 500 }
-      );
-    }
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // tell Apps Script which tab to write to
-      body: JSON.stringify({ type: "admissions", ...form }),
-      cache: "no-store",
-    });
+function json(status: number, payload: unknown) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
 
-    // try to parse Apps Script JSON (handle non-JSON gracefully)
-    let data: any = {};
-    try {
-      data = await r.json();
-    } catch {
-      data = {};
-    }
+function applyLinks(req: NextRequest) {
+  const origin = new URL(req.url).origin;
 
-    return NextResponse.json({ ok: !!data.ok });
-  } catch (e) {
-    return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
-  }
+  return {
+    school: `${origin}/apply/school`,
+    governance: `${origin}/apply/governance`,
+  };
+}
+
+export async function GET(req: NextRequest) {
+  return json(410, {
+    ok: false,
+    error: "LEGACY_ADMISSIONS_PIPELINE_RETIRED",
+    message:
+      "The legacy admissions API has been retired. Use the EduLife OS onboarding application links instead.",
+    links: applyLinks(req),
+  });
+}
+
+export async function POST(req: NextRequest) {
+  // Intentionally consume body so old clients do not crash the route parser.
+  await req.json().catch(() => null);
+
+  return json(410, {
+    ok: false,
+    error: "LEGACY_ADMISSIONS_PIPELINE_RETIRED",
+    message:
+      "The legacy Google Apps Script admissions pipeline has been retired. Use the DB-backed EduLife OS onboarding application pipeline instead.",
+    links: applyLinks(req),
+  });
 }
