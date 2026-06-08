@@ -15,6 +15,7 @@ import {
   rateLimitCheck,
   rateLimitRecord,
 } from "@/lib/rateLimit";
+import { sendGovernanceOfficerWelcomeSms } from "@/lib/governance/inviteDelivery";
 
 type Body = {
   token?: string;
@@ -24,11 +25,17 @@ type Body = {
   phone?: string;
 };
 
-const WINDOW_SECONDS = Number(process.env.GOVERNANCE_INVITE_ACCEPT_WINDOW_SECONDS || 30 * 60);
-const LIMIT_PER_IP = Number(process.env.GOVERNANCE_INVITE_ACCEPT_LIMIT_PER_IP || 25);
-const LIMIT_PER_TOKEN = Number(process.env.GOVERNANCE_INVITE_ACCEPT_LIMIT_PER_TOKEN || 15);
+const WINDOW_SECONDS = Number(
+  process.env.GOVERNANCE_INVITE_ACCEPT_WINDOW_SECONDS || 30 * 60
+);
+const LIMIT_PER_IP = Number(
+  process.env.GOVERNANCE_INVITE_ACCEPT_LIMIT_PER_IP || 25
+);
+const LIMIT_PER_TOKEN = Number(
+  process.env.GOVERNANCE_INVITE_ACCEPT_LIMIT_PER_TOKEN || 15
+);
 
-function json(status: number, payload: any) {
+function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: {
@@ -77,6 +84,7 @@ function metadataTitle(metadata: Prisma.JsonValue, fallback: string) {
     const title = clean(m.title);
     if (title) return title;
   }
+
   return fallback;
 }
 
@@ -85,9 +93,14 @@ function assignmentTitle(role: string, zoneName: string) {
   if (role === "CIRCUIT_SUPERVISOR") return `Circuit Supervisor ${zoneName}`;
   if (role === "DISTRICT_DIRECTOR") return `District Director ${zoneName}`;
   if (role === "DISTRICT_MIS_OFFICER") return `District MIS Officer ${zoneName}`;
-  if (role === "DISTRICT_SHEP_OFFICER") return `District SHEP Officer ${zoneName}`;
-  if (role === "DISTRICT_ASSESSMENT_OFFICER") return `District Assessment Officer ${zoneName}`;
+  if (role === "DISTRICT_SHEP_OFFICER") {
+    return `District SHEP Officer ${zoneName}`;
+  }
+  if (role === "DISTRICT_ASSESSMENT_OFFICER") {
+    return `District Assessment Officer ${zoneName}`;
+  }
   if (role === "REGIONAL_VIEWER") return `Regional Viewer ${zoneName}`;
+
   return `${role} ${zoneName}`;
 }
 
@@ -104,11 +117,18 @@ export async function POST(req: Request) {
   const phone = cleanPhone(body.phone);
 
   if (!token) return json(400, { ok: false, error: "MISSING_TOKEN" });
-  if (!emailNorm || !isEmailLike(emailNorm)) return json(400, { ok: false, error: "INVALID_EMAIL" });
+
+  if (!emailNorm || !isEmailLike(emailNorm)) {
+    return json(400, { ok: false, error: "INVALID_EMAIL" });
+  }
+
   if (!password || !isStrongEnoughPassword(password)) {
     return json(400, { ok: false, error: "WEAK_PASSWORD" });
   }
-  if (phone && !isPhoneE164ish(phone)) return json(400, { ok: false, error: "INVALID_PHONE" });
+
+  if (phone && !isPhoneE164ish(phone)) {
+    return json(400, { ok: false, error: "INVALID_PHONE" });
+  }
 
   const tokenHash = sha256Hex(token);
   const tokenKey = `governanceInviteAccept:token:${tokenHash.slice(0, 24)}`;
@@ -227,103 +247,116 @@ export async function POST(req: Request) {
   }
 
   let result: {
-  userId: string;
-  assignmentId: string;
-  role: string;
-  zoneName: string;
-};
+    userId: string;
+    assignmentId: string;
+    role: string;
+    zoneName: string;
+    welcomePhone: string | null;
+  };
 
-try {
-  result = await prisma.$transaction(async (tx) => {
-    const existing = await tx.user.findFirst({
-      where: { email: { equals: emailNorm, mode: "insensitive" } },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        passwordHash: true,
-        phoneNorm: true,
-      },
-    });
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.user.findFirst({
+        where: { email: { equals: emailNorm, mode: "insensitive" } },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          passwordHash: true,
+          phoneNorm: true,
+        },
+      });
 
-    let userId: string;
+      let userId: string;
 
-    if (existing) {
-      if (existing.passwordHash) {
-        const okPassword = await verifyPassword(password, existing.passwordHash);
-        if (!okPassword) {
-          throw new Error("EXISTING_USER_PASSWORD_MISMATCH");
-        }
+      if (existing) {
+        if (existing.passwordHash) {
+          const okPassword = await verifyPassword(password, existing.passwordHash);
 
-        const updateData: Prisma.UserUpdateInput = {};
-        if (name && !existing.name) updateData.name = name;
-
-        if (phone && !existing.phoneNorm) {
-          const phoneConflict = await tx.user.findFirst({
-            where: { phoneNorm: phone, NOT: { id: existing.id } },
-            select: { id: true },
-          });
-
-          if (!phoneConflict) {
-            updateData.phone = phone;
-            updateData.phoneNorm = phone;
+          if (!okPassword) {
+            throw new Error("EXISTING_USER_PASSWORD_MISMATCH");
           }
+
+          const updateData: Prisma.UserUpdateInput = {};
+          if (name && !existing.name) updateData.name = name;
+
+          if (phone && !existing.phoneNorm) {
+            const phoneConflict = await tx.user.findFirst({
+              where: { phoneNorm: phone, NOT: { id: existing.id } },
+              select: { id: true },
+            });
+
+            if (!phoneConflict) {
+              updateData.phone = phone;
+              updateData.phoneNorm = phone;
+            }
+          }
+
+          if (Object.keys(updateData).length) {
+            await tx.user.update({
+              where: { id: existing.id },
+              data: updateData,
+            });
+          }
+        } else {
+          await tx.user.update({
+            where: { id: existing.id },
+            data: {
+              passwordHash: await hashPassword(password),
+              name: name || existing.name || invite.email,
+              phone: phone || invite.phone || undefined,
+              phoneNorm: phone || invite.phoneNorm || undefined,
+            },
+          });
         }
 
-        if (Object.keys(updateData).length) {
-          await tx.user.update({ where: { id: existing.id }, data: updateData });
-        }
+        userId = existing.id;
       } else {
-        await tx.user.update({
-          where: { id: existing.id },
-          data: {
-            passwordHash: await hashPassword(password),
-            name: name || existing.name || invite.email,
-            phone: phone || invite.phone || undefined,
-            phoneNorm: phone || invite.phoneNorm || undefined,
-          },
-        });
+        const phoneConflict = phone
+          ? await tx.user.findFirst({
+              where: { phoneNorm: phone },
+              select: { id: true },
+            })
+          : null;
+
+        userId = (
+          await tx.user.create({
+            data: {
+              email: emailNorm,
+              passwordHash: await hashPassword(password),
+              name: name || invite.email,
+              phone: phone && !phoneConflict ? phone : null,
+              phoneNorm: phone && !phoneConflict ? phone : null,
+            },
+            select: { id: true },
+          })
+        ).id;
       }
 
-      userId = existing.id;
-    } else {
-      const phoneConflict = phone
-        ? await tx.user.findFirst({ where: { phoneNorm: phone }, select: { id: true } })
-        : null;
+      const title = metadataTitle(
+        invite.metadata,
+        assignmentTitle(String(invite.role), invite.zone.name)
+      );
 
-      userId = (
-        await tx.user.create({
-          data: {
-            email: emailNorm,
-            passwordHash: await hashPassword(password),
-            name: name || invite.email,
-            phone: phone && !phoneConflict ? phone : null,
-            phoneNorm: phone && !phoneConflict ? phone : null,
-          },
-          select: { id: true },
-        })
-      ).id;
-    }
+      const existingAssignment = await tx.governanceOfficerAssignment.findFirst({
+        where: {
+          userId,
+          zoneId: invite.zoneId,
+          role: invite.role,
+          status: "ACTIVE",
+          revokedAt: null,
+        },
+        select: {
+          id: true,
+          phone: true,
+          role: true,
+          zone: { select: { name: true } },
+        },
+      });
 
-    const title = metadataTitle(
-      invite.metadata,
-      assignmentTitle(String(invite.role), invite.zone.name)
-    );
-
-    const existingAssignment = await tx.governanceOfficerAssignment.findFirst({
-      where: {
-        userId,
-        zoneId: invite.zoneId,
-        role: invite.role,
-        status: "ACTIVE",
-        revokedAt: null,
-      },
-      select: { id: true },
-    });
-
-    const assignment = existingAssignment
-      ? existingAssignment
-      : await tx.governanceOfficerAssignment.create({
+      const assignment =
+        existingAssignment ??
+        (await tx.governanceOfficerAssignment.create({
           data: {
             userId,
             zoneId: invite.zoneId,
@@ -340,70 +373,87 @@ try {
               zoneLevel: invite.zone.zoneType.level,
             },
           },
-          select: { id: true },
-        });
+          select: {
+            id: true,
+            phone: true,
+            role: true,
+            zone: { select: { name: true } },
+          },
+        }));
 
-    await tx.governanceOfficerInvite.update({
-      where: { id: invite.id },
-      data: {
-        status: "ACCEPTED",
-        acceptedAt: now,
-        acceptedByUserId: userId,
-        metadata: {
-          ...(invite.metadata && typeof invite.metadata === "object" && !Array.isArray(invite.metadata)
-            ? (invite.metadata as Record<string, unknown>)
-            : {}),
-          acceptedFromIp: ip ?? null,
-          acceptedUserAgent: userAgent ?? null,
-          assignmentId: assignment.id,
+      await tx.governanceOfficerInvite.update({
+        where: { id: invite.id },
+        data: {
+          status: "ACCEPTED",
+          acceptedAt: now,
+          acceptedByUserId: userId,
+          metadata: {
+            ...(invite.metadata &&
+            typeof invite.metadata === "object" &&
+            !Array.isArray(invite.metadata)
+              ? (invite.metadata as Record<string, unknown>)
+              : {}),
+            acceptedFromIp: ip ?? null,
+            acceptedUserAgent: userAgent ?? null,
+            assignmentId: assignment.id,
+          },
         },
-      },
+      });
+
+      return {
+        userId,
+        assignmentId: assignment.id,
+        role: String(assignment.role),
+        zoneName: assignment.zone.name,
+        welcomePhone:
+          assignment.phone || phone || invite.phoneNorm || invite.phone || null,
+      };
     });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
 
-        return {
-      userId,
-      assignmentId: assignment.id,
-      role: String(invite.role),
-      zoneName: invite.zone.name,
-    };
-  });
-} catch (err) {
-  const message = err instanceof Error ? err.message : "";
+    if (message === "EXISTING_USER_PASSWORD_MISMATCH") {
+      if (ipKey) {
+        await rateLimitRecord({
+          action: "GOVERNANCE_INVITE_ACCEPT_FAIL",
+          key: ipKey,
+          ip,
+          userAgent,
+          metadata: { reason: "EXISTING_USER_PASSWORD_MISMATCH" },
+        });
+      }
 
-  if (message === "EXISTING_USER_PASSWORD_MISMATCH") {
-    if (ipKey) {
       await rateLimitRecord({
         action: "GOVERNANCE_INVITE_ACCEPT_FAIL",
-        key: ipKey,
+        key: tokenKey,
         ip,
         userAgent,
         metadata: { reason: "EXISTING_USER_PASSWORD_MISMATCH" },
       });
+
+      return json(409, {
+        ok: false,
+        error: "EXISTING_USER_PASSWORD_MISMATCH",
+        message:
+          "This email already has an account. Enter the existing password to link this governance assignment, or ask Superadmin to invite a fresh official email.",
+      });
     }
 
-    await rateLimitRecord({
-      action: "GOVERNANCE_INVITE_ACCEPT_FAIL",
-      key: tokenKey,
-      ip,
-      userAgent,
-      metadata: { reason: "EXISTING_USER_PASSWORD_MISMATCH" },
-    });
+    console.error("GOVERNANCE_INVITE_ACCEPT_ERROR", err);
 
-    return json(409, {
+    return json(500, {
       ok: false,
-      error: "EXISTING_USER_PASSWORD_MISMATCH",
-      message:
-        "This email already has an account. Enter the existing password to link this governance assignment, or ask Superadmin to invite a fresh official email.",
+      error: "GOVERNANCE_INVITE_ACCEPT_FAILED",
     });
   }
 
-  console.error("GOVERNANCE_INVITE_ACCEPT_ERROR", err);
-
-  return json(500, {
-    ok: false,
-    error: "GOVERNANCE_INVITE_ACCEPT_FAILED",
+  const welcomeDelivery = await sendGovernanceOfficerWelcomeSms({
+    phone: result.welcomePhone,
+    role: result.role,
+    zoneName: result.zoneName,
+    actorId: result.userId,
+    assignmentId: result.assignmentId,
   });
-}
 
   await writeAuditLog({
     action: "GOVERNANCE_OFFICER_INVITE_ACCEPTED",
@@ -418,11 +468,14 @@ try {
       zoneId: invite.zoneId,
       zoneName: result.zoneName,
       emailNorm,
+      welcomeDelivery,
     },
   });
 
   const destination = roleDefaultDestination(result.role);
-  const signInUrl = `/auth/signin?mode=governance&callbackUrl=${encodeURIComponent(destination)}`;
+  const signInUrl = `/auth/signin?mode=governance&callbackUrl=${encodeURIComponent(
+    destination
+  )}`;
 
   return json(200, {
     ok: true,
@@ -430,5 +483,6 @@ try {
     destination,
     role: result.role,
     zoneName: result.zoneName,
+    welcomeDelivery,
   });
 }

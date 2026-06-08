@@ -13,6 +13,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { getIpFromHeaders, getUserAgentFromHeaders } from "@/lib/rateLimit";
+import { buildPublicUrl } from "@/lib/publicUrl";
+import { deliverGovernanceOfficerInvite } from "@/lib/governance/inviteDelivery";
 
 type Body = {
   applicationId?: string;
@@ -51,6 +53,10 @@ function sha256Hex(value: string) {
 
 function newToken() {
   return randomBytes(32).toString("base64url");
+}
+
+function jsonSafe(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
 }
 
 function randomCode(len = 6) {
@@ -175,8 +181,6 @@ export async function POST(req: NextRequest) {
       return json(400, { ok: false, error: "APPLICATION_ID_REQUIRED" });
     }
 
-    const origin = new URL(req.url).origin;
-
     const result = await prisma.$transaction(async (tx) => {
       const app = await tx.onboardingApplication.findUnique({
         where: { id: applicationId },
@@ -266,7 +270,10 @@ export async function POST(req: NextRequest) {
         return {
           type: "SCHOOL" as const,
           invite,
-          inviteUrl: `${origin}/tenant/enroll?token=${encodeURIComponent(token)}`,
+          inviteUrl: buildPublicUrl(
+            `/tenant/enroll?token=${encodeURIComponent(token)}`,
+            req
+          ),
         };
       }
 
@@ -358,6 +365,8 @@ export async function POST(req: NextRequest) {
         select: {
           id: true,
           email: true,
+          phone: true,
+          phoneNorm: true,
           role: true,
           zoneId: true,
           expiresAt: true,
@@ -402,14 +411,54 @@ export async function POST(req: NextRequest) {
         type: "GOVERNANCE_OFFICER" as const,
         invite: {
           ...invite,
+          title: app.title || app.applicantTitle || null,
           zoneName: zone.name,
           zoneType: zone.zoneType.name,
+          zoneTypeName: zone.zoneType.name,
         },
-        inviteUrl: `${origin}/governance/invite/${encodeURIComponent(token)}`,
+        inviteUrl: buildPublicUrl(
+          `/governance/invite/${encodeURIComponent(token)}`,
+          req
+        ),
       };
     });
 
-    return json(200, { ok: true, ...result });
+    const delivery =
+      result.type === "GOVERNANCE_OFFICER"
+        ? await deliverGovernanceOfficerInvite({
+            email: result.invite.email,
+            phone: result.invite.phoneNorm || result.invite.phone || null,
+            role: String(result.invite.role),
+            title: result.invite.title,
+            zoneName: result.invite.zoneName,
+            zoneTypeName: result.invite.zoneTypeName,
+            inviteUrl: result.inviteUrl,
+            expiresAt: result.invite.expiresAt,
+            actorId: auth.ctx.userId,
+            inviteId: result.invite.id,
+            source: "ONBOARDING_APPLICATION_CONVERSION",
+          })
+        : null;
+
+    if (result.type === "GOVERNANCE_OFFICER") {
+      await prisma.auditLog.create({
+        data: {
+          userId: auth.ctx.userId,
+          action: "GOVERNANCE_OFFICER_INVITE_DELIVERY_ATTEMPTED",
+          resource: "GovernanceOfficerInvite",
+          resourceId: result.invite.id,
+          ip,
+          userAgent,
+          metadata: {
+  inviteUrl: result.inviteUrl,
+  delivery: jsonSafe(delivery),
+  source: "ONBOARDING_APPLICATION_CONVERSION",
+},
+        },
+      });
+    }
+
+    return json(200, { ok: true, ...result, delivery });
   } catch (err) {
     if (err instanceof ApiError) {
       return json(err.status, { ok: false, error: err.code });

@@ -9,6 +9,8 @@ import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { writeAuditLog } from "@/lib/audit";
 import { getIpFromHeaders, getUserAgentFromHeaders } from "@/lib/rateLimit";
+import { buildPublicUrl } from "@/lib/publicUrl";
+import { deliverGovernanceOfficerInvite } from "@/lib/governance/inviteDelivery";
 
 type Body = {
   email?: string;
@@ -29,7 +31,7 @@ const GOVERNANCE_ROLES = new Set([
   "REGIONAL_VIEWER",
 ]);
 
-function json(status: number, payload: any) {
+function json(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: {
@@ -111,7 +113,9 @@ export async function POST(req: Request) {
 
   const expiresInDaysRaw = Number(body.expiresInDays ?? 7);
   const expiresInDays =
-    Number.isFinite(expiresInDaysRaw) && expiresInDaysRaw >= 1 && expiresInDaysRaw <= 30
+    Number.isFinite(expiresInDaysRaw) &&
+    expiresInDaysRaw >= 1 &&
+    expiresInDaysRaw <= 30
       ? Math.floor(expiresInDaysRaw)
       : 7;
 
@@ -206,12 +210,33 @@ export async function POST(req: Request) {
       select: {
         id: true,
         email: true,
+        phone: true,
+        phoneNorm: true,
         role: true,
         zoneId: true,
         expiresAt: true,
         createdAt: true,
       },
     });
+  });
+
+  const inviteUrl = buildPublicUrl(
+    `/governance/invite/${encodeURIComponent(token)}`,
+    req,
+  );
+
+  const delivery = await deliverGovernanceOfficerInvite({
+    email: invite.email,
+    phone: invite.phoneNorm || invite.phone || null,
+    role: String(invite.role),
+    title: title || null,
+    zoneName: zone.name,
+    zoneTypeName: zone.zoneType.name,
+    inviteUrl,
+    expiresAt: invite.expiresAt,
+    actorId: auth.ctx.userId,
+    inviteId: invite.id,
+    source: "SUPERADMIN_GOVERNANCE_INVITE",
   });
 
   await writeAuditLog({
@@ -227,11 +252,10 @@ export async function POST(req: Request) {
       zoneId,
       zoneName: zone.name,
       expiresAt: invite.expiresAt.toISOString(),
+      inviteUrl,
+      delivery,
     },
   });
-
-  const origin = new URL(req.url).origin;
-  const inviteUrl = `${origin}/governance/invite/${encodeURIComponent(token)}`;
 
   return json(201, {
     ok: true,
@@ -246,5 +270,6 @@ export async function POST(req: Request) {
       createdAt: invite.createdAt.toISOString(),
     },
     inviteUrl,
+    delivery,
   });
 }
