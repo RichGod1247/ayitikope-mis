@@ -83,6 +83,10 @@ export default async function HeadteacherLayout({ children }: { children: ReactN
                   Dashboard
                 </Link>
 
+                <Link className={navLinkClass()} href="/headteacher/day">
+                  Attendance Command
+                </Link>
+
                 <Link className={navLinkClass()} href="/headteacher/notices">
                   Notices
                 </Link>
