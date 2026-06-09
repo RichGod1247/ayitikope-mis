@@ -16,6 +16,8 @@ export const dynamic = "force-dynamic";
 
 const STATUS = ["PRESENT", "ABSENT", "LATE", "EXCUSED"] as const;
 
+const QR_GENERATED_NOTE = "Marked PRESENT by QR badge scan.";
+
 const ItemSchema = z.object({
   studentId: z.string().trim().min(1, "studentId is required."),
   status: z.enum(STATUS),
@@ -81,6 +83,24 @@ function cleanNote(v: string | null | undefined) {
   if (typeof v !== "string") return null;
   const s = v.trim();
   return s ? s : null;
+}
+
+function normalizeManualNote(existing: ExistingMark | undefined, desired: DesiredMark): string | null {
+  const note = desired.note;
+
+  // C.2A hardening:
+  // QR may write a machine-generated evidence note when it marks PRESENT.
+  // If a teacher later edits that mark manually, the old QR note must not
+  // remain beside a new manual truth such as ABSENT/LATE/EXCUSED.
+  if (note !== QR_GENERATED_NOTE) return note;
+
+  if (!existing) return null;
+
+  if (existing.status !== desired.status) return null;
+
+  if (desired.status !== "PRESENT") return null;
+
+  return note;
 }
 
 function isAdminLike(roleName: string | null | undefined) {
@@ -264,8 +284,12 @@ export async function POST(req: Request) {
     let unchangedCount = 0;
 
     await prisma.$transaction(async (tx) => {
-      for (const desiredMark of desired) {
-        const existing = existingByStudent.get(desiredMark.studentId);
+      for (const desiredMarkRaw of desired) {
+        const existing = existingByStudent.get(desiredMarkRaw.studentId);
+        const desiredMark: DesiredMark = {
+          ...desiredMarkRaw,
+          note: normalizeManualNote(existing, desiredMarkRaw),
+        };
 
         if (existing && sameMark(existing, desiredMark)) {
           unchangedCount += 1;

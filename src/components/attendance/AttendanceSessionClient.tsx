@@ -107,6 +107,18 @@ type NotifyOk = {
 
 type NotifyResponse = NotifyOk | ApiErr;
 
+type QrScanOk = {
+  ok: true;
+  status: "ACCEPTED" | "DUPLICATE" | "REJECTED";
+  duplicate?: boolean;
+  studentId?: string;
+  studentName?: string;
+  attendanceStatus?: AttendanceStatus;
+  message?: string;
+};
+
+type QrScanResponse = QrScanOk | ApiErr;
+
 type MarkState = {
   status: AttendanceDisplayStatus;
   note: string | null;
@@ -222,6 +234,11 @@ export default function AttendanceSessionClient(props: {
   const [notifyMsg, setNotifyMsg] = useState<string | null>(null);
   const [notifyErr, setNotifyErr] = useState<string | null>(null);
 
+  const [qrToken, setQrToken] = useState("");
+  const [qrBusy, setQrBusy] = useState(false);
+  const [qrMsg, setQrMsg] = useState<string | null>(null);
+  const [qrErr, setQrErr] = useState<string | null>(null);
+
   const isCertified = !!session?.certifiedAt;
   const isClosed = !!session?.isClosed;
   const locked = isCertified || isClosed;
@@ -265,6 +282,8 @@ export default function AttendanceSessionClient(props: {
       setMutErr(null);
       setNotifyMsg(null);
       setNotifyErr(null);
+      setQrMsg(null);
+      setQrErr(null);
     } catch (e: unknown) {
       const msg = safeText((e as { message?: unknown })?.message) || "Failed to load session.";
       setErr(msg);
@@ -401,6 +420,17 @@ export default function AttendanceSessionClient(props: {
     !saveErr &&
     alertPreview.total > 0;
 
+  const canScanQr =
+    !!session &&
+    !loading &&
+    !locked &&
+    !dirty &&
+    !saveErr &&
+    !saving &&
+    !mutating &&
+    !qrBusy &&
+    qrToken.trim().length >= 16;
+
   function closeDisabledReason(): string | null {
     if (!session) return "Session not loaded.";
     if (locked) return "Session is already locked.";
@@ -422,6 +452,19 @@ export default function AttendanceSessionClient(props: {
     if (saving) return "Saving…";
     if (mutating) return "Processing…";
     if (notifying) return "Notifying…";
+    return null;
+  }
+
+  function qrDisabledReason(): string | null {
+    if (!session) return "Session not loaded.";
+    if (loading) return "Loading session…";
+    if (locked) return "Closed or certified sessions cannot accept QR scans.";
+    if (dirty) return "Save manual changes before scanning.";
+    if (saveErr) return "Last save failed. Fix save first.";
+    if (saving) return "Saving…";
+    if (mutating) return "Processing…";
+    if (qrBusy) return "Scanning…";
+    if (qrToken.trim().length < 16) return "Scan or paste a valid badge QR payload.";
     return null;
   }
 
@@ -622,6 +665,40 @@ export default function AttendanceSessionClient(props: {
     await notifyParents();
   }
 
+  async function scanQrBadge() {
+    if (!session) return;
+
+    setQrBusy(true);
+    setQrMsg(null);
+    setQrErr(null);
+
+    try {
+      const reason = qrDisabledReason();
+      if (reason) throw new Error(reason);
+
+      const r = await fetch("/api/teacher/attendance/qr/scan", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: session.id, token: qrToken.trim() }),
+      });
+
+      const j: QrScanResponse = await r.json().catch(() => ({
+        ok: false,
+        error: "Failed to parse QR scan response.",
+      }));
+
+      if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
+
+      setQrMsg(j.message || `${j.studentName || "Learner"} scanned successfully.`);
+      setQrToken("");
+      await load();
+    } catch (e: unknown) {
+      setQrErr(safeText((e as { message?: unknown })?.message) || "QR scan failed.");
+    } finally {
+      setQrBusy(false);
+    }
+  }
+
   function statusPill() {
     const base = "inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold";
     if (isCertified) return `${base} border-indigo-300/20 bg-indigo-400/12 text-indigo-100`;
@@ -765,6 +842,8 @@ export default function AttendanceSessionClient(props: {
       {mutMsg ? <Banner tone="info">{mutMsg}</Banner> : null}
       {notifyErr ? <Banner tone="error">{notifyErr}</Banner> : null}
       {notifyMsg ? <Banner tone="info">{notifyMsg}</Banner> : null}
+      {qrErr ? <Banner tone="error">{qrErr}</Banner> : null}
+      {qrMsg ? <Banner tone="ok">{qrMsg}</Banner> : null}
 
       <section className={`${shellCard} p-5 md:p-6`}>
         <div className="flex flex-wrap gap-2 text-[11px]">
@@ -776,6 +855,47 @@ export default function AttendanceSessionClient(props: {
           <CountChip label="Absent" value={counts.absent} tone="bad" />
           <CountChip label="Excused" value={counts.excused} />
         </div>
+      </section>
+
+      <section className={`${shellCard} p-5 md:p-6`}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-[#F7F4ED]">QR badge attendance backup</div>
+            <div className="mt-1 text-[11px] text-[#C9CDD6]">
+              Scan or paste a learner badge payload. QR marks PRESENT only, writes to the same attendance register, and
+              never captures health data. Manual edits remain available for corrections.
+            </div>
+
+            <input
+              type="text"
+              value={qrToken}
+              onChange={(e) => setQrToken(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canScanQr) void scanQrBadge();
+              }}
+              disabled={locked || loading || qrBusy}
+              className={`${tinyFieldClass} mt-3 font-mono`}
+              placeholder="Scan badge or paste EDULIFEOS-ATT-V1:..."
+              autoComplete="off"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void scanQrBadge()}
+            disabled={!canScanQr}
+            className={primaryBtn}
+            title={qrDisabledReason() ?? "Mark learner PRESENT by QR"}
+          >
+            {qrBusy ? "Scanning…" : "Scan QR"}
+          </button>
+        </div>
+
+        {!canScanQr ? (
+          <div className="mt-3 text-[11px] text-[#AEB6C4]">
+            <span className="font-semibold text-[#F7F4ED]">Why disabled:</span> {qrDisabledReason() || "—"}
+          </div>
+        ) : null}
       </section>
 
       <section className={`${shellCard} p-5 md:p-6`}>

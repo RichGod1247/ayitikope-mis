@@ -51,26 +51,29 @@ model User {
   phoneNorm String? @unique
 
   accounts                      Account[]
-  announcementsCreated          Announcement[]          @relation("AnnouncementCreatedBy")
+  announcementsCreated          Announcement[]           @relation("AnnouncementCreatedBy")
   Assessment                    Assessment[]
-  assessmentItemsCreated        AssessmentItem[]        @relation("AssessmentItemCreatedBy")
-  assessmentItemsPublished      AssessmentItem[]        @relation("AssessmentItemPublishedBy")
-  assessmentItemsLocked         AssessmentItem[]        @relation("AssessmentItemLockedBy")
-  tenantBootstrapInvitesCreated TenantBootstrapInvite[] @relation("TenantBootstrapInviteCreatedBy")
+  assessmentItemsCreated        AssessmentItem[]         @relation("AssessmentItemCreatedBy")
+  assessmentItemsPublished      AssessmentItem[]         @relation("AssessmentItemPublishedBy")
+  assessmentItemsLocked         AssessmentItem[]         @relation("AssessmentItemLockedBy")
+  tenantBootstrapInvitesCreated TenantBootstrapInvite[]  @relation("TenantBootstrapInviteCreatedBy")
   AttendanceSession             AttendanceSession[]
+  attendanceBadgesIssued        StudentAttendanceBadge[] @relation("AttendanceBadgeIssuedBy")
+  attendanceBadgesRevoked       StudentAttendanceBadge[] @relation("AttendanceBadgeRevokedBy")
+  attendanceScans               AttendanceScanEvent[]    @relation("AttendanceScanScannedBy")
   auditLogs                     AuditLog[]
-  invitesSent                   Invite[]                @relation("UserInvites")
-  lessonNotesAsHeadteacher      LessonNote[]            @relation("LessonNoteHeadteacher")
-  lessonNotesAsTeacher          LessonNote[]            @relation("LessonNoteTeacher")
-  lessonDeliveriesAsTeacher     LessonDelivery[]        @relation("LessonDeliveryTeacher")
+  invitesSent                   Invite[]                 @relation("UserInvites")
+  lessonNotesAsHeadteacher      LessonNote[]             @relation("LessonNoteHeadteacher")
+  lessonNotesAsTeacher          LessonNote[]             @relation("LessonNoteTeacher")
+  lessonDeliveriesAsTeacher     LessonDelivery[]         @relation("LessonDeliveryTeacher")
   memberships                   Membership[]
   sessions                      Session[]
   teacherHealthWeekly           TeacherHealthWeekly[]
-  teacherProfiles               TeacherProfile[]        @relation("UserTeacherProfiles")
-  lastActiveTenant              Tenant?                 @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
+  teacherProfiles               TeacherProfile[]         @relation("UserTeacherProfiles")
+  lastActiveTenant              Tenant?                  @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
   inviteCodes                   InviteCode[]
   inviteCodeUses                InviteCodeUse[]
-  resultsReleasesCreated        ResultsRelease[]        @relation("ResultsReleaseCreatedBy")
+  resultsReleasesCreated        ResultsRelease[]         @relation("ResultsReleaseCreatedBy")
 
   /// ✅ Sprint 9 / Phase 1 — finance, scholarships, receipts, reconciliation
   scholarshipApplicationsReviewed  ScholarshipApplication[]  @relation("ScholarshipApplicationReviewer")
@@ -140,12 +143,14 @@ model Tenant {
   zoneId String?
   zone   AdminZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 
-  announcements     Announcement[]      @relation("TenantAnnouncements")
-  Assessment        Assessment[]
-  assessmentItems   AssessmentItem[]
-  AttendanceSession AttendanceSession[]
-  auditLogs         AuditLog[]
-  curriculumUnits   CurriculumUnit[]
+  announcements           Announcement[]           @relation("TenantAnnouncements")
+  Assessment              Assessment[]
+  assessmentItems         AssessmentItem[]
+  AttendanceSession       AttendanceSession[]
+  studentAttendanceBadges StudentAttendanceBadge[]
+  attendanceScanEvents    AttendanceScanEvent[]
+  auditLogs               AuditLog[]
+  curriculumUnits         CurriculumUnit[]
 
   /// ✅ Existing finance relations
   feeInvoices   FeeInvoice[]   @relation("TenantFeeInvoices")
@@ -595,15 +600,16 @@ model Classroom {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  Assessment         Assessment[]
-  assessmentItems    AssessmentItem[]
-  AttendanceSession  AttendanceSession[]
-  lessonNotes        LessonNote[]
-  lessonDeliveries   LessonDelivery[]
-  students           Student[]
-  StudentHealthDaily StudentHealthDaily[]
-  primaryTeachers    TeacherProfile[]     @relation("TeacherPrimaryClassroom")
-  resultsReleases    ResultsRelease[]
+  Assessment           Assessment[]
+  assessmentItems      AssessmentItem[]
+  AttendanceSession    AttendanceSession[]
+  attendanceScanEvents AttendanceScanEvent[]
+  lessonNotes          LessonNote[]
+  lessonDeliveries     LessonDelivery[]
+  students             Student[]
+  StudentHealthDaily   StudentHealthDaily[]
+  primaryTeachers      TeacherProfile[]      @relation("TeacherPrimaryClassroom")
+  resultsReleases      ResultsRelease[]
 
   // Legacy unique (optional). Keep it if it still exists in DB.
   // IMPORTANT: do NOT "map" it unless you're 100% sure the DB constraint name matches.
@@ -729,6 +735,8 @@ model Student {
 
   assessmentScores AssessmentScore[]
   AttendanceMark   AttendanceMark[]
+  attendanceBadges StudentAttendanceBadge[]
+  attendanceScans  AttendanceScanEvent[]
 
   /// ✅ Sprint 9 / Phase 1 — student finance links
   feeInvoices        FeeInvoice[]        @relation("StudentFeeInvoices")
@@ -754,28 +762,32 @@ model Student {
 /// * Attendance
 /// * =======================
 model AttendanceSession {
-  id                String           @id @default(dbgenerated("(gen_random_uuid())::text"))
+  id                String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   tenantId          String
   classroomId       String
-  date              DateTime         @db.Timestamptz(6)
+  date              DateTime  @db.Timestamptz(6)
   takenByUserId     String?
-  createdAt         DateTime         @default(now()) @db.Timestamptz(6)
-  updatedAt         DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
-  isClosed          Boolean          @default(false)
-  closedAt          DateTime?        @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  isClosed          Boolean   @default(false)
+  closedAt          DateTime? @db.Timestamptz(6)
   certifiedByUserId String?
-  certifiedAt       DateTime?        @db.Timestamptz(6)
+  certifiedAt       DateTime? @db.Timestamptz(6)
   certifiedNote     String?
+
   /// ✅ Day 4 — SMS idempotency (server-enforced)
   /// notifyingAt: lock while sending
   /// notifiedAt: set once any messages successfully sent
-  notifyingAt       DateTime?        @db.Timestamptz(6)
-  notifiedAt        DateTime?        @db.Timestamptz(6)
-  notifiedByUserId  String?
-  marks             AttendanceMark[]
-  classroom         Classroom        @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "AttendanceSession_classroom_fkey")
-  takenBy           User?            @relation(fields: [takenByUserId], references: [id], onUpdate: NoAction, map: "AttendanceSession_takenBy_fkey")
-  tenant            Tenant           @relation(fields: [tenantId], references: [id], onUpdate: NoAction, map: "AttendanceSession_tenant_fkey")
+  notifyingAt      DateTime? @db.Timestamptz(6)
+  notifiedAt       DateTime? @db.Timestamptz(6)
+  notifiedByUserId String?
+
+  marks      AttendanceMark[]
+  scanEvents AttendanceScanEvent[]
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onUpdate: NoAction, map: "AttendanceSession_classroom_fkey")
+  takenBy   User?     @relation(fields: [takenByUserId], references: [id], onUpdate: NoAction, map: "AttendanceSession_takenBy_fkey")
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onUpdate: NoAction, map: "AttendanceSession_tenant_fkey")
 
   @@unique([tenantId, classroomId, date], map: "AttendanceSession_tenant_classroom_date_unique")
   @@index([date])
@@ -799,6 +811,86 @@ model AttendanceMark {
 
   @@unique([sessionId, studentId], map: "AttendanceMark_session_student_unique")
   @@index([studentId], map: "AttendanceMark_student_idx")
+}
+
+model StudentAttendanceBadge {
+  id        String @id @default(cuid())
+  tenantId  String
+  studentId String
+
+  /// Store only a hash of the badge secret. Never store raw QR payload.
+  tokenHash String  @unique @db.VarChar(64)
+  tokenHint String? @db.VarChar(12)
+  label     String? @db.VarChar(120)
+
+  issuedAt       DateTime @default(now()) @db.Timestamptz(6)
+  issuedByUserId String?
+
+  revokedAt       DateTime? @db.Timestamptz(6)
+  revokedByUserId String?
+  revokeReason    String?   @db.Text
+
+  lastUsedAt DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  issuedBy  User?   @relation("AttendanceBadgeIssuedBy", fields: [issuedByUserId], references: [id], onDelete: SetNull)
+  revokedBy User?   @relation("AttendanceBadgeRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+
+  scans AttendanceScanEvent[]
+
+  @@index([tenantId, studentId], map: "StudentAttendanceBadge_tenant_student_idx")
+  @@index([tenantId, revokedAt], map: "StudentAttendanceBadge_tenant_revoked_idx")
+  @@index([issuedByUserId], map: "StudentAttendanceBadge_issuedBy_idx")
+  @@index([revokedByUserId], map: "StudentAttendanceBadge_revokedBy_idx")
+}
+
+model AttendanceScanEvent {
+  id String @id @default(cuid())
+
+  tenantId    String
+  sessionId   String
+  classroomId String
+
+  studentId String?
+  badgeId   String?
+
+  scannedByUserId String
+
+  source AttendanceScanSource @default(QR)
+  status AttendanceScanStatus
+
+  /// Status written or observed. QR scan currently writes PRESENT only.
+  attendanceStatus AttendanceStatus?
+
+  reason String? @db.Text
+
+  /// Hash of the scanned token for audit and duplicate control. Never store raw token.
+  rawTokenHash   String @db.VarChar(64)
+  idempotencyKey String @db.VarChar(160)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session   AttendanceSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  classroom Classroom               @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  student   Student?                @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  badge     StudentAttendanceBadge? @relation(fields: [badgeId], references: [id], onDelete: SetNull)
+  scannedBy User                    @relation("AttendanceScanScannedBy", fields: [scannedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, idempotencyKey], map: "AttendanceScanEvent_tenant_idempotency_unique")
+  @@index([tenantId, createdAt], map: "AttendanceScanEvent_tenant_created_idx")
+  @@index([sessionId, createdAt], map: "AttendanceScanEvent_session_created_idx")
+  @@index([classroomId, createdAt], map: "AttendanceScanEvent_classroom_created_idx")
+  @@index([studentId, createdAt], map: "AttendanceScanEvent_student_created_idx")
+  @@index([badgeId], map: "AttendanceScanEvent_badge_idx")
+  @@index([status], map: "AttendanceScanEvent_status_idx")
+  @@index([scannedByUserId], map: "AttendanceScanEvent_scannedBy_idx")
 }
 
 /// *
@@ -2589,6 +2681,16 @@ enum AttendanceStatus {
   ABSENT
   LATE
   EXCUSED
+}
+
+enum AttendanceScanSource {
+  QR
+}
+
+enum AttendanceScanStatus {
+  ACCEPTED
+  DUPLICATE
+  REJECTED
 }
 
 enum TeacherPhase {
