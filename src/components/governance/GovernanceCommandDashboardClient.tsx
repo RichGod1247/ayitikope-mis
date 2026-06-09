@@ -11,6 +11,19 @@ type SchoolMetrics = {
   learners?: number;
   teachers?: number;
   classrooms?: number;
+  operationalClassrooms?: number;
+  attendanceSessionsToday?: number;
+  openAttendanceSessionsToday?: number;
+  closedAttendanceSessionsToday?: number;
+  certifiedAttendanceSessionsToday?: number;
+  closedButUncertifiedAttendanceSessionsToday?: number;
+  missingAttendanceSessionsToday?: number;
+  parentAlertsSentToday?: number;
+  attendanceMarksToday?: number;
+  presentMarksToday?: number;
+  absentMarksToday?: number;
+  lateMarksToday?: number;
+  excusedMarksToday?: number;
   attendanceRateToday?: number;
   attendanceCompletionRateToday?: number;
   missingAttendanceMarksToday?: number;
@@ -75,6 +88,56 @@ type CircuitBreakdownRow = {
   highestRiskScore?: number;
 };
 
+type AttendanceFollowUpSchool = {
+  tenantId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector?: "PUBLIC" | "PRIVATE" | string;
+  circuitName: string | null;
+  districtName: string | null;
+  sessions: number;
+  openSessions: number;
+  closedSessions: number;
+  certifiedSessions: number;
+  closedUncertifiedSessions: number;
+  missingSessions: number;
+  learners: number;
+  marked: number;
+  unmarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  completionPct: number;
+  presentPct: number;
+  parentAlertsSent: number;
+  reason: string;
+};
+
+type AttendanceOverview = {
+  date: string;
+  schools: number;
+  schoolsWithSessions: number;
+  schoolsMissingSessions: number;
+  openSessions: number;
+  closedSessions: number;
+  certifiedSessions: number;
+  closedUncertifiedSessions: number;
+  missingSessions: number;
+  learners: number;
+  marked: number;
+  unmarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  completionPct: number;
+  presentPct: number;
+  needsAction: number;
+  parentAlertsSent: number;
+  schoolsNeedingFollowUp: AttendanceFollowUpSchool[];
+};
+
 type SectorSummary = {
   public?: {
     schools: number;
@@ -130,6 +193,7 @@ type OverviewResponse =
         sectorSummary?: SectorSummary;
         totals?: Record<string, number>;
         signals?: Record<string, number>;
+        attendance?: AttendanceOverview;
         emptyStates?: string[];
         generatedAt?: string;
       };
@@ -372,6 +436,7 @@ export default function GovernanceCommandDashboardClient({
   const queue = useMemo(() => overview?.interventionQueue ?? [], [overview]);
   const totals = overview?.totals ?? {};
   const signals = overview?.signals ?? {};
+  const attendance = overview?.attendance ?? null;
   const riskSummary = overview?.riskSummary ?? {};
   const sectorSummary = overview?.sectorSummary ?? {};
 
@@ -434,13 +499,24 @@ export default function GovernanceCommandDashboardClient({
     numberValue(sectorSummary.public?.highRiskSchools) +
     numberValue(sectorSummary.private?.highRiskSchools);
 
-  const attendanceRate =
-    numberValue(signals.attendanceRateToday) ||
-    numberValue(totals.attendanceRateToday);
+  const attendanceRate = numberValue(
+    attendance?.presentPct ?? signals.attendanceRateToday ?? totals.attendanceRateToday,
+  );
 
-  const attendanceCompletion =
-    numberValue(signals.attendanceCompletionRateToday) ||
-    numberValue(totals.attendanceCompletionRateToday);
+  const attendanceCompletion = numberValue(
+    attendance?.completionPct ??
+      signals.attendanceCompletionRateToday ??
+      totals.attendanceCompletionRateToday,
+  );
+
+  const attendanceNeedsAction = numberValue(attendance?.needsAction);
+  const attendanceMissingSchools = numberValue(attendance?.schoolsMissingSessions);
+  const attendanceOpenSessions = numberValue(attendance?.openSessions);
+  const attendanceUnmarked = numberValue(
+    attendance?.unmarked ?? signals.missingAttendanceMarksToday,
+  );
+  const attendanceAbsent = numberValue(attendance?.absent ?? signals.absentMarksToday);
+  const attendanceFollowUpSchools = attendance?.schoolsNeedingFollowUp ?? [];
 
   const lessonCompliance =
     numberValue(signals.lessonDeliveryComplianceRate) ||
@@ -507,8 +583,14 @@ export default function GovernanceCommandDashboardClient({
             <StatCard
               label="Attendance today"
               value={attendanceRate ? percentValue(attendanceRate) : "0%"}
-              helper={`${percentValue(attendanceCompletion)} completion`}
-              tone={attendanceRate < 70 ? "warning" : "success"}
+              helper={
+                attendanceNeedsAction
+                  ? `${attendanceNeedsAction} school(s) need follow-up · ${percentValue(attendanceCompletion)} completion`
+                  : `${percentValue(attendanceCompletion)} completion`
+              }
+              tone={
+                attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"
+              }
             />
             <StatCard
               label="Risk load"
@@ -544,8 +626,16 @@ export default function GovernanceCommandDashboardClient({
           icon="✅"
           title="Attendance"
           description="Today's capture signal."
-          value={attendanceRate ? percentValue(attendanceRate) : "0%"}
-          tone={attendanceRate < 70 ? "warning" : "success"}
+          value={
+            attendanceNeedsAction
+              ? `${attendanceNeedsAction} follow-up`
+              : attendanceRate
+                ? percentValue(attendanceRate)
+                : "0%"
+          }
+          tone={
+            attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"
+          }
           active={activePanel === "attendance"}
           onClick={() => setActivePanel("attendance")}
         />
@@ -695,16 +785,29 @@ export default function GovernanceCommandDashboardClient({
 
       {activePanel === "attendance" ? (
         <section className="rounded-[28px] border border-emerald-300/20 bg-emerald-400/10 p-4 md:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
-            Attendance command signal
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-white">
-            Today’s capture health
-          </h2>
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                Attendance command signal
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-white">
+                Today’s attendance truth
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-emerald-100/80">
+                This view reads the same AttendanceSession and AttendanceMark
+                truth used by teachers, admins, and headteachers. It does not
+                mix health signals into attendance.
+              </p>
+            </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <span className="w-fit rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold text-white">
+              {attendance?.date ?? "Today"}
+            </span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
             <StatCard
-              label="Rate"
+              label="Present rate"
               value={percentValue(attendanceRate)}
               tone={attendanceRate < 70 ? "warning" : "success"}
             />
@@ -713,20 +816,123 @@ export default function GovernanceCommandDashboardClient({
               value={percentValue(attendanceCompletion)}
               tone={attendanceCompletion < 70 ? "warning" : "success"}
             />
-            <StatCard label="Schools" value={schoolCount} tone="info" />
             <StatCard
-              label="Missing marks"
-              value={
-                numberValue(signals.missingAttendanceMarksToday) ||
-                numberValue(totals.missingAttendanceMarksToday)
-              }
-              tone={
-                numberValue(signals.missingAttendanceMarksToday) ||
-                numberValue(totals.missingAttendanceMarksToday)
-                  ? "warning"
-                  : "success"
-              }
+              label="Missing schools"
+              value={attendanceMissingSchools}
+              helper={`${numberValue(attendance?.schoolsWithSessions)} with sessions`}
+              tone={attendanceMissingSchools ? "warning" : "success"}
             />
+            <StatCard
+              label="Open sessions"
+              value={attendanceOpenSessions}
+              helper={`${numberValue(attendance?.closedSessions)} closed · ${numberValue(
+                attendance?.certifiedSessions,
+              )} certified`}
+              tone={attendanceOpenSessions ? "warning" : "success"}
+            />
+            <StatCard
+              label="Unmarked"
+              value={attendanceUnmarked}
+              helper={`${numberValue(attendance?.marked)} marked / ${numberValue(
+                attendance?.learners,
+              )} learners`}
+              tone={attendanceUnmarked ? "warning" : "success"}
+            />
+            <StatCard
+              label="Absent"
+              value={attendanceAbsent}
+              helper={`${numberValue(attendance?.late)} late · ${numberValue(
+                attendance?.excused,
+              )} excused`}
+              tone={attendanceAbsent ? "warning" : "success"}
+            />
+            <StatCard
+              label="Parent alerts"
+              value={numberValue(attendance?.parentAlertsSent)}
+              helper="Sessions with alert evidence"
+              tone={numberValue(attendance?.parentAlertsSent) ? "success" : "default"}
+            />
+            <StatCard
+              label="Follow-up"
+              value={attendanceNeedsAction}
+              helper="Schools needing SISSO action"
+              tone={attendanceNeedsAction ? "warning" : "success"}
+            />
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-white">
+                  Schools needing attendance follow-up
+                </p>
+                <p className="text-xs leading-5 text-emerald-100/75">
+                  Ordered by missing registers, open sessions, unmarked learners,
+                  uncertified closed sessions, then absence pressure.
+                </p>
+              </div>
+              <span className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white">
+                {attendanceFollowUpSchools.length} shown
+              </span>
+            </div>
+
+            <div className="mt-3 space-y-3">
+              {attendanceFollowUpSchools.length ? (
+                attendanceFollowUpSchools.map((school) => (
+                  <article
+                    key={school.tenantId}
+                    className="rounded-2xl border border-white/10 bg-black/20 p-3"
+                  >
+                    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={cx(
+                              "rounded-full border px-3 py-1 text-[11px] font-semibold",
+                              sectorBadgeClass(school.schoolSector),
+                            )}
+                          >
+                            {sectorLabel(school.schoolSector)}
+                          </span>
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200">
+                            {school.circuitName ?? "No circuit"}
+                          </span>
+                        </div>
+                        <h3 className="mt-2 text-sm font-bold text-white">
+                          {school.schoolName}
+                        </h3>
+                        <p className="mt-1 text-xs leading-5 text-emerald-100/80">
+                          {school.schoolCode || "No school code"} · {school.reason}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-xs sm:min-w-[300px]">
+                        <StatCard
+                          label="Open"
+                          value={school.openSessions}
+                          tone={school.openSessions ? "warning" : "success"}
+                        />
+                        <StatCard
+                          label="Unmarked"
+                          value={school.unmarked}
+                          tone={school.unmarked ? "warning" : "success"}
+                        />
+                        <StatCard
+                          label="Absent"
+                          value={school.absent}
+                          tone={school.absent ? "warning" : "success"}
+                        />
+                      </div>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+                  No attendance follow-up school detected from today’s register
+                  truth.
+                </div>
+              )}
+            </div>
           </div>
         </section>
       ) : null}

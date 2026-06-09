@@ -66,8 +66,15 @@ type SchoolMetricSnapshot = {
   learners: number;
   teachers: number;
   classrooms: number;
+  operationalClassrooms: number;
 
   attendanceSessionsToday: number;
+  openAttendanceSessionsToday: number;
+  closedAttendanceSessionsToday: number;
+  certifiedAttendanceSessionsToday: number;
+  closedButUncertifiedAttendanceSessionsToday: number;
+  missingAttendanceSessionsToday: number;
+  parentAlertsSentToday: number;
   attendanceMarksToday: number;
   presentMarksToday: number;
   absentMarksToday: number;
@@ -131,6 +138,67 @@ type MappedSchool = {
   metrics: SchoolMetricSnapshot;
 };
 
+type GovernanceAttendanceFollowUpSchool = {
+  tenantId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector: SchoolSector;
+  circuitName: string | null;
+  districtName: string | null;
+  sessions: number;
+  openSessions: number;
+  closedSessions: number;
+  certifiedSessions: number;
+  closedUncertifiedSessions: number;
+  missingSessions: number;
+  learners: number;
+  marked: number;
+  unmarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  completionPct: number;
+  presentPct: number;
+  parentAlertsSent: number;
+  reason: string;
+};
+
+type GovernanceAttendanceOverview = {
+  date: string;
+  schools: number;
+  schoolsWithSessions: number;
+  schoolsMissingSessions: number;
+  openSessions: number;
+  closedSessions: number;
+  certifiedSessions: number;
+  closedUncertifiedSessions: number;
+  missingSessions: number;
+  learners: number;
+  marked: number;
+  unmarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  completionPct: number;
+  presentPct: number;
+  needsAction: number;
+  parentAlertsSent: number;
+  schoolsNeedingFollowUp: GovernanceAttendanceFollowUpSchool[];
+};
+
+type GovernanceOverview = any;
+
+type OverviewCacheEntry = {
+  expiresAt: number;
+  value?: GovernanceOverview;
+  promise?: Promise<GovernanceOverview>;
+};
+
+const OVERVIEW_CACHE_TTL_MS = 15_000;
+const overviewCache = new Map<string, OverviewCacheEntry>();
+
 function jsonNoStore(payload: unknown, status = 200) {
   return Response.json(payload, {
     status,
@@ -170,8 +238,15 @@ function zeroMetrics(): SchoolMetricSnapshot {
     learners: 0,
     teachers: 0,
     classrooms: 0,
+    operationalClassrooms: 0,
 
     attendanceSessionsToday: 0,
+    openAttendanceSessionsToday: 0,
+    closedAttendanceSessionsToday: 0,
+    certifiedAttendanceSessionsToday: 0,
+    closedButUncertifiedAttendanceSessionsToday: 0,
+    missingAttendanceSessionsToday: 0,
+    parentAlertsSentToday: 0,
     attendanceMarksToday: 0,
     presentMarksToday: 0,
     absentMarksToday: 0,
@@ -233,6 +308,28 @@ function computeRisk(
     actions.push("Call or visit the headteacher and require same-day attendance capture.");
   }
 
+  if (metrics.missingAttendanceSessionsToday > 0) {
+    score += clamp(metrics.missingAttendanceSessionsToday * 10, 10, 30);
+    reasons.push(
+      `${metrics.missingAttendanceSessionsToday} operational class register(s) are missing today.`
+    );
+    actions.push("Require the school to open attendance for every operational class today.");
+  }
+
+  if (metrics.openAttendanceSessionsToday > 0) {
+    score += clamp(metrics.openAttendanceSessionsToday * 8, 8, 24);
+    reasons.push(`${metrics.openAttendanceSessionsToday} attendance session(s) are still open.`);
+    actions.push("Ask the headteacher to close completed registers after teacher verification.");
+  }
+
+  if (metrics.closedButUncertifiedAttendanceSessionsToday > 0) {
+    score += clamp(metrics.closedButUncertifiedAttendanceSessionsToday * 4, 4, 16);
+    reasons.push(
+      `${metrics.closedButUncertifiedAttendanceSessionsToday} closed attendance session(s) are awaiting certification.`
+    );
+    actions.push("Ask the headteacher to certify closed, complete attendance registers.");
+  }
+
   if (metrics.learners > 0 && metrics.attendanceCompletionRateToday < 75) {
     score += 20;
     reasons.push(
@@ -278,9 +375,7 @@ function computeRisk(
     reasons.push(
       `${metrics.orphanedDeliveriesLast14Days} lesson delivery record(s) are not linked to approved lesson notes.`
     );
-    actions.push(
-      "Verify that lesson deliveries are linked to approved lesson notes, not recorded loosely."
-    );
+    actions.push("Verify that lesson deliveries are linked to approved lesson notes, not recorded loosely.");
   }
 
   if (
@@ -500,10 +595,9 @@ async function buildGovernanceScope(
   const isSuperAdmin = await userHasSuperAdminRole(ctx.userId, ctx.roleName);
 
   if (isSuperAdmin) {
-    const [zoneIds, tenantIds] = await Promise.all([
-      loadAllActiveZoneIds(),
-      loadAllActiveTenantIds(),
-    ]);
+    // Keep these sequential. Supabase/local pool may intentionally be connection_limit=1.
+    const zoneIds = await loadAllActiveZoneIds();
+    const tenantIds = await loadAllActiveTenantIds();
 
     return {
       userId: ctx.userId,
@@ -589,6 +683,7 @@ export function assertTenantInGovernanceScope(scope: GovernanceScope, tenantId: 
 function todayRangeUtcForGhana() {
   const now = new Date();
 
+  // Ghana is UTC. Keep this as a day range rather than exact Date equality.
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
@@ -596,367 +691,464 @@ function todayRangeUtcForGhana() {
   return { start, end };
 }
 
-async function loadSchoolMetrics(args: {
-  tenantId: string;
+function todayDateKey(start: Date) {
+  return start.toISOString().slice(0, 10);
+}
+
+function inc(map: Map<string, number>, key: string, amount = 1) {
+  map.set(key, (map.get(key) ?? 0) + amount);
+}
+
+function setMetric(
+  metricsByTenantId: Map<string, SchoolMetricSnapshot>,
+  tenantId: string,
+  field: keyof SchoolMetricSnapshot,
+  value: number
+) {
+  const metrics = metricsByTenantId.get(tenantId);
+  if (!metrics) return;
+  (metrics as any)[field] = value;
+}
+
+function addMetric(
+  metricsByTenantId: Map<string, SchoolMetricSnapshot>,
+  tenantId: string,
+  field: keyof SchoolMetricSnapshot,
+  amount = 1
+) {
+  const metrics = metricsByTenantId.get(tenantId);
+  if (!metrics) return;
+  (metrics as any)[field] = Number((metrics as any)[field] ?? 0) + amount;
+}
+
+async function loadSchoolMetricsForTenants(args: {
+  tenantIds: string[];
   todayStart: Date;
   todayEnd: Date;
   fourteenDaysAgo: Date;
-}): Promise<SchoolMetricSnapshot> {
-  const { tenantId, todayStart, todayEnd, fourteenDaysAgo } = args;
+}): Promise<Map<string, SchoolMetricSnapshot>> {
+  const { tenantIds, todayStart, todayEnd, fourteenDaysAgo } = args;
+  const metricsByTenantId = new Map<string, SchoolMetricSnapshot>();
 
-  const [
-    learners,
-    teachers,
-    classrooms,
-    attendanceSessionsToday,
-    attendanceMarksToday,
-    presentMarksToday,
-    absentMarksToday,
-    lateMarksToday,
-    excusedMarksToday,
-    highTemperatureToday,
-    symptomReportsToday,
-    publishedOrLockedAssessments,
-    assessmentScoresLast14Days,
-    assessmentItemsTotal,
-    assessmentItemsDraft,
-    assessmentItemsWithScores,
-    assessmentItemsWithoutScores,
-    assessmentItemsWithoutLessonDelivery,
-    assessmentItemsWithoutCurriculumUnit,
-    lessonDeliveriesLast14Days,
-    lessonNotesSubmittedLast14Days,
-    lessonNotesApprovedLast14Days,
-    lessonNotesReturnedLast14Days,
-    lessonNotesPendingReview,
-    approvedLessonNotesLast14Days,
-    deliveredApprovedLessonNotesLast14Days,
-    lessonDeliveriesLinkedToApprovedNotesLast14Days,
-    orphanedDeliveriesLast14Days,
-  ] = await prisma.$transaction([
-    prisma.student.count({
-      where: {
-        tenantId,
-        status: StudentStatus.ACTIVE,
+  for (const tenantId of tenantIds) {
+    metricsByTenantId.set(tenantId, zeroMetrics());
+  }
+
+  if (!tenantIds.length) return metricsByTenantId;
+
+  // Keep these batched and mostly sequential. This is intentionally kinder to connection_limit=1.
+  const learnerGroups = await prisma.student.groupBy({
+    by: ["tenantId"],
+    where: { tenantId: { in: tenantIds }, status: StudentStatus.ACTIVE },
+    _count: { _all: true },
+  });
+  for (const row of learnerGroups) {
+    setMetric(metricsByTenantId, row.tenantId, "learners", row._count._all);
+  }
+
+  const teacherGroups = await prisma.teacherProfile.groupBy({
+    by: ["tenantId"],
+    where: { tenantId: { in: tenantIds } },
+    _count: { _all: true },
+  });
+  for (const row of teacherGroups) {
+    setMetric(metricsByTenantId, row.tenantId, "teachers", row._count._all);
+  }
+
+  const classroomGroups = await prisma.classroom.groupBy({
+    by: ["tenantId"],
+    where: { tenantId: { in: tenantIds }, status: ClassroomStatus.ACTIVE },
+    _count: { _all: true },
+  });
+  for (const row of classroomGroups) {
+    setMetric(metricsByTenantId, row.tenantId, "classrooms", row._count._all);
+  }
+
+  const operationalClassrooms = await prisma.classroom.findMany({
+    where: { tenantId: { in: tenantIds }, status: ClassroomStatus.ACTIVE },
+    select: {
+      id: true,
+      tenantId: true,
+      _count: {
+        select: {
+          students: { where: { status: StudentStatus.ACTIVE } },
+        },
       },
-    }),
+    },
+  });
 
-    prisma.teacherProfile.count({
-      where: {
-        tenantId,
-      },
-    }),
+  const operationalClassroomIdsByTenant = new Map<string, Set<string>>();
+  for (const classroom of operationalClassrooms) {
+    if (classroom._count.students <= 0) continue;
+    addMetric(metricsByTenantId, classroom.tenantId, "operationalClassrooms");
+    const set = operationalClassroomIdsByTenant.get(classroom.tenantId) ?? new Set<string>();
+    set.add(classroom.id);
+    operationalClassroomIdsByTenant.set(classroom.tenantId, set);
+  }
 
-    prisma.classroom.count({
-      where: {
-        tenantId,
-        status: ClassroomStatus.ACTIVE,
-      },
-    }),
+  const attendanceSessions = await prisma.attendanceSession.findMany({
+    where: {
+      tenantId: { in: tenantIds },
+      date: { gte: todayStart, lt: todayEnd },
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      classroomId: true,
+      isClosed: true,
+      certifiedAt: true,
+      notifiedAt: true,
+    },
+  });
 
-    prisma.attendanceSession.count({
-      where: {
-        tenantId,
+  const sessionTenantById = new Map<string, string>();
+  const sessionClassroomsByTenant = new Map<string, Set<string>>();
+
+  for (const session of attendanceSessions) {
+    sessionTenantById.set(session.id, session.tenantId);
+    addMetric(metricsByTenantId, session.tenantId, "attendanceSessionsToday");
+
+    const classSet = sessionClassroomsByTenant.get(session.tenantId) ?? new Set<string>();
+    classSet.add(session.classroomId);
+    sessionClassroomsByTenant.set(session.tenantId, classSet);
+
+    if (session.isClosed) {
+      addMetric(metricsByTenantId, session.tenantId, "closedAttendanceSessionsToday");
+      if (session.certifiedAt) {
+        addMetric(metricsByTenantId, session.tenantId, "certifiedAttendanceSessionsToday");
+      } else {
+        addMetric(metricsByTenantId, session.tenantId, "closedButUncertifiedAttendanceSessionsToday");
+      }
+    } else {
+      addMetric(metricsByTenantId, session.tenantId, "openAttendanceSessionsToday");
+    }
+
+    if (session.notifiedAt) {
+      addMetric(metricsByTenantId, session.tenantId, "parentAlertsSentToday");
+    }
+  }
+
+  const attendanceMarks = await prisma.attendanceMark.findMany({
+    where: {
+      session: {
+        tenantId: { in: tenantIds },
         date: { gte: todayStart, lt: todayEnd },
       },
-    }),
+    },
+    select: {
+      status: true,
+      sessionId: true,
+    },
+  });
 
-    prisma.attendanceMark.count({
-      where: {
-        session: {
-          tenantId,
-          date: { gte: todayStart, lt: todayEnd },
+  for (const mark of attendanceMarks) {
+    const tenantId = sessionTenantById.get(mark.sessionId);
+    if (!tenantId) continue;
+
+    addMetric(metricsByTenantId, tenantId, "attendanceMarksToday");
+    if (mark.status === AttendanceStatus.PRESENT) addMetric(metricsByTenantId, tenantId, "presentMarksToday");
+    if (mark.status === AttendanceStatus.ABSENT) addMetric(metricsByTenantId, tenantId, "absentMarksToday");
+    if (mark.status === AttendanceStatus.LATE) addMetric(metricsByTenantId, tenantId, "lateMarksToday");
+    if (mark.status === AttendanceStatus.EXCUSED) addMetric(metricsByTenantId, tenantId, "excusedMarksToday");
+  }
+
+  const highTemperatureGroups = await prisma.studentHealthDaily.groupBy({
+    by: ["tenantId"],
+    where: {
+      tenantId: { in: tenantIds },
+      date: { gte: todayStart, lt: todayEnd },
+      temperatureC: { gte: new Prisma.Decimal("37.5") },
+    },
+    _count: { _all: true },
+  });
+  for (const row of highTemperatureGroups) {
+    setMetric(metricsByTenantId, row.tenantId, "highTemperatureToday", row._count._all);
+  }
+
+  const symptomGroups = await prisma.studentHealthDaily.groupBy({
+    by: ["tenantId"],
+    where: {
+      tenantId: { in: tenantIds },
+      date: { gte: todayStart, lt: todayEnd },
+      symptoms: { not: null },
+    },
+    _count: { _all: true },
+  });
+  for (const row of symptomGroups) {
+    setMetric(metricsByTenantId, row.tenantId, "symptomReportsToday", row._count._all);
+  }
+
+  const assessmentItems = await prisma.assessmentItem.findMany({
+    where: { tenantId: { in: tenantIds } },
+    select: {
+      tenantId: true,
+      status: true,
+      lessonDeliveryId: true,
+      curriculumUnitId: true,
+      _count: { select: { scores: true } },
+    },
+  });
+
+  for (const item of assessmentItems) {
+    addMetric(metricsByTenantId, item.tenantId, "assessmentItemsTotal");
+    if (item.status === AssessmentItemStatus.DRAFT) {
+      addMetric(metricsByTenantId, item.tenantId, "assessmentItemsDraft");
+    }
+    if (
+      item.status === AssessmentItemStatus.PUBLISHED ||
+      item.status === AssessmentItemStatus.LOCKED
+    ) {
+      addMetric(metricsByTenantId, item.tenantId, "publishedOrLockedAssessments");
+    }
+    if (item._count.scores > 0) {
+      addMetric(metricsByTenantId, item.tenantId, "assessmentItemsWithScores");
+    } else {
+      addMetric(metricsByTenantId, item.tenantId, "assessmentItemsWithoutScores");
+    }
+    if (!item.lessonDeliveryId) {
+      addMetric(metricsByTenantId, item.tenantId, "assessmentItemsWithoutLessonDelivery");
+    }
+    if (!item.curriculumUnitId) {
+      addMetric(metricsByTenantId, item.tenantId, "assessmentItemsWithoutCurriculumUnit");
+    }
+  }
+
+  const recentAssessmentScores = await prisma.assessmentScore.findMany({
+    where: {
+      item: {
+        tenantId: { in: tenantIds },
+        updatedAt: { gte: fourteenDaysAgo },
+      },
+    },
+    select: { item: { select: { tenantId: true } } },
+  });
+  for (const score of recentAssessmentScores) {
+    addMetric(metricsByTenantId, score.item.tenantId, "assessmentScoresLast14Days");
+  }
+
+  const lessonDeliveries = await prisma.lessonDelivery.findMany({
+    where: {
+      tenantId: { in: tenantIds },
+      dateTaught: { gte: fourteenDaysAgo },
+    },
+    select: {
+      tenantId: true,
+      lessonNoteId: true,
+      lessonNote: { select: { status: true } },
+    },
+  });
+
+  for (const delivery of lessonDeliveries) {
+    addMetric(metricsByTenantId, delivery.tenantId, "lessonDeliveriesLast14Days");
+    if (delivery.lessonNote?.status === "APPROVED") {
+      addMetric(metricsByTenantId, delivery.tenantId, "lessonDeliveriesLinkedToApprovedNotesLast14Days");
+    } else {
+      addMetric(metricsByTenantId, delivery.tenantId, "orphanedDeliveriesLast14Days");
+    }
+  }
+
+  const lessonNotes = await prisma.lessonNote.findMany({
+    where: {
+      tenantId: { in: tenantIds },
+      OR: [
+        { submittedAt: { gte: fourteenDaysAgo } },
+        { approvedAt: { gte: fourteenDaysAgo } },
+        { rejectedAt: { gte: fourteenDaysAgo } },
+        { status: "SUBMITTED" },
+      ],
+    },
+    select: {
+      tenantId: true,
+      status: true,
+      submittedAt: true,
+      approvedAt: true,
+      rejectedAt: true,
+      _count: {
+        select: {
+          lessonDeliveries: { where: { dateTaught: { gte: fourteenDaysAgo } } },
         },
       },
-    }),
+    },
+  });
 
-    prisma.attendanceMark.count({
-      where: {
-        status: AttendanceStatus.PRESENT,
-        session: {
-          tenantId,
-          date: { gte: todayStart, lt: todayEnd },
-        },
-      },
-    }),
+  for (const note of lessonNotes) {
+    if (note.submittedAt && note.submittedAt >= fourteenDaysAgo) {
+      addMetric(metricsByTenantId, note.tenantId, "lessonNotesSubmittedLast14Days");
+    }
+    if (note.approvedAt && note.approvedAt >= fourteenDaysAgo) {
+      addMetric(metricsByTenantId, note.tenantId, "lessonNotesApprovedLast14Days");
+    }
+    if (note.rejectedAt && note.rejectedAt >= fourteenDaysAgo) {
+      addMetric(metricsByTenantId, note.tenantId, "lessonNotesReturnedLast14Days");
+    }
+    if (note.status === "SUBMITTED") {
+      addMetric(metricsByTenantId, note.tenantId, "lessonNotesPendingReview");
+    }
+    if (note.status === "APPROVED" && note.approvedAt && note.approvedAt >= fourteenDaysAgo) {
+      addMetric(metricsByTenantId, note.tenantId, "approvedLessonNotesLast14Days");
+      if (note._count.lessonDeliveries > 0) {
+        addMetric(metricsByTenantId, note.tenantId, "deliveredApprovedLessonNotesLast14Days");
+      }
+    }
+  }
 
-    prisma.attendanceMark.count({
-      where: {
-        status: AttendanceStatus.ABSENT,
-        session: {
-          tenantId,
-          date: { gte: todayStart, lt: todayEnd },
-        },
-      },
-    }),
+  for (const [tenantId, metrics] of metricsByTenantId.entries()) {
+    const operationalClassroomsCount = operationalClassroomIdsByTenant.get(tenantId)?.size ?? 0;
+    const sessionClassroomsCount = sessionClassroomsByTenant.get(tenantId)?.size ?? 0;
+    metrics.missingAttendanceSessionsToday = Math.max(
+      0,
+      operationalClassroomsCount - sessionClassroomsCount
+    );
 
-    prisma.attendanceMark.count({
-      where: {
-        status: AttendanceStatus.LATE,
-        session: {
-          tenantId,
-          date: { gte: todayStart, lt: todayEnd },
-        },
-      },
-    }),
+    metrics.missingAttendanceMarksToday = Math.max(0, metrics.learners - metrics.attendanceMarksToday);
+    metrics.attendanceRateToday = pct(metrics.presentMarksToday, metrics.attendanceMarksToday);
+    metrics.attendanceCompletionRateToday = pct(metrics.attendanceMarksToday, metrics.learners);
+    metrics.healthAlertsToday = metrics.highTemperatureToday + metrics.symptomReportsToday;
 
-    prisma.attendanceMark.count({
-      where: {
-        status: AttendanceStatus.EXCUSED,
-        session: {
-          tenantId,
-          date: { gte: todayStart, lt: todayEnd },
-        },
-      },
-    }),
+    metrics.orphanedLessonNotesLast14Days = Math.max(
+      0,
+      metrics.approvedLessonNotesLast14Days - metrics.deliveredApprovedLessonNotesLast14Days
+    );
+    metrics.lessonDeliveryComplianceRate = pct(
+      metrics.deliveredApprovedLessonNotesLast14Days,
+      metrics.approvedLessonNotesLast14Days
+    );
+    metrics.assessmentCompletionRate = pct(metrics.assessmentItemsWithScores, metrics.assessmentItemsTotal);
+    metrics.assessmentLinkCoverageRate = pct(
+      metrics.assessmentItemsTotal - metrics.assessmentItemsWithoutLessonDelivery,
+      metrics.assessmentItemsTotal
+    );
 
-    prisma.studentHealthDaily.count({
-      where: {
-        tenantId,
-        date: { gte: todayStart, lt: todayEnd },
-        temperatureC: { gte: new Prisma.Decimal("37.5") },
-      },
-    }),
+    const risk = computeRisk(metrics);
+    metrics.riskScore = risk.riskScore;
+    metrics.riskLevel = risk.riskLevel;
+    metrics.riskReasons = risk.riskReasons;
+    metrics.recommendedActions = risk.recommendedActions;
+  }
 
-    prisma.studentHealthDaily.count({
-      where: {
-        tenantId,
-        date: { gte: todayStart, lt: todayEnd },
-        symptoms: { not: null },
-      },
-    }),
+  return metricsByTenantId;
+}
 
-    prisma.assessmentItem.count({
-      where: {
-        tenantId,
-        status: {
-          in: [AssessmentItemStatus.PUBLISHED, AssessmentItemStatus.LOCKED],
-        },
-      },
-    }),
-
-    prisma.assessmentScore.count({
-      where: {
-        item: {
-          tenantId,
-          updatedAt: { gte: fourteenDaysAgo },
-        },
-      },
-    }),
-
-    prisma.assessmentItem.count({
-      where: {
-        tenantId,
-      },
-    }),
-
-    prisma.assessmentItem.count({
-      where: {
-        tenantId,
-        status: AssessmentItemStatus.DRAFT,
-      },
-    }),
-
-    prisma.assessmentItem.count({
-      where: {
-        tenantId,
-        scores: {
-          some: {},
-        },
-      },
-    }),
-
-    prisma.assessmentItem.count({
-      where: {
-        tenantId,
-        scores: {
-          none: {},
-        },
-      },
-    }),
-
-    prisma.assessmentItem.count({
-      where: {
-        tenantId,
-        lessonDeliveryId: null,
-      },
-    }),
-
-    prisma.assessmentItem.count({
-      where: {
-        tenantId,
-        curriculumUnitId: null,
-      },
-    }),
-
-    prisma.lessonDelivery.count({
-      where: {
-        tenantId,
-        dateTaught: { gte: fourteenDaysAgo },
-      },
-    }),
-
-    prisma.lessonNote.count({
-      where: {
-        tenantId,
-        submittedAt: { gte: fourteenDaysAgo },
-      },
-    }),
-
-    prisma.lessonNote.count({
-      where: {
-        tenantId,
-        approvedAt: { gte: fourteenDaysAgo },
-      },
-    }),
-
-    prisma.lessonNote.count({
-      where: {
-        tenantId,
-        rejectedAt: { gte: fourteenDaysAgo },
-      },
-    }),
-
-    prisma.lessonNote.count({
-      where: {
-        tenantId,
-        status: "SUBMITTED",
-      },
-    }),
-
-    prisma.lessonNote.count({
-      where: {
-        tenantId,
-        status: "APPROVED",
-        approvedAt: { gte: fourteenDaysAgo },
-      },
-    }),
-
-    prisma.lessonNote.count({
-      where: {
-        tenantId,
-        status: "APPROVED",
-        approvedAt: { gte: fourteenDaysAgo },
-        lessonDeliveries: {
-          some: {
-            dateTaught: { gte: fourteenDaysAgo },
-          },
-        },
-      },
-    }),
-
-    prisma.lessonDelivery.count({
-      where: {
-        tenantId,
-        dateTaught: { gte: fourteenDaysAgo },
-        lessonNote: {
-          is: {
-            status: "APPROVED",
-          },
-        },
-      },
-    }),
-
-    prisma.lessonDelivery.count({
-      where: {
-        tenantId,
-        dateTaught: { gte: fourteenDaysAgo },
-        OR: [
-          { lessonNoteId: null },
-          {
-            lessonNote: {
-              is: {
-                status: {
-                  not: "APPROVED",
-                },
-              },
-            },
-          },
-        ],
-      },
-    }),
-  ]);
-
-  const expectedAttendanceMarks = learners;
-  const attendanceRateToday = pct(presentMarksToday, attendanceMarksToday);
-  const attendanceCompletionRateToday = pct(
-    attendanceMarksToday,
-    expectedAttendanceMarks
-  );
-  const missingAttendanceMarksToday = Math.max(
-    0,
-    expectedAttendanceMarks - attendanceMarksToday
-  );
-  const healthAlertsToday = highTemperatureToday + symptomReportsToday;
-
-  const orphanedLessonNotesLast14Days = Math.max(
-    0,
-    approvedLessonNotesLast14Days - deliveredApprovedLessonNotesLast14Days
-  );
-  const lessonDeliveryComplianceRate = pct(
-    deliveredApprovedLessonNotesLast14Days,
-    approvedLessonNotesLast14Days
-  );
-  const assessmentCompletionRate = pct(assessmentItemsWithScores, assessmentItemsTotal);
-  const assessmentLinkCoverageRate = pct(
-    assessmentItemsTotal - assessmentItemsWithoutLessonDelivery,
-    assessmentItemsTotal
-  );
-
-  const base = {
-    learners,
-    teachers,
-    classrooms,
-
-    attendanceSessionsToday,
-    attendanceMarksToday,
-    presentMarksToday,
-    absentMarksToday,
-    lateMarksToday,
-    excusedMarksToday,
-    attendanceRateToday,
-    attendanceCompletionRateToday,
-    missingAttendanceMarksToday,
-
-    healthAlertsToday,
-    highTemperatureToday,
-    symptomReportsToday,
-
-    publishedOrLockedAssessments,
-    assessmentScoresLast14Days,
-
-    assessmentItemsTotal,
-    assessmentItemsDraft,
-    assessmentItemsWithScores,
-    assessmentItemsWithoutScores,
-    assessmentItemsWithoutLessonDelivery,
-    assessmentItemsWithoutCurriculumUnit,
-    assessmentCompletionRate,
-    assessmentLinkCoverageRate,
-
-    lessonDeliveriesLast14Days,
-    lessonNotesSubmittedLast14Days,
-    lessonNotesApprovedLast14Days,
-    lessonNotesReturnedLast14Days,
-    lessonNotesPendingReview,
-
-    approvedLessonNotesLast14Days,
-    deliveredApprovedLessonNotesLast14Days,
-    orphanedLessonNotesLast14Days,
-    lessonDeliveriesLinkedToApprovedNotesLast14Days,
-    orphanedDeliveriesLast14Days,
-    lessonDeliveryComplianceRate,
-  };
-
+function emptyAttendanceOverview(date = todayDateKey(todayRangeUtcForGhana().start)): GovernanceAttendanceOverview {
   return {
-    ...base,
-    ...computeRisk(base),
+    date,
+    schools: 0,
+    schoolsWithSessions: 0,
+    schoolsMissingSessions: 0,
+    openSessions: 0,
+    closedSessions: 0,
+    certifiedSessions: 0,
+    closedUncertifiedSessions: 0,
+    missingSessions: 0,
+    learners: 0,
+    marked: 0,
+    unmarked: 0,
+    present: 0,
+    absent: 0,
+    late: 0,
+    excused: 0,
+    completionPct: 0,
+    presentPct: 0,
+    needsAction: 0,
+    parentAlertsSent: 0,
+    schoolsNeedingFollowUp: [],
   };
+}
+
+function buildAttendanceOverview(mappedSchools: MappedSchool[], date: string): GovernanceAttendanceOverview {
+  const attendance = mappedSchools.reduce(
+    (acc, school) => {
+      const m = school.metrics;
+      acc.schools += 1;
+      if (m.attendanceSessionsToday > 0) acc.schoolsWithSessions += 1;
+      if (m.missingAttendanceSessionsToday > 0) acc.schoolsMissingSessions += 1;
+
+      acc.openSessions += m.openAttendanceSessionsToday;
+      acc.closedSessions += m.closedAttendanceSessionsToday;
+      acc.certifiedSessions += m.certifiedAttendanceSessionsToday;
+      acc.closedUncertifiedSessions += m.closedButUncertifiedAttendanceSessionsToday;
+      acc.missingSessions += m.missingAttendanceSessionsToday;
+      acc.learners += m.learners;
+      acc.marked += m.attendanceMarksToday;
+      acc.unmarked += m.missingAttendanceMarksToday;
+      acc.present += m.presentMarksToday;
+      acc.absent += m.absentMarksToday;
+      acc.late += m.lateMarksToday;
+      acc.excused += m.excusedMarksToday;
+      acc.parentAlertsSent += m.parentAlertsSentToday;
+
+      const reasons: string[] = [];
+      if (m.missingAttendanceSessionsToday > 0) {
+        reasons.push(`${m.missingAttendanceSessionsToday} operational class register(s) missing today`);
+      }
+      if (m.openAttendanceSessionsToday > 0) {
+        reasons.push(`${m.openAttendanceSessionsToday} attendance session(s) still open`);
+      }
+      if (m.missingAttendanceMarksToday > 0) {
+        reasons.push(`${m.missingAttendanceMarksToday} learner(s) unmarked`);
+      }
+      if (m.closedButUncertifiedAttendanceSessionsToday > 0) {
+        reasons.push(`${m.closedButUncertifiedAttendanceSessionsToday} closed session(s) awaiting certification`);
+      }
+      if (m.absentMarksToday > 0) {
+        reasons.push(`${m.absentMarksToday} absent learner(s)`);
+      }
+
+      if (reasons.length) {
+        acc.needsAction += 1;
+        acc.schoolsNeedingFollowUp.push({
+          tenantId: school.id,
+          schoolName: school.name,
+          schoolCode: school.schoolCode,
+          schoolSector: school.schoolSector,
+          circuitName: school.circuit?.name ?? null,
+          districtName: school.district?.name ?? null,
+          sessions: m.attendanceSessionsToday,
+          openSessions: m.openAttendanceSessionsToday,
+          closedSessions: m.closedAttendanceSessionsToday,
+          certifiedSessions: m.certifiedAttendanceSessionsToday,
+          closedUncertifiedSessions: m.closedButUncertifiedAttendanceSessionsToday,
+          missingSessions: m.missingAttendanceSessionsToday,
+          learners: m.learners,
+          marked: m.attendanceMarksToday,
+          unmarked: m.missingAttendanceMarksToday,
+          present: m.presentMarksToday,
+          absent: m.absentMarksToday,
+          late: m.lateMarksToday,
+          excused: m.excusedMarksToday,
+          completionPct: m.attendanceCompletionRateToday,
+          presentPct: m.attendanceRateToday,
+          parentAlertsSent: m.parentAlertsSentToday,
+          reason: `${reasons[0]}.`,
+        });
+      }
+
+      return acc;
+    },
+    emptyAttendanceOverview(date)
+  );
+
+  attendance.completionPct = pct(attendance.marked, attendance.learners);
+  attendance.presentPct = pct(attendance.present, attendance.marked);
+  attendance.schoolsNeedingFollowUp = attendance.schoolsNeedingFollowUp
+    .sort((a, b) => {
+      return (
+        b.missingSessions - a.missingSessions ||
+        b.openSessions - a.openSessions ||
+        b.unmarked - a.unmarked ||
+        b.closedUncertifiedSessions - a.closedUncertifiedSessions ||
+        b.absent - a.absent ||
+        a.schoolName.localeCompare(b.schoolName)
+      );
+    })
+    .slice(0, 20);
+
+  return attendance;
 }
 
 function emptyOverview(message = "No schools are currently assigned to this governance scope.") {
   return {
-    schools: [],
+    schools: [] as MappedSchool[],
     circuitBreakdown: [],
     interventionQueue: [],
     riskSummary: {
@@ -967,16 +1159,32 @@ function emptyOverview(message = "No schools are currently assigned to this gove
       highestRiskScore: 0,
       highestRiskSchool: null,
     },
+    sectorSummary: {
+      public: { schools: 0, highRiskSchools: 0, criticalRiskSchools: 0, highestRiskScore: 0 },
+      private: { schools: 0, highRiskSchools: 0, criticalRiskSchools: 0, highestRiskScore: 0 },
+      governanceRule:
+        "Public schools are normal GES governance targets. Private schools must be distinguished and should only be included in official command where explicitly authorized.",
+    },
     totals: {
       schools: 0,
+      publicSchools: 0,
+      privateSchools: 0,
       learners: 0,
       teachers: 0,
       classrooms: 0,
+      operationalClassrooms: 0,
       circuits: 0,
       districts: 0,
     },
+    attendance: emptyAttendanceOverview(),
     signals: {
       attendanceSessionsToday: 0,
+      openAttendanceSessionsToday: 0,
+      closedAttendanceSessionsToday: 0,
+      certifiedAttendanceSessionsToday: 0,
+      closedButUncertifiedAttendanceSessionsToday: 0,
+      missingAttendanceSessionsToday: 0,
+      parentAlertsSentToday: 0,
       attendanceMarksToday: 0,
       presentMarksToday: 0,
       absentMarksToday: 0,
@@ -1022,7 +1230,41 @@ function emptyOverview(message = "No schools are currently assigned to this gove
   };
 }
 
+function overviewCacheKey(scope: GovernanceScope) {
+  const { start } = todayRangeUtcForGhana();
+  return [
+    scope.isSuperAdmin ? "SUPER" : scope.userId,
+    todayDateKey(start),
+    [...scope.zoneIds].sort().join(","),
+    [...scope.tenantIds].sort().join(","),
+  ].join("|");
+}
+
 export async function buildGovernanceOverview(scope: GovernanceScope) {
+  const key = overviewCacheKey(scope);
+  const now = Date.now();
+  const cached = overviewCache.get(key);
+
+  if (cached && cached.expiresAt > now) {
+    if (cached.value) return cached.value;
+    if (cached.promise) return cached.promise;
+  }
+
+  const promise = buildGovernanceOverviewUncached(scope)
+    .then((value) => {
+      overviewCache.set(key, { value, expiresAt: Date.now() + OVERVIEW_CACHE_TTL_MS });
+      return value;
+    })
+    .catch((error) => {
+      overviewCache.delete(key);
+      throw error;
+    });
+
+  overviewCache.set(key, { promise, expiresAt: now + OVERVIEW_CACHE_TTL_MS });
+  return promise;
+}
+
+async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
   const tenantIds = scope.tenantIds;
 
   if (!tenantIds.length) {
@@ -1030,83 +1272,75 @@ export async function buildGovernanceOverview(scope: GovernanceScope) {
   }
 
   const { start, end } = todayRangeUtcForGhana();
+  const dateKey = todayDateKey(start);
 
   const fourteenDaysAgo = new Date();
   fourteenDaysAgo.setUTCDate(fourteenDaysAgo.getUTCDate() - 14);
 
-  const [schools, zones] = await Promise.all([
-    prisma.tenant.findMany({
-      where: {
-        id: { in: tenantIds },
-        status: TenantStatus.ACTIVE,
-      },
-      select: {
-  id: true,
-  name: true,
-  schoolCode: true,
-  status: true,
-  schoolSector: true,
-  zone: {
-          select: {
-            id: true,
-            name: true,
-            zoneType: {
-              select: { name: true, level: true },
-            },
-            parentZone: {
-              select: { id: true, name: true },
-            },
+  const schools = await prisma.tenant.findMany({
+    where: {
+      id: { in: tenantIds },
+      status: TenantStatus.ACTIVE,
+    },
+    select: {
+      id: true,
+      name: true,
+      schoolCode: true,
+      status: true,
+      schoolSector: true,
+      zone: {
+        select: {
+          id: true,
+          name: true,
+          zoneType: {
+            select: { name: true, level: true },
+          },
+          parentZone: {
+            select: { id: true, name: true },
           },
         },
       },
-      orderBy: { name: "asc" },
-    }),
+    },
+    orderBy: { name: "asc" },
+  });
 
-    prisma.adminZone.findMany({
-      where: {
-        id: { in: scope.zoneIds },
-        isActive: true,
+  const zones = await prisma.adminZone.findMany({
+    where: {
+      id: { in: scope.zoneIds },
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      zoneType: {
+        select: { name: true, level: true },
       },
-      select: {
-        id: true,
-        name: true,
-        zoneType: {
-          select: { name: true, level: true },
-        },
-      },
-    }),
-  ]);
+    },
+  });
 
   if (!schools.length) {
     return emptyOverview("This governance scope is valid, but no active schools are attached to it yet.");
   }
 
- const schoolMetricPairs: Array<readonly [string, SchoolMetricSnapshot]> = [];
-
-for (const school of schools) {
-  const metrics = await loadSchoolMetrics({
-    tenantId: school.id,
+  const schoolIds = schools.map((school) => school.id);
+  const metricsByTenantId = await loadSchoolMetricsForTenants({
+    tenantIds: schoolIds,
     todayStart: start,
     todayEnd: end,
     fourteenDaysAgo,
   });
-
-  schoolMetricPairs.push([school.id, metrics] as const);
-}
-
-const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPairs);
 
   const mappedSchools: MappedSchool[] = schools
     .map((school) => {
       const metrics = metricsByTenantId.get(school.id) ?? zeroMetrics();
 
       return {
-  id: school.id,
-  name: school.name,
-  schoolCode: school.schoolCode,
-  status: school.status,
-  schoolSector: school.schoolSector,
-  circuit: school.zone
+        id: school.id,
+        name: school.name,
+        schoolCode: school.schoolCode,
+        status: school.status,
+        schoolSector: school.schoolSector,
+        circuit: school.zone
           ? {
               id: school.zone.id,
               name: school.zone.name,
@@ -1129,52 +1363,55 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
       return a.name.localeCompare(b.name);
     });
 
-  const metricTotals = mappedSchools.reduce(
-    (acc, school) => {
-      acc.learners += school.metrics.learners;
-      acc.teachers += school.metrics.teachers;
-      acc.classrooms += school.metrics.classrooms;
+  const metricTotals = mappedSchools.reduce((acc, school) => {
+    acc.learners += school.metrics.learners;
+    acc.teachers += school.metrics.teachers;
+    acc.classrooms += school.metrics.classrooms;
+    acc.operationalClassrooms += school.metrics.operationalClassrooms;
 
-      acc.attendanceSessionsToday += school.metrics.attendanceSessionsToday;
-      acc.attendanceMarksToday += school.metrics.attendanceMarksToday;
-      acc.presentMarksToday += school.metrics.presentMarksToday;
-      acc.absentMarksToday += school.metrics.absentMarksToday;
-      acc.lateMarksToday += school.metrics.lateMarksToday;
-      acc.excusedMarksToday += school.metrics.excusedMarksToday;
-      acc.missingAttendanceMarksToday += school.metrics.missingAttendanceMarksToday;
+    acc.attendanceSessionsToday += school.metrics.attendanceSessionsToday;
+    acc.openAttendanceSessionsToday += school.metrics.openAttendanceSessionsToday;
+    acc.closedAttendanceSessionsToday += school.metrics.closedAttendanceSessionsToday;
+    acc.certifiedAttendanceSessionsToday += school.metrics.certifiedAttendanceSessionsToday;
+    acc.closedButUncertifiedAttendanceSessionsToday +=
+      school.metrics.closedButUncertifiedAttendanceSessionsToday;
+    acc.missingAttendanceSessionsToday += school.metrics.missingAttendanceSessionsToday;
+    acc.parentAlertsSentToday += school.metrics.parentAlertsSentToday;
+    acc.attendanceMarksToday += school.metrics.attendanceMarksToday;
+    acc.presentMarksToday += school.metrics.presentMarksToday;
+    acc.absentMarksToday += school.metrics.absentMarksToday;
+    acc.lateMarksToday += school.metrics.lateMarksToday;
+    acc.excusedMarksToday += school.metrics.excusedMarksToday;
+    acc.missingAttendanceMarksToday += school.metrics.missingAttendanceMarksToday;
 
-      acc.healthAlertsToday += school.metrics.healthAlertsToday;
-      acc.highTemperatureToday += school.metrics.highTemperatureToday;
-      acc.symptomReportsToday += school.metrics.symptomReportsToday;
+    acc.healthAlertsToday += school.metrics.healthAlertsToday;
+    acc.highTemperatureToday += school.metrics.highTemperatureToday;
+    acc.symptomReportsToday += school.metrics.symptomReportsToday;
 
-      acc.publishedOrLockedAssessments += school.metrics.publishedOrLockedAssessments;
-      acc.assessmentScoresLast14Days += school.metrics.assessmentScoresLast14Days;
-      acc.assessmentItemsTotal += school.metrics.assessmentItemsTotal;
-      acc.assessmentItemsDraft += school.metrics.assessmentItemsDraft;
-      acc.assessmentItemsWithScores += school.metrics.assessmentItemsWithScores;
-      acc.assessmentItemsWithoutScores += school.metrics.assessmentItemsWithoutScores;
-      acc.assessmentItemsWithoutLessonDelivery +=
-        school.metrics.assessmentItemsWithoutLessonDelivery;
-      acc.assessmentItemsWithoutCurriculumUnit +=
-        school.metrics.assessmentItemsWithoutCurriculumUnit;
+    acc.publishedOrLockedAssessments += school.metrics.publishedOrLockedAssessments;
+    acc.assessmentScoresLast14Days += school.metrics.assessmentScoresLast14Days;
+    acc.assessmentItemsTotal += school.metrics.assessmentItemsTotal;
+    acc.assessmentItemsDraft += school.metrics.assessmentItemsDraft;
+    acc.assessmentItemsWithScores += school.metrics.assessmentItemsWithScores;
+    acc.assessmentItemsWithoutScores += school.metrics.assessmentItemsWithoutScores;
+    acc.assessmentItemsWithoutLessonDelivery += school.metrics.assessmentItemsWithoutLessonDelivery;
+    acc.assessmentItemsWithoutCurriculumUnit += school.metrics.assessmentItemsWithoutCurriculumUnit;
 
-      acc.lessonDeliveriesLast14Days += school.metrics.lessonDeliveriesLast14Days;
-      acc.lessonNotesSubmittedLast14Days += school.metrics.lessonNotesSubmittedLast14Days;
-      acc.lessonNotesApprovedLast14Days += school.metrics.lessonNotesApprovedLast14Days;
-      acc.lessonNotesReturnedLast14Days += school.metrics.lessonNotesReturnedLast14Days;
-      acc.lessonNotesPendingReview += school.metrics.lessonNotesPendingReview;
-      acc.approvedLessonNotesLast14Days += school.metrics.approvedLessonNotesLast14Days;
-      acc.deliveredApprovedLessonNotesLast14Days +=
-        school.metrics.deliveredApprovedLessonNotesLast14Days;
-      acc.orphanedLessonNotesLast14Days += school.metrics.orphanedLessonNotesLast14Days;
-      acc.lessonDeliveriesLinkedToApprovedNotesLast14Days +=
-        school.metrics.lessonDeliveriesLinkedToApprovedNotesLast14Days;
-      acc.orphanedDeliveriesLast14Days += school.metrics.orphanedDeliveriesLast14Days;
+    acc.lessonDeliveriesLast14Days += school.metrics.lessonDeliveriesLast14Days;
+    acc.lessonNotesSubmittedLast14Days += school.metrics.lessonNotesSubmittedLast14Days;
+    acc.lessonNotesApprovedLast14Days += school.metrics.lessonNotesApprovedLast14Days;
+    acc.lessonNotesReturnedLast14Days += school.metrics.lessonNotesReturnedLast14Days;
+    acc.lessonNotesPendingReview += school.metrics.lessonNotesPendingReview;
+    acc.approvedLessonNotesLast14Days += school.metrics.approvedLessonNotesLast14Days;
+    acc.deliveredApprovedLessonNotesLast14Days +=
+      school.metrics.deliveredApprovedLessonNotesLast14Days;
+    acc.orphanedLessonNotesLast14Days += school.metrics.orphanedLessonNotesLast14Days;
+    acc.lessonDeliveriesLinkedToApprovedNotesLast14Days +=
+      school.metrics.lessonDeliveriesLinkedToApprovedNotesLast14Days;
+    acc.orphanedDeliveriesLast14Days += school.metrics.orphanedDeliveriesLast14Days;
 
-      return acc;
-    },
-    zeroMetrics()
-  );
+    return acc;
+  }, zeroMetrics());
 
   const riskSummary = mappedSchools.reduce(
     (acc, school) => {
@@ -1210,38 +1447,21 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
     }
   );
 
-    const publicSchools = mappedSchools.filter(
-    (school) => school.schoolSector === SchoolSector.PUBLIC
-  );
-
-  const privateSchools = mappedSchools.filter(
-    (school) => school.schoolSector === SchoolSector.PRIVATE
-  );
+  const publicSchools = mappedSchools.filter((school) => school.schoolSector === SchoolSector.PUBLIC);
+  const privateSchools = mappedSchools.filter((school) => school.schoolSector === SchoolSector.PRIVATE);
 
   const sectorRiskSummary = {
     public: {
       schools: publicSchools.length,
-      highRiskSchools: publicSchools.filter((school) => school.metrics.riskLevel === "HIGH")
-        .length,
-      criticalRiskSchools: publicSchools.filter(
-        (school) => school.metrics.riskLevel === "CRITICAL"
-      ).length,
-      highestRiskScore: publicSchools.reduce(
-        (max, school) => Math.max(max, school.metrics.riskScore),
-        0
-      ),
+      highRiskSchools: publicSchools.filter((school) => school.metrics.riskLevel === "HIGH").length,
+      criticalRiskSchools: publicSchools.filter((school) => school.metrics.riskLevel === "CRITICAL").length,
+      highestRiskScore: publicSchools.reduce((max, school) => Math.max(max, school.metrics.riskScore), 0),
     },
     private: {
       schools: privateSchools.length,
-      highRiskSchools: privateSchools.filter((school) => school.metrics.riskLevel === "HIGH")
-        .length,
-      criticalRiskSchools: privateSchools.filter(
-        (school) => school.metrics.riskLevel === "CRITICAL"
-      ).length,
-      highestRiskScore: privateSchools.reduce(
-        (max, school) => Math.max(max, school.metrics.riskScore),
-        0
-      ),
+      highRiskSchools: privateSchools.filter((school) => school.metrics.riskLevel === "HIGH").length,
+      criticalRiskSchools: privateSchools.filter((school) => school.metrics.riskLevel === "CRITICAL").length,
+      highestRiskScore: privateSchools.reduce((max, school) => Math.max(max, school.metrics.riskScore), 0),
     },
     governanceRule:
       "Public schools are normal GES governance targets. Private schools must be distinguished and should only be included in official command where explicitly authorized.",
@@ -1254,12 +1474,20 @@ const metricsByTenantId = new Map<string, SchoolMetricSnapshot>(schoolMetricPair
       circuitName: string;
       districtId: string | null;
       districtName: string | null;
-schools: number;
-publicSchools: number;
-privateSchools: number;
-learners: number;
-teachers: number;
+      schools: number;
+      publicSchools: number;
+      privateSchools: number;
+      learners: number;
+      teachers: number;
       classrooms: number;
+      operationalClassrooms: number;
+      attendanceSessionsToday: number;
+      openAttendanceSessionsToday: number;
+      closedAttendanceSessionsToday: number;
+      certifiedAttendanceSessionsToday: number;
+      closedButUncertifiedAttendanceSessionsToday: number;
+      missingAttendanceSessionsToday: number;
+      parentAlertsSentToday: number;
       attendanceMarksToday: number;
       presentMarksToday: number;
       absentMarksToday: number;
@@ -1290,15 +1518,15 @@ teachers: number;
       criticalRiskSchools: number;
       highestRiskScore: number;
       schoolsDrivingRisk: Array<{
-  schoolId: string;
-  schoolName: string;
-  schoolCode: string | null;
-  schoolSector: SchoolSector;
-  riskScore: number;
-  riskLevel: RiskLevel;
-  reasons: string[];
-  recommendedActions: string[];
-}>;
+        schoolId: string;
+        schoolName: string;
+        schoolCode: string | null;
+        schoolSector: SchoolSector;
+        riskScore: number;
+        riskLevel: RiskLevel;
+        reasons: string[];
+        recommendedActions: string[];
+      }>;
       directorRecommendedActions: string[];
     }
   >();
@@ -1314,11 +1542,19 @@ teachers: number;
         districtId: school.district?.id ?? null,
         districtName: school.district?.name ?? null,
         schools: 0,
-publicSchools: 0,
-privateSchools: 0,
-learners: 0,
-teachers: 0,
+        publicSchools: 0,
+        privateSchools: 0,
+        learners: 0,
+        teachers: 0,
         classrooms: 0,
+        operationalClassrooms: 0,
+        attendanceSessionsToday: 0,
+        openAttendanceSessionsToday: 0,
+        closedAttendanceSessionsToday: 0,
+        certifiedAttendanceSessionsToday: 0,
+        closedButUncertifiedAttendanceSessionsToday: 0,
+        missingAttendanceSessionsToday: 0,
+        parentAlertsSentToday: 0,
         attendanceMarksToday: 0,
         presentMarksToday: 0,
         absentMarksToday: 0,
@@ -1352,12 +1588,21 @@ teachers: 0,
         directorRecommendedActions: [],
       };
 
-existing.schools += 1;
-if (school.schoolSector === SchoolSector.PUBLIC) existing.publicSchools += 1;
-if (school.schoolSector === SchoolSector.PRIVATE) existing.privateSchools += 1;
-existing.learners += school.metrics.learners;
+    existing.schools += 1;
+    if (school.schoolSector === SchoolSector.PUBLIC) existing.publicSchools += 1;
+    if (school.schoolSector === SchoolSector.PRIVATE) existing.privateSchools += 1;
+    existing.learners += school.metrics.learners;
     existing.teachers += school.metrics.teachers;
     existing.classrooms += school.metrics.classrooms;
+    existing.operationalClassrooms += school.metrics.operationalClassrooms;
+    existing.attendanceSessionsToday += school.metrics.attendanceSessionsToday;
+    existing.openAttendanceSessionsToday += school.metrics.openAttendanceSessionsToday;
+    existing.closedAttendanceSessionsToday += school.metrics.closedAttendanceSessionsToday;
+    existing.certifiedAttendanceSessionsToday += school.metrics.certifiedAttendanceSessionsToday;
+    existing.closedButUncertifiedAttendanceSessionsToday +=
+      school.metrics.closedButUncertifiedAttendanceSessionsToday;
+    existing.missingAttendanceSessionsToday += school.metrics.missingAttendanceSessionsToday;
+    existing.parentAlertsSentToday += school.metrics.parentAlertsSentToday;
     existing.attendanceMarksToday += school.metrics.attendanceMarksToday;
     existing.presentMarksToday += school.metrics.presentMarksToday;
     existing.absentMarksToday += school.metrics.absentMarksToday;
@@ -1370,10 +1615,8 @@ existing.learners += school.metrics.learners;
     existing.assessmentItemsDraft += school.metrics.assessmentItemsDraft;
     existing.assessmentItemsWithScores += school.metrics.assessmentItemsWithScores;
     existing.assessmentItemsWithoutScores += school.metrics.assessmentItemsWithoutScores;
-    existing.assessmentItemsWithoutLessonDelivery +=
-      school.metrics.assessmentItemsWithoutLessonDelivery;
-    existing.assessmentItemsWithoutCurriculumUnit +=
-      school.metrics.assessmentItemsWithoutCurriculumUnit;
+    existing.assessmentItemsWithoutLessonDelivery += school.metrics.assessmentItemsWithoutLessonDelivery;
+    existing.assessmentItemsWithoutCurriculumUnit += school.metrics.assessmentItemsWithoutCurriculumUnit;
     existing.lessonDeliveriesLast14Days += school.metrics.lessonDeliveriesLast14Days;
     existing.lessonNotesPendingReview += school.metrics.lessonNotesPendingReview;
     existing.approvedLessonNotesLast14Days += school.metrics.approvedLessonNotesLast14Days;
@@ -1385,16 +1628,16 @@ existing.learners += school.metrics.learners;
     existing.orphanedDeliveriesLast14Days += school.metrics.orphanedDeliveriesLast14Days;
 
     if (school.metrics.riskLevel !== "LOW") {
-existing.schoolsDrivingRisk.push({
-  schoolId: school.id,
-  schoolName: school.name,
-  schoolCode: school.schoolCode,
-  schoolSector: school.schoolSector,
-  riskScore: school.metrics.riskScore,
-  riskLevel: school.metrics.riskLevel,
-  reasons: school.metrics.riskReasons,
-  recommendedActions: school.metrics.recommendedActions,
-});
+      existing.schoolsDrivingRisk.push({
+        schoolId: school.id,
+        schoolName: school.name,
+        schoolCode: school.schoolCode,
+        schoolSector: school.schoolSector,
+        riskScore: school.metrics.riskScore,
+        riskLevel: school.metrics.riskLevel,
+        reasons: school.metrics.riskReasons,
+        recommendedActions: school.metrics.recommendedActions,
+      });
     }
 
     if (school.metrics.riskLevel === "HIGH") existing.highRiskSchools += 1;
@@ -1449,11 +1692,11 @@ existing.schoolsDrivingRisk.push({
     .filter((school) => school.metrics.riskLevel !== "LOW")
     .slice(0, 10)
     .map((school) => ({
-  schoolId: school.id,
-  schoolName: school.name,
-  schoolCode: school.schoolCode,
-  schoolSector: school.schoolSector,
-  circuitName: school.circuit?.name ?? "Unassigned Circuit",
+      schoolId: school.id,
+      schoolName: school.name,
+      schoolCode: school.schoolCode,
+      schoolSector: school.schoolSector,
+      circuitName: school.circuit?.name ?? "Unassigned Circuit",
       districtName: school.district?.name ?? null,
       riskScore: school.metrics.riskScore,
       riskLevel: school.metrics.riskLevel,
@@ -1469,10 +1712,8 @@ existing.schoolsDrivingRisk.push({
         assessmentItemsTotal: school.metrics.assessmentItemsTotal,
         assessmentItemsDraft: school.metrics.assessmentItemsDraft,
         assessmentItemsWithoutScores: school.metrics.assessmentItemsWithoutScores,
-        assessmentItemsWithoutLessonDelivery:
-          school.metrics.assessmentItemsWithoutLessonDelivery,
-        assessmentItemsWithoutCurriculumUnit:
-          school.metrics.assessmentItemsWithoutCurriculumUnit,
+        assessmentItemsWithoutLessonDelivery: school.metrics.assessmentItemsWithoutLessonDelivery,
+        assessmentItemsWithoutCurriculumUnit: school.metrics.assessmentItemsWithoutCurriculumUnit,
         assessmentCompletionRate: school.metrics.assessmentCompletionRate,
         assessmentLinkCoverageRate: school.metrics.assessmentLinkCoverageRate,
         orphanedLessonNotesLast14Days: school.metrics.orphanedLessonNotesLast14Days,
@@ -1483,6 +1724,7 @@ existing.schoolsDrivingRisk.push({
 
   const circuitCount = new Set(mappedSchools.map((s) => s.circuit?.id).filter(Boolean)).size;
   const districtCount = new Set(mappedSchools.map((s) => s.district?.id).filter(Boolean)).size;
+  const attendance = buildAttendanceOverview(mappedSchools, dateKey);
 
   const emptyStates: string[] = [];
 
@@ -1530,24 +1772,33 @@ existing.schoolsDrivingRisk.push({
     emptyStates.push("No high-priority intervention school detected from current signals.");
   }
 
- return {
-  schools: mappedSchools,
-  circuitBreakdown,
-  interventionQueue,
-  riskSummary,
-  sectorSummary: sectorRiskSummary,
-  totals: {
-  schools: mappedSchools.length,
-  publicSchools: publicSchools.length,
-  privateSchools: privateSchools.length,
-  learners: metricTotals.learners,
+  return {
+    schools: mappedSchools,
+    circuitBreakdown,
+    interventionQueue,
+    riskSummary,
+    sectorSummary: sectorRiskSummary,
+    totals: {
+      schools: mappedSchools.length,
+      publicSchools: publicSchools.length,
+      privateSchools: privateSchools.length,
+      learners: metricTotals.learners,
       teachers: metricTotals.teachers,
       classrooms: metricTotals.classrooms,
+      operationalClassrooms: metricTotals.operationalClassrooms,
       circuits: circuitCount || zones.filter((z) => z.zoneType.level === 1).length,
       districts: districtCount || zones.filter((z) => z.zoneType.level === 2).length,
     },
+    attendance,
     signals: {
       attendanceSessionsToday: metricTotals.attendanceSessionsToday,
+      openAttendanceSessionsToday: metricTotals.openAttendanceSessionsToday,
+      closedAttendanceSessionsToday: metricTotals.closedAttendanceSessionsToday,
+      certifiedAttendanceSessionsToday: metricTotals.certifiedAttendanceSessionsToday,
+      closedButUncertifiedAttendanceSessionsToday:
+        metricTotals.closedButUncertifiedAttendanceSessionsToday,
+      missingAttendanceSessionsToday: metricTotals.missingAttendanceSessionsToday,
+      parentAlertsSentToday: metricTotals.parentAlertsSentToday,
       attendanceMarksToday: metricTotals.attendanceMarksToday,
       presentMarksToday: metricTotals.presentMarksToday,
       absentMarksToday: metricTotals.absentMarksToday,
@@ -1567,17 +1818,11 @@ existing.schoolsDrivingRisk.push({
       assessmentItemsDraft: metricTotals.assessmentItemsDraft,
       assessmentItemsWithScores: metricTotals.assessmentItemsWithScores,
       assessmentItemsWithoutScores: metricTotals.assessmentItemsWithoutScores,
-      assessmentItemsWithoutLessonDelivery:
-        metricTotals.assessmentItemsWithoutLessonDelivery,
-      assessmentItemsWithoutCurriculumUnit:
-        metricTotals.assessmentItemsWithoutCurriculumUnit,
-      assessmentCompletionRate: pct(
-        metricTotals.assessmentItemsWithScores,
-        metricTotals.assessmentItemsTotal
-      ),
+      assessmentItemsWithoutLessonDelivery: metricTotals.assessmentItemsWithoutLessonDelivery,
+      assessmentItemsWithoutCurriculumUnit: metricTotals.assessmentItemsWithoutCurriculumUnit,
+      assessmentCompletionRate: pct(metricTotals.assessmentItemsWithScores, metricTotals.assessmentItemsTotal),
       assessmentLinkCoverageRate: pct(
-        metricTotals.assessmentItemsTotal -
-          metricTotals.assessmentItemsWithoutLessonDelivery,
+        metricTotals.assessmentItemsTotal - metricTotals.assessmentItemsWithoutLessonDelivery,
         metricTotals.assessmentItemsTotal
       ),
 
@@ -1587,8 +1832,7 @@ existing.schoolsDrivingRisk.push({
       lessonNotesReturnedLast14Days: metricTotals.lessonNotesReturnedLast14Days,
       lessonNotesPendingReview: metricTotals.lessonNotesPendingReview,
       approvedLessonNotesLast14Days: metricTotals.approvedLessonNotesLast14Days,
-      deliveredApprovedLessonNotesLast14Days:
-        metricTotals.deliveredApprovedLessonNotesLast14Days,
+      deliveredApprovedLessonNotesLast14Days: metricTotals.deliveredApprovedLessonNotesLast14Days,
       orphanedLessonNotesLast14Days: metricTotals.orphanedLessonNotesLast14Days,
       lessonDeliveriesLinkedToApprovedNotesLast14Days:
         metricTotals.lessonDeliveriesLinkedToApprovedNotesLast14Days,
