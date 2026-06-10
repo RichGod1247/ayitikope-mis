@@ -2,7 +2,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BrowserQRCodeReader, type IScannerControls } from "@zxing/browser";
+import type { IScannerControls } from "@zxing/browser";
+
+type BrowserQRCodeReaderType =
+  typeof import("@zxing/browser").BrowserQRCodeReader;
 
 function cleanPayload(value: unknown) {
   return String(value ?? "").trim();
@@ -30,10 +33,10 @@ export default function QrCameraScanner({
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
-  const readerRef = useRef<BrowserQRCodeReader | null>(null);
 
   const disabledRef = useRef(disabled);
   const busyRef = useRef(Boolean(scanBusy));
+  const submittingRef = useRef(false);
   const onPayloadRef = useRef(onPayload);
 
   const lastPayloadRef = useRef("");
@@ -64,7 +67,6 @@ export default function QrCameraScanner({
     }
 
     controlsRef.current = null;
-    readerRef.current = null;
 
     const video = videoRef.current;
     if (video) {
@@ -72,9 +74,15 @@ export default function QrCameraScanner({
       video.srcObject = null;
     }
 
+    submittingRef.current = false;
     setActive(false);
     setStarting(false);
   }, []);
+
+  async function loadScanner(): Promise<BrowserQRCodeReaderType> {
+    const mod = await import("@zxing/browser");
+    return mod.BrowserQRCodeReader;
+  }
 
   async function startCamera() {
     setErr(null);
@@ -101,22 +109,30 @@ export default function QrCameraScanner({
     setStarting(true);
 
     try {
-      const reader = new BrowserQRCodeReader();
+      setMsg("Loading camera scanner…");
 
-      readerRef.current = reader;
+      const BrowserQRCodeReader = await loadScanner();
+      const reader = new BrowserQRCodeReader();
 
       const controls = await reader.decodeFromConstraints(
         {
           audio: false,
           video: {
             facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            width: { ideal: 960 },
+            height: { ideal: 540 },
           },
         },
         video,
         async (result) => {
-          if (!result || disabledRef.current || busyRef.current) return;
+          if (
+            !result ||
+            disabledRef.current ||
+            busyRef.current ||
+            submittingRef.current
+          ) {
+            return;
+          }
 
           const raw = cleanPayload(result.getText());
           if (!raw) return;
@@ -138,12 +154,17 @@ export default function QrCameraScanner({
             return;
           }
 
-          setMsg("EduLife badge detected. Sending scan…");
+          submittingRef.current = true;
+          setMsg("EduLife badge detected. Marking attendance…");
 
           try {
             await onPayloadRef.current(raw);
           } catch (e) {
             setErr(errorMessage(e));
+          } finally {
+            window.setTimeout(() => {
+              submittingRef.current = false;
+            }, 900);
           }
         },
       );
@@ -156,9 +177,7 @@ export default function QrCameraScanner({
     } catch (e) {
       stopCamera();
       setErr(
-        `${errorMessage(
-          e,
-        )} If this is a phone, open the deployed HTTPS site, not localhost.`,
+        `${errorMessage(e)} If this is a phone, open the deployed HTTPS site, not localhost.`,
       );
     } finally {
       setStarting(false);
