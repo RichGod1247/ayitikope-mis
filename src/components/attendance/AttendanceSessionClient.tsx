@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import QrCameraScanner from "@/components/attendance/QrCameraScanner";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
@@ -144,14 +145,28 @@ function trimOrNull(v: unknown): string | null {
 }
 
 function fullName(s: { firstName: string; lastName: string; name?: string }) {
-  return s.name || [s.firstName, s.lastName].filter(Boolean).join(" ").trim() || "Unnamed learner";
+  return (
+    s.name ||
+    [s.firstName, s.lastName].filter(Boolean).join(" ").trim() ||
+    "Unnamed learner"
+  );
 }
 
-function isRealAttendanceStatus(status: AttendanceDisplayStatus): status is AttendanceStatus {
-  return status === "PRESENT" || status === "ABSENT" || status === "LATE" || status === "EXCUSED";
+function isRealAttendanceStatus(
+  status: AttendanceDisplayStatus,
+): status is AttendanceStatus {
+  return (
+    status === "PRESENT" ||
+    status === "ABSENT" ||
+    status === "LATE" ||
+    status === "EXCUSED"
+  );
 }
 
-function Banner(props: { tone: "ok" | "error" | "info" | "warn"; children: React.ReactNode }) {
+function Banner(props: {
+  tone: "ok" | "error" | "info" | "warn";
+  children: React.ReactNode;
+}) {
   const cls =
     props.tone === "ok"
       ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
@@ -161,17 +176,30 @@ function Banner(props: { tone: "ok" | "error" | "info" | "warn"; children: React
           ? "border-amber-300/20 bg-amber-400/12 text-amber-100"
           : "border-white/10 bg-white/5 text-[#D7DCE5]";
 
-  return <div className={`rounded-2xl border px-4 py-3 text-sm ${cls}`}>{props.children}</div>;
+  return (
+    <div className={`rounded-2xl border px-4 py-3 text-sm ${cls}`}>
+      {props.children}
+    </div>
+  );
 }
 
-function CountChip(props: { label: string; value: number; tone?: "neutral" | "good" | "warn" | "bad" }) {
+function CountChip(props: {
+  label: string;
+  value: number;
+  tone?: "neutral" | "good" | "warn" | "bad";
+}) {
   let cls = "border-white/10 bg-white/5 text-[#D7DCE5]";
-  if (props.tone === "good") cls = "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
-  if (props.tone === "warn") cls = "border-amber-300/20 bg-amber-400/12 text-amber-100";
-  if (props.tone === "bad") cls = "border-rose-300/20 bg-rose-400/12 text-rose-100";
+  if (props.tone === "good")
+    cls = "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+  if (props.tone === "warn")
+    cls = "border-amber-300/20 bg-amber-400/12 text-amber-100";
+  if (props.tone === "bad")
+    cls = "border-rose-300/20 bg-rose-400/12 text-rose-100";
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] ${cls}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] ${cls}`}
+    >
       <span>{props.label}:</span>
       <span className="font-semibold">{props.value}</span>
     </span>
@@ -179,11 +207,15 @@ function CountChip(props: { label: string; value: number; tone?: "neutral" | "go
 }
 
 function statusButtonClass(active: boolean, status: AttendanceStatus) {
-  if (!active) return "border-white/10 bg-white/5 text-[#D7DCE5] hover:bg-white/10";
+  if (!active)
+    return "border-white/10 bg-white/5 text-[#D7DCE5] hover:bg-white/10";
 
-  if (status === "PRESENT") return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
-  if (status === "LATE") return "border-amber-300/20 bg-amber-400/12 text-amber-100";
-  if (status === "ABSENT") return "border-rose-300/20 bg-rose-400/12 text-rose-100";
+  if (status === "PRESENT")
+    return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+  if (status === "LATE")
+    return "border-amber-300/20 bg-amber-400/12 text-amber-100";
+  if (status === "ABSENT")
+    return "border-rose-300/20 bg-rose-400/12 text-rose-100";
 
   return "border-white/10 bg-white/10 text-[#F7F4ED]";
 }
@@ -214,9 +246,13 @@ export default function AttendanceSessionClient(props: {
   const [err, setErr] = useState<string | null>(null);
 
   const [session, setSession] = useState<SessionDTO | null>(null);
-  const [classLabel, setClassLabel] = useState<string>(props.initialClassName || "Class");
+  const [classLabel, setClassLabel] = useState<string>(
+    props.initialClassName || "Class",
+  );
   const [students, setStudents] = useState<StudentRowDTO[]>([]);
-  const [brand, setBrand] = useState<string>((props.initialBrand || "EDULIFEOS").trim() || "EDULIFEOS");
+  const [brand, setBrand] = useState<string>(
+    (props.initialBrand || "EDULIFEOS").trim() || "EDULIFEOS",
+  );
 
   const [marks, setMarks] = useState<Record<string, MarkState>>({});
   const baselineMarksRef = useRef<Record<string, MarkState>>({});
@@ -248,9 +284,12 @@ export default function AttendanceSessionClient(props: {
     setErr(null);
 
     try {
-      const r = await fetch(`/api/teacher/attendance/sessions/get?sessionId=${encodeURIComponent(sessionId)}`, {
-        cache: "no-store",
-      });
+      const r = await fetch(
+        `/api/teacher/attendance/sessions/get?sessionId=${encodeURIComponent(sessionId)}`,
+        {
+          cache: "no-store",
+        },
+      );
 
       const j: GetResponse = await r.json().catch(() => ({
         ok: false,
@@ -285,7 +324,9 @@ export default function AttendanceSessionClient(props: {
       setQrMsg(null);
       setQrErr(null);
     } catch (e: unknown) {
-      const msg = safeText((e as { message?: unknown })?.message) || "Failed to load session.";
+      const msg =
+        safeText((e as { message?: unknown })?.message) ||
+        "Failed to load session.";
       setErr(msg);
     } finally {
       setLoading(false);
@@ -336,7 +377,8 @@ export default function AttendanceSessionClient(props: {
   }, [students, marks]);
 
   function markRemainingPresent() {
-    if (locked || loading || students.length === 0 || counts.unmarked === 0) return;
+    if (locked || loading || students.length === 0 || counts.unmarked === 0)
+      return;
 
     setSaveErr(null);
     setSaveMsg(null);
@@ -365,13 +407,19 @@ export default function AttendanceSessionClient(props: {
   }
 
   const alertPreview = useMemo(() => {
-    const absentees = students.filter((student) => marks[student.id]?.status === "ABSENT");
-    const eligible = absentees.filter(
-      (student) => student.guardianSmsOptIn && !!(student.guardianPhone || "").trim()
+    const absentees = students.filter(
+      (student) => marks[student.id]?.status === "ABSENT",
     );
-    const skippedNoOptIn = absentees.filter((student) => !student.guardianSmsOptIn).length;
+    const eligible = absentees.filter(
+      (student) =>
+        student.guardianSmsOptIn && !!(student.guardianPhone || "").trim(),
+    );
+    const skippedNoOptIn = absentees.filter(
+      (student) => !student.guardianSmsOptIn,
+    ).length;
     const skippedNoPhone = absentees.filter(
-      (student) => student.guardianSmsOptIn && !(student.guardianPhone || "").trim()
+      (student) =>
+        student.guardianSmsOptIn && !(student.guardianPhone || "").trim(),
     ).length;
 
     return {
@@ -407,7 +455,8 @@ export default function AttendanceSessionClient(props: {
     !saveErr &&
     counts.unmarked === 0;
 
-  const canReopen = !!session && !loading && !mutating && !saving && !isCertified && isClosed;
+  const canReopen =
+    !!session && !loading && !mutating && !saving && !isCertified && isClosed;
 
   const canNotify =
     !!session &&
@@ -420,23 +469,18 @@ export default function AttendanceSessionClient(props: {
     !saveErr &&
     alertPreview.total > 0;
 
-  const canScanQr =
-    !!session &&
-    !loading &&
-    !locked &&
-    !dirty &&
-    !saveErr &&
-    !saving &&
-    !mutating &&
-    !qrBusy &&
-    qrToken.trim().length >= 16;
+  const qrBaseBlockReason = qrBaseDisabledReason();
+  const canUseQrCamera = !!session && !qrBaseBlockReason;
+
+  const canScanQr = canUseQrCamera && !qrBusy && qrToken.trim().length >= 16;
 
   function closeDisabledReason(): string | null {
     if (!session) return "Session not loaded.";
     if (locked) return "Session is already locked.";
     if (dirty) return "Save changes first.";
     if (saveErr) return "Last save failed.";
-    if (counts.unmarked > 0) return `${counts.unmarked} learner(s) are still unmarked.`;
+    if (counts.unmarked > 0)
+      return `${counts.unmarked} learner(s) are still unmarked.`;
     if (saving) return "Saving…";
     if (mutating) return "Processing…";
     return null;
@@ -445,7 +489,8 @@ export default function AttendanceSessionClient(props: {
   function notifyDisabledReason(): string | null {
     if (!session) return "Session not loaded.";
     if (loading) return "Loading session…";
-    if (!(isClosed || isCertified)) return "Close or certify the session first.";
+    if (!(isClosed || isCertified))
+      return "Close or certify the session first.";
     if (dirty) return "You have unsaved changes. Save first.";
     if (saveErr) return "Last save failed. Fix save first.";
     if (alertPreview.total === 0) return "No absent learners to notify.";
@@ -455,7 +500,7 @@ export default function AttendanceSessionClient(props: {
     return null;
   }
 
-  function qrDisabledReason(): string | null {
+  function qrBaseDisabledReason(): string | null {
     if (!session) return "Session not loaded.";
     if (loading) return "Loading session…";
     if (locked) return "Closed or certified sessions cannot accept QR scans.";
@@ -463,8 +508,15 @@ export default function AttendanceSessionClient(props: {
     if (saveErr) return "Last save failed. Fix save first.";
     if (saving) return "Saving…";
     if (mutating) return "Processing…";
+    return null;
+  }
+
+  function qrDisabledReason(): string | null {
+    const baseReason = qrBaseDisabledReason();
+    if (baseReason) return baseReason;
     if (qrBusy) return "Scanning…";
-    if (qrToken.trim().length < 16) return "Scan or paste a valid badge QR payload.";
+    if (qrToken.trim().length < 16)
+      return "Scan or paste a valid badge QR payload.";
     return null;
   }
 
@@ -484,12 +536,20 @@ export default function AttendanceSessionClient(props: {
           status: marks[student.id]?.status ?? "UNMARKED",
           note: trimOrNull(marks[student.id]?.note),
         }))
-        .filter((item): item is { studentId: string; status: AttendanceStatus; note: string | null } =>
-          isRealAttendanceStatus(item.status)
+        .filter(
+          (
+            item,
+          ): item is {
+            studentId: string;
+            status: AttendanceStatus;
+            note: string | null;
+          } => isRealAttendanceStatus(item.status),
         );
 
       if (!markItems.length) {
-        throw new Error("No learners have been marked yet. Mark at least one learner before saving.");
+        throw new Error(
+          "No learners have been marked yet. Mark at least one learner before saving.",
+        );
       }
 
       const r = await fetch("/api/teacher/attendance/marks/upsert", {
@@ -510,13 +570,14 @@ export default function AttendanceSessionClient(props: {
       setSaveMsg(
         `Saved ${j.count} mark(s). Created: ${j.createdCount ?? 0}, updated: ${
           j.updatedCount ?? 0
-        }, unchanged: ${j.unchangedCount ?? 0}.`
+        }, unchanged: ${j.unchangedCount ?? 0}.`,
       );
 
       await load();
       return true;
     } catch (e: unknown) {
-      const msg = safeText((e as { message?: unknown })?.message) || "Save failed.";
+      const msg =
+        safeText((e as { message?: unknown })?.message) || "Save failed.";
       setSaveErr(msg);
       setSaveMsg(null);
       return false;
@@ -525,7 +586,9 @@ export default function AttendanceSessionClient(props: {
     }
   }
 
-  async function mutate(action: "close" | "certify" | "reopen"): Promise<boolean> {
+  async function mutate(
+    action: "close" | "certify" | "reopen",
+  ): Promise<boolean> {
     if (!session) return false;
 
     setMutating(true);
@@ -534,7 +597,9 @@ export default function AttendanceSessionClient(props: {
 
     try {
       if ((action === "close" || action === "certify") && dirty) {
-        throw new Error("You have unsaved changes. Save before closing/certifying.");
+        throw new Error(
+          "You have unsaved changes. Save before closing/certifying.",
+        );
       }
 
       if ((action === "close" || action === "certify") && saveErr) {
@@ -545,10 +610,14 @@ export default function AttendanceSessionClient(props: {
         throw new Error(`${counts.unmarked} learner(s) are still unmarked.`);
       }
 
-      let payload: { sessionId: string; reason?: string } = { sessionId: session.id };
+      let payload: { sessionId: string; reason?: string } = {
+        sessionId: session.id,
+      };
 
       if (action === "reopen") {
-        const reason = window.prompt("Why are you reopening this attendance session?");
+        const reason = window.prompt(
+          "Why are you reopening this attendance session?",
+        );
         const cleanReason = reason?.trim() ?? "";
 
         if (!cleanReason) {
@@ -577,13 +646,19 @@ export default function AttendanceSessionClient(props: {
 
       setSession(j.session);
       setMutMsg(
-        action === "close" ? "Session closed." : action === "certify" ? "Session certified." : "Session reopened."
+        action === "close"
+          ? "Session closed."
+          : action === "certify"
+            ? "Session certified."
+            : "Session reopened.",
       );
 
       await load();
       return true;
     } catch (e: unknown) {
-      setMutErr(safeText((e as { message?: unknown })?.message) || "Action failed.");
+      setMutErr(
+        safeText((e as { message?: unknown })?.message) || "Action failed.",
+      );
       return false;
     } finally {
       setMutating(false);
@@ -604,7 +679,8 @@ export default function AttendanceSessionClient(props: {
 
       if (dirty) throw new Error("You have unsaved changes. Save first.");
       if (saveErr) throw new Error("Last save failed. Fix save first.");
-      if (alertPreview.total === 0) throw new Error("No absent learners to notify.");
+      if (alertPreview.total === 0)
+        throw new Error("No absent learners to notify.");
 
       const sender = (brand || "EDULIFEOS").trim() || "EDULIFEOS";
 
@@ -626,7 +702,9 @@ export default function AttendanceSessionClient(props: {
       await load();
       return true;
     } catch (e: unknown) {
-      setNotifyErr(safeText((e as { message?: unknown })?.message) || "Notify failed.");
+      setNotifyErr(
+        safeText((e as { message?: unknown })?.message) || "Notify failed.",
+      );
       return false;
     } finally {
       setNotifying(false);
@@ -647,7 +725,9 @@ export default function AttendanceSessionClient(props: {
     }
 
     if (counts.unmarked > 0) {
-      setMutErr(`${counts.unmarked} learner(s) are still unmarked. Mark all learners before closing.`);
+      setMutErr(
+        `${counts.unmarked} learner(s) are still unmarked. Mark all learners before closing.`,
+      );
       return;
     }
 
@@ -665,21 +745,27 @@ export default function AttendanceSessionClient(props: {
     await notifyParents();
   }
 
-  async function scanQrBadge() {
+  async function submitQrPayload(rawPayload: string) {
     if (!session) return;
+
+    const token = rawPayload.trim();
 
     setQrBusy(true);
     setQrMsg(null);
     setQrErr(null);
 
     try {
-      const reason = qrDisabledReason();
-      if (reason) throw new Error(reason);
+      const baseReason = qrBaseDisabledReason();
+      if (baseReason) throw new Error(baseReason);
+
+      if (token.length < 16) {
+        throw new Error("Scan or paste a valid badge QR payload.");
+      }
 
       const r = await fetch("/api/teacher/attendance/qr/scan", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: session.id, token: qrToken.trim() }),
+        body: JSON.stringify({ sessionId: session.id, token }),
       });
 
       const j: QrScanResponse = await r.json().catch(() => ({
@@ -689,20 +775,34 @@ export default function AttendanceSessionClient(props: {
 
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
 
-      setQrMsg(j.message || `${j.studentName || "Learner"} scanned successfully.`);
+      const successMessage =
+        j.message || `${j.studentName || "Learner"} scanned successfully.`;
+
       setQrToken("");
       await load();
+
+      // load() clears QR banners, so set the final message after refresh.
+      setQrMsg(successMessage);
     } catch (e: unknown) {
-      setQrErr(safeText((e as { message?: unknown })?.message) || "QR scan failed.");
+      setQrErr(
+        safeText((e as { message?: unknown })?.message) || "QR scan failed.",
+      );
     } finally {
       setQrBusy(false);
     }
   }
 
+  async function scanQrBadge() {
+    await submitQrPayload(qrToken);
+  }
+
   function statusPill() {
-    const base = "inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold";
-    if (isCertified) return `${base} border-indigo-300/20 bg-indigo-400/12 text-indigo-100`;
-    if (isClosed) return `${base} border-rose-300/20 bg-rose-400/12 text-rose-100`;
+    const base =
+      "inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold";
+    if (isCertified)
+      return `${base} border-indigo-300/20 bg-indigo-400/12 text-indigo-100`;
+    if (isClosed)
+      return `${base} border-rose-300/20 bg-rose-400/12 text-rose-100`;
     return `${base} border-amber-300/20 bg-amber-400/12 text-amber-100`;
   }
 
@@ -718,23 +818,40 @@ export default function AttendanceSessionClient(props: {
             </div>
 
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED]">Attendance Session</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-[#F7F4ED]">
+                Attendance Session
+              </h1>
               <p className="mt-1 text-sm text-[#C9CDD6]">
-                Mark every learner. Save changes. Close only when no learner remains unmarked.
+                Mark every learner. Save changes. Close only when no learner
+                remains unmarked.
               </p>
             </div>
 
             {session ? (
               <p className="text-sm text-[#D7DCE5]">
-                <span className="font-semibold text-[#F7F4ED]">{classLabel}</span> • {session.date}{" "}
-                <span className={statusPill()}>{isCertified ? "CERTIFIED" : isClosed ? "CLOSED" : "OPEN"}</span>
-                {dirty ? <span className="ml-2 text-[11px] text-amber-200">• Unsaved changes</span> : null}
-                {lastSaveAt ? <span className="ml-2 text-[11px] text-[#8F98A8]">• Last save: {lastSaveAt}</span> : null}
+                <span className="font-semibold text-[#F7F4ED]">
+                  {classLabel}
+                </span>{" "}
+                • {session.date}{" "}
+                <span className={statusPill()}>
+                  {isCertified ? "CERTIFIED" : isClosed ? "CLOSED" : "OPEN"}
+                </span>
+                {dirty ? (
+                  <span className="ml-2 text-[11px] text-amber-200">
+                    • Unsaved changes
+                  </span>
+                ) : null}
+                {lastSaveAt ? (
+                  <span className="ml-2 text-[11px] text-[#8F98A8]">
+                    • Last save: {lastSaveAt}
+                  </span>
+                ) : null}
               </p>
             ) : null}
 
             <p className="text-[11px] font-mono text-[#8F98A8]">
-              Session: {sessionId} • Teacher: {teacherUserId.slice(0, 8)}… • Tenant: {tenantId.slice(0, 8)}…
+              Session: {sessionId} • Teacher: {teacherUserId.slice(0, 8)}… •
+              Tenant: {tenantId.slice(0, 8)}…
             </p>
           </div>
 
@@ -757,14 +874,22 @@ export default function AttendanceSessionClient(props: {
             <button
               type="button"
               onClick={markRemainingPresent}
-              disabled={locked || loading || saving || mutating || counts.unmarked === 0}
+              disabled={
+                locked || loading || saving || mutating || counts.unmarked === 0
+              }
               className={ghostBtn}
               title="Marks only UNMARKED learners as PRESENT. Existing ABSENT, LATE, and EXCUSED marks are not changed."
             >
-              Mark remaining PRESENT{counts.unmarked > 0 ? ` (${counts.unmarked})` : ""}
+              Mark remaining PRESENT
+              {counts.unmarked > 0 ? ` (${counts.unmarked})` : ""}
             </button>
 
-            <button type="button" onClick={() => void saveAll()} disabled={!canSave} className={primaryBtn}>
+            <button
+              type="button"
+              onClick={() => void saveAll()}
+              disabled={!canSave}
+              className={primaryBtn}
+            >
               {saving ? "Saving…" : "Save"}
             </button>
 
@@ -801,7 +926,11 @@ export default function AttendanceSessionClient(props: {
               onClick={() => void mutate("reopen")}
               disabled={!canReopen}
               className={ghostBtn}
-              title={isCertified ? "Cannot reopen a certified session." : "Reopen with reason"}
+              title={
+                isCertified
+                  ? "Cannot reopen a certified session."
+                  : "Reopen with reason"
+              }
             >
               Reopen
             </button>
@@ -809,7 +938,15 @@ export default function AttendanceSessionClient(props: {
             <button
               type="button"
               onClick={() => void closeThenNotify()}
-              disabled={loading || !session || saving || mutating || notifying || isCertified || isClosed}
+              disabled={
+                loading ||
+                !session ||
+                saving ||
+                mutating ||
+                notifying ||
+                isCertified ||
+                isClosed
+              }
               className={ghostBtn}
               title="Save, close, and notify eligible parents"
             >
@@ -823,8 +960,9 @@ export default function AttendanceSessionClient(props: {
 
       {counts.unmarked > 0 && !locked ? (
         <Banner tone="warn">
-          <b>{counts.unmarked} learner(s) are still unmarked.</b> You may save partial marks, but you cannot close or
-          certify until every learner is marked.
+          <b>{counts.unmarked} learner(s) are still unmarked.</b> You may save
+          partial marks, but you cannot close or certify until every learner is
+          marked.
         </Banner>
       ) : null}
 
@@ -832,7 +970,8 @@ export default function AttendanceSessionClient(props: {
         <Banner tone="error">
           <b>Save failed:</b> {saveErr}
           <div className="mt-1 text-[11px] text-rose-200">
-            Fix this before closing or certifying. Otherwise the server will not have your latest marks.
+            Fix this before closing or certifying. Otherwise the server will not
+            have your latest marks.
           </div>
         </Banner>
       ) : null}
@@ -849,7 +988,11 @@ export default function AttendanceSessionClient(props: {
         <div className="flex flex-wrap gap-2 text-[11px]">
           <CountChip label="Total" value={counts.total} />
           <CountChip label="Marked" value={counts.marked} />
-          <CountChip label="Unmarked" value={counts.unmarked} tone={counts.unmarked ? "warn" : "good"} />
+          <CountChip
+            label="Unmarked"
+            value={counts.unmarked}
+            tone={counts.unmarked ? "warn" : "good"}
+          />
           <CountChip label="Present" value={counts.present} tone="good" />
           <CountChip label="Late" value={counts.late} tone="warn" />
           <CountChip label="Absent" value={counts.absent} tone="bad" />
@@ -860,10 +1003,13 @@ export default function AttendanceSessionClient(props: {
       <section className={`${shellCard} p-5 md:p-6`}>
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-[#F7F4ED]">QR badge attendance backup</div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">
+              QR badge attendance backup
+            </div>
             <div className="mt-1 text-[11px] text-[#C9CDD6]">
-              Scan or paste a learner badge payload. QR marks PRESENT only, writes to the same attendance register, and
-              never captures health data. Manual edits remain available for corrections.
+              Scan or paste a learner badge payload. QR marks PRESENT only,
+              writes to the same attendance register, and never captures health
+              data. Manual edits remain available for corrections.
             </div>
 
             <input
@@ -877,6 +1023,13 @@ export default function AttendanceSessionClient(props: {
               className={`${tinyFieldClass} mt-3 font-mono`}
               placeholder="Scan badge or paste EDULIFEOS-ATT-V1:..."
               autoComplete="off"
+            />
+
+            <QrCameraScanner
+              disabled={!canUseQrCamera}
+              disabledReason={qrBaseBlockReason}
+              scanBusy={qrBusy}
+              onPayload={(payload) => submitQrPayload(payload)}
             />
           </div>
 
@@ -893,7 +1046,8 @@ export default function AttendanceSessionClient(props: {
 
         {!canScanQr ? (
           <div className="mt-3 text-[11px] text-[#AEB6C4]">
-            <span className="font-semibold text-[#F7F4ED]">Why disabled:</span> {qrDisabledReason() || "—"}
+            <span className="font-semibold text-[#F7F4ED]">Why disabled:</span>{" "}
+            {qrDisabledReason() || "—"}
           </div>
         ) : null}
       </section>
@@ -901,10 +1055,13 @@ export default function AttendanceSessionClient(props: {
       <section className={`${shellCard} p-5 md:p-6`}>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="text-sm font-semibold text-[#F7F4ED]">Notification preview</div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">
+              Notification preview
+            </div>
             <div className="text-[11px] text-[#C9CDD6]">
-              Absent: <b>{alertPreview.absentees.length}</b> • SMS eligible: <b>{alertPreview.eligible.length}</b> •
-              Skipped no opt-in: <b>{alertPreview.skippedNoOptIn}</b> • Skipped no phone:{" "}
+              Absent: <b>{alertPreview.absentees.length}</b> • SMS eligible:{" "}
+              <b>{alertPreview.eligible.length}</b> • Skipped no opt-in:{" "}
+              <b>{alertPreview.skippedNoOptIn}</b> • Skipped no phone:{" "}
               <b>{alertPreview.skippedNoPhone}</b>
             </div>
           </div>
@@ -922,12 +1079,14 @@ export default function AttendanceSessionClient(props: {
 
         {!canNotify ? (
           <div className="mt-3 text-[11px] text-[#AEB6C4]">
-            <span className="font-semibold text-[#F7F4ED]">Why disabled:</span> {notifyDisabledReason() || "—"}
+            <span className="font-semibold text-[#F7F4ED]">Why disabled:</span>{" "}
+            {notifyDisabledReason() || "—"}
           </div>
         ) : null}
 
         <div className="mt-3 text-[11px] text-[#AEB6C4]">
-          Notifications require guardian phone and SMS opt-in. Learners without opt-in are skipped and reported.
+          Notifications require guardian phone and SMS opt-in. Learners without
+          opt-in are skipped and reported.
         </div>
       </section>
 
@@ -935,7 +1094,9 @@ export default function AttendanceSessionClient(props: {
         {loading ? (
           <div className="p-4 text-sm text-[#C9CDD6]">Loading learners…</div>
         ) : students.length === 0 ? (
-          <div className="p-4 text-sm text-[#C9CDD6]">No learners found for this classroom.</div>
+          <div className="p-4 text-sm text-[#C9CDD6]">
+            No learners found for this classroom.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-[920px] w-full text-sm">
@@ -949,15 +1110,24 @@ export default function AttendanceSessionClient(props: {
 
               <tbody className="divide-y divide-white/10">
                 {students.map((student) => {
-                  const mark = marks[student.id] ?? { status: "UNMARKED", note: null };
+                  const mark = marks[student.id] ?? {
+                    status: "UNMARKED",
+                    note: null,
+                  };
                   const unmarked = mark.status === "UNMARKED";
 
                   return (
-                    <tr key={student.id} className="[&>td]:px-3 [&>td]:py-3 align-top odd:bg-transparent even:bg-white/[0.02]">
+                    <tr
+                      key={student.id}
+                      className="[&>td]:px-3 [&>td]:py-3 align-top odd:bg-transparent even:bg-white/[0.02]"
+                    >
                       <td>
-                        <div className="font-medium text-[#F7F4ED]">{fullName(student)}</div>
+                        <div className="font-medium text-[#F7F4ED]">
+                          {fullName(student)}
+                        </div>
                         <div className="text-[11px] text-[#8F98A8]">
-                          {student.guardianName || "—"} • {student.guardianPhone || "—"}
+                          {student.guardianName || "—"} •{" "}
+                          {student.guardianPhone || "—"}
                           {student.guardianSmsOptIn ? "" : " • (no SMS opt-in)"}
                         </div>
 
@@ -970,7 +1140,14 @@ export default function AttendanceSessionClient(props: {
 
                       <td className="min-w-[360px]">
                         <div className="flex flex-wrap gap-2">
-                          {(["PRESENT", "LATE", "ABSENT", "EXCUSED"] as AttendanceStatus[]).map((option) => (
+                          {(
+                            [
+                              "PRESENT",
+                              "LATE",
+                              "ABSENT",
+                              "EXCUSED",
+                            ] as AttendanceStatus[]
+                          ).map((option) => (
                             <button
                               key={option}
                               type="button"
@@ -983,7 +1160,10 @@ export default function AttendanceSessionClient(props: {
                               }
                               className={[
                                 "rounded-full border px-3 py-1 text-[11px] font-semibold transition disabled:opacity-60",
-                                statusButtonClass(mark.status === option, option),
+                                statusButtonClass(
+                                  mark.status === option,
+                                  option,
+                                ),
                               ].join(" ")}
                             >
                               {option}
@@ -1001,10 +1181,15 @@ export default function AttendanceSessionClient(props: {
                           onChange={(e) =>
                             setMarks((prev) => ({
                               ...prev,
-                              [student.id]: { ...mark, note: e.target.value || null },
+                              [student.id]: {
+                                ...mark,
+                                note: e.target.value || null,
+                              },
                             }))
                           }
-                          placeholder={locked ? "Locked" : "Optional attendance note"}
+                          placeholder={
+                            locked ? "Locked" : "Optional attendance note"
+                          }
                         />
                       </td>
                     </tr>

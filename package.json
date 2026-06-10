@@ -26,6 +26,7 @@
     "@prisma/client": "^6.19.1",
     "@sparticuz/chromium": "^147.0.2",
     "@supabase/supabase-js": "^2.76.1",
+    "@zxing/browser": "^0.2.0",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.38.0",
     "next": "^15.5.9",
