@@ -2,6 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AttendanceScanAuditPanel from "@/components/attendance/AttendanceScanAuditPanel";
 
 type SessionState = "NO_SESSION" | "OPEN" | "CLOSED" | "CERTIFIED";
 
@@ -106,12 +107,9 @@ const inputClass =
   "w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-950 shadow-sm outline-none [color-scheme:light] placeholder:text-slate-400 focus:border-slate-950 focus:ring-2 focus:ring-slate-950/10";
 const btnBase =
   "inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50";
-const btnPrimary =
-  `${btnBase} border-slate-950 bg-slate-950 text-white hover:bg-slate-800`;
-const btnOutline =
-  `${btnBase} border-slate-300 bg-white text-slate-900 hover:bg-slate-50`;
-const btnSoft =
-  `${btnBase} border-indigo-200 bg-indigo-50 text-indigo-800 hover:bg-indigo-100`;
+const btnPrimary = `${btnBase} border-slate-950 bg-slate-950 text-white hover:bg-slate-800`;
+const btnOutline = `${btnBase} border-slate-300 bg-white text-slate-900 hover:bg-slate-50`;
+const btnSoft = `${btnBase} border-indigo-200 bg-indigo-50 text-indigo-800 hover:bg-indigo-100`;
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -161,7 +159,7 @@ function statusBadge(state: SessionState) {
 function countChip(
   label: string,
   value: number | undefined,
-  tone: "plain" | "good" | "warn" | "bad" = "plain"
+  tone: "plain" | "good" | "warn" | "bad" = "plain",
 ) {
   const cls =
     tone === "good"
@@ -281,7 +279,7 @@ export default function HeadteacherDayPage() {
       try {
         const res = await fetch(
           `/api/headteacher/day/overview?date=${encodeURIComponent(safeDate)}`,
-          { cache: "no-store" }
+          { cache: "no-store" },
         );
 
         const data = await res.json().catch(() => ({}));
@@ -291,7 +289,7 @@ export default function HeadteacherDayPage() {
           setSummary(null);
           setError(
             data?.error ||
-              `Failed to load attendance command view. Status: ${res.status}`
+              `Failed to load attendance command view. Status: ${res.status}`,
           );
           return;
         }
@@ -319,13 +317,13 @@ export default function HeadteacherDayPage() {
         setItems([]);
         setSummary(null);
         setError(
-          "Failed to load attendance command view. Check your connection and try again."
+          "Failed to load attendance command view. Check your connection and try again.",
         );
       } finally {
         setLoading(false);
       }
     },
-    [safeDate]
+    [safeDate],
   );
 
   useEffect(() => {
@@ -351,7 +349,9 @@ export default function HeadteacherDayPage() {
 
       if (!res.ok || !data.ok) {
         setMessage(null);
-        setError(data.error || `Bulk certification failed. Status: ${res.status}`);
+        setError(
+          data.error || `Bulk certification failed. Status: ${res.status}`,
+        );
         return;
       }
 
@@ -359,7 +359,9 @@ export default function HeadteacherDayPage() {
       await refresh({ keepMessage: true });
     } catch {
       setMessage(null);
-      setError("Bulk certification failed. Check your connection and try again.");
+      setError(
+        "Bulk certification failed. Check your connection and try again.",
+      );
     } finally {
       setBulkLoading(false);
     }
@@ -369,9 +371,9 @@ export default function HeadteacherDayPage() {
     () =>
       items.filter(
         (item) =>
-          stateOf(item) === "CLOSED" && item.total > 0 && item.unmarked === 0
+          stateOf(item) === "CLOSED" && item.total > 0 && item.unmarked === 0,
       ),
-    [items]
+    [items],
   );
 
   const needsTeacherAction = useMemo(
@@ -380,12 +382,12 @@ export default function HeadteacherDayPage() {
         const state = stateOf(item);
         return state === "NO_SESSION" || state === "OPEN" || item.unmarked > 0;
       }),
-    [items]
+    [items],
   );
 
   const certified = useMemo(
     () => items.filter((item) => stateOf(item) === "CERTIFIED"),
-    [items]
+    [items],
   );
 
   const openOrMissing = useMemo(
@@ -394,7 +396,7 @@ export default function HeadteacherDayPage() {
         const state = stateOf(item);
         return state === "NO_SESSION" || state === "OPEN";
       }),
-    [items]
+    [items],
   );
 
   return (
@@ -411,9 +413,9 @@ export default function HeadteacherDayPage() {
             </h1>
 
             <p className="mt-1 max-w-3xl text-sm text-slate-700">
-              See which classes have not opened attendance, which are still open,
-              which are ready for certification, and which are already certified.
-              Unmarked learners are never counted as present.
+              See which classes have not opened attendance, which are still
+              open, which are ready for certification, and which are already
+              certified. Unmarked learners are never counted as present.
             </p>
           </div>
 
@@ -474,8 +476,8 @@ export default function HeadteacherDayPage() {
 
           <div className="mt-3 text-xs text-slate-600">
             Certification rule: only closed, complete, non-empty sessions can be
-            certified. Open, incomplete, empty, and already-certified sessions are
-            safely skipped.
+            certified. Open, incomplete, empty, and already-certified sessions
+            are safely skipped.
           </div>
         </section>
 
@@ -495,43 +497,53 @@ export default function HeadteacherDayPage() {
           <section className="mt-5 flex flex-wrap gap-2">
             {countChip(
               "Operational classes",
-              summary.operationalClassrooms ?? summary.total
+              summary.operationalClassrooms ?? summary.total,
             )}
             {countChip(
               "Needs action",
               summary.needsAction ?? needsTeacherAction.length,
-              (summary.needsAction ?? needsTeacherAction.length) ? "warn" : "good"
+              (summary.needsAction ?? needsTeacherAction.length)
+                ? "warn"
+                : "good",
             )}
             {countChip(
               "No session",
               summary.NO_SESSION,
-              summary.NO_SESSION ? "warn" : "plain"
+              summary.NO_SESSION ? "warn" : "plain",
             )}
             {countChip("Open", summary.OPEN, summary.OPEN ? "warn" : "plain")}
-            {countChip("Ready closed", summary.CLOSED, summary.CLOSED ? "good" : "plain")}
+            {countChip(
+              "Ready closed",
+              summary.CLOSED,
+              summary.CLOSED ? "good" : "plain",
+            )}
             {countChip("Certified", summary.CERTIFIED, "good")}
             {countChip("Learners", summary.learners ?? 0)}
             {countChip("Marked", summary.marked ?? 0)}
             {countChip(
               "Unmarked",
               summary.unmarked ?? 0,
-              (summary.unmarked ?? 0) ? "warn" : "good"
+              (summary.unmarked ?? 0) ? "warn" : "good",
             )}
             {countChip("Present", summary.present ?? 0, "good")}
             {countChip(
               "Absent",
               summary.absent ?? 0,
-              (summary.absent ?? 0) ? "bad" : "plain"
+              (summary.absent ?? 0) ? "bad" : "plain",
             )}
             {countChip(
               "Late",
               summary.late ?? 0,
-              (summary.late ?? 0) ? "warn" : "plain"
+              (summary.late ?? 0) ? "warn" : "plain",
             )}
             {countChip("Parent alerts", summary.notified ?? 0)}
             {typeof summary.hiddenEmptyClassrooms === "number" &&
             summary.hiddenEmptyClassrooms > 0
-              ? countChip("Hidden empty shells", summary.hiddenEmptyClassrooms, "warn")
+              ? countChip(
+                  "Hidden empty shells",
+                  summary.hiddenEmptyClassrooms,
+                  "warn",
+                )
               : null}
           </section>
         ) : null}
@@ -585,6 +597,16 @@ export default function HeadteacherDayPage() {
             </p>
           </div>
         </section>
+
+        <div className="mt-6">
+          <AttendanceScanAuditPanel
+            date={safeDate}
+            endpoint="/api/headteacher/attendance/scan-audit/list"
+            title="Daily QR scan evidence"
+            description="Headteacher evidence view for today’s QR attendance activity across active classes. This is attendance-only evidence and does not expose QR secrets, token hashes, parent contact data, health data, or location data."
+            showClassroom
+          />
+        </div>
 
         <section className={`mt-6 overflow-hidden ${cardClass}`}>
           <div className="border-b border-slate-200 px-4 py-3">
@@ -643,7 +665,8 @@ export default function HeadteacherDayPage() {
                 {!loading
                   ? items.map((item) => {
                       const state = stateOf(item);
-                      const className = item.label || item.classLabel || "Class";
+                      const className =
+                        item.label || item.classLabel || "Class";
 
                       return (
                         <tr
@@ -716,13 +739,15 @@ export default function HeadteacherDayPage() {
 
                           <td className="text-xs text-slate-700">
                             <div>Closed: {formatDateTime(item.closedAt)}</div>
-                            <div>Certified: {formatDateTime(item.certifiedAt)}</div>
+                            <div>
+                              Certified: {formatDateTime(item.certifiedAt)}
+                            </div>
                           </td>
 
                           <td>
                             <span
                               className={`inline-flex rounded-xl border px-2.5 py-1 text-xs font-medium ${actionTone(
-                                item
+                                item,
                               )}`}
                             >
                               {actionMeaning(item)}

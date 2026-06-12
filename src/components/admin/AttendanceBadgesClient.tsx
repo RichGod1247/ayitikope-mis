@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as QRCode from "qrcode";
+import AttendanceScanAuditPanel from "@/components/attendance/AttendanceScanAuditPanel";
 
 type ClassroomOption = {
   id: string;
@@ -140,13 +141,13 @@ async function readJson<T>(res: Response, label: string): Promise<T> {
 
   if (!raw.trim()) {
     throw new Error(
-      `${label} returned an empty response (${res.status} ${res.statusText || "No status text"}). Check the Next.js terminal for the real server error.`
+      `${label} returned an empty response (${res.status} ${res.statusText || "No status text"}). Check the Next.js terminal for the real server error.`,
     );
   }
 
   if (!contentType.toLowerCase().includes("application/json")) {
     throw new Error(
-      `${label} returned non-JSON (${res.status}). Preview: ${raw.slice(0, 180)}`
+      `${label} returned non-JSON (${res.status}). Preview: ${raw.slice(0, 180)}`,
     );
   }
 
@@ -154,20 +155,21 @@ async function readJson<T>(res: Response, label: string): Promise<T> {
     return JSON.parse(raw) as T;
   } catch {
     throw new Error(
-      `${label} returned invalid JSON (${res.status}). Preview: ${raw.slice(0, 180)}`
+      `${label} returned invalid JSON (${res.status}). Preview: ${raw.slice(0, 180)}`,
     );
   }
 }
 
 export default function AttendanceBadgesClient() {
-const [classes, setClasses] = useState<ClassroomOption[]>([]);
-const [classroomId, setClassroomId] = useState("");
-const [showStreamArms, setShowStreamArms] = useState(false);
+  const [classes, setClasses] = useState<ClassroomOption[]>([]);
+  const [classroomId, setClassroomId] = useState("");
+  const [showStreamArms, setShowStreamArms] = useState(false);
   const [rows, setRows] = useState<BadgeListItem[]>([]);
   const [tenantName, setTenantName] = useState("School");
   const [schoolCode, setSchoolCode] = useState<string | null>(null);
   const [classroomLabel, setClassroomLabel] = useState("");
-  const [summary, setSummary] = useState<BadgeListResponse["summary"]>(undefined);
+  const [summary, setSummary] =
+    useState<BadgeListResponse["summary"]>(undefined);
 
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [loadingRows, setLoadingRows] = useState(false);
@@ -179,40 +181,46 @@ const [showStreamArms, setShowStreamArms] = useState(false);
 
   const selectedClass = useMemo(
     () => classes.find((item) => item.id === classroomId) ?? null,
-    [classes, classroomId]
+    [classes, classroomId],
   );
 
-const loadClasses = useCallback(async () => {
-  setLoadingClasses(true);
-  setErr(null);
+  const loadClasses = useCallback(async () => {
+    setLoadingClasses(true);
+    setErr(null);
 
-  try {
-    const mode = showStreamArms ? "streams" : "single";
+    try {
+      const mode = showStreamArms ? "streams" : "single";
 
-    const res = await fetch(
-      `/api/admin/attendance/badges/classrooms?mode=${encodeURIComponent(mode)}`,
-      { cache: "no-store" }
-    );
+      const res = await fetch(
+        `/api/admin/attendance/badges/classrooms?mode=${encodeURIComponent(mode)}`,
+        { cache: "no-store" },
+      );
 
-    const data = await readJson<ClassroomListResponse>(res, "Badge classroom list");
+      const data = await readJson<ClassroomListResponse>(
+        res,
+        "Badge classroom list",
+      );
 
-    if (!res.ok || !data.ok) {
-      throw new Error(data.error || "Could not load badge classrooms.");
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Could not load badge classrooms.");
+      }
+
+      const items = data.items ?? [];
+      setClasses(items);
+
+      setClassroomId((current) => {
+        if (current && items.some((item) => item.id === current))
+          return current;
+        return items[0]?.id ?? "";
+      });
+    } catch (e) {
+      setErr(
+        e instanceof Error ? e.message : "Could not load badge classrooms.",
+      );
+    } finally {
+      setLoadingClasses(false);
     }
-
-    const items = data.items ?? [];
-    setClasses(items);
-
-    setClassroomId((current) => {
-      if (current && items.some((item) => item.id === current)) return current;
-      return items[0]?.id ?? "";
-    });
-  } catch (e) {
-    setErr(e instanceof Error ? e.message : "Could not load badge classrooms.");
-  } finally {
-    setLoadingClasses(false);
-  }
-}, [showStreamArms]);
+  }, [showStreamArms]);
 
   const loadBadges = useCallback(async () => {
     if (!classroomId) {
@@ -227,7 +235,7 @@ const loadClasses = useCallback(async () => {
     try {
       const res = await fetch(
         `/api/admin/attendance/badges/list?classroomId=${encodeURIComponent(classroomId)}`,
-        { cache: "no-store" }
+        { cache: "no-store" },
       );
 
       const data = await readJson<BadgeListResponse>(res, "Badge register");
@@ -242,7 +250,9 @@ const loadClasses = useCallback(async () => {
       setSchoolCode(data.tenant?.schoolCode ?? null);
       setClassroomLabel(data.classroom?.label || selectedClass?.label || "");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not load attendance badges.");
+      setErr(
+        e instanceof Error ? e.message : "Could not load attendance badges.",
+      );
     } finally {
       setLoadingRows(false);
     }
@@ -274,7 +284,13 @@ const loadClasses = useCallback(async () => {
 
       const data = await readJson<IssueResponse>(res, "Issue badge");
 
-      if (!res.ok || !data.ok || !data.qrPayload || !data.badge || !data.student) {
+      if (
+        !res.ok ||
+        !data.ok ||
+        !data.qrPayload ||
+        !data.badge ||
+        !data.student
+      ) {
         throw new Error(data.error || "Could not issue badge.");
       }
 
@@ -292,16 +308,22 @@ const loadClasses = useCallback(async () => {
         qrDataUrl,
         studentId: data.student.id,
         studentName: data.student.name,
-        classroomLabel: data.student.classroomLabel || row.student.classroomLabel,
+        classroomLabel:
+          data.student.classroomLabel || row.student.classroomLabel,
         schoolName: tenantName,
         schoolCode,
         issuedAt: data.badge.issuedAt,
       };
 
       setPrintBadges((prev) =>
-  [printable, ...prev.filter((item) => item.studentId !== data.student?.id)].slice(0, 80)
-);
-      setMsg(`${data.student.name} badge issued. Print it now; the raw QR secret will not be stored.`);
+        [
+          printable,
+          ...prev.filter((item) => item.studentId !== data.student?.id),
+        ].slice(0, 80),
+      );
+      setMsg(
+        `${data.student.name} badge issued. Print it now; the raw QR secret will not be stored.`,
+      );
       await loadBadges();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not issue badge.");
@@ -314,7 +336,7 @@ const loadClasses = useCallback(async () => {
     if (!row.activeBadgeId) return;
 
     const confirmed = window.confirm(
-      `Revoke the active badge for ${row.student.name}? The old printed QR will stop working.`
+      `Revoke the active badge for ${row.student.name}? The old printed QR will stop working.`,
     );
 
     if (!confirmed) return;
@@ -340,7 +362,9 @@ const loadClasses = useCallback(async () => {
       }
 
       setMsg(`${row.student.name} badge revoked.`);
-      setPrintBadges((prev) => prev.filter((item) => item.studentId !== row.student.id));
+      setPrintBadges((prev) =>
+        prev.filter((item) => item.studentId !== row.student.id),
+      );
       await loadBadges();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not revoke badge.");
@@ -409,8 +433,9 @@ const loadClasses = useCallback(async () => {
               QR Attendance Badges
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#AEB7C7]">
-              Issue, reissue, revoke, and print learner QR badges. Badges mark attendance only.
-              They never capture health data, temperature, symptoms, or device readings.
+              Issue, reissue, revoke, and print learner QR badges. Badges mark
+              attendance only. They never capture health data, temperature,
+              symptoms, or device readings.
             </p>
           </div>
 
@@ -447,33 +472,35 @@ const loadClasses = useCallback(async () => {
               className="mt-2 w-full rounded-2xl border border-white/10 bg-[#07111F] px-4 py-3 text-sm font-semibold text-[#F7F4ED] outline-none ring-0 transition focus:border-[#E8C96A]/60 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loadingClasses ? <option>Loading classes…</option> : null}
-              {!loadingClasses && noClass ? <option>No active classes found</option> : null}
+              {!loadingClasses && noClass ? (
+                <option>No active classes found</option>
+              ) : null}
               {!loadingClasses
-  ? classes.map((item) => (
-      <option key={item.id} value={item.id}>
-        {item.label} · {item.activeLearnerCount ?? 0} learners
-      </option>
-    ))
-  : null}
+                ? classes.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label} · {item.activeLearnerCount ?? 0} learners
+                    </option>
+                  ))
+                : null}
             </select>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-[#C9CDD6] hover:bg-white/10">
-    <input
-      type="checkbox"
-      checked={showStreamArms}
-      onChange={(e) => {
-        setShowStreamArms(e.target.checked);
-        setClassroomId("");
-      }}
-      className="h-4 w-4 accent-[#E8C96A]"
-    />
-    Show multi-stream arms A–D
-  </label>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-[#C9CDD6] hover:bg-white/10">
+                <input
+                  type="checkbox"
+                  checked={showStreamArms}
+                  onChange={(e) => {
+                    setShowStreamArms(e.target.checked);
+                    setClassroomId("");
+                  }}
+                  className="h-4 w-4 accent-[#E8C96A]"
+                />
+                Show multi-stream arms A–D
+              </label>
 
-  <span className="text-xs text-[#8F98A8]">
-    Default view shows one student-bearing class per level.
-  </span>
-</div>
+              <span className="text-xs text-[#8F98A8]">
+                Default view shows one student-bearing class per level.
+              </span>
+            </div>
           </label>
 
           <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 px-4 py-3 text-sm text-[#C9CDD6]">
@@ -499,27 +526,45 @@ const loadClasses = useCallback(async () => {
 
       <section className="grid gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8F98A8]">Learners</p>
-          <p className="mt-2 text-3xl font-bold text-[#F7F4ED]">{summary?.totalLearners ?? 0}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8F98A8]">
+            Learners
+          </p>
+          <p className="mt-2 text-3xl font-bold text-[#F7F4ED]">
+            {summary?.totalLearners ?? 0}
+          </p>
         </div>
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">Active</p>
-          <p className="mt-2 text-3xl font-bold text-emerald-100">{summary?.activeBadges ?? 0}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
+            Active
+          </p>
+          <p className="mt-2 text-3xl font-bold text-emerald-100">
+            {summary?.activeBadges ?? 0}
+          </p>
         </div>
         <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">Revoked only</p>
-          <p className="mt-2 text-3xl font-bold text-amber-100">{summary?.revokedOnly ?? 0}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">
+            Revoked only
+          </p>
+          <p className="mt-2 text-3xl font-bold text-amber-100">
+            {summary?.revokedOnly ?? 0}
+          </p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8F98A8]">No badge</p>
-          <p className="mt-2 text-3xl font-bold text-[#F7F4ED]">{summary?.noBadge ?? 0}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8F98A8]">
+            No badge
+          </p>
+          <p className="mt-2 text-3xl font-bold text-[#F7F4ED]">
+            {summary?.noBadge ?? 0}
+          </p>
         </div>
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-[#F7F4ED]">Learner badge register</h2>
+            <h2 className="text-lg font-bold text-[#F7F4ED]">
+              Learner badge register
+            </h2>
             <p className="text-sm text-[#8F98A8]">
               Reissue creates a new QR and revokes the old one automatically.
             </p>
@@ -554,13 +599,19 @@ const loadClasses = useCallback(async () => {
                 <tbody className="divide-y divide-white/8 bg-[#07111F]/40">
                   {rows.map((row) => {
                     const issuing = busyStudentId === row.student.id;
-                    const revoking = row.activeBadgeId ? busyBadgeId === row.activeBadgeId : false;
+                    const revoking = row.activeBadgeId
+                      ? busyBadgeId === row.activeBadgeId
+                      : false;
 
                     return (
                       <tr key={row.student.id} className="align-top">
                         <td className="px-4 py-4">
-                          <p className="font-semibold text-[#F7F4ED]">{row.student.name}</p>
-                          <p className="mt-1 text-xs text-[#8F98A8]">{row.student.classroomLabel}</p>
+                          <p className="font-semibold text-[#F7F4ED]">
+                            {row.student.name}
+                          </p>
+                          <p className="mt-1 text-xs text-[#8F98A8]">
+                            {row.student.classroomLabel}
+                          </p>
                           <p className="mt-1 text-xs text-[#6F7A8C]">
                             Guardian: {row.student.guardianName || "—"}
                           </p>
@@ -569,7 +620,7 @@ const loadClasses = useCallback(async () => {
                         <td className="px-4 py-4">
                           <span
                             className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadgeClass(
-                              row.badgeState
+                              row.badgeState,
                             )}`}
                           >
                             {statusLabel(row.badgeState)}
@@ -579,7 +630,9 @@ const loadClasses = useCallback(async () => {
                             <p>Hint: {row.badge?.tokenHint || "—"}</p>
                             <p>Issued: {fmtDate(row.badge?.issuedAt)}</p>
                             {row.badge?.revokedAt ? (
-                              <p className="text-amber-200">Revoked: {fmtDate(row.badge.revokedAt)}</p>
+                              <p className="text-amber-200">
+                                Revoked: {fmtDate(row.badge.revokedAt)}
+                              </p>
                             ) : null}
                           </div>
                         </td>
@@ -587,7 +640,9 @@ const loadClasses = useCallback(async () => {
                         <td className="px-4 py-4 text-xs leading-5 text-[#AEB7C7]">
                           <p>Last used: {fmtDate(row.badge?.lastUsedAt)}</p>
                           {row.badge?.revokeReason ? (
-                            <p className="mt-1 max-w-xs text-amber-200">{row.badge.revokeReason}</p>
+                            <p className="mt-1 max-w-xs text-amber-200">
+                              {row.badge.revokeReason}
+                            </p>
                           ) : null}
                         </td>
 
@@ -611,7 +666,9 @@ const loadClasses = useCallback(async () => {
                             <button
                               type="button"
                               onClick={() => void revokeBadge(row)}
-                              disabled={!row.activeBadgeId || issuing || revoking}
+                              disabled={
+                                !row.activeBadgeId || issuing || revoking
+                              }
                               className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               {revoking ? "Revoking…" : "Revoke"}
@@ -632,12 +689,23 @@ const loadClasses = useCallback(async () => {
         )}
       </section>
 
+      {classroomId ? (
+        <AttendanceScanAuditPanel
+          classroomId={classroomId}
+          endpoint="/api/admin/attendance/scan-audit/list"
+          title="Class QR scan audit"
+          description="Shows QR scan evidence for the selected class. This view hides raw QR payloads, token hashes, parent contact data, health data, and location data."
+          showClassroom={false}
+        />
+      ) : null}
+
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-lg font-bold text-[#F7F4ED]">Print queue</h2>
             <p className="text-sm text-[#8F98A8]">
-              Only newly issued badges appear here. Print before leaving this page.
+              Only newly issued badges appear here. Print before leaving this
+              page.
             </p>
           </div>
 
@@ -669,7 +737,9 @@ const loadClasses = useCallback(async () => {
         ) : (
           <div id="attendance-badge-print-area" className="mt-5">
             <div className="hidden print:block">
-              <h1 className="text-xl font-bold">EduLife OS Attendance Badges</h1>
+              <h1 className="text-xl font-bold">
+                EduLife OS Attendance Badges
+              </h1>
               <p className="mt-1 text-sm">
                 {tenantName} {schoolCode ? `(${schoolCode})` : ""}
               </p>
@@ -701,7 +771,9 @@ const loadClasses = useCallback(async () => {
                       <p className="mt-1 text-xs text-[#AEB7C7] print:text-gray-600">
                         {badge.classroomLabel}
                       </p>
-                      <p className="mt-2 text-xs font-semibold">{badge.schoolName}</p>
+                      <p className="mt-2 text-xs font-semibold">
+                        {badge.schoolName}
+                      </p>
                       {badge.schoolCode ? (
                         <p className="text-[11px] text-[#8F98A8] print:text-gray-500">
                           Code: {badge.schoolCode}
@@ -712,12 +784,15 @@ const loadClasses = useCallback(async () => {
 
                   <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-[#C9CDD6] print:border-gray-200 print:bg-gray-50 print:text-gray-700">
                     <p>
-                      Hint: <span className="font-bold">{badge.tokenHint || "—"}</span>
+                      Hint:{" "}
+                      <span className="font-bold">
+                        {badge.tokenHint || "—"}
+                      </span>
                     </p>
                     <p>Issued: {fmtDate(badge.issuedAt)}</p>
                     <p className="mt-1 text-[11px]">
-                      Scan only on EduLife OS attendance session pages. This badge does not capture
-                      health data.
+                      Scan only on EduLife OS attendance session pages. This
+                      badge does not capture health data.
                     </p>
                   </div>
                 </div>
