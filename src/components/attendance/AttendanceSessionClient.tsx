@@ -503,7 +503,8 @@ export default function AttendanceSessionClient(props: {
   function qrBaseDisabledReason(): string | null {
     if (!session) return "Session not loaded.";
     if (loading) return "Loading session…";
-    if (locked) return "Closed or certified sessions cannot accept QR scans.";
+    if (locked)
+      return "Closed or certified sessions cannot accept register seal scans.";
     if (dirty) return "Save manual changes before scanning.";
     if (saveErr) return "Last save failed. Fix save first.";
     if (saving) return "Saving…";
@@ -516,7 +517,7 @@ export default function AttendanceSessionClient(props: {
     if (baseReason) return baseReason;
     if (qrBusy) return "Scanning…";
     if (qrToken.trim().length < 16)
-      return "Scan or paste a valid badge QR payload.";
+      return "Scan or paste a valid register seal payload.";
     return null;
   }
 
@@ -759,7 +760,7 @@ export default function AttendanceSessionClient(props: {
       if (baseReason) throw new Error(baseReason);
 
       if (token.length < 16) {
-        throw new Error("Scan or paste a valid badge QR payload.");
+        throw new Error("Scan or paste a valid register seal payload.");
       }
 
       const r = await fetch("/api/teacher/attendance/qr/scan", {
@@ -770,7 +771,7 @@ export default function AttendanceSessionClient(props: {
 
       const j: QrScanResponse = await r.json().catch(() => ({
         ok: false,
-        error: "Failed to parse QR scan response.",
+        error: "Failed to parse register seal scan response.",
       }));
 
       if (!r.ok || !j.ok) throw new Error(j.ok ? `HTTP ${r.status}` : j.error);
@@ -785,7 +786,8 @@ export default function AttendanceSessionClient(props: {
       setQrMsg(successMessage);
     } catch (e: unknown) {
       setQrErr(
-        safeText((e as { message?: unknown })?.message) || "QR scan failed.",
+        safeText((e as { message?: unknown })?.message) ||
+          "Register seal scan failed.",
       );
     } finally {
       setQrBusy(false);
@@ -1004,12 +1006,12 @@ export default function AttendanceSessionClient(props: {
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-[#F7F4ED]">
-              QR badge attendance backup
+              Register seal attendance backup
             </div>
             <div className="mt-1 text-[11px] text-[#C9CDD6]">
-              Scan or paste a learner badge payload. QR marks PRESENT only,
-              writes to the same attendance register, and never captures health
-              data. Manual edits remain available for corrections.
+              Scan or paste a learner register seal. Register seal scans mark
+              PRESENT only, write to the same attendance register, and manual
+              edits remain available for corrections.
             </div>
 
             <input
@@ -1021,7 +1023,7 @@ export default function AttendanceSessionClient(props: {
               }}
               disabled={locked || loading || qrBusy}
               className={`${tinyFieldClass} mt-3 font-mono`}
-              placeholder="Scan badge or paste EDULIFEOS-ATT-V1:..."
+              placeholder="Scan register seal or paste EDULIFEOS-ATT-V1:..."
               autoComplete="off"
             />
 
@@ -1038,9 +1040,11 @@ export default function AttendanceSessionClient(props: {
             onClick={() => void scanQrBadge()}
             disabled={!canScanQr}
             className={primaryBtn}
-            title={qrDisabledReason() ?? "Mark learner PRESENT by QR"}
+            title={
+              qrDisabledReason() ?? "Mark learner PRESENT by register seal"
+            }
           >
-            {qrBusy ? "Scanning…" : "Scan QR"}
+            {qrBusy ? "Scanning…" : "Scan seal"}
           </button>
         </div>
 

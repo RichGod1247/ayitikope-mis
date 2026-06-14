@@ -1,7 +1,11 @@
 // src/app/api/teacher/attendance/qr/scan/route.ts
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
-import { AttendanceScanStatus, AttendanceStatus, StudentStatus } from "@prisma/client";
+import {
+  AttendanceScanStatus,
+  AttendanceStatus,
+  StudentStatus,
+} from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
@@ -19,7 +23,11 @@ const BodySchema = z
   .object({
     tenantId: z.string().optional(), // legacy/back-compat only
     sessionId: z.string().trim().min(1, "sessionId is required."),
-    token: z.string().trim().min(16, "QR token is too short.").max(700, "QR token is too long."),
+    token: z
+      .string()
+      .trim()
+      .min(16, "Register seal token is too short.")
+      .max(700, "Register seal token is too long."),
   })
   .strict();
 
@@ -34,7 +42,11 @@ function noStoreJson(status: number, payload: unknown) {
 }
 
 function clientIp(req: Request) {
-  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    null
+  );
 }
 
 function userAgent(req: Request) {
@@ -55,7 +67,10 @@ function extractBadgeSecret(input: string) {
   // 4. raw secret
   try {
     const url = new URL(raw);
-    const fromB = url.searchParams.get("b") || url.searchParams.get("badge") || url.searchParams.get("token");
+    const fromB =
+      url.searchParams.get("b") ||
+      url.searchParams.get("badge") ||
+      url.searchParams.get("token");
     if (fromB?.trim()) return fromB.trim();
   } catch {
     // not a URL; continue below
@@ -74,12 +89,19 @@ function isIdLike(id: string) {
 }
 
 function fullName(firstName?: string | null, lastName?: string | null) {
-  return [firstName, lastName].filter(Boolean).join(" ").trim() || "Unnamed learner";
+  return (
+    [firstName, lastName].filter(Boolean).join(" ").trim() || "Unnamed learner"
+  );
 }
 
 function isAdminLike(roleName: string | null | undefined) {
   const r = String(roleName ?? "").toUpperCase();
-  return r.includes("ADMIN") || r.includes("HEAD") || r.includes("OWNER") || r === "SUPERADMIN";
+  return (
+    r.includes("ADMIN") ||
+    r.includes("HEAD") ||
+    r.includes("OWNER") ||
+    r === "SUPERADMIN"
+  );
 }
 
 async function loadActiveRoleName(userId: string, tenantId: string) {
@@ -157,24 +179,34 @@ export async function POST(req: Request) {
 
     const ct = req.headers.get("content-type") || "";
     if (!ct.toLowerCase().includes("application/json")) {
-      return noStoreJson(415, { ok: false, error: "Content-Type must be application/json." });
+      return noStoreJson(415, {
+        ok: false,
+        error: "Content-Type must be application/json.",
+      });
     }
 
     const raw = await req.json().catch(() => null);
     const parsed = BodySchema.safeParse(raw);
     if (!parsed.success) {
-      return noStoreJson(400, { ok: false, error: parsed.error.issues[0]?.message || "Invalid body." });
+      return noStoreJson(400, {
+        ok: false,
+        error: parsed.error.issues[0]?.message || "Invalid body.",
+      });
     }
 
     const sessionId = parsed.data.sessionId.trim();
-    if (!isIdLike(sessionId)) return noStoreJson(400, { ok: false, error: "Invalid sessionId." });
+    if (!isIdLike(sessionId))
+      return noStoreJson(400, { ok: false, error: "Invalid sessionId." });
 
     const suppliedTenantId = parsed.data.tenantId?.trim() || null;
     assertTenantParamMatches(safe.tenantId, suppliedTenantId);
 
     const secret = extractBadgeSecret(parsed.data.token);
     if (!/^[a-zA-Z0-9._~:-]{16,512}$/.test(secret)) {
-      return noStoreJson(400, { ok: false, error: "Invalid QR token format." });
+      return noStoreJson(400, {
+        ok: false,
+        error: "Invalid register seal token format.",
+      });
     }
 
     const tokenHash = sha256Hex(secret);
@@ -197,21 +229,41 @@ export async function POST(req: Request) {
       }),
     ]);
 
-    if (!session) return noStoreJson(404, { ok: false, error: "Attendance session not found." });
+    if (!session)
+      return noStoreJson(404, {
+        ok: false,
+        error: "Attendance session not found.",
+      });
 
-    await assertCanAccessClassroom({ ...safe, classroomId: session.classroomId });
+    await assertCanAccessClassroom({
+      ...safe,
+      classroomId: session.classroomId,
+    });
 
     const adminLike = isAdminLike(roleName);
-    if (!adminLike && session.takenByUserId && session.takenByUserId !== safe.userId) {
-      return noStoreJson(403, { ok: false, error: "This session is owned by another user." });
+    if (
+      !adminLike &&
+      session.takenByUserId &&
+      session.takenByUserId !== safe.userId
+    ) {
+      return noStoreJson(403, {
+        ok: false,
+        error: "This session is owned by another user.",
+      });
     }
 
     if (session.certifiedAt) {
-      return noStoreJson(409, { ok: false, error: "Session is certified and cannot accept QR scans." });
+      return noStoreJson(409, {
+        ok: false,
+        error: "Session is certified and cannot accept register seal scans.",
+      });
     }
 
     if (session.isClosed) {
-      return noStoreJson(409, { ok: false, error: "Session is closed. Reopen it before scanning." });
+      return noStoreJson(409, {
+        ok: false,
+        error: "Session is closed. Reopen it before scanning.",
+      });
     }
 
     const badge = await prisma.studentAttendanceBadge.findFirst({
@@ -246,7 +298,11 @@ export async function POST(req: Request) {
     };
 
     if (!badge) {
-      await recordScanEvent({ ...eventBase, status: AttendanceScanStatus.REJECTED, reason: "Badge token not found." });
+      await recordScanEvent({
+        ...eventBase,
+        status: AttendanceScanStatus.REJECTED,
+        reason: "Badge token not found.",
+      });
       return noStoreJson(404, { ok: false, error: "Badge not recognized." });
     }
 
@@ -269,10 +325,16 @@ export async function POST(req: Request) {
         status: AttendanceScanStatus.REJECTED,
         reason: "Student is archived or missing.",
       });
-      return noStoreJson(409, { ok: false, error: "Learner is archived or unavailable." });
+      return noStoreJson(409, {
+        ok: false,
+        error: "Learner is archived or unavailable.",
+      });
     }
 
-    if (badge.student.tenantId !== safe.tenantId || badge.student.classroomId !== session.classroomId) {
+    if (
+      badge.student.tenantId !== safe.tenantId ||
+      badge.student.classroomId !== session.classroomId
+    ) {
       await recordScanEvent({
         ...eventBase,
         badgeId: badge.id,
@@ -280,15 +342,26 @@ export async function POST(req: Request) {
         status: AttendanceScanStatus.REJECTED,
         reason: "Badge does not belong to this class/session.",
       });
-      return noStoreJson(409, { ok: false, error: "This badge does not belong to this class session." });
+      return noStoreJson(409, {
+        ok: false,
+        error: "This badge does not belong to this class session.",
+      });
     }
 
     const existingMark = await prisma.attendanceMark.findUnique({
-      where: { sessionId_studentId: { sessionId: session.id, studentId: badge.studentId } },
+      where: {
+        sessionId_studentId: {
+          sessionId: session.id,
+          studentId: badge.studentId,
+        },
+      },
       select: { id: true, status: true, note: true },
     });
 
-    const studentName = fullName(badge.student.firstName, badge.student.lastName);
+    const studentName = fullName(
+      badge.student.firstName,
+      badge.student.lastName,
+    );
 
     if (existingMark) {
       const scanEvent = await recordScanEvent({
@@ -320,7 +393,7 @@ export async function POST(req: Request) {
           sessionId: session.id,
           studentId: badge.studentId,
           status: AttendanceStatus.PRESENT,
-          note: "Marked PRESENT by QR badge scan.",
+          note: "Marked PRESENT by register seal scan.",
         },
         select: { id: true },
       });
@@ -348,7 +421,7 @@ export async function POST(req: Request) {
           source: "QR",
           status: AttendanceScanStatus.ACCEPTED,
           attendanceStatus: AttendanceStatus.PRESENT,
-          reason: "Marked PRESENT by QR badge scan.",
+          reason: "Marked PRESENT by register seal scan.",
           rawTokenHash: tokenHash,
           idempotencyKey,
           metadata: {
@@ -400,7 +473,7 @@ export async function POST(req: Request) {
       studentId: badge.studentId,
       studentName,
       attendanceStatus: "PRESENT",
-      message: `${studentName} marked PRESENT by QR scan.`,
+      message: `${studentName} marked PRESENT by register seal scan.`,
     });
   } catch (e) {
     const { status, msg } = toHttpError(e);

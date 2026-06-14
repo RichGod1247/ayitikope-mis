@@ -128,7 +128,7 @@ export default function AttendanceScanAuditPanel({
   classroomId,
   date,
   endpoint,
-  title = "QR scan audit",
+  title = "Register seal scan audit",
   description = "Operational evidence for QR attendance scans. Raw QR secrets and token hashes are never shown.",
   showClassroom = true,
 }: {
@@ -171,7 +171,10 @@ export default function AttendanceScanAuditPanel({
         cache: "no-store",
       });
 
-      const json = await readJson<ScanAuditResponse>(res, "QR scan audit");
+      const json = await readJson<ScanAuditResponse>(
+        res,
+        "Register seal scan audit",
+      );
 
       if (!res.ok || !json.ok) {
         throw new Error(json.ok ? `HTTP ${res.status}` : json.error);
@@ -179,7 +182,11 @@ export default function AttendanceScanAuditPanel({
 
       setData(json);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not load QR scan audit.");
+      setErr(
+        e instanceof Error
+          ? e.message
+          : "Could not load register seal scan audit.",
+      );
     } finally {
       setLoading(false);
     }
@@ -246,7 +253,11 @@ export default function AttendanceScanAuditPanel({
       ) : null}
 
       <div className="mt-5 grid gap-3 md:grid-cols-4">
-        {statCard("Total scans", summary?.total ?? 0, "All QR scan attempts")}
+        {statCard(
+          "Total scans",
+          summary?.total ?? 0,
+          "All register seal scan attempts",
+        )}
         {statCard(
           "Accepted",
           summary?.accepted ?? 0,
@@ -281,7 +292,7 @@ export default function AttendanceScanAuditPanel({
                 <th className="px-4 py-3">Learner</th>
                 {showClassroom ? <th className="px-4 py-3">Class</th> : null}
                 <th className="px-4 py-3">Scanned by</th>
-                <th className="px-4 py-3">Badge hint</th>
+                <th className="px-4 py-3">Seal hint</th>
                 <th className="px-4 py-3">Reason</th>
               </tr>
             </thead>
@@ -304,7 +315,7 @@ export default function AttendanceScanAuditPanel({
                     className="px-4 py-6 text-slate-500"
                     colSpan={showClassroom ? 7 : 6}
                   >
-                    No QR scans found for this date/filter.
+                    No register seal scans found for this date/filter.
                   </td>
                 </tr>
               ) : null}
