@@ -607,33 +607,31 @@ export default function AttendanceBadgesClient() {
 
         <div className="rounded-[28px] border border-emerald-400/20 bg-emerald-400/10 p-5 shadow-2xl shadow-black/20">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
-            Final QR closure checklist
+            Attendance backup operating rules
           </p>
           <h2 className="mt-2 text-lg font-bold text-[#F7F4ED]">
-            Before QR backup is marked complete
+            How to use register seals responsibly
           </h2>
 
           <ul className="mt-4 space-y-3 text-sm leading-6 text-[#D8DEE8]">
             <li>
-              ✅ Manual attendance remains the primary truth and still works
-              without any register seal.
+              ✅ Use manual attendance as the primary attendance truth. Register
+              seals are a fast backup, not a replacement for teacher
+              responsibility.
             </li>
             <li>
-              ✅ Register seal scanning marks attendance only, using the same
-              attendance session and mark records.
+              ✅ Scan register seals only inside an official EduLife OS
+              attendance session.
             </li>
             <li>
-              ✅ Printed seals expose no learner name, class, guardian contact,
-              health data, fees, results, home address, or location.
+              ✅ Keep printed seals privacy-safe. They must not show learner
+              name, class, guardian contact, health data, fees, results, home
+              address, or location.
             </li>
             <li>
-              ✅ Scan audit shows operational evidence only and hides raw QR
-              payloads, token hashes, parent data, health data, and location
-              data.
-            </li>
-            <li>
-              ✅ No RFID, temperature, symptoms, device, or health clock-in
-              logic belongs in this QR backup layer.
+              ✅ Use the scan audit when reviewing attendance evidence. It hides
+              raw QR payloads, token hashes, parent data, health data, and
+              location data.
             </li>
           </ul>
         </div>
