@@ -95,8 +95,6 @@ type PrintBadge = {
   qrPayload: string;
   qrDataUrl: string;
   studentId: string;
-  studentName: string;
-  classroomLabel: string;
   schoolName: string;
   schoolCode: string | null;
   issuedAt: string;
@@ -130,9 +128,9 @@ function statusBadgeClass(state: BadgeState) {
 }
 
 function statusLabel(state: BadgeState) {
-  if (state === "ACTIVE") return "Active badge";
-  if (state === "REVOKED") return "Revoked only";
-  return "No badge";
+  if (state === "ACTIVE") return "Active seal";
+  if (state === "REVOKED") return "Retired / compromised";
+  return "No seal";
 }
 
 async function readJson<T>(res: Response, label: string): Promise<T> {
@@ -198,11 +196,13 @@ export default function AttendanceBadgesClient() {
 
       const data = await readJson<ClassroomListResponse>(
         res,
-        "Badge classroom list",
+        "Register seal classroom list",
       );
 
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || "Could not load badge classrooms.");
+        throw new Error(
+          data.error || "Could not load register seal classrooms.",
+        );
       }
 
       const items = data.items ?? [];
@@ -215,7 +215,9 @@ export default function AttendanceBadgesClient() {
       });
     } catch (e) {
       setErr(
-        e instanceof Error ? e.message : "Could not load badge classrooms.",
+        e instanceof Error
+          ? e.message
+          : "Could not load register seal classrooms.",
       );
     } finally {
       setLoadingClasses(false);
@@ -238,10 +240,13 @@ export default function AttendanceBadgesClient() {
         { cache: "no-store" },
       );
 
-      const data = await readJson<BadgeListResponse>(res, "Badge register");
+      const data = await readJson<BadgeListResponse>(
+        res,
+        "Register seal control",
+      );
 
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || "Could not load attendance badges.");
+        throw new Error(data.error || "Could not load register seals.");
       }
 
       setRows(data.items ?? []);
@@ -250,9 +255,7 @@ export default function AttendanceBadgesClient() {
       setSchoolCode(data.tenant?.schoolCode ?? null);
       setClassroomLabel(data.classroom?.label || selectedClass?.label || "");
     } catch (e) {
-      setErr(
-        e instanceof Error ? e.message : "Could not load attendance badges.",
-      );
+      setErr(e instanceof Error ? e.message : "Could not load register seals.");
     } finally {
       setLoadingRows(false);
     }
@@ -277,12 +280,12 @@ export default function AttendanceBadgesClient() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           studentId: row.student.id,
-          label: `Attendance badge · ${row.student.name}`,
+          label: "Learner Register Seal",
           revokeExisting: true,
         }),
       });
 
-      const data = await readJson<IssueResponse>(res, "Issue badge");
+      const data = await readJson<IssueResponse>(res, "Issue register seal");
 
       if (
         !res.ok ||
@@ -291,7 +294,7 @@ export default function AttendanceBadgesClient() {
         !data.badge ||
         !data.student
       ) {
-        throw new Error(data.error || "Could not issue badge.");
+        throw new Error(data.error || "Could not issue register seal.");
       }
 
       const qrDataUrl = await QRCode.toDataURL(data.qrPayload, {
@@ -307,9 +310,6 @@ export default function AttendanceBadgesClient() {
         qrPayload: data.qrPayload,
         qrDataUrl,
         studentId: data.student.id,
-        studentName: data.student.name,
-        classroomLabel:
-          data.student.classroomLabel || row.student.classroomLabel,
         schoolName: tenantName,
         schoolCode,
         issuedAt: data.badge.issuedAt,
@@ -322,11 +322,11 @@ export default function AttendanceBadgesClient() {
         ].slice(0, 80),
       );
       setMsg(
-        `${data.student.name} badge issued. Print it now; the raw QR secret will not be stored.`,
+        `${data.student.name} register seal issued. Print it now; the raw QR secret will not be stored.`,
       );
       await loadBadges();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not issue badge.");
+      setErr(e instanceof Error ? e.message : "Could not issue register seal.");
     } finally {
       setBusyStudentId(null);
     }
@@ -336,7 +336,7 @@ export default function AttendanceBadgesClient() {
     if (!row.activeBadgeId) return;
 
     const confirmed = window.confirm(
-      `Revoke the active badge for ${row.student.name}? The old printed QR will stop working.`,
+      `Retire or compromise the active register seal for ${row.student.name}? The old printed seal will stop working.`,
     );
 
     if (!confirmed) return;
@@ -351,23 +351,25 @@ export default function AttendanceBadgesClient() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           badgeId: row.activeBadgeId,
-          reason: "Revoked from badge operations page.",
+          reason: "Retired or compromised from register seal operations page.",
         }),
       });
 
-      const data = await readJson<RevokeResponse>(res, "Revoke badge");
+      const data = await readJson<RevokeResponse>(res, "Retire register seal");
 
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || "Could not revoke badge.");
+        throw new Error(data.error || "Could not retire register seal.");
       }
 
-      setMsg(`${row.student.name} badge revoked.`);
+      setMsg(`${row.student.name} register seal retired.`);
       setPrintBadges((prev) =>
         prev.filter((item) => item.studentId !== row.student.id),
       );
       await loadBadges();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not revoke badge.");
+      setErr(
+        e instanceof Error ? e.message : "Could not retire register seal.",
+      );
     } finally {
       setBusyBadgeId(null);
     }
@@ -375,7 +377,7 @@ export default function AttendanceBadgesClient() {
 
   function printQueuedBadges() {
     if (!printBadges.length) {
-      setErr("Issue or reissue at least one badge before printing.");
+      setErr("Issue or reissue at least one register seal before printing.");
       return;
     }
 
@@ -430,12 +432,13 @@ export default function AttendanceBadgesClient() {
               EduLife OS · Attendance
             </p>
             <h1 className="mt-2 text-2xl font-bold text-[#F7F4ED] md:text-3xl">
-              QR Attendance Badges
+              Learner Register Seals
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#AEB7C7]">
-              Issue, reissue, revoke, and print learner QR badges. Badges mark
-              attendance only. They never capture health data, temperature,
-              symptoms, or device readings.
+              Issue, reissue, retire, and print learner register seals for
+              attendance. A seal marks attendance only. It does not expose a
+              learner’s name to the public, and it never carries health data,
+              fees, results, parent contacts, home address, or location data.
             </p>
           </div>
 
@@ -455,7 +458,7 @@ export default function AttendanceBadgesClient() {
               disabled={!printBadges.length}
               className="rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-bold text-[#071A3D] shadow-lg shadow-[#D4AF37]/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Print Queue ({printBadges.length})
+              Print Seals ({printBadges.length})
             </button>
           </div>
         </div>
@@ -535,7 +538,7 @@ export default function AttendanceBadgesClient() {
         </div>
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-200">
-            Active
+            Active seals
           </p>
           <p className="mt-2 text-3xl font-bold text-emerald-100">
             {summary?.activeBadges ?? 0}
@@ -543,7 +546,7 @@ export default function AttendanceBadgesClient() {
         </div>
         <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200">
-            Revoked only
+            Retired / compromised
           </p>
           <p className="mt-2 text-3xl font-bold text-amber-100">
             {summary?.revokedOnly ?? 0}
@@ -551,7 +554,7 @@ export default function AttendanceBadgesClient() {
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#8F98A8]">
-            No badge
+            No seal
           </p>
           <p className="mt-2 text-3xl font-bold text-[#F7F4ED]">
             {summary?.noBadge ?? 0}
@@ -563,17 +566,18 @@ export default function AttendanceBadgesClient() {
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-lg font-bold text-[#F7F4ED]">
-              Learner badge register
+              Learner register seal control
             </h2>
             <p className="text-sm text-[#8F98A8]">
-              Reissue creates a new QR and revokes the old one automatically.
+              Reissue creates a new private attendance seal and retires the old
+              one when it is replaced, damaged, exposed, or compromised.
             </p>
           </div>
         </div>
 
         {loadingRows ? (
           <div className="rounded-2xl border border-white/10 bg-[#07111F]/80 px-4 py-10 text-center text-sm text-[#C9CDD6]">
-            Loading badge register…
+            Loading register seal control…
           </div>
         ) : rows.length ? (
           <div className="overflow-hidden rounded-2xl border border-white/10">
@@ -585,7 +589,7 @@ export default function AttendanceBadgesClient() {
                       Learner
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-[#8F98A8]">
-                      Badge
+                      Register seal
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-[0.14em] text-[#8F98A8]">
                       Last activity
@@ -671,7 +675,7 @@ export default function AttendanceBadgesClient() {
                               }
                               className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-100 hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                              {revoking ? "Revoking…" : "Revoke"}
+                              {revoking ? "Retiring…" : "Retire"}
                             </button>
                           </div>
                         </td>
@@ -693,8 +697,8 @@ export default function AttendanceBadgesClient() {
         <AttendanceScanAuditPanel
           classroomId={classroomId}
           endpoint="/api/admin/attendance/scan-audit/list"
-          title="Class QR scan audit"
-          description="Shows QR scan evidence for the selected class. This view hides raw QR payloads, token hashes, parent contact data, health data, and location data."
+          title="Class register seal scan audit"
+          description="Shows register seal scan evidence for the selected class. This view hides raw QR payloads, token hashes, parent contact data, health data, and location data."
           showClassroom={false}
         />
       ) : null}
@@ -702,10 +706,13 @@ export default function AttendanceBadgesClient() {
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-[#F7F4ED]">Print queue</h2>
+            <h2 className="text-lg font-bold text-[#F7F4ED]">
+              Register seal print queue
+            </h2>
             <p className="text-sm text-[#8F98A8]">
-              Only newly issued badges appear here. Print before leaving this
-              page.
+              Only newly issued register seals appear here. Print before leaving
+              this page. The physical seal must not display learner name, class,
+              guardian, health, fees, results, home address, or location data.
             </p>
           </div>
 
@@ -732,13 +739,13 @@ export default function AttendanceBadgesClient() {
 
         {!printBadges.length ? (
           <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-[#8F98A8]">
-            No badges waiting to print.
+            No register seals waiting to print.
           </div>
         ) : (
           <div id="attendance-badge-print-area" className="mt-5">
             <div className="hidden print:block">
               <h1 className="text-xl font-bold">
-                EduLife OS Attendance Badges
+                EduLife OS Attendance Register seal
               </h1>
               <p className="mt-1 text-sm">
                 {tenantName} {schoolCode ? `(${schoolCode})` : ""}
@@ -756,43 +763,46 @@ export default function AttendanceBadgesClient() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={badge.qrDataUrl}
-                        alt={`QR badge for ${badge.studentName}`}
+                        alt="Learner Register Seal QR"
                         className="h-28 w-28"
                       />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#E8C96A] print:text-gray-500">
-                        Attendance only
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#D4AF37] print:text-gray-600">
+                        Learner Register Seal
                       </p>
                       <h3 className="mt-1 text-base font-extrabold leading-tight">
-                        {badge.studentName}
+                        Attendance register use only
                       </h3>
-                      <p className="mt-1 text-xs text-[#AEB7C7] print:text-gray-600">
-                        {badge.classroomLabel}
+                      <p className="mt-1 text-xs leading-5 text-[#AEB7C7] print:text-gray-600">
+                        This seal contains no learner name, class, parent
+                        contact, health, fees, results, home address, or
+                        location data.
                       </p>
                       <p className="mt-2 text-xs font-semibold">
                         {badge.schoolName}
                       </p>
                       {badge.schoolCode ? (
                         <p className="text-[11px] text-[#8F98A8] print:text-gray-500">
-                          Code: {badge.schoolCode}
+                          School code: {badge.schoolCode}
                         </p>
                       ) : null}
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-[#C9CDD6] print:border-gray-200 print:bg-gray-50 print:text-gray-700">
+                  <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs leading-5 text-[#AEB7C7] print:border-gray-200 print:bg-gray-50 print:text-gray-700">
                     <p>
-                      Hint:{" "}
+                      Seal hint:{" "}
                       <span className="font-bold">
                         {badge.tokenHint || "—"}
                       </span>
                     </p>
                     <p>Issued: {fmtDate(badge.issuedAt)}</p>
                     <p className="mt-1 text-[11px]">
-                      Scan only on EduLife OS attendance session pages. This
-                      badge does not capture health data.
+                      Authorized staff scan this seal only inside an EduLife OS
+                      attendance session. It marks attendance only and does not
+                      track the learner.
                     </p>
                   </div>
                 </div>
