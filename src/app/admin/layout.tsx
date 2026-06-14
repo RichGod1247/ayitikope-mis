@@ -20,7 +20,7 @@ const mainNav: NavItem[] = [
   { label: "Student 360°", href: "/admin/students/profile" },
   { label: "Teachers", href: "/admin/teachers" },
   { label: "Attendance", href: "/admin/attendance" },
-  { label: "Attendance Badges", href: "/admin/attendance/badges" },
+  { label: "Register Seals", href: "/admin/attendance/badges" },
   { label: "Assessments", href: "/admin/assessments" },
 ];
 
@@ -195,10 +195,10 @@ export default async function AdminLayout({
           <div className="flex items-center gap-1 overflow-x-auto px-3 py-2 scrollbar-none">
             <MobileNavLink href="/admin/dashboard">Dashboard</MobileNavLink>
             <MobileNavLink href="/admin/students">Students</MobileNavLink>
-<MobileNavLink href="/admin/attendance/badges">
-  Attendance Badges
-</MobileNavLink>
-<MobileNavLink href="/admin/fees/invoices">Invoices</MobileNavLink>
+            <MobileNavLink href="/admin/attendance/badges">
+              Register Seals
+            </MobileNavLink>
+            <MobileNavLink href="/admin/fees/invoices">Invoices</MobileNavLink>
             <MobileNavLink href="/admin/fees/receipts">Receipts</MobileNavLink>
             <MobileNavLink href="/admin/fees/refunds">Refunds</MobileNavLink>
             <MobileNavLink href="/admin/fees/online-payments">

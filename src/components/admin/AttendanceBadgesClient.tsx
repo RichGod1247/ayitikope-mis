@@ -562,6 +562,83 @@ export default function AttendanceBadgesClient() {
         </div>
       </section>
 
+      <section className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+        <div className="rounded-[28px] border border-[#D4AF37]/20 bg-[#D4AF37]/10 p-5 shadow-2xl shadow-black/20">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#E8C96A]">
+            Register seal lifecycle guide
+          </p>
+          <h2 className="mt-2 text-lg font-bold text-[#F7F4ED]">
+            How to manage a learner register seal
+          </h2>
+
+          <div className="mt-4 grid gap-3 text-sm leading-6 text-[#D8DEE8]">
+            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+              <p className="font-bold text-[#F7F4ED]">Reprint</p>
+              <p className="mt-1 text-[#AEB7C7]">
+                Use reprint when the same learner needs another physical copy:
+                damaged uniform, new uniform, faded print, or multiple approved
+                uniforms.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+              <p className="font-bold text-[#F7F4ED]">Reissue</p>
+              <p className="mt-1 text-[#AEB7C7]">
+                Use reissue when the old seal should stop working: exposed seal,
+                suspected misuse, wrong print, lost card, or compromised copy.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+              <p className="font-bold text-[#F7F4ED]">Retire</p>
+              <p className="mt-1 text-[#AEB7C7]">
+                Retire the seal when a learner leaves the school, transfers out,
+                or when the school no longer wants that seal accepted.
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm leading-6 text-emerald-100">
+            Promotion does not require a new public identity. The school record
+            changes inside EduLife OS; the seal remains an attendance register
+            tool, not a public learner profile.
+          </p>
+        </div>
+
+        <div className="rounded-[28px] border border-emerald-400/20 bg-emerald-400/10 p-5 shadow-2xl shadow-black/20">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
+            Final QR closure checklist
+          </p>
+          <h2 className="mt-2 text-lg font-bold text-[#F7F4ED]">
+            Before QR backup is marked complete
+          </h2>
+
+          <ul className="mt-4 space-y-3 text-sm leading-6 text-[#D8DEE8]">
+            <li>
+              ✅ Manual attendance remains the primary truth and still works
+              without any register seal.
+            </li>
+            <li>
+              ✅ Register seal scanning marks attendance only, using the same
+              attendance session and mark records.
+            </li>
+            <li>
+              ✅ Printed seals expose no learner name, class, guardian contact,
+              health data, fees, results, home address, or location.
+            </li>
+            <li>
+              ✅ Scan audit shows operational evidence only and hides raw QR
+              payloads, token hashes, parent data, health data, and location
+              data.
+            </li>
+            <li>
+              ✅ No RFID, temperature, symptoms, device, or health clock-in
+              logic belongs in this QR backup layer.
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 md:p-5">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
