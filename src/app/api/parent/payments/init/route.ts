@@ -16,6 +16,9 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const PAYMENT_CHANNEL = "checkout";
+const PAYMENT_SOURCE = "parent_portal";
+
 function noStore(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
@@ -107,7 +110,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (!paystackSecret.startsWith("sk_test_") && !paystackSecret.startsWith("sk_live_")) {
+    if (
+      !paystackSecret.startsWith("sk_test_") &&
+      !paystackSecret.startsWith("sk_live_")
+    ) {
       console.error("[PARENT_PAYMENT_INIT] Invalid Paystack secret key prefix");
       return noStore(500, {
         ok: false,
@@ -191,6 +197,8 @@ export async function POST(req: NextRequest) {
       amountPesewas,
       guardianPhoneE164: String(sess.guardianPhoneE164 ?? ""),
       guardianSuffix9: digitsOnly(sess.guardianSuffix9 ?? ""),
+      channel: PAYMENT_CHANNEL,
+      source: PAYMENT_SOURCE,
     });
 
     const subaccountCode = clean(
@@ -215,6 +223,7 @@ export async function POST(req: NextRequest) {
     )}`;
 
     const bearer = validBearer(process.env.PAYSTACK_SCHOOL_FEES_BEARER);
+    const channel = clean(intentResult.intent.channel) || PAYMENT_CHANNEL;
 
     const paystackPayload: Record<string, unknown> = {
       amount: intentResult.intent.amountPesewas,
@@ -231,7 +240,8 @@ export async function POST(req: NextRequest) {
         studentName: intentResult.studentName,
         term,
         academicYear,
-        source: "parent_portal",
+        source: PAYMENT_SOURCE,
+        channel,
         settlement: {
           provider: "PAYSTACK",
           settlementAccountId: intentResult.intent.settlementAccountId,
@@ -350,6 +360,7 @@ export async function POST(req: NextRequest) {
       access_code: psData.data.access_code,
       reference: intentResult.intent.providerReference,
       paymentIntentId: intentResult.intent.id,
+      channel,
       amountPesewas: intentResult.intent.amountPesewas,
       invoiceId: intentResult.intent.invoiceId,
       settlementAccountId: intentResult.intent.settlementAccountId,

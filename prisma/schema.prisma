@@ -1116,23 +1116,32 @@ model FeePayment {
 }
 
 model PaymentIntent {
-  id                  String              @id @default(cuid())
+  id                  String  @id @default(cuid())
   tenantId            String
   studentId           String
   invoiceId           String
   settlementAccountId String?
-  provider            PaymentProvider     @default(PAYSTACK)
-  providerReference   String              @db.VarChar(120)
-  amountPesewas       Int
-  currency            String              @default("GHS") @db.VarChar(8)
-  status              PaymentIntentStatus @default(PENDING)
-  checkoutUrl         String?
-  accessCode          String?
-  metadata            Json                @default("{}")
-  expiresAt           DateTime?           @db.Timestamptz(6)
-  createdByUserId     String?
-  createdAt           DateTime            @default(now()) @db.Timestamptz(6)
-  updatedAt           DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+
+  /// Who confirms the money.
+  /// For Paystack USSD, this remains PAYSTACK.
+  provider PaymentProvider @default(PAYSTACK)
+
+  /// How the parent entered/completed the payment.
+  /// Examples: "card", "mobile_money", "ussd", "bank_transfer", "checkout".
+  /// This prevents the bad design of treating USSD as a provider.
+  channel String? @db.VarChar(40)
+
+  providerReference String              @db.VarChar(120)
+  amountPesewas     Int
+  currency          String              @default("GHS") @db.VarChar(8)
+  status            PaymentIntentStatus @default(PENDING)
+  checkoutUrl       String?
+  accessCode        String?
+  metadata          Json                @default("{}")
+  expiresAt         DateTime?           @db.Timestamptz(6)
+  createdByUserId   String?
+  createdAt         DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
 
   tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   student           Student                  @relation(fields: [studentId], references: [id], onDelete: Restrict)
@@ -1147,6 +1156,7 @@ model PaymentIntent {
   @@index([tenantId, invoiceId])
   @@index([tenantId, status])
   @@index([tenantId, settlementAccountId])
+  @@index([tenantId, provider, channel, status], map: "PaymentIntent_tenant_provider_channel_status_idx")
 }
 
 model PaymentProviderEvent {

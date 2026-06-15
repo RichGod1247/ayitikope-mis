@@ -76,6 +76,31 @@ function cleanMethod(method: string | null | undefined): string {
   return allowed.has(m) ? m : "other";
 }
 
+function cleanPaymentChannel(channel: string | null | undefined): string {
+  const c = String(channel ?? "checkout").trim().toLowerCase();
+
+  const allowed = new Set([
+    "checkout",
+    "ussd",
+    "card",
+    "mobile_money",
+    "bank_transfer",
+    "qr",
+    "other",
+  ]);
+
+  return allowed.has(c) ? c : "other";
+}
+
+function cleanPaymentSource(source: string | null | undefined, channel: string): string {
+  const s = String(source ?? "").trim().toLowerCase();
+
+  if (s) return s.replace(/[^a-z0-9:_./-]/g, "").slice(0, 80) || "parent_portal";
+  if (channel === "ussd") return "paystack_ussd";
+
+  return "parent_portal";
+}
+
 function makeJournalRef(prefix: string): string {
   const now = new Date();
   const stamp = now.toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
@@ -1314,6 +1339,19 @@ export async function createParentPaymentIntent(input: {
   amountPesewas: number;
   guardianPhoneE164: string;
   guardianSuffix9: string;
+
+  /**
+   * Payment channel, not provider.
+   * Normal parent portal payments use "checkout".
+   * Paystack USSD-originated payments use "ussd".
+   */
+  channel?: string | null;
+
+  /**
+   * Audit/source label for metadata.
+   * Examples: "parent_portal", "paystack_ussd".
+   */
+  source?: string | null;
 }) {
   const {
     tenantId,
@@ -1323,6 +1361,9 @@ export async function createParentPaymentIntent(input: {
     guardianPhoneE164,
     guardianSuffix9,
   } = input;
+
+  const channel = cleanPaymentChannel(input.channel);
+  const source = cleanPaymentSource(input.source, channel);
 
   const amountPesewas = assertPositiveIntegerPesewas(
     input.amountPesewas,
@@ -1485,16 +1526,18 @@ export async function createParentPaymentIntent(input: {
         invoiceId: targetInvoice.id,
         settlementAccountId: settlementAccount.id,
         provider: "PAYSTACK",
-        providerReference,
-        amountPesewas,
-        currency: "GHS",
-        status: "PENDING",
-        expiresAt,
-        metadata: toPrismaJson({
-          studentName,
-          term,
-          academicYear,
-          source: "parent_portal",
+channel,
+providerReference,
+amountPesewas,
+currency: "GHS",
+status: "PENDING",
+expiresAt,
+metadata: toPrismaJson({
+  studentName,
+  term,
+  academicYear,
+  source,
+  channel,
           expiresAt: expiresAt.toISOString(),
           pendingExposurePesewas,
           effectiveAvailablePesewas,
@@ -1511,13 +1554,14 @@ export async function createParentPaymentIntent(input: {
         }),
       },
       select: {
-        id: true,
-        tenantId: true,
-        studentId: true,
-        invoiceId: true,
-        settlementAccountId: true,
-        providerReference: true,
-        amountPesewas: true,
+  id: true,
+  tenantId: true,
+  studentId: true,
+  invoiceId: true,
+  settlementAccountId: true,
+  providerReference: true,
+  channel: true,
+  amountPesewas: true,
         currency: true,
         status: true,
         expiresAt: true,
@@ -1692,7 +1736,7 @@ export async function finalizePaystackChargeSuccess(input: {
   const reference = cleanProviderString(data.reference);
   const amountPesewas = cleanProviderNumber(data.amount);
   const currency = (cleanProviderString(data.currency) ?? "GHS").toUpperCase();
-  const channel = cleanProviderString(data.channel);
+  const providerReportedChannel = cleanProviderString(data.channel);
   const providerTransactionId = cleanProviderString(data.id);
   const providerPaidAt = parseProviderPaidAt(data.paid_at);
   const providerEventId = extractProviderEventIdFromPayload(input.event);
@@ -1767,7 +1811,7 @@ export async function finalizePaystackChargeSuccess(input: {
     };
   }
 
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: TxClient) => {
     await lockPaymentIntentForUpdate(tx, intentLite.tenantId, intentLite.id);
     await lockFeeInvoiceForUpdate(tx, intentLite.tenantId, intentLite.invoiceId);
 
@@ -1782,6 +1826,7 @@ export async function finalizePaystackChargeSuccess(input: {
         amountPesewas: true,
         status: true,
         providerReference: true,
+        channel: true,
         expiresAt: true,
         settlementAccount: {
           select: {
@@ -1851,6 +1896,9 @@ export async function finalizePaystackChargeSuccess(input: {
       };
     }
 
+    const settledChannel = providerReportedChannel ?? intent.channel ?? null;
+    const settledMethod = settledChannel === "ussd" ? "paystack_ussd" : "paystack";
+
     const existingTransaction = await tx.paymentTransaction.findFirst({
       where: {
         tenantId: intent.tenantId,
@@ -1905,7 +1953,7 @@ export async function finalizePaystackChargeSuccess(input: {
           amountPesewas: existingPayment.amountPesewas,
           currency,
           status: "SUCCESS",
-          channel,
+          channel: settledChannel,
           providerPaidAt,
           providerRaw: toPrismaJson({
             ...input.event,
@@ -2037,7 +2085,7 @@ export async function finalizePaystackChargeSuccess(input: {
         amountPesewas,
         currency,
         status: "SUCCESS",
-        channel,
+        channel: settledChannel,
         providerPaidAt,
         providerRaw: toPrismaJson({
           ...input.event,
@@ -2058,9 +2106,9 @@ export async function finalizePaystackChargeSuccess(input: {
         tenantId: intent.tenantId,
         invoiceId: intent.invoiceId,
         amountPesewas,
-        method: "paystack",
+        method: settledMethod,
         reference,
-        channel,
+        channel: settledChannel,
         status: "SUCCESS",
       },
       select: { id: true },
