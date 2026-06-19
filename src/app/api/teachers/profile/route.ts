@@ -10,6 +10,8 @@ import {
   sameNormalizedJhsAssignments,
 } from "@/lib/teacherScope";
 
+import { replaceTeacherAssessmentAssignmentsForProfile } from "@/lib/assessments/teacherAssignmentSync";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -165,35 +167,57 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const profile = await prisma.teacherProfile.upsert({
-      where: {
-        teacherProfile_tenant_user_unique: {
+    const profile = await prisma.$transaction(async (tx) => {
+      const savedProfile = await tx.teacherProfile.upsert({
+        where: {
+          teacherProfile_tenant_user_unique: {
+            tenantId: ctx.tenantId,
+            userId: ctx.userId,
+          },
+        },
+        create: {
           tenantId: ctx.tenantId,
           userId: ctx.userId,
+          phone,
+          phase,
+          classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
+          jhsAssignments:
+            phase === "JHS"
+              ? (normalizedJhsAssignments as Prisma.InputJsonValue)
+              : Prisma.DbNull,
+          additionalDuties,
         },
-      },
-      create: {
+        update: {
+          phone,
+          phase,
+          classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
+          jhsAssignments:
+            phase === "JHS"
+              ? (normalizedJhsAssignments as Prisma.InputJsonValue)
+              : Prisma.DbNull,
+          additionalDuties,
+        },
+      });
+
+      await replaceTeacherAssessmentAssignmentsForProfile({
+        tx,
         tenantId: ctx.tenantId,
-        userId: ctx.userId,
-        phone,
+        teacherUserId: ctx.userId,
         phase,
         classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
+        primaryClassroomId: savedProfile.primaryClassroomId ?? null,
         jhsAssignments:
           phase === "JHS"
-            ? (normalizedJhsAssignments as Prisma.InputJsonValue)
-            : Prisma.DbNull,
-        additionalDuties,
-      },
-      update: {
-        phone,
-        phase,
-        classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
-        jhsAssignments:
-          phase === "JHS"
-            ? (normalizedJhsAssignments as Prisma.InputJsonValue)
-            : Prisma.DbNull,
-        additionalDuties,
-      },
+            ? normalizedJhsAssignments.map((a) => ({
+                subject: a.subject,
+                classes: a.classes,
+              }))
+            : [],
+        createdByUserId: ctx.userId,
+        reason: "Teacher updated profile scope through legacy teacher profile endpoint.",
+      });
+
+      return savedProfile;
     });
 
     return jsonNoStore(

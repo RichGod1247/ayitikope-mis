@@ -14,6 +14,8 @@ import {
 import bcrypt from "bcryptjs";
 import { normalizeStaffIdNorm } from "@/lib/staffId";
 import { normalizeTeacherClassLevel } from "@/lib/teacherScope";
+import { replaceTeacherAssessmentAssignmentsForProfile } from "@/lib/assessments/teacherAssignmentSync";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -886,15 +888,25 @@ export async function POST(req: NextRequest) {
         if (willTeach) {
           const existingProfile = await tx.teacherProfile.findUnique({
             where: { teacherProfile_tenant_user_unique: { tenantId, userId } },
-            select: { id: true, phase: true, classLevel: true, jhsAssignments: true },
+            select: {
+              id: true,
+              phase: true,
+              classLevel: true,
+              jhsAssignments: true,
+              primaryClassroomId: true,
+            },
           });
 
           const additionalDuties = Array.isArray((body as any).additionalDuties)
-            ? ((body as any).additionalDuties as any).map((x: any) => cleanStr(x)).filter(Boolean)
+            ? ((body as any).additionalDuties as unknown[])
+                .map((x) => cleanStr(x))
+                .filter(Boolean)
             : [];
 
+          let primaryClassroomId: string | null = existingProfile?.primaryClassroomId ?? null;
+
           if (!existingProfile) {
-            await tx.teacherProfile.create({
+            const createdProfile = await tx.teacherProfile.create({
               data: {
                 tenantId,
                 userId,
@@ -904,16 +916,26 @@ export async function POST(req: NextRequest) {
                 ...(phase === "JHS" ? { jhsAssignments: canonicalJhs as any } : {}),
                 additionalDuties,
               },
+              select: {
+                primaryClassroomId: true,
+              },
             });
+
+            primaryClassroomId = createdProfile.primaryClassroomId ?? null;
           } else {
-            if (String(existingProfile.phase) !== String(phase)) throw new Error("SCOPE_ALREADY_LOCKED");
+            if (String(existingProfile.phase) !== String(phase)) {
+              throw new Error("SCOPE_ALREADY_LOCKED");
+            }
 
             const existingClassLevel =
               phase === "KG" || phase === "PRIMARY"
                 ? normalizeTeacherClassLevel(phase, existingProfile.classLevel)
                 : null;
 
-            if ((phase === "KG" || phase === "PRIMARY") && existingClassLevel !== classLevel) {
+            if (
+              (phase === "KG" || phase === "PRIMARY") &&
+              existingClassLevel !== classLevel
+            ) {
               throw new Error("SCOPE_ALREADY_LOCKED");
             }
 
@@ -924,7 +946,33 @@ export async function POST(req: NextRequest) {
                 throw new Error("SCOPE_ALREADY_LOCKED");
               }
             }
+
+            await tx.teacherProfile.update({
+              where: { id: existingProfile.id },
+              data: {
+                phone,
+                additionalDuties,
+              },
+            });
           }
+
+          await replaceTeacherAssessmentAssignmentsForProfile({
+            tx,
+            tenantId,
+            teacherUserId: userId,
+            phase: phase as any,
+            classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
+            primaryClassroomId,
+            jhsAssignments:
+              phase === "JHS" && canonicalJhs
+                ? canonicalJhs.map((a) => ({
+                    subject: a.subject,
+                    classes: a.classes,
+                  }))
+                : [],
+            createdByUserId: userId,
+            reason: "Teacher assessment assignments created during teacher signup.",
+          });
         }
 
         const action = roleName === "HEADTEACHER" ? "HEADTEACHER_SIGNUP" : "TEACHER_SIGNUP";
