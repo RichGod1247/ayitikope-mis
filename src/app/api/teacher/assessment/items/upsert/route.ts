@@ -8,7 +8,8 @@ import {
   subjectEquals,
 } from "@/lib/teacherAccess";
 import {
-  getTenantAssessmentPolicy,
+  findPolicyComponent,
+  getTenantAssessmentPolicyLite as getTenantAssessmentPolicy,
   isAllowedType,
   normalizeTypeCode,
 } from "@/lib/assessments/policy";
@@ -17,7 +18,7 @@ import { assertAssessmentItemWritable } from "@/lib/assessments/itemWriteState";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function noStore(status: number, payload: any) {
+function noStore(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
     headers: {
@@ -31,6 +32,10 @@ function isForbiddenReason(reason: string) {
   return reason === "OUT_OF_SCOPE" || reason === "SUBJECT_OUT_OF_SCOPE";
 }
 
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
 export async function POST(req: Request) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
@@ -39,34 +44,34 @@ export async function POST(req: Request) {
   if (!auth.ok) return auth.res as any;
 
   const { ctx } = auth;
-  const body = await req.json().catch(() => null);
+  const rawBody: unknown = await req.json().catch(() => null);
+const body =
+  rawBody && typeof rawBody === "object"
+    ? (rawBody as Record<string, unknown>)
+    : {};
 
-  const id = typeof body?.id === "string" ? body.id.trim() : "";
+  const id = clean(body?.id);
 
-  const classroomId =
-    typeof body?.classroomId === "string" ? body.classroomId.trim() : "";
-  const subject =
-    typeof body?.subject === "string" ? body.subject.trim() : "";
-  const term = typeof body?.term === "string" ? body.term.trim() : "";
-  const academicYear =
-    typeof body?.academicYear === "string" ? body.academicYear.trim() : "";
-  const title = typeof body?.title === "string" ? body.title.trim() : "";
-  const description =
-    typeof body?.description === "string" ? body.description.trim() : null;
+  const classroomId = clean(body?.classroomId);
+  const subject = clean(body?.subject);
+  const term = clean(body?.term);
+  const academicYear = clean(body?.academicYear);
+  const title = clean(body?.title);
+  const description = clean(body?.description) || null;
 
-  const typeRaw = typeof body?.type === "string" ? body.type.trim() : "";
-  const type = normalizeTypeCode(typeRaw);
+  const type = normalizeTypeCode(body?.type);
+  const componentCodeFromBody = clean(body?.componentCode)
+    ? normalizeTypeCode(body?.componentCode)
+    : "";
 
-  const lessonDeliveryId =
-    typeof body?.lessonDeliveryId === "string" ? body.lessonDeliveryId.trim() : "";
+  const lessonDeliveryId = clean(body?.lessonDeliveryId);
 
   const maxScoreNum = Number(body?.maxScore ?? 0);
   const weightingNum =
     body?.weighting == null || body.weighting === ""
       ? null
       : Number(body.weighting);
-  const date =
-    typeof body?.date === "string" && body.date ? new Date(body.date) : null;
+  const date = typeof body?.date === "string" && body.date ? new Date(body.date) : null;
 
   if (!classroomId || !subject || !term || !academicYear || !title || !type) {
     return noStore(400, { ok: false, error: "MISSING_FIELDS" });
@@ -87,16 +92,7 @@ export async function POST(req: Request) {
     return noStore(400, { ok: false, error: "INVALID_DATE" });
   }
 
-  const policy = await getTenantAssessmentPolicy(ctx.tenantId);
-  if (!isAllowedType(policy, type)) {
-    return noStore(400, {
-      ok: false,
-      error: "TYPE_NOT_ALLOWED",
-      allowed: policy.types,
-    });
-  }
-
-  // ✅ Validate target classroom+subject scope (server-trusted)
+  // ✅ Validate target classroom+subject scope first.
   const targetAccess = await resolveUserClassroomAccess({
     tenantId: ctx.tenantId,
     userId: ctx.userId,
@@ -112,9 +108,28 @@ export async function POST(req: Request) {
     });
   }
 
+  const policy = await getTenantAssessmentPolicy(ctx.tenantId, {
+    classroom: targetAccess.classroom,
+  });
+
+  if (!isAllowedType(policy, type)) {
+    return noStore(400, {
+      ok: false,
+      error: "TYPE_NOT_ALLOWED",
+      allowed: policy.types,
+    });
+  }
+
+  const component =
+    findPolicyComponent(policy, componentCodeFromBody || type) ??
+    findPolicyComponent(policy, type);
+
+  const resolvedComponentCode = component?.code ?? (componentCodeFromBody || type);
+  const resolvedPolicyId = component?.policyId ?? policy.id ?? null;
+  const resolvedComponentId = component?.id ?? null;
+
   let resolvedCurriculumUnitId: string | null = null;
 
-  // ✅ Optional: lesson delivery link scope validation
   let delivery:
     | {
         id: string;
@@ -187,9 +202,6 @@ export async function POST(req: Request) {
   }
 
   try {
-    // -----------------------------
-    // UPDATE existing
-    // -----------------------------
     if (id) {
       const existing = await prisma.assessmentItem.findUnique({
         where: { id },
@@ -202,7 +214,7 @@ export async function POST(req: Request) {
           publishedAt: true,
           lockedAt: true,
           curriculumUnitId: true,
-          createdByUserId: true, // ✅ ownership
+          createdByUserId: true,
         },
       });
 
@@ -210,7 +222,6 @@ export async function POST(req: Request) {
         return noStore(404, { ok: false, error: "ITEM_NOT_FOUND" });
       }
 
-      // ✅ Bank-grade ownership: teachers can edit only what they created
       if (!isAdminLikeRole(ctx.roleName)) {
         if (!existing.createdByUserId) {
           return noStore(403, { ok: false, error: "ITEM_OWNER_MISSING" });
@@ -220,7 +231,6 @@ export async function POST(req: Request) {
         }
       }
 
-      // Existing scope must also be valid (prevents “edit by knowing id”)
       const currentAccess = await resolveUserClassroomAccess({
         tenantId: ctx.tenantId,
         userId: ctx.userId,
@@ -236,10 +246,8 @@ export async function POST(req: Request) {
         });
       }
 
-      // ✅ lifecycle protection
       assertAssessmentItemWritable(existing);
 
-      // If existing already has a unit, delivery can’t conflict with it
       if (
         resolvedCurriculumUnitId &&
         existing.curriculumUnitId &&
@@ -261,6 +269,12 @@ export async function POST(req: Request) {
           maxScore: maxScoreNum,
           weighting: weightingNum,
           date,
+          assessmentPolicyId: resolvedPolicyId,
+          policyComponentId: resolvedComponentId,
+          componentCode: resolvedComponentCode,
+          templateKey: `${term}:${academicYear}:${subject}:${resolvedComponentCode}`,
+          sortOrder: component?.orderIndex ?? 0,
+          isRequired: component?.required ?? true,
           lessonDeliveryId: lessonDeliveryId || null,
           curriculumUnitId: existing.curriculumUnitId ?? resolvedCurriculumUnitId,
         },
@@ -281,15 +295,18 @@ export async function POST(req: Request) {
           lockedAt: true,
           lessonDeliveryId: true,
           curriculumUnitId: true,
+          assessmentPolicyId: true,
+          policyComponentId: true,
+          componentCode: true,
+          templateKey: true,
+          sortOrder: true,
+          isRequired: true,
         },
       });
 
       return noStore(200, { ok: true, item: updated });
     }
 
-    // -----------------------------
-    // CREATE new
-    // -----------------------------
     const created = await prisma.assessmentItem.create({
       data: {
         tenantId: ctx.tenantId,
@@ -303,9 +320,15 @@ export async function POST(req: Request) {
         maxScore: maxScoreNum,
         weighting: weightingNum,
         date,
+        assessmentPolicyId: resolvedPolicyId,
+        policyComponentId: resolvedComponentId,
+        componentCode: resolvedComponentCode,
+        templateKey: `${term}:${academicYear}:${subject}:${resolvedComponentCode}`,
+        sortOrder: component?.orderIndex ?? 0,
+        isRequired: component?.required ?? true,
         lessonDeliveryId: lessonDeliveryId || null,
         curriculumUnitId: resolvedCurriculumUnitId,
-        createdByUserId: ctx.userId, // ✅ set owner
+        createdByUserId: ctx.userId,
       },
       select: {
         id: true,
@@ -324,12 +347,19 @@ export async function POST(req: Request) {
         lockedAt: true,
         lessonDeliveryId: true,
         curriculumUnitId: true,
+        assessmentPolicyId: true,
+        policyComponentId: true,
+        componentCode: true,
+        templateKey: true,
+        sortOrder: true,
+        isRequired: true,
       },
     });
 
     return noStore(200, { ok: true, item: created });
-  } catch (err: any) {
-    const msg = String(err?.message || "FAILED_TO_SAVE_ITEM");
+   } catch (err: unknown) {
+  const msg =
+    err instanceof Error ? err.message : "FAILED_TO_SAVE_ITEM";
 
     if (msg === "ITEM_PUBLISHED" || msg === "ITEM_LOCKED") {
       return noStore(409, { ok: false, error: msg });

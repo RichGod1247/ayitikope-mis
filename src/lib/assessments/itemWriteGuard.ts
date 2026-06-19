@@ -1,4 +1,8 @@
 // src/lib/assessments/itemWriteGuard.ts
+import {
+  getAssessmentItemWriteBlock as getCanonicalAssessmentItemWriteBlock,
+  normalizeAssessmentItemStatus as normalizeCanonicalAssessmentItemStatus,
+} from "@/lib/assessments/itemWriteState";
 
 type ItemWriteState = {
   status?: string | null;
@@ -25,15 +29,22 @@ export type AssessmentItemWriteBlock =
     };
 
 export function normalizeAssessmentItemStatus(raw: unknown) {
-  return String(raw ?? "DRAFT").trim().toUpperCase() || "DRAFT";
+  return normalizeCanonicalAssessmentItemStatus(raw);
 }
 
+/**
+ * Compatibility shell only.
+ *
+ * Canonical write-state logic now lives in:
+ * src/lib/assessments/itemWriteState.ts
+ */
 export function getAssessmentItemWriteBlock(
   item: ItemWriteState
 ): AssessmentItemWriteBlock {
-  const status = normalizeAssessmentItemStatus(item.status);
+  const status = normalizeCanonicalAssessmentItemStatus(item.status);
+  const block = getCanonicalAssessmentItemWriteBlock(item);
 
-  if (status === "LOCKED" || !!item.lockedAt) {
+  if (block === "ITEM_LOCKED") {
     return {
       ok: false,
       error: "ITEM_ALREADY_LOCKED",
@@ -43,7 +54,7 @@ export function getAssessmentItemWriteBlock(
     };
   }
 
-  if (status === "PUBLISHED" || !!item.publishedAt) {
+  if (block === "ITEM_PUBLISHED") {
     return {
       ok: false,
       error: "ITEM_ALREADY_PUBLISHED",

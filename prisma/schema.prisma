@@ -50,30 +50,35 @@ model User {
   phone     String?
   phoneNorm String? @unique
 
-  accounts                      Account[]
-  announcementsCreated          Announcement[]           @relation("AnnouncementCreatedBy")
-  Assessment                    Assessment[]
-  assessmentItemsCreated        AssessmentItem[]         @relation("AssessmentItemCreatedBy")
-  assessmentItemsPublished      AssessmentItem[]         @relation("AssessmentItemPublishedBy")
-  assessmentItemsLocked         AssessmentItem[]         @relation("AssessmentItemLockedBy")
-  tenantBootstrapInvitesCreated TenantBootstrapInvite[]  @relation("TenantBootstrapInviteCreatedBy")
-  AttendanceSession             AttendanceSession[]
-  attendanceBadgesIssued        StudentAttendanceBadge[] @relation("AttendanceBadgeIssuedBy")
-  attendanceBadgesRevoked       StudentAttendanceBadge[] @relation("AttendanceBadgeRevokedBy")
-  attendanceScans               AttendanceScanEvent[]    @relation("AttendanceScanScannedBy")
-  auditLogs                     AuditLog[]
-  invitesSent                   Invite[]                 @relation("UserInvites")
-  lessonNotesAsHeadteacher      LessonNote[]             @relation("LessonNoteHeadteacher")
-  lessonNotesAsTeacher          LessonNote[]             @relation("LessonNoteTeacher")
-  lessonDeliveriesAsTeacher     LessonDelivery[]         @relation("LessonDeliveryTeacher")
-  memberships                   Membership[]
-  sessions                      Session[]
-  teacherHealthWeekly           TeacherHealthWeekly[]
-  teacherProfiles               TeacherProfile[]         @relation("UserTeacherProfiles")
-  lastActiveTenant              Tenant?                  @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
-  inviteCodes                   InviteCode[]
-  inviteCodeUses                InviteCodeUse[]
-  resultsReleasesCreated        ResultsRelease[]         @relation("ResultsReleaseCreatedBy")
+  accounts                            Account[]
+  announcementsCreated                Announcement[]                @relation("AnnouncementCreatedBy")
+  Assessment                          Assessment[]
+  assessmentItemsCreated              AssessmentItem[]              @relation("AssessmentItemCreatedBy")
+  assessmentItemsPublished            AssessmentItem[]              @relation("AssessmentItemPublishedBy")
+  assessmentItemsLocked               AssessmentItem[]              @relation("AssessmentItemLockedBy")
+  /// ✅ Assessment Sprint A — policy, broadsheet assignment, release governance
+  assessmentPoliciesCreated           AssessmentPolicy[]            @relation("AssessmentPolicyCreatedBy")
+  teacherAssessmentAssignments        TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentTeacher")
+  teacherAssessmentAssignmentsMade    TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentCreatedBy")
+  teacherAssessmentAssignmentsRevoked TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentRevokedBy")
+  tenantBootstrapInvitesCreated       TenantBootstrapInvite[]       @relation("TenantBootstrapInviteCreatedBy")
+  AttendanceSession                   AttendanceSession[]
+  attendanceBadgesIssued              StudentAttendanceBadge[]      @relation("AttendanceBadgeIssuedBy")
+  attendanceBadgesRevoked             StudentAttendanceBadge[]      @relation("AttendanceBadgeRevokedBy")
+  attendanceScans                     AttendanceScanEvent[]         @relation("AttendanceScanScannedBy")
+  auditLogs                           AuditLog[]
+  invitesSent                         Invite[]                      @relation("UserInvites")
+  lessonNotesAsHeadteacher            LessonNote[]                  @relation("LessonNoteHeadteacher")
+  lessonNotesAsTeacher                LessonNote[]                  @relation("LessonNoteTeacher")
+  lessonDeliveriesAsTeacher           LessonDelivery[]              @relation("LessonDeliveryTeacher")
+  memberships                         Membership[]
+  sessions                            Session[]
+  teacherHealthWeekly                 TeacherHealthWeekly[]
+  teacherProfiles                     TeacherProfile[]              @relation("UserTeacherProfiles")
+  lastActiveTenant                    Tenant?                       @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
+  inviteCodes                         InviteCode[]
+  inviteCodeUses                      InviteCodeUse[]
+  resultsReleasesCreated              ResultsRelease[]              @relation("ResultsReleaseCreatedBy")
 
   /// ✅ Sprint 9 / Phase 1 — finance, scholarships, receipts, reconciliation
   scholarshipApplicationsReviewed  ScholarshipApplication[]  @relation("ScholarshipApplicationReviewer")
@@ -143,14 +148,17 @@ model Tenant {
   zoneId String?
   zone   AdminZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 
-  announcements           Announcement[]           @relation("TenantAnnouncements")
-  Assessment              Assessment[]
-  assessmentItems         AssessmentItem[]
-  AttendanceSession       AttendanceSession[]
-  studentAttendanceBadges StudentAttendanceBadge[]
-  attendanceScanEvents    AttendanceScanEvent[]
-  auditLogs               AuditLog[]
-  curriculumUnits         CurriculumUnit[]
+  announcements                Announcement[]                @relation("TenantAnnouncements")
+  Assessment                   Assessment[]
+  assessmentItems              AssessmentItem[]
+  /// ✅ Assessment Sprint A — policy + broadsheet assignment spine
+  assessmentPolicies           AssessmentPolicy[]
+  teacherAssessmentAssignments TeacherAssessmentAssignment[]
+  AttendanceSession            AttendanceSession[]
+  studentAttendanceBadges      StudentAttendanceBadge[]
+  attendanceScanEvents         AttendanceScanEvent[]
+  auditLogs                    AuditLog[]
+  curriculumUnits              CurriculumUnit[]
 
   /// ✅ Existing finance relations
   feeInvoices   FeeInvoice[]   @relation("TenantFeeInvoices")
@@ -600,16 +608,17 @@ model Classroom {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  Assessment           Assessment[]
-  assessmentItems      AssessmentItem[]
-  AttendanceSession    AttendanceSession[]
-  attendanceScanEvents AttendanceScanEvent[]
-  lessonNotes          LessonNote[]
-  lessonDeliveries     LessonDelivery[]
-  students             Student[]
-  StudentHealthDaily   StudentHealthDaily[]
-  primaryTeachers      TeacherProfile[]      @relation("TeacherPrimaryClassroom")
-  resultsReleases      ResultsRelease[]
+  Assessment                   Assessment[]
+  assessmentItems              AssessmentItem[]
+  AttendanceSession            AttendanceSession[]
+  attendanceScanEvents         AttendanceScanEvent[]
+  lessonNotes                  LessonNote[]
+  lessonDeliveries             LessonDelivery[]
+  students                     Student[]
+  StudentHealthDaily           StudentHealthDaily[]
+  primaryTeachers              TeacherProfile[]              @relation("TeacherPrimaryClassroom")
+  resultsReleases              ResultsRelease[]
+  teacherAssessmentAssignments TeacherAssessmentAssignment[]
 
   // Legacy unique (optional). Keep it if it still exists in DB.
   // IMPORTANT: do NOT "map" it unless you're 100% sure the DB constraint name matches.
@@ -636,6 +645,20 @@ model ResultsRelease {
 
   classroomId String? @map("classroom_id")
 
+  /// ✅ Assessment Sprint A — release must be backed by readiness evidence.
+  readinessStatus       ResultsReleaseReadinessStatus @default(BLOCKED) @map("readiness_status")
+  readinessScore        Int                           @default(0) @map("readiness_score")
+  readinessSnapshotJson Json                          @default("{}") @map("readiness_snapshot_json")
+
+  /// Optional future proofing:
+  /// hash of the released report/readiness snapshot when PDF/report snapshots are introduced.
+  releaseSnapshotHash String? @map("release_snapshot_hash") @db.VarChar(64)
+
+  /// NORMAL = ordinary release after readiness passes.
+  /// OVERRIDE = admin/headteacher forced release with reason.
+  releaseMode    String? @default("NORMAL") @map("release_mode") @db.VarChar(40)
+  overrideReason String? @map("override_reason") @db.Text
+
   releasedAt       DateTime @default(now()) @map("released_at") @db.Timestamptz(6)
   releasedByUserId String   @map("released_by_user_id")
 
@@ -649,6 +672,7 @@ model ResultsRelease {
   @@unique([tenantId, term, academicYear, scopeKey], name: "ResultsRelease_scope_unique", map: "ResultsRelease_tenant_term_year_scopeKey_unique")
   @@index([tenantId, term, academicYear], map: "ResultsRelease_tenant_term_year_idx")
   @@index([tenantId, classroomId], map: "ResultsRelease_tenant_classroom_idx")
+  @@index([tenantId, term, academicYear, readinessStatus], map: "ResultsRelease_tenant_term_year_readiness_idx")
   @@map("results_release")
 }
 
@@ -2017,6 +2041,14 @@ model AssessmentItem {
   weighting    Float?
   date         DateTime? @db.Timestamptz(6)
 
+  /// ✅ Assessment Sprint A — policy/template linkage.
+  assessmentPolicyId String?
+  policyComponentId  String?
+  componentCode      String? @db.VarChar(80)
+  templateKey        String? @db.VarChar(120)
+  sortOrder          Int     @default(0)
+  isRequired         Boolean @default(true)
+
   /// ✅ Sprint 2A.2 publish / lock lifecycle
   status            AssessmentItemStatus @default(DRAFT)
   publishedAt       DateTime?            @db.Timestamptz(6)
@@ -2032,23 +2064,28 @@ model AssessmentItem {
   createdByUserId  String?
   curriculumUnitId String?
 
-  classroom       Classroom         @relation(fields: [classroomId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  createdByUser   User?             @relation("AssessmentItemCreatedBy", fields: [createdByUserId], references: [id])
-  publishedByUser User?             @relation("AssessmentItemPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  lockedByUser    User?             @relation("AssessmentItemLockedBy", fields: [lockedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  curriculumUnit  CurriculumUnit?   @relation(fields: [curriculumUnitId], references: [id], map: "AssessmentItem_curriculumUnitId_fkey")
-  lessonDelivery  LessonDelivery?   @relation(fields: [lessonDeliveryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  scores          AssessmentScore[]
+  classroom        Classroom                  @relation(fields: [classroomId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdByUser    User?                      @relation("AssessmentItemCreatedBy", fields: [createdByUserId], references: [id])
+  publishedByUser  User?                      @relation("AssessmentItemPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  lockedByUser     User?                      @relation("AssessmentItemLockedBy", fields: [lockedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  curriculumUnit   CurriculumUnit?            @relation(fields: [curriculumUnitId], references: [id], map: "AssessmentItem_curriculumUnitId_fkey")
+  lessonDelivery   LessonDelivery?            @relation(fields: [lessonDeliveryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  tenant           Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assessmentPolicy AssessmentPolicy?          @relation(fields: [assessmentPolicyId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  policyComponent  AssessmentPolicyComponent? @relation(fields: [policyComponentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  scores           AssessmentScore[]
 
   @@index([tenantId, createdByUserId])
   @@index([publishedByUserId], map: "AssessmentItem_publishedByUserId_idx")
   @@index([lockedByUserId], map: "AssessmentItem_lockedByUserId_idx")
   @@index([curriculumUnitId])
   @@index([lessonDeliveryId], map: "AssessmentItem_lessonDeliveryId_idx")
+  @@index([assessmentPolicyId], map: "AssessmentItem_policy_idx")
+  @@index([policyComponentId], map: "AssessmentItem_policyComponent_idx")
   @@index([tenantId, curriculumUnitId], map: "AssessmentItem_tenant_curriculumUnitId_idx")
   @@index([tenantId, classroomId, term, academicYear], map: "AssessmentItem_filters_idx")
   @@index([tenantId, classroomId, term, academicYear, status], map: "AssessmentItem_filters_status_idx")
+  @@index([tenantId, classroomId, subject, term, academicYear, componentCode], map: "AssessmentItem_broadsheet_component_idx")
 }
 
 model LessonDelivery {
@@ -2099,6 +2136,155 @@ model AssessmentScore {
   student   Student        @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([itemId, studentId], name: "assessment_student_unique", map: "assessment_student_unique")
+}
+
+model AssessmentPolicy {
+  id String @id @default(cuid())
+
+  /// NULL tenantId = global/country default policy.
+  /// tenantId set = school-custom policy.
+  tenantId String?
+
+  countryCode String @default("GH") @db.VarChar(8)
+  framework   String @default("GES_BASIC_SCHOOL") @db.VarChar(80)
+
+  name        String  @db.VarChar(160)
+  description String? @db.Text
+
+  levelBand AssessmentLevelBand
+  phase     TeacherPhase?
+  level     String?             @db.VarChar(40)
+
+  term         String?
+  academicYear String?
+
+  version   Int                    @default(1)
+  status    AssessmentPolicyStatus @default(ACTIVE)
+  isDefault Boolean                @default(false)
+
+  metadata Json @default("{}")
+
+  createdByUserId String?
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdBy User?   @relation("AssessmentPolicyCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  components      AssessmentPolicyComponent[]
+  gradeScales     AssessmentGradeScale[]
+  assessmentItems AssessmentItem[]
+
+  @@index([tenantId, status], map: "AssessmentPolicy_tenant_status_idx")
+  @@index([countryCode, framework, levelBand, status], map: "AssessmentPolicy_country_framework_level_status_idx")
+  @@index([tenantId, levelBand, phase, level], map: "AssessmentPolicy_tenant_level_lookup_idx")
+  @@index([isDefault], map: "AssessmentPolicy_default_idx")
+}
+
+model AssessmentPolicyComponent {
+  id String @id @default(cuid())
+
+  policyId String
+  tenantId String?
+
+  code  String @db.VarChar(80)
+  label String @db.VarChar(120)
+
+  kind AssessmentComponentKind @default(OTHER)
+
+  maxScore      Int
+  weightPercent Float
+
+  orderIndex Int     @default(0)
+  required   Boolean @default(true)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  policy AssessmentPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  assessmentItems AssessmentItem[]
+
+  @@unique([policyId, code], map: "AssessmentPolicyComponent_policy_code_unique")
+  @@index([policyId, orderIndex], map: "AssessmentPolicyComponent_policy_order_idx")
+  @@index([tenantId], map: "AssessmentPolicyComponent_tenant_idx")
+}
+
+model AssessmentGradeScale {
+  id String @id @default(cuid())
+
+  policyId String
+  tenantId String?
+
+  grade        String  @db.VarChar(20)
+  minPercent   Float
+  maxPercent   Float
+  label        String  @db.VarChar(120)
+  remark       String  @db.VarChar(160)
+  reportPhrase String? @db.Text
+
+  orderIndex Int @default(0)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  policy AssessmentPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([policyId, orderIndex], map: "AssessmentGradeScale_policy_order_idx")
+  @@index([tenantId], map: "AssessmentGradeScale_tenant_idx")
+}
+
+model TeacherAssessmentAssignment {
+  id String @id @default(cuid())
+
+  tenantId      String
+  teacherUserId String
+
+  /// CLASS_ALL_SUBJECTS:
+  ///   classroomId required, subject null.
+  ///
+  /// SUBJECT:
+  ///   classroomId can be specific class, or null for phase/level-level assignment.
+  ///   subject required.
+  assignmentKind TeacherAssessmentAssignmentKind
+
+  classroomId String?
+
+  phase TeacherPhase?
+  level String?       @db.VarChar(40)
+
+  subject     String? @db.VarChar(120)
+  subjectNorm String? @db.VarChar(120)
+
+  status TeacherAssessmentAssignmentStatus @default(ACTIVE)
+
+  startsAt DateTime? @db.Timestamptz(6)
+  endsAt   DateTime? @db.Timestamptz(6)
+
+  createdByUserId String?
+  revokedByUserId String?
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+
+  revokeReason String? @db.Text
+  metadata     Json    @default("{}")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  teacher   User       @relation("TeacherAssessmentAssignmentTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdBy User?      @relation("TeacherAssessmentAssignmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  revokedBy User?      @relation("TeacherAssessmentAssignmentRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([tenantId, teacherUserId, status], map: "TeacherAssessmentAssignment_teacher_status_idx")
+  @@index([tenantId, classroomId, status], map: "TeacherAssessmentAssignment_classroom_status_idx")
+  @@index([tenantId, phase, level, status], map: "TeacherAssessmentAssignment_phase_level_status_idx")
+  @@index([tenantId, subjectNorm, status], map: "TeacherAssessmentAssignment_subject_status_idx")
+  @@index([createdByUserId], map: "TeacherAssessmentAssignment_createdBy_idx")
+  @@index([revokedByUserId], map: "TeacherAssessmentAssignment_revokedBy_idx")
 }
 
 model TeacherProfile {
@@ -2762,6 +2948,47 @@ enum AssessmentItemStatus {
   DRAFT
   PUBLISHED
   LOCKED
+}
+
+enum AssessmentPolicyStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AssessmentLevelBand {
+  KG
+  PRIMARY
+  JHS
+  SHS
+  CUSTOM
+}
+
+enum AssessmentComponentKind {
+  EXERCISE
+  HOMEWORK
+  CLASS_TEST
+  PROJECT
+  PRACTICAL
+  EXAM
+  OTHER
+}
+
+enum TeacherAssessmentAssignmentKind {
+  CLASS_ALL_SUBJECTS
+  SUBJECT
+}
+
+enum TeacherAssessmentAssignmentStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+enum ResultsReleaseReadinessStatus {
+  READY
+  BLOCKED
+  OVERRIDE
 }
 
 /// *
