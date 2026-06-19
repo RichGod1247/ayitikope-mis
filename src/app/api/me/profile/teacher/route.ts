@@ -9,6 +9,7 @@ import {
   normalizeTeacherScopeForRead,
   sameNormalizedJhsAssignments,
 } from "@/lib/teacherScope";
+import { replaceTeacherAssessmentAssignmentsForProfile } from "@/lib/assessments/teacherAssignmentSync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -193,7 +194,7 @@ export async function POST(req: Request) {
         data: { phone: phoneNorm!, phoneNorm: phoneNorm! },
       });
 
-      await tx.teacherProfile.upsert({
+            const savedProfile = await tx.teacherProfile.upsert({
         where: { teacherProfile_tenant_user_unique: { tenantId, userId } },
         create: {
           tenantId,
@@ -217,6 +218,27 @@ export async function POST(req: Request) {
               : Prisma.DbNull,
           additionalDuties,
         },
+        select: {
+          primaryClassroomId: true,
+        },
+      });
+
+      await replaceTeacherAssessmentAssignmentsForProfile({
+        tx,
+        tenantId,
+        teacherUserId: userId,
+        phase: phase!,
+        classLevel: phase === "KG" || phase === "PRIMARY" ? classLevel : null,
+        primaryClassroomId: savedProfile.primaryClassroomId ?? null,
+        jhsAssignments:
+          phase === "JHS"
+            ? normalizedJhsAssignments.map((a) => ({
+                subject: a.subject,
+                classes: a.classes,
+              }))
+            : [],
+        createdByUserId: userId,
+        reason: "Teacher updated own profile scope.",
       });
     });
 
