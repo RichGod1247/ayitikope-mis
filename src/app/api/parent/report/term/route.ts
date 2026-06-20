@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 import { StudentStatus } from "@prisma/client";
+import {
+  buildStudentPolicyReportTruth,
+  findEvidenceBackedResultsRelease,
+} from "@/lib/assessments/reportTruth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -54,30 +58,6 @@ function phoneMatchesBySuffix(a: string, b: string) {
 
 function isValidSuffixForLookup(suffix: string) {
   return normDigits(suffix).length >= 7;
-}
-
-function naccaGrade(pct: number | null): string | null {
-  if (pct == null) return null;
-  if (pct >= 90) return "1";
-  if (pct >= 80) return "2";
-  if (pct >= 70) return "3";
-  if (pct >= 60) return "4";
-  if (pct >= 50) return "5";
-  if (pct >= 40) return "6";
-  return "7";
-}
-
-function naccaRemark(grade: string | null): string | null {
-  const map: Record<string, string> = {
-    "1": "Excellent",
-    "2": "Very Good",
-    "3": "Good",
-    "4": "Credit",
-    "5": "Pass",
-    "6": "Below Average",
-    "7": "Fail",
-  };
-  return grade ? (map[grade] ?? null) : null;
 }
 
 type TermDates = { gte: Date; lte: Date } | null;
@@ -164,13 +144,14 @@ export async function GET(req: NextRequest) {
       return noStoreJson({ ok: false, error: "GUARDIAN_MISMATCH" }, 403);
     }
 
-    const classroomId = student.classroomId ? String(student.classroomId) : "";
-    const scopeKeys = ["SCHOOL", ...(classroomId ? [classroomId] : [])];
+const classroomId = student.classroomId ? String(student.classroomId) : "";
 
-    const rel = await prisma.resultsRelease.findFirst({
-      where: { tenantId: sess.tenantId, term, academicYear, scopeKey: { in: scopeKeys } },
-      select: { id: true },
-    });
+const rel = await findEvidenceBackedResultsRelease({
+  tenantId: sess.tenantId,
+  term,
+  academicYear,
+  classroomId,
+});
 
     if (!rel) {
       return noStoreJson({ ok: false, error: "RESULTS_NOT_RELEASED", term, academicYear }, 403);
@@ -186,51 +167,31 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // ------------- Subjects with NaCCA grades -------------
-    let subjects: any[] = [];
-    try {
-      const scores = await prisma.assessmentScore.findMany({
-        where: {
-          studentId: student.id,
-          item: { term, academicYear, tenantId: sess.tenantId },
-        },
-        select: {
-          score: true,
-          item: { select: { subject: true, maxScore: true } },
-        },
-      });
+    // ------------- Subjects with policy-aware broadsheet truth -------------
+let subjects: any[] = [];
+let overallPercentage: number | null = null;
+let policy: any = null;
+let classReadiness: any = null;
 
-      const bySubject: Record<string, { subject: string; total: number; max: number }> = {};
-      for (const s of scores) {
-        const name = (s.item?.subject || "Subject").trim() || "Subject";
-        if (!bySubject[name]) bySubject[name] = { subject: name, total: 0, max: 0 };
-        bySubject[name].total += typeof s.score === "number" ? s.score : 0;
-        bySubject[name].max += typeof s.item?.maxScore === "number" ? s.item.maxScore : 0;
-      }
+try {
+  const reportTruth = await buildStudentPolicyReportTruth({
+    tenantId: sess.tenantId,
+    studentId: student.id,
+    term,
+    academicYear,
+  });
 
-      subjects = Object.values(bySubject).map((entry) => {
-        const pct = entry.max > 0 ? (entry.total / entry.max) * 100 : null;
-        const grade = naccaGrade(pct);
-        return {
-          subject: entry.subject,
-          classScore: null,
-          examScore: null,
-          totalScore: entry.total,
-          maxScore: entry.max,
-          percentage: pct,
-          grade,
-          remark: naccaRemark(grade),
-          position: null,
-        };
-      });
-    } catch (err) {
-      console.error("[PARENT_TERM_REPORT_SUBJECTS_ERROR]", err);
-    }
-
-    // Overall percentage from subject totals
-    const totalScoreSum = subjects.reduce((s, x) => s + (x.totalScore ?? 0), 0);
-    const maxScoreSum = subjects.reduce((s, x) => s + (x.maxScore ?? 0), 0);
-    const overallPercentage = maxScoreSum > 0 ? (totalScoreSum / maxScoreSum) * 100 : null;
+  if (reportTruth.ok) {
+    subjects = reportTruth.subjects;
+    overallPercentage = reportTruth.overallPercentage;
+    policy = reportTruth.policy;
+    classReadiness = reportTruth.classReadiness;
+  } else {
+    console.error("[PARENT_TERM_REPORT_POLICY_TRUTH_ERROR]", reportTruth.error);
+  }
+} catch (err) {
+  console.error("[PARENT_TERM_REPORT_SUBJECTS_ERROR]", err);
+}
 
     // ------------- Attendance summary (scoped to term dates when configured) -------------
     let attendanceSummary: any = null;
@@ -355,17 +316,19 @@ export async function GET(req: NextRequest) {
     };
 
     return noStoreJson({
-      ok: true,
-      context: { tenantId: sess.tenantId, studentId, term, academicYear },
-      student,
-      classroom: student.classroom,
-      termSummary,
-      subjects,
-      attendanceSummary,
-      feesSummary,
-      healthSummary,
-      headteacherSignature,
-    });
+  ok: true,
+  context: { tenantId: sess.tenantId, studentId, term, academicYear },
+  student,
+  classroom: student.classroom,
+  policy,
+  classReadiness,
+  termSummary,
+  subjects,
+  attendanceSummary,
+  feesSummary,
+  healthSummary,
+  headteacherSignature,
+});
   } catch (err) {
     console.error("[PARENT_TERM_REPORT_ERROR]", err);
     return noStoreJson({ ok: false, error: "Failed to load parent term report." }, 500);

@@ -6,6 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 import { StudentStatus } from "@prisma/client";
 import { launchBrowser } from "@/lib/puppeteerBrowser";
+import {
+  buildStudentPolicyReportTruth,
+  findEvidenceBackedResultsRelease,
+} from "@/lib/assessments/reportTruth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -290,13 +294,12 @@ export async function GET(req: NextRequest) {
 
   // Release enforcement
   const classroomId = student.classroomId ?? "";
-  const rel = await prisma.resultsRelease.findFirst({
-    where: {
-      tenantId: sess.tenantId, term, academicYear,
-      scopeKey: { in: ["SCHOOL", ...(classroomId ? [classroomId] : [])] },
-    },
-    select: { id: true },
-  });
+  const rel = await findEvidenceBackedResultsRelease({
+  tenantId: sess.tenantId,
+  term,
+  academicYear,
+  classroomId,
+});
   if (!rel) {
     return new Response(JSON.stringify({ ok: false, error: "RESULTS_NOT_RELEASED" }), {
       status: 403, headers: { "content-type": "application/json" },
@@ -307,31 +310,58 @@ export async function GET(req: NextRequest) {
     where: { id: sess.tenantId }, select: { name: true },
   });
 
-  // Build subject rows
-  const scores = await prisma.assessmentScore.findMany({
-    where: { studentId: student.id, item: { term, academicYear, tenantId: sess.tenantId } },
-    select: { score: true, item: { select: { subject: true, maxScore: true } } },
-  });
+  // Build subject rows from policy-aware broadsheet truth
+const reportTruth = await buildStudentPolicyReportTruth({
+  tenantId: sess.tenantId,
+  studentId: student.id,
+  term,
+  academicYear,
+});
 
-  const bySubject: Record<string, { total: number; max: number }> = {};
-  for (const s of scores) {
-    const k = (s.item?.subject || "Subject").trim() || "Subject";
-    if (!bySubject[k]) bySubject[k] = { total: 0, max: 0 };
-    bySubject[k].total += typeof s.score === "number" ? s.score : 0;
-    bySubject[k].max += typeof s.item?.maxScore === "number" ? s.item.maxScore : 0;
-  }
+if (!reportTruth.ok) {
+  return new Response(
+    JSON.stringify({
+      ok: false,
+      error: "REPORT_TRUTH_UNAVAILABLE",
+      detail: reportTruth.error,
+    }),
+    {
+      status: 409,
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      },
+    }
+  );
+}
 
-  const subjectRows = Object.entries(bySubject)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([subject, { total, max }]) => {
-      const pct = max > 0 ? (total / max) * 100 : null;
-      const grade = naccaGrade(pct);
-      return { subject, total, max, pct, grade, remark: naccaRemark(grade) };
-    });
+const policySubjects = reportTruth.subjects;
 
-  const totalSum = subjectRows.reduce((s, r) => s + r.total, 0);
-  const maxSum = subjectRows.reduce((s, r) => s + r.max, 0);
-  const overallPct = maxSum > 0 ? (totalSum / maxSum) * 100 : null;
+const subjectRows = policySubjects
+  .slice()
+  .sort((a, b) => String(a.subject).localeCompare(String(b.subject)))
+  .map((s) => ({
+    subject: s.subject,
+    total: typeof s.totalScore === "number" ? s.totalScore : 0,
+    max: typeof s.maxScore === "number" ? s.maxScore : 100,
+    pct: typeof s.percentage === "number" ? s.percentage : null,
+    grade: s.grade ?? "—",
+    remark: s.remark ?? s.gradeLabel ?? "—",
+  }));
+
+const validPercentages = subjectRows
+  .map((r) => r.pct)
+  .filter((p): p is number => typeof p === "number" && Number.isFinite(p));
+
+const overallPct =
+  typeof reportTruth.overallPercentage === "number"
+    ? reportTruth.overallPercentage
+    : validPercentages.length
+      ? validPercentages.reduce((sum, p) => sum + p, 0) / validPercentages.length
+      : null;
+
+const totalSum = subjectRows.reduce((s, r) => s + r.total, 0);
+const maxSum = subjectRows.reduce((s, r) => s + r.max, 0);
 
   // Attendance
   const marks = classroomId

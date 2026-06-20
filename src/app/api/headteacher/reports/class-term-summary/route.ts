@@ -1,8 +1,7 @@
 // src/app/api/headteacher/reports/class-term-summary/route.ts
-
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
+import { buildClassPolicyReportTruth } from "@/lib/assessments/reportTruth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,170 +46,60 @@ export async function GET(req: Request) {
       });
     }
 
-    const classroom = await prisma.classroom.findFirst({
-      where: {
-        id: classroomId,
-        tenantId: ctx.tenantId,
-        status: "ACTIVE",
-      },
-      select: { id: true },
+    const truth = await buildClassPolicyReportTruth({
+      tenantId: ctx.tenantId,
+      classroomId,
+      term,
+      academicYear,
     });
 
-    if (!classroom) {
-      return noStoreJson(404, {
+    if (!truth.ok) {
+      return noStoreJson(truth.error === "CLASSROOM_NOT_FOUND" ? 404 : 400, {
         ok: false,
-        error: "CLASSROOM_NOT_FOUND",
+        error: truth.error,
       });
     }
 
-    const students = await prisma.student.findMany({
-      where: {
-        tenantId: ctx.tenantId,
-        classroomId,
-        status: "ACTIVE",
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-      },
-      orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
-    });
+    const subjects = truth.broadsheets.map((sheet) => sheet.subject);
 
-    if (students.length === 0) {
-      return noStoreJson(200, {
-        ok: true,
-        tenantId: ctx.tenantId,
-        classroomId,
-        term,
-        academicYear,
-        subjects: [],
-        students: [],
-        message:
-          "No learners found for this class. Please assign learners to this classroom first.",
-      });
-    }
+    const studentRows = truth.students.map((student) => {
+      const scoresBySubject: Record<string, number | null> = {};
+      const percentageBySubject: Record<string, number | null> = {};
+      const gradeBySubject: Record<string, string | null> = {};
+      const positionBySubject: Record<string, number | null> = {};
 
-    const items = await prisma.assessmentItem.findMany({
-      where: {
-        tenantId: ctx.tenantId,
-        classroomId,
-        term,
-        academicYear,
-      },
-      select: {
-        id: true,
-        subject: true,
-        title: true,
-        maxScore: true,
-      },
-      orderBy: [{ subject: "asc" }, { createdAt: "asc" }],
-    });
-
-    if (items.length === 0) {
-      return noStoreJson(200, {
-        ok: true,
-        tenantId: ctx.tenantId,
-        classroomId,
-        term,
-        academicYear,
-        subjects: [],
-        students: students.map((s) => ({
-          id: s.id,
-          firstName: s.firstName ?? "",
-          lastName: s.lastName ?? "",
-          totalScore: 0,
-          maxTotalScore: 0,
-          scoresBySubject: {},
-        })),
-        message:
-          "No assessment items found for this class and term yet. Once assessments are recorded, this report will populate.",
-      });
-    }
-
-    const itemIds = items.map((i) => i.id);
-
-    const maxBySubject = new Map<string, number>();
-    for (const item of items) {
-      const subject = item.subject ?? "Unknown";
-      const max = Number(item.maxScore ?? 0);
-      maxBySubject.set(subject, (maxBySubject.get(subject) ?? 0) + max);
-    }
-
-    const subjects = Array.from(maxBySubject.keys()).sort();
-
-    const scores = await prisma.assessmentScore.findMany({
-      where: {
-        itemId: {
-          in: itemIds,
-        },
-      },
-      select: {
-        itemId: true,
-        studentId: true,
-        score: true,
-      },
-    });
-
-    const itemMeta = new Map<string, { subject: string; maxScore: number }>();
-    for (const item of items) {
-      itemMeta.set(item.id, {
-        subject: item.subject ?? "Unknown",
-        maxScore: Number(item.maxScore ?? 0),
-      });
-    }
-
-    type StudentAgg = {
-      totalScore: number;
-      maxTotalScore: number;
-      scoresBySubject: Record<string, number>;
-    };
-
-    const aggByStudent = new Map<string, StudentAgg>();
-
-    function ensureAgg(studentId: string): StudentAgg {
-      let existing = aggByStudent.get(studentId);
-      if (!existing) {
-        existing = {
-          totalScore: 0,
-          maxTotalScore: 0,
-          scoresBySubject: {},
-        };
-        aggByStudent.set(studentId, existing);
+      for (const sheet of truth.broadsheets) {
+        const row = sheet.rows.find((r) => r.studentId === student.id) ?? null;
+        scoresBySubject[sheet.subject] = row?.weightedTotal ?? null;
+        percentageBySubject[sheet.subject] = row?.totalPercent ?? null;
+        gradeBySubject[sheet.subject] = row?.grade ?? null;
+        positionBySubject[sheet.subject] = row?.position ?? null;
       }
-      return existing;
-    }
 
-    for (const sc of scores) {
-      if (!sc.studentId || !sc.itemId) continue;
+      const completePercentages = Object.values(percentageBySubject).filter(
+        (p): p is number => typeof p === "number" && Number.isFinite(p)
+      );
 
-      const meta = itemMeta.get(sc.itemId);
-      if (!meta) continue;
-
-      const agg = ensureAgg(sc.studentId);
-      const scoreValue = Number(sc.score ?? 0);
-
-      agg.totalScore += Number.isFinite(scoreValue) ? scoreValue : 0;
-      agg.maxTotalScore += meta.maxScore;
-      agg.scoresBySubject[meta.subject] =
-        (agg.scoresBySubject[meta.subject] ?? 0) +
-        (Number.isFinite(scoreValue) ? scoreValue : 0);
-    }
-
-    const studentRows = students.map((s) => {
-      const agg = aggByStudent.get(s.id) ?? {
-        totalScore: 0,
-        maxTotalScore: 0,
-        scoresBySubject: {},
-      };
+      const overallPercentage =
+        completePercentages.length > 0
+          ? Math.round(
+              (completePercentages.reduce((sum, p) => sum + p, 0) /
+                completePercentages.length) *
+                100
+            ) / 100
+          : null;
 
       return {
-        id: s.id,
-        firstName: s.firstName ?? "",
-        lastName: s.lastName ?? "",
-        totalScore: agg.totalScore,
-        maxTotalScore: agg.maxTotalScore,
-        scoresBySubject: agg.scoresBySubject,
+        id: student.id,
+        firstName: student.firstName ?? "",
+        lastName: student.lastName ?? "",
+        totalScore: overallPercentage ?? 0,
+        maxTotalScore: completePercentages.length ? 100 : 0,
+        overallPercentage,
+        scoresBySubject,
+        percentageBySubject,
+        gradeBySubject,
+        positionBySubject,
       };
     });
 
@@ -218,10 +107,20 @@ export async function GET(req: Request) {
       ok: true,
       tenantId: ctx.tenantId,
       classroomId,
+      classroom: truth.classroom,
       term,
       academicYear,
+      policy: truth.policy,
+      readiness: truth.readiness,
       subjects,
       students: studentRows,
+      broadsheets: truth.broadsheets,
+      message:
+        truth.students.length === 0
+          ? "No learners found for this class. Please assign learners to this classroom first."
+          : truth.broadsheets.length === 0
+            ? "No assessment items found for this class and term yet. Once assessments are recorded, this report will populate."
+            : undefined,
     });
   } catch (err: any) {
     console.error("[HEADTEACHER_CLASS_TERM_SUMMARY_GET]", err);
