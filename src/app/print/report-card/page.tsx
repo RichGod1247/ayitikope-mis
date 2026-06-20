@@ -5,36 +5,13 @@ import { redirect } from "next/navigation";
 import { RefundStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import { buildStudentPolicyReportTruth } from "@/lib/assessments/reportTruth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type SP = Record<string, string | undefined>;
 
-function naccaGrade(pct: number | null): string | null {
-  if (pct == null) return null;
-  if (pct >= 90) return "1";
-  if (pct >= 80) return "2";
-  if (pct >= 70) return "3";
-  if (pct >= 60) return "4";
-  if (pct >= 50) return "5";
-  if (pct >= 40) return "6";
-  return "7";
-}
-
-function naccaRemark(grade: string | null): string | null {
-  const map: Record<string, string> = {
-    "1": "Excellent",
-    "2": "Very Good",
-    "3": "Good",
-    "4": "Credit",
-    "5": "Pass",
-    "6": "Below Average",
-    "7": "Fail",
-  };
-
-  return grade ? map[grade] ?? null : null;
-}
 
 function fmtDate(value: Date | string | null | undefined): string {
   if (!value) return "—";
@@ -113,57 +90,42 @@ export default async function ReportCardPrintPage(props: {
 
   const classroomId = student.classroomId ?? "";
 
-  const assessmentItems = await prisma.assessmentItem.findMany({
-    where: { tenantId: ctx.tenantId, classroomId, term, academicYear },
-    select: { id: true, subject: true, maxScore: true },
-  });
+const reportTruth = await buildStudentPolicyReportTruth({
+  tenantId: ctx.tenantId,
+  studentId: student.id,
+  term,
+  academicYear,
+});
 
-  const assessmentScores = assessmentItems.length
-    ? await prisma.assessmentScore.findMany({
-        where: {
-          studentId: student.id,
-          itemId: { in: assessmentItems.map((item) => item.id) },
-        },
-        select: { itemId: true, score: true },
-      })
-    : [];
+const reportTruthWarning =
+  reportTruth.ok === false
+    ? reportTruth.error === "STUDENT_HAS_NO_CLASSROOM"
+      ? "This learner is not assigned to a classroom yet."
+      : reportTruth.error === "STUDENT_NOT_FOUND"
+        ? "Learner report truth could not be found."
+        : "Policy-aware report truth is unavailable."
+    : null;
 
-  const scoreMap = new Map(
-    assessmentScores.map((score) => [score.itemId, Number(score.score ?? 0)])
-  );
+const classReadiness = reportTruth.ok ? reportTruth.classReadiness : null;
 
-  const bySubject: Record<string, { total: number; max: number }> = {};
+const subjectRows = reportTruth.ok
+  ? reportTruth.subjects
+      .slice()
+      .sort((a, b) => String(a.subject).localeCompare(String(b.subject)))
+      .map((subject) => ({
+        subject: subject.subject,
+        total: subject.totalScore,
+        max: subject.maxScore,
+        pct: subject.percentage,
+        grade: subject.grade,
+        remark: subject.remark ?? subject.gradeLabel ?? null,
+        position: subject.position,
+        complete: subject.complete,
+        missingRequiredCount: subject.missingRequiredCount,
+      }))
+  : [];
 
-  for (const item of assessmentItems) {
-    const subject = item.subject ?? "Subject";
-
-    if (!bySubject[subject]) {
-      bySubject[subject] = { total: 0, max: 0 };
-    }
-
-    bySubject[subject].total += scoreMap.get(item.id) ?? 0;
-    bySubject[subject].max += Number(item.maxScore ?? 0);
-  }
-
-  const subjectRows = Object.entries(bySubject)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([subject, totals]) => {
-      const pct = totals.max > 0 ? (totals.total / totals.max) * 100 : null;
-      const grade = naccaGrade(pct);
-
-      return {
-        subject,
-        total: totals.total,
-        max: totals.max,
-        pct,
-        grade,
-        remark: naccaRemark(grade),
-      };
-    });
-
-  const totalScore = subjectRows.reduce((sum, row) => sum + row.total, 0);
-  const maxScore = subjectRows.reduce((sum, row) => sum + row.max, 0);
-  const overallPct = maxScore > 0 ? (totalScore / maxScore) * 100 : null;
+const overallPct = reportTruth.ok ? reportTruth.overallPercentage : null;
 
   const attendanceMarks = classroomId
     ? await prisma.attendanceMark.findMany({
@@ -428,12 +390,14 @@ export default async function ReportCardPrintPage(props: {
             </thead>
             <tbody>
               {subjectRows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "#777" }}>
-                    No assessment scores available for this learner.
-                  </td>
-                </tr>
-              ) : (
+  <tr>
+    <td colSpan={6} style={{ textAlign: "center", color: "#777" }}>
+      {reportTruthWarning ??
+        classReadiness?.blockedReasons?.[0] ??
+        "No reportable assessment subjects available for this learner."}
+    </td>
+  </tr>
+) : (
                 subjectRows.map((row, index) => (
                   <tr
                     key={row.subject}
@@ -449,8 +413,10 @@ export default async function ReportCardPrintPage(props: {
                       <span
                         className={[
                           "rc-grade",
-                          row.grade === "7" ? "rc-grade-fail" : "",
-                          row.grade === "6" ? "rc-grade-below" : "",
+row.grade === "7" || row.grade === "8" || row.grade === "9"
+  ? "rc-grade-fail"
+  : "",
+row.grade === "5" || row.grade === "6" ? "rc-grade-below" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
