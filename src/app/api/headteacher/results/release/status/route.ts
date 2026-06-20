@@ -53,15 +53,40 @@ export async function GET(req: NextRequest) {
 
   const releases = await prisma.resultsRelease.findMany({
     where: { tenantId: ctx.tenantId, term: t, academicYear: y },
-    select: { scopeKey: true, scope: true, releasedAt: true, classroomId: true },
+    select: {
+      scopeKey: true,
+      scope: true,
+      releasedAt: true,
+      classroomId: true,
+      readinessStatus: true,
+      readinessScore: true,
+      releaseMode: true,
+      releaseSnapshotHash: true,
+    },
   });
 
   const school = releases.find((r) => r.scopeKey === "SCHOOL") ?? null;
 
-  const byClass: Record<string, { releasedAt: string }> = {};
+  const byClass: Record<
+    string,
+    {
+      releasedAt: string;
+      readinessStatus: string;
+      readinessScore: number;
+      releaseMode: string | null;
+      releaseSnapshotHash: string | null;
+    }
+  > = {};
+
   for (const r of releases) {
     if (r.scopeKey !== "SCHOOL") {
-      byClass[r.scopeKey] = { releasedAt: r.releasedAt.toISOString() };
+      byClass[r.scopeKey] = {
+        releasedAt: r.releasedAt.toISOString(),
+        readinessStatus: String(r.readinessStatus),
+        readinessScore: Number(r.readinessScore ?? 0),
+        releaseMode: r.releaseMode ?? null,
+        releaseSnapshotHash: r.releaseSnapshotHash ?? null,
+      };
     }
   }
 
@@ -69,7 +94,15 @@ export async function GET(req: NextRequest) {
     ok: true,
     term: t,
     academicYear: y,
-    school: school ? { releasedAt: school.releasedAt.toISOString() } : null,
+    school: school
+      ? {
+          releasedAt: school.releasedAt.toISOString(),
+          readinessStatus: String(school.readinessStatus),
+          readinessScore: Number(school.readinessScore ?? 0),
+          releaseMode: school.releaseMode ?? null,
+          releaseSnapshotHash: school.releaseSnapshotHash ?? null,
+        }
+      : null,
     classroomReleaseMap: byClass,
   });
 }
