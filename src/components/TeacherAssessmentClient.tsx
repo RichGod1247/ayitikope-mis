@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AssessmentInsightsPanel from "@/components/teacher/AssessmentInsightsPanel";
+import AssessmentBroadsheetPanel from "@/components/teacher/AssessmentBroadsheetPanel";
 
 type ClassroomPick = {
   id: string;
@@ -237,6 +238,9 @@ const emeraldButton =
   "inline-flex items-center rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-2 text-[12px] font-semibold text-emerald-100 transition hover:bg-emerald-400/18 disabled:cursor-not-allowed disabled:opacity-50";
 const indigoButton =
   "inline-flex items-center rounded-xl border border-indigo-300/20 bg-indigo-400/12 px-4 py-2 text-[12px] font-semibold text-indigo-100 transition hover:bg-indigo-400/18 disabled:cursor-not-allowed disabled:opacity-50";
+
+const broadsheetButton =
+  "inline-flex items-center justify-center rounded-xl border border-[#E8C96A]/35 bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-[12px] font-semibold text-[#071A3D] shadow-[0_18px_50px_rgba(212,175,55,0.24)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50";
 
 function cleanStr(v: unknown) {
   return String(v ?? "").trim();
@@ -521,7 +525,7 @@ function friendlyActionError(code: string | null | undefined) {
   return null;
 }
 
-type MobileTab = "scores" | "items" | "insights" | "pipeline";
+type MobileTab = "scores" | "broadsheet" | "items" | "insights" | "pipeline";
 
 function TabButton(props: {
   active: boolean;
@@ -1305,6 +1309,18 @@ export default function TeacherAssessmentClient() {
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => setTab("broadsheet")}
+              className={
+                tab === "broadsheet"
+                  ? `${broadsheetButton} ring-2 ring-[#E8C96A]/35`
+                  : broadsheetButton
+              }
+            >
+              📊 Open broadsheet
+            </button>
+
             <Link href={lessonDeliveriesPageHref} className={emeraldButton}>
               Record lesson delivery
             </Link>
@@ -1383,12 +1399,18 @@ export default function TeacherAssessmentClient() {
       ) : null}
 
       <div className="md:hidden">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           <TabButton
             active={tab === "scores"}
             label="Scores"
             hint={selectedItem ? "Enter marks" : "Pick item"}
             onClick={() => setTab("scores")}
+          />
+          <TabButton
+            active={tab === "broadsheet"}
+            label="Sheet"
+            hint="Totals"
+            onClick={() => setTab("broadsheet")}
           />
           <TabButton
             active={tab === "items"}
@@ -1399,19 +1421,62 @@ export default function TeacherAssessmentClient() {
           <TabButton
             active={tab === "insights"}
             label="Insights"
-            hint="Class signals"
+            hint="Signals"
             onClick={() => setTab("insights")}
           />
           <TabButton
             active={tab === "pipeline"}
             label="Pipeline"
-            hint="Teaching chain"
+            hint="Chain"
             onClick={() => setTab("pipeline")}
           />
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+            <div className="hidden md:grid md:grid-cols-5 md:gap-2">
+        <TabButton
+          active={tab === "scores"}
+          label="Scores"
+          hint={selectedItem ? "Enter marks" : "Pick item"}
+          onClick={() => setTab("scores")}
+        />
+        <TabButton
+          active={tab === "broadsheet"}
+          label="Broadsheet"
+          hint="Totals • grades • readiness"
+          onClick={() => setTab("broadsheet")}
+        />
+        <TabButton
+          active={tab === "items"}
+          label="Items"
+          hint="Create / edit"
+          onClick={() => setTab("items")}
+        />
+        <TabButton
+          active={tab === "insights"}
+          label="Insights"
+          hint="Class signals"
+          onClick={() => setTab("insights")}
+        />
+        <TabButton
+          active={tab === "pipeline"}
+          label="Pipeline"
+          hint="Teaching chain"
+          onClick={() => setTab("pipeline")}
+        />
+      </div>
+
+            {tab === "broadsheet" ? (
+        <AssessmentBroadsheetPanel
+          classroomId={classroomId}
+          term={term}
+          academicYear={academicYear}
+          subjectOptions={subjectOptions}
+          currentSubject={subject}
+        />
+      ) : null}
+
+      <div className={tab === "broadsheet" ? "hidden" : "grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"}>
         <div className={["space-y-4", "md:block", tab === "pipeline" ? "hidden md:block" : ""].join(" ")}>
           <div className={tab !== "insights" ? "hidden md:block" : ""}>
             <SectionCard
