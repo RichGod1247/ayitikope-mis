@@ -65,7 +65,16 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const school = releases.find((r) => r.scopeKey === "SCHOOL") ?? null;
+  function isEvidenceBackedRelease(r: (typeof releases)[number]) {
+    const status = String(r.readinessStatus ?? "").toUpperCase();
+    return (
+      (status === "READY" || status === "OVERRIDE") &&
+      !!String(r.releaseSnapshotHash ?? "").trim()
+    );
+  }
+
+  const schoolRaw = releases.find((r) => r.scopeKey === "SCHOOL") ?? null;
+  const school = schoolRaw && isEvidenceBackedRelease(schoolRaw) ? schoolRaw : null;
 
   const byClass: Record<
     string,
@@ -79,7 +88,7 @@ export async function GET(req: NextRequest) {
   > = {};
 
   for (const r of releases) {
-    if (r.scopeKey !== "SCHOOL") {
+    if (r.scopeKey !== "SCHOOL" && isEvidenceBackedRelease(r)) {
       byClass[r.scopeKey] = {
         releasedAt: r.releasedAt.toISOString(),
         readinessStatus: String(r.readinessStatus),
@@ -89,6 +98,20 @@ export async function GET(req: NextRequest) {
       };
     }
   }
+
+  const suppressedReleases = releases
+    .filter((r) => !isEvidenceBackedRelease(r))
+    .map((r) => ({
+      scope: r.scope,
+      scopeKey: r.scopeKey,
+      classroomId: r.classroomId,
+      releasedAt: r.releasedAt.toISOString(),
+      readinessStatus: String(r.readinessStatus),
+      readinessScore: Number(r.readinessScore ?? 0),
+      releaseMode: r.releaseMode ?? null,
+      releaseSnapshotHash: r.releaseSnapshotHash ?? null,
+      reason: "Release row is not evidence-backed and is hidden from active release status.",
+    }));
 
   return noStoreJson(200, {
     ok: true,
@@ -104,5 +127,6 @@ export async function GET(req: NextRequest) {
         }
       : null,
     classroomReleaseMap: byClass,
+    suppressedReleases,
   });
 }

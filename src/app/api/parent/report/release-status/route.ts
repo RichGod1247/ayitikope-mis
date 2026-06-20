@@ -1,3 +1,4 @@
+//src/app/api/parent/report/release-status/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
@@ -78,8 +79,23 @@ export async function GET(req: NextRequest) {
   const scopeKeys = ["SCHOOL", ...(classroomId ? [classroomId] : [])];
 
   const rel = await prisma.resultsRelease.findFirst({
-    where: { tenantId: sess.tenantId, term, academicYear, scopeKey: { in: scopeKeys } },
-    select: { scope: true, scopeKey: true, releasedAt: true },
+    where: {
+      tenantId: sess.tenantId,
+      term,
+      academicYear,
+      scopeKey: { in: scopeKeys },
+      readinessStatus: { in: ["READY", "OVERRIDE"] },
+      releaseSnapshotHash: { not: null },
+    },
+    select: {
+      scope: true,
+      scopeKey: true,
+      releasedAt: true,
+      readinessStatus: true,
+      readinessScore: true,
+      releaseMode: true,
+      releaseSnapshotHash: true,
+    },
   });
 
   return noStore({
@@ -93,6 +109,10 @@ export async function GET(req: NextRequest) {
           scope: rel.scope,
           scopeKey: rel.scopeKey,
           releasedAt: rel.releasedAt.toISOString(),
+          readinessStatus: String(rel.readinessStatus),
+          readinessScore: Number(rel.readinessScore ?? 0),
+          releaseMode: rel.releaseMode ?? null,
+          releaseSnapshotHash: rel.releaseSnapshotHash ?? null,
         }
       : null,
   });
