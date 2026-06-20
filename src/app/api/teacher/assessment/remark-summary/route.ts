@@ -1,64 +1,101 @@
-//src/app/api/teacher/assessment/remark-summary/route.ts
+// src/app/api/teacher/assessment/remark-summary/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
-import { isAdminLikeRole, resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import {
+  isAdminLikeRole,
+  resolveUserClassroomAccess,
+} from "@/lib/teacherAccess";
+import { buildClassPolicyReportTruth } from "@/lib/assessments/reportTruth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function bandDefs() {
-  return [
-    { grade: 1, label: "Excellent", min: 90, max: 100 },
-    { grade: 2, label: "Very Good", min: 80, max: 89 },
-    { grade: 3, label: "Good", min: 70, max: 79 },
-    { grade: 4, label: "High Average", min: 60, max: 69 },
-    { grade: 5, label: "Average", min: 55, max: 59 },
-    { grade: 6, label: "Low Average", min: 50, max: 54 },
-    { grade: 7, label: "Low", min: 40, max: 49 },
-    { grade: 8, label: "Lower", min: 35, max: 39 },
-    { grade: 9, label: "Lowest / Fail", min: 0, max: 34 },
-  ];
-}
+type GradeScaleRow = {
+  grade: string | number;
+  minPercent: number;
+  maxPercent: number;
+  label?: string | null;
+  remark?: string | null;
+};
 
-function noStore(status: number, payload: any) {
+function noStore(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
-    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
+}
+
+function clean(v: unknown) {
+  return String(v ?? "").trim();
 }
 
 function isForbiddenReason(reason: string) {
   return reason === "OUT_OF_SCOPE" || reason === "SUBJECT_OUT_OF_SCOPE";
 }
 
-function buildSubjectWhere(args: { roleName: string | null; allowedSubjects: string[] | null }) {
-  if (isAdminLikeRole(args.roleName)) return {};
-  if (args.allowedSubjects?.length) {
-    return {
-      OR: args.allowedSubjects.map((s) => ({
-        subject: { equals: s, mode: "insensitive" as const },
-      })),
-    };
-  }
-  return {};
+function canSeeSubject(args: {
+  roleName: string | null;
+  allowedSubjects: string[] | null;
+  subject: string;
+}) {
+  if (isAdminLikeRole(args.roleName)) return true;
+  if (!args.allowedSubjects?.length) return true;
+
+  const target = clean(args.subject).toLowerCase();
+  return args.allowedSubjects.some((s) => clean(s).toLowerCase() === target);
+}
+
+function gradeFromPolicyScale(
+  gradeScale: GradeScaleRow[] | undefined,
+  pct: number | null
+) {
+  if (pct === null || !Number.isFinite(pct)) return null;
+
+  return (
+    gradeScale?.find(
+      (row) => pct >= Number(row.minPercent) && pct <= Number(row.maxPercent)
+    ) ?? null
+  );
+}
+
+function emptyBands(gradeScale: GradeScaleRow[]) {
+  return gradeScale.map((row) => ({
+    grade: String(row.grade),
+    label: row.label ?? row.remark ?? String(row.grade),
+    remark: row.remark ?? row.label ?? null,
+    minPercent: Number(row.minPercent),
+    maxPercent: Number(row.maxPercent),
+    learnersCount: 0,
+  }));
 }
 
 export async function GET(req: Request) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
-    requireRoleNames: ["TEACHER", "HEADTEACHER", "ADMIN", "SCHOOL_ADMIN", "SUPERADMIN"],
+    requireRoleNames: [
+      "TEACHER",
+      "HEADTEACHER",
+      "ADMIN",
+      "SCHOOL_ADMIN",
+      "SUPERADMIN",
+    ],
   });
+
   if (!auth.ok) return auth.res;
 
   const { ctx } = auth;
   const { searchParams } = new URL(req.url);
 
-  const classroomId = (searchParams.get("classroomId") ?? "").trim();
-  const term = (searchParams.get("term") ?? "1st Term").trim();
-  const academicYear = (searchParams.get("academicYear") ?? "2025/2026").trim();
+  const classroomId = clean(searchParams.get("classroomId"));
+  const term = clean(searchParams.get("term")) || "1st Term";
+  const academicYear = clean(searchParams.get("academicYear")) || "2025/2026";
 
-  if (!classroomId) return noStore(400, { ok: false, error: "MISSING_CLASSROOM_ID" });
+  if (!classroomId) {
+    return noStore(400, { ok: false, error: "MISSING_CLASSROOM_ID" });
+  }
 
   const access = await resolveUserClassroomAccess({
     tenantId: ctx.tenantId,
@@ -70,73 +107,128 @@ export async function GET(req: Request) {
   if (!access.ok) {
     return noStore(isForbiddenReason(access.reason) ? 403 : 404, {
       ok: false,
-      error: isForbiddenReason(access.reason) ? access.reason : "CLASSROOM_NOT_FOUND",
+      error: isForbiddenReason(access.reason)
+        ? access.reason
+        : "CLASSROOM_NOT_FOUND",
     });
   }
 
-  const subjectWhere = buildSubjectWhere({
-    roleName: ctx.roleName,
-    allowedSubjects: access.allowedSubjects,
+  const truth = await buildClassPolicyReportTruth({
+    tenantId: ctx.tenantId,
+    classroomId,
+    term,
+    academicYear,
   });
 
-  const items = await prisma.assessmentItem.findMany({
-    where: { tenantId: ctx.tenantId, classroomId, term, academicYear, ...subjectWhere } as any,
-    select: { id: true, maxScore: true },
-  });
-
-  if (items.length === 0) {
-    const bands = bandDefs().map((b) => ({
-      grade: b.grade,
-      label: b.label,
-      minPercent: b.min,
-      maxPercent: b.max,
-      learnersCount: 0,
-    }));
-    return noStore(200, { ok: true, totalLearnersEvaluated: 0, bands });
+  if (!truth.ok) {
+    return noStore(truth.error === "CLASSROOM_NOT_FOUND" ? 404 : 409, {
+      ok: false,
+      error: truth.error,
+    });
   }
 
-  const itemMax = new Map<string, number>();
-  const itemIds = items.map((i) => {
-    itemMax.set(i.id, Number(i.maxScore ?? 0));
-    return i.id;
-  });
+  const gradeScale = truth.policy.gradeScale as GradeScaleRow[];
 
-  const scores = await prisma.assessmentScore.findMany({
-    where: { itemId: { in: itemIds } },
-    select: { itemId: true, studentId: true, score: true },
-  });
+  const visibleSheets = truth.broadsheets.filter((sheet) =>
+    canSeeSubject({
+      roleName: ctx.roleName,
+      allowedSubjects: access.allowedSubjects,
+      subject: sheet.subject,
+    })
+  );
 
-  const totals = new Map<string, { totalScore: number; totalMax: number }>();
-
-  for (const s of scores) {
-    const max = itemMax.get(s.itemId) ?? 0;
-    if (max <= 0) continue;
-    const prev = totals.get(s.studentId) || { totalScore: 0, totalMax: 0 };
-    prev.totalScore += Number(s.score ?? 0);
-    prev.totalMax += max;
-    totals.set(s.studentId, prev);
+  if (visibleSheets.length === 0) {
+    return noStore(200, {
+      ok: true,
+      totalLearnersEvaluated: 0,
+      policy: truth.policy,
+      readiness: {
+        status: "BLOCKED",
+        subjectCount: 0,
+        blockedSubjectCount: 0,
+        learnerCount: truth.students.length,
+        score: 0,
+        blockedReasons: [
+          "No policy-aware reportable subjects are visible for this teacher.",
+        ],
+      },
+      bands: emptyBands(gradeScale),
+    });
   }
 
-  const defs = bandDefs();
-  const counts = new Map<number, number>();
-  for (const d of defs) counts.set(d.grade, 0);
+  const scoresByStudent = new Map<string, number[]>();
+
+  for (const sheet of visibleSheets) {
+    for (const row of sheet.rows) {
+      const pct = row.totalPercent;
+
+      if (typeof pct !== "number" || !Number.isFinite(pct)) continue;
+
+      const existing = scoresByStudent.get(row.studentId) ?? [];
+      existing.push(pct);
+      scoresByStudent.set(row.studentId, existing);
+    }
+  }
+
+  const counts = new Map<string, number>();
+  for (const band of gradeScale) {
+    counts.set(String(band.grade), 0);
+  }
 
   let evaluated = 0;
-  for (const [, t] of totals.entries()) {
-    if (t.totalMax <= 0) continue;
+
+  for (const [, percentages] of scoresByStudent.entries()) {
+    if (percentages.length === 0) continue;
+
+    const avg =
+      percentages.reduce((sum, pct) => sum + pct, 0) / percentages.length;
+
+    const band = gradeFromPolicyScale(gradeScale, avg);
+
+    if (!band) continue;
+
     evaluated += 1;
-    const pct = (t.totalScore / t.totalMax) * 100;
-    const band = defs.find((b) => pct >= b.min && pct <= b.max) || (pct > 100 ? defs[0] : defs[defs.length - 1]);
-    counts.set(band.grade, (counts.get(band.grade) ?? 0) + 1);
+    const key = String(band.grade);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
 
-  const bands = defs.map((b) => ({
-    grade: b.grade,
-    label: b.label,
-    minPercent: b.min,
-    maxPercent: b.max,
-    learnersCount: counts.get(b.grade) ?? 0,
+  const blockedSubjects = visibleSheets.filter(
+    (sheet) => sheet.readiness.status === "BLOCKED"
+  );
+
+  const bands = gradeScale.map((row) => ({
+    grade: String(row.grade),
+    label: row.label ?? row.remark ?? String(row.grade),
+    remark: row.remark ?? row.label ?? null,
+    minPercent: Number(row.minPercent),
+    maxPercent: Number(row.maxPercent),
+    learnersCount: counts.get(String(row.grade)) ?? 0,
   }));
 
-  return noStore(200, { ok: true, totalLearnersEvaluated: evaluated, bands });
+  return noStore(200, {
+    ok: true,
+    totalLearnersEvaluated: evaluated,
+    policy: truth.policy,
+    readiness: {
+      status: blockedSubjects.length ? "BLOCKED" : "READY",
+      subjectCount: visibleSheets.length,
+      blockedSubjectCount: blockedSubjects.length,
+      learnerCount: truth.students.length,
+      score:
+        visibleSheets.length > 0
+          ? Math.round(
+              visibleSheets.reduce(
+                (sum, sheet) => sum + Number(sheet.readiness.score ?? 0),
+                0
+              ) / visibleSheets.length
+            )
+          : 0,
+      blockedReasons: blockedSubjects.flatMap((sheet) =>
+        sheet.readiness.blockedReasons.map(
+          (reason) => `${sheet.subject}: ${reason}`
+        )
+      ),
+    },
+    bands,
+  });
 }
