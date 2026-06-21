@@ -49,6 +49,25 @@ type ApprovedNotesOk = {
 type ApprovedNotesErr = { ok: false; error: string };
 type ApprovedNotesResponse = ApprovedNotesOk | ApprovedNotesErr;
 
+type LessonDeliveryAssessmentItem = {
+  id: string;
+  title: string;
+  type: string;
+  maxScore: number;
+  weighting?: number | null;
+  status: string;
+  date?: string | null;
+  assessmentPolicyId?: string | null;
+  policyComponentId?: string | null;
+  componentCode?: string | null;
+  templateKey?: string | null;
+  sortOrder?: number | null;
+  isRequired?: boolean | null;
+  publishedAt?: string | null;
+  lockedAt?: string | null;
+  scoresCount: number;
+};
+
 type LessonDeliveryItem = {
   id: string;
   classroomId: string;
@@ -64,6 +83,7 @@ type LessonDeliveryItem = {
   notes?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  assessmentItems?: LessonDeliveryAssessmentItem[];
 };
 
 type LessonDeliveryListOk = {
@@ -124,6 +144,35 @@ function deliveryLabel(d: LessonDeliveryItem) {
   else if (cleanStr(d.contentStandardCode)) parts.push(d.contentStandardCode!);
   if (d.lessonNoteId) parts.push("Lesson note linked");
   return parts.join(" • ") || d.id;
+}
+
+function statusBadgeClass(status: unknown) {
+  const s = cleanStr(status).toUpperCase();
+
+  if (s === "LOCKED") {
+    return "rounded-full border border-slate-400 bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700";
+  }
+
+  if (s === "PUBLISHED") {
+    return "rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700";
+  }
+
+  return "rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700";
+}
+
+function createAssessmentHrefFromDelivery(d: LessonDeliveryItem) {
+  const params = new URLSearchParams({
+    classroomId: d.classroomId,
+    term: d.term,
+    academicYear: d.academicYear,
+    subject: d.subject,
+    lessonDeliveryId: d.id,
+  });
+
+  if (d.curriculumUnitId) params.set("curriculumUnitId", d.curriculumUnitId);
+  if (d.lessonNoteId) params.set("lessonNoteId", d.lessonNoteId);
+
+  return `/teacher/assessment?${params.toString()}`;
 }
 
 export default function TeacherLessonDeliveriesClient() {
@@ -515,9 +564,9 @@ export default function TeacherLessonDeliveriesClient() {
           <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div>
               <h2 className="text-sm font-semibold text-slate-900">Recorded deliveries</h2>
-              <p className="mt-1 text-[11px] text-slate-500">
-                These are the records that the assessment screen should link to.
-              </p>
+<p className="mt-1 text-[11px] text-slate-500">
+  Each delivery now shows whether assessment evidence has been created from the lesson.
+</p>
             </div>
 
             {deliveriesError ? (
@@ -547,11 +596,14 @@ export default function TeacherLessonDeliveriesClient() {
                         Delivery
                       </th>
                       <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
-                        Linked note
-                      </th>
-                      <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
-                        Notes
-                      </th>
+  Linked note
+</th>
+<th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+  Assessment evidence
+</th>
+<th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-700">
+  Notes
+</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -563,12 +615,63 @@ export default function TeacherLessonDeliveriesClient() {
                             <div className="font-medium">{deliveryLabel(d)}</div>
                             <div className="text-[11px] text-slate-500">{d.id}</div>
                           </td>
-                          <td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-700">
-                            {d.lessonNoteId || "—"}
-                          </td>
-                          <td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-700">
-                            {d.notes || "—"}
-                          </td>
+<td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-700">
+  {d.lessonNoteId || "—"}
+</td>
+
+<td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-700">
+  {Array.isArray(d.assessmentItems) && d.assessmentItems.length > 0 ? (
+    <div className="space-y-2">
+      {d.assessmentItems.map((a) => (
+        <div
+          key={a.id}
+          className="rounded-md border border-emerald-100 bg-emerald-50/60 px-2 py-1.5"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-1">
+            <span className="font-medium text-emerald-900">
+              {a.componentCode || a.type || "Assessment"}
+            </span>
+            <span className={statusBadgeClass(a.status)}>
+              {cleanStr(a.status) || "DRAFT"}
+            </span>
+          </div>
+
+          <div className="mt-0.5 text-[11px] text-slate-700">{a.title}</div>
+
+          <div className="mt-0.5 text-[10px] text-slate-500">
+            Max: {Number(a.maxScore ?? 0)} • Scores:{" "}
+            {Number(a.scoresCount ?? 0)}
+            {a.isRequired ? " • Required" : " • Optional"}
+          </div>
+        </div>
+      ))}
+
+      <Link
+        href={createAssessmentHrefFromDelivery(d)}
+        className="inline-flex rounded-full border border-indigo-300 bg-white px-2 py-0.5 text-[10px] font-medium text-indigo-700 hover:bg-indigo-50"
+      >
+        Add another assessment
+      </Link>
+    </div>
+  ) : (
+    <div className="space-y-1">
+      <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-2 py-1.5 text-[11px] text-slate-500">
+        No assessment evidence yet.
+      </div>
+
+      <Link
+        href={createAssessmentHrefFromDelivery(d)}
+        className="inline-flex rounded-full border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 hover:bg-indigo-100"
+      >
+        Create assessment from this lesson
+      </Link>
+    </div>
+  )}
+</td>
+
+<td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-700">
+  {d.notes || "—"}
+</td>
                         </tr>
                       );
                     })}
