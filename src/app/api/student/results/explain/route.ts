@@ -179,8 +179,10 @@ export async function POST(req: NextRequest) {
         `For **${periodLabel}**, there are some scores for ${youName}, but not enough trusted data to calculate a clear overall percentage yet.`
       );
     } else {
+      const subjectVerb = youName.toLowerCase() === "you" ? "are" : "is";
+
       lines.push(
-        `For **${periodLabel}**, ${youName} are currently around **${overall.toFixed(
+        `For **${periodLabel}**, ${youName} ${subjectVerb} currently around **${overall.toFixed(
           1
         )}%** across the policy-aware subjects available in EduLife OS.`
       );
