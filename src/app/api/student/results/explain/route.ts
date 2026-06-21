@@ -1,16 +1,24 @@
 // src/app/api/student/results/explain/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
-type GesInfo = {
-  grade?: number;
-  label?: string;
-  band?: string;
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+type PolicyInfo = {
+  grade?: string | number | null;
+  label?: string | null;
+  band?: string | null;
+  remark?: string | null;
 };
 
 type SubjectPayload = {
   subject?: string;
   percentage?: number | null;
-  ges?: GesInfo | null;
+  totalPercent?: number | null;
+  grade?: string | number | null;
+  gradeLabel?: string | null;
+  remark?: string | null;
+  ges?: PolicyInfo | null;
 };
 
 type BodyShape = {
@@ -23,291 +31,246 @@ type BodyShape = {
   subjects?: SubjectPayload[];
 };
 
+type NormalizedSubject = {
+  subject: string;
+  percentage: number;
+  policyText: string | null;
+};
+
+function noStoreJson(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
 function clampPercent(v: number | null | undefined): number | null {
   if (v == null || !Number.isFinite(v)) return null;
   return Math.max(0, Math.min(100, v));
 }
 
-function gesTextFromSubject(s: SubjectPayload): string | null {
-  const p = clampPercent(s.percentage);
-  const ges = s.ges || {};
-  if (p == null) return null;
-
-  if (ges.grade != null || ges.label || ges.band) {
-    const parts: string[] = [];
-    if (ges.grade != null) parts.push(`Grade ${ges.grade}`);
-    if (ges.band) parts.push(ges.band);
-    if (ges.label) parts.push(ges.label);
-    return parts.join(" – ");
+function readTrustedPercentage(subject: SubjectPayload): number | null {
+  if (typeof subject.percentage === "number") {
+    return clampPercent(subject.percentage);
   }
 
-  if (p >= 80) return "Excellent";
-  if (p >= 70) return "Very good";
-  if (p >= 60) return "Good";
-  if (p >= 50) return "Pass";
-  if (p >= 40) return "Below average";
-  return "Weak – needs support";
+  if (typeof subject.totalPercent === "number") {
+    return clampPercent(subject.totalPercent);
+  }
+
+  return null;
+}
+
+function policyTextFromSubject(subject: SubjectPayload): string | null {
+  const parts: string[] = [];
+
+  if (subject.grade != null && clean(subject.grade)) {
+    parts.push(`Grade ${clean(subject.grade)}`);
+  }
+
+  if (clean(subject.gradeLabel)) parts.push(clean(subject.gradeLabel));
+  if (clean(subject.remark)) parts.push(clean(subject.remark));
+
+  const ges = subject.ges ?? null;
+  if (ges) {
+    if (ges.grade != null && clean(ges.grade)) parts.push(`Grade ${clean(ges.grade)}`);
+    if (clean(ges.band)) parts.push(clean(ges.band));
+    if (clean(ges.label)) parts.push(clean(ges.label));
+    if (clean(ges.remark)) parts.push(clean(ges.remark));
+  }
+
+  const unique = Array.from(new Set(parts.filter(Boolean)));
+  return unique.length ? unique.join(" – ") : null;
+}
+
+function normalizeSubjects(rawSubjects: unknown): NormalizedSubject[] {
+  if (!Array.isArray(rawSubjects)) return [];
+
+  return rawSubjects
+    .map((subject) => {
+      const s = subject as SubjectPayload;
+      const name = clean(s.subject);
+      const percentage = readTrustedPercentage(s);
+
+      if (!name || percentage === null) return null;
+
+      return {
+        subject: name,
+        percentage,
+        policyText: policyTextFromSubject(s),
+      };
+    })
+    .filter((s): s is NormalizedSubject => s !== null);
+}
+
+function listNames(arr: NormalizedSubject[], limit = 3): string {
+  const names = arr.map((s) => s.subject);
+  if (names.length === 0) return "";
+  if (names.length <= limit) return names.join(", ");
+  return `${names.slice(0, limit).join(", ")} and ${names.length - limit} more`;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json().catch(() => null)) as BodyShape | null;
+
     if (!body || typeof body !== "object") {
-      return NextResponse.json(
-        { ok: false, error: "Invalid JSON body." },
-        { status: 400 }
-      );
+      return noStoreJson({ ok: false, error: "Invalid JSON body." }, 400);
     }
 
-    const {
-      tenantId,
-      studentName,
-      className,
-      term = "1st Term",
-      academicYear = "2025/2026",
-      overallPercentage,
-      subjects: rawSubjects,
-    } = body;
-
+    const youName = clean(body.studentName) || "you";
+    const classLabel = clean(body.className) || "your class";
+    const term = clean(body.term) || "1st Term";
+    const academicYear = clean(body.academicYear) || "2025/2026";
     const periodLabel = `${term}, ${academicYear}`;
-    const youName = (studentName || "you").trim();
-    const classLabel = (className || "your class").trim();
 
-    if (!Array.isArray(rawSubjects)) {
-      return NextResponse.json(
-        { ok: false, error: "subjects must be an array." },
-        { status: 400 }
-      );
-    }
-
-    const subjects = rawSubjects
-      .map((s) => ({
-        subject: (s.subject ?? "").trim(),
-        percentage: clampPercent(s.percentage ?? null),
-        ges: s.ges ?? null,
-      }))
-      .filter((s) => s.subject && s.percentage != null);
+    const subjects = normalizeSubjects(body.subjects);
 
     if (subjects.length === 0) {
-      const summary =
-        `For **${periodLabel}**, there are not enough continuous assessment scores recorded for you yet.\n\n` +
-        `That does **not** mean you are doing badly. It simply means teachers are still entering marks into EduLife OS. ` +
-        `Once more scores are inside the system, this page will show your subjects one by one.`;
-
-      const suggestions =
-        `**What you can do while marks are still being entered**\n` +
-        `- Keep paying attention in class and doing your classwork and homework.\n` +
-        `- Ask your teacher if there is any assignment or topic you can revise ahead of time.\n` +
-        `- Use this waiting time to build good habits: a small daily study time, enough sleep, and less distraction during study.`;
-
-      return NextResponse.json(
-        { ok: true, summary, suggestions, meta: { tenantId: tenantId ?? null } },
-        { status: 200 }
-      );
+      return noStoreJson({
+        ok: true,
+        summary:
+          `For **${periodLabel}**, there are no complete policy-aware subject percentages ready for you yet.\n\n` +
+          "That does not mean you are doing badly. It simply means EduLife OS is waiting for trusted assessment evidence before explaining your results.",
+        suggestions: [
+          "**What you can do while marks are still being completed**",
+          "- Keep paying attention in class and doing classwork/homework.",
+          "- Ask your teacher which topic you can revise ahead of time.",
+          "- Build small daily habits: study time, enough sleep, and fewer distractions.",
+        ].join("\n"),
+        meta: {
+          tenantId: body.tenantId ?? null,
+          overall: null,
+          subjectCount: 0,
+          explanationSource: "policy-payload-only",
+        },
+      });
     }
 
-    // Overall percentage
-    const subjectPercents = subjects
-      .map((s) => s.percentage!)
-      .filter((p) => p != null);
     const derivedOverall =
-      subjectPercents.length > 0
-        ? subjectPercents.reduce((a, b) => a + b, 0) / subjectPercents.length
-        : null;
+      subjects.reduce((sum, subject) => sum + subject.percentage, 0) /
+      subjects.length;
 
     const overall = clampPercent(
-      overallPercentage != null ? overallPercentage : derivedOverall
+      typeof body.overallPercentage === "number"
+        ? body.overallPercentage
+        : derivedOverall
     );
 
-    // Buckets
-    const high = subjects.filter((s) => (s.percentage ?? 0) >= 75);
-    const mid = subjects.filter(
-      (s) => (s.percentage ?? 0) >= 50 && (s.percentage ?? 0) < 75
-    );
-    const low = subjects.filter((s) => (s.percentage ?? 0) < 50);
+    const high = subjects.filter((s) => s.percentage >= 75);
+    const mid = subjects.filter((s) => s.percentage >= 50 && s.percentage < 75);
+    const low = subjects.filter((s) => s.percentage < 50);
 
-    const sorted = [...subjects].sort(
-      (a, b) => (b.percentage ?? 0) - (a.percentage ?? 0)
-    );
-    const best = sorted[0];
-    const worst = sorted[sorted.length - 1];
-
-    const listNames = (arr: typeof subjects, limit = 3): string => {
-      const names = arr.map((s) => s.subject);
-      if (names.length === 0) return "";
-      if (names.length <= limit) return names.join(", ");
-      const head = names.slice(0, limit).join(", ");
-      const remaining = names.length - limit;
-      return `${head} and ${remaining} more`;
-    };
-
-    let overallLine: string;
-    if (overall == null) {
-      overallLine =
-        `For **${periodLabel}**, there are some scores for you, but not enough to calculate a clear overall percentage yet.`;
-    } else if (overall >= 80) {
-      overallLine =
-        `For **${periodLabel}**, your overall continuous assessment is about **${overall.toFixed(
-          1
-        )}%** — this is a **very strong performance**.`;
-    } else if (overall >= 70) {
-      overallLine =
-        `For **${periodLabel}**, your overall score is around **${overall.toFixed(
-          1
-        )}%**, which means you are doing **well** but can still push certain areas higher.`;
-    } else if (overall >= 55) {
-      overallLine =
-        `For **${periodLabel}**, your overall score is about **${overall.toFixed(
-          1
-        )}%**. This shows that you are **in the middle** — not failing, but with clear room to grow.`;
-    } else if (overall >= 45) {
-      overallLine =
-        `For **${periodLabel}**, your overall continuous assessment is around **${overall.toFixed(
-          1
-        )}%**, which tells us that you are **struggling in some places**, but you can definitely improve with a clear plan.`;
-    } else {
-      overallLine =
-        `For **${periodLabel}**, your overall continuous assessment is about **${overall?.toFixed(
-          1
-        )}%**. This does **not** mean you are not intelligent; it simply means your current habits, understanding, or support are not yet strong enough — and those can change.`;
-    }
+    const sorted = [...subjects].sort((a, b) => b.percentage - a.percentage);
+    const best = sorted[0] ?? null;
+    const weakest = sorted[sorted.length - 1] ?? null;
 
     const lines: string[] = [];
-    lines.push(overallLine);
+
+    if (overall === null) {
+      lines.push(
+        `For **${periodLabel}**, there are some scores for ${youName}, but not enough trusted data to calculate a clear overall percentage yet.`
+      );
+    } else {
+      lines.push(
+        `For **${periodLabel}**, ${youName} are currently around **${overall.toFixed(
+          1
+        )}%** across the policy-aware subjects available in EduLife OS.`
+      );
+    }
 
     if (best) {
-      const bestGes = gesTextFromSubject(best);
       lines.push(
-        `- Your strongest subject right now is **${best.subject}**, with about **${best.percentage!.toFixed(
-          1
-        )}%**${bestGes ? ` (${bestGes})` : ""}.`
+        `- Strongest subject right now: **${best.subject}** (~${best.percentage.toFixed(1)}%${
+          best.policyText ? `, ${best.policyText}` : ""
+        }).`
       );
     }
 
-    if (worst && worst !== best) {
-      const worstGes = gesTextFromSubject(worst);
+    if (weakest && weakest.subject !== best?.subject) {
       lines.push(
-        `- The subject that needs the **most attention** is **${worst.subject}**, with about **${worst.percentage!.toFixed(
-          1
-        )}%**${worstGes ? ` (${worstGes})` : ""}.`
+        `- Subject needing most attention: **${weakest.subject}** (~${weakest.percentage.toFixed(1)}%${
+          weakest.policyText ? `, ${weakest.policyText}` : ""
+        }).`
       );
     }
 
-    if (high.length > 0) {
-      lines.push(
-        `- You are doing especially well in **${listNames(
-          high
-        )}**. These are your current “confidence subjects”.`
-      );
+    if (high.length) {
+      lines.push(`- Confidence subjects: **${listNames(high)}**.`);
     }
 
-    if (mid.length > 0) {
-      lines.push(
-        `- You are fairly steady in **${listNames(
-          mid
-        )}**. With a bit more focus, these can move into your strongest group.`
-      );
+    if (mid.length) {
+      lines.push(`- Steady subjects: **${listNames(mid)}**.`);
     }
 
-    if (low.length > 0) {
-      lines.push(
-        `- Subjects like **${listNames(
-          low
-        )}** are where you need to grow the most right now. This is normal; every serious student has some tough areas.`
-      );
+    if (low.length) {
+      lines.push(`- Growth subjects: **${listNames(low)}**.`);
     }
 
     lines.push(
-      ``,
-      `Overall, this pattern gives you a clear map of where you are strong, where you are okay, and where you need to focus more in **${classLabel}** for **${periodLabel}**.`
+      "",
+      `Overall, this pattern gives you a clear map for **${classLabel}** in **${periodLabel}**. These results describe current performance, not permanent ability.`
     );
 
-    const summary = lines.join("\n");
-
-    // ------------ Suggestions (coach-style) ------------
     const suggestionLines: string[] = [];
-    suggestionLines.push(`**Practical steps you can take from here**`);
 
-    if (high.length > 0) {
+    suggestionLines.push("**Practical steps you can take from here**");
+
+    if (best) {
       suggestionLines.push(
-        `1. **Protect your strong subjects**`,
-        `   - Keep revising **${listNames(
-          high
-        )}** regularly so they stay strong.`,
-        `   - Let these subjects remind you that **you can understand things deeply** when you put in effort.`,
-        `   - If a friend struggles in one of your strong subjects, try explaining a topic to them — teaching makes you even better.`
-      );
-    } else {
-      suggestionLines.push(
-        `1. **Notice any small strengths**`,
-        `   - Even if you feel you do not have “very strong” subjects yet, look for the ones where you are **slightly better** than others.`,
-        `   - Use them to remind yourself that growth is possible.`
+        `1. **Protect your strength**`,
+        `   - Keep revising **${best.subject}** so it stays strong.`,
+        "   - Try explaining a topic from this subject to a friend; teaching helps you remember better."
       );
     }
 
-    if (mid.length > 0) {
+    if (weakest) {
       suggestionLines.push(
-        ``,
-        `2. **Turn okay subjects into strong subjects**`,
-        `   - Choose one or two subjects from **${listNames(
-          mid
-        )}** to focus on this month.`,
-        `   - For each one, pick a fixed time (e.g., 20–30 minutes, 3 times per week) to revise notes and do extra questions.`,
-        `   - Ask your teacher: “Which topics should I practice first if I want to improve in this subject?”`
-      );
-    }
-
-    if (low.length > 0) {
-      suggestionLines.push(
-        ``,
-        `3. **Handle your toughest subjects wisely**`,
-        `   - For subjects like **${listNames(
-          low
-        )}**, do not say “I am just not good at this.” Instead, say: “I have not mastered this **yet**.”`,
-        `   - Break the work into small pieces: one topic, one exercise, one past question at a time.`,
-        `   - If you can, study with a friend who is strong in one of these areas, or ask the teacher for a few extra minutes after class.`,
-        `   - Track any small improvement (for example, moving from 20% to 35%) as a **victory**, not a failure.`
+        "",
+        `2. **Focus on your biggest growth area**`,
+        `   - Start with **${weakest.subject}** for two weeks.`,
+        "   - Practise one topic, one exercise, and one correction at a time.",
+        "   - Ask your teacher what to practise first."
       );
     }
 
     suggestionLines.push(
-      ``,
-      `4. **Fix your daily habits around school work**`,
-      `   - Create a simple plan for school days: homework time, short revision, and then rest.`,
-      `   - Reduce distractions when studying (especially phones and social media).`,
-      `   - Sleep well. A tired brain cannot give its best, even if you “try hard”.`,
-      ``,
-      `5. **Stay in honest conversation with your adults**`,
-      `   - Share this summary with your parents or guardians and talk about what you want to improve.`,
-      `   - If you feel overwhelmed, tell a trusted adult or teacher early. Hiding struggles usually makes them grow.`,
-      ``,
-      `Remember: **these results describe your current performance, not your permanent ability**. If you keep showing up, asking questions, and improving your habits a little each week, your pattern can change in the next term and beyond.`
+      "",
+      "3. **Build simple daily habits**",
+      "   - Do homework first, then short revision.",
+      "   - Sleep well and reduce distractions during study.",
+      "   - Ask for help early instead of hiding confusion.",
+      "",
+      "Remember: your current result is feedback. With better habits and support, the pattern can change."
     );
 
-    const suggestions = suggestionLines.join("\n");
-
-    return NextResponse.json(
-      {
-        ok: true,
-        summary,
-        suggestions,
-        meta: {
-          tenantId: tenantId ?? null,
-          overall,
-          subjectCount: subjects.length,
-        },
+    return noStoreJson({
+      ok: true,
+      summary: lines.join("\n"),
+      suggestions: suggestionLines.join("\n"),
+      meta: {
+        tenantId: body.tenantId ?? null,
+        overall,
+        subjectCount: subjects.length,
+        explanationSource: "policy-payload-only",
       },
-      { status: 200 }
-    );
+    });
   } catch (err) {
     console.error("[STUDENT_RESULTS_EXPLAIN_ERROR]", err);
-    return NextResponse.json(
+    return noStoreJson(
       {
         ok: false,
         error:
           "Failed to generate an explanation for your results. Please try again or talk to your teacher.",
       },
-      { status: 500 }
+      500
     );
   }
 }

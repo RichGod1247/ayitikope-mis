@@ -1,61 +1,37 @@
 // src/app/api/parent/report/term/explain/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
-/**
- * POST /api/parent/report/term/explain
- *
- * Body (sent from parent term report UI):
- * {
- *   studentName: string;
- *   classLabel?: string | null;
- *   term: string;
- *   academicYear: string;
- *   subjects: Array<{
- *     subject?: string;
- *     percentage?: number | null;
- *     totalScore?: number | null;
- *     maxScore?: number | null;
- *     totalObtained?: number | null;
- *     totalMax?: number | null;
- *   }>;
- *   feesSummary?: {
- *     totalBilledPesewas?: number | null;
- *     totalWaivedPesewas?: number | null;
- *     totalPaidPesewas?: number | null;
- *     outstandingPesewas?: number | null;
- *   } | null;
- *   healthSummary?: {
- *     totalScreenings?: number | null;
- *     feverCount?: number | null;
- *     symptomsCount?: number | null;
- *     lastScreenedAt?: string | null;
- *   } | null;
- * }
- *
- * Returns:
- * {
- *   ok: boolean;
- *   summary?: string;
- *   suggestions?: string;
- *   error?: string;
- * }
- *
- * NOTE: This is rule-based, no external LLM calls.
- */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type SubjectPayload = {
+  subject?: string;
+  percentage?: number | null;
+  totalPercent?: number | null;
+  grade?: string | number | null;
+  gradeLabel?: string | null;
+  remark?: string | null;
+  ges?: {
+    grade?: string | number | null;
+    label?: string | null;
+    band?: string | null;
+    remark?: string | null;
+  } | null;
+
+  // Kept for backward payload compatibility only.
+  // Do not derive explanation percentages from these raw totals.
+  totalScore?: number | null;
+  maxScore?: number | null;
+  totalObtained?: number | null;
+  totalMax?: number | null;
+};
 
 type ExplainBody = {
   studentName?: string;
   classLabel?: string | null;
   term?: string;
   academicYear?: string;
-  subjects?: Array<{
-    subject?: string;
-    percentage?: number | null;
-    totalScore?: number | null;
-    maxScore?: number | null;
-    totalObtained?: number | null;
-    totalMax?: number | null;
-  }>;
+  subjects?: SubjectPayload[];
   feesSummary?: {
     totalBilledPesewas?: number | null;
     totalWaivedPesewas?: number | null;
@@ -70,338 +46,252 @@ type ExplainBody = {
   } | null;
 };
 
-function clampPercent(p: number): number {
-  if (!Number.isFinite(p)) return 0;
+type NormalizedSubject = {
+  subject: string;
+  percentage: number;
+  gradeText: string | null;
+};
+
+function noStoreJson(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function clampPercent(p: number | null | undefined): number | null {
+  if (p == null || !Number.isFinite(p)) return null;
   return Math.max(0, Math.min(100, p));
 }
 
-function deriveSubjectPercentage(s: any): number | null {
-  if (typeof s.percentage === "number" && Number.isFinite(s.percentage)) {
-    return clampPercent(s.percentage);
+function readTrustedPercentage(subject: SubjectPayload): number | null {
+  if (typeof subject.percentage === "number") {
+    return clampPercent(subject.percentage);
   }
 
-  const totalRaw =
-    typeof s.totalScore === "number"
-      ? s.totalScore
-      : typeof s.totalObtained === "number"
-      ? s.totalObtained
-      : null;
+  if (typeof subject.totalPercent === "number") {
+    return clampPercent(subject.totalPercent);
+  }
 
-  const maxRaw =
-    typeof s.maxScore === "number"
-      ? s.maxScore
-      : typeof s.totalMax === "number"
-      ? s.totalMax
-      : null;
+  return null;
+}
 
-  if (totalRaw == null || maxRaw == null || maxRaw <= 0) return null;
+function policyTextFromSubject(subject: SubjectPayload): string | null {
+  const parts: string[] = [];
 
-  return clampPercent((totalRaw / maxRaw) * 100);
+  if (subject.grade != null && clean(subject.grade)) {
+    parts.push(`Grade ${clean(subject.grade)}`);
+  }
+
+  if (clean(subject.gradeLabel)) parts.push(clean(subject.gradeLabel));
+  if (clean(subject.remark)) parts.push(clean(subject.remark));
+
+  const ges = subject.ges ?? null;
+  if (ges) {
+    if (ges.grade != null && clean(ges.grade)) parts.push(`Grade ${clean(ges.grade)}`);
+    if (clean(ges.band)) parts.push(clean(ges.band));
+    if (clean(ges.label)) parts.push(clean(ges.label));
+    if (clean(ges.remark)) parts.push(clean(ges.remark));
+  }
+
+  const unique = Array.from(new Set(parts.filter(Boolean)));
+  return unique.length ? unique.join(" – ") : null;
+}
+
+function normalizeSubjects(rawSubjects: unknown): NormalizedSubject[] {
+  if (!Array.isArray(rawSubjects)) return [];
+
+  return rawSubjects
+    .map((subject) => {
+      const s = subject as SubjectPayload;
+      const name = clean(s.subject) || "Subject";
+      const percentage = readTrustedPercentage(s);
+
+      if (percentage === null) return null;
+
+      return {
+        subject: name,
+        percentage,
+        gradeText: policyTextFromSubject(s),
+      };
+    })
+    .filter((s): s is NormalizedSubject => s !== null);
+}
+
+function listNames(subjects: NormalizedSubject[], limit = 3) {
+  const names = subjects.map((s) => s.subject);
+  if (names.length === 0) return "";
+  if (names.length <= limit) return names.join(", ");
+  return `${names.slice(0, limit).join(", ")} and ${names.length - limit} more`;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => null)) as
-      | ExplainBody
-      | null;
+    const body = (await req.json().catch(() => null)) as ExplainBody | null;
 
     if (!body || typeof body !== "object") {
-      return NextResponse.json(
-        { ok: false, error: "Invalid JSON body." },
-        { status: 400 }
-      );
+      return noStoreJson({ ok: false, error: "Invalid JSON body." }, 400);
     }
 
-    const {
-      studentName: rawStudentName,
-      classLabel,
-      term,
-      academicYear,
-      subjects: rawSubjects,
-      feesSummary,
-      healthSummary,
-    } = body;
+    const studentName = clean(body.studentName) || "your child";
+    const classText = body.classLabel ? ` in ${clean(body.classLabel)}` : "";
 
-    const studentName = (rawStudentName || "your child").trim();
-    const classText = classLabel
-      ? ` in ${classLabel}`
-      : "";
+    const termText = clean(body.term) || "this term";
+    const yearText = clean(body.academicYear);
+    const periodLabel = yearText ? `${termText}, ${yearText}` : termText;
 
-    const termText = term || "this term";
-    const yearText = academicYear || "";
+    const subjects = normalizeSubjects(body.subjects);
 
-    const periodLabel =
-      yearText && termText
-        ? `${termText}, ${yearText}`
-        : termText || "this term";
-
-    const subjects = Array.isArray(rawSubjects)
-      ? rawSubjects
-      : [];
-
-    // If no subjects at all, give a soft explanation
     if (subjects.length === 0) {
-      const summary =
-        `For **${periodLabel}**, there are no continuous assessment scores recorded in EduLife OS yet for ${studentName}${classText}. ` +
-        `Once the teacher starts entering class tests and project scores, this page will show a clear picture of strengths and areas to support.`;
-
-      const suggestions = [
-        `You can gently ask the class teacher when CA scores will be ready in the system.`,
-        `Use this waiting time to keep encouraging regular study habits at home: reading, revision, and asking questions.`,
-      ].join("\n");
-
-      return NextResponse.json(
-        {
-          ok: true,
-          summary,
-          suggestions,
+      return noStoreJson({
+        ok: true,
+        summary:
+          `For **${periodLabel}**, there are no complete policy-aware subject percentages ready yet for ${studentName}${classText}. ` +
+          `This does not mean the learner is doing badly. It means EduLife OS is waiting for trusted assessment evidence before giving an explanation.`,
+        suggestions: [
+          "You can gently ask the class teacher or headteacher when the assessment records will be completed.",
+          "Meanwhile, keep encouraging regular study habits at home: reading, revision, attendance, and asking questions.",
+        ].join("\n"),
+        meta: {
+          subjectCount: 0,
+          explanationSource: "policy-payload-only",
         },
-        { status: 200 }
-      );
+      });
     }
 
-    // Build per-subject percentages
-    const withPercents = subjects
-      .map((s) => {
-        const p = deriveSubjectPercentage(s);
-        return {
-          subject: s.subject || "Subject",
-          percentage: p,
-        };
-      })
-      .filter((s) => s.percentage !== null) as {
-      subject: string;
-      percentage: number;
-    }[];
+    const avgPercent =
+      subjects.reduce((sum, s) => sum + s.percentage, 0) / subjects.length;
 
-    // If all percentages are null (should be rare)
-    if (withPercents.length === 0) {
-      const summary =
-        `For **${periodLabel}**, EduLife OS found subject scores for ${studentName}${classText}, ` +
-        `but could not compute percentages yet. This usually means the maximum scores have not been set properly.`;
+    const strong = subjects.filter((s) => s.percentage >= 75);
+    const steady = subjects.filter((s) => s.percentage >= 50 && s.percentage < 75);
+    const needsSupport = subjects.filter((s) => s.percentage < 50);
 
-      const suggestions =
-        `Kindly let the class teacher or headteacher know so they can check the assessment setup. ` +
-        `Once corrected, this page will automatically show clear percentage scores for each subject.`;
+    const sorted = [...subjects].sort((a, b) => b.percentage - a.percentage);
+    const best = sorted[0] ?? null;
+    const weakest = sorted[sorted.length - 1] ?? null;
 
-      return NextResponse.json(
-        { ok: true, summary, suggestions },
-        { status: 200 }
-      );
-    }
-
-    // Overall average
-    const totalPercent = withPercents.reduce(
-      (sum, s) => sum + s.percentage,
-      0
-    );
-    const avgPercent = clampPercent(
-      totalPercent / withPercents.length
-    );
-
-    // Group subjects by strength
-    const strong: string[] = [];
-    const solid: string[] = [];
-    const needsSupport: string[] = [];
-
-    for (const s of withPercents) {
-      if (s.percentage >= 75) {
-        strong.push(s.subject);
-      } else if (s.percentage >= 50) {
-        solid.push(s.subject);
-      } else {
-        needsSupport.push(s.subject);
-      }
-    }
-
-    const strongText =
-      strong.length > 0
-        ? strong.join(", ")
-        : "";
-    const solidText =
-      solid.length > 0
-        ? solid.join(", ")
-        : "";
-    const supportText =
-      needsSupport.length > 0
-        ? needsSupport.join(", ")
-        : "";
-
-    // Fees interpretation
-    const billed =
-      feesSummary?.totalBilledPesewas ?? 0;
-    const waived =
-      feesSummary?.totalWaivedPesewas ?? 0;
-    const paid = feesSummary?.totalPaidPesewas ?? 0;
-
-    const outstandingExplicit =
-      feesSummary?.outstandingPesewas;
-    const outstanding =
-      outstandingExplicit != null
-        ? outstandingExplicit
-        : billed - waived - paid;
-
-    // Health interpretation
-    const totalScreenings =
-      healthSummary?.totalScreenings ?? 0;
-    const feverCount =
-      healthSummary?.feverCount ?? 0;
-    const symptomsCount =
-      healthSummary?.symptomsCount ?? 0;
-
-    // -----------------------------
-    // Build parent-friendly summary
-    // -----------------------------
     const lines: string[] = [];
 
-    // Overall
     lines.push(
-      `For **${periodLabel}**, ${studentName}${classText} is working at about **${avgPercent.toFixed(
+      `For **${periodLabel}**, ${studentName}${classText} is currently around **${avgPercent.toFixed(
         1
-      )}%** on average across the subjects that have been recorded in EduLife OS.`
+      )}%** on average across the policy-aware subjects available in EduLife OS.`
     );
 
-    if (strong.length > 0) {
+    if (best) {
       lines.push(
-        `• Strong areas: **${strongText}** – these subjects are going very well and deserve celebration.`
+        `• Strongest area: **${best.subject}** (~${best.percentage.toFixed(1)}%${
+          best.gradeText ? `, ${best.gradeText}` : ""
+        }).`
       );
     }
 
-    if (solid.length > 0) {
+    if (weakest && weakest.subject !== best?.subject) {
       lines.push(
-        `• Steady areas: **${solidText}** – these subjects are generally okay but can still grow with regular revision and feedback.`
+        `• Needs most support: **${weakest.subject}** (~${weakest.percentage.toFixed(1)}%${
+          weakest.gradeText ? `, ${weakest.gradeText}` : ""
+        }).`
       );
     }
 
-    if (needsSupport.length > 0) {
-      lines.push(
-        `• Needs extra support: **${supportText}** – these are the subjects where a bit more guidance, practice and encouragement will really help.`
-      );
+    if (strong.length) {
+      lines.push(`• Strong areas: **${listNames(strong)}**.`);
     }
 
-    // Fees note
-    if (billed > 0 || paid > 0 || outstanding > 0) {
-      const billedCedis = (billed - waived) / 100;
-      const paidCedis = paid / 100;
-      const outstandingCedis =
-        outstanding / 100;
+    if (steady.length) {
+      lines.push(`• Steady areas: **${listNames(steady)}**.`);
+    }
 
-      if (outstanding > 0.5) {
+    if (needsSupport.length) {
+      lines.push(`• Areas needing extra support: **${listNames(needsSupport)}**.`);
+    }
+
+    const feesSummary = body.feesSummary ?? null;
+    if (feesSummary) {
+      const billed = feesSummary.totalBilledPesewas ?? 0;
+      const waived = feesSummary.totalWaivedPesewas ?? 0;
+      const paid = feesSummary.totalPaidPesewas ?? 0;
+      const outstanding =
+        feesSummary.outstandingPesewas ?? billed - waived - paid;
+
+      if (billed > 0 || paid > 0 || outstanding > 0) {
+        if (outstanding > 0.5) {
+          lines.push(
+            "",
+            `On the **fees** side, the estimated outstanding balance is **GH₵${(
+              outstanding / 100
+            ).toFixed(2)}**.`
+          );
+        } else {
+          lines.push(
+            "",
+            "On the **fees** side, everything recorded for this learner appears to be settled for the term."
+          );
+        }
+      }
+    }
+
+    const healthSummary = body.healthSummary ?? null;
+    if (healthSummary) {
+      const totalScreenings = healthSummary.totalScreenings ?? 0;
+      const feverCount = healthSummary.feverCount ?? 0;
+      const symptomsCount = healthSummary.symptomsCount ?? 0;
+
+      if (totalScreenings > 0) {
         lines.push(
           "",
-          `On the **fees** side, the system shows that about **GH₵${billedCedis.toFixed(
-            2
-          )}** was billed for this term after waivers, ` +
-            `and around **GH₵${paidCedis.toFixed(
-              2
-            )}** has been paid so far. This leaves an estimated balance of **GH₵${outstandingCedis.toFixed(
-              2
-            )}** to clear.`
-        );
-      } else {
-        lines.push(
-          "",
-          `On the **fees** side, everything recorded for this learner appears to be **fully settled** for the term in EduLife OS.`
+          `${studentName} has ${totalScreenings} recorded health screening${
+            totalScreenings === 1 ? "" : "s"
+          } in EduLife OS. ${
+            feverCount || symptomsCount
+              ? "Some screenings need parent-school attention, not fear."
+              : "No major screening concern is highlighted by this summary."
+          }`
         );
       }
-    }
-
-    // Health note
-    if (totalScreenings > 0) {
-      const parts: string[] = [];
-      parts.push(
-        `During this academic year, ${studentName} has been screened about **${totalScreenings}** time${
-          totalScreenings === 1 ? "" : "s"
-        } at school.`
-      );
-
-      if (feverCount > 0) {
-        parts.push(
-          `There were around **${feverCount}** screening${
-            feverCount === 1 ? "" : "s"
-          } with higher temperature readings.`
-        );
-      }
-
-      if (symptomsCount > 0) {
-        parts.push(
-          `In addition, **${symptomsCount}** screening${
-            symptomsCount === 1 ? "" : "s"
-          } recorded some symptoms.`
-        );
-      }
-
-      parts.push(
-        `This information is not to create fear, but to help parents and school work together to protect health early.`
-      );
-
-      lines.push("", parts.join(" "));
-    } else if (healthSummary) {
-      lines.push(
-        "",
-        `For now, there are no recorded health screenings for ${studentName} in EduLife OS. As the school uses the daily-health tools more, you will see a simple history here.`
-      );
     }
 
     lines.push(
       "",
-      `Overall, this report is a **conversation starter**, not a final judgment. The goal is for home and school to walk together so that ${studentName} keeps growing in confidence, character and competence.`
+      "This report is a conversation starter, not a final judgment. The goal is for home and school to work together with truth, calmness, and encouragement."
     );
 
-    const summary = lines.join("\n");
+    const suggestions = [
+      "Practical next steps:",
+      best ? `- Celebrate progress in ${best.subject}.` : "- Celebrate effort and consistency.",
+      weakest
+        ? `- Give focused support in ${weakest.subject}: short daily revision, practice questions, and teacher feedback.`
+        : "- Keep a steady home-study rhythm.",
+      "- Ask the learner how they feel about each subject before giving advice.",
+      "- Focus on one improvement target at a time.",
+    ].join("\n");
 
-    // -----------------------------
-    // Suggestions block
-    // -----------------------------
-    const suggestionLines: string[] = [];
-
-    if (strong.length > 0) {
-      suggestionLines.push(
-        `• Take a moment to **celebrate** the strong subjects (${strongText}). Simple words like “Well done, keep it up” mean a lot.`
-      );
-    }
-
-    if (needsSupport.length > 0) {
-      suggestionLines.push(
-        `• For the subjects needing support (${supportText}), agree on a calm plan: a short daily revision time, extra practice questions, or chatting with the teacher about how to help.`
-      );
-    }
-
-    if (outstanding > 0.5) {
-      suggestionLines.push(
-        `• If fees are outstanding, consider **small, regular payments** instead of waiting for one big amount. This reduces stress on both the home and the school.`
-      );
-    }
-
-    if (totalScreenings > 0 && (feverCount > 0 || symptomsCount > 0)) {
-      suggestionLines.push(
-        `• Keep an eye on ${studentName}'s health: plenty of sleep, good food, water, hygiene, and early visits to the clinic when something doesn’t look right.`
-      );
-    }
-
-    suggestionLines.push(
-      `• Use this report as an opportunity to **listen** to ${studentName}: ask how they feel about each subject, and what support they think would help them most.`
-    );
-
-    const suggestions = suggestionLines.join("\n");
-
-    return NextResponse.json(
-      {
-        ok: true,
-        summary,
-        suggestions,
+    return noStoreJson({
+      ok: true,
+      summary: lines.join("\n"),
+      suggestions,
+      meta: {
+        overall: Number(avgPercent.toFixed(1)),
+        subjectCount: subjects.length,
+        explanationSource: "policy-payload-only",
       },
-      { status: 200 }
-    );
+    });
   } catch (err) {
     console.error("[PARENT_TERM_REPORT_EXPLAIN_ERROR]", err);
-    return NextResponse.json(
+    return noStoreJson(
       {
         ok: false,
         error:
           "Failed to generate a term summary explanation. Please try again or contact the school office.",
       },
-      { status: 500 }
+      500
     );
   }
 }
