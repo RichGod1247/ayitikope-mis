@@ -451,17 +451,29 @@ function normalizeItemStatus(raw: unknown): ItemStatusCode {
   return "DRAFT";
 }
 
-function itemReadOnlyReason(item: AssessmentItem | null) {
+function itemDefinitionReadOnlyReason(item: AssessmentItem | null) {
   if (!item) return null;
 
   const status = normalizeItemStatus(item.status);
 
   if (status === "LOCKED" || item.lockedAt) {
-    return "This assessment is locked. It can no longer be edited or scored.";
+    return "This assessment is locked. It can no longer be edited or deleted.";
   }
 
   if (status === "PUBLISHED" || item.publishedAt) {
-    return "This assessment is published. Reopen it before editing scores or details.";
+    return "This assessment is published. Reopen it before editing its details.";
+  }
+
+  return null;
+}
+
+function itemScoreReadOnlyReason(item: AssessmentItem | null) {
+  if (!item) return null;
+
+  const status = normalizeItemStatus(item.status);
+
+  if (status === "LOCKED" || item.lockedAt) {
+    return "This assessment is locked. Scores can no longer be edited.";
   }
 
   return null;
@@ -512,7 +524,7 @@ function formatLessonDeliveryLabel(d: LessonDeliveryItem) {
 function friendlyActionError(code: string | null | undefined) {
   const c = cleanStr(code).toUpperCase();
 
-  if (c === "ITEM_PUBLISHED") return "This assessment is published. Reopen it before editing or saving scores.";
+  if (c === "ITEM_PUBLISHED") return "This assessment is published. Reopen it before editing its details.";
   if (c === "ITEM_LOCKED") return "This assessment is locked. It can no longer be edited or scored.";
   if (c === "INVALID_STUDENT_SCOPE") return "One or more learners do not belong to this class.";
   if (c === "LESSON_DELIVERY_NOT_FOUND") return "The selected lesson delivery was not found.";
@@ -630,7 +642,18 @@ export default function TeacherAssessmentClient() {
 
   const selectedItem = useMemo(() => items.find((i) => i.id === selectedItemId) ?? null, [items, selectedItemId]);
 
-  const selectedItemReadOnlyReason = useMemo(() => itemReadOnlyReason(selectedItem), [selectedItem]);
+  const selectedItemDefinitionReadOnlyReason = useMemo(
+    () => itemDefinitionReadOnlyReason(selectedItem),
+    [selectedItem]
+  );
+
+  const selectedItemScoreReadOnlyReason = useMemo(
+    () => itemScoreReadOnlyReason(selectedItem),
+    [selectedItem]
+  );
+
+  const selectedItemNotice =
+    selectedItemScoreReadOnlyReason ?? selectedItemDefinitionReadOnlyReason;
 
   const selectedLessonDelivery = useMemo(
     () => lessonDeliveries.find((d) => d.id === lessonDeliveryId) ?? null,
@@ -1061,8 +1084,8 @@ export default function TeacherAssessmentClient() {
 
   async function handleDeleteSelectedItem() {
     if (!selectedItem) return;
-    if (selectedItemReadOnlyReason) {
-      setActionError(selectedItemReadOnlyReason);
+    if (selectedItemDefinitionReadOnlyReason) {
+      setActionError(selectedItemDefinitionReadOnlyReason);
       return;
     }
     if (!window.confirm(`Delete "${selectedItem.title}" and all its scores?`)) return;
@@ -1114,8 +1137,8 @@ export default function TeacherAssessmentClient() {
       return;
     }
 
-    if (selectedItemReadOnlyReason) {
-      setActionError(selectedItemReadOnlyReason);
+    if (selectedItemDefinitionReadOnlyReason) {
+      setActionError(selectedItemDefinitionReadOnlyReason);
       setSavingItemState("error");
       return;
     }
@@ -1188,8 +1211,8 @@ export default function TeacherAssessmentClient() {
   async function handleSaveScores() {
     if (!selectedItem) return;
 
-    if (selectedItemReadOnlyReason) {
-      setActionError(selectedItemReadOnlyReason);
+    if (selectedItemScoreReadOnlyReason) {
+      setActionError(selectedItemScoreReadOnlyReason);
       setSavingScoresState("error");
       return;
     }
@@ -1318,7 +1341,7 @@ export default function TeacherAssessmentClient() {
                   : broadsheetButton
               }
             >
-              📊 Open broadsheet
+              📊 Open broadsheet``
             </button>
 
             <Link href={lessonDeliveriesPageHref} className={emeraldButton}>
@@ -1392,11 +1415,11 @@ export default function TeacherAssessmentClient() {
         </div>
       ) : null}
 
-      {selectedItemReadOnlyReason ? (
+      {selectedItemNotice && (
         <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-[12px] text-amber-100">
-          {selectedItemReadOnlyReason}
+          {selectedItemNotice}
         </div>
-      ) : null}
+      )}
 
       <div className="md:hidden">
         <div className="grid grid-cols-5 gap-2">
@@ -1516,7 +1539,7 @@ export default function TeacherAssessmentClient() {
                   <button
                     type="button"
                     onClick={handleDeleteSelectedItem}
-                    disabled={!selectedItem || !!selectedItemReadOnlyReason}
+                    disabled={!selectedItem || !!selectedItemDefinitionReadOnlyReason}
                     className="inline-flex items-center rounded-xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-[12px] font-semibold text-rose-100 transition hover:bg-rose-400/18 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Delete
@@ -1619,7 +1642,7 @@ export default function TeacherAssessmentClient() {
                       <div className="space-y-1">
                         <label className="block text-[11px] font-medium text-[#C9CDD6]">Subject</label>
                         <select
-                          disabled={!!selectedItemReadOnlyReason || subjectOptionsLoading || subjectOptions.length === 0}
+                          disabled={!!selectedItemDefinitionReadOnlyReason || subjectOptionsLoading || subjectOptions.length === 0}
                           className={darkInput}
                           value={subject}
                           onChange={(e) => setSubject(e.target.value)}
@@ -1647,7 +1670,7 @@ export default function TeacherAssessmentClient() {
                       <div className="space-y-1">
                         <label className="block text-[11px] font-medium text-[#C9CDD6]">Type</label>
                         <select
-                          disabled={!!selectedItemReadOnlyReason}
+                          disabled={!!selectedItemDefinitionReadOnlyReason}
                           className={darkInput}
                           value={type}
                           onChange={(e) => setType(e.target.value)}
@@ -1663,7 +1686,7 @@ export default function TeacherAssessmentClient() {
                       <div className="space-y-1 sm:col-span-2">
                         <label className="block text-[11px] font-medium text-[#C9CDD6]">Title</label>
                         <input
-                          disabled={!!selectedItemReadOnlyReason}
+                          disabled={!!selectedItemDefinitionReadOnlyReason}
                           className={darkInput}
                           value={title}
                           onChange={(e) => setTitle(e.target.value)}
@@ -1674,7 +1697,7 @@ export default function TeacherAssessmentClient() {
                       <div className="space-y-1 sm:col-span-2">
                         <label className="block text-[11px] font-medium text-[#C9CDD6]">Short description (optional)</label>
                         <textarea
-                          disabled={!!selectedItemReadOnlyReason}
+                          disabled={!!selectedItemDefinitionReadOnlyReason}
                           className={darkTextarea}
                           rows={2}
                           value={description}
@@ -1687,7 +1710,7 @@ export default function TeacherAssessmentClient() {
                         <input
                           type="number"
                           min={0}
-                          disabled={!!selectedItemReadOnlyReason}
+                          disabled={!!selectedItemDefinitionReadOnlyReason}
                           className={darkInput}
                           value={maxScore}
                           onChange={(e) => setMaxScore(e.target.value)}
@@ -1699,7 +1722,7 @@ export default function TeacherAssessmentClient() {
                         <input
                           type="number"
                           min={0}
-                          disabled={!!selectedItemReadOnlyReason}
+                          disabled={!!selectedItemDefinitionReadOnlyReason}
                           className={darkInput}
                           value={weighting}
                           onChange={(e) => setWeighting(e.target.value)}
@@ -1710,7 +1733,7 @@ export default function TeacherAssessmentClient() {
                         <label className="block text-[11px] font-medium text-[#C9CDD6]">Date (optional)</label>
                         <input
                           type="date"
-                          disabled={!!selectedItemReadOnlyReason}
+                          disabled={!!selectedItemDefinitionReadOnlyReason}
                           className={darkInput}
                           value={date}
                           onChange={(e) => setDate(e.target.value)}
@@ -1720,7 +1743,7 @@ export default function TeacherAssessmentClient() {
                       <div className="space-y-1 sm:col-span-2">
                         <label className="block text-[11px] font-medium text-[#C9CDD6]">Link lesson delivered (optional)</label>
                         <select
-                          disabled={!!selectedItemReadOnlyReason || lessonDeliveriesLoading}
+                          disabled={!!selectedItemDefinitionReadOnlyReason || lessonDeliveriesLoading}
                           className={darkInput}
                           value={lessonDeliveryId}
                           onChange={(e) => setLessonDeliveryId(e.target.value)}
@@ -1767,7 +1790,7 @@ export default function TeacherAssessmentClient() {
                     <div className="mt-4 flex items-center justify-between gap-3">
                       <button
                         type="submit"
-                        disabled={savingItemState === "saving" || !!selectedItemReadOnlyReason || !cleanStr(subject)}
+                        disabled={savingItemState === "saving" || !!selectedItemDefinitionReadOnlyReason || !cleanStr(subject)}
                         className={goldButton}
                       >
                         {savingItemState === "saving" ? "Saving..." : selectedItem ? "Update item" : "Create item"}
@@ -2014,9 +2037,9 @@ export default function TeacherAssessmentClient() {
                               <div className="text-[11px] font-semibold text-[#C9CDD6]">Score</div>
                               <input
                                 type="number"
-                                min={0}
-                                max={selectedItem.maxScore}
-                                disabled={!!selectedItemReadOnlyReason}
+min={0}
+max={selectedItem.maxScore}
+disabled={!!selectedItemScoreReadOnlyReason}
                                 className={darkInput + " mt-1"}
                                 value={row.score}
                                 onChange={(e) =>
@@ -2031,7 +2054,7 @@ export default function TeacherAssessmentClient() {
                               <div className="text-[11px] font-semibold text-[#C9CDD6]">Comment</div>
                               <input
                                 type="text"
-                                disabled={!!selectedItemReadOnlyReason}
+                                disabled={!!selectedItemScoreReadOnlyReason}
                                 className={darkInput + " mt-1"}
                                 value={row.comment}
                                 onChange={(e) =>
@@ -2075,7 +2098,7 @@ export default function TeacherAssessmentClient() {
                                     type="number"
                                     min={0}
                                     max={selectedItem.maxScore}
-                                    disabled={!!selectedItemReadOnlyReason}
+                                    disabled={!!selectedItemScoreReadOnlyReason}
                                     className="w-28 rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] disabled:bg-white/[0.05]"
                                     value={row.score}
                                     onChange={(e) =>
@@ -2089,7 +2112,7 @@ export default function TeacherAssessmentClient() {
                                 <td className="border-b border-white/10 px-4 py-3 align-top">
                                   <input
                                     type="text"
-                                    disabled={!!selectedItemReadOnlyReason}
+                                    disabled={!!selectedItemScoreReadOnlyReason}
                                     className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-sm text-[#F7F4ED] disabled:bg-white/[0.05]"
                                     value={row.comment}
                                     onChange={(e) =>
@@ -2112,7 +2135,7 @@ export default function TeacherAssessmentClient() {
                     <button
                       type="button"
                       onClick={handleSaveScores}
-                      disabled={savingScoresState === "saving" || !!selectedItemReadOnlyReason}
+                      disabled={savingScoresState === "saving" || !!selectedItemScoreReadOnlyReason}
                       className={goldButton}
                     >
                       {savingScoresState === "saving" ? "Saving…" : "Save scores"}
@@ -2150,7 +2173,7 @@ export default function TeacherAssessmentClient() {
             <button
               type="button"
               onClick={handleSaveScores}
-              disabled={savingScoresState === "saving" || !!selectedItemReadOnlyReason}
+              disabled={savingScoresState === "saving" || !!selectedItemScoreReadOnlyReason}
               className={goldButton + " shrink-0"}
             >
               {savingScoresState === "saving" ? "Saving…" : "Save"}
@@ -2158,8 +2181,8 @@ export default function TeacherAssessmentClient() {
           </div>
 
           <div className="mt-2 text-center text-[11px]">
-            {selectedItemReadOnlyReason ? (
-              <span className="text-amber-100">{selectedItemReadOnlyReason}</span>
+            {selectedItemScoreReadOnlyReason ? (
+              <span className="text-amber-100">{selectedItemScoreReadOnlyReason}</span>
             ) : savingScoresState === "error" ? (
               <span className="text-rose-100">Failed to save scores.</span>
             ) : savingScoresState === "saved" ? (

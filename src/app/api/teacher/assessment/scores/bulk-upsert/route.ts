@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
-import { assertAssessmentItemWritable } from "@/lib/assessments/itemWriteState";
+import { assertAssessmentScoresWritable } from "@/lib/assessments/itemWriteState";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
       });
     }
 
-    assertAssessmentItemWritable(item);
+    assertAssessmentScoresWritable(item);
 
     const maxScore = Number(item.maxScore ?? 0);
     if (!Number.isFinite(maxScore) || maxScore <= 0) {
