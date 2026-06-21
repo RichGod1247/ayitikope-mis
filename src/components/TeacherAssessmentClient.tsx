@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AssessmentInsightsPanel from "@/components/teacher/AssessmentInsightsPanel";
 import AssessmentBroadsheetPanel from "@/components/teacher/AssessmentBroadsheetPanel";
 
@@ -588,6 +589,17 @@ function SectionCard(props: {
 }
 
 export default function TeacherAssessmentClient() {
+    const searchParams = useSearchParams();
+
+  const urlClassroomId = cleanStr(searchParams.get("classroomId"));
+  const urlTerm = cleanStr(searchParams.get("term"));
+  const urlAcademicYear = cleanStr(searchParams.get("academicYear"));
+  const urlSubject = cleanStr(searchParams.get("subject"));
+  const urlLessonDeliveryId = cleanStr(searchParams.get("lessonDeliveryId"));
+  const urlCurriculumUnitId = cleanStr(searchParams.get("curriculumUnitId"));
+  const urlLessonNoteId = cleanStr(searchParams.get("lessonNoteId"));
+
+  const hasLessonDeliveryContext = !!urlLessonDeliveryId;
   const [ctxLoading, setCtxLoading] = useState(true);
   const [ctxError, setCtxError] = useState<string | null>(null);
 
@@ -615,6 +627,7 @@ export default function TeacherAssessmentClient() {
   const [lessonDeliveriesLoading, setLessonDeliveriesLoading] = useState(false);
   const [lessonDeliveriesError, setLessonDeliveriesError] = useState<string | null>(null);
   const [lessonDeliveryId, setLessonDeliveryId] = useState<string>("");
+  const [curriculumUnitId, setCurriculumUnitId] = useState<string>("");
 
   const [subject, setSubject] = useState("");
   const [type, setType] = useState("CLASS_TEST");
@@ -779,14 +792,24 @@ export default function TeacherAssessmentClient() {
 
         const nextClassrooms = Array.isArray(json.classrooms) ? json.classrooms : [];
 
-        setTerm(json.term);
-        setAcademicYear(json.academicYear);
+        setTerm(urlTerm || json.term);
+        setAcademicYear(urlAcademicYear || json.academicYear);
         setTeacherPhase(json.teacherPhase ?? null);
-        setClassrooms(nextClassrooms);
-        setShowMultiStream(false);
+setClassrooms(nextClassrooms);
 
-        const def = resolveInitialClassroomId(nextClassrooms, json.defaultClassroomId || null);
-        setClassroomId(def);
+const exactUrlClassroom = urlClassroomId
+  ? nextClassrooms.find((c) => c.id === urlClassroomId) ?? null
+  : null;
+
+// When coming from lesson delivery, preserve the exact stream/class.
+// Do not let single-stream representative logic swap the classroom.
+setShowMultiStream(!!exactUrlClassroom);
+
+const def = exactUrlClassroom
+  ? exactUrlClassroom.id
+  : resolveInitialClassroomId(nextClassrooms, json.defaultClassroomId || null);
+
+setClassroomId(def);
       } catch {
         setCtxError("Failed to load assessment context.");
       } finally {
@@ -795,7 +818,7 @@ export default function TeacherAssessmentClient() {
     };
 
     boot();
-  }, []);
+  }, [urlAcademicYear, urlClassroomId, urlTerm]);
 
   useEffect(() => {
     if (visibleClassrooms.length === 0) {
@@ -854,6 +877,16 @@ export default function TeacherAssessmentClient() {
         const studentData = Array.isArray(data.students) ? data.students : [];
         const assessmentData = Array.isArray(data.assessments) ? data.assessments : [];
 
+        if (hasLessonDeliveryContext) {
+          setSelectedItemId(null);
+          setLessonDeliveryId(urlLessonDeliveryId);
+          setCurriculumUnitId(urlCurriculumUnitId);
+          setScoreDraft(buildBlankScoreGrid(studentData));
+          setItemFormOpen(true);
+          setTab("items");
+          return;
+        }
+
         if (assessmentData.length > 0) {
           const first = assessmentData[0];
           setSelectedItemId(first.id);
@@ -875,7 +908,14 @@ export default function TeacherAssessmentClient() {
     };
 
     load();
-  }, [classroomId, term, academicYear]);
+  }, [
+    classroomId,
+    term,
+    academicYear,
+    hasLessonDeliveryContext,
+    urlCurriculumUnitId,
+    urlLessonDeliveryId,
+  ]);
 
   useEffect(() => {
     const loadSubjects = async () => {
@@ -903,9 +943,14 @@ export default function TeacherAssessmentClient() {
         setSubjectOptions(nextSubjects);
 
         setSubject((prev) => {
+          if (urlSubject && nextSubjects.some((s) => sameSubject(s, urlSubject))) {
+            return nextSubjects.find((s) => sameSubject(s, urlSubject)) || urlSubject;
+          }
+
           if (cleanStr(prev) && nextSubjects.some((s) => sameSubject(s, prev))) {
             return nextSubjects.find((s) => sameSubject(s, prev)) || prev;
           }
+
           return nextSubjects[0] || "";
         });
       } catch (err: any) {
@@ -917,7 +962,7 @@ export default function TeacherAssessmentClient() {
     };
 
     loadSubjects();
-  }, [classroomId]);
+  }, [classroomId, urlSubject]);
 
   useEffect(() => {
     const loadLessonDeliveries = async () => {
@@ -941,7 +986,27 @@ export default function TeacherAssessmentClient() {
         if (!json) throw new Error(`Invalid lesson-deliveries response (HTTP ${res.status}).`);
         if (!res.ok || !json.ok) throw new Error((json as any)?.error || `HTTP ${res.status}`);
 
-        setLessonDeliveries(Array.isArray(json.items) ? json.items : []);
+        const nextDeliveries = Array.isArray(json.items) ? json.items : [];
+        setLessonDeliveries(nextDeliveries);
+
+        if (urlLessonDeliveryId) {
+          const linked = nextDeliveries.find((d) => d.id === urlLessonDeliveryId);
+
+          if (linked) {
+            setLessonDeliveryId(linked.id);
+            setCurriculumUnitId(linked.curriculumUnitId || urlCurriculumUnitId || "");
+
+            if (cleanStr(linked.subject)) {
+              setSubject((prev) => {
+                if (cleanStr(prev) && sameSubject(prev, linked.subject)) return prev;
+                return linked.subject;
+              });
+            }
+          } else {
+            setLessonDeliveryId(urlLessonDeliveryId);
+            setCurriculumUnitId(urlCurriculumUnitId);
+          }
+        }
       } catch (err: any) {
         setLessonDeliveries([]);
         setLessonDeliveriesError(String(err?.message || "Failed to load lesson deliveries."));
@@ -951,7 +1016,7 @@ export default function TeacherAssessmentClient() {
     };
 
     loadLessonDeliveries();
-  }, [classroomId, term, academicYear]);
+  }, [classroomId, term, academicYear, urlCurriculumUnitId, urlLessonDeliveryId]);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -1040,14 +1105,15 @@ export default function TeacherAssessmentClient() {
 
   useEffect(() => {
     if (!selectedItem) {
-      setSubject(subjectOptions[0] || "");
+      setSubject(urlSubject || subjectOptions[0] || "");
       setType("CLASS_TEST");
       setTitle("");
       setDescription("");
       setMaxScore("10");
       setWeighting("10");
       setDate("");
-      setLessonDeliveryId("");
+      setLessonDeliveryId(urlLessonDeliveryId || "");
+      setCurriculumUnitId(urlCurriculumUnitId || "");
       return;
     }
 
@@ -1059,7 +1125,8 @@ export default function TeacherAssessmentClient() {
     setWeighting(selectedItem.weighting != null ? String(selectedItem.weighting) : "");
     setDate(formatDateForInput(selectedItem.date ?? null));
     setLessonDeliveryId(selectedItem.lessonDeliveryId ?? "");
-  }, [selectedItem, subjectOptions]);
+        setCurriculumUnitId(selectedItem.curriculumUnitId ?? "");
+    }, [selectedItem, subjectOptions, urlCurriculumUnitId, urlLessonDeliveryId, urlSubject]);
 
   async function handleSelectItem(itemId: string) {
     setActionError(null);
@@ -1072,14 +1139,27 @@ export default function TeacherAssessmentClient() {
   function handleNewItem() {
     setActionError(null);
     setSelectedItemId(null);
-    setSubject(subjectOptions[0] || "");
+
+    const linkedDelivery = urlLessonDeliveryId
+      ? lessonDeliveries.find((d) => d.id === urlLessonDeliveryId) ?? null
+      : selectedLessonDelivery;
+
+    setSubject(
+      cleanStr(linkedDelivery?.subject) ||
+        urlSubject ||
+        subjectOptions[0] ||
+        ""
+    );
     setType("CLASS_TEST");
     setTitle("");
     setDescription("");
     setMaxScore("10");
     setWeighting("10");
-    setDate("");
-    setLessonDeliveryId("");
+    setDate(formatDateForInput(linkedDelivery?.dateTaught ?? null));
+    setLessonDeliveryId(linkedDelivery?.id || urlLessonDeliveryId || "");
+    setCurriculumUnitId(
+      linkedDelivery?.curriculumUnitId || urlCurriculumUnitId || ""
+    );
     setScoreDraft(buildBlankScoreGrid(students));
     setItemFormOpen(true);
     setTab("items");
@@ -1118,9 +1198,10 @@ export default function TeacherAssessmentClient() {
           setSelectedItemId(next.id);
           void loadScoresForItem(next.id, students);
         } else {
-          setSelectedItemId(null);
-          setLessonDeliveryId("");
-          setScoreDraft(buildBlankScoreGrid(students));
+        setSelectedItemId(null);
+setLessonDeliveryId("");
+setCurriculumUnitId("");
+setScoreDraft(buildBlankScoreGrid(students));
         }
 
         return remaining;
@@ -1156,6 +1237,12 @@ export default function TeacherAssessmentClient() {
     setActionError(null);
 
     try {
+      const resolvedCurriculumUnitId =
+        selectedLessonDelivery?.curriculumUnitId ||
+        curriculumUnitId ||
+        urlCurriculumUnitId ||
+        null;
+
       const body = {
         id: selectedItem?.id,
         classroomId,
@@ -1169,6 +1256,7 @@ export default function TeacherAssessmentClient() {
         weighting: weighting ? Number(weighting) : null,
         date: date ? new Date(date).toISOString() : null,
         lessonDeliveryId: lessonDeliveryId || null,
+        curriculumUnitId: resolvedCurriculumUnitId,
       };
 
       const res = await fetch("/api/teacher/assessment/items/upsert", {
@@ -1196,9 +1284,10 @@ export default function TeacherAssessmentClient() {
         return clone;
       });
 
-      setSelectedItemId(item.id);
-      setLessonDeliveryId(item.lessonDeliveryId ?? "");
-      await loadScoresForItem(item.id, students);
+setSelectedItemId(item.id);
+setLessonDeliveryId(item.lessonDeliveryId ?? "");
+setCurriculumUnitId(item.curriculumUnitId ?? "");
+await loadScoresForItem(item.id, students);
 
       setSavingItemState("saved");
       setTimeout(() => setSavingItemState("idle"), 900);
@@ -1415,6 +1504,26 @@ export default function TeacherAssessmentClient() {
       {actionError ? (
         <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-[12px] text-amber-100">
           {actionError}
+        </div>
+      ) : null}
+
+      {hasLessonDeliveryContext ? (
+        <div className="rounded-2xl border border-indigo-300/20 bg-indigo-400/12 px-4 py-3 text-[12px] text-indigo-100">
+          Creating assessment evidence from delivered lesson.
+          {selectedLessonDelivery ? (
+            <span className="ml-1 font-semibold">
+              {formatLessonDeliveryLabel(selectedLessonDelivery)}
+            </span>
+          ) : urlLessonDeliveryId ? (
+            <span className="ml-1 text-indigo-200">
+              Linked delivery: {urlLessonDeliveryId.slice(0, 8)}…
+            </span>
+          ) : null}
+          {urlLessonNoteId ? (
+            <span className="ml-1 text-indigo-200">
+              • Lesson note linked
+            </span>
+          ) : null}
         </div>
       ) : null}
 
@@ -1749,7 +1858,23 @@ export default function TeacherAssessmentClient() {
                           disabled={!!selectedItemDefinitionReadOnlyReason || lessonDeliveriesLoading}
                           className={darkInput}
                           value={lessonDeliveryId}
-                          onChange={(e) => setLessonDeliveryId(e.target.value)}
+                  onChange={(e) => {
+  const nextId = e.target.value;
+  setLessonDeliveryId(nextId);
+
+  const nextDelivery =
+    lessonDeliveries.find((d) => d.id === nextId) ?? null;
+
+  setCurriculumUnitId(nextDelivery?.curriculumUnitId ?? "");
+
+  if (nextDelivery?.subject && !sameSubject(subject, nextDelivery.subject)) {
+    setSubject(nextDelivery.subject);
+  }
+
+  if (nextDelivery?.dateTaught && !date) {
+    setDate(formatDateForInput(nextDelivery.dateTaught));
+  }
+}}
                         >
                           <option value="">No linked lesson delivery</option>
                           {lessonDeliveries.map((d) => (
