@@ -98,8 +98,15 @@ export async function GET(req: Request) {
       status: true,
       publishedAt: true,
       lockedAt: true,
-      lessonDeliveryId: true,
-      curriculumUnitId: true,
+lessonDeliveryId: true,
+curriculumUnitId: true,
+
+assessmentPolicyId: true,
+policyComponentId: true,
+componentCode: true,
+templateKey: true,
+sortOrder: true,
+isRequired: true,
     },
   });
 
