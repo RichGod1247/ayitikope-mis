@@ -549,10 +549,15 @@ export async function GET(req: NextRequest) {
       margin: { top: "12mm", bottom: "12mm", left: "12mm", right: "12mm" },
     });
 
-    return new Response(pdf, {
-      status: 200,
-      headers: {
-        "content-type": "application/pdf",
+const pdfBody = pdf.buffer.slice(
+  pdf.byteOffset,
+  pdf.byteOffset + pdf.byteLength
+) as ArrayBuffer;
+
+return new Response(pdfBody, {
+  status: 200,
+  headers: {
+    "content-type": "application/pdf",
         "cache-control": "no-store",
         "content-disposition": `inline; filename="report-card-${student.id}.pdf"`,
       },

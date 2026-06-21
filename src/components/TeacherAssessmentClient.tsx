@@ -1341,7 +1341,7 @@ export default function TeacherAssessmentClient() {
                   : broadsheetButton
               }
             >
-              📊 Open broadsheet``
+              📊 Open broadsheet
             </button>
 
             <Link href={lessonDeliveriesPageHref} className={emeraldButton}>
