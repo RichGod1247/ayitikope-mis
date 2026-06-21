@@ -4,32 +4,18 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-type GesRemark = {
-  grade: number;
-  label: string;
-  band: string;
-};
-
-function mapPercentageToGes(
-  percentage: number | null | undefined
-): GesRemark | null {
-  if (percentage == null || isNaN(percentage)) return null;
-  const p = percentage;
-
-  if (p >= 90 && p <= 100) return { grade: 1, label: "Excellent", band: "A+" };
-  if (p >= 80 && p <= 89) return { grade: 2, label: "Very Good", band: "A" };
-  if (p >= 70 && p <= 79) return { grade: 3, label: "Good", band: "B+" };
-  if (p >= 60 && p <= 69) return { grade: 4, label: "High Average", band: "B" };
-  if (p >= 55 && p <= 59) return { grade: 5, label: "Average", band: "C+" };
-  if (p >= 50 && p <= 54) return { grade: 6, label: "Low Average", band: "C" };
-  if (p >= 40 && p <= 49) return { grade: 7, label: "Low Average", band: "D" };
-  if (p >= 35 && p <= 39) return { grade: 8, label: "Lower", band: "E" };
-  return { grade: 9, label: "Lowest / Fail", band: "F" };
-}
-
 function formatCedis(pesewas: number | null | undefined): string {
   const safe = typeof pesewas === "number" ? pesewas : 0;
   return `GH₵${(safe / 100).toFixed(2)}`;
+}
+
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function clampPercent(v: number | null | undefined): number | null {
+  if (v == null || !Number.isFinite(v)) return null;
+  return Math.max(0, Math.min(100, v));
 }
 
 type ClassroomInfo = {
@@ -41,8 +27,9 @@ type ClassroomInfo = {
 
 type StudentInfo = {
   id: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  fullName?: string | null;
   sex?: string | null;
   dob?: string | null;
   guardianName?: string | null;
@@ -53,9 +40,26 @@ type StudentInfo = {
 
 type SubjectRow = {
   subject: string;
-  totalScore: number;
-  maxScore: number;
-  percentage: number | null;
+  totalScore?: number | null;
+  maxScore?: number | null;
+  rawTotal?: number | null;
+  rawMaxTotal?: number | null;
+  percentage?: number | null;
+  totalPercent?: number | null;
+  grade?: string | number | null;
+  gradeLabel?: string | null;
+  remark?: string | null;
+  complete?: boolean | null;
+  readiness?: {
+    status?: string | null;
+    blockedReasons?: string[] | null;
+  } | null;
+};
+
+type SubjectDisplayRow = SubjectRow & {
+  trustedPercentage: number | null;
+  gradeDisplay: string | null;
+  remarkDisplay: string;
 };
 
 type FeesSummary = {
@@ -75,39 +79,93 @@ type HealthSummary = {
 };
 
 type TermSummary = {
-  term: string;
-  academicYear: string;
-  overallPercentage: number | null;
-  overallPosition: number | null;
-  classSize: number | null;
-  promotedTo: string | null;
-  attendance: any;
-  fees: FeesSummary | null;
-  health: HealthSummary | null;
-  behaviour: any;
-  nextTermBegins: string | null;
-  subjects: SubjectRow[];
+  term?: string;
+  academicYear?: string;
+  overallPercentage?: number | null;
+  grade?: string | number | null;
+  gradeLabel?: string | null;
+  remark?: string | null;
+  overallPosition?: number | null;
+  classSize?: number | null;
+  promotedTo?: string | null;
+  attendance?: unknown;
+  fees?: FeesSummary | null;
+  health?: HealthSummary | null;
+  behaviour?: unknown;
+  nextTermBegins?: string | null;
+  subjects?: SubjectRow[];
 };
 
 type TermReportResponse = {
   ok: boolean;
-  context: {
-    tenantId: string;
-    studentId: string;
-    term: string;
-    academicYear: string;
+  context?: {
+    tenantId?: string;
+    studentId?: string;
+    term?: string;
+    academicYear?: string;
   };
-  student: StudentInfo;
-  classroom: ClassroomInfo | null;
-  termSummary: TermSummary;
-  subjects: SubjectRow[];
-  attendanceSummary: any;
-  feesSummary: FeesSummary | null;
-  healthSummary: HealthSummary | null;
+  term?: string;
+  academicYear?: string;
+  student?: StudentInfo;
+  classroom?: ClassroomInfo | null;
+  termSummary?: TermSummary;
+  subjects?: SubjectRow[];
+  attendanceSummary?: unknown;
+  feesSummary?: FeesSummary | null;
+  healthSummary?: HealthSummary | null;
+  classReadiness?: {
+    status?: string | null;
+    blockedReasons?: string[] | null;
+  } | null;
   error?: string;
 };
 
 type Mode = "demo" | "live";
+
+function readTrustedPercentage(row: SubjectRow): number | null {
+  if (typeof row.percentage === "number") {
+    return clampPercent(row.percentage);
+  }
+
+  if (typeof row.totalPercent === "number") {
+    return clampPercent(row.totalPercent);
+  }
+
+  return null;
+}
+
+function formatScore(v: number | null | undefined) {
+  return typeof v === "number" && Number.isFinite(v) ? v.toFixed(1) : "–";
+}
+
+function formatGrade(row: SubjectRow): string | null {
+  if (row.grade == null || !clean(row.grade)) return null;
+  return String(row.grade);
+}
+
+function formatRemark(row: SubjectRow): string {
+  if (clean(row.remark)) return clean(row.remark);
+  if (clean(row.gradeLabel)) return clean(row.gradeLabel);
+  if (row.complete === false) return "Incomplete assessment evidence";
+  return "No policy remark yet";
+}
+
+function formatOverallBadge(args: {
+  grade?: string | number | null;
+  gradeLabel?: string | null;
+  remark?: string | null;
+}) {
+  const parts: string[] = [];
+
+  if (args.grade != null && clean(args.grade)) {
+    parts.push(`Grade ${clean(args.grade)}`);
+  }
+
+  if (clean(args.gradeLabel)) parts.push(clean(args.gradeLabel));
+  if (clean(args.remark)) parts.push(clean(args.remark));
+
+  return Array.from(new Set(parts)).join(" · ") || null;
+}
 
 /**
  * Suspense fallback (simple skeleton)
@@ -137,8 +195,7 @@ function StudentTermReportInner() {
   const queryTerm = searchParams.get("term") ?? "1st Term";
   const queryAcademicYear = searchParams.get("academicYear") ?? "2025/2026";
 
-  const tenantId =
-    queryTenantId.trim() || "cmhhnghn00008vcpgp3fl07fl"; // demo tenant
+  const tenantId = queryTenantId.trim() || "cmhhnghn00008vcpgp3fl07fl";
   const studentId = queryStudentId.trim();
 
   const [mode, setMode] = useState<Mode>(studentId ? "live" : "demo");
@@ -181,7 +238,9 @@ function StudentTermReportInner() {
 
         if (!cancelled) setReport(data);
       } catch {
-        if (!cancelled) setError("Network or server error while loading the term report.");
+        if (!cancelled) {
+          setError("Network or server error while loading the term report.");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -197,45 +256,60 @@ function StudentTermReportInner() {
   const studentName = useMemo(() => {
     if (mode === "live" && report?.student) {
       const s = report.student;
-      return [s.firstName, s.lastName].filter(Boolean).join(" ");
+      return (
+        clean(s.fullName) ||
+        [s.firstName, s.lastName].filter(Boolean).join(" ").trim() ||
+        "Learner"
+      );
     }
+
     return "Demo Learner";
   }, [mode, report]);
 
   const classroomLabel = useMemo(() => {
     if (mode === "live" && report?.classroom) {
       const c = report.classroom;
-      return c?.name || "Class";
+      return (
+        clean(c.name) ||
+        [c.grade, c.arm ? `(${c.arm})` : ""].filter(Boolean).join(" ").trim() ||
+        "Class"
+      );
     }
-    return "KG1 – Blue";
+
+    return "JHS1";
   }, [mode, report]);
 
-  const term = report?.context.term ?? queryTerm;
-  const academicYear = report?.context.academicYear ?? queryAcademicYear;
+  const term =
+    report?.context?.term ??
+    report?.termSummary?.term ??
+    report?.term ??
+    queryTerm;
 
-  const subjectsWithGrades = useMemo(() => {
+  const academicYear =
+    report?.context?.academicYear ??
+    report?.termSummary?.academicYear ??
+    report?.academicYear ??
+    queryAcademicYear;
+
+  const subjectsWithPolicy = useMemo<SubjectDisplayRow[]>(() => {
     const rows =
       mode === "live"
         ? report?.subjects ?? report?.termSummary?.subjects ?? []
         : demoSubjects;
 
-    return rows.map((row) => {
-      const percentage =
-        typeof row.percentage === "number"
-          ? row.percentage
-          : row.maxScore > 0
-          ? Number(((row.totalScore / row.maxScore) * 100).toFixed(2))
-          : null;
-
-      const ges = mapPercentageToGes(percentage);
-      return { ...row, percentage, ges };
-    });
+    return rows.map((row) => ({
+      ...row,
+      trustedPercentage: readTrustedPercentage(row),
+      gradeDisplay: formatGrade(row),
+      remarkDisplay: formatRemark(row),
+    }));
   }, [mode, report]);
 
   const feesCard = useMemo<FeesSummary | null>(() => {
     if (mode === "live") {
       return report?.feesSummary ?? report?.termSummary?.fees ?? null;
     }
+
     return {
       totalBilledPesewas: 150000,
       totalWaivedPesewas: 0,
@@ -249,6 +323,7 @@ function StudentTermReportInner() {
     if (mode === "live") {
       return report?.healthSummary ?? report?.termSummary?.health ?? null;
     }
+
     return {
       totalScreenings: 45,
       feverCount: 2,
@@ -260,21 +335,31 @@ function StudentTermReportInner() {
 
   const overallPercentage = useMemo(() => {
     if (mode === "live") {
-      const p =
-        report?.termSummary?.overallPercentage ??
-        computeOverallPercentageFromSubjects(
-          report?.termSummary?.subjects ?? report?.subjects ?? []
-        );
-      return p;
+      return clampPercent(report?.termSummary?.overallPercentage ?? null);
     }
+
     return 82.5;
   }, [mode, report]);
 
-  const overallGes = mapPercentageToGes(overallPercentage);
+  const overallBadge = useMemo(() => {
+    if (mode === "live") {
+      return formatOverallBadge({
+        grade: report?.termSummary?.grade ?? null,
+        gradeLabel: report?.termSummary?.gradeLabel ?? null,
+        remark: report?.termSummary?.remark ?? null,
+      });
+    }
+
+    return "Grade HP · Highly Proficient";
+  }, [mode, report]);
+
+  const readinessMessage =
+    report?.classReadiness?.blockedReasons?.[0] ??
+    "Policy-aware report values appear once trusted assessment evidence is available.";
 
   const modeLabel =
     mode === "live" && studentId
-      ? "Live data (where available)"
+      ? "Live policy-aware data"
       : "Demo mode – no specific learner selected";
 
   return (
@@ -293,9 +378,9 @@ function StudentTermReportInner() {
                 End-of-term report
               </h1>
               <p className="text-xs md:text-sm text-slate-600 max-w-xl">
-                A simple, BECE-style view of your performance in this term. Designed so learners and parents can{" "}
+                A simple policy-aware view of your performance this term. Designed so learners and parents can{" "}
                 <span className="font-semibold">clearly see strengths and gaps</span>{" "}
-                without getting lost in spreadsheets.
+                without hidden formulas or conflicting grades.
               </p>
             </div>
 
@@ -319,16 +404,18 @@ function StudentTermReportInner() {
             Loading this learner&apos;s term report…
           </div>
         )}
+
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
             {error}
           </div>
         )}
+
         {!loading && !error && mode === "demo" && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
-            This is a <span className="font-semibold">demo report view</span>. Once a real learner is selected (with a valid{" "}
-            <code className="rounded bg-amber-100 px-1">studentId</code> in the link), this page will show{" "}
-            <span className="font-semibold">live continuous assessment data</span> from EduLife OS.
+            This is a <span className="font-semibold">demo report view</span>. Once a real learner is selected with a valid{" "}
+            <code className="rounded bg-amber-100 px-1">studentId</code>, this page will show{" "}
+            <span className="font-semibold">live policy-aware assessment data</span> from EduLife OS.
           </div>
         )}
 
@@ -336,18 +423,12 @@ function StudentTermReportInner() {
           <SummaryCard
             label="Overall term performance"
             value={overallPercentage != null ? `${overallPercentage.toFixed(1)}%` : "–"}
-            badge={overallGes ? `${overallGes.band} · Grade ${overallGes.grade}` : undefined}
-            tone={
-              !overallGes
-                ? "neutral"
-                : overallGes.grade <= 2
-                ? "good"
-                : overallGes.grade <= 4
-                ? "ok"
-                : "warn"
-            }
+            badge={overallBadge ?? undefined}
+            tone="neutral"
             hint={
-              overallGes ? overallGes.label : "Overall percentage will appear once scores are recorded."
+              overallBadge
+                ? "Grade and remark come from the policy-aware report payload."
+                : readinessMessage
             }
           />
 
@@ -393,7 +474,9 @@ function StudentTermReportInner() {
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-900">Subject performance</h2>
-            <p className="text-[11px] text-slate-500">GES-style percentage view across recorded CA items.</p>
+            <p className="text-[11px] text-slate-500">
+              Policy-aware subject view across trusted recorded assessment items.
+            </p>
           </div>
 
           <div className="overflow-x-auto">
@@ -409,30 +492,37 @@ function StudentTermReportInner() {
                 </tr>
               </thead>
               <tbody>
-                {subjectsWithGrades.map((row, idx) => {
+                {subjectsWithPolicy.map((row, idx) => {
                   const zebra = idx % 2 === 0 ? "bg-white" : "bg-slate-50/70";
+
                   return (
                     <tr key={`${row.subject}-${idx}`} className={zebra}>
                       <td className="px-3 py-2 text-left">{row.subject}</td>
-                      <td className="px-3 py-2 text-right">{row.totalScore.toFixed(1)}</td>
-                      <td className="px-3 py-2 text-right">{row.maxScore.toFixed(1)}</td>
                       <td className="px-3 py-2 text-right">
-                        {row.percentage != null ? `${row.percentage.toFixed(1)}%` : "–"}
+                        {formatScore(row.totalScore)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {formatScore(row.maxScore)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {row.trustedPercentage != null
+                          ? `${row.trustedPercentage.toFixed(1)}%`
+                          : "–"}
                       </td>
                       <td className="px-3 py-2 text-right font-mono">
-                        {row.ges ? `${row.ges.band} (${row.ges.grade})` : "–"}
+                        {row.gradeDisplay ?? "–"}
                       </td>
                       <td className="px-3 py-2 text-left text-slate-700">
-                        {row.ges ? row.ges.label : "No remark yet"}
+                        {row.remarkDisplay}
                       </td>
                     </tr>
                   );
                 })}
 
-                {subjectsWithGrades.length === 0 && (
+                {subjectsWithPolicy.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-6 text-center text-xs text-slate-500">
-                      No assessment scores recorded for this learner in the selected term/year yet.
+                      No policy-aware assessment subjects are ready for this learner in the selected term/year yet.
                     </td>
                   </tr>
                 )}
@@ -441,36 +531,47 @@ function StudentTermReportInner() {
           </div>
 
           <div className="border-t border-slate-100 px-4 py-3 text-[11px] text-slate-500">
-            This table reads from the same continuous assessment records teachers enter in EduLife OS, so there is{" "}
-            <span className="font-semibold">one truth</span> across the school.
+            This table displays the same policy-aware report payload used by the parent and headteacher report layers.
+            It does <span className="font-semibold">not</span> rebuild grades locally.
           </div>
         </section>
 
         <p className="text-[11px] text-slate-500 max-w-3xl">
-          Later, this view will connect directly to the printable report cards so the same data appears in parent/student/headteacher layouts.
+          The student report view now displays report truth instead of calculating a second version of the result.
         </p>
       </div>
     </main>
   );
 }
 
-function computeOverallPercentageFromSubjects(subjects: SubjectRow[]): number | null {
-  if (!subjects || subjects.length === 0) return null;
-  let totalScore = 0;
-  let totalMax = 0;
-  for (const row of subjects) {
-    totalScore += row.totalScore ?? 0;
-    totalMax += row.maxScore ?? 0;
-  }
-  if (totalMax <= 0) return null;
-  return Number(((totalScore / totalMax) * 100).toFixed(2));
-}
-
 const demoSubjects: SubjectRow[] = [
-  { subject: "Language & Literacy", totalScore: 84, maxScore: 100, percentage: 84 },
-  { subject: "Numeracy", totalScore: 78, maxScore: 100, percentage: 78 },
-  { subject: "Creative Arts", totalScore: 90, maxScore: 100, percentage: 90 },
-  { subject: "Our World & Our People", totalScore: 80, maxScore: 100, percentage: 80 },
+  {
+    subject: "English Language",
+    totalScore: 80,
+    maxScore: 100,
+    percentage: 80,
+    grade: "HP",
+    gradeLabel: "Highly Proficient",
+    remark: "Highly Proficient",
+  },
+  {
+    subject: "Mathematics",
+    totalScore: 55,
+    maxScore: 100,
+    percentage: 55,
+    grade: "AP",
+    gradeLabel: "Approaching Proficiency",
+    remark: "Approaching Proficiency",
+  },
+  {
+    subject: "Science",
+    totalScore: 72,
+    maxScore: 100,
+    percentage: 72,
+    grade: "P",
+    gradeLabel: "Proficient",
+    remark: "Proficient",
+  },
 ];
 
 function SummaryCard(props: {
@@ -483,9 +584,14 @@ function SummaryCard(props: {
   const { label, value, badge, hint, tone = "neutral" } = props;
 
   let borderClass = "border-slate-200 bg-white text-slate-900 shadow-sm";
-  if (tone === "good") borderClass = "border-emerald-200 bg-emerald-50/80 text-emerald-900 shadow-sm";
-  else if (tone === "ok") borderClass = "border-amber-200 bg-amber-50/80 text-amber-900 shadow-sm";
-  else if (tone === "warn") borderClass = "border-red-200 bg-red-50/80 text-red-900 shadow-sm";
+
+  if (tone === "good") {
+    borderClass = "border-emerald-200 bg-emerald-50/80 text-emerald-900 shadow-sm";
+  } else if (tone === "ok") {
+    borderClass = "border-amber-200 bg-amber-50/80 text-amber-900 shadow-sm";
+  } else if (tone === "warn") {
+    borderClass = "border-red-200 bg-red-50/80 text-red-900 shadow-sm";
+  }
 
   return (
     <div className={`rounded-2xl border px-3 py-3 md:px-4 md:py-4 ${borderClass}`}>
@@ -501,7 +607,13 @@ function SummaryCard(props: {
   );
 }
 
-function Th({ label, align = "right" }: { label: string; align?: "left" | "right" }) {
+function Th({
+  label,
+  align = "right",
+}: {
+  label: string;
+  align?: "left" | "right";
+}) {
   return (
     <th
       className={`px-3 py-2 text-[11px] font-semibold text-slate-500 ${
