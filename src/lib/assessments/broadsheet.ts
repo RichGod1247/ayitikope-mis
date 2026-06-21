@@ -2,9 +2,9 @@
 import type { AssessmentItemStatus } from "@prisma/client";
 import {
   AssessmentPolicyLite,
-  findPolicyComponent,
   gradeFromPolicy,
 } from "@/lib/assessments/policy";
+import { normalizeAssessmentCategory } from "@/lib/assessments/categories";
 
 export type BroadsheetItemInput = {
   id: string;
@@ -47,6 +47,20 @@ export type BroadsheetComponent = {
   itemId: string | null;
   itemTitle: string | null;
   itemStatus: string | null;
+  itemCount: number;
+};
+
+export type BroadsheetEvidenceCandidate = {
+  itemId: string;
+  itemTitle: string;
+  itemStatus: string;
+  score: number;
+  maxScore: number;
+  normalizedScore: number;
+  weightedScore: number;
+  weightPercent: number;
+  comment: string | null;
+  readonly: boolean;
 };
 
 export type BroadsheetCell = {
@@ -59,6 +73,17 @@ export type BroadsheetCell = {
   missing: boolean;
   readonly: boolean;
   comment: string | null;
+
+  /**
+   * A14.2C evidence trace:
+   * - evidenceCount = how many scored evidences existed for this learner/category.
+   * - candidateItemCount = how many assessment items existed for this category.
+   * - selectedEvidence = the highest normalized evidence selected into the broadsheet.
+   */
+  evidenceCount: number;
+  candidateItemCount: number;
+  selectedEvidence: BroadsheetEvidenceCandidate | null;
+  evidenceCandidates: BroadsheetEvidenceCandidate[];
 };
 
 export type BroadsheetLearnerRow = {
@@ -107,6 +132,10 @@ function norm(v: unknown) {
   return clean(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+function categoryNorm(v: unknown) {
+  return norm(normalizeAssessmentCategory(v));
+}
+
 function displayName(student: BroadsheetStudentInput) {
   return [student.lastName, student.firstName, student.otherNames]
     .map(clean)
@@ -117,11 +146,15 @@ function displayName(student: BroadsheetStudentInput) {
 
 function itemStatusReadonly(status: unknown) {
   const s = clean(status).toUpperCase();
-  return s === "PUBLISHED" || s === "LOCKED";
+  return s === "LOCKED";
 }
 
 function percentFromWeighted(weightedTotal: number, totalWeight: number) {
-  if (!Number.isFinite(weightedTotal) || !Number.isFinite(totalWeight) || totalWeight <= 0) {
+  if (
+    !Number.isFinite(weightedTotal) ||
+    !Number.isFinite(totalWeight) ||
+    totalWeight <= 0
+  ) {
     return null;
   }
 
@@ -156,31 +189,93 @@ function rankRows(rows: BroadsheetLearnerRow[]) {
   });
 }
 
-function matchItemToComponent(
+function componentMatchesItem(args: {
+  item: BroadsheetItemInput;
+  componentId: string | null;
+  componentCode: string;
+}) {
+  const componentCode = categoryNorm(args.componentCode);
+  const itemComponentCode = categoryNorm(args.item.componentCode);
+  const itemTypeCode = categoryNorm(args.item.type);
+
+  if (args.componentId && args.item.policyComponentId === args.componentId) {
+    return true;
+  }
+
+  return itemComponentCode === componentCode || itemTypeCode === componentCode;
+}
+
+function matchItemsToComponent(
   items: BroadsheetItemInput[],
+  componentId: string | null,
   componentCode: string
 ) {
-  const code = norm(componentCode);
-
-  const candidates = items.filter((item) => {
-    const itemComponentCode = norm(item.componentCode);
-    const typeCode = norm(item.type);
-
-    return itemComponentCode === code || typeCode === code;
-  });
-
-  if (!candidates.length) return null;
-
-  return candidates
+  return items
+    .filter((item) => componentMatchesItem({ item, componentId, componentCode }))
     .slice()
     .sort((a, b) => {
       const sortA = Number(a.sortOrder ?? 0);
       const sortB = Number(b.sortOrder ?? 0);
       if (sortA !== sortB) return sortA - sortB;
 
-      const dateA = clean(a.title);
-      const dateB = clean(b.title);
-      return dateA.localeCompare(dateB);
+      return clean(a.title).localeCompare(clean(b.title));
+    });
+}
+
+function pickRepresentativeItem(items: BroadsheetItemInput[]) {
+  return items[0] ?? null;
+}
+
+function buildEvidenceCandidate(args: {
+  item: BroadsheetItemInput;
+  score: BroadsheetScoreInput;
+  componentMaxScore: number;
+  weightPercent: number;
+}): BroadsheetEvidenceCandidate | null {
+  const rawScore = Number(args.score.score ?? 0);
+  const itemMaxScore = Number(args.item.maxScore ?? 0);
+  const componentMaxScore = Number(args.componentMaxScore ?? 0);
+  const weightPercent = Number(args.weightPercent ?? 0);
+
+  if (!Number.isFinite(rawScore) || !Number.isFinite(itemMaxScore) || itemMaxScore <= 0) {
+    return null;
+  }
+
+  const normalizedScore = componentMaxScore > 0
+    ? (rawScore / itemMaxScore) * componentMaxScore
+    : rawScore;
+
+  const weightedScore = weightPercent > 0
+    ? (rawScore / itemMaxScore) * weightPercent
+    : 0;
+
+  return {
+    itemId: args.item.id,
+    itemTitle: args.item.title,
+    itemStatus: String(args.item.status ?? ""),
+    score: round2(rawScore),
+    maxScore: round2(itemMaxScore),
+    normalizedScore: round2(normalizedScore),
+    weightedScore: round2(weightedScore),
+    weightPercent: round2(weightPercent),
+    comment: args.score.comment ?? null,
+    readonly: itemStatusReadonly(args.item.status),
+  };
+}
+
+function pickBestEvidence(candidates: BroadsheetEvidenceCandidate[]) {
+  if (!candidates.length) return null;
+
+  return candidates
+    .slice()
+    .sort((a, b) => {
+      const normalizedDiff = b.normalizedScore - a.normalizedScore;
+      if (normalizedDiff !== 0) return normalizedDiff;
+
+      const weightedDiff = b.weightedScore - a.weightedScore;
+      if (weightedDiff !== 0) return weightedDiff;
+
+      return a.itemTitle.localeCompare(b.itemTitle);
     })[0];
 }
 
@@ -192,21 +287,37 @@ export function buildSubjectBroadsheet(args: BuildBroadsheetArgs) {
   );
 
   const components: BroadsheetComponent[] = policy.components.map((component) => {
-    const item = matchItemToComponent(relevantItems, component.code);
+    const matchedItems = matchItemsToComponent(
+      relevantItems,
+      component.id,
+      component.code
+    );
+    const representative = pickRepresentativeItem(matchedItems);
 
     return {
       code: component.code,
       label: component.label,
       kind: component.kind,
-      maxScore: item?.maxScore ?? component.maxScore,
-      weightPercent: item?.weighting ?? component.weightPercent,
-      required: item?.isRequired ?? component.required,
+      maxScore: component.maxScore,
+      weightPercent: component.weightPercent,
+      required: representative?.isRequired ?? component.required,
       orderIndex: component.orderIndex,
-      itemId: item?.id ?? null,
-      itemTitle: item?.title ?? null,
-      itemStatus: item?.status ? String(item.status) : null,
+      itemId: representative?.id ?? null,
+      itemTitle: representative?.title ?? null,
+      itemStatus: representative?.status ? String(representative.status) : null,
+      itemCount: matchedItems.length,
     };
   });
+
+  const itemsByComponentCode = new Map<string, BroadsheetItemInput[]>();
+  for (const component of policy.components) {
+    const matchedItems = matchItemsToComponent(
+      relevantItems,
+      component.id,
+      component.code
+    );
+    itemsByComponentCode.set(component.code, matchedItems);
+  }
 
   const scoreByStudentItem = new Map<string, BroadsheetScoreInput>();
   for (const score of scores) {
@@ -225,12 +336,31 @@ export function buildSubjectBroadsheet(args: BuildBroadsheetArgs) {
     let missingOptionalCount = 0;
 
     const cells: BroadsheetCell[] = components.map((component) => {
-      const itemId = component.itemId;
+      const candidateItems = itemsByComponentCode.get(component.code) ?? [];
       const maxScore = Number(component.maxScore ?? 0);
       const weightPercent = Number(component.weightPercent ?? 0);
-      const readonly = itemStatusReadonly(component.itemStatus);
 
-      if (!itemId) {
+      const evidenceCandidates = candidateItems
+        .map((item) => {
+          const score = scoreByStudentItem.get(`${student.id}:${item.id}`);
+          if (!score) return null;
+
+          return buildEvidenceCandidate({
+            item,
+            score,
+            componentMaxScore: maxScore,
+            weightPercent,
+          });
+        })
+        .filter((candidate): candidate is BroadsheetEvidenceCandidate => !!candidate);
+
+      const selectedEvidence = pickBestEvidence(evidenceCandidates);
+      const missing = selectedEvidence == null;
+      const readonly = candidateItems.length
+        ? candidateItems.every((item) => itemStatusReadonly(item.status))
+        : false;
+
+      if (missing) {
         if (component.required) missingRequiredCount += 1;
         else missingOptionalCount += 1;
 
@@ -244,37 +374,31 @@ export function buildSubjectBroadsheet(args: BuildBroadsheetArgs) {
           missing: true,
           readonly,
           comment: null,
+          evidenceCount: 0,
+          candidateItemCount: candidateItems.length,
+          selectedEvidence: null,
+          evidenceCandidates,
         };
       }
 
-      const score = scoreByStudentItem.get(`${student.id}:${itemId}`);
-      const value = score ? Number(score.score ?? 0) : null;
-      const missing = value == null;
-
-      if (missing) {
-        if (component.required) missingRequiredCount += 1;
-        else missingOptionalCount += 1;
-      }
-
-      let weightedScore: number | null = null;
-
-      if (value != null && maxScore > 0) {
-        rawTotal += value;
-        rawMaxTotal += maxScore;
-        weightedScore = (value / maxScore) * weightPercent;
-        weightedTotal += weightedScore;
-      }
+      rawTotal += selectedEvidence.normalizedScore;
+      rawMaxTotal += maxScore;
+      weightedTotal += selectedEvidence.weightedScore;
 
       return {
         componentCode: component.code,
-        itemId,
-        score: value,
+        itemId: selectedEvidence.itemId,
+        score: selectedEvidence.normalizedScore,
         maxScore,
-        weightedScore: weightedScore == null ? null : round2(weightedScore),
+        weightedScore: selectedEvidence.weightedScore,
         weightPercent,
-        missing,
-        readonly,
-        comment: score?.comment ?? null,
+        missing: false,
+        readonly: selectedEvidence.readonly,
+        comment: selectedEvidence.comment,
+        evidenceCount: evidenceCandidates.length,
+        candidateItemCount: candidateItems.length,
+        selectedEvidence,
+        evidenceCandidates,
       };
     });
 
@@ -331,7 +455,7 @@ export function buildSubjectBroadsheet(args: BuildBroadsheetArgs) {
   }
 
   const missingRequiredItems = components.filter(
-    (c) => c.required && !c.itemId
+    (c) => c.required && c.itemCount === 0
   );
 
   if (missingRequiredItems.length) {
@@ -350,7 +474,13 @@ export function buildSubjectBroadsheet(args: BuildBroadsheetArgs) {
 
   const readinessPercent =
     totalRequiredCells > 0
-      ? Math.max(0, Math.round(((totalRequiredCells - missingRequiredCells) / totalRequiredCells) * 100))
+      ? Math.max(
+          0,
+          Math.round(
+            ((totalRequiredCells - missingRequiredCells) / totalRequiredCells) *
+              100
+          )
+        )
       : 0;
 
   const readiness: BroadsheetReadiness = {
