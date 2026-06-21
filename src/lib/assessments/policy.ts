@@ -1,6 +1,11 @@
 // src/lib/assessments/policy.ts
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import {
+  ASSESSMENT_CATEGORIES,
+  isAssessmentCategoryCode,
+  normalizeAssessmentCategory,
+} from "@/lib/assessments/categories";
 
 type ClassroomLike = {
   id?: string;
@@ -41,14 +46,10 @@ export type GradeBand = z.infer<typeof GradeBandSchema>;
 export function defaultAssessmentPolicy(): AssessmentPolicyV1 {
   return {
     version: 1,
-    types: [
-      { code: "CLASS_TEST", label: "Class Test" },
-      { code: "HOMEWORK", label: "Homework" },
-      { code: "PROJECT", label: "Project" },
-      { code: "QUIZ", label: "Quiz" },
-      { code: "EXAM", label: "Exam" },
-      { code: "OTHER", label: "Other" },
-    ],
+    types: ASSESSMENT_CATEGORIES.map((category) => ({
+  code: category.code,
+  label: category.label,
+})),
     gradeBands: [
       { grade: 1, label: "Excellent", minPercent: 90, maxPercent: 100 },
       { grade: 2, label: "Very Good", minPercent: 80, maxPercent: 89 },
@@ -74,34 +75,8 @@ function clean(v: unknown) {
   return String(v ?? "").trim();
 }
 
-function compactAlphaNum(v: unknown) {
-  return clean(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
 export function normalizeTypeCode(input: unknown) {
-  const s = clean(input).toUpperCase().replace(/[-\s]+/g, "_");
-
-  const map: Record<string, string> = {
-    EXERCISE: "EXERCISE",
-    EXER: "EXERCISE",
-    HOMEWORK: "HOMEWORK",
-    HOME_WORK: "HOMEWORK",
-    CLASS_TEST: "CLASS_TEST",
-    TEST: "CLASS_TEST",
-    CLASSWORK: "CLASS_TEST",
-    CLASS_WORK: "CLASS_TEST",
-    PROJECT: "PROJECT",
-    PROJECT_WORK: "PROJECT",
-    GROUP_WORK: "PROJECT",
-    PRACTICAL: "PRACTICAL",
-    QUIZ: "QUIZ",
-    EXAM: "EXAM",
-    EXAMS: "EXAM",
-    EXAMINATION: "EXAM",
-    OTHER: "OTHER",
-  };
-
-  return map[s] ?? compactAlphaNum(s);
+  return normalizeAssessmentCategory(input);
 }
 
 /**
@@ -130,7 +105,9 @@ export async function getTenantAssessmentPolicy(
 type ComponentKindCode =
   | "EXERCISE"
   | "HOMEWORK"
+  | "QUIZ"
   | "CLASS_TEST"
+  | "GROUP_WORK"
   | "PROJECT"
   | "PRACTICAL"
   | "EXAM"
@@ -138,84 +115,86 @@ type ComponentKindCode =
 
 function componentKindFromCode(raw: unknown): ComponentKindCode {
   const code = normalizeTypeCode(raw);
-
-  if (
-    code === "EXERCISE" ||
-    code === "HOMEWORK" ||
-    code === "CLASS_TEST" ||
-    code === "PROJECT" ||
-    code === "PRACTICAL" ||
-    code === "EXAM"
-  ) {
-    return code;
-  }
-
-  return "OTHER";
+  return isAssessmentCategoryCode(code) ? code : "OTHER";
 }
 
 function fallbackComponentForLegacyType(code: string) {
   const normalized = normalizeTypeCode(code);
 
-  const defaults: Record<
-    string,
-    {
-      label: string;
-      maxScore: number;
-      weightPercent: number;
-      orderIndex: number;
-      required: boolean;
-    }
-  > = {
-    EXERCISE: {
-      label: "Exercise",
-      maxScore: 20,
-      weightPercent: 6,
-      orderIndex: 10,
-      required: true,
-    },
-    HOMEWORK: {
-      label: "Homework",
-      maxScore: 20,
-      weightPercent: 6,
-      orderIndex: 20,
-      required: true,
-    },
-    CLASS_TEST: {
-      label: "Class Test",
-      maxScore: 30,
-      weightPercent: 9,
-      orderIndex: 30,
-      required: true,
-    },
-    PROJECT: {
-      label: "Project",
-      maxScore: 30,
-      weightPercent: 9,
-      orderIndex: 40,
-      required: false,
-    },
-    EXAM: {
-      label: "Exam",
-      maxScore: 100,
-      weightPercent: 70,
-      orderIndex: 50,
-      required: true,
-    },
-    QUIZ: {
-      label: "Quiz",
-      maxScore: 20,
-      weightPercent: 0,
-      orderIndex: 60,
-      required: false,
-    },
-    OTHER: {
-      label: "Other",
-      maxScore: 100,
-      weightPercent: 0,
-      orderIndex: 70,
-      required: false,
-    },
-  };
+const defaults: Record<
+  string,
+  {
+    label: string;
+    maxScore: number;
+    weightPercent: number;
+    orderIndex: number;
+    required: boolean;
+  }
+> = {
+  EXERCISE: {
+    label: "Exercise",
+    maxScore: 20,
+    weightPercent: 6,
+    orderIndex: 10,
+    required: true,
+  },
+  HOMEWORK: {
+    label: "Homework",
+    maxScore: 20,
+    weightPercent: 6,
+    orderIndex: 20,
+    required: true,
+  },
+  QUIZ: {
+    label: "Quiz",
+    maxScore: 20,
+    weightPercent: 0,
+    orderIndex: 25,
+    required: false,
+  },
+  CLASS_TEST: {
+    label: "Class Test",
+    maxScore: 30,
+    weightPercent: 9,
+    orderIndex: 30,
+    required: true,
+  },
+  PROJECT: {
+    label: "Project",
+    maxScore: 30,
+    weightPercent: 9,
+    orderIndex: 40,
+    required: false,
+  },
+  GROUP_WORK: {
+    label: "Group Work",
+    maxScore: 30,
+    weightPercent: 0,
+    orderIndex: 45,
+    required: false,
+  },
+  PRACTICAL: {
+    label: "Practical",
+    maxScore: 30,
+    weightPercent: 0,
+    orderIndex: 55,
+    required: false,
+  },
+  EXAM: {
+    label: "Exam",
+    maxScore: 100,
+    weightPercent: 70,
+    orderIndex: 60,
+    required: true,
+  },
+  OTHER: {
+    label: "Other",
+    maxScore: 100,
+    weightPercent: 0,
+    orderIndex: 90,
+    required: false,
+  },
+};
 
   return defaults[normalized] ?? {
     label: normalized

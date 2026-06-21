@@ -2967,7 +2967,9 @@ enum AssessmentLevelBand {
 enum AssessmentComponentKind {
   EXERCISE
   HOMEWORK
+  QUIZ
   CLASS_TEST
+  GROUP_WORK
   PROJECT
   PRACTICAL
   EXAM

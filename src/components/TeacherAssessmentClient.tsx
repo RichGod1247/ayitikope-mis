@@ -214,10 +214,13 @@ type PipelineAnalyticsResponse = PipelineAnalyticsOk | PipelineAnalyticsErr;
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 const ASSESSMENT_TYPES: { value: string; label: string }[] = [
-  { value: "CLASS_TEST", label: "Class Test" },
+  { value: "EXERCISE", label: "Exercise" },
   { value: "HOMEWORK", label: "Homework" },
-  { value: "PROJECT", label: "Project" },
   { value: "QUIZ", label: "Quiz" },
+  { value: "CLASS_TEST", label: "Class Test" },
+  { value: "GROUP_WORK", label: "Group Work" },
+  { value: "PROJECT", label: "Project" },
+  { value: "PRACTICAL", label: "Practical" },
   { value: "EXAM", label: "Exam" },
   { value: "OTHER", label: "Other" },
 ];
