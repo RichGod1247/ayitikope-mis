@@ -1,6 +1,7 @@
 // src/app/api/parent/report/term/pdf/route.ts
-// Generates a PDF report card for a parent's child.
-// Uses page.setContent() with inline HTML — avoids parent cookie forwarding complexity.
+// Generates a policy-aware PDF report card for a parent's child.
+// A13 rule: PDF must display report truth, not rebuild grading formulas.
+
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireParentSession, digitsOnly } from "@/lib/parentSession";
@@ -15,6 +16,23 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+type GradeScaleRow = {
+  grade: string | number;
+  minPercent: number;
+  maxPercent: number;
+  label?: string | null;
+  remark?: string | null;
+};
+
+type PdfSubjectRow = {
+  subject: string;
+  total: number;
+  max: number;
+  pct: number | null;
+  grade: string | null;
+  remark: string | null;
+};
+
 function normDigits(v: unknown) {
   return digitsOnly(String(v ?? ""));
 }
@@ -26,26 +44,7 @@ function phoneMatchesBySuffix(a: string, b: string) {
   return A.endsWith(B) || B.endsWith(A);
 }
 
-function naccaGrade(pct: number | null): string {
-  if (pct == null) return "—";
-  if (pct >= 90) return "1";
-  if (pct >= 80) return "2";
-  if (pct >= 70) return "3";
-  if (pct >= 60) return "4";
-  if (pct >= 50) return "5";
-  if (pct >= 40) return "6";
-  return "7";
-}
-
-function naccaRemark(grade: string): string {
-  const map: Record<string, string> = {
-    "1": "Excellent", "2": "Very Good", "3": "Good",
-    "4": "Credit", "5": "Pass", "6": "Below Average", "7": "Fail",
-  };
-  return map[grade] ?? "—";
-}
-
-function esc(s: string | null | undefined): string {
+function esc(s: string | number | null | undefined): string {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -56,12 +55,39 @@ function esc(s: string | null | undefined): string {
 function fmtDate(d: Date | string | null | undefined): string {
   if (!d) return "—";
   const dt = new Date(d);
-  if (isNaN(dt.getTime())) return "—";
-  return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  if (Number.isNaN(dt.getTime())) return "—";
+  return dt.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function pesewasToGhs(p: number): string {
   return `GHS ${(p / 100).toFixed(2)}`;
+}
+
+function safeNumber(v: number | null | undefined) {
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
+function round1(v: number | null | undefined) {
+  return typeof v === "number" && Number.isFinite(v)
+    ? Math.round(v * 10) / 10
+    : null;
+}
+
+function gradeFromPolicyScale(
+  gradeScale: GradeScaleRow[] | undefined,
+  pct: number | null
+) {
+  if (pct === null || !Number.isFinite(pct)) return null;
+
+  return (
+    gradeScale?.find(
+      (row) => pct >= Number(row.minPercent) && pct <= Number(row.maxPercent)
+    ) ?? null
+  );
 }
 
 function buildReportHtml(data: {
@@ -74,31 +100,56 @@ function buildReportHtml(data: {
   academicYear: string;
   guardianName: string;
   guardianPhone: string;
-  subjectRows: { subject: string; total: number; max: number; pct: number | null; grade: string; remark: string }[];
-  totalSum: number; maxSum: number; overallPct: number | null;
-  daysPresent: number; daysAbsent: number; daysLate: number; totalSchoolDays: number;
-  billed: number; waived: number; paid: number; outstanding: number;
+  subjectRows: PdfSubjectRow[];
+  totalSum: number;
+  maxSum: number;
+  overallPct: number | null;
+  overallGrade: string | null;
+  overallRemark: string | null;
+  readinessMessage: string | null;
+  daysPresent: number;
+  daysAbsent: number;
+  daysLate: number;
+  totalSchoolDays: number;
+  billed: number;
+  waived: number;
+  paid: number;
+  outstanding: number;
   signatureSvg: string | null;
 }): string {
-  const overallGrade = naccaGrade(data.overallPct);
-  const subjectRowsHtml = data.subjectRows.length === 0
-    ? `<tr><td colspan="6" style="text-align:center;padding:12px;color:#999">No assessment scores recorded for this term.</td></tr>`
-    : data.subjectRows.map((r, i) => `
+  const subjectRowsHtml =
+    data.subjectRows.length === 0
+      ? `<tr><td colspan="6" style="text-align:center;padding:12px;color:#999">${esc(
+          data.readinessMessage ??
+            "No reportable assessment subjects available for this learner."
+        )}</td></tr>`
+      : data.subjectRows
+          .map(
+            (r, i) => `
         <tr style="background:${i % 2 === 1 ? "#fafafa" : "#fff"}">
           <td style="font-weight:600">${esc(r.subject)}</td>
           <td style="text-align:center">${r.total}</td>
           <td style="text-align:center;color:#666">${r.max}</td>
-          <td style="text-align:center">${r.pct != null ? r.pct.toFixed(1) + "%" : "—"}</td>
-          <td style="text-align:center"><span style="background:#e8f5e9;color:#1b5e20;border-radius:3px;padding:1px 5px;font-weight:700">${esc(r.grade)}</span></td>
-          <td>${esc(r.remark)}</td>
-        </tr>`).join("") + `
+          <td style="text-align:center">${
+            r.pct != null ? r.pct.toFixed(1) + "%" : "—"
+          }</td>
+          <td style="text-align:center"><span style="background:#e8f5e9;color:#1b5e20;border-radius:3px;padding:1px 5px;font-weight:700">${esc(
+            r.grade ?? "—"
+          )}</span></td>
+          <td>${esc(r.remark ?? "—")}</td>
+        </tr>`
+          )
+          .join("") +
+        `
         <tr style="background:#eef2ff;font-weight:700">
           <td>TOTAL</td>
           <td style="text-align:center">${data.totalSum}</td>
           <td style="text-align:center">${data.maxSum}</td>
-          <td style="text-align:center">${data.overallPct != null ? data.overallPct.toFixed(1) + "%" : "—"}</td>
-          <td style="text-align:center">${esc(overallGrade)}</td>
-          <td>${esc(naccaRemark(overallGrade))}</td>
+          <td style="text-align:center">${
+            data.overallPct != null ? data.overallPct.toFixed(1) + "%" : "—"
+          }</td>
+          <td style="text-align:center">${esc(data.overallGrade ?? "—")}</td>
+          <td>${esc(data.overallRemark ?? "—")}</td>
         </tr>`;
 
   const sigHtml = data.signatureSvg
@@ -144,7 +195,7 @@ function buildReportHtml(data: {
     </div>
     <div style="text-align:right;font-size:8pt;color:#666">
       <div>Ghana Basic Education</div>
-      <div>NaCCA Curriculum</div>
+      <div>Policy-aware assessment</div>
     </div>
   </div>
 
@@ -160,12 +211,14 @@ function buildReportHtml(data: {
       <div class="info-row"><span class="info-label">Acad. Year:</span><span>${esc(data.academicYear)}</span></div>
     </div>
     <div class="info-box" style="display:flex;align-items:center;justify-content:center">
-      ${data.overallPct != null
-        ? `<div class="overall-box">
+      ${
+        data.overallPct != null
+          ? `<div class="overall-box">
              <div class="overall-pct">${data.overallPct.toFixed(1)}%</div>
-             <div class="overall-label">Overall · Grade ${esc(overallGrade)}</div>
+             <div class="overall-label">Overall · ${esc(data.overallGrade ?? "—")}</div>
            </div>`
-        : `<div style="font-size:9pt;color:#999;text-align:center">No scores<br>recorded</div>`}
+          : `<div style="font-size:9pt;color:#999;text-align:center">No reportable<br>assessment yet</div>`
+      }
     </div>
   </div>
 
@@ -247,206 +300,264 @@ function buildReportHtml(data: {
 export async function GET(req: NextRequest) {
   const gate = requireParentSession(req as any);
   if (!gate.ok) return gate.res as any;
-  const sess = gate.session;
 
+  const sess = gate.session;
   const { searchParams } = new URL(req.url);
+
   const studentId = String(searchParams.get("studentId") ?? "").trim();
   const term = String(searchParams.get("term") ?? "1st Term").trim();
-  const academicYear = String(searchParams.get("academicYear") ?? "2025/2026").trim();
+  const academicYear = String(
+    searchParams.get("academicYear") ?? "2025/2026"
+  ).trim();
 
   if (!studentId) {
     return new Response(JSON.stringify({ ok: false, error: "studentId is required" }), {
-      status: 400, headers: { "content-type": "application/json" },
+      status: 400,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
     });
   }
 
   const student = await prisma.student.findFirst({
-    where: { id: studentId, tenantId: sess.tenantId, status: StudentStatus.ACTIVE },
+    where: {
+      id: studentId,
+      tenantId: sess.tenantId,
+      status: StudentStatus.ACTIVE,
+    },
     select: {
-      id: true, firstName: true, lastName: true, sex: true, dob: true,
-      classroomId: true, guardianName: true, guardianPhone: true, guardianPhoneNorm: true,
+      id: true,
+      firstName: true,
+      lastName: true,
+      sex: true,
+      dob: true,
+      classroomId: true,
+      guardianName: true,
+      guardianPhone: true,
+      guardianPhoneNorm: true,
       classroom: { select: { name: true, grade: true, arm: true } },
     },
   });
 
   if (!student) {
     return new Response(JSON.stringify({ ok: false, error: "STUDENT_NOT_FOUND" }), {
-      status: 404, headers: { "content-type": "application/json" },
+      status: 404,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
     });
   }
 
-  // Guardian auth check
   const sessE164 = String(sess.guardianPhoneE164 ?? "").trim();
   const sessSuffix9 = normDigits(sess.guardianSuffix9 ?? "");
   const guardianNorm = String(student.guardianPhoneNorm ?? "").trim();
   const guardianRaw = String(student.guardianPhone ?? "").trim();
 
-  const okByE164 = !!sessE164 && !!guardianNorm && normDigits(sessE164) === normDigits(guardianNorm);
+  const okByE164 =
+    !!sessE164 && !!guardianNorm && normDigits(sessE164) === normDigits(guardianNorm);
+
   const okBySuffix =
     normDigits(sessSuffix9).length >= 7 &&
-    (phoneMatchesBySuffix(sessSuffix9, guardianNorm) || phoneMatchesBySuffix(sessSuffix9, guardianRaw));
+    (phoneMatchesBySuffix(sessSuffix9, guardianNorm) ||
+      phoneMatchesBySuffix(sessSuffix9, guardianRaw));
 
   if (!okByE164 && !okBySuffix) {
     return new Response(JSON.stringify({ ok: false, error: "GUARDIAN_MISMATCH" }), {
-      status: 403, headers: { "content-type": "application/json" },
+      status: 403,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
     });
   }
 
-  // Release enforcement
   const classroomId = student.classroomId ?? "";
+
   const rel = await findEvidenceBackedResultsRelease({
-  tenantId: sess.tenantId,
-  term,
-  academicYear,
-  classroomId,
-});
+    tenantId: sess.tenantId,
+    term,
+    academicYear,
+    classroomId,
+  });
+
   if (!rel) {
     return new Response(JSON.stringify({ ok: false, error: "RESULTS_NOT_RELEASED" }), {
-      status: 403, headers: { "content-type": "application/json" },
+      status: 403,
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
     });
+  }
+
+  const reportTruth = await buildStudentPolicyReportTruth({
+    tenantId: sess.tenantId,
+    studentId: student.id,
+    term,
+    academicYear,
+  });
+
+  if (!reportTruth.ok) {
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: "REPORT_TRUTH_UNAVAILABLE",
+        detail: reportTruth.error,
+      }),
+      {
+        status: 409,
+        headers: { "content-type": "application/json", "cache-control": "no-store" },
+      }
+    );
   }
 
   const tenant = await prisma.tenant.findUnique({
-    where: { id: sess.tenantId }, select: { name: true },
+    where: { id: sess.tenantId },
+    select: { name: true },
   });
 
-  // Build subject rows from policy-aware broadsheet truth
-const reportTruth = await buildStudentPolicyReportTruth({
-  tenantId: sess.tenantId,
-  studentId: student.id,
-  term,
-  academicYear,
-});
+  const subjectRows: PdfSubjectRow[] = reportTruth.subjects
+    .slice()
+    .sort((a, b) => String(a.subject).localeCompare(String(b.subject)))
+    .map((s) => ({
+      subject: String(s.subject ?? "Subject"),
+      total: safeNumber(s.totalScore),
+      max: safeNumber(s.maxScore),
+      pct: round1(s.percentage),
+      grade: s.grade == null ? null : String(s.grade),
+      remark: s.remark ?? s.gradeLabel ?? null,
+    }));
 
-if (!reportTruth.ok) {
-  return new Response(
-    JSON.stringify({
-      ok: false,
-      error: "REPORT_TRUTH_UNAVAILABLE",
-      detail: reportTruth.error,
-    }),
-    {
-      status: 409,
-      headers: {
-        "content-type": "application/json",
-        "cache-control": "no-store",
-      },
-    }
-  );
-}
+  const validPercentages = subjectRows
+    .map((row) => row.pct)
+    .filter((p): p is number => typeof p === "number" && Number.isFinite(p));
 
-const policySubjects = reportTruth.subjects;
-
-const subjectRows = policySubjects
-  .slice()
-  .sort((a, b) => String(a.subject).localeCompare(String(b.subject)))
-  .map((s) => ({
-    subject: s.subject,
-    total: typeof s.totalScore === "number" ? s.totalScore : 0,
-    max: typeof s.maxScore === "number" ? s.maxScore : 100,
-    pct: typeof s.percentage === "number" ? s.percentage : null,
-    grade: s.grade ?? "—",
-    remark: s.remark ?? s.gradeLabel ?? "—",
-  }));
-
-const validPercentages = subjectRows
-  .map((r) => r.pct)
-  .filter((p): p is number => typeof p === "number" && Number.isFinite(p));
-
-const overallPct =
-  typeof reportTruth.overallPercentage === "number"
-    ? reportTruth.overallPercentage
-    : validPercentages.length
+  const fallbackOverall =
+    validPercentages.length > 0
       ? validPercentages.reduce((sum, p) => sum + p, 0) / validPercentages.length
       : null;
 
-const totalSum = subjectRows.reduce((s, r) => s + r.total, 0);
-const maxSum = subjectRows.reduce((s, r) => s + r.max, 0);
+  const overallPct =
+    typeof reportTruth.overallPercentage === "number"
+      ? round1(reportTruth.overallPercentage)
+      : round1(fallbackOverall);
 
-  // Attendance
-  const marks = classroomId
+  const gradeScale = reportTruth.policy.gradeScale as GradeScaleRow[];
+  const overallBand = gradeFromPolicyScale(gradeScale, overallPct);
+
+  const totalSum = subjectRows.reduce((sum, row) => sum + row.total, 0);
+  const maxSum = subjectRows.reduce((sum, row) => sum + row.max, 0);
+
+  const attendanceMarks = classroomId
     ? await prisma.attendanceMark.findMany({
-        where: { studentId: student.id, session: { tenantId: sess.tenantId, classroomId } },
+        where: {
+          studentId: student.id,
+          session: { tenantId: sess.tenantId, classroomId },
+        },
         select: { status: true },
       })
     : [];
+
+  const daysPresent = attendanceMarks.filter((mark) => mark.status === "PRESENT").length;
+  const daysAbsent = attendanceMarks.filter((mark) => mark.status === "ABSENT").length;
+  const daysLate = attendanceMarks.filter((mark) => mark.status === "LATE").length;
+
   const totalSchoolDays = classroomId
     ? await prisma.attendanceSession.count({
         where: { tenantId: sess.tenantId, classroomId, isClosed: true },
       })
     : 0;
 
-  // Fees
-  const invAgg = await prisma.feeInvoice.aggregate({
-    where: { tenantId: sess.tenantId, term, academicYear, studentId: student.id },
-    _sum: { totalBilledPesewas: true, totalWaivedPesewas: true },
-  }).catch(() => ({ _sum: { totalBilledPesewas: 0, totalWaivedPesewas: 0 } }));
-  const payAgg = await prisma.feePayment.aggregate({
-    where: { tenantId: sess.tenantId, invoice: { term, academicYear, studentId: student.id } },
-    _sum: { amountPesewas: true },
-  }).catch(() => ({ _sum: { amountPesewas: 0 } }));
-  const billed = invAgg._sum.totalBilledPesewas ?? 0;
-  const waived = invAgg._sum.totalWaivedPesewas ?? 0;
-  const paid = payAgg._sum.amountPesewas ?? 0;
+  const invoiceAgg = await prisma.feeInvoice
+    .aggregate({
+      where: {
+        tenantId: sess.tenantId,
+        term,
+        academicYear,
+        studentId: student.id,
+      },
+      _sum: { totalBilledPesewas: true, totalWaivedPesewas: true },
+    })
+    .catch(() => ({
+      _sum: { totalBilledPesewas: 0, totalWaivedPesewas: 0 },
+    }));
 
-  // Signature
-  const sig = await prisma.headteacherSignature.findFirst({
-    where: { tenantId: sess.tenantId },
-    select: { signatureSvg: true },
-    orderBy: { updatedAt: "desc" },
-  }).catch(() => null);
+  const paymentAgg = await prisma.feePayment
+    .aggregate({
+      where: {
+        tenantId: sess.tenantId,
+        status: "SUCCESS",
+        invoice: { term, academicYear, studentId: student.id },
+      },
+      _sum: { amountPesewas: true },
+    })
+    .catch(() => ({ _sum: { amountPesewas: 0 } }));
+
+  const billed = safeNumber(invoiceAgg._sum.totalBilledPesewas);
+  const waived = safeNumber(invoiceAgg._sum.totalWaivedPesewas);
+  const paid = safeNumber(paymentAgg._sum.amountPesewas);
+  const outstanding = Math.max(0, billed - waived - paid);
+
+  const signature = await prisma.headteacherSignature
+    .findFirst({
+      where: { tenantId: sess.tenantId },
+      select: { signatureSvg: true },
+      orderBy: { updatedAt: "desc" },
+    })
+    .catch(() => null);
 
   const classLabel = [
-    student.classroom?.name ?? student.classroom?.grade,
-    student.classroom?.arm,
-  ].filter(Boolean).join(" ");
+    student.classroom?.name ?? student.classroom?.grade ?? "—",
+    student.classroom?.arm ? `(${student.classroom.arm})` : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  const readinessMessage =
+    reportTruth.classReadiness?.blockedReasons?.[0] ??
+    "No reportable assessment subjects available for this learner.";
 
   const html = buildReportHtml({
     schoolName: tenant?.name ?? "EduLife OS School",
-    studentName: `${student.lastName} ${student.firstName}`.trim(),
+    studentName:
+      `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim() || "Learner",
     sex: student.sex ?? "—",
     dob: fmtDate(student.dob),
-    classLabel: classLabel || "—",
-    term, academicYear,
+    classLabel,
+    term,
+    academicYear,
     guardianName: student.guardianName ?? "—",
     guardianPhone: student.guardianPhone ?? "—",
     subjectRows,
-    totalSum, maxSum, overallPct,
-    daysPresent: marks.filter((m) => m.status === "PRESENT").length,
-    daysAbsent: marks.filter((m) => m.status === "ABSENT").length,
-    daysLate: marks.filter((m) => m.status === "LATE").length,
+    totalSum,
+    maxSum,
+    overallPct,
+    overallGrade: overallBand ? String(overallBand.grade) : null,
+    overallRemark: overallBand?.remark ?? overallBand?.label ?? null,
+    readinessMessage,
+    daysPresent,
+    daysAbsent,
+    daysLate,
     totalSchoolDays,
-    billed, waived, paid, outstanding: billed - waived - paid,
-    signatureSvg: sig?.signatureSvg ?? null,
+    billed,
+    waived,
+    paid,
+    outstanding,
+    signatureSvg: signature?.signatureSvg ?? null,
   });
 
-  let browser = null;
-  try {
-    browser = await launchBrowser();
-    const page = await browser.newPage();
-    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
-    await page.setContent(html, { waitUntil: "networkidle0", timeout: 60_000 });
+  const browser = await launchBrowser();
 
-    const pdfBytes = await page.pdf({
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
-      preferCSSPageSize: true,
-      margin: { top: "12mm", right: "12mm", bottom: "12mm", left: "12mm" },
+      margin: { top: "12mm", bottom: "12mm", left: "12mm", right: "12mm" },
     });
 
-    const safeName = `${studentId.slice(0, 8)}-${term.replace(/\s+/g, "-")}-${academicYear.replace("/", "-")}`;
-    const headers = new Headers();
-    headers.set("content-type", "application/pdf");
-    headers.set("content-disposition", `attachment; filename="report-card-${safeName}.pdf"`);
-    headers.set("cache-control", "no-store");
-
-    return new Response(Buffer.from(pdfBytes), { status: 200, headers });
-  } catch (err: any) {
-    console.error("[PARENT_REPORT_PDF_ERROR]", err);
-    return new Response(JSON.stringify({ ok: false, error: "PDF generation failed. Please try again." }), {
-      status: 500, headers: { "content-type": "application/json" },
+    return new Response(pdf, {
+      status: 200,
+      headers: {
+        "content-type": "application/pdf",
+        "cache-control": "no-store",
+        "content-disposition": `inline; filename="report-card-${student.id}.pdf"`,
+      },
     });
   } finally {
-    if (browser) await browser.close().catch(() => {});
+    await browser.close().catch(() => undefined);
   }
 }
