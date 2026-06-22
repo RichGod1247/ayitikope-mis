@@ -1,4 +1,4 @@
-//src/app/api/teacher/assessment/scores/bulk-upsert/route.ts
+// src/app/api/teacher/assessment/scores/bulk-upsert/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
@@ -128,31 +128,41 @@ export async function POST(req: Request) {
       });
     }
 
-    if (uniqueStudentIds.length > 0) {
-      const validStudents = await prisma.student.findMany({
-        where: {
-          tenantId: ctx.tenantId,
-          classroomId: item.classroomId,
-          status: "ACTIVE",
-          id: { in: uniqueStudentIds },
-        },
-        select: { id: true },
+    if (uniqueStudentIds.length === 0) {
+      return noStore(200, {
+        ok: true,
+        itemId: data.itemId,
+        count: 0,
+        scores: [],
       });
-
-      if (validStudents.length !== uniqueStudentIds.length) {
-        return noStore(400, { ok: false, error: "INVALID_STUDENT_SCOPE" });
-      }
     }
 
-    const existingScores = uniqueStudentIds.length
-      ? await prisma.assessmentScore.findMany({
-          where: {
-            itemId: data.itemId,
-            studentId: { in: uniqueStudentIds },
-          },
-          select: { id: true, studentId: true, score: true, comment: true },
-        })
-      : [];
+    const validStudents = await prisma.student.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        classroomId: item.classroomId,
+        status: "ACTIVE",
+        id: { in: uniqueStudentIds },
+      },
+      select: { id: true },
+    });
+
+    if (validStudents.length !== uniqueStudentIds.length) {
+      return noStore(400, { ok: false, error: "INVALID_STUDENT_SCOPE" });
+    }
+
+    const existingScores = await prisma.assessmentScore.findMany({
+      where: {
+        itemId: data.itemId,
+        studentId: { in: uniqueStudentIds },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        score: true,
+        comment: true,
+      },
+    });
 
     const existingByStudent = new Map(
       existingScores.map((s) => [
@@ -165,71 +175,82 @@ export async function POST(req: Request) {
       ])
     );
 
-    const results = await prisma.$transaction(async (tx) => {
-      const saved = [];
-
-      for (const s of trimmedScores) {
-        const before = existingByStudent.get(s.studentId) ?? null;
-
-        const row = await tx.assessmentScore.upsert({
-          where: {
-            assessment_student_unique: {
-              itemId: data.itemId,
-              studentId: s.studentId,
-            },
-          },
-          update: {
-            score: s.score,
-            comment: s.comment,
-          },
-          create: {
+    const scoreWriteOps = trimmedScores.map((s) =>
+      prisma.assessmentScore.upsert({
+        where: {
+          assessment_student_unique: {
             itemId: data.itemId,
             studentId: s.studentId,
-            score: s.score,
-            comment: s.comment,
           },
+        },
+        update: {
+          score: s.score,
+          comment: s.comment,
+        },
+        create: {
+          itemId: data.itemId,
+          studentId: s.studentId,
+          score: s.score,
+          comment: s.comment,
+        },
+      })
+    );
+
+    // Bank-grade fix:
+    // Keep score writes atomic, but avoid a slow interactive transaction.
+    // The old tx loop mixed upserts + audit writes and hit Prisma P2028.
+    const results = await prisma.$transaction(scoreWriteOps);
+
+    const auditRows: any[] = [];
+
+    for (let i = 0; i < results.length; i += 1) {
+      const row = results[i];
+      const submitted = trimmedScores[i];
+      const before = existingByStudent.get(submitted.studentId) ?? null;
+
+      const changed =
+        !before ||
+        before.score !== submitted.score ||
+        String(before.comment ?? "") !== String(submitted.comment ?? "");
+
+      if (!changed) continue;
+
+      auditRows.push({
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        action: before ? "ASSESSMENT_SCORE_UPDATED" : "ASSESSMENT_SCORE_CREATED",
+        resource: "AssessmentScore",
+        resourceId: row.id,
+        ip: clientIp(req),
+        userAgent: userAgent(req),
+        metadata: {
+          itemId: item.id,
+          classroomId: item.classroomId,
+          subject: item.subject,
+          term: item.term,
+          academicYear: item.academicYear,
+          studentId: submitted.studentId,
+          maxScore,
+          before,
+          after: {
+            score: submitted.score,
+            comment: submitted.comment,
+          },
+        },
+      });
+    }
+
+    if (auditRows.length > 0) {
+      try {
+        await prisma.auditLog.createMany({
+          data: auditRows,
         });
-
-        saved.push(row);
-
-        const changed =
-          !before ||
-          before.score !== s.score ||
-          String(before.comment ?? "") !== String(s.comment ?? "");
-
-        if (changed) {
-          await tx.auditLog.create({
-            data: {
-              tenantId: ctx.tenantId,
-              userId: ctx.userId,
-              action: before
-                ? "ASSESSMENT_SCORE_UPDATED"
-                : "ASSESSMENT_SCORE_CREATED",
-              resource: "AssessmentScore",
-              resourceId: row.id,
-              ip: clientIp(req),
-              userAgent: userAgent(req),
-              metadata: {
-                itemId: item.id,
-                classroomId: item.classroomId,
-                subject: item.subject,
-                term: item.term,
-                academicYear: item.academicYear,
-                studentId: s.studentId,
-                maxScore,
-                before,
-                after: {
-                  score: s.score,
-                  comment: s.comment,
-                },
-              },
-            },
-          });
-        }
+      } catch (auditErr) {
+        // Do not punish the teacher if audit logging fails after scores are safely saved.
+        // The primary academic truth has already been written atomically above.
+        console.error("[ASSESSMENT_SCORE_AUDIT_LOG_ERROR]", auditErr);
       }
-
-      return saved;
-    });
+    }
 
     return noStore(200, {
       ok: true,
@@ -256,6 +277,7 @@ export async function POST(req: Request) {
     return noStore(500, {
       ok: false,
       error: "FAILED_TO_SAVE_SCORES",
+      code: err?.code ?? null,
     });
   }
 }

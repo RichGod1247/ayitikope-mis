@@ -14,12 +14,78 @@ function noStore(status: number, payload: any) {
   });
 }
 
-function buildSubjectWhere(args: { roleName: string | null; allowedSubjects: string[] | null }) {
-  if (isAdminLikeRole(args.roleName)) return {};
-  if (args.allowedSubjects?.length) {
-    return { OR: args.allowedSubjects.map((s) => ({ subject: { equals: s, mode: "insensitive" as const } })) };
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function subjectKey(v: unknown) {
+  return cleanStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function subjectAliasKeys(v: unknown) {
+  const key = subjectKey(v);
+  const keys = new Set<string>();
+  if (!key) return keys;
+
+  keys.add(key);
+
+  const aliases: Record<string, string[]> = {
+    MATHS: ["MATH", "MATHEMATICS"],
+    MATH: ["MATHS", "MATHEMATICS"],
+    MATHEMATICS: ["MATH", "MATHS"],
+
+    SCIENCE: ["INTEGRATEDSCIENCE", "INTSCIENCE"],
+    INTEGRATEDSCIENCE: ["SCIENCE", "INTSCIENCE"],
+    INTSCIENCE: ["SCIENCE", "INTEGRATEDSCIENCE"],
+
+    ENGLISH: ["ENGLISHLANGUAGE"],
+    ENGLISHLANGUAGE: ["ENGLISH"],
+
+    OWOP: ["OURWORLDOURPEOPLE"],
+    OURWORLDOURPEOPLE: ["OWOP"],
+
+    RME: ["RELIGIOUSANDMORALEDUCATION"],
+    RELIGIOUSANDMORALEDUCATION: ["RME"],
+
+    ICT: ["COMPUTING"],
+    COMPUTING: ["ICT"],
+  };
+
+  for (const alias of aliases[key] ?? []) keys.add(alias);
+  return keys;
+}
+
+function sameSubjectLoose(a: unknown, b: unknown) {
+  const aKeys = subjectAliasKeys(a);
+  const bKeys = subjectAliasKeys(b);
+
+  for (const k of aKeys) {
+    if (bKeys.has(k)) return true;
   }
-  return {};
+
+  return false;
+}
+
+function subjectAllowedInScope(subject: unknown, allowedSubjects: string[] | null) {
+  if (!Array.isArray(allowedSubjects)) return true;
+  if (allowedSubjects.length === 0) return false;
+  return allowedSubjects.some((s) => sameSubjectLoose(s, subject));
+}
+
+function filterRowsBySubjectScope<T extends { subject: string | null }>(
+  rows: T[],
+  allowedSubjects: string[] | null,
+  preferredSubject?: string | null
+) {
+  const allowedRows = rows.filter((r) => subjectAllowedInScope(r.subject, allowedSubjects));
+
+  const preferred = cleanStr(preferredSubject);
+  if (!preferred) return allowedRows;
+
+  const preferredRows = allowedRows.filter((r) => sameSubjectLoose(r.subject, preferred));
+
+  // The selected subject is a helper filter. It must not create false-zero.
+  return preferredRows.length > 0 ? preferredRows : allowedRows;
 }
 
 export async function GET(req: Request) {
@@ -32,10 +98,10 @@ export async function GET(req: Request) {
   const { ctx } = auth;
   const { searchParams } = new URL(req.url);
 
-  const classroomId = (searchParams.get("classroomId") ?? "").trim();
-  const term = (searchParams.get("term") ?? "").trim() || null;
-  const academicYear = (searchParams.get("academicYear") ?? "").trim() || null;
-  const subject = (searchParams.get("subject") ?? "").trim() || null;
+  const classroomId = cleanStr(searchParams.get("classroomId"));
+  const term = cleanStr(searchParams.get("term")) || null;
+  const academicYear = cleanStr(searchParams.get("academicYear")) || null;
+  const subject = cleanStr(searchParams.get("subject")) || null;
 
   if (!classroomId) return noStore(400, { ok: false, error: "MISSING_CLASSROOM_ID" });
 
@@ -44,11 +110,11 @@ export async function GET(req: Request) {
     userId: ctx.userId,
     roleName: ctx.roleName,
     classroomId,
-    subject,
   });
 
   if (!access.ok) {
-    const status = access.reason === "OUT_OF_SCOPE" || access.reason === "SUBJECT_OUT_OF_SCOPE" ? 403 : 404;
+    const status =
+      access.reason === "OUT_OF_SCOPE" || access.reason === "SUBJECT_OUT_OF_SCOPE" ? 403 : 404;
     return noStore(status, { ok: false, error: access.reason });
   }
 
@@ -57,15 +123,13 @@ export async function GET(req: Request) {
     classroomId,
     ...(term ? { term } : {}),
     ...(academicYear ? { academicYear } : {}),
-    ...(subject ? { subject: { equals: subject, mode: "insensitive" as const } } : {}),
-    ...buildSubjectWhere({ roleName: ctx.roleName, allowedSubjects: access.allowedSubjects }),
   };
 
   if (!isAdminLikeRole(ctx.roleName)) {
     where.teacherUserId = ctx.userId;
   }
 
-  const rows = await prisma.lessonDelivery.findMany({
+  const rowsRaw = await prisma.lessonDelivery.findMany({
     where,
     orderBy: [{ dateTaught: "desc" }, { createdAt: "desc" }],
     select: {
@@ -81,36 +145,42 @@ export async function GET(req: Request) {
       contentStandardCode: true,
       indicatorCode: true,
       notes: true,
-createdAt: true,
-updatedAt: true,
-assessmentItems: {
-  orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-  select: {
-    id: true,
-    title: true,
-    type: true,
-    maxScore: true,
-    weighting: true,
-    status: true,
-    date: true,
-    assessmentPolicyId: true,
-    policyComponentId: true,
-    componentCode: true,
-    templateKey: true,
-    sortOrder: true,
-    isRequired: true,
-    publishedAt: true,
-    lockedAt: true,
-    _count: {
-      select: {
-        scores: true,
+      createdAt: true,
+      updatedAt: true,
+      assessmentItems: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          maxScore: true,
+          weighting: true,
+          status: true,
+          date: true,
+          assessmentPolicyId: true,
+          policyComponentId: true,
+          componentCode: true,
+          templateKey: true,
+          sortOrder: true,
+          isRequired: true,
+          publishedAt: true,
+          lockedAt: true,
+          _count: {
+            select: {
+              scores: true,
+            },
+          },
+        },
       },
-    },
-  },
-},
     },
     take: 200,
   });
+
+  const rows = filterRowsBySubjectScope(
+    rowsRaw,
+    isAdminLikeRole(ctx.roleName) ? null : access.allowedSubjects,
+    subject
+  );
 
   return noStore(200, {
     ok: true,
@@ -119,25 +189,25 @@ assessmentItems: {
       ...r,
       dateTaught: r.dateTaught ? new Date(r.dateTaught).toISOString() : null,
       createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : null,
-  updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : null,
-assessmentItems: r.assessmentItems.map((a) => ({
-  id: a.id,
-  title: a.title,
-  type: a.type,
-  maxScore: Number(a.maxScore ?? 0),
-  weighting: a.weighting == null ? null : Number(a.weighting),
-  status: a.status,
-  date: a.date ? new Date(a.date).toISOString() : null,
-  assessmentPolicyId: a.assessmentPolicyId ?? null,
-  policyComponentId: a.policyComponentId ?? null,
-  componentCode: a.componentCode ?? null,
-  templateKey: a.templateKey ?? null,
-  sortOrder: a.sortOrder ?? 0,
-  isRequired: a.isRequired ?? true,
-  publishedAt: a.publishedAt ? new Date(a.publishedAt).toISOString() : null,
-  lockedAt: a.lockedAt ? new Date(a.lockedAt).toISOString() : null,
-  scoresCount: a._count.scores,
-})),
+      updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : null,
+      assessmentItems: r.assessmentItems.map((a) => ({
+        id: a.id,
+        title: a.title,
+        type: a.type,
+        maxScore: Number(a.maxScore ?? 0),
+        weighting: a.weighting == null ? null : Number(a.weighting),
+        status: a.status,
+        date: a.date ? new Date(a.date).toISOString() : null,
+        assessmentPolicyId: a.assessmentPolicyId ?? null,
+        policyComponentId: a.policyComponentId ?? null,
+        componentCode: a.componentCode ?? null,
+        templateKey: a.templateKey ?? null,
+        sortOrder: a.sortOrder ?? 0,
+        isRequired: a.isRequired ?? true,
+        publishedAt: a.publishedAt ? new Date(a.publishedAt).toISOString() : null,
+        lockedAt: a.lockedAt ? new Date(a.lockedAt).toISOString() : null,
+        scoresCount: a._count.scores,
+      })),
     })),
   });
 }

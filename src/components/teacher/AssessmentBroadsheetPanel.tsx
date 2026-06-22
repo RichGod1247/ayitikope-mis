@@ -146,6 +146,14 @@ function clean(v: unknown) {
   return String(v ?? "").trim();
 }
 
+function subjectKey(v: unknown) {
+  return clean(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function sameSubject(a: unknown, b: unknown) {
+  return subjectKey(a) === subjectKey(b);
+}
+
 function safeJson<T>(raw: unknown): T | null {
   if (!raw || typeof raw !== "object") return null;
   return raw as T;
@@ -182,15 +190,28 @@ export default function AssessmentBroadsheetPanel(props: Props) {
   const [loading, setLoading] = useState(false);
   const [learnerQuery, setLearnerQuery] = useState("");
 
-  useEffect(() => {
-    setSubject((prev) => {
-      if (prev && subjectOptions.some((s) => s.toLowerCase() === prev.toLowerCase())) {
-        return prev;
+useEffect(() => {
+  setSubject((prev) => {
+    const current = clean(currentSubject);
+
+    if (current) {
+      const matchedCurrent =
+        subjectOptions.find((s) => sameSubject(s, current)) || current;
+
+      if (!sameSubject(prev, matchedCurrent)) {
+        return matchedCurrent;
       }
-      if (currentSubject) return currentSubject;
-      return subjectOptions[0] ?? "";
-    });
-  }, [currentSubject, subjectOptions]);
+
+      return prev || matchedCurrent;
+    }
+
+    if (prev && subjectOptions.some((s) => sameSubject(s, prev))) {
+      return subjectOptions.find((s) => sameSubject(s, prev)) || prev;
+    }
+
+    return subjectOptions[0] ?? "";
+  });
+}, [currentSubject, subjectOptions]);
 
   async function loadBroadsheet() {
     if (!classroomId) {
@@ -244,7 +265,10 @@ export default function AssessmentBroadsheetPanel(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classroomId, term, academicYear, subject]);
 
-  const sheet = data?.broadsheets?.[0] ?? null;
+  const sheet =
+  data?.broadsheets?.find((s) => sameSubject(s.subject, subject)) ??
+  data?.broadsheets?.[0] ??
+  null;
 
   const filteredRows = useMemo(() => {
     const q = clean(learnerQuery).toLowerCase();
@@ -335,6 +359,11 @@ export default function AssessmentBroadsheetPanel(props: Props) {
                   <div className="text-[12px] font-semibold text-[#F7F4ED]">
                     {sheet?.subject || subject || "Subject"}
                   </div>
+                  {subject && sheet?.subject && !sameSubject(subject, sheet.subject) ? (
+  <div className="mt-1 text-[10px] text-amber-100">
+    Showing {sheet.subject} because no broadsheet was returned for {subject}.
+  </div>
+) : null}
                   <div className="mt-0.5 text-[11px] text-[#AEB6C4]">
                     Policy: {data.policy.name} • {term} • {academicYear}
                   </div>

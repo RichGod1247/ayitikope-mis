@@ -119,6 +119,48 @@ function cleanStr(v: unknown) {
   return String(v ?? "").trim();
 }
 
+const TERM_OPTIONS = ["1st Term", "2nd Term", "3rd Term"] as const;
+
+function normalizeTerm(raw: unknown) {
+  const s = cleanStr(raw).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  if (
+    s === "1" ||
+    s === "term1" ||
+    s === "1st" ||
+    s === "1stterm" ||
+    s === "first" ||
+    s === "firstterm"
+  ) {
+    return "1st Term";
+  }
+
+  if (
+    s === "2" ||
+    s === "term2" ||
+    s === "2nd" ||
+    s === "2ndterm" ||
+    s === "second" ||
+    s === "secondterm"
+  ) {
+    return "2nd Term";
+  }
+
+  if (
+    s === "3" ||
+    s === "term3" ||
+    s === "3rd" ||
+    s === "3rdterm" ||
+    s === "third" ||
+    s === "thirdterm"
+  ) {
+    return "3rd Term";
+  }
+
+  const exact = cleanStr(raw);
+  return TERM_OPTIONS.includes(exact as any) ? exact : "1st Term";
+}
+
 function subjectKey(v: unknown) {
   return cleanStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
@@ -383,7 +425,7 @@ export default function TeacherLessonDeliveriesClient() {
   const [selectedSubjectScope, setSelectedSubjectScope] = useState<string>("");
   const [showMultiStream, setShowMultiStream] = useState(false);
   const [classroomId, setClassroomId] = useState<string>(initialClassroomId);
-  const [term, setTerm] = useState<string>(initialTerm || "1st Term");
+  const [term, setTerm] = useState<string>(normalizeTerm(initialTerm || "1st Term"));
   const [academicYear, setAcademicYear] = useState<string>(initialAcademicYear || "2025/2026");
 
   const [approvedNotes, setApprovedNotes] = useState<ApprovedNote[]>([]);
@@ -431,7 +473,11 @@ const visibleClassrooms = useMemo(() => {
   return buildSingleStreamClassrooms(subjectScopedClassrooms, classroomId || null);
 }, [canToggleMultiStream, showMultiStream, subjectScopedClassrooms, classroomId]);
 
-  const assessmentHref = useMemo(() => {
+useEffect(() => {
+  setShowMultiStream(false);
+}, [selectedSubjectScope]);
+
+const assessmentHref = useMemo(() => {
     if (!classroomId) return "/teacher/assessment";
     const params = new URLSearchParams({ classroomId, term, academicYear });
     return `/teacher/assessment?${params.toString()}`;
@@ -482,7 +528,7 @@ const lessonNotesHref = useMemo(() => {
         if (!initialClassroomId) {
           setClassroomId(json.defaultClassroomId || nextClassrooms[0]?.id || "");
         }
-        if (!initialTerm) setTerm(json.term || "1st Term");
+        if (!initialTerm) setTerm(normalizeTerm(json.term || "1st Term"));
         if (!initialAcademicYear) setAcademicYear(json.academicYear || "2025/2026");
       } catch {
         setCtxError("Failed to load delivery context.");
@@ -626,10 +672,12 @@ const lessonNotesHref = useMemo(() => {
         return;
       }
 
-      const params = new URLSearchParams({ classroomId, term, academicYear });
-      const refetch = await fetch(`/api/teacher/lesson-deliveries/list?${params.toString()}`, {
-        cache: "no-store",
-      });
+const params = new URLSearchParams({ classroomId, term, academicYear });
+if (selectedSubjectScope) params.set("subject", selectedSubjectScope);
+
+const refetch = await fetch(`/api/teacher/lesson-deliveries/list?${params.toString()}`, {
+  cache: "no-store",
+});
       const refetchRaw = await refetch.json().catch(() => null);
       const refetchJson = safeJson<LessonDeliveryListResponse>(refetchRaw);
 
@@ -756,12 +804,18 @@ const lessonNotesHref = useMemo(() => {
 
                 <div className="space-y-1">
                   <label className="block text-[11px] font-medium text-slate-700">Term</label>
-<input
+<select
   className={readableFieldClass}
   style={readableFieldStyle}
   value={term}
-  onChange={(e) => setTerm(e.target.value)}
-/>
+  onChange={(e) => setTerm(normalizeTerm(e.target.value))}
+>
+  {TERM_OPTIONS.map((t) => (
+    <option key={t} value={t} className={readableOptionClass}>
+      {t}
+    </option>
+  ))}
+</select>
                 </div>
 
                 <div className="space-y-1">
