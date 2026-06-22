@@ -35,6 +35,7 @@ export async function GET(req: Request) {
   const classroomId = (searchParams.get("classroomId") ?? "").trim();
   const term = (searchParams.get("term") ?? "").trim() || null;
   const academicYear = (searchParams.get("academicYear") ?? "").trim() || null;
+  const subject = (searchParams.get("subject") ?? "").trim() || null;
 
   if (!classroomId) return noStore(400, { ok: false, error: "MISSING_CLASSROOM_ID" });
 
@@ -43,6 +44,7 @@ export async function GET(req: Request) {
     userId: ctx.userId,
     roleName: ctx.roleName,
     classroomId,
+    subject,
   });
 
   if (!access.ok) {
@@ -55,6 +57,7 @@ export async function GET(req: Request) {
     classroomId,
     ...(term ? { term } : {}),
     ...(academicYear ? { academicYear } : {}),
+    ...(subject ? { subject: { equals: subject, mode: "insensitive" as const } } : {}),
     ...buildSubjectWhere({ roleName: ctx.roleName, allowedSubjects: access.allowedSubjects }),
   };
 

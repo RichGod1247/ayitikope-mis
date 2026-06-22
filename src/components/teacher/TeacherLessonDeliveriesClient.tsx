@@ -10,6 +10,8 @@ type ClassroomPick = {
   name: string;
   grade?: string | null;
   arm?: string | null;
+  allowedSubjects?: string[] | null;
+  scopeSource?: string | null;
 };
 
 type TeacherPhaseCode = "KG" | "PRIMARY" | "JHS" | null;
@@ -96,8 +98,199 @@ type LessonDeliveryListResponse = LessonDeliveryListOk | LessonDeliveryListErr;
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
+const readableFieldStyle = {
+  color: "#0f172a",
+  WebkitTextFillColor: "#0f172a",
+  opacity: 1,
+} as React.CSSProperties;
+
+const readableFieldClass =
+  "w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-white disabled:text-slate-900 disabled:opacity-100";
+
+const readableReadonlyFieldClass =
+  "w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-900 shadow-sm outline-none read-only:bg-white read-only:text-slate-900";
+
+const readableTextareaClass =
+  "w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-900 shadow-sm outline-none placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-white disabled:text-slate-900 disabled:opacity-100";
+
+const readableOptionClass = "bg-white text-slate-900";
+
 function cleanStr(v: unknown) {
   return String(v ?? "").trim();
+}
+
+function subjectKey(v: unknown) {
+  return cleanStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function sameSubject(a: unknown, b: unknown) {
+  return subjectKey(a) === subjectKey(b);
+}
+
+function classAllowsSubject(c: ClassroomPick, subject: string) {
+  const s = cleanStr(subject);
+  if (!s) return true;
+
+  if (!Array.isArray(c.allowedSubjects)) return true;
+  if (c.allowedSubjects.length === 0) return false;
+
+  return c.allowedSubjects.some((x) => sameSubject(x, s));
+}
+
+function classSubjectOptions(list: ClassroomPick[]) {
+  const seen = new Map<string, string>();
+
+  for (const c of list) {
+    if (!Array.isArray(c.allowedSubjects)) continue;
+
+    for (const subject of c.allowedSubjects) {
+      const label = cleanStr(subject);
+      if (!label) continue;
+      const key = subjectKey(label);
+      if (!seen.has(key)) seen.set(key, label);
+    }
+  }
+
+  return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeLevelToken(raw: unknown): string | null {
+  const s = cleanStr(raw).toUpperCase().replace(/\s+/g, " ");
+  if (!s) return null;
+
+  let m =
+    s.match(/^KG\s*([12])$/) ||
+    s.match(/^KG([12])$/) ||
+    s.match(/^K\.?G\.?\s*([12])$/);
+  if (m) return `KG${m[1]}`;
+
+  m =
+    s.match(/^JHS\s*([1-3])$/) ||
+    s.match(/^JHS([1-3])$/) ||
+    s.match(/^J\.?H\.?S\.?\s*([1-3])$/);
+  if (m) return `JHS${m[1]}`;
+
+  m =
+    s.match(/^BASIC\s*([7-9])$/) ||
+    s.match(/^BASIC([7-9])$/) ||
+    s.match(/^B\s*([7-9])$/) ||
+    s.match(/^B([7-9])$/) ||
+    s.match(/^BS\s*([7-9])$/) ||
+    s.match(/^BS([7-9])$/);
+  if (m) {
+    const n = Number(m[1]);
+    return `JHS${n - 6}`;
+  }
+
+  m =
+    s.match(/^BASIC\s*([1-6])$/) ||
+    s.match(/^BASIC([1-6])$/) ||
+    s.match(/^B\s*([1-6])$/) ||
+    s.match(/^B([1-6])$/) ||
+    s.match(/^PRIMARY\s*([1-6])$/) ||
+    s.match(/^PRIMARY([1-6])$/) ||
+    s.match(/^P\s*([1-6])$/) ||
+    s.match(/^P([1-6])$/);
+  if (m) return `B${m[1]}`;
+
+  return null;
+}
+
+function levelTokenLabel(token: string | null): string {
+  if (!token) return "";
+  if (/^KG[12]$/.test(token)) return `KG ${token.slice(2)}`;
+  if (/^B[1-6]$/.test(token)) return `Basic ${token.slice(1)}`;
+  if (/^JHS[1-3]$/.test(token)) return `JHS ${token.slice(3)}`;
+  return token;
+}
+
+function levelTokenOrder(token: string | null): number {
+  if (!token) return 999;
+  if (/^KG[12]$/.test(token)) return Number(token.slice(2));
+  if (/^B[1-6]$/.test(token)) return 10 + Number(token.slice(1));
+  if (/^JHS[1-3]$/.test(token)) return 20 + Number(token.slice(3));
+  return 999;
+}
+
+function getLevelTokenForClassroom(c: ClassroomPick): string | null {
+  return normalizeLevelToken(c.grade) ?? normalizeLevelToken(c.name);
+}
+
+function singleStreamLabel(c: ClassroomPick) {
+  const token = getLevelTokenForClassroom(c);
+  return levelTokenLabel(token) || fullClassroomLabel(c);
+}
+
+function hasDuplicateLevelTokens(list: ClassroomPick[]) {
+  const seen = new Set<string>();
+
+  for (const c of list) {
+    const token = getLevelTokenForClassroom(c);
+    if (!token) continue;
+    if (seen.has(token)) return true;
+    seen.add(token);
+  }
+
+  return false;
+}
+
+function pickSingleStreamRepresentative(
+  group: ClassroomPick[],
+  preferredClassroomId: string | null
+): ClassroomPick | null {
+  if (!group.length) return null;
+
+  const noArm = group.find((c) => cleanStr(c.arm) === "");
+  if (noArm) return noArm;
+
+  if (preferredClassroomId) {
+    const preferred = group.find((c) => c.id === preferredClassroomId);
+    if (preferred) return preferred;
+  }
+
+  return [...group].sort((a, b) => {
+    const armCmp = cleanStr(a.arm).localeCompare(cleanStr(b.arm));
+    if (armCmp !== 0) return armCmp;
+    return fullClassroomLabel(a).localeCompare(fullClassroomLabel(b));
+  })[0];
+}
+
+function buildSingleStreamClassrooms(
+  list: ClassroomPick[],
+  preferredClassroomId: string | null
+): ClassroomPick[] {
+  const grouped = new Map<string, ClassroomPick[]>();
+  const others: ClassroomPick[] = [];
+
+  for (const c of list) {
+    const token = getLevelTokenForClassroom(c);
+
+    if (!token) {
+      others.push(c);
+      continue;
+    }
+
+    const arr = grouped.get(token) ?? [];
+    arr.push(c);
+    grouped.set(token, arr);
+  }
+
+  const picked: ClassroomPick[] = [];
+
+  for (const token of Array.from(grouped.keys()).sort((a, b) => {
+    const diff = levelTokenOrder(a) - levelTokenOrder(b);
+    if (diff !== 0) return diff;
+    return a.localeCompare(b);
+  })) {
+    const representative = pickSingleStreamRepresentative(
+      grouped.get(token) ?? [],
+      preferredClassroomId
+    );
+
+    if (representative) picked.push(representative);
+  }
+
+  return [...picked, ...others];
 }
 
 function safeJson<T>(raw: unknown): T | null {
@@ -186,6 +379,9 @@ export default function TeacherLessonDeliveriesClient() {
   const [ctxError, setCtxError] = useState<string | null>(null);
 
   const [classrooms, setClassrooms] = useState<ClassroomPick[]>([]);
+  const [teacherPhase, setTeacherPhase] = useState<TeacherPhaseCode>(null);
+  const [selectedSubjectScope, setSelectedSubjectScope] = useState<string>("");
+  const [showMultiStream, setShowMultiStream] = useState(false);
   const [classroomId, setClassroomId] = useState<string>(initialClassroomId);
   const [term, setTerm] = useState<string>(initialTerm || "1st Term");
   const [academicYear, setAcademicYear] = useState<string>(initialAcademicYear || "2025/2026");
@@ -210,11 +406,42 @@ export default function TeacherLessonDeliveriesClient() {
     [approvedNotes, selectedNoteId]
   );
 
+  const assignmentSubjectOptions = useMemo(
+    () => classSubjectOptions(classrooms),
+    [classrooms]
+  );
+
+  const showAssignmentSubjectFilter =
+    teacherPhase === "JHS" && assignmentSubjectOptions.length > 0;
+
+const subjectScopedClassrooms = useMemo(() => {
+  if (!selectedSubjectScope) return classrooms;
+  return classrooms.filter((c) => classAllowsSubject(c, selectedSubjectScope));
+}, [classrooms, selectedSubjectScope]);
+
+const canToggleMultiStream = useMemo(
+  () => hasDuplicateLevelTokens(subjectScopedClassrooms),
+  [subjectScopedClassrooms]
+);
+
+const visibleClassrooms = useMemo(() => {
+  if (!canToggleMultiStream) return subjectScopedClassrooms;
+  if (showMultiStream) return subjectScopedClassrooms;
+
+  return buildSingleStreamClassrooms(subjectScopedClassrooms, classroomId || null);
+}, [canToggleMultiStream, showMultiStream, subjectScopedClassrooms, classroomId]);
+
   const assessmentHref = useMemo(() => {
     if (!classroomId) return "/teacher/assessment";
     const params = new URLSearchParams({ classroomId, term, academicYear });
     return `/teacher/assessment?${params.toString()}`;
   }, [classroomId, term, academicYear]);
+
+const lessonNotesHref = useMemo(() => {
+  if (!classroomId) return "/teacher/lesson-notes";
+  const params = new URLSearchParams({ classroomId, term, academicYear });
+  return `/teacher/lesson-notes?${params.toString()}`;
+}, [classroomId, term, academicYear]);
 
   useEffect(() => {
     const boot = async () => {
@@ -239,7 +466,18 @@ export default function TeacherLessonDeliveriesClient() {
         }
 
         const nextClassrooms = Array.isArray(json.classrooms) ? json.classrooms : [];
+        const nextSubjectOptions = classSubjectOptions(nextClassrooms);
+
         setClassrooms(nextClassrooms);
+        setTeacherPhase(json.teacherPhase ?? null);
+
+        setSelectedSubjectScope((prev) => {
+          if (prev && nextSubjectOptions.some((s) => sameSubject(s, prev))) {
+            return nextSubjectOptions.find((s) => sameSubject(s, prev)) || prev;
+          }
+
+          return nextSubjectOptions[0] || "";
+        });
 
         if (!initialClassroomId) {
           setClassroomId(json.defaultClassroomId || nextClassrooms[0]?.id || "");
@@ -257,6 +495,17 @@ export default function TeacherLessonDeliveriesClient() {
   }, [initialAcademicYear, initialClassroomId, initialTerm]);
 
   useEffect(() => {
+    if (visibleClassrooms.length === 0) {
+      if (classroomId) setClassroomId("");
+      return;
+    }
+
+    if (visibleClassrooms.some((c) => c.id === classroomId)) return;
+
+    setClassroomId(visibleClassrooms[0]?.id ?? "");
+  }, [visibleClassrooms, classroomId]);
+
+  useEffect(() => {
     const loadApprovedNotes = async () => {
       if (!classroomId || !term || !academicYear) {
         setApprovedNotes([]);
@@ -268,6 +517,7 @@ export default function TeacherLessonDeliveriesClient() {
         setApprovedNotesError(null);
 
         const params = new URLSearchParams({ classroomId, term, academicYear });
+        if (selectedSubjectScope) params.set("subject", selectedSubjectScope);
         const res = await fetch(
           `/api/teacher/lesson-deliveries/approved-notes/list?${params.toString()}`,
           { cache: "no-store" }
@@ -297,7 +547,7 @@ export default function TeacherLessonDeliveriesClient() {
     };
 
     loadApprovedNotes();
-  }, [classroomId, term, academicYear]);
+  }, [classroomId, term, academicYear, selectedSubjectScope]);
 
   useEffect(() => {
     const loadDeliveries = async () => {
@@ -311,6 +561,8 @@ export default function TeacherLessonDeliveriesClient() {
         setDeliveriesError(null);
 
         const params = new URLSearchParams({ classroomId, term, academicYear });
+        if (selectedSubjectScope) params.set("subject", selectedSubjectScope);
+
         const res = await fetch(`/api/teacher/lesson-deliveries/list?${params.toString()}`, {
           cache: "no-store",
         });
@@ -333,7 +585,7 @@ export default function TeacherLessonDeliveriesClient() {
     };
 
     loadDeliveries();
-  }, [classroomId, term, academicYear]);
+    }, [classroomId, term, academicYear, selectedSubjectScope]);
 
   async function handleCreateDelivery(e: React.FormEvent) {
     e.preventDefault();
@@ -440,58 +692,108 @@ export default function TeacherLessonDeliveriesClient() {
 
             <form onSubmit={handleCreateDelivery} className="space-y-3 text-xs">
               <div className="grid gap-3 sm:grid-cols-2">
+                {showAssignmentSubjectFilter ? (
+  <div className="space-y-1 sm:col-span-2">
+    <label className="block text-[11px] font-medium text-slate-700">
+      Subject assignment
+    </label>
+    <select
+      className={readableFieldClass}
+      style={readableFieldStyle}
+      value={selectedSubjectScope}
+      onChange={(e) => setSelectedSubjectScope(e.target.value)}
+    >
+      {assignmentSubjectOptions.map((s) => (
+        <option key={s} value={s} className={readableOptionClass}>
+          {s}
+        </option>
+      ))}
+    </select>
+    <p className="text-[10px] text-slate-500">
+      Class options below are filtered by the selected subject assignment.
+    </p>
+  </div>
+) : null}
                 <div className="space-y-1 sm:col-span-2">
                   <label className="block text-[11px] font-medium text-slate-700">Class</label>
-                  <select
-                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-                    value={classroomId}
-                    onChange={(e) => setClassroomId(e.target.value)}
-                  >
-                    {classrooms.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {fullClassroomLabel(c)}
-                      </option>
-                    ))}
-                  </select>
+<select
+  className={readableFieldClass}
+  style={readableFieldStyle}
+  value={classroomId}
+  onChange={(e) => setClassroomId(e.target.value)}
+>
+  {visibleClassrooms.length === 0 ? (
+    <option value="" className={readableOptionClass}>
+      No assigned classes for selected subject
+    </option>
+  ) : null}
+
+{visibleClassrooms.map((c) => (
+  <option key={c.id} value={c.id} className={readableOptionClass}>
+    {canToggleMultiStream && !showMultiStream
+      ? singleStreamLabel(c)
+      : fullClassroomLabel(c)}
+  </option>
+))}
+</select>
+{canToggleMultiStream ? (
+  <label className="mt-1 inline-flex items-center gap-2 text-[11px] text-slate-600">
+    <input
+      type="checkbox"
+      checked={showMultiStream}
+      onChange={(e) => setShowMultiStream(e.target.checked)}
+    />
+    Show multi-stream classes
+  </label>
+) : null}
+
+{canToggleMultiStream && !showMultiStream ? (
+  <p className="text-[10px] text-slate-500">
+    Showing single-stream view. Turn on multi-stream only when you need A/B/C/D.
+  </p>
+) : null}
                 </div>
 
                 <div className="space-y-1">
                   <label className="block text-[11px] font-medium text-slate-700">Term</label>
-                  <input
-                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-                    value={term}
-                    onChange={(e) => setTerm(e.target.value)}
-                  />
+<input
+  className={readableFieldClass}
+  style={readableFieldStyle}
+  value={term}
+  onChange={(e) => setTerm(e.target.value)}
+/>
                 </div>
 
                 <div className="space-y-1">
                   <label className="block text-[11px] font-medium text-slate-700">Academic year</label>
-                  <input
-                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-                    value={academicYear}
-                    onChange={(e) => setAcademicYear(e.target.value)}
-                  />
+<input
+  className={readableFieldClass}
+  style={readableFieldStyle}
+  value={academicYear}
+  onChange={(e) => setAcademicYear(e.target.value)}
+/>
                 </div>
 
                 <div className="space-y-1 sm:col-span-2">
                   <label className="block text-[11px] font-medium text-slate-700">
                     Approved lesson note
                   </label>
-                  <select
-                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-                    value={selectedNoteId}
-                    onChange={(e) => setSelectedNoteId(e.target.value)}
-                    disabled={approvedNotesLoading || approvedNotes.length === 0}
-                  >
+<select
+  className={readableFieldClass}
+  style={readableFieldStyle}
+  value={selectedNoteId}
+  onChange={(e) => setSelectedNoteId(e.target.value)}
+  disabled={approvedNotesLoading || approvedNotes.length === 0}
+>
                     {approvedNotes.length === 0 ? (
-                      <option value="">
-                        {approvedNotesLoading ? "Loading approved notes..." : "No approved notes found"}
-                      </option>
+<option value="" className={readableOptionClass}>
+  {approvedNotesLoading ? "Loading approved notes..." : "No approved notes found"}
+</option>
                     ) : (
                       approvedNotes.map((n) => (
-                        <option key={n.id} value={n.id}>
-                          {noteLabel(n)}
-                        </option>
+<option key={n.id} value={n.id} className={readableOptionClass}>
+  {noteLabel(n)}
+</option>
                       ))
                     )}
                   </select>
@@ -499,37 +801,51 @@ export default function TeacherLessonDeliveriesClient() {
                   {approvedNotesError ? (
                     <p className="text-[10px] text-amber-700">{approvedNotesError}</p>
                   ) : null}
+                  {!approvedNotesLoading && !approvedNotesError && approvedNotes.length === 0 ? (
+  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+    No approved lesson notes are available for this class, term, and academic year.
+    Lesson delivery can only be recorded from an approved lesson note.
+    <div className="mt-2">
+      <Link href={lessonNotesHref} className="font-semibold underline">
+        Create or submit a lesson note for approval
+      </Link>
+    </div>
+  </div>
+) : null}
                 </div>
 
                 <div className="space-y-1">
                   <label className="block text-[11px] font-medium text-slate-700">Date taught</label>
-                  <input
-                    type="date"
-                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-                    value={dateTaught}
-                    onChange={(e) => setDateTaught(e.target.value)}
-                  />
+<input
+  type="date"
+  className={readableFieldClass}
+  style={readableFieldStyle}
+  value={dateTaught}
+  onChange={(e) => setDateTaught(e.target.value)}
+/>
                 </div>
 
                 <div className="space-y-1">
                   <label className="block text-[11px] font-medium text-slate-700">Subject</label>
-                  <input
-                    readOnly
-                    className="w-full rounded border border-slate-300 bg-slate-50 px-2 py-1 text-xs"
-                    value={selectedNote?.subject || ""}
-                  />
+<input
+  readOnly
+  className={readableReadonlyFieldClass}
+  style={readableFieldStyle}
+  value={selectedNote?.subject || ""}
+/>
                 </div>
 
                 <div className="space-y-1 sm:col-span-2">
                   <label className="block text-[11px] font-medium text-slate-700">
                     Delivery notes (optional)
                   </label>
-                  <textarea
-                    rows={3}
-                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
+<textarea
+  rows={3}
+  className={readableTextareaClass}
+  style={readableFieldStyle}
+  value={notes}
+  onChange={(e) => setNotes(e.target.value)}
+/>
                 </div>
               </div>
 
@@ -548,7 +864,11 @@ export default function TeacherLessonDeliveriesClient() {
                   disabled={saveState === "saving" || !selectedNoteId}
                   className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
                 >
-                  {saveState === "saving" ? "Recording..." : "Record lesson delivery"}
+                  {saveState === "saving"
+  ? "Recording..."
+  : !selectedNoteId
+    ? "Select approved note first"
+    : "Record lesson delivery"}
                 </button>
 
                 {saveState === "error" ? (
@@ -614,6 +934,20 @@ export default function TeacherLessonDeliveriesClient() {
                           <td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-900">
                             <div className="font-medium">{deliveryLabel(d)}</div>
                             <div className="text-[11px] text-slate-500">{d.id}</div>
+                            <Link
+  href={`/teacher/assessment?${new URLSearchParams({
+    classroomId: d.classroomId,
+    term: d.term,
+    academicYear: d.academicYear,
+    subject: d.subject,
+    lessonDeliveryId: d.id,
+    ...(d.curriculumUnitId ? { curriculumUnitId: d.curriculumUnitId } : {}),
+    ...(d.lessonNoteId ? { lessonNoteId: d.lessonNoteId } : {}),
+  }).toString()}`}
+  className="mt-1 inline-flex rounded-full border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 hover:bg-indigo-100"
+>
+  Create assessment from this lesson
+</Link>
                           </td>
 <td className="border-b border-slate-100 px-3 py-1.5 align-top text-slate-700">
   {d.lessonNoteId || "—"}

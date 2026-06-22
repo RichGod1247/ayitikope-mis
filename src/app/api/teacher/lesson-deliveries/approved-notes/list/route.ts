@@ -34,6 +34,7 @@ export async function GET(req: Request) {
   const classroomId = (searchParams.get("classroomId") || "").trim();
   const term = (searchParams.get("term") || "").trim();
   const academicYear = (searchParams.get("academicYear") || "").trim();
+  const subject = (searchParams.get("subject") || "").trim();
 
   if (!classroomId || !term || !academicYear) {
     return noStore(400, {
@@ -47,6 +48,7 @@ export async function GET(req: Request) {
     userId: ctx.userId,
     roleName: ctx.roleName,
     classroomId,
+    subject: subject || null,
   });
 
   if (!access.ok) {
@@ -62,6 +64,7 @@ export async function GET(req: Request) {
     term,
     academicYear,
     status: "APPROVED",
+    ...(subject ? { subject: { equals: subject, mode: "insensitive" as const } } : {}),
   };
 
   if (!isAdminLikeRole(ctx.roleName)) {

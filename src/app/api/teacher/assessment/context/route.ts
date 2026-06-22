@@ -2,7 +2,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
-import { listUserAccessibleClassrooms } from "@/lib/teacherAccess";
+import {
+  listUserAccessibleClassrooms,
+  resolveUserClassroomAccess,
+} from "@/lib/teacherAccess";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,6 +25,48 @@ function jsonNoStore(status: number, payload: any) {
 function isAdminLike(role: string | null) {
   const r = String(role || "").toUpperCase();
   return r === "ADMIN" || r === "SCHOOL_ADMIN" || r === "HEADTEACHER" || r === "SUPERADMIN";
+}
+
+async function attachClassroomSubjectScopes(args: {
+  tenantId: string;
+  userId: string;
+  roleName: string | null;
+  classrooms: Array<{ id: string; name: string; grade: string | null; arm: string | null }>;
+}) {
+  if (isAdminLike(args.roleName)) {
+    return args.classrooms.map((c) => ({
+      ...c,
+      allowedSubjects: null,
+      scopeSource: "ADMIN",
+    }));
+  }
+
+  const scoped = await Promise.all(
+    args.classrooms.map(async (c) => {
+      const access = await resolveUserClassroomAccess({
+        tenantId: args.tenantId,
+        userId: args.userId,
+        roleName: args.roleName,
+        classroomId: c.id,
+      });
+
+      if (!access.ok) {
+        return {
+          ...c,
+          allowedSubjects: [],
+          scopeSource: access.reason,
+        };
+      }
+
+      return {
+        ...c,
+        allowedSubjects: access.allowedSubjects,
+        scopeSource: access.scopeSource,
+      };
+    })
+  );
+
+  return scoped.filter((c) => c.allowedSubjects === null || c.allowedSubjects.length > 0);
 }
 
 export async function GET(req: Request) {
@@ -47,7 +92,14 @@ export async function GET(req: Request) {
     roleName: ctx.roleName,
   });
 
-  let defaultClassroomId: string | null = classrooms[0]?.id ?? null;
+  const scopedClassrooms = await attachClassroomSubjectScopes({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    roleName: ctx.roleName,
+    classrooms,
+  });
+
+  let defaultClassroomId: string | null = scopedClassrooms[0]?.id ?? null;
   let teacherPhase: TeacherPhaseCode = null;
 
   const tp = await prisma.teacherProfile.findUnique({
@@ -67,8 +119,8 @@ export async function GET(req: Request) {
     teacherPhase = tp.phase;
   }
 
-  if (classrooms.length > 0 && tp?.primaryClassroomId) {
-    if (classrooms.some((c) => c.id === tp.primaryClassroomId)) {
+  if (scopedClassrooms.length > 0 && tp?.primaryClassroomId) {
+    if (scopedClassrooms.some((c) => c.id === tp.primaryClassroomId)) {
       defaultClassroomId = tp.primaryClassroomId;
     }
   }
@@ -101,6 +153,6 @@ export async function GET(req: Request) {
     academicYear,
     teacherPhase,
     defaultClassroomId,
-    classrooms,
+    classrooms: scopedClassrooms,
   });
 }
