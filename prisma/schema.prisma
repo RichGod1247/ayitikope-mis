@@ -56,6 +56,7 @@ model User {
   assessmentItemsCreated              AssessmentItem[]              @relation("AssessmentItemCreatedBy")
   assessmentItemsPublished            AssessmentItem[]              @relation("AssessmentItemPublishedBy")
   assessmentItemsLocked               AssessmentItem[]              @relation("AssessmentItemLockedBy")
+  mockExamSessionsCreated             MockExamSession[]             @relation("MockExamSessionCreatedBy")
   /// ✅ Assessment Sprint A — policy, broadsheet assignment, release governance
   assessmentPoliciesCreated           AssessmentPolicy[]            @relation("AssessmentPolicyCreatedBy")
   teacherAssessmentAssignments        TeacherAssessmentAssignment[] @relation("TeacherAssessmentAssignmentTeacher")
@@ -151,6 +152,7 @@ model Tenant {
   announcements                Announcement[]                @relation("TenantAnnouncements")
   Assessment                   Assessment[]
   assessmentItems              AssessmentItem[]
+  mockExamSessions             MockExamSession[]
   /// ✅ Assessment Sprint A — policy + broadsheet assignment spine
   assessmentPolicies           AssessmentPolicy[]
   teacherAssessmentAssignments TeacherAssessmentAssignment[]
@@ -610,6 +612,7 @@ model Classroom {
 
   Assessment                   Assessment[]
   assessmentItems              AssessmentItem[]
+  mockExamSessions             MockExamSession[]
   AttendanceSession            AttendanceSession[]
   attendanceScanEvents         AttendanceScanEvent[]
   lessonNotes                  LessonNote[]
@@ -2059,6 +2062,11 @@ model AssessmentItem {
   /// ✅ Sprint 2A.3 lesson-delivered linkage
   lessonDeliveryId String?
 
+  /// ✅ A14.5A — Mock grouping spine.
+  /// Normal assessments keep this null.
+  /// Mock assessment items must be grouped under one MockExamSession.
+  mockExamSessionId String?
+
   createdAt        DateTime @default(now()) @db.Timestamptz(6)
   updatedAt        DateTime @default(now()) @updatedAt @db.Timestamptz(6)
   createdByUserId  String?
@@ -2070,6 +2078,7 @@ model AssessmentItem {
   lockedByUser     User?                      @relation("AssessmentItemLockedBy", fields: [lockedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   curriculumUnit   CurriculumUnit?            @relation(fields: [curriculumUnitId], references: [id], map: "AssessmentItem_curriculumUnitId_fkey")
   lessonDelivery   LessonDelivery?            @relation(fields: [lessonDeliveryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  mockExamSession  MockExamSession?           @relation(fields: [mockExamSessionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   tenant           Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   assessmentPolicy AssessmentPolicy?          @relation(fields: [assessmentPolicyId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   policyComponent  AssessmentPolicyComponent? @relation(fields: [policyComponentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -2080,12 +2089,60 @@ model AssessmentItem {
   @@index([lockedByUserId], map: "AssessmentItem_lockedByUserId_idx")
   @@index([curriculumUnitId])
   @@index([lessonDeliveryId], map: "AssessmentItem_lessonDeliveryId_idx")
+  @@index([mockExamSessionId], map: "AssessmentItem_mockExamSessionId_idx")
   @@index([assessmentPolicyId], map: "AssessmentItem_policy_idx")
   @@index([policyComponentId], map: "AssessmentItem_policyComponent_idx")
   @@index([tenantId, curriculumUnitId], map: "AssessmentItem_tenant_curriculumUnitId_idx")
   @@index([tenantId, classroomId, term, academicYear], map: "AssessmentItem_filters_idx")
   @@index([tenantId, classroomId, term, academicYear, status], map: "AssessmentItem_filters_status_idx")
   @@index([tenantId, classroomId, subject, term, academicYear, componentCode], map: "AssessmentItem_broadsheet_component_idx")
+  @@index([tenantId, classroomId, academicYear, type, mockExamSessionId], map: "AssessmentItem_mock_idx")
+}
+
+model MockExamSession {
+  id String @id @default(cuid())
+
+  tenantId    String
+  classroomId String
+
+  /// Resets every academic year.
+  academicYear String
+
+  /// Optional because some schools write mock outside ordinary term structures.
+  term String?
+
+  /// 1st Mock, 2nd Mock, 3rd Mock...
+  mockNumber Int
+
+  /// Human label displayed in UI.
+  mockLabel String @db.VarChar(80)
+
+  /// Example: "2025/2026 BECE Mock 1"
+  title String @db.VarChar(180)
+
+  /// OPEN | CLOSED | LOCKED
+  status String @default("OPEN") @db.VarChar(40)
+
+  date DateTime? @db.Timestamptz(6)
+
+  createdByUserId String?
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdBy User?     @relation("MockExamSessionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  items AssessmentItem[]
+
+  @@unique([tenantId, classroomId, academicYear, mockNumber], map: "MockExamSession_unique")
+  @@index([tenantId, classroomId, academicYear], map: "MockExamSession_tenant_class_year_idx")
+  @@index([tenantId, academicYear, mockNumber], map: "MockExamSession_tenant_year_number_idx")
+  @@index([tenantId, status], map: "MockExamSession_tenant_status_idx")
+  @@index([createdByUserId], map: "MockExamSession_createdBy_idx")
 }
 
 model LessonDelivery {

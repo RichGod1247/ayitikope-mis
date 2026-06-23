@@ -146,6 +146,12 @@ export async function GET(req: NextRequest) {
         classroomId,
         term,
         academicYear,
+
+        // A14.5A:
+        // Normal 30/70 broadsheet must never mix BECE Mock evidence.
+        // Mock will have its own dedicated broadsheet/analyzer.
+        type: { not: "MOCK" },
+
         ...subjectWhere,
       },
       select: {

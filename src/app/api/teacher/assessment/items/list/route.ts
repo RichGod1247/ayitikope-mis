@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
   const term = cleanStr(searchParams.get("term")) || null;
   const academicYear = cleanStr(searchParams.get("academicYear")) || null;
   const subject = cleanStr(searchParams.get("subject")) || null;
+  const type = cleanStr(searchParams.get("type")) || null;
+  const includeMock = cleanStr(searchParams.get("includeMock")).toLowerCase() === "true";
 
   if (!classroomId) return noStore(400, { ok: false, error: "classroomId is required." });
 
@@ -67,6 +69,14 @@ export async function GET(req: NextRequest) {
   if (term) where.term = term;
   if (academicYear) where.academicYear = academicYear;
 
+  // Normal assessment list must not accidentally mix BECE Mock into 30/70 evidence.
+  // Dedicated mock routes will request type=MOCK or includeMock=true.
+  if (type) {
+    where.type = { equals: type, mode: "insensitive" as const };
+  } else if (!includeMock) {
+    where.type = { not: "MOCK" };
+  }
+
   // Subject filter:
   // - Admin-like can query any subject in class
   // - Teachers are restricted by resolveUserClassroomAccess; if subject is out of scope, access fails above
@@ -81,7 +91,21 @@ export async function GET(req: NextRequest) {
   const items = await prisma.assessmentItem.findMany({
     where,
     orderBy: [{ date: "asc" }, { createdAt: "asc" }],
-    include: { scores: { select: { id: true, studentId: true, score: true } } },
+    include: {
+      scores: { select: { id: true, studentId: true, score: true } },
+      mockExamSession: {
+        select: {
+          id: true,
+          academicYear: true,
+          term: true,
+          mockNumber: true,
+          mockLabel: true,
+          title: true,
+          status: true,
+          date: true,
+        },
+      },
+    },
   });
 
   const mapped = items.map((item) => {
@@ -105,17 +129,21 @@ export async function GET(req: NextRequest) {
       status: item.status,
       publishedAt: item.publishedAt,
       lockedAt: item.lockedAt,
-lessonDeliveryId: (item as any).lessonDeliveryId ?? null,
-curriculumUnitId: (item as any).curriculumUnitId ?? null,
 
-assessmentPolicyId: item.assessmentPolicyId ?? null,
-policyComponentId: item.policyComponentId ?? null,
-componentCode: item.componentCode ?? null,
-templateKey: item.templateKey ?? null,
-sortOrder: item.sortOrder ?? 0,
-isRequired: item.isRequired ?? true,
+      lessonDeliveryId: item.lessonDeliveryId ?? null,
+      curriculumUnitId: item.curriculumUnitId ?? null,
 
-scoresCount: scores.length,
+      mockExamSessionId: item.mockExamSessionId ?? null,
+      mockExamSession: item.mockExamSession ?? null,
+
+      assessmentPolicyId: item.assessmentPolicyId ?? null,
+      policyComponentId: item.policyComponentId ?? null,
+      componentCode: item.componentCode ?? null,
+      templateKey: item.templateKey ?? null,
+      sortOrder: item.sortOrder ?? 0,
+      isRequired: item.isRequired ?? true,
+
+      scoresCount: scores.length,
       averageScore,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
@@ -124,7 +152,15 @@ scoresCount: scores.length,
 
   return noStore(200, {
     ok: true,
-    filters: { tenantId: ctx.tenantId, classroomId, term, academicYear, subject },
+    filters: {
+      tenantId: ctx.tenantId,
+      classroomId,
+      term,
+      academicYear,
+      subject,
+      type,
+      includeMock,
+    },
     count: mapped.length,
     items: mapped,
   });

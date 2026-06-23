@@ -30,6 +30,10 @@ function noStore(status: number, payload: any) {
   });
 }
 
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
 function isForbiddenReason(reason: string) {
   return reason === "OUT_OF_SCOPE" || reason === "SUBJECT_OUT_OF_SCOPE";
 }
@@ -68,10 +72,12 @@ export async function POST(req: Request) {
         subject: true,
         term: true,
         academicYear: true,
+        type: true,
         maxScore: true,
         status: true,
         publishedAt: true,
         lockedAt: true,
+        mockExamSessionId: true,
       },
     });
 
@@ -96,9 +102,27 @@ export async function POST(req: Request) {
 
     assertAssessmentScoresWritable(item);
 
+    const itemType = cleanStr(item.type).toUpperCase();
+
+    if (itemType === "MOCK" && !item.mockExamSessionId) {
+      return noStore(409, {
+        ok: false,
+        error: "MOCK_SESSION_REQUIRED",
+        message: "Mock scores must belong to a valid mock exam session.",
+      });
+    }
+
     const maxScore = Number(item.maxScore ?? 0);
     if (!Number.isFinite(maxScore) || maxScore <= 0) {
       return noStore(400, { ok: false, error: "INVALID_ITEM_MAX_SCORE" });
+    }
+
+    if (itemType === "MOCK" && maxScore !== 100) {
+      return noStore(400, {
+        ok: false,
+        error: "MOCK_MAX_SCORE_MUST_BE_100",
+        maxScore,
+      });
     }
 
     const trimmedScores = data.scores.map((s) => ({
@@ -196,9 +220,6 @@ export async function POST(req: Request) {
       })
     );
 
-    // Bank-grade fix:
-    // Keep score writes atomic, but avoid a slow interactive transaction.
-    // The old tx loop mixed upserts + audit writes and hit Prisma P2028.
     const results = await prisma.$transaction(scoreWriteOps);
 
     const auditRows: any[] = [];
@@ -229,6 +250,8 @@ export async function POST(req: Request) {
           subject: item.subject,
           term: item.term,
           academicYear: item.academicYear,
+          type: item.type,
+          mockExamSessionId: item.mockExamSessionId ?? null,
           studentId: submitted.studentId,
           maxScore,
           before,
@@ -246,8 +269,6 @@ export async function POST(req: Request) {
           data: auditRows,
         });
       } catch (auditErr) {
-        // Do not punish the teacher if audit logging fails after scores are safely saved.
-        // The primary academic truth has already been written atomically above.
         console.error("[ASSESSMENT_SCORE_AUDIT_LOG_ERROR]", auditErr);
       }
     }
