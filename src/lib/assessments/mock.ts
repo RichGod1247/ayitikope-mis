@@ -290,3 +290,338 @@ export function readinessBandFromAverage(percentInput: unknown) {
 function round1(n: number) {
   return Math.round(n * 10) / 10;
 }
+
+export type MockSubjectGradeInput = {
+  subject: string;
+  score?: number | null;
+  grade?: number | null;
+};
+
+export type MockAggregateSubject = {
+  subject: string;
+  canonicalSubject: string;
+  grade: MockGrade;
+  score: number | null;
+};
+
+export type MockAggregateResult = {
+  ok: boolean;
+  aggregate: number | null;
+  usedSubjects: MockAggregateSubject[];
+  missingSubjects: string[];
+  selectedElectives: MockAggregateSubject[];
+  availableElectives: MockAggregateSubject[];
+  reason: string | null;
+};
+
+export const MOCK_CORE_SUBJECTS = [
+  "ENGLISH",
+  "MATHEMATICS",
+  "SCIENCE",
+  "SOCIAL",
+] as const;
+
+export const MOCK_SCHOOL_AGGREGATE_SUBJECTS = [
+  "ENGLISH",
+  "MATHEMATICS",
+  "SCIENCE",
+  "SOCIAL",
+  "RME",
+  "GHANAIAN_LANGUAGE",
+] as const;
+
+export const MOCK_SUBJECT_LABELS: Record<string, string> = {
+  ENGLISH: "English",
+  MATHEMATICS: "Mathematics",
+  SCIENCE: "Science",
+  SOCIAL: "Social Studies",
+  RME: "RME",
+  GHANAIAN_LANGUAGE: "Ghanaian Language",
+  EWE: "Ewe",
+  CREATIVE_ARTS: "Creative Arts",
+  COMPUTING: "Computing",
+  CAREER_TECH: "Career Technology",
+};
+
+export function canonicalMockSubject(raw: unknown) {
+  const key = normalizeMockKey(raw);
+
+  if (
+    key === "ENGLISH" ||
+    key === "ENGLISHLANGUAGE" ||
+    key === "ENG"
+  ) {
+    return "ENGLISH";
+  }
+
+  if (
+    key === "MATHEMATICS" ||
+    key === "MATHS" ||
+    key === "MATH"
+  ) {
+    return "MATHEMATICS";
+  }
+
+  if (
+    key === "SCIENCE" ||
+    key === "INTEGRATEDSCIENCE" ||
+    key === "INTSCIENCE"
+  ) {
+    return "SCIENCE";
+  }
+
+  if (
+    key === "SOCIAL" ||
+    key === "SOCIALSTUDIES" ||
+    key === "SOCIALSTUDY"
+  ) {
+    return "SOCIAL";
+  }
+
+  if (
+    key === "RME" ||
+    key === "RELIGIOUSANDMORALEDUCATION" ||
+    key === "RELIGIOUSMORALEDUCATION"
+  ) {
+    return "RME";
+  }
+
+  if (
+    key === "EWE" ||
+    key === "GHANAIANLANGUAGE" ||
+    key === "GHANAIANLANG" ||
+    key === "GHANALANGUAGE"
+  ) {
+    return "GHANAIAN_LANGUAGE";
+  }
+
+  if (
+    key === "CREATIVEARTS" ||
+    key === "CARTS" ||
+    key === "CA"
+  ) {
+    return "CREATIVE_ARTS";
+  }
+
+  if (
+    key === "COMPUTING" ||
+    key === "COMP" ||
+    key === "ICT"
+  ) {
+    return "COMPUTING";
+  }
+
+  if (
+    key === "CAREERTECHNOLOGY" ||
+    key === "CAREERTECH" ||
+    key === "CTECH" ||
+    key === "CATECH"
+  ) {
+    return "CAREER_TECH";
+  }
+
+  return key || "UNKNOWN";
+}
+
+export function mockSubjectLabel(canonicalSubject: string) {
+  return MOCK_SUBJECT_LABELS[canonicalSubject] ?? canonicalSubject;
+}
+
+function gradeFromSubjectInput(input: MockSubjectGradeInput): MockGrade | null {
+  const directGrade = Number(input.grade);
+
+  if (
+    Number.isInteger(directGrade) &&
+    directGrade >= 1 &&
+    directGrade <= 9
+  ) {
+    return directGrade as MockGrade;
+  }
+
+  const derived = mockGradeFromScore(input.score);
+  return derived?.grade ?? null;
+}
+
+function scoredSubjects(inputs: MockSubjectGradeInput[]) {
+  const byCanonical = new Map<string, MockAggregateSubject>();
+
+  for (const input of inputs) {
+    const subject = cleanMockStr(input.subject);
+    if (!subject) continue;
+
+    const canonicalSubject = canonicalMockSubject(subject);
+    const grade = gradeFromSubjectInput(input);
+    if (!grade) continue;
+
+    const score =
+      input.score == null || !Number.isFinite(Number(input.score))
+        ? null
+        : Number(input.score);
+
+    const existing = byCanonical.get(canonicalSubject);
+
+    // Lower grade is better. If duplicate subject evidence exists, keep the stronger valid signal.
+    if (!existing || grade < existing.grade) {
+      byCanonical.set(canonicalSubject, {
+        subject,
+        canonicalSubject,
+        grade,
+        score,
+      });
+    }
+  }
+
+  return Array.from(byCanonical.values());
+}
+
+export function isMockCoreSubject(subject: string) {
+  return MOCK_CORE_SUBJECTS.includes(subject as (typeof MOCK_CORE_SUBJECTS)[number]);
+}
+
+export function calculateSchoolMockAggregate(inputs: MockSubjectGradeInput[]): MockAggregateResult {
+  const scored = scoredSubjects(inputs);
+  const byCanonical = new Map(scored.map((item) => [item.canonicalSubject, item]));
+
+  const usedSubjects: MockAggregateSubject[] = [];
+  const missingSubjects: string[] = [];
+
+  for (const subject of MOCK_SCHOOL_AGGREGATE_SUBJECTS) {
+    const found = byCanonical.get(subject);
+    if (found) usedSubjects.push(found);
+    else missingSubjects.push(mockSubjectLabel(subject));
+  }
+
+  if (missingSubjects.length > 0) {
+    return {
+      ok: false,
+      aggregate: null,
+      usedSubjects,
+      missingSubjects,
+      selectedElectives: [],
+      availableElectives: scored.filter(
+        (item) => !isMockCoreSubject(item.canonicalSubject)
+      ),
+      reason: "SCHOOL_AGGREGATE_INCOMPLETE",
+    };
+  }
+
+  return {
+    ok: true,
+    aggregate: usedSubjects.reduce((sum, item) => sum + item.grade, 0),
+    usedSubjects,
+    missingSubjects: [],
+    selectedElectives: [],
+    availableElectives: scored.filter(
+      (item) => !isMockCoreSubject(item.canonicalSubject)
+    ),
+    reason: null,
+  };
+}
+
+export function calculatePlacementMockAggregate(inputs: MockSubjectGradeInput[]): MockAggregateResult {
+  const scored = scoredSubjects(inputs);
+  const byCanonical = new Map(scored.map((item) => [item.canonicalSubject, item]));
+
+  const coreSubjects: MockAggregateSubject[] = [];
+  const missingSubjects: string[] = [];
+
+  for (const subject of MOCK_CORE_SUBJECTS) {
+    const found = byCanonical.get(subject);
+    if (found) coreSubjects.push(found);
+    else missingSubjects.push(mockSubjectLabel(subject));
+  }
+
+  const availableElectives = scored
+    .filter((item) => !isMockCoreSubject(item.canonicalSubject))
+    .sort((a, b) => {
+      if (a.grade !== b.grade) return a.grade - b.grade;
+      return (b.score ?? -1) - (a.score ?? -1);
+    });
+
+  const selectedElectives = availableElectives.slice(0, 2);
+
+  if (missingSubjects.length > 0 || selectedElectives.length < 2) {
+    return {
+      ok: false,
+      aggregate: null,
+      usedSubjects: [...coreSubjects, ...selectedElectives],
+      missingSubjects: [
+        ...missingSubjects,
+        ...(selectedElectives.length < 2
+          ? [`${2 - selectedElectives.length} more elective subject(s)`]
+          : []),
+      ],
+      selectedElectives,
+      availableElectives,
+      reason: "PLACEMENT_AGGREGATE_INCOMPLETE",
+    };
+  }
+
+  const usedSubjects = [...coreSubjects, ...selectedElectives];
+
+  return {
+    ok: true,
+    aggregate: usedSubjects.reduce((sum, item) => sum + item.grade, 0),
+    usedSubjects,
+    missingSubjects: [],
+    selectedElectives,
+    availableElectives,
+    reason: null,
+  };
+}
+
+export function readinessBandFromAggregate(aggregateInput: unknown) {
+  const aggregate = Number(aggregateInput);
+
+  if (!Number.isFinite(aggregate)) {
+    return {
+      code: "INCOMPLETE",
+      label: "Incomplete evidence",
+      tone: "NEUTRAL",
+      action: "Enter all required mock subject scores before readiness can be estimated.",
+    };
+  }
+
+  if (aggregate <= 12) {
+    return {
+      code: "READY_STRONG",
+      label: "Strong BECE readiness",
+      tone: "READY",
+      action: "Protect consistency and target Grade 1–2 stability.",
+    };
+  }
+
+  if (aggregate <= 18) {
+    return {
+      code: "READY_MONITOR",
+      label: "Competitive but monitor closely",
+      tone: "WATCH",
+      action: "Push weak subjects upward before the next mock.",
+    };
+  }
+
+  if (aggregate <= 24) {
+    return {
+      code: "DEVELOPING",
+      label: "Developing readiness",
+      tone: "WATCH",
+      action: "Assign focused revision for core and weakest elective subjects.",
+    };
+  }
+
+  if (aggregate <= 30) {
+    return {
+      code: "AT_RISK",
+      label: "At risk",
+      tone: "RISK",
+      action: "Begin urgent weekly intervention and parent follow-up.",
+    };
+  }
+
+  return {
+    code: "CRITICAL",
+    label: "Critical BECE risk",
+    tone: "CRITICAL",
+    action: "Escalate immediately with daily remedial intervention.",
+  };
+}
