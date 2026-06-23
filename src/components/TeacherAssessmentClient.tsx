@@ -769,17 +769,29 @@ const typeOptions = useMemo(() => {
     return "Default view is single-stream for KG, Primary, and JHS. Turn multi-stream on only when you need all streams.";
   }, [teacherPhase]);
 
-  const termDashboardHref = useMemo(() => {
-    if (!classroomId) return "/teacher/assessment/term-dashboard";
-    const params = new URLSearchParams({ classroomId, term, academicYear });
-    return `/teacher/assessment/term-dashboard?${params.toString()}`;
-  }, [classroomId, term, academicYear]);
+const termDashboardHref = useMemo(() => {
+  if (!classroomId) return "/teacher/assessment/term-dashboard";
+  const params = new URLSearchParams({ classroomId, term, academicYear });
+  return `/teacher/assessment/term-dashboard?${params.toString()}`;
+}, [classroomId, term, academicYear]);
 
-  const lessonDeliveriesPageHref = useMemo(() => {
-    if (!classroomId) return "/teacher/lesson-deliveries";
-    const params = new URLSearchParams({ classroomId, term, academicYear });
-    return `/teacher/lesson-deliveries?${params.toString()}`;
-  }, [classroomId, term, academicYear]);
+const mockAssessmentHref = useMemo(() => {
+  const params = new URLSearchParams();
+
+  if (classroomId) params.set("classroomId", classroomId);
+  if (term) params.set("term", term);
+  if (academicYear) params.set("academicYear", academicYear);
+
+  const query = params.toString();
+
+  return query ? `/teacher/assessment/mock?${query}` : "/teacher/assessment/mock";
+}, [classroomId, term, academicYear]);
+
+const lessonDeliveriesPageHref = useMemo(() => {
+  if (!classroomId) return "/teacher/lesson-deliveries";
+  const params = new URLSearchParams({ classroomId, term, academicYear });
+  return `/teacher/lesson-deliveries?${params.toString()}`;
+}, [classroomId, term, academicYear]);
 
   function buildBlankScoreGrid(currentStudents: Student[]) {
     const base: Record<string, { score: string; comment: string }> = {};
@@ -1537,27 +1549,31 @@ setSavingScoresState("saved");
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={() => setTab("broadsheet")}
-              className={
-                tab === "broadsheet"
-                  ? `${broadsheetButton} ring-2 ring-[#E8C96A]/35`
-                  : broadsheetButton
-              }
-            >
-              📊 Open broadsheet
-            </button>
+<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+  <button
+    type="button"
+    onClick={() => setTab("broadsheet")}
+    className={
+      tab === "broadsheet"
+        ? `${broadsheetButton} ring-2 ring-[#E8C96A]/35`
+        : broadsheetButton
+    }
+  >
+    📊 Open broadsheet
+  </button>
 
-            <Link href={lessonDeliveriesPageHref} className={emeraldButton}>
-              Record lesson delivery
-            </Link>
+  <Link href={mockAssessmentHref} className={goldButton}>
+    BECE Mock
+  </Link>
 
-            <Link href={termDashboardHref} className={indigoButton}>
-              View term dashboard
-            </Link>
-          </div>
+  <Link href={lessonDeliveriesPageHref} className={emeraldButton}>
+    Record lesson delivery
+  </Link>
+
+  <Link href={termDashboardHref} className={indigoButton}>
+    View term dashboard
+  </Link>
+</div>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
