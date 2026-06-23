@@ -1158,36 +1158,7 @@ setClassroomId(def);
     loadPipeline();
   }, [classroomId, term, academicYear]);
 
-  useEffect(() => {
-if (!selectedItem) {
-  setSubject(urlSubject || subjectOptions[0] || "");
-  setType("CLASS_TEST");
-  setComponentCode("CLASS_TEST");
-  setTitle("");
-  setDescription("");
-  setMaxScore("10");
-  setWeighting("10");
-  setDate("");
-  setLessonDeliveryId(urlLessonDeliveryId || "");
-  setCurriculumUnitId(urlCurriculumUnitId || "");
-  return;
-}
-
-    setSubject(selectedItem.subject || subjectOptions[0] || "");
-    setType(selectedItem.type || "CLASS_TEST");
-    setComponentCode(
-  cleanStr(selectedItem.componentCode) || selectedItem.type || "CLASS_TEST"
-);
-    setTitle(selectedItem.title || "");
-    setDescription(selectedItem.description ?? "");
-    setMaxScore(typeof selectedItem.maxScore === "number" ? String(selectedItem.maxScore) : "10");
-    setWeighting(selectedItem.weighting != null ? String(selectedItem.weighting) : "");
-    setDate(formatDateForInput(selectedItem.date ?? null));
-    setLessonDeliveryId(selectedItem.lessonDeliveryId ?? "");
-        setCurriculumUnitId(selectedItem.curriculumUnitId ?? "");
-    }, [selectedItem, subjectOptions, urlCurriculumUnitId, urlLessonDeliveryId, urlSubject]);
-
-  async function handleSelectItem(itemId: string) {
+useEffect(() => { if (!selectedItem) return; setSubject(selectedItem.subject || subjectOptions[0] || ""); setType(selectedItem.type || "CLASS_TEST"); setComponentCode( cleanStr(selectedItem.componentCode) || selectedItem.type || "CLASS_TEST" ); setTitle(selectedItem.title || ""); setDescription(selectedItem.description ?? ""); setMaxScore( typeof selectedItem.maxScore === "number" ? String(selectedItem.maxScore) : "10" ); setWeighting(selectedItem.weighting != null ? String(selectedItem.weighting) : ""); setDate(formatDateForInput(selectedItem.date ?? null)); setLessonDeliveryId(selectedItem.lessonDeliveryId ?? ""); setCurriculumUnitId(selectedItem.curriculumUnitId ?? ""); }, [selectedItem, subjectOptions]); useEffect(() => { if (selectedItem) return; setSubject((prev) => { if (urlSubject && subjectOptions.some((s) => sameSubject(s, urlSubject))) { return subjectOptions.find((s) => sameSubject(s, urlSubject)) || urlSubject; } if (cleanStr(prev) && subjectOptions.some((s) => sameSubject(s, prev))) { return subjectOptions.find((s) => sameSubject(s, prev)) || prev; } return subjectOptions[0] || prev || ""; }); }, [selectedItem, subjectOptions, urlSubject]); async function handleSelectItem(itemId: string) {
     setActionError(null);
     setSelectedItemId(itemId);
     setItemFormOpen(false);
@@ -1249,17 +1220,14 @@ function handleCreateEvidenceItemFromBroadsheet(args: CreateEvidenceItemArgs) {
   setComponentCode(resolvedComponentCode);
   setTitle(defaultEvidenceTitle(args));
   setDescription("");
-  setMaxScore(String(args.maxScore || 10));
+  setMaxScore( String(Number.isFinite(args.maxScore) && args.maxScore > 0 ? args.maxScore : 10) );
   setWeighting(
     Number.isFinite(args.weightPercent) ? String(args.weightPercent) : ""
   );
   setDate(formatDateForInput(linkedDelivery?.dateTaught ?? null));
 
   setLessonDeliveryId(linkedDelivery?.id || "");
-  setCurriculumUnitId(
-    linkedDelivery?.curriculumUnitId || urlCurriculumUnitId || ""
-  );
-
+setCurriculumUnitId( linkedDelivery?.curriculumUnitId || (hasLessonDeliveryContext ? urlCurriculumUnitId : "") );
   setScoreDraft(buildBlankScoreGrid(students));
   setItemFormOpen(true);
   setTab("items");
@@ -1337,11 +1305,7 @@ setScoreDraft(buildBlankScoreGrid(students));
     setActionError(null);
 
     try {
-      const resolvedCurriculumUnitId =
-        selectedLessonDelivery?.curriculumUnitId ||
-        curriculumUnitId ||
-        urlCurriculumUnitId ||
-        null;
+const resolvedCurriculumUnitId = selectedLessonDelivery?.curriculumUnitId || curriculumUnitId || (hasLessonDeliveryContext ? urlCurriculumUnitId : null);
 
 const body = {
   id: selectedItem?.id,
