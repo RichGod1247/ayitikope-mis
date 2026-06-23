@@ -81,7 +81,19 @@ export async function GET(req: Request) {
   });
 
   const assessments = await prisma.assessmentItem.findMany({
-    where: { tenantId: ctx.tenantId, classroomId, term, academicYear, ...subjectWhere } as any,
+    where: {
+      tenantId: ctx.tenantId,
+      classroomId,
+      term,
+      academicYear,
+
+      // A14.5B:
+      // BECE Mock belongs to its own score-entry and broadsheet engine.
+      // Do not mix it into ordinary 30/70 assessment entry.
+      type: { not: "MOCK" },
+
+      ...subjectWhere,
+    } as any,
     orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     select: {
       id: true,
@@ -98,15 +110,15 @@ export async function GET(req: Request) {
       status: true,
       publishedAt: true,
       lockedAt: true,
-lessonDeliveryId: true,
-curriculumUnitId: true,
+      lessonDeliveryId: true,
+      curriculumUnitId: true,
 
-assessmentPolicyId: true,
-policyComponentId: true,
-componentCode: true,
-templateKey: true,
-sortOrder: true,
-isRequired: true,
+      assessmentPolicyId: true,
+      policyComponentId: true,
+      componentCode: true,
+      templateKey: true,
+      sortOrder: true,
+      isRequired: true,
     },
   });
 

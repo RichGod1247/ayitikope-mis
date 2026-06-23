@@ -41,14 +41,14 @@ export async function POST(req: Request) {
     requireTenant: true,
     requireRoleNames: ["TEACHER", "HEADTEACHER", "ADMIN", "SCHOOL_ADMIN", "SUPERADMIN"],
   });
-  if (!auth.ok) return auth.res as any;
+if (!auth.ok) return auth.res;
 
   const { ctx } = auth;
   const rawBody: unknown = await req.json().catch(() => null);
-const body =
-  rawBody && typeof rawBody === "object"
-    ? (rawBody as Record<string, unknown>)
-    : {};
+  const body =
+    rawBody && typeof rawBody === "object"
+      ? (rawBody as Record<string, unknown>)
+      : {};
 
   const id = clean(body?.id);
 
@@ -59,10 +59,12 @@ const body =
   const title = clean(body?.title);
   const description = clean(body?.description) || null;
 
-  const type = normalizeTypeCode(body?.type);
-  const componentCodeFromBody = clean(body?.componentCode)
-    ? normalizeTypeCode(body?.componentCode)
-    : "";
+const requestedType = clean(body?.type).toUpperCase();
+
+const type = normalizeTypeCode(body?.type);
+const componentCodeFromBody = clean(body?.componentCode)
+  ? normalizeTypeCode(body?.componentCode)
+  : "";
 
   const lessonDeliveryId = clean(body?.lessonDeliveryId);
 
@@ -75,6 +77,17 @@ const body =
 
   if (!classroomId || !subject || !term || !academicYear || !title || !type) {
     return noStore(400, { ok: false, error: "MISSING_FIELDS" });
+  }
+
+  // A14.5B:
+  // Mock must not be created through the normal assessment item route.
+  // Mock items must belong to a MockExamSession and use dedicated mock routes.
+  if (requestedType === "MOCK") {
+    return noStore(409, {
+      ok: false,
+      error: "USE_MOCK_ASSESSMENT_ROUTES",
+      message: "Create BECE Mock items through the dedicated mock assessment engine.",
+    });
   }
 
   if (!Number.isFinite(maxScoreNum) || maxScoreNum <= 0 || maxScoreNum > 500) {
@@ -92,7 +105,6 @@ const body =
     return noStore(400, { ok: false, error: "INVALID_DATE" });
   }
 
-  // ✅ Validate target classroom+subject scope first.
   const targetAccess = await resolveUserClassroomAccess({
     tenantId: ctx.tenantId,
     userId: ctx.userId,
@@ -210,16 +222,26 @@ const body =
           tenantId: true,
           classroomId: true,
           subject: true,
+          type: true,
           status: true,
           publishedAt: true,
           lockedAt: true,
           curriculumUnitId: true,
           createdByUserId: true,
+          mockExamSessionId: true,
         },
       });
 
       if (!existing || existing.tenantId !== ctx.tenantId) {
         return noStore(404, { ok: false, error: "ITEM_NOT_FOUND" });
+      }
+
+      if (String(existing.type ?? "").toUpperCase() === "MOCK" || existing.mockExamSessionId) {
+        return noStore(409, {
+          ok: false,
+          error: "USE_MOCK_ASSESSMENT_ROUTES",
+          message: "Edit BECE Mock items through the dedicated mock assessment engine.",
+        });
       }
 
       if (!isAdminLikeRole(ctx.roleName)) {
@@ -277,6 +299,7 @@ const body =
           isRequired: component?.required ?? true,
           lessonDeliveryId: lessonDeliveryId || null,
           curriculumUnitId: existing.curriculumUnitId ?? resolvedCurriculumUnitId,
+          mockExamSessionId: null,
         },
         select: {
           id: true,
@@ -295,6 +318,7 @@ const body =
           lockedAt: true,
           lessonDeliveryId: true,
           curriculumUnitId: true,
+          mockExamSessionId: true,
           assessmentPolicyId: true,
           policyComponentId: true,
           componentCode: true,
@@ -328,6 +352,7 @@ const body =
         isRequired: component?.required ?? true,
         lessonDeliveryId: lessonDeliveryId || null,
         curriculumUnitId: resolvedCurriculumUnitId,
+        mockExamSessionId: null,
         createdByUserId: ctx.userId,
       },
       select: {
@@ -347,6 +372,7 @@ const body =
         lockedAt: true,
         lessonDeliveryId: true,
         curriculumUnitId: true,
+        mockExamSessionId: true,
         assessmentPolicyId: true,
         policyComponentId: true,
         componentCode: true,
@@ -357,9 +383,9 @@ const body =
     });
 
     return noStore(200, { ok: true, item: created });
-   } catch (err: unknown) {
-  const msg =
-    err instanceof Error ? err.message : "FAILED_TO_SAVE_ITEM";
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "FAILED_TO_SAVE_ITEM";
 
     if (msg === "ITEM_PUBLISHED" || msg === "ITEM_LOCKED") {
       return noStore(409, { ok: false, error: msg });

@@ -43,6 +43,9 @@ export async function GET(req: Request) {
       tenantId: true,
       classroomId: true,
       subject: true,
+      type: true,
+      maxScore: true,
+      mockExamSessionId: true,
     },
   });
 
@@ -65,11 +68,30 @@ export async function GET(req: Request) {
     );
   }
 
+  if (String(item.type ?? "").toUpperCase() === "MOCK" && !item.mockExamSessionId) {
+    return noStore(409, {
+      ok: false,
+      error: "MOCK_SESSION_REQUIRED",
+      message: "Mock scores must belong to a valid mock exam session.",
+    });
+  }
+
   const scores = await prisma.assessmentScore.findMany({
     where: { itemId },
     orderBy: { createdAt: "asc" },
     select: { studentId: true, score: true, comment: true },
   });
 
-  return noStore(200, { ok: true, itemId, scores });
+  return noStore(200, {
+    ok: true,
+    itemId,
+    item: {
+      id: item.id,
+      subject: item.subject,
+      type: item.type,
+      maxScore: item.maxScore,
+      mockExamSessionId: item.mockExamSessionId ?? null,
+    },
+    scores,
+  });
 }
