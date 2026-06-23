@@ -697,6 +697,9 @@ export default function TeacherAssessmentClient() {
 const [broadsheetRefreshKey, setBroadsheetRefreshKey] = useState(0);
 const [broadsheetNotice, setBroadsheetNotice] = useState<string | null>(null);
 
+const shouldLoadInsights = tab === "insights";
+const shouldLoadPipeline = tab === "pipeline";
+
   const selectedItem = useMemo(() => items.find((i) => i.id === selectedItemId) ?? null, [items, selectedItemId]);
 
   const selectedItemDefinitionReadOnlyReason = useMemo(
@@ -1080,9 +1083,12 @@ setClassroomId(def);
     loadLessonDeliveries();
   }, [classroomId, term, academicYear, urlCurriculumUnitId, urlLessonDeliveryId]);
 
-  useEffect(() => {
-    const loadSummary = async () => {
-      if (!classroomId) return;
+useEffect(() => {
+  const loadSummary = async () => {
+    if (!classroomId || !shouldLoadPipeline) {
+      setSummaryLoading(false);
+      return;
+    }
 
       try {
         setSummaryLoading(true);
@@ -1129,16 +1135,14 @@ setClassroomId(def);
     };
 
     loadSummary();
-  }, [classroomId, term, academicYear]);
+}, [classroomId, term, academicYear, shouldLoadPipeline]);
 
-  useEffect(() => {
-    const loadPipeline = async () => {
-      if (!classroomId) {
-        setPipeline(null);
-        setPipelineError(null);
-        setPipelineLoading(false);
-        return;
-      }
+useEffect(() => {
+  const loadPipeline = async () => {
+    if (!classroomId || !shouldLoadPipeline) {
+      setPipelineLoading(false);
+      return;
+    }
 
       try {
         setPipelineLoading(true);
@@ -1163,7 +1167,7 @@ setClassroomId(def);
     };
 
     loadPipeline();
-  }, [classroomId, term, academicYear]);
+}, [classroomId, term, academicYear, shouldLoadPipeline]);
 
 useEffect(() => {
   if (!selectedItem) return;
@@ -1760,13 +1764,19 @@ setSavingScoresState("saved");
               }
             >
               <div className={panelCard + " p-3"}>
-                <AssessmentInsightsPanel
-                  classroomId={classroomId}
-                  term={term}
-                  academicYear={academicYear}
-                  students={students.map((s) => ({ id: s.id, name: s.name }))}
-                />
-              </div>
+  {shouldLoadInsights ? (
+    <AssessmentInsightsPanel
+      classroomId={classroomId}
+      term={term}
+      academicYear={academicYear}
+      students={students.map((s) => ({ id: s.id, name: s.name }))}
+    />
+  ) : (
+    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-6 text-center text-[12px] text-[#C9CDD6]">
+      Insights are loaded only when opened, so the assessment page stays fast.
+    </div>
+  )}
+</div>
             </SectionCard>
           </div>
 
