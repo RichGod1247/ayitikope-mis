@@ -232,6 +232,15 @@ export function mockGradeFromScore(scoreInput: unknown): MockGradeResult | null 
 }
 
 export function readinessBandFromAverage(percentInput: unknown) {
+  if (percentInput == null || percentInput === "") {
+    return {
+      code: "NO_DATA",
+      label: "No data",
+      tone: "NEUTRAL",
+      action: "Enter mock scores before readiness can be estimated.",
+    };
+  }
+
   const percent = Number(percentInput);
 
   if (!Number.isFinite(percent)) {
@@ -571,6 +580,15 @@ export function calculatePlacementMockAggregate(inputs: MockSubjectGradeInput[])
 }
 
 export function readinessBandFromAggregate(aggregateInput: unknown) {
+  if (aggregateInput == null || aggregateInput === "") {
+    return {
+      code: "INCOMPLETE",
+      label: "Incomplete evidence",
+      tone: "NEUTRAL",
+      action: "Enter all required mock subject scores before readiness can be estimated.",
+    };
+  }
+
   const aggregate = Number(aggregateInput);
 
   if (!Number.isFinite(aggregate)) {
