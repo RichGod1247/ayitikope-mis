@@ -150,6 +150,7 @@ type Props = {
   academicYear: string;
   subjectOptions: string[];
   currentSubject: string;
+  refreshKey?: number;
   onCreateEvidenceItem?: (args: CreateEvidenceItemArgs) => void;
 };
 
@@ -439,12 +440,13 @@ function EvidenceTrace(props: {
 }
 
 export default function AssessmentBroadsheetPanel(props: Props) {
-  const {
+const {
   classroomId,
   term,
   academicYear,
   subjectOptions,
   currentSubject,
+  refreshKey = 0,
   onCreateEvidenceItem,
 } = props;
 
@@ -453,6 +455,7 @@ export default function AssessmentBroadsheetPanel(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [learnerQuery, setLearnerQuery] = useState("");
+const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     setSubject((prev) => {
@@ -518,7 +521,8 @@ export default function AssessmentBroadsheetPanel(props: Props) {
         return;
       }
 
-      setData(json);
+     setData(json);
+setLastRefreshedAt(new Date());
     } catch {
       setData(null);
       setError("Failed to load broadsheet.");
@@ -527,10 +531,10 @@ export default function AssessmentBroadsheetPanel(props: Props) {
     }
   }
 
-  useEffect(() => {
-    void loadBroadsheet();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classroomId, term, academicYear, subject]);
+useEffect(() => {
+  void loadBroadsheet();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [classroomId, term, academicYear, subject, refreshKey]);
 
   const sheet =
     data?.broadsheets?.find((s) => sameSubject(s.subject, subject)) ??
@@ -599,32 +603,46 @@ export default function AssessmentBroadsheetPanel(props: Props) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <select
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            className={input}
-          >
-            {subjectOptions.length === 0 ? (
-              <option value="">No subject</option>
-            ) : (
-              subjectOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))
-            )}
-          </select>
+<div className="flex flex-col gap-2 sm:items-end">
+  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+    <select
+      value={subject}
+      onChange={(e) => setSubject(e.target.value)}
+      className={input}
+    >
+      {subjectOptions.length === 0 ? (
+        <option value="">No subject</option>
+      ) : (
+        subjectOptions.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))
+      )}
+    </select>
 
-          <button
-            type="button"
-            onClick={loadBroadsheet}
-            disabled={loading}
-            className={button}
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </button>
-        </div>
+    <button
+      type="button"
+      onClick={() => void loadBroadsheet()}
+      disabled={loading}
+      className={button}
+    >
+      {loading ? "Refreshing…" : "Refresh broadsheet"}
+    </button>
+  </div>
+
+  {lastRefreshedAt ? (
+    <div className="text-[11px] text-[#8F98A8]">
+      Last refreshed:{" "}
+      <span className="font-semibold text-[#F7F4ED]">
+        {lastRefreshedAt.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </span>
+    </div>
+  ) : null}
+</div>
       </div>
 
       <div className="space-y-4 px-4 py-4">

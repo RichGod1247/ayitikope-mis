@@ -694,6 +694,8 @@ export default function TeacherAssessmentClient() {
   const [tab, setTab] = useState<MobileTab>("scores");
   const [itemFormOpen, setItemFormOpen] = useState<boolean>(true);
   const [learnerQuery, setLearnerQuery] = useState<string>("");
+const [broadsheetRefreshKey, setBroadsheetRefreshKey] = useState(0);
+const [broadsheetNotice, setBroadsheetNotice] = useState<string | null>(null);
 
   const selectedItem = useMemo(() => items.find((i) => i.id === selectedItemId) ?? null, [items, selectedItemId]);
 
@@ -781,6 +783,11 @@ const typeOptions = useMemo(() => {
     for (const s of currentStudents) base[s.id] = { score: "", comment: "" };
     return base;
   }
+
+function markBroadsheetDirty(message: string) {
+  setBroadsheetRefreshKey((v) => v + 1);
+  setBroadsheetNotice(message);
+}
 
   async function loadScoresForItem(itemId: string, currentStudents: Student[]) {
     const base = buildBlankScoreGrid(currentStudents);
@@ -1158,7 +1165,43 @@ setClassroomId(def);
     loadPipeline();
   }, [classroomId, term, academicYear]);
 
-useEffect(() => { if (!selectedItem) return; setSubject(selectedItem.subject || subjectOptions[0] || ""); setType(selectedItem.type || "CLASS_TEST"); setComponentCode( cleanStr(selectedItem.componentCode) || selectedItem.type || "CLASS_TEST" ); setTitle(selectedItem.title || ""); setDescription(selectedItem.description ?? ""); setMaxScore( typeof selectedItem.maxScore === "number" ? String(selectedItem.maxScore) : "10" ); setWeighting(selectedItem.weighting != null ? String(selectedItem.weighting) : ""); setDate(formatDateForInput(selectedItem.date ?? null)); setLessonDeliveryId(selectedItem.lessonDeliveryId ?? ""); setCurriculumUnitId(selectedItem.curriculumUnitId ?? ""); }, [selectedItem, subjectOptions]); useEffect(() => { if (selectedItem) return; setSubject((prev) => { if (urlSubject && subjectOptions.some((s) => sameSubject(s, urlSubject))) { return subjectOptions.find((s) => sameSubject(s, urlSubject)) || urlSubject; } if (cleanStr(prev) && subjectOptions.some((s) => sameSubject(s, prev))) { return subjectOptions.find((s) => sameSubject(s, prev)) || prev; } return subjectOptions[0] || prev || ""; }); }, [selectedItem, subjectOptions, urlSubject]); async function handleSelectItem(itemId: string) {
+useEffect(() => {
+  if (!selectedItem) return;
+
+  setSubject(selectedItem.subject || subjectOptions[0] || "");
+  setType(selectedItem.type || "CLASS_TEST");
+  setComponentCode(
+    cleanStr(selectedItem.componentCode) || selectedItem.type || "CLASS_TEST"
+  );
+  setTitle(selectedItem.title || "");
+  setDescription(selectedItem.description ?? "");
+  setMaxScore(
+    typeof selectedItem.maxScore === "number" ? String(selectedItem.maxScore) : "10"
+  );
+  setWeighting(selectedItem.weighting != null ? String(selectedItem.weighting) : "");
+  setDate(formatDateForInput(selectedItem.date ?? null));
+  setLessonDeliveryId(selectedItem.lessonDeliveryId ?? "");
+  setCurriculumUnitId(selectedItem.curriculumUnitId ?? "");
+}, [selectedItem, subjectOptions]);
+
+useEffect(() => {
+  if (selectedItem) return;
+
+  setSubject((prev) => {
+    if (urlSubject && subjectOptions.some((s) => sameSubject(s, urlSubject))) {
+      return subjectOptions.find((s) => sameSubject(s, urlSubject)) || urlSubject;
+    }
+
+    if (cleanStr(prev) && subjectOptions.some((s) => sameSubject(s, prev))) {
+      return subjectOptions.find((s) => sameSubject(s, prev)) || prev;
+    }
+
+    return subjectOptions[0] || prev || "";
+  });
+}, [selectedItem, subjectOptions, urlSubject]);
+
+
+async function handleSelectItem(itemId: string) {
     setActionError(null);
     setSelectedItemId(itemId);
     setItemFormOpen(false);
@@ -1353,6 +1396,7 @@ setSelectedItemId(item.id);
 setLessonDeliveryId(item.lessonDeliveryId ?? "");
 setCurriculumUnitId(item.curriculumUnitId ?? "");
 await loadScoresForItem(item.id, students);
+markBroadsheetDirty("Assessment item saved. Broadsheet evidence can now be refreshed.");
 
       setSavingItemState("saved");
       setTimeout(() => setSavingItemState("idle"), 900);
@@ -1401,9 +1445,10 @@ await loadScoresForItem(item.id, students);
         return;
       }
 
-      await loadScoresForItem(selectedItem.id, students);
+await loadScoresForItem(selectedItem.id, students);
+markBroadsheetDirty("Scores saved. Broadsheet readiness can now be refreshed.");
 
-      setSavingScoresState("saved");
+setSavingScoresState("saved");
       setTimeout(() => setSavingScoresState("idle"), 900);
     } catch {
       setActionError("Unexpected error saving scores.");
@@ -1572,6 +1617,30 @@ await loadScoresForItem(item.id, students);
         </div>
       ) : null}
 
+{broadsheetNotice ? (
+  <div className="flex flex-col gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-400/12 px-4 py-3 text-[12px] text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
+    <div>{broadsheetNotice}</div>
+
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => setTab("broadsheet")}
+        className="inline-flex items-center rounded-xl border border-emerald-300/20 bg-emerald-400/12 px-3 py-2 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-400/18"
+      >
+        View updated broadsheet
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setBroadsheetNotice(null)}
+        className="inline-flex items-center rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/[0.09]"
+      >
+        Dismiss
+      </button>
+    </div>
+  </div>
+) : null}
+
       {hasLessonDeliveryContext ? (
         <div className="rounded-2xl border border-indigo-300/20 bg-indigo-400/12 px-4 py-3 text-[12px] text-indigo-100">
           Creating assessment evidence from delivered lesson.
@@ -1673,6 +1742,7 @@ await loadScoresForItem(item.id, students);
   academicYear={academicYear}
   subjectOptions={subjectOptions}
   currentSubject={subject}
+  refreshKey={broadsheetRefreshKey}
   onCreateEvidenceItem={handleCreateEvidenceItemFromBroadsheet}
 />
       ) : null}
