@@ -150,6 +150,16 @@ type Props = {
   academicYear: string;
   subjectOptions: string[];
   currentSubject: string;
+  onCreateEvidenceItem?: (args: CreateEvidenceItemArgs) => void;
+};
+
+type CreateEvidenceItemArgs = {
+  subject: string;
+  componentCode: string;
+  componentLabel: string;
+  maxScore: number;
+  weightPercent: number;
+  required: boolean;
 };
 
 type ComponentStats = {
@@ -429,7 +439,14 @@ function EvidenceTrace(props: {
 }
 
 export default function AssessmentBroadsheetPanel(props: Props) {
-  const { classroomId, term, academicYear, subjectOptions, currentSubject } = props;
+  const {
+  classroomId,
+  term,
+  academicYear,
+  subjectOptions,
+  currentSubject,
+  onCreateEvidenceItem,
+} = props;
 
   const [subject, setSubject] = useState("");
   const [data, setData] = useState<BroadsheetOk | null>(null);
@@ -790,11 +807,30 @@ export default function AssessmentBroadsheetPanel(props: Props) {
                             </div>
 
                             <div className="mt-2 rounded-xl border border-white/10 bg-black/10 px-2 py-2 text-[10px] text-[#C9CDD6]">
-                              <div className="font-semibold text-[#F7F4ED]">
-                                {componentStatusLabel(component, stats)}
-                              </div>
-                              <div className="mt-0.5">{componentAction(component, stats)}</div>
-                            </div>
+  <div className="font-semibold text-[#F7F4ED]">
+    {componentStatusLabel(component, stats)}
+  </div>
+  <div className="mt-0.5">{componentAction(component, stats)}</div>
+</div>
+
+{onCreateEvidenceItem && Number(component.itemCount ?? 0) === 0 ? (
+  <button
+    type="button"
+    onClick={() =>
+      onCreateEvidenceItem({
+        subject: sheet.subject,
+        componentCode: component.code,
+        componentLabel: component.label,
+        maxScore: component.maxScore,
+        weightPercent: component.weightPercent,
+        required: component.required,
+      })
+    }
+    className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-[#E8C96A]/35 bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-3 py-2 text-[11px] font-semibold text-[#071A3D] shadow-[0_12px_34px_rgba(212,175,55,0.18)] transition hover:brightness-105"
+  >
+    Create {component.label}
+  </button>
+) : null}
                           </div>
                         );
                       })}

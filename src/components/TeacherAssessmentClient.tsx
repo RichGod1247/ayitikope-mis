@@ -59,6 +59,10 @@ type AssessmentItem = {
   lockedAt?: string | null;
   lessonDeliveryId?: string | null;
   curriculumUnitId?: string | null;
+  componentCode?: string | null;
+  policyComponentId?: string | null;
+  sortOrder?: number | null;
+  isRequired?: boolean | null;
 };
 
 type OverviewOk = {
@@ -214,6 +218,15 @@ type PipelineAnalyticsResponse = PipelineAnalyticsOk | PipelineAnalyticsErr;
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
+type CreateEvidenceItemArgs = {
+  subject: string;
+  componentCode: string;
+  componentLabel: string;
+  maxScore: number;
+  weightPercent: number;
+  required: boolean;
+};
+
 const ASSESSMENT_TYPES: { value: string; label: string }[] = [
   { value: "EXERCISE", label: "Exercise" },
   { value: "HOMEWORK", label: "Homework" },
@@ -225,6 +238,31 @@ const ASSESSMENT_TYPES: { value: string; label: string }[] = [
   { value: "EXAM", label: "Exam" },
   { value: "OTHER", label: "Other" },
 ];
+
+function assessmentTypeFromComponent(args: {
+  componentCode: string;
+  componentLabel: string;
+}) {
+  const code = cleanStr(args.componentCode).toUpperCase();
+  const label = cleanStr(args.componentLabel).toUpperCase();
+
+  if (ASSESSMENT_TYPES.some((t) => t.value === code)) return code;
+
+  if (label.includes("EXERCISE")) return "EXERCISE";
+  if (label.includes("HOMEWORK")) return "HOMEWORK";
+  if (label.includes("CLASS") && label.includes("TEST")) return "CLASS_TEST";
+  if (label.includes("PROJECT")) return "PROJECT";
+  if (label.includes("PRACTICAL")) return "PRACTICAL";
+  if (label.includes("EXAM")) return "EXAM";
+  if (label.includes("QUIZ")) return "QUIZ";
+
+  return code || "CLASS_TEST";
+}
+
+function defaultEvidenceTitle(args: CreateEvidenceItemArgs) {
+  const label = cleanStr(args.componentLabel) || cleanStr(args.componentCode) || "Assessment";
+  return `${label} evidence`;
+}
 
 const shellCard =
   "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
@@ -631,6 +669,7 @@ export default function TeacherAssessmentClient() {
 
   const [subject, setSubject] = useState("");
   const [type, setType] = useState("CLASS_TEST");
+  const [componentCode, setComponentCode] = useState("CLASS_TEST");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [maxScore, setMaxScore] = useState<string>("10");
@@ -667,6 +706,22 @@ export default function TeacherAssessmentClient() {
     () => itemScoreReadOnlyReason(selectedItem),
     [selectedItem]
   );
+
+const typeOptions = useMemo(() => {
+  const current = cleanStr(type).toUpperCase();
+
+  if (!current || ASSESSMENT_TYPES.some((t) => t.value === current)) {
+    return ASSESSMENT_TYPES;
+  }
+
+  return [
+    {
+      value: current,
+      label: current.replace(/_/g, " "),
+    },
+    ...ASSESSMENT_TYPES,
+  ];
+}, [type]);
 
   const selectedItemNotice =
     selectedItemScoreReadOnlyReason ?? selectedItemDefinitionReadOnlyReason;
@@ -1104,21 +1159,25 @@ setClassroomId(def);
   }, [classroomId, term, academicYear]);
 
   useEffect(() => {
-    if (!selectedItem) {
-      setSubject(urlSubject || subjectOptions[0] || "");
-      setType("CLASS_TEST");
-      setTitle("");
-      setDescription("");
-      setMaxScore("10");
-      setWeighting("10");
-      setDate("");
-      setLessonDeliveryId(urlLessonDeliveryId || "");
-      setCurriculumUnitId(urlCurriculumUnitId || "");
-      return;
-    }
+if (!selectedItem) {
+  setSubject(urlSubject || subjectOptions[0] || "");
+  setType("CLASS_TEST");
+  setComponentCode("CLASS_TEST");
+  setTitle("");
+  setDescription("");
+  setMaxScore("10");
+  setWeighting("10");
+  setDate("");
+  setLessonDeliveryId(urlLessonDeliveryId || "");
+  setCurriculumUnitId(urlCurriculumUnitId || "");
+  return;
+}
 
     setSubject(selectedItem.subject || subjectOptions[0] || "");
     setType(selectedItem.type || "CLASS_TEST");
+    setComponentCode(
+  cleanStr(selectedItem.componentCode) || selectedItem.type || "CLASS_TEST"
+);
     setTitle(selectedItem.title || "");
     setDescription(selectedItem.description ?? "");
     setMaxScore(typeof selectedItem.maxScore === "number" ? String(selectedItem.maxScore) : "10");
@@ -1151,6 +1210,7 @@ setClassroomId(def);
         ""
     );
     setType("CLASS_TEST");
+    setComponentCode("CLASS_TEST");
     setTitle("");
     setDescription("");
     setMaxScore("10");
@@ -1164,6 +1224,46 @@ setClassroomId(def);
     setItemFormOpen(true);
     setTab("items");
   }
+
+function handleCreateEvidenceItemFromBroadsheet(args: CreateEvidenceItemArgs) {
+  setActionError(null);
+  setSelectedItemId(null);
+
+  const resolvedSubject =
+    subjectOptions.find((s) => sameSubject(s, args.subject)) ||
+    args.subject ||
+    urlSubject ||
+    subjectOptions[0] ||
+    "";
+
+  const resolvedType = assessmentTypeFromComponent(args);
+  const resolvedComponentCode = cleanStr(args.componentCode) || resolvedType;
+
+  const linkedDelivery = hasLessonDeliveryContext
+    ? lessonDeliveries.find((d) => d.id === urlLessonDeliveryId) ??
+      selectedLessonDelivery
+    : null;
+
+  setSubject(resolvedSubject);
+  setType(resolvedType);
+  setComponentCode(resolvedComponentCode);
+  setTitle(defaultEvidenceTitle(args));
+  setDescription("");
+  setMaxScore(String(args.maxScore || 10));
+  setWeighting(
+    Number.isFinite(args.weightPercent) ? String(args.weightPercent) : ""
+  );
+  setDate(formatDateForInput(linkedDelivery?.dateTaught ?? null));
+
+  setLessonDeliveryId(linkedDelivery?.id || "");
+  setCurriculumUnitId(
+    linkedDelivery?.curriculumUnitId || urlCurriculumUnitId || ""
+  );
+
+  setScoreDraft(buildBlankScoreGrid(students));
+  setItemFormOpen(true);
+  setTab("items");
+}
 
   async function handleDeleteSelectedItem() {
     if (!selectedItem) return;
@@ -1243,21 +1343,22 @@ setScoreDraft(buildBlankScoreGrid(students));
         urlCurriculumUnitId ||
         null;
 
-      const body = {
-        id: selectedItem?.id,
-        classroomId,
-        subject: subject.trim(),
-        term,
-        academicYear,
-        title: title.trim(),
-        description: description.trim() || null,
-        type,
-        maxScore: Number(maxScore) || 0,
-        weighting: weighting ? Number(weighting) : null,
-        date: date ? new Date(date).toISOString() : null,
-        lessonDeliveryId: lessonDeliveryId || null,
-        curriculumUnitId: resolvedCurriculumUnitId,
-      };
+const body = {
+  id: selectedItem?.id,
+  classroomId,
+  subject: subject.trim(),
+  term,
+  academicYear,
+  title: title.trim(),
+  description: description.trim() || null,
+  type,
+  componentCode: componentCode || type,
+  maxScore: Number(maxScore) || 0,
+  weighting: weighting ? Number(weighting) : null,
+  date: date ? new Date(date).toISOString() : null,
+  lessonDeliveryId: lessonDeliveryId || null,
+  curriculumUnitId: resolvedCurriculumUnitId,
+};
 
       const res = await fetch("/api/teacher/assessment/items/upsert", {
         method: "POST",
@@ -1602,13 +1703,14 @@ await loadScoresForItem(item.id, students);
       </div>
 
             {tab === "broadsheet" ? (
-        <AssessmentBroadsheetPanel
-          classroomId={classroomId}
-          term={term}
-          academicYear={academicYear}
-          subjectOptions={subjectOptions}
-          currentSubject={subject}
-        />
+<AssessmentBroadsheetPanel
+  classroomId={classroomId}
+  term={term}
+  academicYear={academicYear}
+  subjectOptions={subjectOptions}
+  currentSubject={subject}
+  onCreateEvidenceItem={handleCreateEvidenceItemFromBroadsheet}
+/>
       ) : null}
 
       <div className={tab === "broadsheet" ? "hidden" : "grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"}>
@@ -1781,18 +1883,28 @@ await loadScoresForItem(item.id, students);
 
                       <div className="space-y-1">
                         <label className="block text-[11px] font-medium text-[#C9CDD6]">Type</label>
-                        <select
-                          disabled={!!selectedItemDefinitionReadOnlyReason}
-                          className={darkInput}
-                          value={type}
-                          onChange={(e) => setType(e.target.value)}
-                        >
-                          {ASSESSMENT_TYPES.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </select>
+            <select
+  disabled={!!selectedItemDefinitionReadOnlyReason}
+  className={darkInput}
+  value={type}
+  onChange={(e) => {
+    setType(e.target.value);
+    setComponentCode(e.target.value);
+  }}
+>
+  {typeOptions.map((t) => (
+    <option key={t.value} value={t.value}>
+      {t.label}
+    </option>
+  ))}
+</select>
+
+{componentCode && componentCode !== type ? (
+  <p className="text-[10px] text-[#8F98A8]">
+    Policy component:{" "}
+    <span className="font-semibold text-[#F7F4ED]">{componentCode}</span>
+  </p>
+) : null}
                       </div>
 
                       <div className="space-y-1 sm:col-span-2">
