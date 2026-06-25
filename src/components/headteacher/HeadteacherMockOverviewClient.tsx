@@ -186,6 +186,12 @@ type OverviewErr = {
 
 type OverviewResponse = OverviewOk | OverviewErr;
 
+type ReminderSendStatus = {
+  loading: boolean;
+  ok: boolean | null;
+  message: string;
+};
+
 const shellCard =
   "rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl";
 const panelCard = "rounded-2xl border border-white/10 bg-[#08111C]/85";
@@ -246,6 +252,22 @@ function formatNumber(value: number | null | undefined, suffix = "") {
   if (value == null || !Number.isFinite(Number(value))) return "—";
   const n = Number(value);
   return `${n.toFixed(Number.isInteger(n) ? 0 : 1)}${suffix}`;
+}
+
+function actionKey(action: MockEvidenceAction) {
+  return [
+    action.code,
+    action.subject ?? "",
+    action.studentId ?? "",
+    action.title,
+  ].join(":");
+}
+
+function canSendTeacherReminder(action: MockEvidenceAction) {
+  return (
+    (action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER") &&
+    !!cleanStr(action.subject)
+  );
 }
 
 function actionModeLabel(mode: MockEvidenceActionMode) {
@@ -333,6 +355,13 @@ export default function HeadteacherMockOverviewClient() {
 
   const [broadsheet, setBroadsheet] = useState<Broadsheet | null>(null);
 
+const [reminderDeadline, setReminderDeadline] = useState(() => {
+  const d = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+  return d.toISOString().slice(0, 10);
+});
+const [reminderNote, setReminderNote] = useState("");
+const [reminderStatus, setReminderStatus] = useState<Record<string, ReminderSendStatus>>({});
+
   const allJhs3Classrooms = useMemo(() => classrooms.filter(isJhs3Classroom), [classrooms]);
 
   const visibleClassrooms = useMemo(() => {
@@ -400,6 +429,95 @@ export default function HeadteacherMockOverviewClient() {
       setLoading(false);
     }
   }
+
+async function sendTeacherReminder(action: MockEvidenceAction) {
+  if (!broadsheet) return;
+
+  const key = actionKey(action);
+
+  if (!canSendTeacherReminder(action)) {
+    setReminderStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: false,
+        ok: false,
+        message: "This action needs a specific subject before a teacher reminder can be sent.",
+      },
+    }));
+    return;
+  }
+
+  try {
+    setReminderStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: true,
+        ok: null,
+        message: "Sending reminder...",
+      },
+    }));
+
+    const res = await fetch("/api/headteacher/assessment/mock/reminders/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        sessionId: broadsheet.session.id,
+        actionCode: action.code,
+        subject: action.subject,
+        deadline: reminderDeadline,
+        note: reminderNote,
+      }),
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.ok) {
+      setReminderStatus((prev) => ({
+        ...prev,
+        [key]: {
+          loading: false,
+          ok: false,
+          message:
+            json?.error === "NO_ASSIGNED_TEACHER_FOUND_FOR_MOCK_REMINDER"
+              ? "No assigned teacher found for this subject. Assign the subject first."
+              : json?.error || `Failed to send reminder. HTTP ${res.status}`,
+        },
+      }));
+      return;
+    }
+
+    const names = Array.isArray(json.recipients)
+      ? json.recipients.map((r: { name?: string }) => cleanStr(r.name)).filter(Boolean)
+      : [];
+
+    setReminderStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: false,
+        ok: true,
+        message: json.reused
+          ? `Reminder already sent${names.length ? ` to ${names.join(", ")}` : ""}.`
+          : `Reminder sent${names.length ? ` to ${names.join(", ")}` : ""}.`,
+      },
+    }));
+
+    void loadOverview({
+      nextClassroomId: classroomId,
+      nextSessionId: sessionId,
+      nextAcademicYear: academicYear,
+    });
+  } catch {
+    setReminderStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: false,
+        ok: false,
+        message: "Failed to send reminder.",
+      },
+    }));
+  }
+}
 
   useEffect(() => {
     void loadOverview();
@@ -584,8 +702,34 @@ export default function HeadteacherMockOverviewClient() {
   title="Evidence completeness command map"
   subtitle="Bank-grade action surface: what is missing, who owns it, and where to act next."
 >
-  <div className="space-y-4">
-<div className="grid gap-3 lg:grid-cols-3">
+<div className="space-y-4">
+  <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#08111C]/85 p-4 md:grid-cols-[220px_1fr]">
+    <div>
+      <label className="mb-1 block text-[11px] font-semibold text-[#AEB6C4]">
+        Reminder deadline
+      </label>
+      <input
+        type="date"
+        value={reminderDeadline}
+        onChange={(e) => setReminderDeadline(e.target.value)}
+        className={darkInput}
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-[11px] font-semibold text-[#AEB6C4]">
+        Optional headteacher note
+      </label>
+      <input
+        value={reminderNote}
+        onChange={(e) => setReminderNote(e.target.value)}
+        placeholder="Example: Complete before Friday’s readiness review."
+        className={darkInput}
+      />
+    </div>
+  </div>
+
+  <div className="grid gap-3 lg:grid-cols-3">
   {broadsheet.evidenceActions.headlineActions.map((action) => (
     <div
       key={`${action.code}:${action.title}:${action.subject ?? action.studentId ?? ""}`}
@@ -627,29 +771,54 @@ export default function HeadteacherMockOverviewClient() {
         </div>
       ) : null}
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
-          <button
-            type="button"
-            disabled
-            title="Teacher in-app notification route will be wired in the next sprint."
-            className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-semibold text-[#8F98A8]"
-          >
-            Notification route pending
-          </button>
-        ) : null}
+<div className="mt-3 flex flex-wrap gap-2">
+  {action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
+    <button
+      type="button"
+      onClick={() => sendTeacherReminder(action)}
+      disabled={!canSendTeacherReminder(action) || !!reminderStatus[actionKey(action)]?.loading}
+      title={
+        canSendTeacherReminder(action)
+          ? "Send official in-app reminder to the assigned teacher."
+          : "This action needs a specific subject before a teacher reminder can be sent."
+      }
+      className={[
+        "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+        canSendTeacherReminder(action)
+          ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100 hover:bg-emerald-400/15"
+          : "border-white/10 bg-white/[0.03] text-[#8F98A8]",
+      ].join(" ")}
+    >
+      {reminderStatus[actionKey(action)]?.loading ? "Sending..." : "Send reminder"}
+    </button>
+  ) : null}
 
-        <Link
-          href={action.href}
-          className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
-        >
-          {action.mode === "LEARNER_SUPPORT_REVIEW"
-            ? "Open learner profile"
-            : action.mode === "REVIEW_ONLY"
-              ? "Review"
-              : "Open last-resort cockpit"}
-        </Link>
-      </div>
+  <Link
+    href={action.href}
+    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+  >
+    {action.mode === "LEARNER_SUPPORT_REVIEW"
+      ? "Open learner profile"
+      : action.mode === "REVIEW_ONLY"
+        ? "Review"
+        : "Open last-resort cockpit"}
+  </Link>
+</div>
+
+{reminderStatus[actionKey(action)]?.message ? (
+  <div
+    className={[
+      "mt-2 rounded-xl border px-3 py-2 text-[11px]",
+      reminderStatus[actionKey(action)]?.ok
+        ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+        : reminderStatus[actionKey(action)]?.ok === false
+          ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+          : "border-white/10 bg-white/[0.03] text-[#C9CDD6]",
+    ].join(" ")}
+  >
+    {reminderStatus[actionKey(action)]?.message}
+  </div>
+) : null}
     </div>
   ))}
 </div>

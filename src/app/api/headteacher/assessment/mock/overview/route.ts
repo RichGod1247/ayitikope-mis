@@ -319,22 +319,25 @@ function buildMockEvidenceActions(args: {
 
   const headlineActions: MockEvidenceAction[] = [];
 
-  if (missingCoreSubjectColumns.length > 0) {
-headlineActions.push({
-  code: "NOTIFY_MISSING_CORE_SUBJECT_TEACHERS",
-  mode: "NOTIFY_TEACHER",
-  priority: "CRITICAL",
-  title: "Notify teachers to open missing core Mock columns",
-  detail: `Missing core subject column(s): ${missingCoreSubjectColumns.join(
-    ", "
-  )}. These should be created by the assigned subject teachers before the headteacher intervenes directly.`,
-  owner: "Assigned core subject teachers",
-  primaryAction: "Send in-app reminder with deadline",
-  lastResortAction: "Open teacher Mock cockpit only if the assigned teacher is absent or indisposed",
-  href: teacherMockHref({ sessionId: args.sessionId }),
-  missingCount: missingCoreSubjectColumns.length,
-});
-  }
+  for (const subject of missingCoreSubjectColumns) {
+  headlineActions.push({
+    code: "NOTIFY_MISSING_CORE_SUBJECT_TEACHERS",
+    mode: "NOTIFY_TEACHER",
+    priority: "CRITICAL",
+    title: `Notify ${subject} teacher to open Mock column`,
+    detail: `${subject} Mock column is missing. This should be created by the assigned subject teacher before the headteacher intervenes directly.`,
+    owner: `${subject} teacher`,
+    primaryAction: "Send in-app reminder with deadline",
+    lastResortAction:
+      "Open teacher Mock cockpit only if the assigned teacher is absent or indisposed",
+    href: teacherMockHref({
+      sessionId: args.sessionId,
+      subject,
+    }),
+    subject,
+    missingCount: 1,
+  });
+}
 
   if (missingElectiveColumnCount > 0) {
 headlineActions.push({
