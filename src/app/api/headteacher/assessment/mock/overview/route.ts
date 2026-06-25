@@ -3,12 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import {
+  MOCK_CORE_SUBJECTS,
+  MOCK_SCHOOL_AGGREGATE_SUBJECTS,
   calculatePlacementMockAggregate,
   calculateSchoolMockAggregate,
   canonicalMockSubject,
   cleanMockStr,
   isJhs3MockClassroom,
   mockGradeFromScore,
+  mockSubjectLabel,
   readinessBandFromAggregate,
 } from "@/lib/assessments/mock";
 
@@ -43,6 +46,66 @@ type MockItemRow = {
   status: string;
   lockedAt: Date | null;
   scores: ScoreRow[];
+};
+
+type MockActionPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+
+type MockEvidenceActionMode =
+  | "NOTIFY_TEACHER"
+  | "REMIND_TEACHER"
+  | "LEARNER_SUPPORT_REVIEW"
+  | "REVIEW_ONLY";
+
+type MockEvidenceAction = {
+  code: string;
+  mode: MockEvidenceActionMode;
+  priority: MockActionPriority;
+  title: string;
+  detail: string;
+  owner: string;
+  primaryAction: string;
+  lastResortAction?: string;
+  href: string;
+  subject?: string;
+  studentId?: string;
+  studentName?: string;
+  missingCount?: number;
+};
+
+type MockSubjectSummaryLite = {
+  itemId: string;
+  subject: string;
+  canonicalSubject: string;
+  scoredCount: number;
+  missingCount: number;
+  averageScore: number | null;
+  averageGrade: number | null;
+};
+
+type MockStudentReadinessRow = {
+  studentId: string;
+  name: string;
+  scoredSubjectCount: number;
+  missingSubjectCount: number;
+  averageScore: number | null;
+  schoolAggregate: {
+    ok: boolean;
+    aggregate: number | null;
+    missingSubjects: string[];
+    reason: string | null;
+  };
+  placementAggregate: {
+    ok: boolean;
+    aggregate: number | null;
+    missingSubjects: string[];
+    reason: string | null;
+  };
+  readiness: {
+    code: string;
+    label: string;
+    tone: string;
+    action: string;
+  };
 };
 
 function noStore(status: number, payload: unknown) {
@@ -136,6 +199,245 @@ function buildSubjectSummary(item: MockItemRow, totalStudents: number) {
     averageScore,
     averageGrade,
     gradeDistribution,
+  };
+}
+
+function teacherMockHref(args: {
+  sessionId: string;
+  itemId?: string | null;
+  subject?: string | null;
+}) {
+  const params = new URLSearchParams();
+
+  if (args.sessionId) params.set("sessionId", args.sessionId);
+  if (args.itemId) params.set("itemId", args.itemId);
+  if (cleanMockStr(args.subject)) params.set("subject", cleanMockStr(args.subject));
+
+  const query = params.toString();
+  return query ? `/teacher/assessment/mock?${query}` : "/teacher/assessment/mock";
+}
+
+function uniqueLabels(values: string[]) {
+  return Array.from(new Set(values.map(cleanMockStr).filter(Boolean)));
+}
+
+function actionPriorityRank(priority: MockActionPriority) {
+  if (priority === "CRITICAL") return 0;
+  if (priority === "HIGH") return 1;
+  if (priority === "MEDIUM") return 2;
+  return 3;
+}
+
+function sortActions(actions: MockEvidenceAction[]) {
+  return [...actions].sort((a, b) => {
+    const pr = actionPriorityRank(a.priority) - actionPriorityRank(b.priority);
+    if (pr !== 0) return pr;
+    return a.title.localeCompare(b.title);
+  });
+}
+
+function buildMockEvidenceActions(args: {
+  sessionId: string;
+  totalStudents: number;
+  subjectSummaries: MockSubjectSummaryLite[];
+  students: MockStudentReadinessRow[];
+}) {
+  const createdCanonicalSubjects = new Set(
+    args.subjectSummaries.map((subject) => subject.canonicalSubject)
+  );
+
+  const coreSubjectSet = new Set<string>(MOCK_CORE_SUBJECTS as readonly string[]);
+
+  const missingCoreSubjectColumns = MOCK_CORE_SUBJECTS
+    .filter((subject) => !createdCanonicalSubjects.has(subject))
+    .map((subject) => mockSubjectLabel(subject));
+
+  const missingSchoolAggregateColumns = MOCK_SCHOOL_AGGREGATE_SUBJECTS
+    .filter((subject) => !createdCanonicalSubjects.has(subject))
+    .map((subject) => mockSubjectLabel(subject));
+
+  const electiveColumns = args.subjectSummaries.filter(
+    (subject) => !coreSubjectSet.has(subject.canonicalSubject)
+  );
+
+  const missingElectiveColumnCount = Math.max(0, 2 - electiveColumns.length);
+
+  const subjectScoreGaps = args.subjectSummaries
+    .filter((subject) => subject.missingCount > 0)
+    .sort((a, b) => {
+      if (b.missingCount !== a.missingCount) return b.missingCount - a.missingCount;
+      return a.subject.localeCompare(b.subject);
+    })
+    .map((subject) => ({
+      subject: subject.subject,
+      canonicalSubject: subject.canonicalSubject,
+      itemId: subject.itemId,
+      scoredCount: subject.scoredCount,
+      missingCount: subject.missingCount,
+      completionPercent:
+        args.totalStudents > 0
+          ? Math.round((subject.scoredCount / args.totalStudents) * 1000) / 10
+          : 0,
+      href: teacherMockHref({
+        sessionId: args.sessionId,
+        itemId: subject.itemId,
+        subject: subject.subject,
+      }),
+    }));
+
+  const learnerScoreGaps = args.students
+    .filter((student) => student.missingSubjectCount > 0)
+    .sort((a, b) => {
+      if (b.missingSubjectCount !== a.missingSubjectCount) {
+        return b.missingSubjectCount - a.missingSubjectCount;
+      }
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, 12)
+    .map((student) => ({
+      studentId: student.studentId,
+      name: student.name,
+      scoredSubjectCount: student.scoredSubjectCount,
+      missingSubjectCount: student.missingSubjectCount,
+      averageScore: student.averageScore,
+      missingForPlacement: student.placementAggregate.missingSubjects ?? [],
+      readinessCode: student.readiness.code,
+    }));
+
+  const learnerRiskSignals = args.students
+    .filter((student) => student.averageScore != null && Number(student.averageScore) < 50)
+    .sort((a, b) => Number(a.averageScore ?? 999) - Number(b.averageScore ?? 999))
+    .slice(0, 12)
+    .map((student) => ({
+      studentId: student.studentId,
+      name: student.name,
+      averageScore: student.averageScore,
+      scoredSubjectCount: student.scoredSubjectCount,
+      readinessCode: student.readiness.code,
+      action: "Review weak subject evidence and assign targeted intervention.",
+    }));
+
+  const headlineActions: MockEvidenceAction[] = [];
+
+  if (missingCoreSubjectColumns.length > 0) {
+headlineActions.push({
+  code: "NOTIFY_MISSING_CORE_SUBJECT_TEACHERS",
+  mode: "NOTIFY_TEACHER",
+  priority: "CRITICAL",
+  title: "Notify teachers to open missing core Mock columns",
+  detail: `Missing core subject column(s): ${missingCoreSubjectColumns.join(
+    ", "
+  )}. These should be created by the assigned subject teachers before the headteacher intervenes directly.`,
+  owner: "Assigned core subject teachers",
+  primaryAction: "Send in-app reminder with deadline",
+  lastResortAction: "Open teacher Mock cockpit only if the assigned teacher is absent or indisposed",
+  href: teacherMockHref({ sessionId: args.sessionId }),
+  missingCount: missingCoreSubjectColumns.length,
+});
+  }
+
+  if (missingElectiveColumnCount > 0) {
+headlineActions.push({
+  code: "NOTIFY_ELECTIVE_TEACHERS_TO_OPEN_COLUMNS",
+  mode: "NOTIFY_TEACHER",
+  priority: "HIGH",
+  title: "Notify elective teachers to open enough Mock columns",
+  detail: `Placement aggregate needs at least 2 elective subjects. ${missingElectiveColumnCount} more elective column(s) are needed.`,
+  owner: "Assigned elective subject teachers",
+  primaryAction: "Send in-app reminder with deadline",
+  lastResortAction: "Open teacher Mock cockpit only as last-resort administrative support",
+  href: teacherMockHref({ sessionId: args.sessionId }),
+  missingCount: missingElectiveColumnCount,
+});
+  }
+
+  const emptySubjectColumns = subjectScoreGaps.filter((subject) => subject.scoredCount === 0);
+
+  for (const subject of emptySubjectColumns.slice(0, 5)) {
+headlineActions.push({
+  code: "REMIND_EMPTY_SUBJECT_SCORE_ENTRY",
+  mode: "REMIND_TEACHER",
+  priority: "HIGH",
+  title: `Remind ${subject.subject} teacher to enter Mock scores`,
+  detail: `${subject.subject} has 0/${args.totalStudents} learner scores entered.`,
+  owner: `${subject.subject} teacher`,
+  primaryAction: "Send teacher reminder with deadline",
+  lastResortAction: "Open score-entry cockpit only if delegated to the headteacher",
+  href: subject.href,
+  subject: subject.subject,
+  missingCount: subject.missingCount,
+});
+  }
+
+  const partialSubjectColumns = subjectScoreGaps.filter((subject) => subject.scoredCount > 0);
+
+  for (const subject of partialSubjectColumns.slice(0, 5)) {
+headlineActions.push({
+  code: "REMIND_PARTIAL_SUBJECT_SCORE_COMPLETION",
+  mode: "REMIND_TEACHER",
+  priority: "MEDIUM",
+  title: `Remind ${subject.subject} teacher to complete score evidence`,
+  detail: `${subject.subject} is ${subject.completionPercent}% complete; ${subject.missingCount} learner score(s) still missing.`,
+  owner: `${subject.subject} teacher`,
+  primaryAction: "Send completion reminder with deadline",
+  lastResortAction: "Open score-entry cockpit only as last resort",
+  href: subject.href,
+  subject: subject.subject,
+  missingCount: subject.missingCount,
+});
+  }
+
+  for (const learner of learnerRiskSignals.slice(0, 5)) {
+headlineActions.push({
+  code: "EARLY_LEARNER_SUPPORT_SIGNAL",
+  mode: "LEARNER_SUPPORT_REVIEW",
+  priority: "MEDIUM",
+  title: `Early support signal: ${learner.name}`,
+  detail: `${learner.name} has an available-evidence average of ${learner.averageScore}. This is provisional because full Mock evidence is still incomplete.`,
+  owner: "Headteacher + class teacher + relevant subject teachers",
+  primaryAction: "Review learner context and assign targeted support",
+  lastResortAction: "Open learner profile for attendance, fee, and background context",
+  href: `/headteacher/student/${learner.studentId}?focus=mock-readiness`,
+  studentId: learner.studentId,
+  studentName: learner.name,
+});
+  }
+
+  if (headlineActions.length === 0) {
+headlineActions.push({
+  code: "MOCK_EVIDENCE_READY_FOR_REVIEW",
+  mode: "REVIEW_ONLY",
+  priority: "LOW",
+  title: "Mock evidence is ready for review",
+  detail: "Required Mock evidence is sufficiently complete for leadership review.",
+  owner: "Headteacher",
+  primaryAction: "Review readiness and plan intervention",
+  href: "/headteacher/assessment/mock",
+});
+  }
+
+  return {
+    requiredSubjectColumns: {
+      placementCore: MOCK_CORE_SUBJECTS.map((subject) => mockSubjectLabel(subject)),
+      schoolAggregate: MOCK_SCHOOL_AGGREGATE_SUBJECTS.map((subject) =>
+        mockSubjectLabel(subject)
+      ),
+      placementElectiveMinimum: 2,
+    },
+    createdSubjectColumns: args.subjectSummaries.map((subject) => ({
+      itemId: subject.itemId,
+      subject: subject.subject,
+      canonicalSubject: subject.canonicalSubject,
+      scoredCount: subject.scoredCount,
+      missingCount: subject.missingCount,
+    })),
+    missingCoreSubjectColumns: uniqueLabels(missingCoreSubjectColumns),
+    missingSchoolAggregateColumns: uniqueLabels(missingSchoolAggregateColumns),
+    missingElectiveColumnCount,
+    subjectScoreGaps,
+    learnerScoreGaps,
+    learnerRiskSignals,
+    headlineActions: sortActions(headlineActions),
   };
 }
 
@@ -303,7 +605,7 @@ export async function GET(req: NextRequest) {
     buildSubjectSummary(item, students.length)
   );
 
-  const studentRows = students.map((student) => {
+  const studentRows: MockStudentReadinessRow[] = students.map((student) => {
     const subjectScores = typedItems.map((item) => {
       const score = item.scores.find((row) => row.studentId === student.id) ?? null;
       const grade = score ? mockGradeFromScore(score.score) : null;
@@ -384,12 +686,19 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => Number(b.averageGrade ?? 0) - Number(a.averageGrade ?? 0))
     .slice(0, 3);
 
-  const topSubjects = subjectSummaries
-    .filter((subject) => subject.averageGrade != null)
-    .sort((a, b) => Number(a.averageGrade ?? 99) - Number(b.averageGrade ?? 99))
-    .slice(0, 3);
+const topSubjects = subjectSummaries
+  .filter((subject) => subject.averageGrade != null)
+  .sort((a, b) => Number(a.averageGrade ?? 99) - Number(b.averageGrade ?? 99))
+  .slice(0, 3);
 
-  return noStore(200, {
+const evidenceActions = buildMockEvidenceActions({
+  sessionId: selectedSession.id,
+  totalStudents: students.length,
+  subjectSummaries,
+  students: studentRows,
+});
+
+return noStore(200, {
     ok: true,
     classrooms: classrooms.map((classroom) => ({
       ...classroom,
@@ -441,13 +750,14 @@ export async function GET(req: NextRequest) {
       weakestSubjects,
       topSubjects,
       students: studentRows,
-      warnings: {
-        aggregateMayBeIncomplete: typedItems.length < 6 || placementReadyRows.length < students.length,
-        message:
-          typedItems.length < 6
-            ? "Mock subjects are fewer than required for full BECE aggregate analysis."
-            : null,
-      },
+evidenceActions,
+warnings: {
+  aggregateMayBeIncomplete: typedItems.length < 6 || placementReadyRows.length < students.length,
+  message:
+    typedItems.length < 6
+      ? "Mock subjects are fewer than required for full BECE aggregate analysis."
+      : null,
+},
     },
   });
 }

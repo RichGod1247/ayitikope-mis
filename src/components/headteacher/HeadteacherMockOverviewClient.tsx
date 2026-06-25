@@ -44,6 +44,81 @@ type SubjectSummary = {
   averageGrade: number | null;
 };
 
+type MockActionPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+
+type MockEvidenceActionMode =
+  | "NOTIFY_TEACHER"
+  | "REMIND_TEACHER"
+  | "LEARNER_SUPPORT_REVIEW"
+  | "REVIEW_ONLY";
+
+type MockEvidenceAction = {
+  code: string;
+  mode: MockEvidenceActionMode;
+  priority: MockActionPriority;
+  title: string;
+  detail: string;
+  owner: string;
+  primaryAction: string;
+  lastResortAction?: string;
+  href: string;
+  subject?: string;
+  studentId?: string;
+  studentName?: string;
+  missingCount?: number;
+};
+
+type SubjectScoreGap = {
+  subject: string;
+  canonicalSubject: string;
+  itemId: string;
+  scoredCount: number;
+  missingCount: number;
+  completionPercent: number;
+  href: string;
+};
+
+type LearnerScoreGap = {
+  studentId: string;
+  name: string;
+  scoredSubjectCount: number;
+  missingSubjectCount: number;
+  averageScore: number | null;
+  missingForPlacement: string[];
+  readinessCode: string;
+};
+
+type LearnerRiskSignal = {
+  studentId: string;
+  name: string;
+  averageScore: number | null;
+  scoredSubjectCount: number;
+  readinessCode: string;
+  action: string;
+};
+
+type EvidenceActions = {
+  requiredSubjectColumns: {
+    placementCore: string[];
+    schoolAggregate: string[];
+    placementElectiveMinimum: number;
+  };
+  createdSubjectColumns: {
+    itemId: string;
+    subject: string;
+    canonicalSubject: string;
+    scoredCount: number;
+    missingCount: number;
+  }[];
+  missingCoreSubjectColumns: string[];
+  missingSchoolAggregateColumns: string[];
+  missingElectiveColumnCount: number;
+  subjectScoreGaps: SubjectScoreGap[];
+  learnerScoreGaps: LearnerScoreGap[];
+  learnerRiskSignals: LearnerRiskSignal[];
+  headlineActions: MockEvidenceAction[];
+};
+
 type StudentRow = {
   studentId: string;
   name: string;
@@ -84,8 +159,9 @@ type Broadsheet = {
   subjectSummaries: SubjectSummary[];
   weakestSubjects: SubjectSummary[];
   topSubjects: SubjectSummary[];
-  students: StudentRow[];
-  warnings: {
+students: StudentRow[];
+evidenceActions: EvidenceActions;
+warnings: {
     aggregateMayBeIncomplete: boolean;
     message: string | null;
   };
@@ -170,6 +246,29 @@ function formatNumber(value: number | null | undefined, suffix = "") {
   if (value == null || !Number.isFinite(Number(value))) return "—";
   const n = Number(value);
   return `${n.toFixed(Number.isInteger(n) ? 0 : 1)}${suffix}`;
+}
+
+function actionModeLabel(mode: MockEvidenceActionMode) {
+  if (mode === "NOTIFY_TEACHER") return "Teacher notification";
+  if (mode === "REMIND_TEACHER") return "Teacher reminder";
+  if (mode === "LEARNER_SUPPORT_REVIEW") return "Learner support";
+  return "Leadership review";
+}
+
+function priorityClass(priority: MockActionPriority) {
+  if (priority === "CRITICAL") {
+    return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+  }
+
+  if (priority === "HIGH") {
+    return "border-amber-300/25 bg-amber-400/12 text-amber-100";
+  }
+
+  if (priority === "MEDIUM") {
+    return "border-sky-300/25 bg-sky-400/12 text-sky-100";
+  }
+
+  return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
 }
 
 function readinessClass(code: string) {
@@ -339,16 +438,22 @@ export default function HeadteacherMockOverviewClient() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Link href="/headteacher/assessment/overview" className={darkButton}>
-                Assessment overview
-              </Link>
-              <Link href="/teacher/assessment/mock" className={darkButton}>
-                Teacher Mock cockpit
-              </Link>
-              <button type="button" onClick={() => loadOverview()} disabled={loading} className={goldButton}>
-                {loading ? "Loading..." : "Refresh"}
-              </button>
-            </div>
+  <Link href="/headteacher/dashboard" className={darkButton}>
+    Headteacher dashboard
+  </Link>
+
+  <Link href="/headteacher/assessment/overview" className={darkButton}>
+    Assessment overview
+  </Link>
+
+  <Link href="/teacher/assessment/mock" className={darkButton}>
+    Teacher Mock cockpit
+  </Link>
+
+  <button type="button" onClick={() => loadOverview()} disabled={loading} className={goldButton}>
+    {loading ? "Loading..." : "Refresh"}
+  </button>
+</div>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -470,12 +575,262 @@ export default function HeadteacherMockOverviewClient() {
             </div>
 
             {broadsheet.warnings.message ? (
-              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-[12px] text-amber-100">
-                {broadsheet.warnings.message}
-              </div>
-            ) : null}
+  <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-[12px] text-amber-100">
+    {broadsheet.warnings.message}
+  </div>
+) : null}
 
-            <div className="grid gap-5 lg:grid-cols-2">
+<SectionCard
+  title="Evidence completeness command map"
+  subtitle="Bank-grade action surface: what is missing, who owns it, and where to act next."
+>
+  <div className="space-y-4">
+<div className="grid gap-3 lg:grid-cols-3">
+  {broadsheet.evidenceActions.headlineActions.map((action) => (
+    <div
+      key={`${action.code}:${action.title}:${action.subject ?? action.studentId ?? ""}`}
+      className="rounded-2xl border border-white/10 bg-[#08111C]/85 p-4"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-sm font-semibold text-[#F7F4ED]">{action.title}</div>
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-[#C9CDD6]">
+              {actionModeLabel(action.mode)}
+            </span>
+          </div>
+
+          <div className="mt-2 text-[12px] leading-5 text-[#AEB6C4]">{action.detail}</div>
+        </div>
+
+        <span
+          className={[
+            "shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold",
+            priorityClass(action.priority),
+          ].join(" ")}
+        >
+          {action.priority}
+        </span>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-[#C9CDD6]">
+        Owner: <span className="font-semibold text-[#F7F4ED]">{action.owner}</span>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] text-emerald-100">
+        Primary action: <span className="font-semibold">{action.primaryAction}</span>
+      </div>
+
+      {action.lastResortAction ? (
+        <div className="mt-2 rounded-xl border border-amber-300/15 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100">
+          Last resort: <span className="font-semibold">{action.lastResortAction}</span>
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
+          <button
+            type="button"
+            disabled
+            title="Teacher in-app notification route will be wired in the next sprint."
+            className="inline-flex cursor-not-allowed items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-semibold text-[#8F98A8]"
+          >
+            Notification route pending
+          </button>
+        ) : null}
+
+        <Link
+          href={action.href}
+          className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+        >
+          {action.mode === "LEARNER_SUPPORT_REVIEW"
+            ? "Open learner profile"
+            : action.mode === "REVIEW_ONLY"
+              ? "Review"
+              : "Open last-resort cockpit"}
+        </Link>
+      </div>
+    </div>
+  ))}
+</div>
+
+    <div className="grid gap-3 lg:grid-cols-3">
+      <div className={panelCard + " p-4"}>
+        <div className="text-sm font-semibold text-[#F7F4ED]">Missing core columns</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {broadsheet.evidenceActions.missingCoreSubjectColumns.length === 0 ? (
+            <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
+              Core columns created
+            </span>
+          ) : (
+            broadsheet.evidenceActions.missingCoreSubjectColumns.map((subject) => (
+              <span
+                key={subject}
+                className="rounded-full border border-rose-300/20 bg-rose-400/10 px-3 py-1 text-[11px] text-rose-100"
+              >
+                {subject}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className={panelCard + " p-4"}>
+        <div className="text-sm font-semibold text-[#F7F4ED]">Missing school aggregate columns</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {broadsheet.evidenceActions.missingSchoolAggregateColumns.length === 0 ? (
+            <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
+              School aggregate columns created
+            </span>
+          ) : (
+            broadsheet.evidenceActions.missingSchoolAggregateColumns.map((subject) => (
+              <span
+                key={subject}
+                className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100"
+              >
+                {subject}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className={panelCard + " p-4"}>
+        <div className="text-sm font-semibold text-[#F7F4ED]">Elective sufficiency</div>
+        <div className="mt-2 text-[12px] leading-5 text-[#AEB6C4]">
+          Placement aggregate requires at least{" "}
+          <span className="font-semibold text-[#F7F4ED]">
+            {broadsheet.evidenceActions.requiredSubjectColumns.placementElectiveMinimum}
+          </span>{" "}
+          elective subjects.
+        </div>
+
+        <div className="mt-3">
+          {broadsheet.evidenceActions.missingElectiveColumnCount > 0 ? (
+            <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100">
+              Add {broadsheet.evidenceActions.missingElectiveColumnCount} more elective column(s)
+            </span>
+          ) : (
+            <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
+              Elective minimum satisfied
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <div className="grid gap-3 lg:grid-cols-2">
+      <div className={panelCard + " p-4"}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">Subject score gaps</div>
+            <div className="mt-1 text-[11px] text-[#8F98A8]">
+              Subjects with missing learner scores.
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {broadsheet.evidenceActions.subjectScoreGaps.length === 0 ? (
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] text-emerald-100">
+              No subject score gaps.
+            </div>
+          ) : (
+            broadsheet.evidenceActions.subjectScoreGaps.slice(0, 8).map((gap) => (
+              <Link
+                key={gap.itemId}
+                href={gap.href}
+                className="block rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 transition hover:bg-white/[0.06]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[12px] font-semibold text-[#F7F4ED]">{gap.subject}</div>
+                    <div className="text-[11px] text-[#AEB6C4]">
+                      {gap.scoredCount} scored • {gap.missingCount} missing
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
+                    {formatNumber(gap.completionPercent, "%")}
+                  </span>
+                </div>
+              </Link>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className={panelCard + " p-4"}>
+        <div className="text-sm font-semibold text-[#F7F4ED]">Learner evidence gaps</div>
+        <div className="mt-1 text-[11px] text-[#8F98A8]">
+          Learners missing the most visible Mock subject scores.
+        </div>
+
+        <div className="mt-3 space-y-2">
+          {broadsheet.evidenceActions.learnerScoreGaps.length === 0 ? (
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] text-emerald-100">
+              No learner evidence gaps.
+            </div>
+          ) : (
+            broadsheet.evidenceActions.learnerScoreGaps.slice(0, 8).map((gap) => (
+              <div key={gap.studentId} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[12px] font-semibold text-[#F7F4ED]">{gap.name}</div>
+                    <div className="text-[11px] text-[#AEB6C4]">
+                      {gap.scoredSubjectCount} scored • {gap.missingSubjectCount} missing
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
+                    Avg {formatNumber(gap.averageScore)}
+                  </span>
+                </div>
+
+                {gap.missingForPlacement.length > 0 ? (
+                  <div className="mt-2 text-[10px] text-[#8F98A8]">
+                    Missing for placement: {gap.missingForPlacement.join(", ")}
+                  </div>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+
+    <div className={panelCard + " p-4"}>
+<div className="text-sm font-semibold text-[#F7F4ED]">Early learner support signals</div>
+<div className="mt-1 text-[11px] text-[#8F98A8]">
+  Based only on scores already entered. These are provisional support flags, not final BECE readiness judgments.
+</div>
+
+      <div className="mt-3 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+        {broadsheet.evidenceActions.learnerRiskSignals.length === 0 ? (
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[12px] text-[#AEB6C4]">
+            No low-average learner signal yet.
+          </div>
+        ) : (
+          broadsheet.evidenceActions.learnerRiskSignals.map((signal) => (
+            <Link
+              key={signal.studentId}
+              href={`/headteacher/student/${signal.studentId}`}
+              className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 transition hover:bg-rose-400/15"
+            >
+              <div className="text-[12px] font-semibold text-rose-100">{signal.name}</div>
+              <div className="mt-1 text-[11px] text-rose-100/80">
+                Avg {formatNumber(signal.averageScore)} • {signal.scoredSubjectCount} scored
+              </div>
+              <div className="mt-2 text-[10px] text-rose-100/70">
+  Provisional support signal. Review learner context, then follow up with the responsible subject teacher.
+</div>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+</SectionCard>
+
+<div className="grid gap-5 lg:grid-cols-2">
               <SectionCard title="Subject readiness" subtitle="Averages, missing scores, and strongest/weakest subjects.">
                 <div className="grid gap-3 md:grid-cols-2">
                   {broadsheet.subjectSummaries.length === 0 ? (
