@@ -56,6 +56,23 @@ type MockEvidenceActionMode =
   | "LEARNER_SUPPORT_REVIEW"
   | "REVIEW_ONLY";
 
+type MockReminderAudit = {
+  sent: boolean;
+  noticeId: string | null;
+  noticeTitle: string | null;
+  sentAt: string | null;
+  recipientCount: number;
+  readCount: number;
+  acknowledgedCount: number;
+  recipients: {
+    id: string;
+    userId: string | null;
+    name: string | null;
+    readAt: string | null;
+    acknowledgedAt: string | null;
+  }[];
+};
+
 type MockEvidenceAction = {
   code: string;
   mode: MockEvidenceActionMode;
@@ -70,6 +87,7 @@ type MockEvidenceAction = {
   studentId?: string;
   studentName?: string;
   missingCount?: number;
+  reminderAudit?: MockReminderAudit;
 };
 
 type MockSubjectSummaryLite = {
@@ -236,11 +254,117 @@ function sortActions(actions: MockEvidenceAction[]) {
   });
 }
 
+type MockReminderNoticeRow = {
+  id: string;
+  title: string;
+  sentAt: Date | null;
+  createdAt: Date;
+  metadata: unknown;
+  recipients: {
+    id: string;
+    recipientUserId: string | null;
+    displayName: string | null;
+    readAt: Date | null;
+    acknowledgedAt: Date | null;
+  }[];
+};
+
+function metadataRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function reminderAuditKey(args: {
+  actionCode: string;
+  subject?: string | null;
+}) {
+  return `${cleanMockStr(args.actionCode).toUpperCase()}:${cleanMockStr(args.subject).toUpperCase()}`;
+}
+
+function buildReminderAuditMap(rows: MockReminderNoticeRow[]) {
+  const map = new Map<string, MockReminderAudit>();
+
+  for (const row of rows) {
+    const metadata = metadataRecord(row.metadata);
+    const actionCode = cleanMockStr(metadata.actionCode);
+    const subject = cleanMockStr(metadata.subject);
+    const key = reminderAuditKey({ actionCode, subject });
+
+    if (!actionCode || !subject) continue;
+
+    const existing = map.get(key);
+    const existingTime = existing?.sentAt ? new Date(existing.sentAt).getTime() : 0;
+    const rowTime = (row.sentAt ?? row.createdAt).getTime();
+
+    if (existing && existingTime >= rowTime) continue;
+
+    const recipients = row.recipients.map((recipient) => ({
+      id: recipient.id,
+      userId: recipient.recipientUserId,
+      name: recipient.displayName,
+      readAt: recipient.readAt ? recipient.readAt.toISOString() : null,
+      acknowledgedAt: recipient.acknowledgedAt
+        ? recipient.acknowledgedAt.toISOString()
+        : null,
+    }));
+
+    map.set(key, {
+      sent: true,
+      noticeId: row.id,
+      noticeTitle: row.title,
+      sentAt: (row.sentAt ?? row.createdAt).toISOString(),
+      recipientCount: recipients.length,
+      readCount: recipients.filter((recipient) => Boolean(recipient.readAt)).length,
+      acknowledgedCount: recipients.filter((recipient) =>
+        Boolean(recipient.acknowledgedAt)
+      ).length,
+      recipients,
+    });
+  }
+
+  return map;
+}
+
+function emptyReminderAudit(): MockReminderAudit {
+  return {
+    sent: false,
+    noticeId: null,
+    noticeTitle: null,
+    sentAt: null,
+    recipientCount: 0,
+    readCount: 0,
+    acknowledgedCount: 0,
+    recipients: [],
+  };
+}
+
+function attachReminderAudit(
+  actions: MockEvidenceAction[],
+  auditMap: Map<string, MockReminderAudit>
+) {
+  return actions.map((action) => {
+    if (action.mode !== "NOTIFY_TEACHER" && action.mode !== "REMIND_TEACHER") {
+      return action;
+    }
+
+    const key = reminderAuditKey({
+      actionCode: action.code,
+      subject: action.subject ?? null,
+    });
+
+    return {
+      ...action,
+      reminderAudit: auditMap.get(key) ?? emptyReminderAudit(),
+    };
+  });
+}
+
 function buildMockEvidenceActions(args: {
   sessionId: string;
   totalStudents: number;
   subjectSummaries: MockSubjectSummaryLite[];
   students: MockStudentReadinessRow[];
+  reminderAuditMap: Map<string, MockReminderAudit>;
 }) {
   const createdCanonicalSubjects = new Set(
     args.subjectSummaries.map((subject) => subject.canonicalSubject)
@@ -440,7 +564,7 @@ headlineActions.push({
     subjectScoreGaps,
     learnerScoreGaps,
     learnerRiskSignals,
-    headlineActions: sortActions(headlineActions),
+    headlineActions: attachReminderAudit(sortActions(headlineActions), args.reminderAuditMap),
   };
 }
 
@@ -694,11 +818,46 @@ const topSubjects = subjectSummaries
   .sort((a, b) => Number(a.averageGrade ?? 99) - Number(b.averageGrade ?? 99))
   .slice(0, 3);
 
+const reminderNoticeRows = await prisma.governanceOfficialNotice.findMany({
+  where: {
+    tenantId: ctx.tenantId,
+    idempotencyScope: "HEADTEACHER_MOCK_REMINDER",
+    metadata: {
+      path: ["sessionId"],
+      equals: selectedSession.id,
+    },
+  },
+  orderBy: {
+    createdAt: "desc",
+  },
+  take: 100,
+  select: {
+    id: true,
+    title: true,
+    sentAt: true,
+    createdAt: true,
+    metadata: true,
+    recipients: {
+      orderBy: {
+        createdAt: "asc",
+      },
+      select: {
+        id: true,
+        recipientUserId: true,
+        displayName: true,
+        readAt: true,
+        acknowledgedAt: true,
+      },
+    },
+  },
+});
+
 const evidenceActions = buildMockEvidenceActions({
   sessionId: selectedSession.id,
   totalStudents: students.length,
   subjectSummaries,
   students: studentRows,
+  reminderAuditMap: buildReminderAuditMap(reminderNoticeRows),
 });
 
 return noStore(200, {

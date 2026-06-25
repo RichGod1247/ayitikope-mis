@@ -52,6 +52,23 @@ type MockEvidenceActionMode =
   | "LEARNER_SUPPORT_REVIEW"
   | "REVIEW_ONLY";
 
+type MockReminderAudit = {
+  sent: boolean;
+  noticeId: string | null;
+  noticeTitle: string | null;
+  sentAt: string | null;
+  recipientCount: number;
+  readCount: number;
+  acknowledgedCount: number;
+  recipients: {
+    id: string;
+    userId: string | null;
+    name: string | null;
+    readAt: string | null;
+    acknowledgedAt: string | null;
+  }[];
+};
+
 type MockEvidenceAction = {
   code: string;
   mode: MockEvidenceActionMode;
@@ -66,6 +83,7 @@ type MockEvidenceAction = {
   studentId?: string;
   studentName?: string;
   missingCount?: number;
+  reminderAudit?: MockReminderAudit;
 };
 
 type SubjectScoreGap = {
@@ -248,6 +266,18 @@ function isJhs3Classroom(c: ClassroomRow) {
   return normalizeLevelToken(c.grade) === "JHS3" || normalizeLevelToken(c.name) === "JHS3";
 }
 
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 function formatNumber(value: number | null | undefined, suffix = "") {
   if (value == null || !Number.isFinite(Number(value))) return "—";
   const n = Number(value);
@@ -268,6 +298,29 @@ function canSendTeacherReminder(action: MockEvidenceAction) {
     (action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER") &&
     !!cleanStr(action.subject)
   );
+}
+
+function reminderAuditLabel(action: MockEvidenceAction) {
+  const audit = action.reminderAudit;
+
+  if (!audit?.sent) return "Not sent yet";
+
+  if (audit.acknowledgedCount > 0) {
+    return `Acknowledged by ${audit.acknowledgedCount}/${audit.recipientCount}`;
+  }
+
+  if (audit.readCount > 0) {
+    return `Read by ${audit.readCount}/${audit.recipientCount}`;
+  }
+
+  return `Sent to ${audit.recipientCount}`;
+}
+
+function reminderButtonLabel(action: MockEvidenceAction, local?: ReminderSendStatus) {
+  if (local?.loading) return "Sending...";
+  if (local?.ok === true) return local.message.startsWith("Reminder already") ? "Already sent" : "Sent";
+  if (action.reminderAudit?.sent) return "Already sent";
+  return "Send reminder";
 }
 
 function actionModeLabel(mode: MockEvidenceActionMode) {
@@ -765,6 +818,26 @@ async function sendTeacherReminder(action: MockEvidenceAction) {
         Primary action: <span className="font-semibold">{action.primaryAction}</span>
       </div>
 
+{action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
+  <div className="mt-2 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] text-sky-100">
+    Reminder status:{" "}
+    <span className="font-semibold">{reminderAuditLabel(action)}</span>
+    {action.reminderAudit?.sentAt ? (
+      <span className="block pt-1 text-sky-100/75">
+        Sent: {formatDateTime(action.reminderAudit.sentAt)}
+      </span>
+    ) : null}
+    {action.reminderAudit?.recipients?.length ? (
+      <span className="block pt-1 text-sky-100/75">
+        Recipient(s):{" "}
+        {action.reminderAudit.recipients
+          .map((recipient) => cleanStr(recipient.name) || "Teacher")
+          .join(", ")}
+      </span>
+    ) : null}
+  </div>
+) : null}
+
       {action.lastResortAction ? (
         <div className="mt-2 rounded-xl border border-amber-300/15 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100">
           Last resort: <span className="font-semibold">{action.lastResortAction}</span>
@@ -789,7 +862,7 @@ async function sendTeacherReminder(action: MockEvidenceAction) {
           : "border-white/10 bg-white/[0.03] text-[#8F98A8]",
       ].join(" ")}
     >
-      {reminderStatus[actionKey(action)]?.loading ? "Sending..." : "Send reminder"}
+      {reminderButtonLabel(action, reminderStatus[actionKey(action)])}
     </button>
   ) : null}
 
