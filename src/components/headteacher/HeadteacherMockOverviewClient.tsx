@@ -52,6 +52,20 @@ type MockEvidenceActionMode =
   | "LEARNER_SUPPORT_REVIEW"
   | "REVIEW_ONLY";
 
+type MockSubjectOwnerStatus = {
+  subject: string;
+  hasOwner: boolean;
+  ownerCount: number;
+  owners: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  }[];
+  issue: string | null;
+  assignmentHref: string;
+};
+
 type MockReminderAudit = {
   sent: boolean;
   noticeId: string | null;
@@ -82,8 +96,9 @@ type MockEvidenceAction = {
   subject?: string;
   studentId?: string;
   studentName?: string;
-  missingCount?: number;
-  reminderAudit?: MockReminderAudit;
+ missingCount?: number;
+ownerStatus?: MockSubjectOwnerStatus;
+reminderAudit?: MockReminderAudit;
 };
 
 type SubjectScoreGap = {
@@ -296,7 +311,8 @@ function actionKey(action: MockEvidenceAction) {
 function canSendTeacherReminder(action: MockEvidenceAction) {
   return (
     (action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER") &&
-    !!cleanStr(action.subject)
+    !!cleanStr(action.subject) &&
+    action.ownerStatus?.hasOwner !== false
   );
 }
 
@@ -317,8 +333,11 @@ function reminderAuditLabel(action: MockEvidenceAction) {
 }
 
 function reminderButtonLabel(action: MockEvidenceAction, local?: ReminderSendStatus) {
+  if (action.ownerStatus?.hasOwner === false) return "Assign teacher first";
   if (local?.loading) return "Sending...";
-  if (local?.ok === true) return local.message.startsWith("Reminder already") ? "Already sent" : "Sent";
+  if (local?.ok === true) {
+    return local.message.startsWith("Reminder already") ? "Already sent" : "Sent";
+  }
   if (action.reminderAudit?.sent) return "Already sent";
   return "Send reminder";
 }
@@ -819,6 +838,34 @@ async function sendTeacherReminder(action: MockEvidenceAction) {
       </div>
 
 {action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
+  <div
+    className={[
+      "mt-2 rounded-xl border px-3 py-2 text-[11px]",
+      action.ownerStatus?.hasOwner === false
+        ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+        : "border-emerald-300/15 bg-emerald-400/10 text-emerald-100",
+    ].join(" ")}
+  >
+    Owner status:{" "}
+    <span className="font-semibold">
+      {action.ownerStatus?.hasOwner === false
+        ? "No assigned teacher found"
+        : action.ownerStatus?.owners?.length
+          ? action.ownerStatus.owners
+              .map((owner) => cleanStr(owner.name) || "Teacher")
+              .join(", ")
+          : "Owner check pending"}
+    </span>
+
+    {action.ownerStatus?.hasOwner === false ? (
+      <span className="block pt-1 text-rose-100/75">
+        Assign this subject to a teacher before sending reminders.
+      </span>
+    ) : null}
+  </div>
+) : null}
+
+{action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
   <div className="mt-2 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] text-sky-100">
     Reminder status:{" "}
     <span className="font-semibold">{reminderAuditLabel(action)}</span>
@@ -843,6 +890,15 @@ async function sendTeacherReminder(action: MockEvidenceAction) {
           Last resort: <span className="font-semibold">{action.lastResortAction}</span>
         </div>
       ) : null}
+
+{action.ownerStatus?.hasOwner === false ? (
+  <Link
+    href={action.ownerStatus.assignmentHref}
+    className="inline-flex items-center justify-center rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[11px] font-semibold text-rose-100 transition hover:bg-rose-400/15"
+  >
+    Assign subject owner
+  </Link>
+) : null}
 
 <div className="mt-3 flex flex-wrap gap-2">
   {action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (

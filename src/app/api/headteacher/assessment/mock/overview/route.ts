@@ -1,6 +1,7 @@
 //src/app/api/headteacher/assessment/mock/overview/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import {
   MOCK_CORE_SUBJECTS,
@@ -56,6 +57,20 @@ type MockEvidenceActionMode =
   | "LEARNER_SUPPORT_REVIEW"
   | "REVIEW_ONLY";
 
+type MockSubjectOwnerStatus = {
+  subject: string;
+  hasOwner: boolean;
+  ownerCount: number;
+  owners: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  }[];
+  issue: string | null;
+  assignmentHref: string;
+};
+
 type MockReminderAudit = {
   sent: boolean;
   noticeId: string | null;
@@ -87,6 +102,7 @@ type MockEvidenceAction = {
   studentId?: string;
   studentName?: string;
   missingCount?: number;
+  ownerStatus?: MockSubjectOwnerStatus;
   reminderAudit?: MockReminderAudit;
 };
 
@@ -359,12 +375,186 @@ function attachReminderAudit(
   });
 }
 
+function ownerSubjectKey(value: unknown) {
+  return cleanMockStr(value).toUpperCase();
+}
+
+function ownerNormalizeKey(value: unknown) {
+  return cleanMockStr(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function isTeacherMembershipRole(value: unknown) {
+  return ownerNormalizeKey(value) === "TEACHER";
+}
+
+function ownerDisplayName(user: {
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+}) {
+  const name = cleanMockStr(user.name);
+  if (name) return name;
+
+  const full = `${cleanMockStr(user.firstName)} ${cleanMockStr(user.lastName)}`.trim();
+  if (full) return full;
+
+  return cleanMockStr(user.email) || "Teacher";
+}
+
+function mockOwnerAssignmentHref(args: {
+  subject: string;
+  classroomId: string;
+  sessionId: string;
+}) {
+  const params = new URLSearchParams();
+
+  params.set("focus", "mock-subject-owner");
+  params.set("subject", args.subject);
+  params.set("level", "JHS3");
+  params.set("classroomId", args.classroomId);
+  params.set("sessionId", args.sessionId);
+  params.set("returnTo", "/headteacher/assessment/mock");
+
+  return `/admin/teachers?${params.toString()}`;
+}
+
+async function resolveMockSubjectOwnerMap(args: {
+  tenantId: string;
+  classroomId: string;
+  sessionId: string;
+  subjects: string[];
+}) {
+  const subjects = Array.from(
+    new Set(args.subjects.map(cleanMockStr).filter(Boolean))
+  );
+
+  const ownerMap = new Map<string, MockSubjectOwnerStatus>();
+
+  for (const subject of subjects) {
+    ownerMap.set(ownerSubjectKey(subject), {
+      subject,
+      hasOwner: false,
+      ownerCount: 0,
+      owners: [],
+      issue: "NO_ASSIGNED_TEACHER_FOUND",
+      assignmentHref: mockOwnerAssignmentHref({
+        subject,
+        classroomId: args.classroomId,
+        sessionId: args.sessionId,
+      }),
+    });
+  }
+
+  if (!subjects.length) return ownerMap;
+
+  const memberships = await prisma.membership.findMany({
+    where: {
+      tenantId: args.tenantId,
+      status: "ACTIVE",
+    },
+    select: {
+      role: {
+        select: {
+          name: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  const teachers = memberships.filter((membership) =>
+    isTeacherMembershipRole(membership.role?.name)
+  );
+
+  for (const subject of subjects) {
+    const deduped = new Map<
+      string,
+      {
+        id: string;
+        name: string | null;
+        email: string | null;
+        phone: string | null;
+      }
+    >();
+
+    const checks = await Promise.all(
+      teachers.map(async (membership) => {
+        const access = await resolveUserClassroomAccess({
+          tenantId: args.tenantId,
+          userId: membership.user.id,
+          roleName: membership.role?.name ?? null,
+          classroomId: args.classroomId,
+          subject,
+        });
+
+        return {
+          user: membership.user,
+          access,
+        };
+      })
+    );
+
+    for (const check of checks) {
+      if (!check.access.ok) continue;
+
+      deduped.set(check.user.id, {
+        id: check.user.id,
+        name: ownerDisplayName(check.user),
+        email: check.user.email,
+        phone: check.user.phone,
+      });
+    }
+
+    const owners = Array.from(deduped.values());
+
+    ownerMap.set(ownerSubjectKey(subject), {
+      subject,
+      hasOwner: owners.length > 0,
+      ownerCount: owners.length,
+      owners,
+      issue: owners.length > 0 ? null : "NO_ASSIGNED_TEACHER_FOUND",
+      assignmentHref: mockOwnerAssignmentHref({
+        subject,
+        classroomId: args.classroomId,
+        sessionId: args.sessionId,
+      }),
+    });
+  }
+
+  return ownerMap;
+}
+
+function getOwnerStatus(
+  ownerMap: Map<string, MockSubjectOwnerStatus>,
+  subject: string | null | undefined
+) {
+  const key = ownerSubjectKey(subject);
+  if (!key) return undefined;
+
+  return ownerMap.get(key);
+}
+
 function buildMockEvidenceActions(args: {
   sessionId: string;
+  classroomId: string;
   totalStudents: number;
   subjectSummaries: MockSubjectSummaryLite[];
   students: MockStudentReadinessRow[];
   reminderAuditMap: Map<string, MockReminderAudit>;
+  ownerStatusMap: Map<string, MockSubjectOwnerStatus>;
 }) {
   const createdCanonicalSubjects = new Set(
     args.subjectSummaries.map((subject) => subject.canonicalSubject)
@@ -460,6 +650,7 @@ function buildMockEvidenceActions(args: {
     }),
     subject,
     missingCount: 1,
+    ownerStatus: getOwnerStatus(args.ownerStatusMap, subject),
   });
 }
 
@@ -491,28 +682,30 @@ headlineActions.push({
   primaryAction: "Send teacher reminder with deadline",
   lastResortAction: "Open score-entry cockpit only if delegated to the headteacher",
   href: subject.href,
-  subject: subject.subject,
-  missingCount: subject.missingCount,
+subject: subject.subject,
+missingCount: subject.missingCount,
+ownerStatus: getOwnerStatus(args.ownerStatusMap, subject.subject),
 });
   }
 
-  const partialSubjectColumns = subjectScoreGaps.filter((subject) => subject.scoredCount > 0);
+const partialSubjectColumns = subjectScoreGaps.filter((subject) => subject.scoredCount > 0);
 
-  for (const subject of partialSubjectColumns.slice(0, 5)) {
-headlineActions.push({
-  code: "REMIND_PARTIAL_SUBJECT_SCORE_COMPLETION",
-  mode: "REMIND_TEACHER",
-  priority: "MEDIUM",
-  title: `Remind ${subject.subject} teacher to complete score evidence`,
-  detail: `${subject.subject} is ${subject.completionPercent}% complete; ${subject.missingCount} learner score(s) still missing.`,
-  owner: `${subject.subject} teacher`,
-  primaryAction: "Send completion reminder with deadline",
-  lastResortAction: "Open score-entry cockpit only as last resort",
-  href: subject.href,
-  subject: subject.subject,
-  missingCount: subject.missingCount,
-});
-  }
+for (const subject of partialSubjectColumns.slice(0, 5)) {
+  headlineActions.push({
+    code: "REMIND_PARTIAL_SUBJECT_SCORE_COMPLETION",
+    mode: "REMIND_TEACHER",
+    priority: "MEDIUM",
+    title: `Remind ${subject.subject} teacher to complete score evidence`,
+    detail: `${subject.subject} is ${subject.completionPercent}% complete; ${subject.missingCount} learner score(s) still missing.`,
+    owner: `${subject.subject} teacher`,
+    primaryAction: "Send completion reminder with deadline",
+    lastResortAction: "Open score-entry cockpit only as last resort",
+    href: subject.href,
+    subject: subject.subject,
+    missingCount: subject.missingCount,
+    ownerStatus: getOwnerStatus(args.ownerStatusMap, subject.subject),
+  });
+}
 
   for (const learner of learnerRiskSignals.slice(0, 5)) {
 headlineActions.push({
@@ -818,6 +1011,25 @@ const topSubjects = subjectSummaries
   .sort((a, b) => Number(a.averageGrade ?? 99) - Number(b.averageGrade ?? 99))
   .slice(0, 3);
 
+const subjectsForOwnerCheck = Array.from(
+  new Set(
+    [
+      ...MOCK_CORE_SUBJECTS.map((subject) => mockSubjectLabel(subject)),
+      ...MOCK_SCHOOL_AGGREGATE_SUBJECTS.map((subject) => mockSubjectLabel(subject)),
+      ...subjectSummaries.map((subject) => subject.subject),
+    ]
+      .map(cleanMockStr)
+      .filter(Boolean)
+  )
+);
+
+const ownerStatusMap = await resolveMockSubjectOwnerMap({
+  tenantId: ctx.tenantId,
+  classroomId: selectedSession.classroomId,
+  sessionId: selectedSession.id,
+  subjects: subjectsForOwnerCheck,
+});
+
 const reminderNoticeRows = await prisma.governanceOfficialNotice.findMany({
   where: {
     tenantId: ctx.tenantId,
@@ -854,10 +1066,12 @@ const reminderNoticeRows = await prisma.governanceOfficialNotice.findMany({
 
 const evidenceActions = buildMockEvidenceActions({
   sessionId: selectedSession.id,
+  classroomId: selectedSession.classroomId,
   totalStudents: students.length,
   subjectSummaries,
   students: studentRows,
   reminderAuditMap: buildReminderAuditMap(reminderNoticeRows),
+  ownerStatusMap,
 });
 
 return noStore(200, {
