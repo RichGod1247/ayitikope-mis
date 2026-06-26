@@ -1,8 +1,9 @@
 //MockAssessmentClient.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type ClassroomPick = {
   id: string;
@@ -338,6 +339,36 @@ function gradeClass(grade: number | null) {
   return "border-rose-300/20 bg-rose-400/12 text-rose-100";
 }
 
+function sameText(a: unknown, b: unknown) {
+  return cleanStr(a).toUpperCase() === cleanStr(b).toUpperCase();
+}
+
+function isValidScoreDraftValue(raw: unknown) {
+  const text = cleanStr(raw);
+  if (!text) return false;
+
+  const value = Number(text);
+  return Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
+function guidedScoreInputClass(isGuidedTarget: boolean, hasValidScore: boolean) {
+  if (!isGuidedTarget) return darkInput + " max-w-[140px]";
+
+  if (hasValidScore) {
+    return [
+      darkInput,
+      "max-w-[140px]",
+      "ring-2 ring-emerald-300/25 bg-emerald-400/10 shadow-[0_0_20px_rgba(16,185,129,0.16)]",
+    ].join(" ");
+  }
+
+  return [
+    darkInput,
+    "max-w-[140px]",
+    "ring-2 ring-amber-300/40 bg-amber-400/10 shadow-[0_0_24px_rgba(245,158,11,0.24)]",
+  ].join(" ");
+}
+
 function mockAutoComment(scoreRaw: unknown) {
   const scoreText = cleanStr(scoreRaw);
   if (!scoreText) return "";
@@ -401,6 +432,23 @@ function SectionCard(props: {
 }
 
 export default function MockAssessmentClient() {
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString();
+  const scoreEntryRef = useRef<HTMLDivElement | null>(null);
+
+  const deepLinkTarget = useMemo(() => {
+    const params = new URLSearchParams(queryString);
+
+    return {
+      sessionId: cleanStr(params.get("sessionId")),
+      itemId: cleanStr(params.get("itemId")),
+      subject: cleanStr(params.get("subject")),
+    };
+  }, [queryString]);
+
+  const hasDeepLinkTarget = Boolean(
+    deepLinkTarget.sessionId || deepLinkTarget.itemId || deepLinkTarget.subject
+  );
   const [ctxLoading, setCtxLoading] = useState(true);
   const [ctxError, setCtxError] = useState<string | null>(null);
 
@@ -431,6 +479,7 @@ const [classroomId, setClassroomId] = useState("");
   const [scoresSaving, setScoresSaving] = useState(false);
   const [scoresError, setScoresError] = useState<string | null>(null);
   const [scoresNotice, setScoresNotice] = useState<string | null>(null);
+  const [deepLinkNotice, setDeepLinkNotice] = useState<string | null>(null);
 
   const [broadsheet, setBroadsheet] = useState<MockBroadsheetOk | null>(null);
   const [broadsheetLoading, setBroadsheetLoading] = useState(false);
@@ -451,6 +500,25 @@ const canToggleMultiStream = allJhs3Classrooms.some((c) => cleanStr(c.arm));
     [sessions, sessionId]
   );
   const selectedItem = useMemo(() => items.find((item) => item.id === itemId) ?? null, [items, itemId]);
+  const selectedItemIsDeepLinkTarget = useMemo(() => {
+    if (!hasDeepLinkTarget || !selectedItem) return false;
+
+    if (deepLinkTarget.itemId && selectedItem.id === deepLinkTarget.itemId) return true;
+
+    if (deepLinkTarget.subject && sameText(selectedItem.subject, deepLinkTarget.subject)) {
+      return true;
+    }
+
+    return false;
+  }, [deepLinkTarget.itemId, deepLinkTarget.subject, hasDeepLinkTarget, selectedItem]);
+
+  const guidedMissingScoreCount = useMemo(() => {
+    if (!selectedItemIsDeepLinkTarget || !scoreSheet) return 0;
+
+    return scoreSheet.students.filter(
+      (student) => !isValidScoreDraftValue(scoreDraft[student.id]?.score)
+    ).length;
+  }, [scoreDraft, scoreSheet, selectedItemIsDeepLinkTarget]);
 
   const visibleSubjects = useMemo(() => {
     const fromOptions = subjectOptions.map(cleanStr).filter(Boolean);
@@ -538,10 +606,26 @@ setClassroomId(nextClassroomId);
       const nextSessions = Array.isArray(json.sessions) ? json.sessions : [];
       setSessions(nextSessions);
 
+      const requestedSession = deepLinkTarget.sessionId
+        ? nextSessions.find((session) => session.id === deepLinkTarget.sessionId) ?? null
+        : null;
+
+      if (hasDeepLinkTarget && deepLinkTarget.sessionId && !requestedSession) {
+        setDeepLinkNotice(
+          "The reminder link points to a Mock session that is not available under this JHS 3 classroom. Check the stream/classroom or ask the headteacher to resend the reminder."
+        );
+      }
+
+      if (requestedSession) {
+        setDeepLinkNotice(
+          `Guided from reminder: ${requestedSession.title} is selected.`
+        );
+      }
+
       setSessionId((prev) => {
+        if (requestedSession) return requestedSession.id;
         if (prev && nextSessions.some((session) => session.id === prev)) return prev;
-        const first = nextSessions[0]?.id ?? "";
-        return first;
+        return nextSessions[0]?.id ?? "";
       });
     } catch {
       setSessionError("Failed to load mock sessions.");
@@ -658,7 +742,38 @@ setClassroomId(nextClassroomId);
       const nextItems = Array.isArray(json.items) ? json.items : [];
       setItems(nextItems);
 
+      const requestedItemById = deepLinkTarget.itemId
+        ? nextItems.find((item) => item.id === deepLinkTarget.itemId) ?? null
+        : null;
+
+      const requestedItemBySubject =
+        !requestedItemById && deepLinkTarget.subject
+          ? nextItems.find((item) => sameText(item.subject, deepLinkTarget.subject)) ?? null
+          : null;
+
+      const requestedItem = requestedItemById ?? requestedItemBySubject;
+
+      if (requestedItem) {
+        setSubject(requestedItem.subject);
+        setDeepLinkNotice(
+          `Guided from reminder: ${requestedItem.subject} is selected. Empty score fields below are highlighted until evidence is entered.`
+        );
+      }
+
+      if (
+        hasDeepLinkTarget &&
+        (deepLinkTarget.itemId || deepLinkTarget.subject) &&
+        !requestedItem
+      ) {
+        const targetLabel = deepLinkTarget.subject || deepLinkTarget.itemId || "the requested subject";
+
+        setDeepLinkNotice(
+          `The reminder target (${targetLabel}) is not available in your assigned Mock subjects. This may mean the subject is not assigned to your teacher profile or the item has not been opened yet.`
+        );
+      }
+
       setItemId((prev) => {
+        if (requestedItem) return requestedItem.id;
         if (prev && nextItems.some((item) => item.id === prev)) return prev;
         return nextItems[0]?.id ?? "";
       });
@@ -808,17 +923,13 @@ const rows = scoreSheet.students.map((student) => {
         return;
       }
 
-  setScoresNotice(`Saved ${json.updatedCount} score(s). Cleared ${json.clearedCount}.`);
+      setScoresNotice(`Saved ${json.updatedCount} score(s). Cleared ${json.clearedCount}.`);
 
-await Promise.all([
-  loadScores(itemId),
-  sessionId ? loadBroadsheet(sessionId) : Promise.resolve(),
-]);
-
-if (sessionId) void loadItems(sessionId);
-      await loadScores(itemId);
-      await loadItems(sessionId);
-      await loadBroadsheet(sessionId);
+      await Promise.all([
+        loadScores(itemId),
+        sessionId ? loadItems(sessionId) : Promise.resolve(),
+        sessionId ? loadBroadsheet(sessionId) : Promise.resolve(),
+      ]);
     } catch {
       setScoresError("Failed to save scores.");
     } finally {
@@ -918,6 +1029,15 @@ useEffect(() => {
     void loadScores(itemId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemId]);
+
+    useEffect(() => {
+    if (!selectedItemIsDeepLinkTarget || !scoreSheet) return;
+
+    scoreEntryRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [scoreSheet, selectedItemIsDeepLinkTarget]);
 
   return (
     <main className="min-h-screen bg-[#06101F] text-[#F7F4ED]">
@@ -1072,6 +1192,7 @@ useEffect(() => {
                     <div className="space-y-2">
                       {sessions.map((session) => {
                         const selected = session.id === sessionId;
+                        const isReminderTarget = Boolean(deepLinkTarget.sessionId && session.id === deepLinkTarget.sessionId);
                         return (
                           <button
                             key={session.id}
@@ -1080,8 +1201,10 @@ useEffect(() => {
                             className={[
                               "w-full rounded-xl border px-3 py-3 text-left transition",
                               selected
-                                ? "border-[#E8C96A]/35 bg-[#E8C96A]/10"
-                                : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
+  ? "border-[#E8C96A]/35 bg-[#E8C96A]/10"
+  : isReminderTarget
+    ? "border-cyan-300/35 bg-cyan-400/10 shadow-[0_0_24px_rgba(34,211,238,0.14)]"
+    : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
                             ].join(" ")}
                           >
                             <div className="flex items-start justify-between gap-2">
@@ -1164,6 +1287,9 @@ useEffect(() => {
                     <div className="space-y-2">
                       {items.map((item) => {
                         const selected = item.id === itemId;
+                        const isReminderTarget =
+                         Boolean(deepLinkTarget.itemId && item.id === deepLinkTarget.itemId) ||
+                         Boolean(deepLinkTarget.subject && sameText(item.subject, deepLinkTarget.subject));
                         return (
                           <button
                             key={item.id}
@@ -1175,8 +1301,10 @@ useEffect(() => {
                             className={[
                               "w-full rounded-xl border px-3 py-3 text-left transition",
                               selected
-                                ? "border-emerald-300/30 bg-emerald-400/10"
-                                : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
+  ? "border-emerald-300/30 bg-emerald-400/10"
+  : isReminderTarget
+    ? "border-cyan-300/35 bg-cyan-400/10 shadow-[0_0_24px_rgba(34,211,238,0.14)]"
+    : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
                             ].join(" ")}
                           >
                             <div className="flex items-start justify-between gap-2">
@@ -1189,6 +1317,11 @@ useEffect(() => {
                               <div className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
                                 {item.scoresCount ?? 0} scored
                               </div>
+                              {isReminderTarget ? (
+                               <div className="mt-1 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2 py-1 text-[10px] font-semibold text-cyan-100">
+                                Reminder target
+                               </div>
+                              ) : null}
                             </div>
                           </button>
                         );
@@ -1201,123 +1334,190 @@ useEffect(() => {
           </div>
 
           <div className="space-y-5">
-            <SectionCard
-              title="3. Score entry"
-              subtitle={
-                selectedItem
-                  ? `${selectedItem.subject} • ${selectedSession?.mockLabel ?? "Mock"}`
-                  : "Select or create a subject column first."
+            <div ref={scoreEntryRef} className="scroll-mt-6">
+  <SectionCard
+    title="3. Score entry"
+    subtitle={
+      selectedItem
+        ? `${selectedItem.subject} • ${selectedSession?.mockLabel ?? "Mock"}`
+        : "Select or create a subject column first."
+    }
+    right={
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (!scoreSheet) return;
+
+            setScoreDraft((prev) => {
+              const next = { ...prev };
+
+              for (const student of scoreSheet.students) {
+                const current = next[student.id] ?? { score: "", comment: "" };
+                const comment = cleanStr(current.comment);
+                const autoComment = mockAutoComment(current.score);
+
+                next[student.id] = {
+                  ...current,
+                  comment: comment || autoComment,
+                };
               }
-              right={
-                <div className="flex flex-wrap gap-2">
-  <button
-    type="button"
-    onClick={() => {
-      if (!scoreSheet) return;
 
-      setScoreDraft((prev) => {
-        const next = { ...prev };
+              return next;
+            });
+          }}
+          disabled={!scoreSheet}
+          className={darkButton}
+        >
+          Auto comments
+        </button>
 
-        for (const student of scoreSheet.students) {
-          const current = next[student.id] ?? { score: "", comment: "" };
-          const comment = cleanStr(current.comment);
-          const autoComment = mockAutoComment(current.score);
+        <button
+          type="button"
+          onClick={() => loadScores(itemId)}
+          disabled={!itemId || scoresLoading}
+          className={darkButton}
+        >
+          Reload
+        </button>
 
-          next[student.id] = {
-            ...current,
-            comment: comment || autoComment,
-          };
-        }
-
-        return next;
-      });
-    }}
-    disabled={!scoreSheet}
-    className={darkButton}
+        <button
+          type="button"
+          onClick={saveScores}
+          disabled={!itemId || !scoreSheet || scoresSaving}
+          className={goldButton}
+        >
+          {scoresSaving ? "Saving..." : "Save scores"}
+        </button>
+      </div>
+    }
   >
-    Auto comments
-  </button>
+    <div className="space-y-3">
+      {scoresError ? (
+        <div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[12px] text-rose-100">
+          {scoresError}
+        </div>
+      ) : null}
 
-  <button type="button" onClick={() => loadScores(itemId)} disabled={!itemId || scoresLoading} className={darkButton}>
-    Reload
-  </button>
+      {scoresNotice ? (
+        <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] text-emerald-100">
+          {scoresNotice}
+        </div>
+      ) : null}
 
-  <button type="button" onClick={saveScores} disabled={!itemId || !scoreSheet || scoresSaving} className={goldButton}>
-    {scoresSaving ? "Saving..." : "Save scores"}
-  </button>
+      {hasDeepLinkTarget ? (
+        <div
+          className={[
+            "rounded-xl border px-3 py-2 text-[12px] leading-5",
+            selectedItemIsDeepLinkTarget
+              ? guidedMissingScoreCount > 0
+                ? "border-amber-300/25 bg-amber-400/10 text-amber-100"
+                : "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"
+              : "border-cyan-300/25 bg-cyan-400/10 text-cyan-100",
+          ].join(" ")}
+        >
+          <div className="font-semibold">Reminder-guided score entry</div>
+          <div className="mt-1">
+            {deepLinkNotice ||
+              "This page was opened from a Mock reminder. The requested session and subject will be selected automatically where your teacher access permits it."}
+          </div>
+
+          {selectedItemIsDeepLinkTarget ? (
+            <div className="mt-1 text-[11px]">
+              {guidedMissingScoreCount > 0
+                ? `${guidedMissingScoreCount} score field(s) still need evidence. Empty target fields are softly highlighted.`
+                : "All visible target score fields now have valid score evidence."}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!scoreSheet ? (
+        <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-10 text-center text-[12px] text-[#AEB6C4]">
+          {scoresLoading ? "Loading score sheet..." : "Select a mock subject item to enter scores."}
+        </div>
+      ) : (
+        <div className="overflow-auto rounded-2xl border border-white/10">
+          <table className="min-w-[760px] w-full border-collapse text-left text-[12px]">
+            <thead className="bg-white/[0.05] text-[#AEB6C4]">
+              <tr>
+                <th className="border-b border-white/10 px-3 py-2">Learner</th>
+                <th className="border-b border-white/10 px-3 py-2">Score /100</th>
+                <th className="border-b border-white/10 px-3 py-2">Grade</th>
+                <th className="border-b border-white/10 px-3 py-2">Comment</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {scoreSheet.students.map((student) => {
+                const hasValidGuidedScore = isValidScoreDraftValue(scoreDraft[student.id]?.score);
+                const isGuidedMissing = selectedItemIsDeepLinkTarget && !hasValidGuidedScore;
+                const isGuidedRepaired = selectedItemIsDeepLinkTarget && hasValidGuidedScore;
+
+                return (
+                  <tr
+                    key={student.id}
+                    className={[
+                      "border-b border-white/5 transition",
+                      isGuidedMissing
+                        ? "bg-amber-400/[0.045]"
+                        : isGuidedRepaired
+                          ? "bg-emerald-400/[0.035]"
+                          : "",
+                    ].join(" ")}
+                  >
+                    <td className="px-3 py-2">
+                      <div className="font-semibold text-[#F7F4ED]">{student.name}</div>
+                      {student.remark ? (
+                        <div className="text-[10px] text-[#8F98A8]">{student.remark}</div>
+                      ) : null}
+                    </td>
+
+                    <td className="px-3 py-2">
+                      <input
+                        value={scoreDraft[student.id]?.score ?? ""}
+                        onChange={(e) => updateDraft(student.id, { score: e.target.value })}
+                        inputMode="decimal"
+                        placeholder="Blank clears"
+                        className={guidedScoreInputClass(selectedItemIsDeepLinkTarget, hasValidGuidedScore)}
+                      />
+                    </td>
+
+                    <td className="px-3 py-2">
+                      <span
+                        className={[
+                          "inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold",
+                          gradeClass(student.grade),
+                        ].join(" ")}
+                      >
+                        {student.gradeLabel ?? "—"}
+                      </span>
+
+                      {student.pointsToNextGrade != null ? (
+                        <div className="mt-1 text-[10px] text-[#8F98A8]">
+                          {student.pointsToNextGrade} mark(s) to Grade {student.nextGrade}
+                        </div>
+                      ) : null}
+                    </td>
+
+                    <td className="px-3 py-2">
+                      <input
+                        value={scoreDraft[student.id]?.comment ?? ""}
+                        onChange={(e) => updateDraft(student.id, { comment: e.target.value })}
+                        placeholder="Optional comment"
+                        className={darkInput}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </SectionCard>
 </div>
-              }
-            >
-              <div className="space-y-3">
-                {scoresError ? (
-                  <div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[12px] text-rose-100">
-                    {scoresError}
-                  </div>
-                ) : null}
-
-                {scoresNotice ? (
-                  <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] text-emerald-100">
-                    {scoresNotice}
-                  </div>
-                ) : null}
-
-                {!scoreSheet ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-10 text-center text-[12px] text-[#AEB6C4]">
-                    {scoresLoading ? "Loading score sheet..." : "Select a mock subject item to enter scores."}
-                  </div>
-                ) : (
-                  <div className="overflow-auto rounded-2xl border border-white/10">
-                    <table className="min-w-[760px] w-full border-collapse text-left text-[12px]">
-                      <thead className="bg-white/[0.05] text-[#AEB6C4]">
-                        <tr>
-                          <th className="border-b border-white/10 px-3 py-2">Learner</th>
-                          <th className="border-b border-white/10 px-3 py-2">Score /100</th>
-                          <th className="border-b border-white/10 px-3 py-2">Grade</th>
-                          <th className="border-b border-white/10 px-3 py-2">Comment</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {scoreSheet.students.map((student) => (
-                          <tr key={student.id} className="border-b border-white/5">
-                            <td className="px-3 py-2">
-                              <div className="font-semibold text-[#F7F4ED]">{student.name}</div>
-                              {student.remark ? <div className="text-[10px] text-[#8F98A8]">{student.remark}</div> : null}
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                value={scoreDraft[student.id]?.score ?? ""}
-                                onChange={(e) => updateDraft(student.id, { score: e.target.value })}
-                                inputMode="decimal"
-                                placeholder="Blank clears"
-                                className={darkInput + " max-w-[140px]"}
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className={["inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold", gradeClass(student.grade)].join(" ")}>
-                                {student.gradeLabel ?? "—"}
-                              </span>
-                              {student.pointsToNextGrade != null ? (
-                                <div className="mt-1 text-[10px] text-[#8F98A8]">
-                                  {student.pointsToNextGrade} mark(s) to Grade {student.nextGrade}
-                                </div>
-                              ) : null}
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                value={scoreDraft[student.id]?.comment ?? ""}
-                                onChange={(e) => updateDraft(student.id, { comment: e.target.value })}
-                                placeholder="Optional comment"
-                                className={darkInput}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </SectionCard>
 
             <SectionCard
               title="4. Mock broadsheet intelligence"
