@@ -653,6 +653,39 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
         Parent-facing release stays separate and should be used only for end-of-term exam results for now.
       </div>
 
+<div className="rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.13),rgba(255,255,255,0.04))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-cyan-300/25 bg-cyan-400/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
+          JHS 3 Only
+        </span>
+        <span className="rounded-full border border-amber-300/25 bg-amber-400/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-100">
+          Separate from 30/70 reports
+        </span>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-[#F7F4ED]">
+          BECE Mock Readiness
+        </h2>
+        <p className="mt-1 max-w-3xl text-[12px] leading-6 text-[#C9CDD6]">
+          Monitor JHS3 Mock evidence, subject ownership, teacher reminders,
+          predicted aggregate readiness, missing core subjects, and early
+          intervention signals without mixing Mock scores into normal term reports.
+        </p>
+      </div>
+    </div>
+
+    <Link
+      href="/headteacher/assessment/mock"
+      className="inline-flex items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/12 px-4 py-2 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-400/18"
+    >
+      Open BECE Mock cockpit
+    </Link>
+  </div>
+</div>
+
       {loadError && (
         <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-xs text-rose-100">
           {loadError}
