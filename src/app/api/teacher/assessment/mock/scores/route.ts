@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
-import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
+import { isAdminLikeRole, resolveUserClassroomAccess } from "@/lib/teacherAccess";
 import {
   cleanMockStr,
   isJhs3MockClassroom,
@@ -35,9 +35,10 @@ type MockItemForScores = {
   title: string;
   type: string;
   maxScore: number;
-  status: string;
-  lockedAt: Date | null;
-  mockExamSessionId: string | null;
+status: string;
+lockedAt: Date | null;
+lockedByUserId: string | null;
+mockExamSessionId: string | null;
   mockExamSession: {
     id: string;
     tenantId: string;
@@ -133,9 +134,10 @@ async function getMockItem(itemId: string, tenantId: string) {
       title: true,
       type: true,
       maxScore: true,
-      status: true,
-      lockedAt: true,
-      mockExamSessionId: true,
+status: true,
+lockedAt: true,
+lockedByUserId: true,
+mockExamSessionId: true,
       mockExamSession: {
         select: {
           id: true,
@@ -255,6 +257,14 @@ function mapSession(item: MockItemForScores) {
         date: session.date ? session.date.toISOString() : null,
       }
     : null;
+}
+
+function isHardLocked(item: MockItemForScores) {
+  return String(item.status ?? "").toUpperCase() === "LOCKED";
+}
+
+function isTeacherOwnershipLocked(item: MockItemForScores) {
+  return Boolean(item.lockedAt && item.lockedByUserId && !isHardLocked(item));
 }
 
 export async function GET(req: NextRequest) {
@@ -381,12 +391,26 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (checked.item.lockedAt || String(checked.item.status ?? "").toUpperCase() === "LOCKED") {
-      return noStore(409, {
-        ok: false,
-        error: "MOCK_ITEM_LOCKED",
-      });
-    }
+const actorIsAdminLike = isAdminLikeRole(ctx.roleName);
+
+if (isHardLocked(checked.item)) {
+  return noStore(409, {
+    ok: false,
+    error: "MOCK_ITEM_LOCKED",
+    message: "This Mock subject item is locked.",
+  });
+}
+
+if (actorIsAdminLike && isTeacherOwnershipLocked(checked.item)) {
+  return noStore(409, {
+    ok: false,
+    error: "TEACHER_SUBMITTED_MOCK_ITEM_LOCKED",
+    message:
+      "This Mock subject has already been completed by the responsible teacher. Headteacher editing is locked to protect evidence ownership.",
+    lockedAt: checked.item.lockedAt?.toISOString() ?? null,
+    lockedByUserId: checked.item.lockedByUserId,
+  });
+}
 
     const access = await resolveUserClassroomAccess({
       tenantId: ctx.tenantId,
@@ -449,18 +473,15 @@ export async function POST(req: NextRequest) {
     }
 
     const activeStudents = await prisma.student.findMany({
-      where: {
-        tenantId: ctx.tenantId,
-        classroomId: checked.item.classroomId,
-        status: "ACTIVE",
-        id: {
-          in: normalizedRows.map((row) => row.studentId),
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
+  where: {
+    tenantId: ctx.tenantId,
+    classroomId: checked.item.classroomId,
+    status: "ACTIVE",
+  },
+  select: {
+    id: true,
+  },
+});
 
     const activeStudentIds = new Set(activeStudents.map((student) => student.id));
     const invalidStudentIds = normalizedRows
@@ -480,38 +501,68 @@ export async function POST(req: NextRequest) {
       .filter((row) => row.score == null)
       .map((row) => row.studentId);
 
-    await prisma.$transaction([
-      ...rowsToUpsert.map((row) =>
-        prisma.assessmentScore.upsert({
-          where: {
-            assessment_student_unique: {
-              itemId: checked.item.id,
-              studentId: row.studentId,
-            },
+await prisma.$transaction(async (tx) => {
+  for (const row of rowsToUpsert) {
+    await tx.assessmentScore.upsert({
+      where: {
+        assessment_student_unique: {
+          itemId: checked.item.id,
+          studentId: row.studentId,
+        },
+      },
+      update: {
+        score: row.score as number,
+        comment: row.comment,
+      },
+      create: {
+        itemId: checked.item.id,
+        studentId: row.studentId,
+        score: row.score as number,
+        comment: row.comment,
+      },
+    });
+  }
+
+  if (studentIdsToClear.length) {
+    await tx.assessmentScore.deleteMany({
+      where: {
+        itemId: checked.item.id,
+        studentId: { in: studentIdsToClear },
+      },
+    });
+  }
+
+  const savedStudentIds = await tx.assessmentScore.findMany({
+    where: {
+      itemId: checked.item.id,
+      studentId: { in: activeStudents.map((student) => student.id) },
+    },
+    select: {
+      studentId: true,
+    },
+  });
+
+  const savedUniqueStudentCount = new Set(savedStudentIds.map((score) => score.studentId)).size;
+  const allActiveStudentsScored =
+    activeStudents.length > 0 && savedUniqueStudentCount === activeStudents.length;
+
+  if (!actorIsAdminLike) {
+    await tx.assessmentItem.update({
+      where: {
+        id: checked.item.id,
+      },
+      data: allActiveStudentsScored
+        ? {
+            lockedAt: checked.item.lockedAt ?? new Date(),
+            lockedByUserId: checked.item.lockedByUserId ?? ctx.userId,
+          }
+        : {
+            lockedAt: null,
+            lockedByUserId: null,
           },
-          update: {
-            score: row.score as number,
-            comment: row.comment,
-          },
-          create: {
-            itemId: checked.item.id,
-            studentId: row.studentId,
-            score: row.score as number,
-            comment: row.comment,
-          },
-        })
-      ),
-      ...(studentIdsToClear.length
-        ? [
-            prisma.assessmentScore.deleteMany({
-              where: {
-                itemId: checked.item.id,
-                studentId: { in: studentIdsToClear },
-              },
-            }),
-          ]
-        : []),
-    ]);
+    });
+  }
+});
 
     const savedScores = await prisma.assessmentScore.findMany({
       where: {
@@ -525,13 +576,27 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return noStore(200, {
-      ok: true,
-      itemId: checked.item.id,
-      updatedCount: rowsToUpsert.length,
-      clearedCount: studentIdsToClear.length,
-      scores: savedScores.map(mapScore),
-    });
+const refreshedItem = await prisma.assessmentItem.findFirst({
+  where: {
+    id: checked.item.id,
+    tenantId: ctx.tenantId,
+  },
+  select: {
+    lockedAt: true,
+    lockedByUserId: true,
+  },
+});
+
+return noStore(200, {
+  ok: true,
+  itemId: checked.item.id,
+  updatedCount: rowsToUpsert.length,
+  clearedCount: studentIdsToClear.length,
+  teacherOwnershipLocked: Boolean(refreshedItem?.lockedAt && refreshedItem?.lockedByUserId),
+  lockedAt: refreshedItem?.lockedAt ? refreshedItem.lockedAt.toISOString() : null,
+  lockedByUserId: refreshedItem?.lockedByUserId ?? null,
+  scores: savedScores.map(mapScore),
+});
   } catch (err) {
     if (err instanceof z.ZodError) {
       return noStore(400, {

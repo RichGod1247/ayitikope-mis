@@ -152,12 +152,26 @@ type EvidenceActions = {
   headlineActions: MockEvidenceAction[];
 };
 
+type StudentSubjectScore = {
+  itemId: string;
+  subject: string;
+  canonicalSubject: string;
+  score: number | null;
+  comment: string | null;
+  grade: number | null;
+  gradeLabel: string | null;
+  remark: string | null;
+  nextGrade: number | null;
+  pointsToNextGrade: number | null;
+};
+
 type StudentRow = {
   studentId: string;
   name: string;
   scoredSubjectCount: number;
   missingSubjectCount: number;
   averageScore: number | null;
+  subjects: StudentSubjectScore[];
   schoolAggregate: {
     ok: boolean;
     aggregate: number | null;
@@ -171,6 +185,39 @@ type StudentRow = {
     reason: string | null;
   };
   readiness: ReadinessBand;
+};
+
+type CandidateRescuePriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+
+type CandidateSubjectSignal = {
+  subject: string;
+  canonicalSubject: string;
+  score: number | null;
+  grade: number | null;
+  gradeLabel: string | null;
+  remark: string | null;
+  nextGrade: number | null;
+  pointsToNextGrade: number | null;
+  ownerStatus?: MockSubjectOwnerStatus;
+};
+
+type CandidateRescueProfile = {
+  studentId: string;
+  name: string;
+  priority: CandidateRescuePriority;
+  priorityLabel: string;
+  reason: string;
+  nextAction: string;
+  scoredSubjectCount: number;
+  missingSubjectCount: number;
+  averageScore: number | null;
+  schoolAggregate: StudentRow["schoolAggregate"];
+  placementAggregate: StudentRow["placementAggregate"];
+  readiness: StudentRow["readiness"];
+  missingSubjects: string[];
+  weakSubjects: CandidateSubjectSignal[];
+  strongSubjects: CandidateSubjectSignal[];
+  nearGradeOpportunities: CandidateSubjectSignal[];
 };
 
 type Broadsheet = {
@@ -193,6 +240,7 @@ type Broadsheet = {
   weakestSubjects: SubjectSummary[];
   topSubjects: SubjectSummary[];
 students: StudentRow[];
+candidateRescueProfiles: CandidateRescueProfile[];
 evidenceActions: EvidenceActions;
 warnings: {
     aggregateMayBeIncomplete: boolean;
@@ -347,6 +395,34 @@ function actionModeLabel(mode: MockEvidenceActionMode) {
   if (mode === "REMIND_TEACHER") return "Teacher reminder";
   if (mode === "LEARNER_SUPPORT_REVIEW") return "Learner support";
   return "Leadership review";
+}
+
+function rescuePriorityClass(priority: CandidateRescuePriority) {
+  if (priority === "CRITICAL") {
+    return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+  }
+
+  if (priority === "HIGH") {
+    return "border-orange-300/25 bg-orange-400/12 text-orange-100";
+  }
+
+  if (priority === "MEDIUM") {
+    return "border-amber-300/25 bg-amber-400/12 text-amber-100";
+  }
+
+  return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
+}
+
+function subjectOwnerLine(signal: CandidateSubjectSignal) {
+  const owners = signal.ownerStatus?.owners ?? [];
+
+  if (owners.length > 0) {
+    return owners.map((owner) => cleanStr(owner.name) || "Teacher").join(", ");
+  }
+
+  if (signal.ownerStatus?.hasOwner === false) return "No assigned teacher";
+
+  return "Owner not resolved";
 }
 
 function priorityClass(priority: MockActionPriority) {
@@ -1124,6 +1200,185 @@ async function sendTeacherReminder(action: MockEvidenceAction) {
           ))
         )}
       </div>
+    </div>
+  </div>
+</SectionCard>
+
+<SectionCard
+  title="Candidate rescue profiles"
+  subtitle="Learner-by-learner BECE Mock rescue lens: missing evidence, weak subjects, near-grade opportunities, and next action."
+>
+  <div className="space-y-4">
+    <div className="grid gap-3 md:grid-cols-4">
+      <MetricCard
+        label="Critical rescue"
+        value={broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "CRITICAL").length}
+        hint="Missing evidence or severe weakness"
+      />
+      <MetricCard
+        label="High rescue"
+        value={broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "HIGH").length}
+        hint="Weak subject drag"
+      />
+      <MetricCard
+        label="Improvement chances"
+        value={broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "MEDIUM").length}
+        hint="Near next grade"
+      />
+      <MetricCard
+        label="Stable monitor"
+        value={broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "LOW").length}
+        hint="No urgent signal"
+      />
+    </div>
+
+    <div className="grid gap-3 lg:grid-cols-2">
+      {broadsheet.candidateRescueProfiles.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-center text-[12px] text-[#AEB6C4]">
+          No candidate rescue profiles available yet.
+        </div>
+      ) : (
+        broadsheet.candidateRescueProfiles.slice(0, 12).map((profile) => (
+          <div key={profile.studentId} className={panelCard + " p-4"}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-[#F7F4ED]">{profile.name}</div>
+                <div className="mt-1 text-[11px] text-[#AEB6C4]">
+                  Avg {formatNumber(profile.averageScore)} • {profile.scoredSubjectCount} scored • {profile.missingSubjectCount} missing
+                </div>
+              </div>
+
+              <span
+                className={[
+                  "shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold",
+                  rescuePriorityClass(profile.priority),
+                ].join(" ")}
+              >
+                {profile.priorityLabel}
+              </span>
+            </div>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
+                  School agg.
+                </div>
+                <div className="mt-1 text-[13px] font-semibold text-[#F7F4ED]">
+                  {profile.schoolAggregate.aggregate ?? "Incomplete"}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
+                  Placement agg.
+                </div>
+                <div className="mt-1 text-[13px] font-semibold text-[#F7F4ED]">
+                  {profile.placementAggregate.aggregate ?? "Incomplete"}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
+              <span className="font-semibold">Why: </span>
+              {profile.reason}
+            </div>
+
+            <div className="mt-2 rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] leading-5 text-emerald-100">
+              <span className="font-semibold">Next action: </span>
+              {profile.nextAction}
+            </div>
+
+            {profile.missingSubjects.length > 0 ? (
+              <div className="mt-3">
+                <div className="text-[11px] font-semibold text-[#F7F4ED]">Missing evidence</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {profile.missingSubjects.map((subject) => (
+                    <span
+                      key={`${profile.studentId}:missing:${subject}`}
+                      className="rounded-full border border-rose-300/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold text-rose-100"
+                    >
+                      {subject}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {profile.weakSubjects.length > 0 ? (
+              <div className="mt-3">
+                <div className="text-[11px] font-semibold text-[#F7F4ED]">Weak subjects</div>
+                <div className="mt-2 space-y-2">
+                  {profile.weakSubjects.map((subject) => (
+                    <div
+                      key={`${profile.studentId}:weak:${subject.canonicalSubject}`}
+                      className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[11px] text-rose-100"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-semibold">{subject.subject}</span>
+                        <span>{formatNumber(subject.score)} • {subject.gradeLabel ?? "—"}</span>
+                      </div>
+                      <div className="mt-1 text-rose-100/75">
+                        Owner: {subjectOwnerLine(subject)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {profile.nearGradeOpportunities.length > 0 ? (
+              <div className="mt-3">
+                <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                  Fast improvement opportunities
+                </div>
+                <div className="mt-2 space-y-2">
+                  {profile.nearGradeOpportunities.map((subject) => (
+                    <div
+                      key={`${profile.studentId}:near:${subject.canonicalSubject}`}
+                      className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-semibold">{subject.subject}</span>
+                        <span>
+                          {subject.pointsToNextGrade} mark(s) to Grade {subject.nextGrade}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-amber-100/75">
+                        Owner: {subjectOwnerLine(subject)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {profile.strongSubjects.length > 0 ? (
+              <div className="mt-3">
+                <div className="text-[11px] font-semibold text-[#F7F4ED]">Strengths to protect</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {profile.strongSubjects.map((subject) => (
+                    <span
+                      key={`${profile.studentId}:strong:${subject.canonicalSubject}`}
+                      className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-100"
+                    >
+                      {subject.subject} • {subject.gradeLabel ?? "—"}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-3">
+              <Link
+                href={`/headteacher/student/${profile.studentId}?focus=mock-readiness`}
+                className="inline-flex rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/[0.08]"
+              >
+                Open learner profile
+              </Link>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   </div>
 </SectionCard>
