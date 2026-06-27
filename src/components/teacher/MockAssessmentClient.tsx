@@ -145,12 +145,26 @@ type ReadinessBand = {
   action: string;
 };
 
+type BroadsheetSubjectScore = {
+  itemId: string;
+  subject: string;
+  canonicalSubject: string;
+  score: number | null;
+  comment: string | null;
+  grade: number | null;
+  gradeLabel: string | null;
+  remark: string | null;
+  nextGrade: number | null;
+  pointsToNextGrade: number | null;
+};
+
 type BroadsheetStudent = {
   studentId: string;
   name: string;
   scoredSubjectCount: number;
   missingSubjectCount: number;
   averageScore: number | null;
+  subjects: BroadsheetSubjectScore[];
   schoolAggregate: AggregateResult;
   placementAggregate: AggregateResult;
   readiness: ReadinessBand;
@@ -163,10 +177,15 @@ type SubjectSummary = {
   title: string;
   maxScore: number;
   status: string;
+  lockedAt?: string | null;
   scoredCount: number;
   missingCount: number;
   averageScore: number | null;
   averageGrade: number | null;
+  gradeDistribution?: Array<{
+    grade: number;
+    count: number;
+  }>;
 };
 
 type MockBroadsheetOk = {
@@ -369,6 +388,39 @@ function guidedScoreInputClass(isGuidedTarget: boolean, hasValidScore: boolean) 
   ].join(" ");
 }
 
+function learnerScoreToneClass(score: number | null) {
+  if (score == null) return "border-white/10 bg-white/[0.04] text-[#AEB6C4]";
+  if (score < 50) return "border-rose-300/20 bg-rose-400/12 text-rose-100";
+  if (score < 60) return "border-amber-300/20 bg-amber-400/12 text-amber-100";
+  return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+}
+
+function buildSubjectInterventionAction(args: {
+  subject: string;
+  averageScore: number | null;
+  missingCount: number;
+  weakCount: number;
+  nearThresholdCount: number;
+}) {
+  if (args.missingCount > 0) {
+    return `First complete ${args.missingCount} missing ${args.subject} score field(s). Intelligence is weak until evidence is complete.`;
+  }
+
+  if (args.weakCount > 0) {
+    return `Prioritize ${args.weakCount} learner(s) below 50 in ${args.subject}. Give targeted remedial work before the next Mock.`;
+  }
+
+  if (args.nearThresholdCount > 0) {
+    return `${args.nearThresholdCount} learner(s) are close to the next grade. Small corrections can improve aggregate quality quickly.`;
+  }
+
+  if (args.averageScore != null && args.averageScore >= 70) {
+    return `${args.subject} is currently stable. Protect consistency and push strong learners toward Grade 1–2.`;
+  }
+
+  return `Keep strengthening ${args.subject}. Focus on common mistakes, timed practice, and weekly evidence checks.`;
+}
+
 function mockAutoComment(scoreRaw: unknown) {
   const scoreText = cleanStr(scoreRaw);
   if (!scoreText) return "";
@@ -519,6 +571,101 @@ const canToggleMultiStream = allJhs3Classrooms.some((c) => cleanStr(c.arm));
       (student) => !isValidScoreDraftValue(scoreDraft[student.id]?.score)
     ).length;
   }, [scoreDraft, scoreSheet, selectedItemIsDeepLinkTarget]);
+
+const assignedSubjectIntelligence = useMemo(() => {
+  if (!broadsheet || !selectedItem) return null;
+
+  const subjectSummary =
+    broadsheet.subjectSummaries.find((summary) => summary.itemId === selectedItem.id) ??
+    broadsheet.subjectSummaries.find((summary) => sameText(summary.subject, selectedItem.subject)) ??
+    null;
+
+  const learnerRows = broadsheet.students.map((student) => {
+    const subjectScore =
+      student.subjects?.find((row) => row.itemId === selectedItem.id) ??
+      student.subjects?.find((row) => sameText(row.subject, selectedItem.subject)) ??
+      null;
+
+    return {
+      studentId: student.studentId,
+      name: student.name,
+      score: subjectScore?.score ?? null,
+      grade: subjectScore?.grade ?? null,
+      gradeLabel: subjectScore?.gradeLabel ?? null,
+      remark: subjectScore?.remark ?? null,
+      nextGrade: subjectScore?.nextGrade ?? null,
+      pointsToNextGrade: subjectScore?.pointsToNextGrade ?? null,
+    };
+  });
+
+  const scoredRows = learnerRows.filter((row) => row.score != null);
+  const missingRows = learnerRows.filter((row) => row.score == null);
+
+  const weakRows = learnerRows
+    .filter((row) => typeof row.score === "number" && row.score < 50)
+    .sort((a, b) => Number(a.score ?? 0) - Number(b.score ?? 0));
+
+  const nearThresholdRows = learnerRows
+    .filter(
+      (row) =>
+        typeof row.pointsToNextGrade === "number" &&
+        row.pointsToNextGrade > 0 &&
+        row.pointsToNextGrade <= 5
+    )
+    .sort((a, b) => Number(a.pointsToNextGrade ?? 999) - Number(b.pointsToNextGrade ?? 999));
+
+  const averageScore =
+    subjectSummary?.averageScore ??
+    (scoredRows.length
+      ? Number(
+          (
+            scoredRows.reduce((sum, row) => sum + Number(row.score ?? 0), 0) /
+            scoredRows.length
+          ).toFixed(1)
+        )
+      : null);
+
+  const averageGrade =
+    subjectSummary?.averageGrade ??
+    (scoredRows.length
+      ? Number(
+          (
+            scoredRows.reduce((sum, row) => sum + Number(row.grade ?? 0), 0) /
+            scoredRows.length
+          ).toFixed(1)
+        )
+      : null);
+
+  const gradeDistribution =
+    subjectSummary?.gradeDistribution?.length
+      ? subjectSummary.gradeDistribution
+      : Array.from({ length: 9 }, (_, i) => {
+          const grade = i + 1;
+          return {
+            grade,
+            count: learnerRows.filter((row) => row.grade === grade).length,
+          };
+        });
+
+  return {
+    subject: selectedItem.subject,
+    averageScore,
+    averageGrade,
+    scoredCount: subjectSummary?.scoredCount ?? scoredRows.length,
+    missingCount: subjectSummary?.missingCount ?? missingRows.length,
+    totalStudents: learnerRows.length,
+    gradeDistribution,
+    weakRows: weakRows.slice(0, 8),
+    nearThresholdRows: nearThresholdRows.slice(0, 8),
+    interventionAction: buildSubjectInterventionAction({
+      subject: selectedItem.subject,
+      averageScore,
+      missingCount: subjectSummary?.missingCount ?? missingRows.length,
+      weakCount: weakRows.length,
+      nearThresholdCount: nearThresholdRows.length,
+    }),
+  };
+}, [broadsheet, selectedItem]);
 
   const visibleSubjects = useMemo(() => {
     const fromOptions = subjectOptions.map(cleanStr).filter(Boolean);
@@ -1520,8 +1667,164 @@ useEffect(() => {
 </div>
 
             <SectionCard
-              title="4. Mock broadsheet intelligence"
-              subtitle="Completion, subject averages, aggregate readiness, and missing evidence."
+              title="4. Assigned Subject Intelligence"
+              subtitle={
+                selectedItem
+                  ? `Teacher-only insight for ${selectedItem.subject}. This does not expose all-subject headteacher broadsheet control.`
+                  : "Select a Mock subject item to view teacher-level intelligence."
+              }
+              right={
+                <button
+                  type="button"
+                  onClick={() => loadBroadsheet(sessionId)}
+                  disabled={!sessionId || broadsheetLoading}
+                  className={darkButton}
+                >
+                  {broadsheetLoading ? "Loading..." : "Refresh intelligence"}
+                </button>
+              }
+            >
+              <div className="space-y-4">
+                {!selectedItem ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-10 text-center text-[12px] text-[#AEB6C4]">
+                    Select a subject column to view assigned-subject intelligence.
+                  </div>
+                ) : !broadsheet ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-10 text-center text-[12px] text-[#AEB6C4]">
+                    {broadsheetLoading
+                      ? "Loading assigned-subject intelligence..."
+                      : "Click Refresh intelligence to analyze this subject."}
+                  </div>
+                ) : !assignedSubjectIntelligence ? (
+                  <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-[12px] text-amber-100">
+                    No assigned-subject intelligence is available for the selected item yet.
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <MetricCard
+                        label="Subject average"
+                        value={formatNumber(assignedSubjectIntelligence.averageScore)}
+                        hint={assignedSubjectIntelligence.subject}
+                      />
+                      <MetricCard
+                        label="Average grade"
+                        value={formatNumber(assignedSubjectIntelligence.averageGrade)}
+                        hint="Lower is better"
+                      />
+                      <MetricCard
+                        label="Scored"
+                        value={`${assignedSubjectIntelligence.scoredCount}/${assignedSubjectIntelligence.totalStudents}`}
+                        hint={`${assignedSubjectIntelligence.missingCount} missing`}
+                      />
+                      <MetricCard
+                        label="Weak learners"
+                        value={assignedSubjectIntelligence.weakRows.length}
+                        hint="Below 50"
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-[12px] leading-6 text-emerald-100">
+                      <span className="font-semibold">Recommended teacher action: </span>
+                      {assignedSubjectIntelligence.interventionAction}
+                    </div>
+
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <div className={panelCard + " p-4"}>
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
+                          Grade distribution
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-3 xl:grid-cols-5">
+                          {assignedSubjectIntelligence.gradeDistribution.map((row) => (
+                            <div
+                              key={row.grade}
+                              className={[
+                                "rounded-xl border px-3 py-2",
+                                gradeClass(row.grade),
+                              ].join(" ")}
+                            >
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.14em]">
+                                Grade {row.grade}
+                              </div>
+                              <div className="mt-1 text-lg font-semibold">{row.count}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className={panelCard + " p-4"}>
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
+                          Near next-grade threshold
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {assignedSubjectIntelligence.nearThresholdRows.length === 0 ? (
+                            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[12px] text-[#AEB6C4]">
+                              No learner is within 5 marks of the next grade yet.
+                            </div>
+                          ) : (
+                            assignedSubjectIntelligence.nearThresholdRows.map((row) => (
+                              <div
+                                key={row.studentId}
+                                className="flex items-center justify-between gap-3 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[12px]"
+                              >
+                                <div>
+                                  <div className="font-semibold text-[#F7F4ED]">{row.name}</div>
+                                  <div className="text-[10px] text-amber-100">
+                                    {row.pointsToNextGrade} mark(s) to Grade {row.nextGrade}
+                                  </div>
+                                </div>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
+                                  {row.gradeLabel ?? "—"}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={panelCard + " p-4"}>
+                      <div className="text-sm font-semibold text-[#F7F4ED]">
+                        Learners below 50
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {assignedSubjectIntelligence.weakRows.length === 0 ? (
+                          <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-3 text-[12px] text-emerald-100">
+                            No visible learner is currently below 50 in this subject.
+                          </div>
+                        ) : (
+                          assignedSubjectIntelligence.weakRows.map((row) => (
+                            <div
+                              key={row.studentId}
+                              className="flex items-center justify-between gap-3 rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[12px]"
+                            >
+                              <div>
+                                <div className="font-semibold text-[#F7F4ED]">{row.name}</div>
+                                <div className="text-[10px] text-rose-100">
+                                  {row.remark ?? "Critical risk"} — immediate correction needed
+                                </div>
+                              </div>
+                              <span
+                                className={[
+                                  "rounded-full border px-2 py-1 text-[10px] font-semibold",
+                                  learnerScoreToneClass(row.score),
+                                ].join(" ")}
+                              >
+                                {formatNumber(row.score)}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard
+             title="5. Teacher-visible Mock snapshot"
+             subtitle="This teacher view only uses subjects visible to your account. Full BECE readiness is completed from the headteacher all-subject cockpit."
               right={
                 <button
                   type="button"
@@ -1568,17 +1871,25 @@ useEffect(() => {
                         value={formatNumber(broadsheet.summary.completionPercent, "%")}
                         hint={`${broadsheet.summary.scoredCells}/${broadsheet.summary.possibleCells} cells`}
                       />
-                      <div className={softPanel + " p-4"}>
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-[#8F98A8]">
-                          Class readiness
-                        </div>
-                        <div className={["mt-2 inline-flex rounded-full border px-3 py-1 text-[12px] font-semibold", readinessClass(broadsheet.summary.classReadiness.code)].join(" ")}>
-                          {broadsheet.summary.classReadiness.label}
-                        </div>
-                        <div className="mt-2 text-[11px] text-[#AEB6C4]">
-                          {broadsheet.summary.classReadiness.action}
-                        </div>
-                      </div>
+                     <div className={softPanel + " p-4"}>
+  <div className="text-[11px] uppercase tracking-[0.18em] text-[#8F98A8]">
+    Full BECE readiness
+  </div>
+  <div
+    className={[
+      "mt-2 inline-flex rounded-full border px-3 py-1 text-[12px] font-semibold",
+      readinessClass(broadsheet.summary.classReadiness.code),
+    ].join(" ")}
+  >
+    {broadsheet.summary.classReadiness.label}
+  </div>
+  <div className="mt-2 text-[11px] text-[#AEB6C4]">
+    {broadsheet.summary.classReadiness.action}
+  </div>
+  <div className="mt-2 text-[10px] leading-4 text-[#8F98A8]">
+    This teacher view uses only subjects visible to your account. Full BECE readiness is completed from the headteacher all-subject cockpit.
+  </div>
+</div>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
