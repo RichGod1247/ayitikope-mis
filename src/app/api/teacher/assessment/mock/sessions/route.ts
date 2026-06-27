@@ -213,6 +213,30 @@ export async function POST(req: NextRequest) {
         mockNumber,
       });
 
+const existingSession = await prisma.mockExamSession.findUnique({
+  where: {
+    tenantId_classroomId_academicYear_mockNumber: {
+      tenantId: ctx.tenantId,
+      classroomId,
+      academicYear,
+      mockNumber,
+    },
+  },
+  select: {
+    id: true,
+    status: true,
+  },
+});
+
+if (existingSession && cleanMockStr(existingSession.status).toUpperCase() !== "OPEN") {
+  return noStore(409, {
+    ok: false,
+    error: "MOCK_SESSION_NOT_OPEN",
+    message: "This Mock session has been finalized or closed and can no longer be edited.",
+    status: existingSession.status,
+  });
+}
+
     const session = await prisma.mockExamSession.upsert({
       where: {
         tenantId_classroomId_academicYear_mockNumber: {

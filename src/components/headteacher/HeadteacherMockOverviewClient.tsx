@@ -259,6 +259,12 @@ type OverviewOk = {
   warning?: string;
 };
 
+type FinalizeStatus = {
+  loading: boolean;
+  ok: boolean | null;
+  message: string;
+};
+
 type OverviewErr = {
   ok: false;
   error: string;
@@ -489,6 +495,67 @@ function SectionCard(props: {
   );
 }
 
+function isSealedMockStatus(status: unknown) {
+  return cleanStr(status).toUpperCase() === "LOCKED";
+}
+
+function buildLocalSealReadiness(broadsheet: Broadsheet) {
+  const ownerGapActions = broadsheet.evidenceActions.headlineActions.filter(
+    (action) =>
+      (action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER") &&
+      action.ownerStatus?.hasOwner === false
+  );
+
+  const blockers: string[] = [];
+
+  if (broadsheet.evidenceActions.missingCoreSubjectColumns.length > 0) {
+    blockers.push(
+      `Missing core columns: ${broadsheet.evidenceActions.missingCoreSubjectColumns.join(", ")}`
+    );
+  }
+
+  if (broadsheet.evidenceActions.missingSchoolAggregateColumns.length > 0) {
+    blockers.push(
+      `Missing school aggregate columns: ${broadsheet.evidenceActions.missingSchoolAggregateColumns.join(", ")}`
+    );
+  }
+
+  if (broadsheet.evidenceActions.missingElectiveColumnCount > 0) {
+    blockers.push(
+      `Add ${broadsheet.evidenceActions.missingElectiveColumnCount} more elective column(s).`
+    );
+  }
+
+  if (broadsheet.evidenceActions.subjectScoreGaps.length > 0) {
+    blockers.push(
+      `Missing score evidence in ${broadsheet.evidenceActions.subjectScoreGaps.length} subject(s).`
+    );
+  }
+
+  if (ownerGapActions.length > 0) {
+    blockers.push(
+      `Subject owner gaps: ${ownerGapActions
+        .map((action) => action.subject)
+        .filter(Boolean)
+        .join(", ")}`
+    );
+  }
+
+  if (broadsheet.summary.placementReadyCount < broadsheet.summary.totalStudents) {
+    blockers.push(
+      `${broadsheet.summary.totalStudents - broadsheet.summary.placementReadyCount} learner(s) are not placement-ready.`
+    );
+  }
+
+  const sealed = isSealedMockStatus(broadsheet.session.status);
+
+  return {
+    sealed,
+    ready: !sealed && blockers.length === 0,
+    blockers,
+  };
+}
+
 export default function HeadteacherMockOverviewClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -510,6 +577,11 @@ const [reminderDeadline, setReminderDeadline] = useState(() => {
 const [reminderNote, setReminderNote] = useState("");
 const [reminderStatus, setReminderStatus] = useState<Record<string, ReminderSendStatus>>({});
 
+const [finalizeStatus, setFinalizeStatus] = useState<FinalizeStatus>({
+  loading: false,
+  ok: null,
+  message: "",
+});
   const allJhs3Classrooms = useMemo(() => classrooms.filter(isJhs3Classroom), [classrooms]);
 
   const visibleClassrooms = useMemo(() => {
@@ -520,10 +592,10 @@ const [reminderStatus, setReminderStatus] = useState<Record<string, ReminderSend
 
   const canToggleMultiStream = allJhs3Classrooms.some((c) => cleanStr(c.arm));
 
-  const selectedSession = useMemo(
-    () => sessions.find((session) => session.id === sessionId) ?? null,
-    [sessions, sessionId]
-  );
+const sealReadiness = useMemo(
+  () => (broadsheet ? buildLocalSealReadiness(broadsheet) : null),
+  [broadsheet]
+);
 
   async function loadOverview(args?: {
     nextClassroomId?: string;
@@ -664,6 +736,70 @@ async function sendTeacherReminder(action: MockEvidenceAction) {
         message: "Failed to send reminder.",
       },
     }));
+  }
+}
+
+async function finalizeMockSession() {
+  if (!broadsheet) return;
+
+  try {
+    setFinalizeStatus({
+      loading: true,
+      ok: null,
+      message: "Finalizing Mock evidence seal...",
+    });
+
+    const res = await fetch("/api/headteacher/assessment/mock/finalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        sessionId: broadsheet.session.id,
+      }),
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.ok) {
+      const blockers = Array.isArray(json?.readiness?.blockers)
+        ? json.readiness.blockers
+            .map((blocker: { label?: string; detail?: string }) =>
+              `${cleanStr(blocker.label)}${cleanStr(blocker.detail) ? ` — ${cleanStr(blocker.detail)}` : ""}`
+            )
+            .filter(Boolean)
+            .join(" | ")
+        : "";
+
+      setFinalizeStatus({
+        loading: false,
+        ok: false,
+        message:
+          json?.error === "MOCK_SESSION_NOT_READY_TO_FINALIZE"
+            ? `Not ready to finalize. ${blockers}`
+            : json?.message || json?.error || `Failed to finalize. HTTP ${res.status}`,
+      });
+      return;
+    }
+
+    setFinalizeStatus({
+      loading: false,
+      ok: true,
+      message: json.alreadyFinalized
+        ? "This Mock session was already sealed."
+        : "Mock session finalized and sealed successfully.",
+    });
+
+    void loadOverview({
+      nextClassroomId: classroomId,
+      nextSessionId: sessionId,
+      nextAcademicYear: academicYear,
+    });
+  } catch {
+    setFinalizeStatus({
+      loading: false,
+      ok: false,
+      message: "Failed to finalize Mock session.",
+    });
   }
 }
 
@@ -845,6 +981,86 @@ async function sendTeacherReminder(action: MockEvidenceAction) {
     {broadsheet.warnings.message}
   </div>
 ) : null}
+
+<SectionCard
+  title="Mock evidence seal"
+  subtitle="Finalize only when required subject evidence, owner accountability, and placement readiness are complete."
+  right={
+    <button
+      type="button"
+      onClick={finalizeMockSession}
+      disabled={
+        finalizeStatus.loading ||
+        !sealReadiness ||
+        sealReadiness.sealed ||
+        !sealReadiness.ready
+      }
+      className={goldButton}
+    >
+      {finalizeStatus.loading
+        ? "Finalizing..."
+        : sealReadiness?.sealed
+          ? "Sealed"
+          : "Finalize Mock"}
+    </button>
+  }
+>
+  <div className="space-y-3">
+    <div
+      className={[
+        "rounded-2xl border px-4 py-3 text-[12px] leading-5",
+        sealReadiness?.sealed
+          ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+          : sealReadiness?.ready
+            ? "border-sky-300/20 bg-sky-400/10 text-sky-100"
+            : "border-amber-300/20 bg-amber-400/10 text-amber-100",
+      ].join(" ")}
+    >
+      <div className="font-semibold">
+        {sealReadiness?.sealed
+          ? "This Mock session is sealed."
+          : sealReadiness?.ready
+            ? "Ready to finalize."
+            : "Not ready to finalize."}
+      </div>
+      <div className="mt-1">
+        {sealReadiness?.sealed
+          ? "Scores and subject columns are now protected from ordinary edits."
+          : sealReadiness?.ready
+            ? "All local readiness checks passed. Finalization will hard-lock the session and subject items."
+            : "Resolve the blockers below before sealing this Mock as official evidence."}
+      </div>
+    </div>
+
+    {!sealReadiness?.sealed && sealReadiness?.blockers.length ? (
+      <div className="grid gap-2 md:grid-cols-2">
+        {sealReadiness.blockers.map((blocker) => (
+          <div
+            key={blocker}
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]"
+          >
+            {blocker}
+          </div>
+        ))}
+      </div>
+    ) : null}
+
+    {finalizeStatus.message ? (
+      <div
+        className={[
+          "rounded-xl border px-3 py-2 text-[11px]",
+          finalizeStatus.ok
+            ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+            : finalizeStatus.ok === false
+              ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+              : "border-white/10 bg-white/[0.04] text-[#C9CDD6]",
+        ].join(" ")}
+      >
+        {finalizeStatus.message}
+      </div>
+    ) : null}
+  </div>
+</SectionCard>
 
 <SectionCard
   title="Evidence completeness command map"

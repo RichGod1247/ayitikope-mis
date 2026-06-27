@@ -362,6 +362,10 @@ function sameText(a: unknown, b: unknown) {
   return cleanStr(a).toUpperCase() === cleanStr(b).toUpperCase();
 }
 
+function isOpenMockStatus(status: unknown) {
+  return cleanStr(status).toUpperCase() === "OPEN";
+}
+
 function isValidScoreDraftValue(raw: unknown) {
   const text = cleanStr(raw);
   if (!text) return false;
@@ -563,6 +567,13 @@ const canToggleMultiStream = allJhs3Classrooms.some((c) => cleanStr(c.arm));
 
     return false;
   }, [deepLinkTarget.itemId, deepLinkTarget.subject, hasDeepLinkTarget, selectedItem]);
+
+  const selectedSessionIsOpen = selectedSession ? isOpenMockStatus(selectedSession.status) : true;
+
+const selectedItemIsLocked =
+  cleanStr(selectedItem?.status || scoreSheet?.item?.status).toUpperCase() === "LOCKED";
+
+const scoreEntryLocked = Boolean(!selectedSessionIsOpen || selectedItemIsLocked);
 
   const guidedMissingScoreCount = useMemo(() => {
     if (!selectedItemIsDeepLinkTarget || !scoreSheet) return 0;
@@ -944,6 +955,11 @@ setClassroomId(nextClassroomId);
       return;
     }
 
+    if (!selectedSessionIsOpen) {
+  setItemError("This Mock session has been sealed. Subject columns can no longer be created or repaired.");
+  return;
+}
+
     try {
       setItemSaving(true);
       setItemError(null);
@@ -1031,6 +1047,11 @@ setClassroomId(nextClassroomId);
       setScoresError("Select a mock subject item first.");
       return;
     }
+
+    if (scoreEntryLocked) {
+  setScoresError("This Mock evidence has been sealed. Scores are visible for review, but ordinary edits are disabled.");
+  return;
+}
 
     try {
       setScoresSaving(true);
@@ -1383,7 +1404,7 @@ useEffect(() => {
                 <button
                   type="button"
                   onClick={() => createSubjectItem(subject)}
-                  disabled={itemSaving || !sessionId || !subject}
+                  disabled={itemSaving || !sessionId || !subject || !selectedSessionIsOpen}
                   className={emeraldButton}
                 >
                   {itemSaving ? "Opening..." : "+ Subject"}
@@ -1415,7 +1436,7 @@ useEffect(() => {
                         setSubject(s);
                         void createSubjectItem(s);
                       }}
-                      disabled={itemSaving || !sessionId}
+                      disabled={itemSaving || !sessionId || !selectedSessionIsOpen}
                       className={darkButton}
                     >
                       {s}
@@ -1513,7 +1534,7 @@ useEffect(() => {
               return next;
             });
           }}
-          disabled={!scoreSheet}
+          disabled={!scoreSheet || scoreEntryLocked}
           className={darkButton}
         >
           Auto comments
@@ -1531,7 +1552,7 @@ useEffect(() => {
         <button
           type="button"
           onClick={saveScores}
-          disabled={!itemId || !scoreSheet || scoresSaving}
+          disabled={!itemId || !scoreSheet || scoresSaving || scoreEntryLocked}
           className={goldButton}
         >
           {scoresSaving ? "Saving..." : "Save scores"}
@@ -1540,7 +1561,16 @@ useEffect(() => {
     }
   >
     <div className="space-y-3">
-      {scoresError ? (
+  {scoreEntryLocked ? (
+    <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] leading-5 text-emerald-100">
+      <div className="font-semibold">Mock evidence sealed</div>
+      <div className="mt-1">
+        This Mock subject/session is locked. Scores remain visible for review, but ordinary edits are disabled.
+      </div>
+    </div>
+  ) : null}
+
+  {scoresError ? (
         <div className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[12px] text-rose-100">
           {scoresError}
         </div>
@@ -1622,12 +1652,13 @@ useEffect(() => {
 
                     <td className="px-3 py-2">
                       <input
-                        value={scoreDraft[student.id]?.score ?? ""}
-                        onChange={(e) => updateDraft(student.id, { score: e.target.value })}
-                        inputMode="decimal"
-                        placeholder="Blank clears"
-                        className={guidedScoreInputClass(selectedItemIsDeepLinkTarget, hasValidGuidedScore)}
-                      />
+  value={scoreDraft[student.id]?.score ?? ""}
+  onChange={(e) => updateDraft(student.id, { score: e.target.value })}
+  inputMode="decimal"
+  placeholder="Blank clears"
+  disabled={scoreEntryLocked}
+  className={guidedScoreInputClass(selectedItemIsDeepLinkTarget, hasValidGuidedScore)}
+/>
                     </td>
 
                     <td className="px-3 py-2">
@@ -1648,12 +1679,13 @@ useEffect(() => {
                     </td>
 
                     <td className="px-3 py-2">
-                      <input
-                        value={scoreDraft[student.id]?.comment ?? ""}
-                        onChange={(e) => updateDraft(student.id, { comment: e.target.value })}
-                        placeholder="Optional comment"
-                        className={darkInput}
-                      />
+                     <input
+  value={scoreDraft[student.id]?.comment ?? ""}
+  onChange={(e) => updateDraft(student.id, { comment: e.target.value })}
+  placeholder="Optional comment"
+  disabled={scoreEntryLocked}
+  className={darkInput}
+/>
                     </td>
                   </tr>
                 );
