@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import LessonNotesStudioClient from "./ui/LessonNotesStudioClient";
+import {
+  listUserAccessibleClassrooms,
+  resolveUserClassroomAccess,
+} from "@/lib/teacherAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +14,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 type JhsAssignment = { subject: string; classes: string[] };
 
 async function resolveSearchParams(
-  sp: SearchParams | Promise<SearchParams> | undefined | null
+  sp: SearchParams | Promise<SearchParams> | undefined | null,
 ): Promise<SearchParams> {
   try {
     const v = await Promise.resolve(sp as any);
@@ -52,8 +56,10 @@ function coerceJhsAssignments(raw: unknown): any[] {
 
   if (raw && typeof raw === "object") {
     const obj = raw as Record<string, unknown>;
-    if (Array.isArray((obj as any).jhsAssignments)) return (obj as any).jhsAssignments as any[];
-    if (Array.isArray((obj as any).assignments)) return (obj as any).assignments as any[];
+    if (Array.isArray((obj as any).jhsAssignments))
+      return (obj as any).jhsAssignments as any[];
+    if (Array.isArray((obj as any).assignments))
+      return (obj as any).assignments as any[];
   }
 
   return [];
@@ -74,7 +80,8 @@ function parseJhsAssignments(v: unknown): JhsAssignment[] {
       ? r.classes.map((c: any) => cleanStr(c).toUpperCase()).filter(Boolean)
       : [];
 
-    if (subject && classes.length) out.push({ subject, classes: uniqStrings(classes) });
+    if (subject && classes.length)
+      out.push({ subject, classes: uniqStrings(classes) });
   }
 
   const by = new Map<string, Set<string>>();
@@ -123,7 +130,9 @@ function levelLookupVariants(raw: unknown): string[] {
 
   if (m) {
     const n = Number(m[1]);
-    [`B${n}`, `B ${n}`, `Basic ${n}`, `Basic${n}`, `P${n}`, `P ${n}`].forEach((x) => out.add(x));
+    [`B${n}`, `B ${n}`, `Basic ${n}`, `Basic${n}`, `P${n}`, `P ${n}`].forEach(
+      (x) => out.add(x),
+    );
     return Array.from(out.values());
   }
 
@@ -131,11 +140,116 @@ function levelLookupVariants(raw: unknown): string[] {
   if (m) {
     const j = Number(m[1]);
     const basic = 6 + j;
-    [`JHS ${j}`, `JHS${j}`, `Basic ${basic}`, `Basic${basic}`, `B${basic}`, `B ${basic}`].forEach((x) => out.add(x));
+    [
+      `JHS ${j}`,
+      `JHS${j}`,
+      `Basic ${basic}`,
+      `Basic${basic}`,
+      `B${basic}`,
+      `B ${basic}`,
+    ].forEach((x) => out.add(x));
     return Array.from(out.values());
   }
 
   return Array.from(out.values());
+}
+
+function phaseFromDisplayLevel(raw: unknown): "KG" | "PRIMARY" | "JHS" | null {
+  const s = cleanStr(raw)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "");
+
+  if (/^KG[12]$/.test(s)) return "KG";
+  if (/^(BASIC|B|PRIMARY|P)[1-6]$/.test(s)) return "PRIMARY";
+  if (/^JHS[1-3]$/.test(s) || /^(BASIC|B|BS)[7-9]$/.test(s)) return "JHS";
+
+  const spaced = cleanStr(raw).toUpperCase();
+  if (/^BASIC\s+[1-6]$/.test(spaced)) return "PRIMARY";
+  if (/^JHS\s+[1-3]$/.test(spaced)) return "JHS";
+
+  return null;
+}
+
+function levelSortRank(raw: unknown) {
+  const s = cleanStr(raw)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "");
+
+  let m = s.match(/^KG([12])$/);
+  if (m) return Number(m[1]);
+
+  m = s.match(/^(BASIC|B|PRIMARY|P)([1-6])$/);
+  if (m) return 10 + Number(m[2]);
+
+  m = s.match(/^JHS([1-3])$/);
+  if (m) return 30 + Number(m[1]);
+
+  m = s.match(/^(BASIC|B|BS)([7-9])$/);
+  if (m) return 30 + (Number(m[2]) - 6);
+
+  return 999;
+}
+
+function sortLevels(levels: string[]) {
+  return uniqStrings(levels).sort((a, b) => {
+    return levelSortRank(a) - levelSortRank(b) || a.localeCompare(b);
+  });
+}
+
+async function curriculumSubjectsForAccessLevel(
+  tenantId: string,
+  level: string,
+) {
+  const levelVariants = levelLookupVariants(level);
+
+  if (!levelVariants.length) return [];
+
+  const rows = await prisma.curriculumSubject.findMany({
+    where: {
+      isActive: true,
+      OR: [{ tenantId }, { tenantId: null }],
+      level: {
+        in: levelVariants,
+      },
+    },
+    select: {
+      name: true,
+      orderIndex: true,
+    },
+    orderBy: [{ orderIndex: "asc" }, { name: "asc" }],
+    take: 200,
+  });
+
+  return uniqStrings(rows.map((row) => row.name));
+}
+
+function addSubjectClass(
+  map: Map<string, { label: string; classes: Set<string> }>,
+  subject: string,
+  level: string,
+) {
+  const subjectLabel = cleanStr(subject);
+  const classLabel = cleanStr(level);
+  if (!subjectLabel || !classLabel) return;
+
+  const key = subjectLabel.toLowerCase();
+  const current = map.get(key) ?? {
+    label: subjectLabel,
+    classes: new Set<string>(),
+  };
+  current.classes.add(classLabel);
+  map.set(key, current);
+}
+
+function mapToJhsAssignments(
+  map: Map<string, { label: string; classes: Set<string> }>,
+): JhsAssignment[] {
+  return Array.from(map.values())
+    .map((entry) => ({
+      subject: entry.label,
+      classes: sortLevels(Array.from(entry.classes)),
+    }))
+    .sort((a, b) => a.subject.localeCompare(b.subject));
 }
 
 export default async function Page({
@@ -164,14 +278,19 @@ export default async function Page({
     }),
     prisma.teacherProfile.findUnique({
       where: {
-        teacherProfile_tenant_user_unique: { tenantId: ctx.tenantId, userId: ctx.userId },
+        teacherProfile_tenant_user_unique: {
+          tenantId: ctx.tenantId,
+          userId: ctx.userId,
+        },
       },
       select: {
         phase: true,
         classLevel: true,
         jhsAssignments: true,
         primaryClassroomId: true,
-        primaryClassroom: { select: { id: true, name: true, grade: true, arm: true } },
+        primaryClassroom: {
+          select: { id: true, name: true, grade: true, arm: true },
+        },
       },
     }),
     prisma.tenantSettings.findUnique({
@@ -184,7 +303,9 @@ export default async function Page({
 
   const roleName = cleanStr(membership.role?.name) || "TEACHER";
   const displayName =
-    cleanStr(me?.name) || cleanStr(`${me?.firstName ?? ""} ${me?.lastName ?? ""}`) || "Teacher";
+    cleanStr(me?.name) ||
+    cleanStr(`${me?.firstName ?? ""} ${me?.lastName ?? ""}`) ||
+    "Teacher";
   const email = cleanStr(me?.email) || "";
 
   const initialSchemeItemId = spGet(sp, "schemeItemId").trim() || null;
@@ -197,38 +318,115 @@ export default async function Page({
     weekNumber: spGet(sp, "weekNumber").trim(),
   };
 
-  const phase = tp.phase;
+  const profilePhase = cleanStr(tp.phase).toUpperCase();
   const signupLevelRaw = cleanStr(tp.classLevel) || null;
 
-  const jhsAssignments = phase === "JHS" ? parseJhsAssignments(tp.jhsAssignments) : [];
+  const accessibleClassrooms = await listUserAccessibleClassrooms({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    roleName,
+  });
+
+  const accessRows: Array<{
+    level: string;
+    phase: "KG" | "PRIMARY" | "JHS" | null;
+    subjects: string[];
+  }> = [];
+
+  for (const classroom of accessibleClassrooms) {
+    const access = await resolveUserClassroomAccess({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      roleName,
+      classroomId: classroom.id,
+    });
+
+    if (!access.ok) continue;
+
+    const level =
+      cleanStr(access.normalizedClassLevel) ||
+      cleanStr(classroom.grade) ||
+      cleanStr(classroom.name);
+
+    if (!level) continue;
+
+    const phaseForLevel = phaseFromDisplayLevel(level);
+
+    const subjects =
+      Array.isArray(access.allowedSubjects) && access.allowedSubjects.length > 0
+        ? access.allowedSubjects
+        : await curriculumSubjectsForAccessLevel(ctx.tenantId, level);
+
+    accessRows.push({
+      level,
+      phase: phaseForLevel,
+      subjects: uniqStrings(subjects),
+    });
+  }
+
+  const jhsSubjectClassMap = new Map<
+    string,
+    { label: string; classes: Set<string> }
+  >();
+
+  for (const row of accessRows) {
+    if (row.phase !== "JHS") continue;
+    for (const subject of row.subjects) {
+      addSubjectClass(jhsSubjectClassMap, subject, row.level);
+    }
+  }
+
+  const structuredJhsAssignments = mapToJhsAssignments(jhsSubjectClassMap);
+  const legacyJhsAssignments =
+    profilePhase === "JHS" ? parseJhsAssignments(tp.jhsAssignments) : [];
+
+  const mergedJhsMap = new Map<
+    string,
+    { label: string; classes: Set<string> }
+  >();
+
+  for (const assignment of [
+    ...legacyJhsAssignments,
+    ...structuredJhsAssignments,
+  ]) {
+    for (const level of assignment.classes) {
+      addSubjectClass(mergedJhsMap, assignment.subject, level);
+    }
+  }
+
+  const jhsAssignments = mapToJhsAssignments(mergedJhsMap);
+
+  const nonJhsRows = accessRows.filter(
+    (row) => row.phase && row.phase !== "JHS",
+  );
+
+  const phase =
+    jhsAssignments.length > 0
+      ? "JHS"
+      : nonJhsRows[0]?.phase || profilePhase || String(tp.phase);
+
   const allowedLevels =
     phase === "JHS"
-      ? uniqStrings(jhsAssignments.flatMap((a) => a.classes)).sort()
-      : signupLevelRaw
-        ? [signupLevelRaw]
-        : [];
+      ? sortLevels(jhsAssignments.flatMap((a) => a.classes))
+      : nonJhsRows.length
+        ? sortLevels(nonJhsRows.map((row) => row.level))
+        : signupLevelRaw
+          ? [signupLevelRaw]
+          : [];
 
   let allowedSubjects: string[] = [];
+
   if (phase === "JHS") {
     allowedSubjects = uniqStrings(jhsAssignments.map((a) => a.subject)).sort();
-  } else {
-    if (signupLevelRaw) {
-      const levelVariants = levelLookupVariants(signupLevelRaw);
-
-      const subs = await prisma.curriculumSubject.findMany({
-        where: {
-          isActive: true,
-          OR: levelVariants.map((lv) => ({
-            level: { equals: lv, mode: "insensitive" as const },
-          })),
-        },
-        select: { name: true, orderIndex: true },
-        orderBy: [{ orderIndex: "asc" }, { name: "asc" }],
-        take: 200,
-      });
-
-      allowedSubjects = uniqStrings(subs.map((s) => s.name));
-    }
+  } else if (nonJhsRows.length) {
+    allowedSubjects = uniqStrings(
+      nonJhsRows.flatMap((row) => row.subjects),
+    ).sort();
+  } else if (signupLevelRaw) {
+    allowedSubjects = await curriculumSubjectsForAccessLevel(
+      ctx.tenantId,
+      signupLevelRaw,
+    );
   }
 
   const primaryAssignedLabel = tp.primaryClassroom

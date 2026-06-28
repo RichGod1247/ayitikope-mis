@@ -1,7 +1,9 @@
 // src/app/api/teachers/lesson-notes/upsert/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +50,7 @@ type UpsertBody = {
   status?: LessonNoteStatus; // teacher only: DRAFT | SUBMITTED
 };
 
-function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+function jsonNoStore(payload: unknown, init?: Parameters<typeof NextResponse.json>[1]) {
   return NextResponse.json(payload, {
     ...init,
     headers: {
@@ -214,10 +216,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Membership gate (consistent, bank-grade)
-  const membership = await prisma.membership.findUnique({
-    where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
-    select: { status: true },
-  });
+const membership = await prisma.membership.findUnique({
+  where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+  select: {
+    status: true,
+    role: { select: { name: true } },
+  },
+});
   if (!membership || membership.status !== "ACTIVE") {
     return jsonNoStore({ ok: false, error: "Forbidden (membership inactive)." }, { status: 403 });
   }
@@ -237,12 +242,12 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const lessonNoteIdRaw =
-    typeof body?.lessonNoteId === "string"
-      ? body.lessonNoteId
-      : typeof (body as any)?.id === "string"
-        ? String((body as any).id)
-        : "";
+const lessonNoteIdRaw =
+  typeof body.lessonNoteId === "string"
+    ? body.lessonNoteId
+    : typeof body.id === "string"
+      ? body.id
+      : "";
 
   const lessonNoteId = lessonNoteIdRaw.trim();
   if (!isPlausibleId(lessonNoteId)) {
@@ -279,19 +284,22 @@ export async function POST(req: NextRequest) {
   try {
     const existing = await prisma.lessonNote.findFirst({
       where: { id: lessonNoteId, tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-      select: {
-        id: true,
-        status: true,
-        submittedAt: true,
+select: {
+  id: true,
+  status: true,
+  submittedAt: true,
 
-        curriculumUnitId: true,
-        schemeOfWorkItemId: true,
+  classroomId: true,
+  subject: true,
 
-        indicator: true,
-        objectives: true,
-        lessonDevelopment: true,
-        assessment: true,
-      },
+  curriculumUnitId: true,
+  schemeOfWorkItemId: true,
+
+  indicator: true,
+  objectives: true,
+  lessonDevelopment: true,
+  assessment: true,
+},
     });
 
     if (!existing) {
@@ -324,9 +332,9 @@ export async function POST(req: NextRequest) {
     const curriculumUnitId = asTrimmedNullableString(body.curriculumUnitId);
 
     // ✅ Accept legacy schemeItemId alias
-    const schemeOfWorkItemId = asTrimmedNullableString(
-      body.schemeOfWorkItemId !== undefined ? body.schemeOfWorkItemId : (body as any).schemeItemId
-    );
+const schemeOfWorkItemId = asTrimmedNullableString(
+  body.schemeOfWorkItemId !== undefined ? body.schemeOfWorkItemId : body.schemeItemId
+);
 
     // Lesson fields
     const lessonTitle = asNullableString(body.lessonTitle);
@@ -347,6 +355,32 @@ export async function POST(req: NextRequest) {
 
     const effectiveUnitId =
       curriculumUnitId !== undefined ? curriculumUnitId : existing.curriculumUnitId ?? null;
+    const effectiveSubjectForAccess =
+  subject !== undefined && subject !== null ? subject : existing.subject;
+
+if (existing.classroomId && effectiveSubjectForAccess) {
+  const access = await resolveUserClassroomAccess({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    roleName: membership.role?.name ?? null,
+    classroomId: existing.classroomId,
+    subject: effectiveSubjectForAccess,
+  });
+
+  if (!access.ok) {
+    return jsonNoStore(
+      {
+        ok: false,
+        error:
+          access.reason === "SUBJECT_OUT_OF_SCOPE"
+            ? "You are no longer assigned to write lesson notes for this subject and class."
+            : "You are no longer assigned to this class.",
+        reason: access.reason,
+      },
+      { status: access.reason === "CLASSROOM_NOT_FOUND" ? 404 : 403 }
+    );
+  }
+}  
 
     // Derive NaCCA slice from either SchemeOfWorkItem or CurriculumUnit (server-trusted)
     let derived:
@@ -365,7 +399,7 @@ export async function POST(req: NextRequest) {
         where: {
           id: effectiveSchemeItemId,
           scheme: { tenantId: ctx.tenantId, teacherUserId: ctx.userId },
-        } as any,
+                },
         select: {
           weekNumber: true,
           strandTitle: true,
@@ -391,7 +425,7 @@ export async function POST(req: NextRequest) {
         where: {
           id: effectiveUnitId,
           OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
-        } as any,
+                },
         select: {
           weekNumber: true,
           strand: true,
@@ -436,8 +470,11 @@ export async function POST(req: NextRequest) {
         assessment !== undefined ? safeTrim(assessment) : safeTrim(existing.assessment);
 
       const effectiveIndicator =
-        (derived?.indicator ?? null) ??
-        (body.indicator !== undefined ? safeTrim(body.indicator) : safeTrim(existing.indicator));
+  derived?.indicator != null
+    ? safeTrim(derived.indicator)
+    : body.indicator !== undefined
+      ? safeTrim(body.indicator)
+      : safeTrim(existing.indicator);
 
       const unitOk = !!effectiveSchemeItemId || !!effectiveUnitId;
       const indicatorOk = safeTrim(effectiveIndicator).length > 0;
@@ -457,19 +494,21 @@ export async function POST(req: NextRequest) {
       submittedAt = submittedAt ?? now;
     }
 
-    const data: any = {
-      status: nextStatus,
-      submittedAt,
-    };
+const data: Prisma.LessonNoteUncheckedUpdateManyInput = {
+  status: nextStatus,
+  submittedAt,
+};
 
     // Apply optional fields only when present
-    if (phase !== undefined) data.phase = phase;
-    if (level !== undefined) data.level = level;
-    if (subject !== undefined) data.subject = subject;
-    if (term !== undefined) data.term = term;
-    if (academicYear !== undefined) data.academicYear = academicYear;
-    if (weekNumber !== undefined) data.weekNumber = weekNumber;
-    if (lessonDate !== undefined) data.lessonDate = lessonDate;
+if (phase !== undefined) data.phase = phase;
+if (level !== undefined) data.level = level;
+
+if (subject !== undefined && subject !== null) data.subject = subject;
+if (term !== undefined && term !== null) data.term = term;
+if (academicYear !== undefined && academicYear !== null) data.academicYear = academicYear;
+if (weekNumber !== undefined && weekNumber !== null) data.weekNumber = weekNumber;
+
+if (lessonDate !== undefined) data.lessonDate = lessonDate;
 
     // Linkage updates (keep mutually exclusive if explicitly set)
     if (schemeOfWorkItemId !== undefined) {

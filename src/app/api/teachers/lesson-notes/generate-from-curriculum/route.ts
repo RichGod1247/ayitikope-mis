@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -210,76 +211,30 @@ function isPlaceholderTitle(title: string | null | undefined, subject: string, w
 async function assertTeacherCanAccessClassroomAndSubject(opts: {
   tenantId: string;
   userId: string;
+  roleName?: string | null;
   classroomId: string;
   subject: string;
 }) {
-  const { tenantId, userId, classroomId, subject } = opts;
-
-  const classroom = await prisma.classroom.findFirst({
-    where: { id: classroomId, tenantId },
-    select: { id: true, name: true, grade: true },
+  const access = await resolveUserClassroomAccess({
+    tenantId: opts.tenantId,
+    userId: opts.userId,
+    roleName: opts.roleName ?? null,
+    classroomId: opts.classroomId,
+    subject: opts.subject,
   });
-  if (!classroom) return { ok: false as const, status: 404, error: "Classroom not found." };
 
-  const membership = await prisma.membership.findFirst({
-    where: { tenantId, userId, status: "ACTIVE" },
-    include: { role: true },
-  });
-  if (!membership) return { ok: false as const, status: 403, error: "Forbidden." };
-
-  const roleName = String(membership.role?.name ?? "").toUpperCase();
-  const isAdminLike = roleName.includes("ADMIN") || roleName.includes("HEAD");
-  if (isAdminLike) return { ok: true as const, classroom };
-
-  const teacherProfile = await prisma.teacherProfile.findFirst({
-    where: { tenantId, userId },
-    select: { phase: true, classLevel: true, jhsAssignments: true },
-  });
-  if (!teacherProfile) return { ok: false as const, status: 403, error: "Teacher profile not found for this tenant." };
-
-  if (teacherProfile.phase === "JHS") {
-    const rows = parseJhsAssignmentRows(teacherProfile.jhsAssignments);
-    if (rows.length === 0) return { ok: false as const, status: 403, error: "Forbidden." };
-
-    const reqSubjectKey = normalizeKey(subject);
-
-    const gradeRaw = String(classroom.grade ?? "");
-    const nameRaw = String(classroom.name ?? "");
-
-    const gradeKeyA = normalizeKey(gradeRaw);
-    const nameKeyA = normalizeKey(nameRaw);
-
-    const gradeKeyB = normalizeClassKey(gradeRaw);
-    const nameKeyB = normalizeClassKey(nameRaw);
-
-    const ok = rows.some((r) => {
-      if (normalizeKey(r.subject) !== reqSubjectKey) return false;
-
-      const clsKeysA = r.classes.map((c) => normalizeKey(c));
-      const clsKeysB = r.classes.map((c) => normalizeClassKey(c));
-
-      return (
-        clsKeysA.includes(gradeKeyA) ||
-        clsKeysA.includes(nameKeyA) ||
-        clsKeysB.includes(gradeKeyB) ||
-        clsKeysB.includes(nameKeyB)
-      );
-    });
-
-    if (!ok) return { ok: false as const, status: 403, error: "Forbidden." };
-    return { ok: true as const, classroom };
+  if (!access.ok) {
+    return {
+      ok: false as const,
+      status: access.reason === "CLASSROOM_NOT_FOUND" ? 404 : 403,
+      error:
+        access.reason === "SUBJECT_OUT_OF_SCOPE"
+          ? "You are not assigned to write lesson notes for this subject in this class."
+          : "You are not assigned to write lesson notes for this class.",
+    };
   }
 
-  const classLevel = String(teacherProfile.classLevel ?? "").trim();
-  if (!classLevel) return { ok: false as const, status: 403, error: "Forbidden." };
-
-  const match =
-    String(classroom.grade ?? "").trim() === classLevel ||
-    String(classroom.name ?? "").trim() === classLevel ||
-    String(classroom.name ?? "").toLowerCase().includes(classLevel.toLowerCase());
-
-  if (!match) return { ok: false as const, status: 403, error: "Forbidden." };
-  return { ok: true as const, classroom };
+  return { ok: true as const, classroom: access.classroom };
 }
 
 async function requireSchemePrecondition(opts: {
@@ -339,6 +294,20 @@ export async function POST(req: NextRequest) {
     return jsonNoStore({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
+const membership = await prisma.membership.findUnique({
+  where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+  select: {
+    status: true,
+    role: { select: { name: true } },
+  },
+});
+
+if (!membership || membership.status !== "ACTIVE") {
+  return jsonNoStore({ ok: false, error: "Forbidden (membership inactive)." }, { status: 403 });
+}
+
+const roleName = membership.role?.name ?? null;
+
   const ct = req.headers.get("content-type") || "";
   if (!ct.toLowerCase().includes("application/json")) {
     return jsonNoStore({ ok: false, error: "Content-Type must be application/json." }, { status: 415 });
@@ -379,12 +348,13 @@ export async function POST(req: NextRequest) {
 
   // ✅ Classroom + subject access enforcement (if classroomId provided)
   if (classroomId) {
-    const access = await assertTeacherCanAccessClassroomAndSubject({
-      tenantId: ctx.tenantId,
-      userId: ctx.userId,
-      classroomId,
-      subject,
-    });
+const access = await assertTeacherCanAccessClassroomAndSubject({
+  tenantId: ctx.tenantId,
+  userId: ctx.userId,
+  roleName,
+  classroomId,
+  subject,
+});
     if (!access.ok) return jsonNoStore({ ok: false, error: access.error }, { status: access.status });
   }
 

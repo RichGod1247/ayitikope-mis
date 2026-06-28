@@ -5,6 +5,7 @@ import { requireServerUserContext } from "@/lib/serverAuth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { normalizeLevelToken } from "@/lib/teacherScope";
+import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,17 @@ function canonicalLevelDisplay(raw: unknown) {
   if (/^B[1-6]$/.test(token)) return token;
 
   return normalizeSpaces(cleanStr(raw));
+}
+
+function phaseFromLevel(raw: unknown) {
+  const token = normalizeLevelToken(raw);
+  if (!token) return null;
+
+  if (token.startsWith("KG")) return "KG";
+  if (/^B[1-6]$/.test(token)) return "PRIMARY";
+  if (token.startsWith("JHS")) return "JHS";
+
+  return null;
 }
 
 const VALID_TERMS = ["1st Term", "2nd Term", "3rd Term"] as const;
@@ -209,10 +221,13 @@ export async function POST(req: Request) {
     return json(401, { ok: false, error: "Unauthorized." });
   }
 
-  const membership = await prisma.membership.findUnique({
-    where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
-    select: { status: true },
-  });
+const membership = await prisma.membership.findUnique({
+  where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
+  select: {
+    status: true,
+    role: { select: { name: true } },
+  },
+});
   if (!membership || membership.status !== "ACTIVE") {
     return json(403, { ok: false, error: "Forbidden (membership inactive)." });
   }
@@ -224,11 +239,6 @@ export async function POST(req: Request) {
   }
 
   const schemeItemId = parsed.data.schemeItemId.trim();
-
-  const tp = await prisma.teacherProfile.findUnique({
-    where: { teacherProfile_tenant_user_unique: { tenantId: ctx.tenantId, userId: ctx.userId } },
-    select: { phase: true },
-  });
 
   const item = await prisma.schemeOfWorkItem.findFirst({
     where: {
@@ -282,6 +292,29 @@ export async function POST(req: Request) {
   }
 
   const classroomId = scheme.classroomId ?? null;
+
+const phase = phaseFromLevel(level);
+
+if (classroomId) {
+  const access = await resolveUserClassroomAccess({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    roleName: membership.role?.name ?? null,
+    classroomId,
+    subject,
+  });
+
+  if (!access.ok) {
+    return json(access.reason === "CLASSROOM_NOT_FOUND" ? 404 : 403, {
+      ok: false,
+      error:
+        access.reason === "SUBJECT_OUT_OF_SCOPE"
+          ? "You are not assigned to create lesson notes for this subject in this class."
+          : "You are not assigned to create lesson notes for this class.",
+      reason: access.reason,
+    });
+  }
+}
 
   try {
     const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -352,7 +385,7 @@ export async function POST(req: Request) {
           classroomId,
 
           subject,
-          phase: tp?.phase ? String(tp.phase) : null,
+          phase,
           level,
           term,
           academicYear,

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import { notifyLessonNoteSubmitted } from "@/lib/lessonNotes/submitNotifications";
+import { resolveUserClassroomAccess } from "@/lib/teacherAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,11 +93,12 @@ export async function POST(req: NextRequest) {
         status: true,
         submittedAt: true,
 
-        subject: true,
-        level: true,
-        term: true,
-        academicYear: true,
-        weekNumber: true,
+subject: true,
+level: true,
+term: true,
+academicYear: true,
+weekNumber: true,
+classroomId: true,
 
         schemeOfWorkItemId: true,
         curriculumUnitId: true,
@@ -123,6 +125,30 @@ export async function POST(req: NextRequest) {
     if (!note) {
       return jsonNoStore({ ok: false, error: "Lesson note not found." }, { status: 404 });
     }
+
+if (note.classroomId && note.subject) {
+  const access = await resolveUserClassroomAccess({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    roleName: membership.role?.name ?? null,
+    classroomId: note.classroomId,
+    subject: note.subject,
+  });
+
+  if (!access.ok) {
+    return jsonNoStore(
+      {
+        ok: false,
+        error:
+          access.reason === "SUBJECT_OUT_OF_SCOPE"
+            ? "You are no longer assigned to submit lesson notes for this subject in this class."
+            : "You are no longer assigned to submit lesson notes for this class.",
+        reason: access.reason,
+      },
+      { status: access.reason === "CLASSROOM_NOT_FOUND" ? 404 : 403 }
+    );
+  }
+}
 
     const status = safeTrim(note.status).toUpperCase();
 

@@ -3,16 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getServerUserContextOrNull } from "@/lib/serverAuth";
+import { normalizeSubjectKey } from "@/lib/teacherScope";
 import {
-  getTeacherScopeOrNull,
-  normalizeSubjectKey,
-  teacherCanPlanLessonNotesOrSchemes,
-} from "@/lib/teacherScope";
+  listUserAccessibleClassrooms,
+  resolveUserClassroomAccess,
+} from "@/lib/teacherAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonNoStore(payload: unknown, init?: Parameters<typeof NextResponse.json>[1]) {
+function jsonNoStore(
+  payload: unknown,
+  init?: Parameters<typeof NextResponse.json>[1],
+) {
   return NextResponse.json(payload, {
     ...init,
     headers: {
@@ -35,7 +38,9 @@ function isPlausibleId(id: string) {
 }
 
 function normalizeSubjectSlug(raw: unknown): string | null {
-  const v = String(raw ?? "").trim().toLowerCase();
+  const v = String(raw ?? "")
+    .trim()
+    .toLowerCase();
   if (!v) return null;
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v)) return null;
   return v;
@@ -48,7 +53,10 @@ function normalizeWs(s: string) {
 /**
  * BANK-GRADE SUBJECT VARIANTS (scope matching)
  */
-function subjectVariantsForScope(rawSubject: unknown, subjectSlug: string | null): string[] {
+function subjectVariantsForScope(
+  rawSubject: unknown,
+  subjectSlug: string | null,
+): string[] {
   const base = normalizeWs(String(rawSubject ?? ""));
   if (!base) return subjectSlug ? [subjectSlug] : [];
 
@@ -58,10 +66,11 @@ function subjectVariantsForScope(rawSubject: unknown, subjectSlug: string | null
   const stripped = normalizeWs(
     base.replace(
       /^(?:(?:JHS\s*[1-3]|JHS[1-3])|(?:BASIC\s*[1-9]|BASIC[1-9])|(?:BS\s*[1-9]|BS[1-9])|(?:B\s*[1-9]|B[1-9])|(?:P\s*[1-6]|P[1-6]))\s*[:\-–—]?\s*/i,
-      ""
-    )
+      "",
+    ),
   );
-  if (stripped && stripped.toLowerCase() !== base.toLowerCase()) out.add(stripped);
+  if (stripped && stripped.toLowerCase() !== base.toLowerCase())
+    out.add(stripped);
 
   if (subjectSlug) out.add(subjectSlug);
 
@@ -72,12 +81,35 @@ const VALID_TERMS = ["1st Term", "2nd Term", "3rd Term"] as const;
 type Term = (typeof VALID_TERMS)[number];
 
 function normalizeTerm(raw: unknown): Term | null {
-  const v = String(raw ?? "").trim().toLowerCase();
+  const v = String(raw ?? "")
+    .trim()
+    .toLowerCase();
   if (!v) return null;
 
-  if (v === "1st term" || v === "term 1" || v === "term1" || v === "1" || v === "first term") return "1st Term";
-  if (v === "2nd term" || v === "term 2" || v === "term2" || v === "2" || v === "second term") return "2nd Term";
-  if (v === "3rd term" || v === "term 3" || v === "term3" || v === "3" || v === "third term") return "3rd Term";
+  if (
+    v === "1st term" ||
+    v === "term 1" ||
+    v === "term1" ||
+    v === "1" ||
+    v === "first term"
+  )
+    return "1st Term";
+  if (
+    v === "2nd term" ||
+    v === "term 2" ||
+    v === "term2" ||
+    v === "2" ||
+    v === "second term"
+  )
+    return "2nd Term";
+  if (
+    v === "3rd term" ||
+    v === "term 3" ||
+    v === "term3" ||
+    v === "3" ||
+    v === "third term"
+  )
+    return "3rd Term";
 
   const exact = VALID_TERMS.find((t) => t.toLowerCase() === v);
   return exact ?? null;
@@ -117,7 +149,14 @@ function normalizeAcademicYear(raw: unknown): string | null {
 function isPrivilegedRole(roleName: string | null) {
   if (!roleName) return false;
   const r = roleName.toUpperCase();
-  return ["OWNER", "ADMIN", "HEADTEACHER", "SUPER_ADMIN", "SCHOOL_ADMIN", "SYSTEM_ADMIN"].includes(r);
+  return [
+    "OWNER",
+    "ADMIN",
+    "HEADTEACHER",
+    "SUPER_ADMIN",
+    "SCHOOL_ADMIN",
+    "SYSTEM_ADMIN",
+  ].includes(r);
 }
 
 /**
@@ -130,7 +169,9 @@ function normalizeLevelToken(raw: unknown): string | null {
   const s = s0.replace(/\s+/g, " ").trim();
   const up = s.toUpperCase();
 
-  let m = up.match(/^JHS\s*([1-3])(?:\s*[A-D])?$/) || up.match(/^JHS([1-3])(?:[A-D])?$/);
+  let m =
+    up.match(/^JHS\s*([1-3])(?:\s*[A-D])?$/) ||
+    up.match(/^JHS([1-3])(?:[A-D])?$/);
   if (m) return `JHS${m[1]}`;
 
   m = up.match(/^KG\s*([1-2])$/) || up.match(/^KG([1-2])$/);
@@ -149,7 +190,8 @@ function normalizeLevelToken(raw: unknown): string | null {
     return `B${n}`;
   }
 
-  m = up.match(/^P\s*([1-6])(?:\s*[A-D])?$/) || up.match(/^P([1-6])(?:[A-D])?$/);
+  m =
+    up.match(/^P\s*([1-6])(?:\s*[A-D])?$/) || up.match(/^P([1-6])(?:[A-D])?$/);
   if (m) return `B${m[1]}`;
 
   return null;
@@ -210,7 +252,10 @@ function rawLevelVariantsFromToken(token: string): string[] {
   return Array.from(out);
 }
 
-function normalizeLevelForComparisons(raw: unknown): { token: string | null; variants: string[] } {
+function normalizeLevelForComparisons(raw: unknown): {
+  token: string | null;
+  variants: string[];
+} {
   const token = normalizeLevelToken(raw);
   if (!token) return { token: null, variants: [] };
   const variants = rawLevelVariantsFromToken(token);
@@ -220,11 +265,15 @@ function normalizeLevelForComparisons(raw: unknown): { token: string | null; var
 
   return {
     token,
-    variants: Array.from(new Set(variants.map((x) => cleanStr(x)).filter(Boolean))),
+    variants: Array.from(
+      new Set(variants.map((x) => cleanStr(x)).filter(Boolean)),
+    ),
   };
 }
 
-function inferPhaseFromLevel(level: string | null): "KG" | "PRIMARY" | "JHS" | null {
+function inferPhaseFromLevel(
+  level: string | null,
+): "KG" | "PRIMARY" | "JHS" | null {
   const t = normalizeLevelToken(level);
   if (!t) return null;
   if (t.startsWith("KG")) return "KG";
@@ -234,7 +283,12 @@ function inferPhaseFromLevel(level: string | null): "KG" | "PRIMARY" | "JHS" | n
 }
 
 function formatTeacherName(
-  u: { firstName?: string | null; lastName?: string | null; name?: string | null; email?: string | null } | null
+  u: {
+    firstName?: string | null;
+    lastName?: string | null;
+    name?: string | null;
+    email?: string | null;
+  } | null,
 ) {
   if (!u) return null;
   const a = cleanStr(u.firstName);
@@ -247,7 +301,13 @@ function formatTeacherName(
   return e || null;
 }
 
-function formatClassroomName(c: { name?: string | null; arm?: string | null; grade?: string | null } | null) {
+function formatClassroomName(
+  c: {
+    name?: string | null;
+    arm?: string | null;
+    grade?: string | null;
+  } | null,
+) {
   if (!c) return null;
   const name = cleanStr(c.name);
   const arm = cleanStr(c.arm);
@@ -280,7 +340,129 @@ async function getCtx() {
   });
   if (!membership) return null;
 
-  return { userId: ctx.userId, tenantId: ctx.tenantId, roleName: membership.role?.name ?? null };
+  return {
+    userId: ctx.userId,
+    tenantId: ctx.tenantId,
+    roleName: membership.role?.name ?? null,
+  };
+}
+
+type SchemeScopeClassroom = {
+  id: string;
+  name: string | null;
+  grade: string | null;
+  arm: string | null;
+};
+
+function classroomLevelForSchemeScope(c: {
+  name?: string | null;
+  grade?: string | null;
+}) {
+  return cleanStr(c.grade) || cleanStr(c.name);
+}
+
+function levelTokenMatches(expectedToken: string | null, rawLevel: unknown) {
+  if (!expectedToken) return false;
+  const actualToken = normalizeLevelToken(rawLevel);
+  return !!actualToken && actualToken === expectedToken;
+}
+
+async function teacherCanUseSchemeScope(args: {
+  tenantId: string;
+  userId: string;
+  roleName: string | null;
+  classroomId: string | null;
+  canonicalLevelToken: string | null;
+  subjectsToTry: string[];
+}) {
+  const subjects = Array.from(
+    new Set(args.subjectsToTry.map(cleanStr).filter(Boolean)),
+  );
+
+  let classrooms: SchemeScopeClassroom[] = [];
+
+  if (args.classroomId) {
+    const classroom = await prisma.classroom.findFirst({
+      where: {
+        id: args.classroomId,
+        tenantId: args.tenantId,
+      },
+      select: {
+        id: true,
+        name: true,
+        grade: true,
+        arm: true,
+      },
+    });
+
+    if (classroom) classrooms = [classroom];
+  } else {
+    const rows = await listUserAccessibleClassrooms({
+      tenantId: args.tenantId,
+      userId: args.userId,
+      roleName: args.roleName,
+    });
+
+    classrooms = rows.map((c) => ({
+      id: c.id,
+      name: c.name ?? null,
+      grade: c.grade ?? null,
+      arm: c.arm ?? null,
+    }));
+  }
+
+  for (const classroom of classrooms) {
+    const classAccess = await resolveUserClassroomAccess({
+      tenantId: args.tenantId,
+      userId: args.userId,
+      roleName: args.roleName,
+      classroomId: classroom.id,
+    });
+
+    if (!classAccess.ok) continue;
+
+    const levelCandidates = [
+      classAccess.normalizedClassLevel,
+      classroomLevelForSchemeScope(classroom),
+      classroom.grade,
+      classroom.name,
+      classroom.name && classroom.arm
+        ? `${classroom.name}${classroom.arm}`
+        : null,
+      classroom.name && classroom.arm
+        ? `${classroom.name} ${classroom.arm}`
+        : null,
+    ]
+      .map(cleanStr)
+      .filter(Boolean);
+
+    const levelOk = levelCandidates.some((candidate) =>
+      levelTokenMatches(args.canonicalLevelToken, candidate),
+    );
+
+    if (!levelOk) continue;
+
+    for (const subject of subjects) {
+      const subjectAccess = await resolveUserClassroomAccess({
+        tenantId: args.tenantId,
+        userId: args.userId,
+        roleName: args.roleName,
+        classroomId: classroom.id,
+        subject,
+      });
+
+      if (subjectAccess.ok) {
+        return {
+          ok: true as const,
+          classroomId: classroom.id,
+          matchedSubject: subject,
+          matchedLevel: classroomLevelForSchemeScope(classroom),
+        };
+      }
+    }
+  }
+
+  return { ok: false as const };
 }
 
 type IndicatorSliceInput = {
@@ -339,7 +521,12 @@ async function getCanonicalFromIndicatorWhere(where: any) {
                   code: true,
                   title: true,
                   subject: {
-                    select: { name: true, slug: true, phase: true, level: true },
+                    select: {
+                      name: true,
+                      slug: true,
+                      phase: true,
+                      level: true,
+                    },
                   },
                 },
               },
@@ -380,7 +567,7 @@ async function getCanonicalFromIndicator(indicatorId: string) {
 
 async function getCanonicalFromIndicatorSlice(
   slice: IndicatorSliceInput | null | undefined,
-  bodySubjectSlug: string | null
+  bodySubjectSlug: string | null,
 ) {
   const directIndicatorId = cleanStr(slice?.indicatorId);
 
@@ -400,7 +587,13 @@ async function getCanonicalFromIndicatorSlice(
   const subStrandCode = cleanStr(slice?.subStrandCode);
   const strandCode = cleanStr(slice?.strandCode);
 
-  if (subjectSlug && indicatorCode && contentStandardCode && subStrandCode && strandCode) {
+  if (
+    subjectSlug &&
+    indicatorCode &&
+    contentStandardCode &&
+    subStrandCode &&
+    strandCode
+  ) {
     const byFullChain = await getCanonicalFromIndicatorWhere({
       code: indicatorCode,
       contentStandard: {
@@ -489,11 +682,31 @@ const schemeSelect = {
   updatedAt: true,
 } as const;
 
-type ClassroomLite = { id: string; name: string | null; arm: string | null; grade: string | null };
-type UserLite = { id: string; firstName?: string | null; lastName?: string | null; name?: string | null; email?: string | null };
+type ClassroomLite = {
+  id: string;
+  name: string | null;
+  arm: string | null;
+  grade: string | null;
+};
+type UserLite = {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+  email?: string | null;
+};
 
-async function getClassroomMap(tenantId: string, classroomIds: Array<string | null | undefined>) {
-  const ids = Array.from(new Set(classroomIds.map((x) => cleanStr(x)).filter((x) => !!x && isPlausibleId(x))));
+async function getClassroomMap(
+  tenantId: string,
+  classroomIds: Array<string | null | undefined>,
+) {
+  const ids = Array.from(
+    new Set(
+      classroomIds
+        .map((x) => cleanStr(x))
+        .filter((x) => !!x && isPlausibleId(x)),
+    ),
+  );
   const map = new Map<string, ClassroomLite>();
   if (ids.length === 0) return map;
 
@@ -510,7 +723,11 @@ async function getClassroomMap(tenantId: string, classroomIds: Array<string | nu
 }
 
 async function getUserMap(userIds: Array<string | null | undefined>) {
-  const ids = Array.from(new Set(userIds.map((x) => cleanStr(x)).filter((x) => !!x && isPlausibleId(x))));
+  const ids = Array.from(
+    new Set(
+      userIds.map((x) => cleanStr(x)).filter((x) => !!x && isPlausibleId(x)),
+    ),
+  );
   const map = new Map<string, UserLite>();
   if (ids.length === 0) return map;
 
@@ -519,7 +736,13 @@ async function getUserMap(userIds: Array<string | null | undefined>) {
 
   const rows: UserLite[] = await userModel.findMany({
     where: { id: { in: ids } },
-    select: { id: true, firstName: true, lastName: true, name: true, email: true },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      name: true,
+      email: true,
+    },
   });
 
   for (const r of rows) map.set(r.id, r);
@@ -527,7 +750,9 @@ async function getUserMap(userIds: Array<string | null | undefined>) {
 }
 
 async function getWeekNumbersBySchemeIds(schemeIds: string[]) {
-  const ids = Array.from(new Set(schemeIds.map((x) => cleanStr(x)).filter(Boolean)));
+  const ids = Array.from(
+    new Set(schemeIds.map((x) => cleanStr(x)).filter(Boolean)),
+  );
   const map = new Map<string, number[]>();
   if (ids.length === 0) return map;
 
@@ -557,7 +782,11 @@ export async function GET(req: NextRequest) {
   const reqId = randomUUID();
 
   const ctx = await getCtx();
-  if (!ctx) return jsonNoStore({ ok: false, error: "Unauthorized.", reqId }, { status: 401 });
+  if (!ctx)
+    return jsonNoStore(
+      { ok: false, error: "Unauthorized.", reqId },
+      { status: 401 },
+    );
 
   const tenantId = ctx.tenantId;
 
@@ -567,16 +796,21 @@ export async function GET(req: NextRequest) {
 
   if (mode === "diagnose") {
     const privileged = isPrivilegedRole(ctx.roleName);
-    const envSchemaParam = parseSchemaParamFromUrl(process.env.DATABASE_URL) || null;
+    const envSchemaParam =
+      parseSchemaParamFromUrl(process.env.DATABASE_URL) || null;
 
-    const prismaInfo = await prisma.$queryRaw<Array<{ currentSchema: string; searchPath: string }>>`
+    const prismaInfo = await prisma.$queryRaw<
+      Array<{ currentSchema: string; searchPath: string }>
+    >`
       select current_schema() as "currentSchema", current_setting('search_path') as "searchPath"
     `;
 
     const currentSchema = prismaInfo?.[0]?.currentSchema ?? null;
     const searchPath = prismaInfo?.[0]?.searchPath ?? null;
 
-    const schemasChecked = privileged ? [currentSchema, "public"].filter(Boolean) : [currentSchema].filter(Boolean);
+    const schemasChecked = privileged
+      ? [currentSchema, "public"].filter(Boolean)
+      : [currentSchema].filter(Boolean);
 
     const requiredTables = [
       "CurriculumSubject",
@@ -613,8 +847,15 @@ export async function GET(req: NextRequest) {
             and table_name = 'SchemeOfWork'
         `;
         const colSet = new Set(cols.map((c) => c.column_name));
-        const expected = ["reviewedAt", "submittedAt", "approvedAt", "returnedAt"];
-        missingColumns = expected.filter((c) => !colSet.has(c)).map((c) => `SchemeOfWork.${c}`);
+        const expected = [
+          "reviewedAt",
+          "submittedAt",
+          "approvedAt",
+          "returnedAt",
+        ];
+        missingColumns = expected
+          .filter((c) => !colSet.has(c))
+          .map((c) => `SchemeOfWork.${c}`);
       }
 
       checks[sch] = {
@@ -623,7 +864,9 @@ export async function GET(req: NextRequest) {
         missingColumns,
         tenantSettings: {
           expectedByPrisma: "tenant_settings",
-          presentAs: presentSet.has("tenant_settings") ? "tenant_settings" : null,
+          presentAs: presentSet.has("tenant_settings")
+            ? "tenant_settings"
+            : null,
         },
       };
     }
@@ -638,54 +881,86 @@ export async function GET(req: NextRequest) {
         schemasChecked,
         checks,
       },
-      { status: 200 }
+      { status: 200 },
     );
   }
 
   const subject = cleanStr(url.searchParams.get("subject"));
   const subjectSlugRaw = cleanStr(url.searchParams.get("subjectSlug"));
-  const subjectSlug = subjectSlugRaw ? normalizeSubjectSlug(subjectSlugRaw) : null;
+  const subjectSlug = subjectSlugRaw
+    ? normalizeSubjectSlug(subjectSlugRaw)
+    : null;
 
   if (subjectSlugRaw && !subjectSlug) {
-    return jsonNoStore({ ok: false, error: "Invalid subjectSlug.", reqId }, { status: 400 });
+    return jsonNoStore(
+      { ok: false, error: "Invalid subjectSlug.", reqId },
+      { status: 400 },
+    );
   }
 
   const termRaw = cleanStr(url.searchParams.get("term"));
   const academicYearRaw = cleanStr(url.searchParams.get("academicYear"));
 
   const term = termRaw ? normalizeTerm(termRaw) : null;
-  const academicYear = academicYearRaw ? normalizeAcademicYear(academicYearRaw) : null;
+  const academicYear = academicYearRaw
+    ? normalizeAcademicYear(academicYearRaw)
+    : null;
 
-  if (termRaw && !term) return jsonNoStore({ ok: false, error: "Invalid term.", reqId }, { status: 400 });
+  if (termRaw && !term)
+    return jsonNoStore(
+      { ok: false, error: "Invalid term.", reqId },
+      { status: 400 },
+    );
   if (academicYearRaw && !academicYear) {
-    return jsonNoStore({ ok: false, error: "Invalid academicYear (YYYY/YYYY).", reqId }, { status: 400 });
+    return jsonNoStore(
+      { ok: false, error: "Invalid academicYear (YYYY/YYYY).", reqId },
+      { status: 400 },
+    );
   }
 
   const levelRaw = cleanStr(url.searchParams.get("level"));
   const levelFilter = levelRaw ? normalizeLevelForComparisons(levelRaw) : null;
   if (levelRaw && !levelFilter?.token) {
     return jsonNoStore(
-      { ok: false, error: 'Invalid level. Examples: "B4", "Basic 4", "JHS1", "JHS 1", "KG1", "Basic 7".', reqId },
-      { status: 400 }
+      {
+        ok: false,
+        error:
+          'Invalid level. Examples: "B4", "Basic 4", "JHS1", "JHS 1", "KG1", "Basic 7".',
+        reqId,
+      },
+      { status: 400 },
     );
   }
 
   const privileged = isPrivilegedRole(ctx.roleName);
   const teacherUserIdParam = cleanStr(url.searchParams.get("teacherUserId"));
   const teacherUserId =
-    privileged && teacherUserIdParam && isPlausibleId(teacherUserIdParam) ? teacherUserIdParam : ctx.userId;
+    privileged && teacherUserIdParam && isPlausibleId(teacherUserIdParam)
+      ? teacherUserIdParam
+      : ctx.userId;
 
-  if (id && !isPlausibleId(id)) return jsonNoStore({ ok: false, error: "Invalid id.", reqId }, { status: 400 });
+  if (id && !isPlausibleId(id))
+    return jsonNoStore(
+      { ok: false, error: "Invalid id.", reqId },
+      { status: 400 },
+    );
 
   async function hydrateList(rows: Array<any>) {
     const schemeIds = rows.map((r) => String(r.id));
-    const classroomMap = await getClassroomMap(tenantId, rows.map((r) => r.classroomId));
+    const classroomMap = await getClassroomMap(
+      tenantId,
+      rows.map((r) => r.classroomId),
+    );
     const userMap = await getUserMap(rows.map((r) => r.teacherUserId));
     const weeksMap = await getWeekNumbersBySchemeIds(schemeIds);
 
     return rows.map((s) => {
-      const classroom = s.classroomId ? classroomMap.get(String(s.classroomId)) ?? null : null;
-      const teacher = s.teacherUserId ? userMap.get(String(s.teacherUserId)) ?? null : null;
+      const classroom = s.classroomId
+        ? (classroomMap.get(String(s.classroomId)) ?? null)
+        : null;
+      const teacher = s.teacherUserId
+        ? (userMap.get(String(s.teacherUserId)) ?? null)
+        : null;
       const weekNumbers = weeksMap.get(String(s.id)) ?? [];
 
       return {
@@ -710,7 +985,8 @@ export async function GET(req: NextRequest) {
       const where: any = { tenantId, teacherUserId };
       if (term) where.term = term;
       if (academicYear) where.academicYear = academicYear;
-      if (levelFilter?.variants?.length) where.level = { in: levelFilter.variants };
+      if (levelFilter?.variants?.length)
+        where.level = { in: levelFilter.variants };
 
       const rows = await prisma.schemeOfWork.findMany({
         where,
@@ -723,9 +999,15 @@ export async function GET(req: NextRequest) {
     } catch (err) {
       console.error("SCHEMES_SUMMARY_GET_ERROR", { reqId, err });
       if (isPrismaSchemaOutOfSyncError(err)) {
-        return jsonNoStore({ ok: false, error: schemaOutOfSyncPublicMessage(), reqId }, { status: 500 });
+        return jsonNoStore(
+          { ok: false, error: schemaOutOfSyncPublicMessage(), reqId },
+          { status: 500 },
+        );
       }
-      return jsonNoStore({ ok: false, error: "Failed to load schemes summary.", reqId }, { status: 500 });
+      return jsonNoStore(
+        { ok: false, error: "Failed to load schemes summary.", reqId },
+        { status: 500 },
+      );
     }
   }
 
@@ -736,15 +1018,23 @@ export async function GET(req: NextRequest) {
         select: schemeSelect,
       });
 
-      if (!scheme) return jsonNoStore({ ok: false, error: "Scheme not found.", reqId }, { status: 404 });
+      if (!scheme)
+        return jsonNoStore(
+          { ok: false, error: "Scheme not found.", reqId },
+          { status: 404 },
+        );
 
       const [classroomMap, userMap] = await Promise.all([
         getClassroomMap(tenantId, [scheme.classroomId]),
         getUserMap([scheme.teacherUserId]),
       ]);
 
-      const classroom = scheme.classroomId ? classroomMap.get(String(scheme.classroomId)) ?? null : null;
-      const teacher = scheme.teacherUserId ? userMap.get(String(scheme.teacherUserId)) ?? null : null;
+      const classroom = scheme.classroomId
+        ? (classroomMap.get(String(scheme.classroomId)) ?? null)
+        : null;
+      const teacher = scheme.teacherUserId
+        ? (userMap.get(String(scheme.teacherUserId)) ?? null)
+        : null;
 
       const itemsRaw = await prisma.schemeOfWorkItem.findMany({
         where: { schemeOfWorkId: scheme.id },
@@ -790,14 +1080,20 @@ export async function GET(req: NextRequest) {
             items,
           },
         },
-        { status: 200 }
+        { status: 200 },
       );
     } catch (err) {
       console.error("SCHEMES_DETAIL_GET_ERROR", { reqId, err });
       if (isPrismaSchemaOutOfSyncError(err)) {
-        return jsonNoStore({ ok: false, error: schemaOutOfSyncPublicMessage(), reqId }, { status: 500 });
+        return jsonNoStore(
+          { ok: false, error: schemaOutOfSyncPublicMessage(), reqId },
+          { status: 500 },
+        );
       }
-      return jsonNoStore({ ok: false, error: "Failed to load scheme detail.", reqId }, { status: 500 });
+      return jsonNoStore(
+        { ok: false, error: "Failed to load scheme detail.", reqId },
+        { status: 500 },
+      );
     }
   }
 
@@ -806,7 +1102,8 @@ export async function GET(req: NextRequest) {
       const where: any = { tenantId, teacherUserId };
       if (term) where.term = term;
       if (academicYear) where.academicYear = academicYear;
-      if (levelFilter?.variants?.length) where.level = { in: levelFilter.variants };
+      if (levelFilter?.variants?.length)
+        where.level = { in: levelFilter.variants };
 
       if (subjectSlug && subject) {
         where.OR = [{ subjectSlug }, { subject }];
@@ -827,9 +1124,15 @@ export async function GET(req: NextRequest) {
     } catch (err) {
       console.error("SCHEMES_SUBJECT_GET_ERROR", { reqId, err });
       if (isPrismaSchemaOutOfSyncError(err)) {
-        return jsonNoStore({ ok: false, error: schemaOutOfSyncPublicMessage(), reqId }, { status: 500 });
+        return jsonNoStore(
+          { ok: false, error: schemaOutOfSyncPublicMessage(), reqId },
+          { status: 500 },
+        );
       }
-      return jsonNoStore({ ok: false, error: "Failed to load schemes for this subject.", reqId }, { status: 500 });
+      return jsonNoStore(
+        { ok: false, error: "Failed to load schemes for this subject.", reqId },
+        { status: 500 },
+      );
     }
   }
 
@@ -843,17 +1146,32 @@ export async function POST(req: NextRequest) {
   const reqId = randomUUID();
 
   const ctx = await getCtx();
-  if (!ctx) return jsonNoStore({ ok: false, error: "Unauthorized.", reqId }, { status: 401 });
+  if (!ctx)
+    return jsonNoStore(
+      { ok: false, error: "Unauthorized.", reqId },
+      { status: 401 },
+    );
 
   const tenantId = ctx.tenantId;
   const privileged = isPrivilegedRole(ctx.roleName);
 
   const body = await readJson<PostBody>(req);
-  if (!body) return jsonNoStore({ ok: false, error: "Invalid JSON body.", reqId }, { status: 400 });
+  if (!body)
+    return jsonNoStore(
+      { ok: false, error: "Invalid JSON body.", reqId },
+      { status: 400 },
+    );
 
   const weekNumber = Number(body.weekNumber);
   if (!Number.isInteger(weekNumber) || weekNumber <= 0) {
-    return jsonNoStore({ ok: false, error: "weekNumber must be a positive whole number.", reqId }, { status: 400 });
+    return jsonNoStore(
+      {
+        ok: false,
+        error: "weekNumber must be a positive whole number.",
+        reqId,
+      },
+      { status: 400 },
+    );
   }
 
   const rawIndicatorId = cleanStr(body.indicatorSlice?.indicatorId);
@@ -862,48 +1180,76 @@ export async function POST(req: NextRequest) {
     !!cleanStr(body.indicatorSlice?.contentStandardCode) &&
     !!cleanStr(body.indicatorSlice?.subStrandCode) &&
     !!cleanStr(body.indicatorSlice?.strandCode) &&
-    !!(normalizeSubjectSlug(body.indicatorSlice?.subjectSlug) ?? normalizeSubjectSlug(body.subjectSlug));
+    !!(
+      normalizeSubjectSlug(body.indicatorSlice?.subjectSlug) ??
+      normalizeSubjectSlug(body.subjectSlug)
+    );
 
   if (!rawIndicatorId && !hasCanonicalFields) {
     return jsonNoStore(
-      { ok: false, error: "indicatorSlice is missing both a usable indicator id and canonical curriculum fields.", reqId },
-      { status: 400 }
+      {
+        ok: false,
+        error:
+          "indicatorSlice is missing both a usable indicator id and canonical curriculum fields.",
+        reqId,
+      },
+      { status: 400 },
     );
   }
 
   const canonical = await getCanonicalFromIndicatorSlice(
     body.indicatorSlice,
-    normalizeSubjectSlug(body.subjectSlug)
+    normalizeSubjectSlug(body.subjectSlug),
   );
 
   if (!canonical) {
     return jsonNoStore(
-      { ok: false, error: "Curriculum indicator not found. Refresh the curriculum explorer and try again.", reqId },
-      { status: 404 }
+      {
+        ok: false,
+        error:
+          "Curriculum indicator not found. Refresh the curriculum explorer and try again.",
+        reqId,
+      },
+      { status: 404 },
     );
   }
 
   const canonicalLevelRaw = canonical.level ? cleanStr(canonical.level) : null;
   if (!canonicalLevelRaw) {
     return jsonNoStore(
-      { ok: false, error: "This indicator's subject is missing a 'level' in CurriculumSubject. Fix curriculum seeding.", reqId },
-      { status: 500 }
+      {
+        ok: false,
+        error:
+          "This indicator's subject is missing a 'level' in CurriculumSubject. Fix curriculum seeding.",
+        reqId,
+      },
+      { status: 500 },
     );
   }
 
   const canonicalLevelNorm = normalizeLevelForComparisons(canonicalLevelRaw);
   if (!canonicalLevelNorm.token || canonicalLevelNorm.variants.length === 0) {
     return jsonNoStore(
-      { ok: false, error: "This indicator's subject has an unrecognized 'level'. Fix curriculum seeding.", reqId },
-      { status: 500 }
+      {
+        ok: false,
+        error:
+          "This indicator's subject has an unrecognized 'level'. Fix curriculum seeding.",
+        reqId,
+      },
+      { status: 500 },
     );
   }
 
   const canonicalSlug = normalizeSubjectSlug(canonical.subjectSlug);
   if (!canonicalSlug) {
     return jsonNoStore(
-      { ok: false, error: "This indicator's subject is missing a valid 'slug'. Fix curriculum seeding.", reqId },
-      { status: 500 }
+      {
+        ok: false,
+        error:
+          "This indicator's subject is missing a valid 'slug'. Fix curriculum seeding.",
+        reqId,
+      },
+      { status: 500 },
     );
   }
 
@@ -912,50 +1258,69 @@ export async function POST(req: NextRequest) {
 
   if (subjectFromClient) {
     const clientKey = normalizeSubjectKey(subjectFromClient);
-    const canonicalVariants = subjectVariantsForScope(canonical.subject, canonicalSlug);
-    const ok = canonicalVariants.some((v) => normalizeSubjectKey(v) === clientKey);
+    const canonicalVariants = subjectVariantsForScope(
+      canonical.subject,
+      canonicalSlug,
+    );
+    const ok = canonicalVariants.some(
+      (v) => normalizeSubjectKey(v) === clientKey,
+    );
     if (!ok) {
       return jsonNoStore(
-        { ok: false, error: "Subject mismatch. Select an indicator from the same subject you are adding to the scheme.", reqId },
-        { status: 400 }
+        {
+          ok: false,
+          error:
+            "Subject mismatch. Select an indicator from the same subject you are adding to the scheme.",
+          reqId,
+        },
+        { status: 400 },
       );
     }
   }
 
   if (body.subjectSlug != null && !subjectSlugFromClient) {
-    return jsonNoStore({ ok: false, error: "Invalid subjectSlug.", reqId }, { status: 400 });
+    return jsonNoStore(
+      { ok: false, error: "Invalid subjectSlug.", reqId },
+      { status: 400 },
+    );
   }
 
   if (subjectSlugFromClient && subjectSlugFromClient !== canonicalSlug) {
-    return jsonNoStore({ ok: false, error: "Subject slug mismatch. Please refresh and try again.", reqId }, { status: 400 });
+    return jsonNoStore(
+      {
+        ok: false,
+        error: "Subject slug mismatch. Please refresh and try again.",
+        reqId,
+      },
+      { status: 400 },
+    );
   }
 
-  if (!privileged) {
-    const scope = await getTeacherScopeOrNull(tenantId, ctx.userId);
-    if (!scope) return jsonNoStore({ ok: false, error: "Forbidden: teacher profile missing.", reqId }, { status: 403 });
+  const classroomId = cleanStr(body.classroomId) || null;
 
+  if (!privileged) {
     const levelsToTry = new Set<string>();
-    levelsToTry.add(canonicalLevelNorm.token);
+    if (canonicalLevelNorm.token) levelsToTry.add(canonicalLevelNorm.token);
     for (const v of canonicalLevelNorm.variants) levelsToTry.add(v);
     for (const v of canonicalLevelNorm.variants) {
       const t = normalizeLevelToken(v);
       if (t) levelsToTry.add(t);
     }
 
-    const subjectsToTry = new Set<string>(subjectVariantsForScope(canonical.subject, canonicalSlug));
-    let allowed = false;
+    const subjectsToTry = new Set<string>(
+      subjectVariantsForScope(canonical.subject, canonicalSlug),
+    );
 
-    for (const subj of subjectsToTry) {
-      for (const lv of levelsToTry) {
-        if (teacherCanPlanLessonNotesOrSchemes(scope, subj, lv)) {
-          allowed = true;
-          break;
-        }
-      }
-      if (allowed) break;
-    }
+    const scope = await teacherCanUseSchemeScope({
+      tenantId,
+      userId: ctx.userId,
+      roleName: ctx.roleName,
+      classroomId,
+      canonicalLevelToken: canonicalLevelNorm.token,
+      subjectsToTry: Array.from(subjectsToTry),
+    });
 
-    if (!allowed) {
+    if (!scope.ok) {
       console.warn("SCHEME_SCOPE_DENIED", {
         reqId,
         tenantId,
@@ -968,12 +1333,21 @@ export async function POST(req: NextRequest) {
         triedLevels: Array.from(levelsToTry),
       });
 
-      return jsonNoStore({ ok: false, error: "Forbidden: not assigned to this subject/class.", reqId }, { status: 403 });
+      return jsonNoStore(
+        {
+          ok: false,
+          error: "Forbidden: not assigned to this subject/class.",
+          reqId,
+        },
+        { status: 403 },
+      );
     }
   }
 
   let term = body.term ? normalizeTerm(body.term) : null;
-  let academicYear = body.academicYear ? normalizeAcademicYear(body.academicYear) : null;
+  let academicYear = body.academicYear
+    ? normalizeAcademicYear(body.academicYear)
+    : null;
 
   if (!term || !academicYear) {
     const fallback = await getTenantTermYearOrNull(tenantId);
@@ -982,14 +1356,23 @@ export async function POST(req: NextRequest) {
   }
 
   if (!term || !academicYear) {
-    return jsonNoStore({ ok: false, error: "Term/AcademicYear not provided and not configured for this tenant.", reqId }, { status: 400 });
+    return jsonNoStore(
+      {
+        ok: false,
+        error:
+          "Term/AcademicYear not provided and not configured for this tenant.",
+        reqId,
+      },
+      { status: 400 },
+    );
   }
-
-  const classroomId = body.classroomId ?? null;
 
   const schemeIdRaw = cleanStr(body.schemeId);
   if (schemeIdRaw && !isPlausibleId(schemeIdRaw)) {
-    return jsonNoStore({ ok: false, error: "Invalid schemeId.", reqId }, { status: 400 });
+    return jsonNoStore(
+      { ok: false, error: "Invalid schemeId.", reqId },
+      { status: 400 },
+    );
   }
 
   try {
@@ -1000,21 +1383,49 @@ export async function POST(req: NextRequest) {
         where: { id: schemeIdRaw, tenantId, teacherUserId: ctx.userId },
         select: schemeSelect,
       });
-      if (!scheme) return jsonNoStore({ ok: false, error: "Scheme not found.", reqId }, { status: 404 });
+      if (!scheme)
+        return jsonNoStore(
+          { ok: false, error: "Scheme not found.", reqId },
+          { status: 404 },
+        );
 
       const schemeSlug = normalizeSubjectSlug(scheme.subjectSlug);
       if (!schemeSlug || schemeSlug !== canonicalSlug) {
-        return jsonNoStore({ ok: false, error: "Scheme subject mismatch. Open the correct scheme for this indicator.", reqId }, { status: 400 });
+        return jsonNoStore(
+          {
+            ok: false,
+            error:
+              "Scheme subject mismatch. Open the correct scheme for this indicator.",
+            reqId,
+          },
+          { status: 400 },
+        );
       }
 
       const schemeLevelTok = normalizeLevelToken(scheme.level);
       const canonicalTok = canonicalLevelNorm.token;
       if (!schemeLevelTok || schemeLevelTok !== canonicalTok) {
-        return jsonNoStore({ ok: false, error: "Scheme level mismatch. Open the correct scheme for this indicator.", reqId }, { status: 400 });
+        return jsonNoStore(
+          {
+            ok: false,
+            error:
+              "Scheme level mismatch. Open the correct scheme for this indicator.",
+            reqId,
+          },
+          { status: 400 },
+        );
       }
 
       if (scheme.term !== term || scheme.academicYear !== academicYear) {
-        return jsonNoStore({ ok: false, error: "Scheme term/year mismatch. Open the correct scheme for this term/year.", reqId }, { status: 400 });
+        return jsonNoStore(
+          {
+            ok: false,
+            error:
+              "Scheme term/year mismatch. Open the correct scheme for this term/year.",
+            reqId,
+          },
+          { status: 400 },
+        );
       }
 
       if (classroomId && !scheme.classroomId) {
@@ -1041,7 +1452,9 @@ export async function POST(req: NextRequest) {
       });
 
       if (!scheme) {
-        const autoTitle = (body.title && cleanStr(body.title)) || `${canonical.subject} – ${term} (${academicYear})`;
+        const autoTitle =
+          (body.title && cleanStr(body.title)) ||
+          `${canonical.subject} – ${term} (${academicYear})`;
 
         scheme = await prisma.schemeOfWork.create({
           data: {
@@ -1077,7 +1490,11 @@ export async function POST(req: NextRequest) {
     }
 
     const existingItem = await prisma.schemeOfWorkItem.findFirst({
-      where: { schemeOfWorkId: scheme.id, weekNumber, indicatorId: canonical.indicatorId },
+      where: {
+        schemeOfWorkId: scheme.id,
+        weekNumber,
+        indicatorId: canonical.indicatorId,
+      },
       select: { id: true },
     });
 
@@ -1100,7 +1517,7 @@ export async function POST(req: NextRequest) {
           },
           item: { id: existingItem.id },
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -1114,7 +1531,8 @@ export async function POST(req: NextRequest) {
         strandTitle: canonical.strandTitle ?? null,
         subStrandTitle: canonical.subStrandTitle ?? null,
         contentStandardCode: canonical.contentStandardCode ?? null,
-        contentStandardDescription: canonical.contentStandardDescription ?? null,
+        contentStandardDescription:
+          canonical.contentStandardDescription ?? null,
       },
       select: {
         id: true,
@@ -1150,13 +1568,19 @@ export async function POST(req: NextRequest) {
         },
         item,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (err) {
     console.error("SCHEMES_POST_ERROR", { reqId, err });
     if (isPrismaSchemaOutOfSyncError(err)) {
-      return jsonNoStore({ ok: false, error: schemaOutOfSyncPublicMessage(), reqId }, { status: 500 });
+      return jsonNoStore(
+        { ok: false, error: schemaOutOfSyncPublicMessage(), reqId },
+        { status: 500 },
+      );
     }
-    return jsonNoStore({ ok: false, error: "Failed to save scheme item.", reqId }, { status: 500 });
+    return jsonNoStore(
+      { ok: false, error: "Failed to save scheme item.", reqId },
+      { status: 500 },
+    );
   }
 }

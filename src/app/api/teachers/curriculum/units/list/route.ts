@@ -1,12 +1,20 @@
 // src/app/api/teachers/curriculum/units/list/route.ts
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
+import {
+  listUserAccessibleClassrooms,
+  resolveUserClassroomAccess,
+} from "@/lib/teacherAccess";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonNoStore(payload: any, init?: Parameters<typeof NextResponse.json>[1]) {
+function jsonNoStore(
+  payload: unknown,
+  init?: Parameters<typeof NextResponse.json>[1],
+) {
   return NextResponse.json(payload, {
     ...init,
     headers: {
@@ -40,7 +48,6 @@ function termVariants(raw: string): string[] {
   const t = normalizeSpaces(raw);
   if (!t) return [];
 
-  // extract 1..3 from: "Term 1", "1", "TERM1", "1st term", etc.
   const m = t.match(/([1-3])/);
   const n = m ? Number(m[1]) : null;
 
@@ -74,7 +81,6 @@ function phaseVariants(raw: string): string[] {
 
   const u = p.toUpperCase();
 
-  // Common system + seed variants
   if (u === "JHS" || u.includes("JUNIOR")) {
     out.add("JHS");
     out.add("Junior High School");
@@ -82,7 +88,12 @@ function phaseVariants(raw: string): string[] {
     out.add("Junior High");
   }
 
-  if (u === "PRIMARY" || u.includes("PRIMARY") || u.includes("LOWER") || u.includes("UPPER")) {
+  if (
+    u === "PRIMARY" ||
+    u.includes("PRIMARY") ||
+    u.includes("LOWER") ||
+    u.includes("UPPER")
+  ) {
     out.add("PRIMARY");
     out.add("Primary");
     out.add("Lower Primary");
@@ -107,28 +118,57 @@ function levelVariants(raw: string): string[] {
   const out = new Set<string>();
   out.add(s);
 
-  // JHS 1..3 variants
   let m = s.match(/^JHS\s*([1-3])$/i) || s.match(/^JHS([1-3])$/i);
   if (m) {
-    const n = m[1];
+    const n = Number(m[1]);
+    const basic = 6 + n;
+
     out.add(`JHS ${n}`);
     out.add(`JHS${n}`);
     out.add(`jhs ${n}`);
     out.add(`jhs${n}`);
+    out.add(`Basic ${basic}`);
+    out.add(`Basic${basic}`);
+    out.add(`B${basic}`);
+    out.add(`B ${basic}`);
   }
 
-  // Basic 1..9 variants
   m = s.match(/^Basic\s*([1-9])$/i) || s.match(/^Basic([1-9])$/i);
   if (m) {
-    const n = m[1];
+    const n = Number(m[1]);
+
     out.add(`Basic ${n}`);
     out.add(`Basic${n}`);
     out.add(`B${n}`);
+    out.add(`B ${n}`);
     out.add(`basic ${n}`);
     out.add(`basic${n}`);
+
+    if (n >= 7 && n <= 9) {
+      const j = n - 6;
+      out.add(`JHS ${j}`);
+      out.add(`JHS${j}`);
+      out.add(`jhs ${j}`);
+      out.add(`jhs${j}`);
+    }
   }
 
-  // KG1/KG2 variants
+  m = s.match(/^B\s*([1-9])$/i) || s.match(/^B([1-9])$/i);
+  if (m) {
+    const n = Number(m[1]);
+
+    out.add(`B${n}`);
+    out.add(`B ${n}`);
+    out.add(`Basic ${n}`);
+    out.add(`Basic${n}`);
+
+    if (n >= 7 && n <= 9) {
+      const j = n - 6;
+      out.add(`JHS ${j}`);
+      out.add(`JHS${j}`);
+    }
+  }
+
   m = s.match(/^KG\s*([12])$/i) || s.match(/^KG([12])$/i);
   if (m) {
     const n = m[1];
@@ -141,7 +181,67 @@ function levelVariants(raw: string): string[] {
   return Array.from(out.values());
 }
 
-function orEqualsInsensitive(field: string, variants: string[]) {
+function norm(v: unknown) {
+  return clean(String(v ?? ""))
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "");
+}
+
+function levelMatches(requestedLevel: string, candidateLevel: string) {
+  const requested = new Set(levelVariants(requestedLevel).map(norm));
+  const candidate = new Set(levelVariants(candidateLevel).map(norm));
+
+  if (requested.size === 0 || candidate.size === 0) return false;
+
+  for (const item of requested) {
+    if (candidate.has(item)) return true;
+  }
+
+  return false;
+}
+
+function classroomLevel(c: { name?: string | null; grade?: string | null }) {
+  return clean(c.grade ?? null) || clean(c.name ?? null);
+}
+
+async function assertTeacherCanUseCurriculumScope(args: {
+  tenantId: string;
+  userId: string;
+  roleName: string | null;
+  level: string;
+  subject: string;
+}) {
+  const classrooms = await listUserAccessibleClassrooms({
+    tenantId: args.tenantId,
+    userId: args.userId,
+    roleName: args.roleName,
+  });
+
+  for (const classroom of classrooms) {
+    const level = classroomLevel(classroom);
+    if (!levelMatches(args.level, level)) continue;
+
+    const access = await resolveUserClassroomAccess({
+      tenantId: args.tenantId,
+      userId: args.userId,
+      roleName: args.roleName,
+      classroomId: classroom.id,
+      subject: args.subject,
+    });
+
+    if (access.ok) return { ok: true as const };
+  }
+
+  return {
+    ok: false as const,
+    error: "Forbidden: not assigned to this subject.",
+  };
+}
+
+function orEqualsInsensitive(
+  field: "phase" | "level" | "subject" | "term",
+  variants: string[],
+): Prisma.CurriculumUnitWhereInput | null {
   const cleanVars = variants.map((x) => normalizeSpaces(x)).filter(Boolean);
   if (!cleanVars.length) return null;
 
@@ -149,13 +249,13 @@ function orEqualsInsensitive(field: string, variants: string[]) {
     OR: cleanVars.map((v) => ({
       [field]: { equals: v, mode: "insensitive" as const },
     })),
-  };
+  } as Prisma.CurriculumUnitWhereInput;
 }
 
 export async function POST() {
   return jsonNoStore(
     { ok: false, error: "Method not allowed. Use GET." },
-    { status: 405, headers: { Allow: "GET" } }
+    { status: 405, headers: { Allow: "GET" } },
   );
 }
 
@@ -175,10 +275,16 @@ export async function GET(req: NextRequest) {
   // Membership gate (production-grade)
   const membership = await prisma.membership.findUnique({
     where: { userId_tenantId: { userId: ctx.userId, tenantId: ctx.tenantId } },
-    select: { status: true },
+    select: {
+      status: true,
+      role: { select: { name: true } },
+    },
   });
   if (!membership || membership.status !== "ACTIVE") {
-    return jsonNoStore({ ok: false, error: "Forbidden (membership inactive)." }, { status: 403 });
+    return jsonNoStore(
+      { ok: false, error: "Forbidden (membership inactive)." },
+      { status: 403 },
+    );
   }
 
   const { searchParams } = new URL(req.url);
@@ -205,9 +311,10 @@ export async function GET(req: NextRequest) {
     return jsonNoStore(
       {
         ok: false,
-        error: "level and subject (or subjectSlug) are required. (phase/term/weekNumber are optional)",
+        error:
+          "level and subject (or subjectSlug) are required. (phase/term/weekNumber are optional)",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -226,10 +333,24 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  const scope = await assertTeacherCanUseCurriculumScope({
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+    roleName: membership.role?.name ?? null,
+    level: levelRaw,
+    subject: subjectRaw,
+  });
+
+  if (!scope.ok) {
+    return jsonNoStore({ ok: false, error: scope.error }, { status: 403 });
+  }
+
   try {
     // ✅ GLOBAL + tenant-scoped units
-    const tenantScope = { OR: [{ tenantId: ctx.tenantId }, { tenantId: null }] };
-    const and: any[] = [tenantScope];
+    const tenantScope: Prisma.CurriculumUnitWhereInput = {
+      OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
+    };
+    const and: Prisma.CurriculumUnitWhereInput[] = [tenantScope];
 
     // Phase (optional, normalized)
     if (phaseRaw) {
@@ -251,7 +372,10 @@ export async function GET(req: NextRequest) {
       // If both were given, include both tokens as candidates
       if (subjectSlugRaw) subjectSet.add(normalizeSpaces(subjectSlugRaw));
 
-      const sOr = orEqualsInsensitive("subject", Array.from(subjectSet.values()));
+      const sOr = orEqualsInsensitive(
+        "subject",
+        Array.from(subjectSet.values()),
+      );
       if (sOr) and.push(sOr);
     }
 
@@ -313,6 +437,9 @@ export async function GET(req: NextRequest) {
     return jsonNoStore({ ok: true, items }, { status: 200 });
   } catch (err) {
     console.error("[TEACHER_CURRICULUM_UNITS_LIST_ERROR]", err);
-    return jsonNoStore({ ok: false, error: "Failed to load curriculum units." }, { status: 500 });
+    return jsonNoStore(
+      { ok: false, error: "Failed to load curriculum units." },
+      { status: 500 },
+    );
   }
 }
