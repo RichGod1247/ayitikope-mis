@@ -1,9 +1,11 @@
 //src/app/api/headteacher/assessment/mock/overview/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseTeacherJhsAssignments } from "@/lib/teacherAccess";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import {
   MOCK_CORE_SUBJECTS,
+  MOCK_REQUIRED_FINALIZE_SUBJECTS,
   MOCK_SCHOOL_AGGREGATE_SUBJECTS,
   calculatePlacementMockAggregate,
   calculateSchoolMockAggregate,
@@ -64,6 +66,21 @@ type MockOwnerAssignmentRow = {
   subject: string | null;
   subjectNorm: string | null;
   teacher: {
+    id: string;
+    name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    phone: string | null;
+  };
+};
+
+type MockLegacyOwnerProfileRow = {
+  phase: string | null;
+  classLevel: string | null;
+  primaryClassroomId: string | null;
+  jhsAssignments: unknown;
+  user: {
     id: string;
     name: string | null;
     firstName: string | null;
@@ -216,7 +233,9 @@ function noStore(status: number, payload: unknown) {
 }
 
 function studentName(student: StudentRow) {
-  return `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Learner";
+  return (
+    `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Learner"
+  );
 }
 
 function round1(n: number) {
@@ -233,7 +252,10 @@ function classroomLabel(classroom: ClassroomRow) {
   return name;
 }
 
-function pickDefaultClassroom(classrooms: ClassroomRow[], requestedId: string | null) {
+function pickDefaultClassroom(
+  classrooms: ClassroomRow[],
+  requestedId: string | null,
+) {
   if (requestedId && classrooms.some((c) => c.id === requestedId)) {
     return requestedId;
   }
@@ -267,21 +289,28 @@ function buildSubjectSummary(item: MockItemRow, totalStudents: number) {
 
   const averageScore =
     scoredCount > 0
-      ? round1(validScores.reduce((sum, score) => sum + score.score, 0) / scoredCount)
+      ? round1(
+          validScores.reduce((sum, score) => sum + score.score, 0) /
+            scoredCount,
+        )
       : null;
 
   const averageGrade =
     scoredCount > 0
       ? round1(
-          validScores.reduce((sum, score) => sum + Number(score.grade?.grade ?? 0), 0) /
-            scoredCount
+          validScores.reduce(
+            (sum, score) => sum + Number(score.grade?.grade ?? 0),
+            0,
+          ) / scoredCount,
         )
       : null;
 
-  const gradeDistribution = Array.from({ length: 9 }, (_, i) => i + 1).map((grade) => ({
-    grade,
-    count: validScores.filter((score) => score.grade?.grade === grade).length,
-  }));
+  const gradeDistribution = Array.from({ length: 9 }, (_, i) => i + 1).map(
+    (grade) => ({
+      grade,
+      count: validScores.filter((score) => score.grade?.grade === grade).length,
+    }),
+  );
 
   return {
     itemId: item.id,
@@ -308,10 +337,13 @@ function teacherMockHref(args: {
 
   if (args.sessionId) params.set("sessionId", args.sessionId);
   if (args.itemId) params.set("itemId", args.itemId);
-  if (cleanMockStr(args.subject)) params.set("subject", cleanMockStr(args.subject));
+  if (cleanMockStr(args.subject))
+    params.set("subject", cleanMockStr(args.subject));
 
   const query = params.toString();
-  return query ? `/teacher/assessment/mock?${query}` : "/teacher/assessment/mock";
+  return query
+    ? `/teacher/assessment/mock?${query}`
+    : "/teacher/assessment/mock";
 }
 
 function uniqueLabels(values: string[]) {
@@ -372,7 +404,9 @@ function buildReminderAuditMap(rows: MockReminderNoticeRow[]) {
     if (!actionCode || !subject) continue;
 
     const existing = map.get(key);
-    const existingTime = existing?.sentAt ? new Date(existing.sentAt).getTime() : 0;
+    const existingTime = existing?.sentAt
+      ? new Date(existing.sentAt).getTime()
+      : 0;
     const rowTime = (row.sentAt ?? row.createdAt).getTime();
 
     if (existing && existingTime >= rowTime) continue;
@@ -393,9 +427,10 @@ function buildReminderAuditMap(rows: MockReminderNoticeRow[]) {
       noticeTitle: row.title,
       sentAt: (row.sentAt ?? row.createdAt).toISOString(),
       recipientCount: recipients.length,
-      readCount: recipients.filter((recipient) => Boolean(recipient.readAt)).length,
+      readCount: recipients.filter((recipient) => Boolean(recipient.readAt))
+        .length,
       acknowledgedCount: recipients.filter((recipient) =>
-        Boolean(recipient.acknowledgedAt)
+        Boolean(recipient.acknowledgedAt),
       ).length,
       recipients,
     });
@@ -419,7 +454,7 @@ function emptyReminderAudit(): MockReminderAudit {
 
 function attachReminderAudit(
   actions: MockEvidenceAction[],
-  auditMap: Map<string, MockReminderAudit>
+  auditMap: Map<string, MockReminderAudit>,
 ) {
   return actions.map((action) => {
     if (action.mode !== "NOTIFY_TEACHER" && action.mode !== "REMIND_TEACHER") {
@@ -439,11 +474,13 @@ function attachReminderAudit(
 }
 
 function ownerSubjectKey(value: unknown) {
-  return cleanMockStr(value).toUpperCase();
+  return canonicalMockSubject(value);
 }
 
 function ownerNormalizeKey(value: unknown) {
-  return cleanMockStr(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return cleanMockStr(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 }
 
 function isTeacherMembershipRole(value: unknown) {
@@ -459,7 +496,8 @@ function ownerDisplayName(user: {
   const name = cleanMockStr(user.name);
   if (name) return name;
 
-  const full = `${cleanMockStr(user.firstName)} ${cleanMockStr(user.lastName)}`.trim();
+  const full =
+    `${cleanMockStr(user.firstName)} ${cleanMockStr(user.lastName)}`.trim();
   if (full) return full;
 
   return cleanMockStr(user.email) || "Teacher";
@@ -469,16 +507,19 @@ function classroomOwnerLevelKey(classroom: ClassroomRow | null) {
   const text = `${cleanMockStr(classroom?.name)} ${cleanMockStr(classroom?.grade)}`;
   const key = ownerNormalizeKey(text);
 
-  if (key.includes("JHS3") || key.includes("BASIC9") || key === "B9") return "JHS3";
-  if (key.includes("JHS2") || key.includes("BASIC8") || key === "B8") return "JHS2";
-  if (key.includes("JHS1") || key.includes("BASIC7") || key === "B7") return "JHS1";
+  if (key.includes("JHS3") || key.includes("BASIC9") || key === "B9")
+    return "JHS3";
+  if (key.includes("JHS2") || key.includes("BASIC8") || key === "B8")
+    return "JHS2";
+  if (key.includes("JHS1") || key.includes("BASIC7") || key === "B7")
+    return "JHS1";
 
   return key;
 }
 
 function ownerAssignmentMatchesClass(
   assignment: Pick<MockOwnerAssignmentRow, "classroomId" | "phase" | "level">,
-  classroom: ClassroomRow | null
+  classroom: ClassroomRow | null,
 ) {
   if (!classroom) return false;
 
@@ -567,10 +608,19 @@ async function resolveMockSubjectOwnerMap(args: {
   sessionId: string;
   subjects: string[];
 }) {
-  const subjects = Array.from(new Set(args.subjects.map(cleanMockStr).filter(Boolean)));
+  const subjects = Array.from(
+    new Set(args.subjects.map(cleanMockStr).filter(Boolean)),
+  );
   const subjectKeys = new Set(subjects.map(ownerSubjectKey).filter(Boolean));
   const subjectNorms = Array.from(
-    new Set(subjects.map(ownerNormalizeKey).filter(Boolean))
+    new Set(
+      subjects
+        .flatMap((subject) => [
+          ownerNormalizeKey(subject),
+          ownerSubjectKey(subject),
+        ])
+        .filter(Boolean),
+    ),
   );
 
   const ownerMap = new Map<string, MockSubjectOwnerStatus>();
@@ -594,7 +644,7 @@ async function resolveMockSubjectOwnerMap(args: {
 
   const now = new Date();
 
-  const [classroom, assignments] = await Promise.all([
+  const [classroom, assignments, legacyProfiles] = await Promise.all([
     prisma.classroom.findFirst({
       where: {
         id: args.classroomId,
@@ -619,18 +669,9 @@ async function resolveMockSubjectOwnerMap(args: {
           { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
           { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
         ],
-        OR: [
-          {
-            assignmentKind: "CLASS_ALL_SUBJECTS",
-          },
-          {
-            assignmentKind: "SUBJECT",
-            OR: [
-              { subjectNorm: { in: subjectNorms } },
-              { subject: { in: subjects } },
-            ],
-          },
-        ],
+        assignmentKind: {
+          in: ["CLASS_ALL_SUBJECTS", "SUBJECT"],
+        },
       },
       select: {
         assignmentKind: true,
@@ -654,17 +695,58 @@ async function resolveMockSubjectOwnerMap(args: {
         createdAt: "asc",
       },
     }),
+
+    prisma.teacherProfile.findMany({
+      where: {
+        tenantId: args.tenantId,
+        user: {
+          memberships: {
+            some: {
+              tenantId: args.tenantId,
+              status: "ACTIVE",
+              role: {
+                name: {
+                  equals: "TEACHER",
+                  mode: "insensitive",
+                },
+              },
+            },
+          },
+        },
+      },
+      select: {
+        phase: true,
+        classLevel: true,
+        primaryClassroomId: true,
+        jhsAssignments: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    }),
   ]);
 
-  const typedAssignments: MockOwnerAssignmentRow[] = assignments.map((assignment) => ({
-    assignmentKind: assignment.assignmentKind,
-    classroomId: assignment.classroomId,
-    phase: assignment.phase,
-    level: assignment.level,
-    subject: assignment.subject,
-    subjectNorm: assignment.subjectNorm,
-    teacher: assignment.teacher,
-  }));
+  const typedAssignments: MockOwnerAssignmentRow[] = assignments.map(
+    (assignment) => ({
+      assignmentKind: assignment.assignmentKind,
+      classroomId: assignment.classroomId,
+      phase: assignment.phase,
+      level: assignment.level,
+      subject: assignment.subject,
+      subjectNorm: assignment.subjectNorm,
+      teacher: assignment.teacher,
+    }),
+  );
 
   for (const assignment of typedAssignments) {
     if (!ownerAssignmentMatchesClass(assignment, classroom)) continue;
@@ -687,18 +769,33 @@ async function resolveMockSubjectOwnerMap(args: {
 
     if (kind !== "SUBJECT") continue;
 
-    const subject = cleanMockStr(assignment.subject);
-    const subjectKey = ownerSubjectKey(subject);
-    const subjectNorm = ownerNormalizeKey(assignment.subjectNorm || assignment.subject);
-
-    if (!subjectKey || (!subjectKeys.has(subjectKey) && !subjectNorms.includes(subjectNorm))) {
-      continue;
-    }
+    const assignmentSubjectKeys = new Set(
+      [
+        ownerSubjectKey(assignment.subject),
+        ownerSubjectKey(assignment.subjectNorm),
+      ].filter(Boolean),
+    );
+    const assignmentSubjectNorms = new Set(
+      [
+        ownerNormalizeKey(assignment.subject),
+        ownerNormalizeKey(assignment.subjectNorm),
+      ].filter(Boolean),
+    );
 
     const resolvedSubject =
-      subjects.find((candidate) => ownerSubjectKey(candidate) === subjectKey) ??
-      subjects.find((candidate) => ownerNormalizeKey(candidate) === subjectNorm) ??
-      subject;
+      subjects.find((candidate) =>
+        assignmentSubjectKeys.has(ownerSubjectKey(candidate)),
+      ) ??
+      subjects.find((candidate) =>
+        assignmentSubjectNorms.has(ownerNormalizeKey(candidate)),
+      );
+
+    if (
+      !resolvedSubject ||
+      !subjectKeys.has(ownerSubjectKey(resolvedSubject))
+    ) {
+      continue;
+    }
 
     addOwnerToSubjectMap({
       ownerMap,
@@ -709,12 +806,56 @@ async function resolveMockSubjectOwnerMap(args: {
     });
   }
 
+  const classroomLevel = classroomOwnerLevelKey(classroom);
+
+  for (const profile of legacyProfiles as MockLegacyOwnerProfileRow[]) {
+    if (ownerNormalizeKey(profile.phase) !== "JHS") continue;
+
+    const legacyAssignments = parseTeacherJhsAssignments(
+      profile.jhsAssignments,
+    );
+
+    for (const legacy of legacyAssignments) {
+      const classHit = legacy.classes.some(
+        (level) => ownerNormalizeKey(level) === classroomLevel,
+      );
+
+      if (!classHit) continue;
+
+      const legacySubjectKey = ownerSubjectKey(legacy.subject);
+      const legacySubjectNorm = ownerNormalizeKey(legacy.subject);
+
+      const resolvedSubject =
+        subjects.find(
+          (candidate) => ownerSubjectKey(candidate) === legacySubjectKey,
+        ) ??
+        subjects.find(
+          (candidate) => ownerNormalizeKey(candidate) === legacySubjectNorm,
+        );
+
+      if (
+        !resolvedSubject ||
+        !subjectKeys.has(ownerSubjectKey(resolvedSubject))
+      ) {
+        continue;
+      }
+
+      addOwnerToSubjectMap({
+        ownerMap,
+        subject: resolvedSubject,
+        owner: profile.user,
+        classroomId: args.classroomId,
+        sessionId: args.sessionId,
+      });
+    }
+  }
+
   return ownerMap;
 }
 
 function getOwnerStatus(
   ownerMap: Map<string, MockSubjectOwnerStatus>,
-  subject: string | null | undefined
+  subject: string | null | undefined,
 ) {
   const key = ownerSubjectKey(subject);
   if (!key) return undefined;
@@ -732,21 +873,28 @@ function buildMockEvidenceActions(args: {
   ownerStatusMap: Map<string, MockSubjectOwnerStatus>;
 }) {
   const createdCanonicalSubjects = new Set(
-    args.subjectSummaries.map((subject) => subject.canonicalSubject)
+    args.subjectSummaries.map((subject) => subject.canonicalSubject),
   );
 
-  const coreSubjectSet = new Set<string>(MOCK_CORE_SUBJECTS as readonly string[]);
+  const coreSubjectSet = new Set<string>(
+    MOCK_CORE_SUBJECTS as readonly string[],
+  );
 
-  const missingCoreSubjectColumns = MOCK_CORE_SUBJECTS
-    .filter((subject) => !createdCanonicalSubjects.has(subject))
-    .map((subject) => mockSubjectLabel(subject));
+  const missingRequiredMockSubjectColumns =
+    MOCK_REQUIRED_FINALIZE_SUBJECTS.filter(
+      (subject) => !createdCanonicalSubjects.has(subject),
+    ).map((subject) => mockSubjectLabel(subject));
 
-  const missingSchoolAggregateColumns = MOCK_SCHOOL_AGGREGATE_SUBJECTS
-    .filter((subject) => !createdCanonicalSubjects.has(subject))
-    .map((subject) => mockSubjectLabel(subject));
+  const missingCoreSubjectColumns = MOCK_CORE_SUBJECTS.filter(
+    (subject) => !createdCanonicalSubjects.has(subject),
+  ).map((subject) => mockSubjectLabel(subject));
+
+  const missingSchoolAggregateColumns = MOCK_SCHOOL_AGGREGATE_SUBJECTS.filter(
+    (subject) => !createdCanonicalSubjects.has(subject),
+  ).map((subject) => mockSubjectLabel(subject));
 
   const electiveColumns = args.subjectSummaries.filter(
-    (subject) => !coreSubjectSet.has(subject.canonicalSubject)
+    (subject) => !coreSubjectSet.has(subject.canonicalSubject),
   );
 
   const missingElectiveColumnCount = Math.max(0, 2 - electiveColumns.length);
@@ -754,7 +902,8 @@ function buildMockEvidenceActions(args: {
   const subjectScoreGaps = args.subjectSummaries
     .filter((subject) => subject.missingCount > 0)
     .sort((a, b) => {
-      if (b.missingCount !== a.missingCount) return b.missingCount - a.missingCount;
+      if (b.missingCount !== a.missingCount)
+        return b.missingCount - a.missingCount;
       return a.subject.localeCompare(b.subject);
     })
     .map((subject) => ({
@@ -794,8 +943,13 @@ function buildMockEvidenceActions(args: {
     }));
 
   const learnerRiskSignals = args.students
-    .filter((student) => student.averageScore != null && Number(student.averageScore) < 50)
-    .sort((a, b) => Number(a.averageScore ?? 999) - Number(b.averageScore ?? 999))
+    .filter(
+      (student) =>
+        student.averageScore != null && Number(student.averageScore) < 50,
+    )
+    .sort(
+      (a, b) => Number(a.averageScore ?? 999) - Number(b.averageScore ?? 999),
+    )
     .slice(0, 12)
     .map((student) => ({
       studentId: student.studentId,
@@ -808,114 +962,153 @@ function buildMockEvidenceActions(args: {
 
   const headlineActions: MockEvidenceAction[] = [];
 
-  for (const subject of missingCoreSubjectColumns) {
-  headlineActions.push({
-    code: "NOTIFY_MISSING_CORE_SUBJECT_TEACHERS",
-    mode: "NOTIFY_TEACHER",
-    priority: "CRITICAL",
-    title: `Notify ${subject} teacher to open Mock column`,
-    detail: `${subject} Mock column is missing. This should be created by the assigned subject teacher before the headteacher intervenes directly.`,
-    owner: `${subject} teacher`,
-    primaryAction: "Send in-app reminder with deadline",
-    lastResortAction:
-      "Open teacher Mock cockpit only if the assigned teacher is absent or indisposed",
-    href: teacherMockHref({
-      sessionId: args.sessionId,
+  const missingRequiredNonCoreSubjectColumns =
+    missingRequiredMockSubjectColumns.filter(
+      (subject) => !missingCoreSubjectColumns.includes(subject),
+    );
+
+  for (const subject of missingRequiredNonCoreSubjectColumns) {
+    headlineActions.push({
+      code: "NOTIFY_MISSING_REQUIRED_MOCK_SUBJECT_TEACHERS",
+      mode: "NOTIFY_TEACHER",
+      priority: "HIGH",
+      title: `Notify ${subject} teacher to open Mock column`,
+      detail: `${subject} Mock column is missing. This subject blocks finalization because the Mock session must contain all required JHS3 Mock subjects.`,
+      owner: `${subject} teacher`,
+      primaryAction: "Send in-app reminder with deadline",
+      lastResortAction:
+        "Open teacher Mock cockpit only if the assigned teacher is absent or indisposed",
+      href: teacherMockHref({
+        sessionId: args.sessionId,
+        subject,
+      }),
       subject,
-    }),
-    subject,
-    missingCount: 1,
-    ownerStatus: getOwnerStatus(args.ownerStatusMap, subject),
-  });
-}
+      missingCount: 1,
+      ownerStatus: getOwnerStatus(args.ownerStatusMap, subject),
+    });
+  }
+
+  for (const subject of missingCoreSubjectColumns) {
+    headlineActions.push({
+      code: "NOTIFY_MISSING_CORE_SUBJECT_TEACHERS",
+      mode: "NOTIFY_TEACHER",
+      priority: "CRITICAL",
+      title: `Notify ${subject} teacher to open Mock column`,
+      detail: `${subject} Mock column is missing. This should be created by the assigned subject teacher before the headteacher intervenes directly.`,
+      owner: `${subject} teacher`,
+      primaryAction: "Send in-app reminder with deadline",
+      lastResortAction:
+        "Open teacher Mock cockpit only if the assigned teacher is absent or indisposed",
+      href: teacherMockHref({
+        sessionId: args.sessionId,
+        subject,
+      }),
+      subject,
+      missingCount: 1,
+      ownerStatus: getOwnerStatus(args.ownerStatusMap, subject),
+    });
+  }
 
   if (missingElectiveColumnCount > 0) {
-headlineActions.push({
-  code: "NOTIFY_ELECTIVE_TEACHERS_TO_OPEN_COLUMNS",
-  mode: "NOTIFY_TEACHER",
-  priority: "HIGH",
-  title: "Notify elective teachers to open enough Mock columns",
-  detail: `Placement aggregate needs at least 2 elective subjects. ${missingElectiveColumnCount} more elective column(s) are needed.`,
-  owner: "Assigned elective subject teachers",
-  primaryAction: "Send in-app reminder with deadline",
-  lastResortAction: "Open teacher Mock cockpit only as last-resort administrative support",
-  href: teacherMockHref({ sessionId: args.sessionId }),
-  missingCount: missingElectiveColumnCount,
-});
+    headlineActions.push({
+      code: "NOTIFY_ELECTIVE_TEACHERS_TO_OPEN_COLUMNS",
+      mode: "NOTIFY_TEACHER",
+      priority: "HIGH",
+      title: "Notify elective teachers to open enough Mock columns",
+      detail: `Placement aggregate needs at least 2 elective subjects. ${missingElectiveColumnCount} more elective column(s) are needed.`,
+      owner: "Assigned elective subject teachers",
+      primaryAction: "Send in-app reminder with deadline",
+      lastResortAction:
+        "Open teacher Mock cockpit only as last-resort administrative support",
+      href: teacherMockHref({ sessionId: args.sessionId }),
+      missingCount: missingElectiveColumnCount,
+    });
   }
 
-  const emptySubjectColumns = subjectScoreGaps.filter((subject) => subject.scoredCount === 0);
+  const emptySubjectColumns = subjectScoreGaps.filter(
+    (subject) => subject.scoredCount === 0,
+  );
 
   for (const subject of emptySubjectColumns.slice(0, 5)) {
-headlineActions.push({
-  code: "REMIND_EMPTY_SUBJECT_SCORE_ENTRY",
-  mode: "REMIND_TEACHER",
-  priority: "HIGH",
-  title: `Remind ${subject.subject} teacher to enter Mock scores`,
-  detail: `${subject.subject} has 0/${args.totalStudents} learner scores entered.`,
-  owner: `${subject.subject} teacher`,
-  primaryAction: "Send teacher reminder with deadline",
-  lastResortAction: "Open score-entry cockpit only if delegated to the headteacher",
-  href: subject.href,
-subject: subject.subject,
-missingCount: subject.missingCount,
-ownerStatus: getOwnerStatus(args.ownerStatusMap, subject.subject),
-});
+    headlineActions.push({
+      code: "REMIND_EMPTY_SUBJECT_SCORE_ENTRY",
+      mode: "REMIND_TEACHER",
+      priority: "HIGH",
+      title: `Remind ${subject.subject} teacher to enter Mock scores`,
+      detail: `${subject.subject} has 0/${args.totalStudents} learner scores entered.`,
+      owner: `${subject.subject} teacher`,
+      primaryAction: "Send teacher reminder with deadline",
+      lastResortAction:
+        "Open score-entry cockpit only if delegated to the headteacher",
+      href: subject.href,
+      subject: subject.subject,
+      missingCount: subject.missingCount,
+      ownerStatus: getOwnerStatus(args.ownerStatusMap, subject.subject),
+    });
   }
 
-const partialSubjectColumns = subjectScoreGaps.filter((subject) => subject.scoredCount > 0);
+  const partialSubjectColumns = subjectScoreGaps.filter(
+    (subject) => subject.scoredCount > 0,
+  );
 
-for (const subject of partialSubjectColumns.slice(0, 5)) {
-  headlineActions.push({
-    code: "REMIND_PARTIAL_SUBJECT_SCORE_COMPLETION",
-    mode: "REMIND_TEACHER",
-    priority: "MEDIUM",
-    title: `Remind ${subject.subject} teacher to complete score evidence`,
-    detail: `${subject.subject} is ${subject.completionPercent}% complete; ${subject.missingCount} learner score(s) still missing.`,
-    owner: `${subject.subject} teacher`,
-    primaryAction: "Send completion reminder with deadline",
-    lastResortAction: "Open score-entry cockpit only as last resort",
-    href: subject.href,
-    subject: subject.subject,
-    missingCount: subject.missingCount,
-    ownerStatus: getOwnerStatus(args.ownerStatusMap, subject.subject),
-  });
-}
+  for (const subject of partialSubjectColumns.slice(0, 5)) {
+    headlineActions.push({
+      code: "REMIND_PARTIAL_SUBJECT_SCORE_COMPLETION",
+      mode: "REMIND_TEACHER",
+      priority: "MEDIUM",
+      title: `Remind ${subject.subject} teacher to complete score evidence`,
+      detail: `${subject.subject} is ${subject.completionPercent}% complete; ${subject.missingCount} learner score(s) still missing.`,
+      owner: `${subject.subject} teacher`,
+      primaryAction: "Send completion reminder with deadline",
+      lastResortAction: "Open score-entry cockpit only as last resort",
+      href: subject.href,
+      subject: subject.subject,
+      missingCount: subject.missingCount,
+      ownerStatus: getOwnerStatus(args.ownerStatusMap, subject.subject),
+    });
+  }
 
   for (const learner of learnerRiskSignals.slice(0, 5)) {
-headlineActions.push({
-  code: "EARLY_LEARNER_SUPPORT_SIGNAL",
-  mode: "LEARNER_SUPPORT_REVIEW",
-  priority: "MEDIUM",
-  title: `Early support signal: ${learner.name}`,
-  detail: `${learner.name} has an available-evidence average of ${learner.averageScore}. This is provisional because full Mock evidence is still incomplete.`,
-  owner: "Headteacher + class teacher + relevant subject teachers",
-  primaryAction: "Review learner context and assign targeted support",
-  lastResortAction: "Open learner profile for attendance, fee, and background context",
-  href: `/headteacher/student/${learner.studentId}?focus=mock-readiness`,
-  studentId: learner.studentId,
-  studentName: learner.name,
-});
+    headlineActions.push({
+      code: "EARLY_LEARNER_SUPPORT_SIGNAL",
+      mode: "LEARNER_SUPPORT_REVIEW",
+      priority: "MEDIUM",
+      title: `Early support signal: ${learner.name}`,
+      detail: `${learner.name} has an available-evidence average of ${learner.averageScore}. This is provisional because full Mock evidence is still incomplete.`,
+      owner: "Headteacher + class teacher + relevant subject teachers",
+      primaryAction: "Review learner context and assign targeted support",
+      lastResortAction:
+        "Open learner profile for attendance, fee, and background context",
+      href: `/headteacher/student/${learner.studentId}?focus=mock-readiness`,
+      studentId: learner.studentId,
+      studentName: learner.name,
+    });
   }
 
   if (headlineActions.length === 0) {
-headlineActions.push({
-  code: "MOCK_EVIDENCE_READY_FOR_REVIEW",
-  mode: "REVIEW_ONLY",
-  priority: "LOW",
-  title: "Mock evidence is ready for review",
-  detail: "Required Mock evidence is sufficiently complete for leadership review.",
-  owner: "Headteacher",
-  primaryAction: "Review readiness and plan intervention",
-  href: "/headteacher/assessment/mock",
-});
+    headlineActions.push({
+      code: "MOCK_EVIDENCE_READY_FOR_REVIEW",
+      mode: "REVIEW_ONLY",
+      priority: "LOW",
+      title: "Mock evidence is ready for review",
+      detail:
+        "Required Mock evidence is sufficiently complete for leadership review.",
+      owner: "Headteacher",
+      primaryAction: "Review readiness and plan intervention",
+      href: "/headteacher/assessment/mock",
+    });
   }
 
   return {
     requiredSubjectColumns: {
-      placementCore: MOCK_CORE_SUBJECTS.map((subject) => mockSubjectLabel(subject)),
+      placementCore: MOCK_CORE_SUBJECTS.map((subject) =>
+        mockSubjectLabel(subject),
+      ),
       schoolAggregate: MOCK_SCHOOL_AGGREGATE_SUBJECTS.map((subject) =>
-        mockSubjectLabel(subject)
+        mockSubjectLabel(subject),
+      ),
+      allRequiredForFinalization: MOCK_REQUIRED_FINALIZE_SUBJECTS.map(
+        (subject) => mockSubjectLabel(subject),
       ),
       placementElectiveMinimum: 2,
     },
@@ -926,13 +1119,19 @@ headlineActions.push({
       scoredCount: subject.scoredCount,
       missingCount: subject.missingCount,
     })),
+    missingRequiredMockSubjectColumns: uniqueLabels(
+      missingRequiredMockSubjectColumns,
+    ),
     missingCoreSubjectColumns: uniqueLabels(missingCoreSubjectColumns),
     missingSchoolAggregateColumns: uniqueLabels(missingSchoolAggregateColumns),
     missingElectiveColumnCount,
     subjectScoreGaps,
     learnerScoreGaps,
     learnerRiskSignals,
-    headlineActions: attachReminderAudit(sortActions(headlineActions), args.reminderAuditMap),
+    headlineActions: attachReminderAudit(
+      sortActions(headlineActions),
+      args.reminderAuditMap,
+    ),
   };
 }
 
@@ -945,7 +1144,7 @@ function candidatePriorityRank(priority: CandidateRescuePriority) {
 
 function candidateSubjectSignal(
   subject: MockStudentSubjectScore,
-  ownerStatusMap: Map<string, MockSubjectOwnerStatus>
+  ownerStatusMap: Map<string, MockSubjectOwnerStatus>,
 ): CandidateSubjectSignal {
   return {
     subject: subject.subject,
@@ -970,15 +1169,21 @@ function buildCandidateRescueProfiles(args: {
       ...(student.schoolAggregate.missingSubjects ?? []),
     ]);
 
-    const scoredSubjects = student.subjects.filter((subject) => subject.score != null);
+    const scoredSubjects = student.subjects.filter(
+      (subject) => subject.score != null,
+    );
 
     const weakSubjects = scoredSubjects
-      .filter((subject) => typeof subject.score === "number" && subject.score < 50)
+      .filter(
+        (subject) => typeof subject.score === "number" && subject.score < 50,
+      )
       .sort((a, b) => Number(a.score ?? 999) - Number(b.score ?? 999))
       .map((subject) => candidateSubjectSignal(subject, args.ownerStatusMap));
 
     const strongSubjects = scoredSubjects
-      .filter((subject) => typeof subject.grade === "number" && subject.grade <= 3)
+      .filter(
+        (subject) => typeof subject.grade === "number" && subject.grade <= 3,
+      )
       .sort((a, b) => {
         if (Number(a.grade ?? 99) !== Number(b.grade ?? 99)) {
           return Number(a.grade ?? 99) - Number(b.grade ?? 99);
@@ -994,11 +1199,12 @@ function buildCandidateRescueProfiles(args: {
         (subject) =>
           typeof subject.pointsToNextGrade === "number" &&
           subject.pointsToNextGrade > 0 &&
-          subject.pointsToNextGrade <= 5
+          subject.pointsToNextGrade <= 5,
       )
       .sort(
         (a, b) =>
-          Number(a.pointsToNextGrade ?? 999) - Number(b.pointsToNextGrade ?? 999)
+          Number(a.pointsToNextGrade ?? 999) -
+          Number(b.pointsToNextGrade ?? 999),
       )
       .map((subject) => candidateSubjectSignal(subject, args.ownerStatusMap));
 
@@ -1064,7 +1270,8 @@ function buildCandidateRescueProfiles(args: {
   });
 
   return profiles.sort((a, b) => {
-    const priorityDiff = candidatePriorityRank(a.priority) - candidatePriorityRank(b.priority);
+    const priorityDiff =
+      candidatePriorityRank(a.priority) - candidatePriorityRank(b.priority);
     if (priorityDiff !== 0) return priorityDiff;
 
     const aAgg = a.placementAggregate.aggregate ?? 999;
@@ -1085,9 +1292,12 @@ export async function GET(req: NextRequest) {
   const { ctx } = auth;
   const { searchParams } = new URL(req.url);
 
-  const requestedClassroomId = cleanMockStr(searchParams.get("classroomId")) || null;
-  const requestedSessionId = cleanMockStr(searchParams.get("sessionId")) || null;
-  const requestedAcademicYear = cleanMockStr(searchParams.get("academicYear")) || null;
+  const requestedClassroomId =
+    cleanMockStr(searchParams.get("classroomId")) || null;
+  const requestedSessionId =
+    cleanMockStr(searchParams.get("sessionId")) || null;
+  const requestedAcademicYear =
+    cleanMockStr(searchParams.get("academicYear")) || null;
 
   const rawClassrooms = await prisma.classroom.findMany({
     where: {
@@ -1112,9 +1322,14 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const classrooms = rawClassrooms.filter((classroom) => isJhs3MockClassroom(classroom));
+  const classrooms = rawClassrooms.filter((classroom) =>
+    isJhs3MockClassroom(classroom),
+  );
 
-  const selectedClassroomId = pickDefaultClassroom(classrooms, requestedClassroomId);
+  const selectedClassroomId = pickDefaultClassroom(
+    classrooms,
+    requestedClassroomId,
+  );
 
   if (!selectedClassroomId) {
     return noStore(200, {
@@ -1129,7 +1344,8 @@ export async function GET(req: NextRequest) {
   }
 
   const selectedClassroom =
-    classrooms.find((classroom) => classroom.id === selectedClassroomId) ?? null;
+    classrooms.find((classroom) => classroom.id === selectedClassroomId) ??
+    null;
 
   const sessionWhere = {
     tenantId: ctx.tenantId,
@@ -1139,7 +1355,11 @@ export async function GET(req: NextRequest) {
 
   const sessions = await prisma.mockExamSession.findMany({
     where: sessionWhere,
-    orderBy: [{ academicYear: "desc" }, { mockNumber: "asc" }, { createdAt: "asc" }],
+    orderBy: [
+      { academicYear: "desc" },
+      { mockNumber: "asc" },
+      { createdAt: "asc" },
+    ],
     select: {
       id: true,
       tenantId: true,
@@ -1186,7 +1406,11 @@ export async function GET(req: NextRequest) {
         classroomId: selectedSession.classroomId,
         status: "ACTIVE",
       },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { createdAt: "asc" }],
+      orderBy: [
+        { lastName: "asc" },
+        { firstName: "asc" },
+        { createdAt: "asc" },
+      ],
       select: {
         id: true,
         firstName: true,
@@ -1236,12 +1460,13 @@ export async function GET(req: NextRequest) {
   }));
 
   const subjectSummaries = typedItems.map((item) =>
-    buildSubjectSummary(item, students.length)
+    buildSubjectSummary(item, students.length),
   );
 
   const studentRows: MockStudentReadinessRow[] = students.map((student) => {
     const subjectScores = typedItems.map((item) => {
-      const score = item.scores.find((row) => row.studentId === student.id) ?? null;
+      const score =
+        item.scores.find((row) => row.studentId === student.id) ?? null;
       const grade = score ? mockGradeFromScore(score.score) : null;
 
       return {
@@ -1258,13 +1483,17 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const scoredSubjects = subjectScores.filter((subject) => subject.score != null);
+    const scoredSubjects = subjectScores.filter(
+      (subject) => subject.score != null,
+    );
 
     const averageScore =
       scoredSubjects.length > 0
         ? round1(
-            scoredSubjects.reduce((sum, subject) => sum + Number(subject.score ?? 0), 0) /
-              scoredSubjects.length
+            scoredSubjects.reduce(
+              (sum, subject) => sum + Number(subject.score ?? 0),
+              0,
+            ) / scoredSubjects.length,
           )
         : null;
 
@@ -1285,7 +1514,10 @@ export async function GET(req: NextRequest) {
       studentId: student.id,
       name: studentName(student),
       scoredSubjectCount: scoredSubjects.length,
-      missingSubjectCount: Math.max(0, typedItems.length - scoredSubjects.length),
+      missingSubjectCount: Math.max(
+        0,
+        typedItems.length - scoredSubjects.length,
+      ),
       averageScore,
       subjects: subjectScores,
       schoolAggregate,
@@ -1295,13 +1527,20 @@ export async function GET(req: NextRequest) {
   });
 
   const possibleCells = students.length * typedItems.length;
-  const scoredCells = typedItems.reduce((sum, item) => sum + item.scores.length, 0);
+  const scoredCells = typedItems.reduce(
+    (sum, item) => sum + item.scores.length,
+    0,
+  );
 
   const completionPercent =
     possibleCells > 0 ? round1((scoredCells / possibleCells) * 100) : 0;
 
-  const placementReadyRows = studentRows.filter((row) => row.placementAggregate.ok);
-  const schoolAggregateReadyRows = studentRows.filter((row) => row.schoolAggregate.ok);
+  const placementReadyRows = studentRows.filter(
+    (row) => row.placementAggregate.ok,
+  );
+  const schoolAggregateReadyRows = studentRows.filter(
+    (row) => row.schoolAggregate.ok,
+  );
 
   const classPlacementAggregates = placementReadyRows
     .map((row) => row.placementAggregate.aggregate)
@@ -1311,7 +1550,7 @@ export async function GET(req: NextRequest) {
     classPlacementAggregates.length > 0
       ? round1(
           classPlacementAggregates.reduce((sum, value) => sum + value, 0) /
-            classPlacementAggregates.length
+            classPlacementAggregates.length,
         )
       : null;
 
@@ -1320,80 +1559,85 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => Number(b.averageGrade ?? 0) - Number(a.averageGrade ?? 0))
     .slice(0, 3);
 
-const topSubjects = subjectSummaries
-  .filter((subject) => subject.averageGrade != null)
-  .sort((a, b) => Number(a.averageGrade ?? 99) - Number(b.averageGrade ?? 99))
-  .slice(0, 3);
+  const topSubjects = subjectSummaries
+    .filter((subject) => subject.averageGrade != null)
+    .sort((a, b) => Number(a.averageGrade ?? 99) - Number(b.averageGrade ?? 99))
+    .slice(0, 3);
 
-const subjectsForOwnerCheck = Array.from(
-  new Set(
-    [
-      ...MOCK_CORE_SUBJECTS.map((subject) => mockSubjectLabel(subject)),
-      ...MOCK_SCHOOL_AGGREGATE_SUBJECTS.map((subject) => mockSubjectLabel(subject)),
-      ...subjectSummaries.map((subject) => subject.subject),
-    ]
-      .map(cleanMockStr)
-      .filter(Boolean)
-  )
-);
+  const subjectsForOwnerCheck = Array.from(
+    new Set(
+      [
+        ...MOCK_CORE_SUBJECTS.map((subject) => mockSubjectLabel(subject)),
+        ...MOCK_SCHOOL_AGGREGATE_SUBJECTS.map((subject) =>
+          mockSubjectLabel(subject),
+        ),
+        ...MOCK_REQUIRED_FINALIZE_SUBJECTS.map((subject) =>
+          mockSubjectLabel(subject),
+        ),
+        ...subjectSummaries.map((subject) => subject.subject),
+      ]
+        .map(cleanMockStr)
+        .filter(Boolean),
+    ),
+  );
 
-const ownerStatusMap = await resolveMockSubjectOwnerMap({
-  tenantId: ctx.tenantId,
-  classroomId: selectedSession.classroomId,
-  sessionId: selectedSession.id,
-  subjects: subjectsForOwnerCheck,
-});
-
-const reminderNoticeRows = await prisma.governanceOfficialNotice.findMany({
-  where: {
+  const ownerStatusMap = await resolveMockSubjectOwnerMap({
     tenantId: ctx.tenantId,
-    idempotencyScope: "HEADTEACHER_MOCK_REMINDER",
-    metadata: {
-      path: ["sessionId"],
-      equals: selectedSession.id,
-    },
-  },
-  orderBy: {
-    createdAt: "desc",
-  },
-  take: 100,
-  select: {
-    id: true,
-    title: true,
-    sentAt: true,
-    createdAt: true,
-    metadata: true,
-    recipients: {
-      orderBy: {
-        createdAt: "asc",
-      },
-      select: {
-        id: true,
-        recipientUserId: true,
-        displayName: true,
-        readAt: true,
-        acknowledgedAt: true,
+    classroomId: selectedSession.classroomId,
+    sessionId: selectedSession.id,
+    subjects: subjectsForOwnerCheck,
+  });
+
+  const reminderNoticeRows = await prisma.governanceOfficialNotice.findMany({
+    where: {
+      tenantId: ctx.tenantId,
+      idempotencyScope: "HEADTEACHER_MOCK_REMINDER",
+      metadata: {
+        path: ["sessionId"],
+        equals: selectedSession.id,
       },
     },
-  },
-});
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 100,
+    select: {
+      id: true,
+      title: true,
+      sentAt: true,
+      createdAt: true,
+      metadata: true,
+      recipients: {
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          recipientUserId: true,
+          displayName: true,
+          readAt: true,
+          acknowledgedAt: true,
+        },
+      },
+    },
+  });
 
-const evidenceActions = buildMockEvidenceActions({
-  sessionId: selectedSession.id,
-  classroomId: selectedSession.classroomId,
-  totalStudents: students.length,
-  subjectSummaries,
-  students: studentRows,
-  reminderAuditMap: buildReminderAuditMap(reminderNoticeRows),
-  ownerStatusMap,
-});
+  const evidenceActions = buildMockEvidenceActions({
+    sessionId: selectedSession.id,
+    classroomId: selectedSession.classroomId,
+    totalStudents: students.length,
+    subjectSummaries,
+    students: studentRows,
+    reminderAuditMap: buildReminderAuditMap(reminderNoticeRows),
+    ownerStatusMap,
+  });
 
-const candidateRescueProfiles = buildCandidateRescueProfiles({
-  students: studentRows,
-  ownerStatusMap,
-});
+  const candidateRescueProfiles = buildCandidateRescueProfiles({
+    students: studentRows,
+    ownerStatusMap,
+  });
 
-return noStore(200, {
+  return noStore(200, {
     ok: true,
     classrooms: classrooms.map((classroom) => ({
       ...classroom,
@@ -1438,22 +1682,25 @@ return noStore(200, {
         schoolAggregateReadyCount: schoolAggregateReadyRows.length,
         placementReadyCount: placementReadyRows.length,
         classAveragePlacementAggregate,
-        classReadiness: readinessBandFromAggregate(classAveragePlacementAggregate),
+        classReadiness: readinessBandFromAggregate(
+          classAveragePlacementAggregate,
+        ),
         readinessCounts: mapReadinessCounts(studentRows),
       },
       subjectSummaries,
       weakestSubjects,
       topSubjects,
       students: studentRows,
-candidateRescueProfiles,
-evidenceActions,
-warnings: {
-  aggregateMayBeIncomplete: typedItems.length < 6 || placementReadyRows.length < students.length,
-  message:
-    typedItems.length < 6
-      ? "Mock subjects are fewer than required for full BECE aggregate analysis."
-      : null,
-},
+      candidateRescueProfiles,
+      evidenceActions,
+      warnings: {
+        aggregateMayBeIncomplete:
+          typedItems.length < 6 || placementReadyRows.length < students.length,
+        message:
+          typedItems.length < 6
+            ? "Mock subjects are fewer than required for full BECE aggregate analysis."
+            : null,
+      },
     },
   });
 }

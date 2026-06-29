@@ -3,10 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiUserContext } from "@/lib/serverAuth";
 import {
+  MOCK_CORE_SUBJECTS,
+  MOCK_MAX_SCORE,
+  MOCK_REQUIRED_FINALIZE_SUBJECTS,
+  MOCK_SCHOOL_AGGREGATE_SUBJECTS,
+  canonicalMockSubject,
   cleanMockStr,
   isJhs3MockClassroom,
-  MOCK_MAX_SCORE,
-  normalizeMockKey,
+  mockSubjectLabel,
 } from "@/lib/assessments/mock";
 import { z } from "zod";
 
@@ -17,19 +21,6 @@ const FinalizeMockSessionSchema = z.object({
   sessionId: z.string().min(1),
 });
 
-const REQUIRED_SCHOOL_AGGREGATE_SUBJECTS = [
-  "English",
-  "Mathematics",
-  "Science",
-  "Social Studies",
-  "Religious and Moral Education",
-  "Computing",
-  "Career Technology",
-  "Creative Art and Design",
-  "Ewe",
-];
-
-const PLACEMENT_CORE_SUBJECTS = ["English", "Mathematics", "Science", "Social Studies"];
 const PLACEMENT_ELECTIVE_MINIMUM = 2;
 
 function noStore(status: number, payload: unknown) {
@@ -43,7 +34,11 @@ function noStore(status: number, payload: unknown) {
 }
 
 function subjectKey(subject: unknown) {
-  return normalizeMockKey(cleanMockStr(subject));
+  return canonicalMockSubject(subject);
+}
+
+function subjectLabel(canonicalSubject: string) {
+  return mockSubjectLabel(canonicalSubject);
 }
 
 function isOpen(status: unknown) {
@@ -73,12 +68,19 @@ function assignmentMatchesClass(args: {
 
   const phase = subjectKey(args.assignment.phase);
   const level = subjectKey(args.assignment.level);
-  const classText = subjectKey(`${args.classroom.name ?? ""} ${args.classroom.grade ?? ""}`);
+  const classText = subjectKey(
+    `${args.classroom.name ?? ""} ${args.classroom.grade ?? ""}`,
+  );
 
-  if (phase === "JHS" && !level && isJhs3MockClassroom(args.classroom)) return true;
+  if (phase === "JHS" && !level && isJhs3MockClassroom(args.classroom))
+    return true;
 
   if (level === "JHS3" || level === "BASIC9" || level === "B9") {
-    return isJhs3MockClassroom(args.classroom) || classText.includes("JHS3") || classText.includes("BASIC9");
+    return (
+      isJhs3MockClassroom(args.classroom) ||
+      classText.includes("JHS3") ||
+      classText.includes("BASIC9")
+    );
   }
 
   return false;
@@ -177,24 +179,37 @@ async function buildSealCheck(args: { tenantId: string; sessionId: string }) {
     scoreSetByItem.set(score.itemId, set);
   }
 
-  const createdSubjectKeys = new Set(session.items.map((item) => subjectKey(item.subject)).filter(Boolean));
-
-  const missingSchoolAggregateSubjects = REQUIRED_SCHOOL_AGGREGATE_SUBJECTS.filter(
-    (subject) => !createdSubjectKeys.has(subjectKey(subject))
+  const createdSubjectKeys = new Set(
+    session.items
+      .map((item) => subjectKey(item.subject))
+      .filter((key) => key && key !== "UNKNOWN"),
   );
 
-  const missingCoreSubjects = PLACEMENT_CORE_SUBJECTS.filter(
-    (subject) => !createdSubjectKeys.has(subjectKey(subject))
+  const missingRequiredMockSubjectKeys = MOCK_REQUIRED_FINALIZE_SUBJECTS.filter(
+    (subject) => !createdSubjectKeys.has(subject),
   );
 
-  const coreSubjectKeys = new Set(PLACEMENT_CORE_SUBJECTS.map(subjectKey));
+  const missingRequiredMockSubjects =
+    missingRequiredMockSubjectKeys.map(subjectLabel);
+
+  const missingSchoolAggregateSubjects = MOCK_SCHOOL_AGGREGATE_SUBJECTS.filter(
+    (subject) => !createdSubjectKeys.has(subject),
+  ).map(subjectLabel);
+
+  const missingCoreSubjects = MOCK_CORE_SUBJECTS.filter(
+    (subject) => !createdSubjectKeys.has(subject),
+  ).map(subjectLabel);
+
+  const coreSubjectKeys = new Set<string>(
+    MOCK_CORE_SUBJECTS as readonly string[],
+  );
   const electiveColumnCount = session.items.filter(
-    (item) => !coreSubjectKeys.has(subjectKey(item.subject))
+    (item) => !coreSubjectKeys.has(subjectKey(item.subject)),
   ).length;
 
   const missingElectiveColumnCount = Math.max(
     0,
-    PLACEMENT_ELECTIVE_MINIMUM - electiveColumnCount
+    PLACEMENT_ELECTIVE_MINIMUM - electiveColumnCount,
   );
 
   const scoreGaps = session.items
@@ -211,10 +226,18 @@ async function buildSealCheck(args: { tenantId: string; sessionId: string }) {
     })
     .filter((gap) => gap.missingCount > 0);
 
-  const invalidItems = session.items.filter((item) => item.maxScore !== MOCK_MAX_SCORE);
+  const invalidItems = session.items.filter(
+    (item) => item.maxScore !== MOCK_MAX_SCORE,
+  );
 
   const now = new Date();
-  const subjectNorms = Array.from(createdSubjectKeys);
+  const ownerSubjectKeysToCheck = Array.from(
+    new Set([
+      ...Array.from(createdSubjectKeys),
+      ...MOCK_REQUIRED_FINALIZE_SUBJECTS,
+    ]),
+  );
+  const subjectNorms = ownerSubjectKeysToCheck;
 
   const assignments = await prisma.teacherAssessmentAssignment.findMany({
     where: {
@@ -225,16 +248,9 @@ async function buildSealCheck(args: { tenantId: string; sessionId: string }) {
         { OR: [{ startsAt: null }, { startsAt: { lte: now } }] },
         { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
       ],
-      OR: [
-        { assignmentKind: "CLASS_ALL_SUBJECTS" },
-        {
-          assignmentKind: "SUBJECT",
-          OR: [
-            { subjectNorm: { in: subjectNorms } },
-            { subject: { in: session.items.map((item) => item.subject) } },
-          ],
-        },
-      ],
+      assignmentKind: {
+        in: ["CLASS_ALL_SUBJECTS", "SUBJECT"],
+      },
     },
     select: {
       assignmentKind: true,
@@ -250,12 +266,14 @@ async function buildSealCheck(args: { tenantId: string; sessionId: string }) {
   const ownedSubjectKeys = new Set<string>();
 
   for (const assignment of assignments) {
-    if (!assignmentMatchesClass({ assignment, classroom: session.classroom })) continue;
+    if (!assignmentMatchesClass({ assignment, classroom: session.classroom }))
+      continue;
 
     const kind = cleanMockStr(assignment.assignmentKind).toUpperCase();
 
     if (kind === "CLASS_ALL_SUBJECTS") {
-      for (const item of session.items) ownedSubjectKeys.add(subjectKey(item.subject));
+      for (const subject of ownerSubjectKeysToCheck)
+        ownedSubjectKeys.add(subject);
       continue;
     }
 
@@ -265,9 +283,9 @@ async function buildSealCheck(args: { tenantId: string; sessionId: string }) {
     if (key) ownedSubjectKeys.add(key);
   }
 
-  const ownerGaps = session.items
-    .filter((item) => !ownedSubjectKeys.has(subjectKey(item.subject)))
-    .map((item) => item.subject);
+  const ownerGaps = missingRequiredMockSubjectKeys
+    .filter((subject) => !ownedSubjectKeys.has(subject))
+    .map(subjectLabel);
 
   const blockers: { code: string; label: string; detail: string }[] = [];
 
@@ -284,6 +302,14 @@ async function buildSealCheck(args: { tenantId: string; sessionId: string }) {
       code: "NO_SUBJECT_COLUMNS",
       label: "No Mock subject columns",
       detail: "Create the required Mock subject columns before finalization.",
+    });
+  }
+
+  if (missingRequiredMockSubjects.length > 0) {
+    blockers.push({
+      code: "MISSING_REQUIRED_MOCK_SUBJECT_COLUMNS",
+      label: "Missing required Mock subjects",
+      detail: missingRequiredMockSubjects.join(", "),
     });
   }
 
@@ -333,7 +359,9 @@ async function buildSealCheck(args: { tenantId: string; sessionId: string }) {
     blockers.push({
       code: "INVALID_MOCK_MAX_SCORE",
       label: "Invalid Mock max score",
-      detail: invalidItems.map((item) => `${item.subject}: max ${item.maxScore}`).join("; "),
+      detail: invalidItems
+        .map((item) => `${item.subject}: max ${item.maxScore}`)
+        .join("; "),
     });
   }
 
@@ -349,8 +377,10 @@ async function buildSealCheck(args: { tenantId: string; sessionId: string }) {
         subjectColumnCount: session.items.length,
         scoreGapCount: scoreGaps.length,
         ownerGapCount: ownerGaps.length,
+        missingRequiredMockSubjectCount: missingRequiredMockSubjects.length,
         missingCoreSubjectCount: missingCoreSubjects.length,
-        missingSchoolAggregateSubjectCount: missingSchoolAggregateSubjects.length,
+        missingSchoolAggregateSubjectCount:
+          missingSchoolAggregateSubjects.length,
         missingElectiveColumnCount,
       },
     },

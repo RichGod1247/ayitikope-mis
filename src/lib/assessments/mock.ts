@@ -37,7 +37,9 @@ export function cleanMockStr(v: unknown) {
 }
 
 export function normalizeMockKey(v: unknown) {
-  return cleanMockStr(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return cleanMockStr(v)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 }
 
 export function sameMockSubject(a: unknown, b: unknown) {
@@ -71,11 +73,18 @@ export function normalizeMockLevelToken(raw: unknown): string | null {
   return null;
 }
 
-export function mockClassroomLevelToken(classroom: MockClassroomLike | null | undefined) {
-  return normalizeMockLevelToken(classroom?.grade) ?? normalizeMockLevelToken(classroom?.name);
+export function mockClassroomLevelToken(
+  classroom: MockClassroomLike | null | undefined,
+) {
+  return (
+    normalizeMockLevelToken(classroom?.grade) ??
+    normalizeMockLevelToken(classroom?.name)
+  );
 }
 
-export function isJhs3MockClassroom(classroom: MockClassroomLike | null | undefined) {
+export function isJhs3MockClassroom(
+  classroom: MockClassroomLike | null | undefined,
+) {
   return mockClassroomLevelToken(classroom) === "JHS3";
 }
 
@@ -115,7 +124,9 @@ export function defaultMockTitle(args: {
   return `${args.academicYear} BECE ${mockLabel(args.mockNumber)}`;
 }
 
-export function mockGradeFromScore(scoreInput: unknown): MockGradeResult | null {
+export function mockGradeFromScore(
+  scoreInput: unknown,
+): MockGradeResult | null {
   const score = Number(scoreInput);
 
   if (!Number.isFinite(score) || score < 0 || score > MOCK_MAX_SCORE) {
@@ -339,6 +350,18 @@ export const MOCK_SCHOOL_AGGREGATE_SUBJECTS = [
   "GHANAIAN_LANGUAGE",
 ] as const;
 
+export const MOCK_REQUIRED_FINALIZE_SUBJECTS = [
+  "ENGLISH",
+  "MATHEMATICS",
+  "SCIENCE",
+  "SOCIAL",
+  "RME",
+  "GHANAIAN_LANGUAGE",
+  "CAREER_TECH",
+  "COMPUTING",
+  "CREATIVE_ARTS",
+] as const;
+
 export const MOCK_SUBJECT_LABELS: Record<string, string> = {
   ENGLISH: "English",
   MATHEMATICS: "Mathematics",
@@ -347,7 +370,7 @@ export const MOCK_SUBJECT_LABELS: Record<string, string> = {
   RME: "RME",
   GHANAIAN_LANGUAGE: "Ghanaian Language",
   EWE: "Ewe",
-  CREATIVE_ARTS: "Creative Arts",
+  CREATIVE_ARTS: "Creative Art and Design",
   COMPUTING: "Computing",
   CAREER_TECH: "Career Technology",
 };
@@ -355,19 +378,11 @@ export const MOCK_SUBJECT_LABELS: Record<string, string> = {
 export function canonicalMockSubject(raw: unknown) {
   const key = normalizeMockKey(raw);
 
-  if (
-    key === "ENGLISH" ||
-    key === "ENGLISHLANGUAGE" ||
-    key === "ENG"
-  ) {
+  if (key === "ENGLISH" || key === "ENGLISHLANGUAGE" || key === "ENG") {
     return "ENGLISH";
   }
 
-  if (
-    key === "MATHEMATICS" ||
-    key === "MATHS" ||
-    key === "MATH"
-  ) {
+  if (key === "MATHEMATICS" || key === "MATHS" || key === "MATH") {
     return "MATHEMATICS";
   }
 
@@ -379,11 +394,7 @@ export function canonicalMockSubject(raw: unknown) {
     return "SCIENCE";
   }
 
-  if (
-    key === "SOCIAL" ||
-    key === "SOCIALSTUDIES" ||
-    key === "SOCIALSTUDY"
-  ) {
+  if (key === "SOCIAL" || key === "SOCIALSTUDIES" || key === "SOCIALSTUDY") {
     return "SOCIAL";
   }
 
@@ -406,17 +417,19 @@ export function canonicalMockSubject(raw: unknown) {
 
   if (
     key === "CREATIVEARTS" ||
+    key === "CREATIVEART" ||
+    key === "CREATIVEARTANDDESIGN" ||
+    key === "CREATIVEARTSANDDESIGN" ||
+    key === "CREATIVEARTDESIGN" ||
+    key === "CREATIVEARTSDESIGN" ||
     key === "CARTS" ||
+    key === "CAD" ||
     key === "CA"
   ) {
     return "CREATIVE_ARTS";
   }
 
-  if (
-    key === "COMPUTING" ||
-    key === "COMP" ||
-    key === "ICT"
-  ) {
+  if (key === "COMPUTING" || key === "COMP" || key === "ICT") {
     return "COMPUTING";
   }
 
@@ -439,11 +452,7 @@ export function mockSubjectLabel(canonicalSubject: string) {
 function gradeFromSubjectInput(input: MockSubjectGradeInput): MockGrade | null {
   const directGrade = Number(input.grade);
 
-  if (
-    Number.isInteger(directGrade) &&
-    directGrade >= 1 &&
-    directGrade <= 9
-  ) {
+  if (Number.isInteger(directGrade) && directGrade >= 1 && directGrade <= 9) {
     return directGrade as MockGrade;
   }
 
@@ -484,12 +493,18 @@ function scoredSubjects(inputs: MockSubjectGradeInput[]) {
 }
 
 export function isMockCoreSubject(subject: string) {
-  return MOCK_CORE_SUBJECTS.includes(subject as (typeof MOCK_CORE_SUBJECTS)[number]);
+  return MOCK_CORE_SUBJECTS.includes(
+    subject as (typeof MOCK_CORE_SUBJECTS)[number],
+  );
 }
 
-export function calculateSchoolMockAggregate(inputs: MockSubjectGradeInput[]): MockAggregateResult {
+export function calculateSchoolMockAggregate(
+  inputs: MockSubjectGradeInput[],
+): MockAggregateResult {
   const scored = scoredSubjects(inputs);
-  const byCanonical = new Map(scored.map((item) => [item.canonicalSubject, item]));
+  const byCanonical = new Map(
+    scored.map((item) => [item.canonicalSubject, item]),
+  );
 
   const usedSubjects: MockAggregateSubject[] = [];
   const missingSubjects: string[] = [];
@@ -508,7 +523,7 @@ export function calculateSchoolMockAggregate(inputs: MockSubjectGradeInput[]): M
       missingSubjects,
       selectedElectives: [],
       availableElectives: scored.filter(
-        (item) => !isMockCoreSubject(item.canonicalSubject)
+        (item) => !isMockCoreSubject(item.canonicalSubject),
       ),
       reason: "SCHOOL_AGGREGATE_INCOMPLETE",
     };
@@ -521,15 +536,19 @@ export function calculateSchoolMockAggregate(inputs: MockSubjectGradeInput[]): M
     missingSubjects: [],
     selectedElectives: [],
     availableElectives: scored.filter(
-      (item) => !isMockCoreSubject(item.canonicalSubject)
+      (item) => !isMockCoreSubject(item.canonicalSubject),
     ),
     reason: null,
   };
 }
 
-export function calculatePlacementMockAggregate(inputs: MockSubjectGradeInput[]): MockAggregateResult {
+export function calculatePlacementMockAggregate(
+  inputs: MockSubjectGradeInput[],
+): MockAggregateResult {
   const scored = scoredSubjects(inputs);
-  const byCanonical = new Map(scored.map((item) => [item.canonicalSubject, item]));
+  const byCanonical = new Map(
+    scored.map((item) => [item.canonicalSubject, item]),
+  );
 
   const coreSubjects: MockAggregateSubject[] = [];
   const missingSubjects: string[] = [];
@@ -585,7 +604,8 @@ export function readinessBandFromAggregate(aggregateInput: unknown) {
       code: "INCOMPLETE",
       label: "Incomplete evidence",
       tone: "NEUTRAL",
-      action: "Enter all required mock subject scores before readiness can be estimated.",
+      action:
+        "Enter all required mock subject scores before readiness can be estimated.",
     };
   }
 
@@ -596,7 +616,8 @@ export function readinessBandFromAggregate(aggregateInput: unknown) {
       code: "INCOMPLETE",
       label: "Incomplete evidence",
       tone: "NEUTRAL",
-      action: "Enter all required mock subject scores before readiness can be estimated.",
+      action:
+        "Enter all required mock subject scores before readiness can be estimated.",
     };
   }
 

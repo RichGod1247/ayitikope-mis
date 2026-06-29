@@ -135,7 +135,9 @@ type EvidenceActions = {
     placementCore: string[];
     schoolAggregate: string[];
     placementElectiveMinimum: number;
+    allRequiredForFinalization?: string[];
   };
+  missingRequiredMockSubjectColumns: string[];
   createdSubjectColumns: {
     itemId: string;
     subject: string;
@@ -524,13 +526,28 @@ function isSealedMockStatus(status: unknown) {
 }
 
 function buildLocalSealReadiness(broadsheet: Broadsheet) {
+  const missingRequiredSubjects = new Set(
+    broadsheet.evidenceActions.missingRequiredMockSubjectColumns ?? [],
+  );
+
   const ownerGapActions = broadsheet.evidenceActions.headlineActions.filter(
     (action) =>
       (action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER") &&
-      action.ownerStatus?.hasOwner === false,
+      action.ownerStatus?.hasOwner === false &&
+      !!cleanStr(action.subject) &&
+      missingRequiredSubjects.has(cleanStr(action.subject)),
   );
 
   const blockers: string[] = [];
+
+  if (
+    (broadsheet.evidenceActions.missingRequiredMockSubjectColumns ?? [])
+      .length > 0
+  ) {
+    blockers.push(
+      `Missing required Mock subject columns: ${broadsheet.evidenceActions.missingRequiredMockSubjectColumns.join(", ")}`,
+    );
+  }
 
   if (broadsheet.evidenceActions.missingCoreSubjectColumns.length > 0) {
     blockers.push(
