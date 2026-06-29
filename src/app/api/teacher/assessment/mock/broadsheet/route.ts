@@ -57,7 +57,9 @@ function isForbiddenReason(reason: string) {
 }
 
 function studentName(student: StudentRow) {
-  return `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Learner";
+  return (
+    `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Learner"
+  );
 }
 
 function round1(n: number) {
@@ -98,21 +100,28 @@ function buildSubjectSummary(item: MockItemRow, totalStudents: number) {
   const scoredCount = validScores.length;
   const averageScore =
     scoredCount > 0
-      ? round1(validScores.reduce((sum, score) => sum + score.score, 0) / scoredCount)
+      ? round1(
+          validScores.reduce((sum, score) => sum + score.score, 0) /
+            scoredCount,
+        )
       : null;
 
   const averageGrade =
     scoredCount > 0
       ? round1(
-          validScores.reduce((sum, score) => sum + Number(score.grade?.grade ?? 0), 0) /
-            scoredCount
+          validScores.reduce(
+            (sum, score) => sum + Number(score.grade?.grade ?? 0),
+            0,
+          ) / scoredCount,
         )
       : null;
 
-  const gradeDistribution = Array.from({ length: 9 }, (_, i) => i + 1).map((grade) => ({
-    grade,
-    count: validScores.filter((score) => score.grade?.grade === grade).length,
-  }));
+  const gradeDistribution = Array.from({ length: 9 }, (_, i) => i + 1).map(
+    (grade) => ({
+      grade,
+      count: validScores.filter((score) => score.grade?.grade === grade).length,
+    }),
+  );
 
   return {
     itemId: item.id,
@@ -133,7 +142,13 @@ function buildSubjectSummary(item: MockItemRow, totalStudents: number) {
 export async function GET(req: NextRequest) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
-    requireRoleNames: ["TEACHER", "HEADTEACHER", "ADMIN", "SCHOOL_ADMIN", "SUPERADMIN"],
+    requireRoleNames: [
+      "TEACHER",
+      "HEADTEACHER",
+      "ADMIN",
+      "SCHOOL_ADMIN",
+      "SUPERADMIN",
+    ],
   });
   if (!auth.ok) return auth.res;
 
@@ -200,14 +215,18 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const [students, items] = await Promise.all([
+  const [students, visibleItems, fullItems] = await Promise.all([
     prisma.student.findMany({
       where: {
         tenantId: ctx.tenantId,
         classroomId: session.classroomId,
         status: "ACTIVE",
       },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { createdAt: "asc" }],
+      orderBy: [
+        { lastName: "asc" },
+        { firstName: "asc" },
+        { createdAt: "asc" },
+      ],
       select: {
         id: true,
         firstName: true,
@@ -244,9 +263,35 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
+
+    prisma.assessmentItem.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        classroomId: session.classroomId,
+        academicYear: session.academicYear,
+        mockExamSessionId: session.id,
+        type: "MOCK",
+      },
+      orderBy: [{ subject: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        subject: true,
+        title: true,
+        maxScore: true,
+        status: true,
+        lockedAt: true,
+        scores: {
+          select: {
+            studentId: true,
+            score: true,
+            comment: true,
+          },
+        },
+      },
+    }),
   ]);
 
-  const typedItems: MockItemRow[] = items.map((item) => ({
+  const visibleTypedItems: MockItemRow[] = visibleItems.map((item) => ({
     id: item.id,
     subject: item.subject,
     title: item.title,
@@ -260,39 +305,63 @@ export async function GET(req: NextRequest) {
     })),
   }));
 
-  const subjectSummaries = typedItems.map((item) =>
-    buildSubjectSummary(item, students.length)
+  const fullTypedItems: MockItemRow[] = fullItems.map((item) => ({
+    id: item.id,
+    subject: item.subject,
+    title: item.title,
+    maxScore: item.maxScore,
+    status: item.status,
+    lockedAt: item.lockedAt,
+    scores: item.scores.map((score) => ({
+      studentId: score.studentId,
+      score: score.score,
+      comment: score.comment,
+    })),
+  }));
+
+  const subjectSummaries = visibleTypedItems.map((item) =>
+    buildSubjectSummary(item, students.length),
   );
 
   const studentRows = students.map((student) => {
-    const subjectScores = typedItems.map((item) => {
-      const score = item.scores.find((row) => row.studentId === student.id) ?? null;
-      const grade = score ? mockGradeFromScore(score.score) : null;
+    const buildSubjectScores = (sourceItems: MockItemRow[]) =>
+      sourceItems.map((item) => {
+        const score =
+          item.scores.find((row) => row.studentId === student.id) ?? null;
+        const grade = score ? mockGradeFromScore(score.score) : null;
 
-      return {
-        itemId: item.id,
-        subject: item.subject,
-        canonicalSubject: canonicalMockSubject(item.subject),
-        score: score?.score ?? null,
-        comment: score?.comment ?? null,
-        grade: grade?.grade ?? null,
-        gradeLabel: grade?.label ?? null,
-        remark: grade?.remark ?? null,
-        nextGrade: grade?.nextGrade ?? null,
-        pointsToNextGrade: grade?.pointsToNextGrade ?? null,
-      };
-    });
+        return {
+          itemId: item.id,
+          subject: item.subject,
+          canonicalSubject: canonicalMockSubject(item.subject),
+          score: score?.score ?? null,
+          comment: score?.comment ?? null,
+          grade: grade?.grade ?? null,
+          gradeLabel: grade?.label ?? null,
+          remark: grade?.remark ?? null,
+          nextGrade: grade?.nextGrade ?? null,
+          pointsToNextGrade: grade?.pointsToNextGrade ?? null,
+        };
+      });
 
-    const scoredSubjects = subjectScores.filter((subject) => subject.score != null);
+    const visibleSubjectScores = buildSubjectScores(visibleTypedItems);
+    const fullSubjectScores = buildSubjectScores(fullTypedItems);
+
+    const fullScoredSubjects = fullSubjectScores.filter(
+      (subject) => subject.score != null,
+    );
+
     const averageScore =
-      scoredSubjects.length > 0
+      fullScoredSubjects.length > 0
         ? round1(
-            scoredSubjects.reduce((sum, subject) => sum + Number(subject.score ?? 0), 0) /
-              scoredSubjects.length
+            fullScoredSubjects.reduce(
+              (sum, subject) => sum + Number(subject.score ?? 0),
+              0,
+            ) / fullScoredSubjects.length,
           )
         : null;
 
-    const aggregateInputs = subjectScores.map((subject) => ({
+    const aggregateInputs = fullSubjectScores.map((subject) => ({
       subject: subject.subject,
       score: subject.score,
       grade: subject.grade,
@@ -308,27 +377,42 @@ export async function GET(req: NextRequest) {
     return {
       studentId: student.id,
       name: studentName(student),
-      scoredSubjectCount: scoredSubjects.length,
-      missingSubjectCount: Math.max(0, typedItems.length - scoredSubjects.length),
+      scoredSubjectCount: fullScoredSubjects.length,
+      missingSubjectCount: Math.max(
+        0,
+        fullTypedItems.length - fullScoredSubjects.length,
+      ),
       averageScore,
-      subjects: subjectScores,
+      subjects: visibleSubjectScores,
       schoolAggregate,
       placementAggregate,
       readiness,
     };
   });
 
-  const possibleCells = students.length * typedItems.length;
-  const scoredCells = typedItems.reduce((sum, item) => sum + item.scores.length, 0);
+  const possibleCells = students.length * visibleTypedItems.length;
+  const scoredCells = visibleTypedItems.reduce(
+    (sum, item) => sum + item.scores.length,
+    0,
+  );
   const completionPercent =
     possibleCells > 0 ? round1((scoredCells / possibleCells) * 100) : 0;
 
-  const placementReadyCount = studentRows.filter(
-    (row) => row.placementAggregate.ok
-  ).length;
+  const fullPossibleCells = students.length * fullTypedItems.length;
+  const fullScoredCells = fullTypedItems.reduce(
+    (sum, item) => sum + item.scores.length,
+    0,
+  );
+  const fullCompletionPercent =
+    fullPossibleCells > 0
+      ? round1((fullScoredCells / fullPossibleCells) * 100)
+      : 0;
 
+  const placementReadyCount = studentRows.filter(
+    (row) => row.placementAggregate.ok,
+  ).length;
   const schoolAggregateReadyCount = studentRows.filter(
-    (row) => row.schoolAggregate.ok
+    (row) => row.schoolAggregate.ok,
   ).length;
 
   const classPlacementAggregates = studentRows
@@ -339,9 +423,12 @@ export async function GET(req: NextRequest) {
     classPlacementAggregates.length > 0
       ? round1(
           classPlacementAggregates.reduce((sum, value) => sum + value, 0) /
-            classPlacementAggregates.length
+            classPlacementAggregates.length,
         )
       : null;
+
+  const fullAggregateMayBeIncomplete =
+    fullTypedItems.length < 6 || placementReadyCount < students.length;
 
   return noStore(200, {
     ok: true,
@@ -360,29 +447,37 @@ export async function GET(req: NextRequest) {
     access: {
       scopeSource: access.scopeSource,
       allowedSubjects: access.allowedSubjects,
-      visibleSubjectCount: typedItems.length,
+      visibleSubjectCount: visibleTypedItems.length,
     },
     summary: {
       totalStudents: students.length,
-      visibleSubjectCount: typedItems.length,
+      visibleSubjectCount: visibleTypedItems.length,
+      fullSubjectCount: fullTypedItems.length,
       possibleCells,
       scoredCells,
       missingCells: Math.max(0, possibleCells - scoredCells),
       completionPercent,
+      fullPossibleCells,
+      fullScoredCells,
+      fullMissingCells: Math.max(0, fullPossibleCells - fullScoredCells),
+      fullCompletionPercent,
       schoolAggregateReadyCount,
       placementReadyCount,
       classAveragePlacementAggregate,
-      classReadiness: readinessBandFromAggregate(classAveragePlacementAggregate),
+      classReadiness: readinessBandFromAggregate(
+        classAveragePlacementAggregate,
+      ),
     },
     subjectSummaries,
     students: studentRows,
     warnings: {
-      aggregateMayBeIncomplete:
-        typedItems.length < 6 || placementReadyCount < students.length,
+      aggregateMayBeIncomplete: fullAggregateMayBeIncomplete,
       message:
-        typedItems.length < 6
-          ? "Visible mock subjects are fewer than required for full BECE aggregate analysis."
-          : null,
+        fullTypedItems.length < 6
+          ? "Full Mock subjects are fewer than required for full BECE aggregate analysis."
+          : placementReadyCount < students.length
+            ? "Full all-subject Mock evidence is still incomplete in the headteacher cockpit."
+            : null,
     },
   });
 }

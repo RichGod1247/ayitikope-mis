@@ -96,9 +96,9 @@ type MockEvidenceAction = {
   subject?: string;
   studentId?: string;
   studentName?: string;
- missingCount?: number;
-ownerStatus?: MockSubjectOwnerStatus;
-reminderAudit?: MockReminderAudit;
+  missingCount?: number;
+  ownerStatus?: MockSubjectOwnerStatus;
+  reminderAudit?: MockReminderAudit;
 };
 
 type SubjectScoreGap = {
@@ -239,10 +239,10 @@ type Broadsheet = {
   subjectSummaries: SubjectSummary[];
   weakestSubjects: SubjectSummary[];
   topSubjects: SubjectSummary[];
-students: StudentRow[];
-candidateRescueProfiles: CandidateRescueProfile[];
-evidenceActions: EvidenceActions;
-warnings: {
+  students: StudentRow[];
+  candidateRescueProfiles: CandidateRescueProfile[];
+  evidenceActions: EvidenceActions;
+  warnings: {
     aggregateMayBeIncomplete: boolean;
     message: string | null;
   };
@@ -332,7 +332,10 @@ function normalizeLevelToken(raw: unknown): string | null {
 }
 
 function isJhs3Classroom(c: ClassroomRow) {
-  return normalizeLevelToken(c.grade) === "JHS3" || normalizeLevelToken(c.name) === "JHS3";
+  return (
+    normalizeLevelToken(c.grade) === "JHS3" ||
+    normalizeLevelToken(c.name) === "JHS3"
+  );
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -386,11 +389,16 @@ function reminderAuditLabel(action: MockEvidenceAction) {
   return `Sent to ${audit.recipientCount}`;
 }
 
-function reminderButtonLabel(action: MockEvidenceAction, local?: ReminderSendStatus) {
+function reminderButtonLabel(
+  action: MockEvidenceAction,
+  local?: ReminderSendStatus,
+) {
   if (action.ownerStatus?.hasOwner === false) return "Assign teacher first";
   if (local?.loading) return "Sending...";
   if (local?.ok === true) {
-    return local.message.startsWith("Reminder already") ? "Already sent" : "Sent";
+    return local.message.startsWith("Reminder already")
+      ? "Already sent"
+      : "Sent";
   }
   if (action.reminderAudit?.sent) return "Already sent";
   return "Send reminder";
@@ -465,12 +473,22 @@ function readinessClass(code: string) {
   return "border-white/10 bg-white/[0.04] text-[#C9CDD6]";
 }
 
-function MetricCard(props: { label: string; value: React.ReactNode; hint?: string }) {
+function MetricCard(props: {
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+}) {
   return (
     <div className={softPanel + " p-4"}>
-      <div className="text-[11px] uppercase tracking-[0.18em] text-[#8F98A8]">{props.label}</div>
-      <div className="mt-2 text-2xl font-semibold text-[#F7F4ED]">{props.value}</div>
-      {props.hint ? <div className="mt-1 text-[11px] text-[#AEB6C4]">{props.hint}</div> : null}
+      <div className="text-[11px] uppercase tracking-[0.18em] text-[#8F98A8]">
+        {props.label}
+      </div>
+      <div className="mt-2 text-2xl font-semibold text-[#F7F4ED]">
+        {props.value}
+      </div>
+      {props.hint ? (
+        <div className="mt-1 text-[11px] text-[#AEB6C4]">{props.hint}</div>
+      ) : null}
     </div>
   );
 }
@@ -485,8 +503,14 @@ function SectionCard(props: {
     <div className={shellCard}>
       <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <div className="text-sm font-semibold text-[#F7F4ED]">{props.title}</div>
-          {props.subtitle ? <div className="mt-0.5 text-[11px] text-[#AEB6C4]">{props.subtitle}</div> : null}
+          <div className="text-sm font-semibold text-[#F7F4ED]">
+            {props.title}
+          </div>
+          {props.subtitle ? (
+            <div className="mt-0.5 text-[11px] text-[#AEB6C4]">
+              {props.subtitle}
+            </div>
+          ) : null}
         </div>
         {props.right ? <div className="shrink-0">{props.right}</div> : null}
       </div>
@@ -503,32 +527,32 @@ function buildLocalSealReadiness(broadsheet: Broadsheet) {
   const ownerGapActions = broadsheet.evidenceActions.headlineActions.filter(
     (action) =>
       (action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER") &&
-      action.ownerStatus?.hasOwner === false
+      action.ownerStatus?.hasOwner === false,
   );
 
   const blockers: string[] = [];
 
   if (broadsheet.evidenceActions.missingCoreSubjectColumns.length > 0) {
     blockers.push(
-      `Missing core columns: ${broadsheet.evidenceActions.missingCoreSubjectColumns.join(", ")}`
+      `Missing core columns: ${broadsheet.evidenceActions.missingCoreSubjectColumns.join(", ")}`,
     );
   }
 
   if (broadsheet.evidenceActions.missingSchoolAggregateColumns.length > 0) {
     blockers.push(
-      `Missing school aggregate columns: ${broadsheet.evidenceActions.missingSchoolAggregateColumns.join(", ")}`
+      `Missing school aggregate columns: ${broadsheet.evidenceActions.missingSchoolAggregateColumns.join(", ")}`,
     );
   }
 
   if (broadsheet.evidenceActions.missingElectiveColumnCount > 0) {
     blockers.push(
-      `Add ${broadsheet.evidenceActions.missingElectiveColumnCount} more elective column(s).`
+      `Add ${broadsheet.evidenceActions.missingElectiveColumnCount} more elective column(s).`,
     );
   }
 
   if (broadsheet.evidenceActions.subjectScoreGaps.length > 0) {
     blockers.push(
-      `Missing score evidence in ${broadsheet.evidenceActions.subjectScoreGaps.length} subject(s).`
+      `Missing score evidence in ${broadsheet.evidenceActions.subjectScoreGaps.length} subject(s).`,
     );
   }
 
@@ -537,13 +561,15 @@ function buildLocalSealReadiness(broadsheet: Broadsheet) {
       `Subject owner gaps: ${ownerGapActions
         .map((action) => action.subject)
         .filter(Boolean)
-        .join(", ")}`
+        .join(", ")}`,
     );
   }
 
-  if (broadsheet.summary.placementReadyCount < broadsheet.summary.totalStudents) {
+  if (
+    broadsheet.summary.placementReadyCount < broadsheet.summary.totalStudents
+  ) {
     blockers.push(
-      `${broadsheet.summary.totalStudents - broadsheet.summary.placementReadyCount} learner(s) are not placement-ready.`
+      `${broadsheet.summary.totalStudents - broadsheet.summary.placementReadyCount} learner(s) are not placement-ready.`,
     );
   }
 
@@ -570,19 +596,24 @@ export default function HeadteacherMockOverviewClient() {
 
   const [broadsheet, setBroadsheet] = useState<Broadsheet | null>(null);
 
-const [reminderDeadline, setReminderDeadline] = useState(() => {
-  const d = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-  return d.toISOString().slice(0, 10);
-});
-const [reminderNote, setReminderNote] = useState("");
-const [reminderStatus, setReminderStatus] = useState<Record<string, ReminderSendStatus>>({});
+  const [reminderDeadline, setReminderDeadline] = useState(() => {
+    const d = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    return d.toISOString().slice(0, 10);
+  });
+  const [reminderNote, setReminderNote] = useState("");
+  const [reminderStatus, setReminderStatus] = useState<
+    Record<string, ReminderSendStatus>
+  >({});
 
-const [finalizeStatus, setFinalizeStatus] = useState<FinalizeStatus>({
-  loading: false,
-  ok: null,
-  message: "",
-});
-  const allJhs3Classrooms = useMemo(() => classrooms.filter(isJhs3Classroom), [classrooms]);
+  const [finalizeStatus, setFinalizeStatus] = useState<FinalizeStatus>({
+    loading: false,
+    ok: null,
+    message: "",
+  });
+  const allJhs3Classrooms = useMemo(
+    () => classrooms.filter(isJhs3Classroom),
+    [classrooms],
+  );
 
   const visibleClassrooms = useMemo(() => {
     if (showMultiStream) return allJhs3Classrooms;
@@ -592,10 +623,25 @@ const [finalizeStatus, setFinalizeStatus] = useState<FinalizeStatus>({
 
   const canToggleMultiStream = allJhs3Classrooms.some((c) => cleanStr(c.arm));
 
-const sealReadiness = useMemo(
-  () => (broadsheet ? buildLocalSealReadiness(broadsheet) : null),
-  [broadsheet]
-);
+  const sealReadiness = useMemo(
+    () => (broadsheet ? buildLocalSealReadiness(broadsheet) : null),
+    [broadsheet],
+  );
+
+  const selectedExportSessionId =
+    cleanStr(broadsheet?.session?.id) || cleanStr(sessionId);
+
+  const mockExcelExportHref = selectedExportSessionId
+    ? `/api/headteacher/assessment/mock/export/xlsx?sessionId=${encodeURIComponent(
+        selectedExportSessionId,
+      )}`
+    : "";
+
+  const mockPdfExportHref = selectedExportSessionId
+    ? `/api/headteacher/assessment/mock/export/pdf?sessionId=${encodeURIComponent(
+        selectedExportSessionId,
+      )}`
+    : "";
 
   async function loadOverview(args?: {
     nextClassroomId?: string;
@@ -619,7 +665,7 @@ const sealReadiness = useMemo(
       const query = params.toString();
       const res = await fetch(
         `/api/headteacher/assessment/mock/overview${query ? `?${query}` : ""}`,
-        { cache: "no-store" }
+        { cache: "no-store" },
       );
 
       const json = await readJson(res);
@@ -630,7 +676,12 @@ const sealReadiness = useMemo(
       }
 
       if (!res.ok || !json.ok) {
-        setError(getError(json, `Failed to load headteacher mock overview. HTTP ${res.status}`));
+        setError(
+          getError(
+            json,
+            `Failed to load headteacher mock overview. HTTP ${res.status}`,
+          ),
+        );
         return;
       }
 
@@ -650,158 +701,167 @@ const sealReadiness = useMemo(
     }
   }
 
-async function sendTeacherReminder(action: MockEvidenceAction) {
-  if (!broadsheet) return;
+  async function sendTeacherReminder(action: MockEvidenceAction) {
+    if (!broadsheet) return;
 
-  const key = actionKey(action);
+    const key = actionKey(action);
 
-  if (!canSendTeacherReminder(action)) {
-    setReminderStatus((prev) => ({
-      ...prev,
-      [key]: {
-        loading: false,
-        ok: false,
-        message: "This action needs a specific subject before a teacher reminder can be sent.",
-      },
-    }));
-    return;
-  }
-
-  try {
-    setReminderStatus((prev) => ({
-      ...prev,
-      [key]: {
-        loading: true,
-        ok: null,
-        message: "Sending reminder...",
-      },
-    }));
-
-    const res = await fetch("/api/headteacher/assessment/mock/reminders/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        sessionId: broadsheet.session.id,
-        actionCode: action.code,
-        subject: action.subject,
-        deadline: reminderDeadline,
-        note: reminderNote,
-      }),
-    });
-
-    const json = await res.json().catch(() => null);
-
-    if (!res.ok || !json?.ok) {
+    if (!canSendTeacherReminder(action)) {
       setReminderStatus((prev) => ({
         ...prev,
         [key]: {
           loading: false,
           ok: false,
           message:
-            json?.error === "NO_ASSIGNED_TEACHER_FOUND_FOR_MOCK_REMINDER"
-              ? "No assigned teacher found for this subject. Assign the subject first."
-              : json?.error || `Failed to send reminder. HTTP ${res.status}`,
+            "This action needs a specific subject before a teacher reminder can be sent.",
         },
       }));
       return;
     }
 
-    const names = Array.isArray(json.recipients)
-      ? json.recipients.map((r: { name?: string }) => cleanStr(r.name)).filter(Boolean)
-      : [];
+    try {
+      setReminderStatus((prev) => ({
+        ...prev,
+        [key]: {
+          loading: true,
+          ok: null,
+          message: "Sending reminder...",
+        },
+      }));
 
-    setReminderStatus((prev) => ({
-      ...prev,
-      [key]: {
-        loading: false,
-        ok: true,
-        message: json.reused
-          ? `Reminder already sent${names.length ? ` to ${names.join(", ")}` : ""}.`
-          : `Reminder sent${names.length ? ` to ${names.join(", ")}` : ""}.`,
-      },
-    }));
+      const res = await fetch(
+        "/api/headteacher/assessment/mock/reminders/send",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            sessionId: broadsheet.session.id,
+            actionCode: action.code,
+            subject: action.subject,
+            deadline: reminderDeadline,
+            note: reminderNote,
+          }),
+        },
+      );
 
-    void loadOverview({
-      nextClassroomId: classroomId,
-      nextSessionId: sessionId,
-      nextAcademicYear: academicYear,
-    });
-  } catch {
-    setReminderStatus((prev) => ({
-      ...prev,
-      [key]: {
-        loading: false,
-        ok: false,
-        message: "Failed to send reminder.",
-      },
-    }));
-  }
-}
+      const json = await res.json().catch(() => null);
 
-async function finalizeMockSession() {
-  if (!broadsheet) return;
+      if (!res.ok || !json?.ok) {
+        setReminderStatus((prev) => ({
+          ...prev,
+          [key]: {
+            loading: false,
+            ok: false,
+            message:
+              json?.error === "NO_ASSIGNED_TEACHER_FOUND_FOR_MOCK_REMINDER"
+                ? "No assigned teacher found for this subject. Assign the subject first."
+                : json?.error || `Failed to send reminder. HTTP ${res.status}`,
+          },
+        }));
+        return;
+      }
 
-  try {
-    setFinalizeStatus({
-      loading: true,
-      ok: null,
-      message: "Finalizing Mock evidence seal...",
-    });
-
-    const res = await fetch("/api/headteacher/assessment/mock/finalize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        sessionId: broadsheet.session.id,
-      }),
-    });
-
-    const json = await res.json().catch(() => null);
-
-    if (!res.ok || !json?.ok) {
-      const blockers = Array.isArray(json?.readiness?.blockers)
-        ? json.readiness.blockers
-            .map((blocker: { label?: string; detail?: string }) =>
-              `${cleanStr(blocker.label)}${cleanStr(blocker.detail) ? ` — ${cleanStr(blocker.detail)}` : ""}`
-            )
+      const names = Array.isArray(json.recipients)
+        ? json.recipients
+            .map((r: { name?: string }) => cleanStr(r.name))
             .filter(Boolean)
-            .join(" | ")
-        : "";
+        : [];
+
+      setReminderStatus((prev) => ({
+        ...prev,
+        [key]: {
+          loading: false,
+          ok: true,
+          message: json.reused
+            ? `Reminder already sent${names.length ? ` to ${names.join(", ")}` : ""}.`
+            : `Reminder sent${names.length ? ` to ${names.join(", ")}` : ""}.`,
+        },
+      }));
+
+      void loadOverview({
+        nextClassroomId: classroomId,
+        nextSessionId: sessionId,
+        nextAcademicYear: academicYear,
+      });
+    } catch {
+      setReminderStatus((prev) => ({
+        ...prev,
+        [key]: {
+          loading: false,
+          ok: false,
+          message: "Failed to send reminder.",
+        },
+      }));
+    }
+  }
+
+  async function finalizeMockSession() {
+    if (!broadsheet) return;
+
+    try {
+      setFinalizeStatus({
+        loading: true,
+        ok: null,
+        message: "Finalizing Mock evidence seal...",
+      });
+
+      const res = await fetch("/api/headteacher/assessment/mock/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          sessionId: broadsheet.session.id,
+        }),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.ok) {
+        const blockers = Array.isArray(json?.readiness?.blockers)
+          ? json.readiness.blockers
+              .map(
+                (blocker: { label?: string; detail?: string }) =>
+                  `${cleanStr(blocker.label)}${cleanStr(blocker.detail) ? ` — ${cleanStr(blocker.detail)}` : ""}`,
+              )
+              .filter(Boolean)
+              .join(" | ")
+          : "";
+
+        setFinalizeStatus({
+          loading: false,
+          ok: false,
+          message:
+            json?.error === "MOCK_SESSION_NOT_READY_TO_FINALIZE"
+              ? `Not ready to finalize. ${blockers}`
+              : json?.message ||
+                json?.error ||
+                `Failed to finalize. HTTP ${res.status}`,
+        });
+        return;
+      }
 
       setFinalizeStatus({
         loading: false,
-        ok: false,
-        message:
-          json?.error === "MOCK_SESSION_NOT_READY_TO_FINALIZE"
-            ? `Not ready to finalize. ${blockers}`
-            : json?.message || json?.error || `Failed to finalize. HTTP ${res.status}`,
+        ok: true,
+        message: json.alreadyFinalized
+          ? "This Mock session was already sealed."
+          : "Mock session finalized and sealed successfully.",
       });
-      return;
+
+      void loadOverview({
+        nextClassroomId: classroomId,
+        nextSessionId: sessionId,
+        nextAcademicYear: academicYear,
+      });
+    } catch {
+      setFinalizeStatus({
+        loading: false,
+        ok: false,
+        message: "Failed to finalize Mock session.",
+      });
     }
-
-    setFinalizeStatus({
-      loading: false,
-      ok: true,
-      message: json.alreadyFinalized
-        ? "This Mock session was already sealed."
-        : "Mock session finalized and sealed successfully.",
-    });
-
-    void loadOverview({
-      nextClassroomId: classroomId,
-      nextSessionId: sessionId,
-      nextAcademicYear: academicYear,
-    });
-  } catch {
-    setFinalizeStatus({
-      loading: false,
-      ok: false,
-      message: "Failed to finalize Mock session.",
-    });
   }
-}
 
   useEffect(() => {
     void loadOverview();
@@ -834,28 +894,67 @@ async function finalizeMockSession() {
                 JHS3 Mock overview
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
-                View the full JHS3 Mock readiness picture across all subjects, learners,
-                missing evidence, subject averages, and aggregate readiness.
+                View the full JHS3 Mock readiness picture across all subjects,
+                learners, missing evidence, subject averages, and aggregate
+                readiness.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-  <Link href="/headteacher/dashboard" className={darkButton}>
-    Headteacher dashboard
-  </Link>
+              <Link href="/headteacher/dashboard" className={darkButton}>
+                Headteacher dashboard
+              </Link>
 
-  <Link href="/headteacher/assessment/overview" className={darkButton}>
-    Assessment overview
-  </Link>
+              <Link
+                href="/headteacher/assessment/overview"
+                className={darkButton}
+              >
+                Assessment overview
+              </Link>
 
-  <Link href="/teacher/assessment/mock" className={darkButton}>
-    Teacher Mock cockpit
-  </Link>
+              <Link href="/teacher/assessment/mock" className={darkButton}>
+                Teacher Mock cockpit
+              </Link>
 
-  <button type="button" onClick={() => loadOverview()} disabled={loading} className={goldButton}>
-    {loading ? "Loading..." : "Refresh"}
-  </button>
-</div>
+              {mockExcelExportHref ? (
+                <a
+                  href={mockExcelExportHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={darkButton}
+                >
+                  Download Excel
+                </a>
+              ) : (
+                <button type="button" disabled className={darkButton}>
+                  Download Excel
+                </button>
+              )}
+
+              {mockPdfExportHref ? (
+                <a
+                  href={mockPdfExportHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={darkButton}
+                >
+                  Download PDF
+                </a>
+              ) : (
+                <button type="button" disabled className={darkButton}>
+                  Download PDF
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => loadOverview()}
+                disabled={loading}
+                className={goldButton}
+              >
+                {loading ? "Loading..." : "Refresh"}
+              </button>
+            </div>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -882,7 +981,10 @@ async function finalizeMockSession() {
                   const next = e.target.value;
                   setClassroomId(next);
                   setSessionId("");
-                  void loadOverview({ nextClassroomId: next, nextSessionId: "" });
+                  void loadOverview({
+                    nextClassroomId: next,
+                    nextSessionId: "",
+                  });
                 }}
                 className={darkInput}
               >
@@ -923,7 +1025,10 @@ async function finalizeMockSession() {
                 onChange={(e) => {
                   const next = e.target.value;
                   setSessionId(next);
-                  void loadOverview({ nextClassroomId: classroomId, nextSessionId: next });
+                  void loadOverview({
+                    nextClassroomId: classroomId,
+                    nextSessionId: next,
+                  });
                 }}
                 className={darkInput}
               >
@@ -945,14 +1050,28 @@ async function finalizeMockSession() {
         </div>
 
         {!broadsheet ? (
-          <div className={shellCard + " px-5 py-12 text-center text-sm text-[#AEB6C4]"}>
-            {loading ? "Loading Mock overview..." : "No Mock session found for this JHS3 selection yet."}
+          <div
+            className={
+              shellCard + " px-5 py-12 text-center text-sm text-[#AEB6C4]"
+            }
+          >
+            {loading
+              ? "Loading Mock overview..."
+              : "No Mock session found for this JHS3 selection yet."}
           </div>
         ) : (
           <>
             <div className="grid gap-3 md:grid-cols-5">
-              <MetricCard label="Students" value={broadsheet.summary.totalStudents} hint="Active JHS3 learners" />
-              <MetricCard label="Subjects" value={broadsheet.summary.totalSubjects} hint="All Mock columns" />
+              <MetricCard
+                label="Students"
+                value={broadsheet.summary.totalStudents}
+                hint="Active JHS3 learners"
+              />
+              <MetricCard
+                label="Subjects"
+                value={broadsheet.summary.totalSubjects}
+                hint="All Mock columns"
+              />
               <MetricCard
                 label="Completion"
                 value={formatNumber(broadsheet.summary.completionPercent, "%")}
@@ -967,7 +1086,12 @@ async function finalizeMockSession() {
                 <div className="text-[11px] uppercase tracking-[0.18em] text-[#8F98A8]">
                   Class readiness
                 </div>
-                <div className={["mt-2 inline-flex rounded-full border px-3 py-1 text-[12px] font-semibold", readinessClass(broadsheet.summary.classReadiness.code)].join(" ")}>
+                <div
+                  className={[
+                    "mt-2 inline-flex rounded-full border px-3 py-1 text-[12px] font-semibold",
+                    readinessClass(broadsheet.summary.classReadiness.code),
+                  ].join(" ")}
+                >
                   {broadsheet.summary.classReadiness.label}
                 </div>
                 <div className="mt-2 text-[11px] text-[#AEB6C4]">
@@ -977,641 +1101,776 @@ async function finalizeMockSession() {
             </div>
 
             {broadsheet.warnings.message ? (
-  <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-[12px] text-amber-100">
-    {broadsheet.warnings.message}
-  </div>
-) : null}
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-[12px] text-amber-100">
+                {broadsheet.warnings.message}
+              </div>
+            ) : null}
 
-<SectionCard
-  title="Mock evidence seal"
-  subtitle="Finalize only when required subject evidence, owner accountability, and placement readiness are complete."
-  right={
-    <button
-      type="button"
-      onClick={finalizeMockSession}
-      disabled={
-        finalizeStatus.loading ||
-        !sealReadiness ||
-        sealReadiness.sealed ||
-        !sealReadiness.ready
-      }
-      className={goldButton}
-    >
-      {finalizeStatus.loading
-        ? "Finalizing..."
-        : sealReadiness?.sealed
-          ? "Sealed"
-          : "Finalize Mock"}
-    </button>
-  }
->
-  <div className="space-y-3">
-    <div
-      className={[
-        "rounded-2xl border px-4 py-3 text-[12px] leading-5",
-        sealReadiness?.sealed
-          ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
-          : sealReadiness?.ready
-            ? "border-sky-300/20 bg-sky-400/10 text-sky-100"
-            : "border-amber-300/20 bg-amber-400/10 text-amber-100",
-      ].join(" ")}
-    >
-      <div className="font-semibold">
-        {sealReadiness?.sealed
-          ? "This Mock session is sealed."
-          : sealReadiness?.ready
-            ? "Ready to finalize."
-            : "Not ready to finalize."}
-      </div>
-      <div className="mt-1">
-        {sealReadiness?.sealed
-          ? "Scores and subject columns are now protected from ordinary edits."
-          : sealReadiness?.ready
-            ? "All local readiness checks passed. Finalization will hard-lock the session and subject items."
-            : "Resolve the blockers below before sealing this Mock as official evidence."}
-      </div>
-    </div>
-
-    {!sealReadiness?.sealed && sealReadiness?.blockers.length ? (
-      <div className="grid gap-2 md:grid-cols-2">
-        {sealReadiness.blockers.map((blocker) => (
-          <div
-            key={blocker}
-            className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]"
-          >
-            {blocker}
-          </div>
-        ))}
-      </div>
-    ) : null}
-
-    {finalizeStatus.message ? (
-      <div
-        className={[
-          "rounded-xl border px-3 py-2 text-[11px]",
-          finalizeStatus.ok
-            ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
-            : finalizeStatus.ok === false
-              ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
-              : "border-white/10 bg-white/[0.04] text-[#C9CDD6]",
-        ].join(" ")}
-      >
-        {finalizeStatus.message}
-      </div>
-    ) : null}
-  </div>
-</SectionCard>
-
-<SectionCard
-  title="Evidence completeness command map"
-  subtitle="Bank-grade action surface: what is missing, who owns it, and where to act next."
->
-<div className="space-y-4">
-  <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#08111C]/85 p-4 md:grid-cols-[220px_1fr]">
-    <div>
-      <label className="mb-1 block text-[11px] font-semibold text-[#AEB6C4]">
-        Reminder deadline
-      </label>
-      <input
-        type="date"
-        value={reminderDeadline}
-        onChange={(e) => setReminderDeadline(e.target.value)}
-        className={darkInput}
-      />
-    </div>
-
-    <div>
-      <label className="mb-1 block text-[11px] font-semibold text-[#AEB6C4]">
-        Optional headteacher note
-      </label>
-      <input
-        value={reminderNote}
-        onChange={(e) => setReminderNote(e.target.value)}
-        placeholder="Example: Complete before Friday’s readiness review."
-        className={darkInput}
-      />
-    </div>
-  </div>
-
-  <div className="grid gap-3 lg:grid-cols-3">
-  {broadsheet.evidenceActions.headlineActions.map((action) => (
-    <div
-      key={`${action.code}:${action.title}:${action.subject ?? action.studentId ?? ""}`}
-      className="rounded-2xl border border-white/10 bg-[#08111C]/85 p-4"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="text-sm font-semibold text-[#F7F4ED]">{action.title}</div>
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-[#C9CDD6]">
-              {actionModeLabel(action.mode)}
-            </span>
-          </div>
-
-          <div className="mt-2 text-[12px] leading-5 text-[#AEB6C4]">{action.detail}</div>
-        </div>
-
-        <span
-          className={[
-            "shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold",
-            priorityClass(action.priority),
-          ].join(" ")}
-        >
-          {action.priority}
-        </span>
-      </div>
-
-      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-[#C9CDD6]">
-        Owner: <span className="font-semibold text-[#F7F4ED]">{action.owner}</span>
-      </div>
-
-      <div className="mt-3 rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] text-emerald-100">
-        Primary action: <span className="font-semibold">{action.primaryAction}</span>
-      </div>
-
-{action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
-  <div
-    className={[
-      "mt-2 rounded-xl border px-3 py-2 text-[11px]",
-      action.ownerStatus?.hasOwner === false
-        ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
-        : "border-emerald-300/15 bg-emerald-400/10 text-emerald-100",
-    ].join(" ")}
-  >
-    Owner status:{" "}
-    <span className="font-semibold">
-      {action.ownerStatus?.hasOwner === false
-        ? "No assigned teacher found"
-        : action.ownerStatus?.owners?.length
-          ? action.ownerStatus.owners
-              .map((owner) => cleanStr(owner.name) || "Teacher")
-              .join(", ")
-          : "Owner check pending"}
-    </span>
-
-    {action.ownerStatus?.hasOwner === false ? (
-      <span className="block pt-1 text-rose-100/75">
-        Assign this subject to a teacher before sending reminders.
-      </span>
-    ) : null}
-  </div>
-) : null}
-
-{action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
-  <div className="mt-2 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] text-sky-100">
-    Reminder status:{" "}
-    <span className="font-semibold">{reminderAuditLabel(action)}</span>
-    {action.reminderAudit?.sentAt ? (
-      <span className="block pt-1 text-sky-100/75">
-        Sent: {formatDateTime(action.reminderAudit.sentAt)}
-      </span>
-    ) : null}
-    {action.reminderAudit?.recipients?.length ? (
-      <span className="block pt-1 text-sky-100/75">
-        Recipient(s):{" "}
-        {action.reminderAudit.recipients
-          .map((recipient) => cleanStr(recipient.name) || "Teacher")
-          .join(", ")}
-      </span>
-    ) : null}
-  </div>
-) : null}
-
-      {action.lastResortAction ? (
-        <div className="mt-2 rounded-xl border border-amber-300/15 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100">
-          Last resort: <span className="font-semibold">{action.lastResortAction}</span>
-        </div>
-      ) : null}
-
-{action.ownerStatus?.hasOwner === false ? (
-  <Link
-    href={action.ownerStatus.assignmentHref}
-    className="inline-flex items-center justify-center rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[11px] font-semibold text-rose-100 transition hover:bg-rose-400/15"
-  >
-    Assign subject owner
-  </Link>
-) : null}
-
-<div className="mt-3 flex flex-wrap gap-2">
-  {action.mode === "NOTIFY_TEACHER" || action.mode === "REMIND_TEACHER" ? (
-    <button
-      type="button"
-      onClick={() => sendTeacherReminder(action)}
-      disabled={!canSendTeacherReminder(action) || !!reminderStatus[actionKey(action)]?.loading}
-      title={
-        canSendTeacherReminder(action)
-          ? "Send official in-app reminder to the assigned teacher."
-          : "This action needs a specific subject before a teacher reminder can be sent."
-      }
-      className={[
-        "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
-        canSendTeacherReminder(action)
-          ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100 hover:bg-emerald-400/15"
-          : "border-white/10 bg-white/[0.03] text-[#8F98A8]",
-      ].join(" ")}
-    >
-      {reminderButtonLabel(action, reminderStatus[actionKey(action)])}
-    </button>
-  ) : null}
-
-  <Link
-    href={action.href}
-    className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
-  >
-    {action.mode === "LEARNER_SUPPORT_REVIEW"
-      ? "Open learner profile"
-      : action.mode === "REVIEW_ONLY"
-        ? "Review"
-        : "Open last-resort cockpit"}
-  </Link>
-</div>
-
-{reminderStatus[actionKey(action)]?.message ? (
-  <div
-    className={[
-      "mt-2 rounded-xl border px-3 py-2 text-[11px]",
-      reminderStatus[actionKey(action)]?.ok
-        ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
-        : reminderStatus[actionKey(action)]?.ok === false
-          ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
-          : "border-white/10 bg-white/[0.03] text-[#C9CDD6]",
-    ].join(" ")}
-  >
-    {reminderStatus[actionKey(action)]?.message}
-  </div>
-) : null}
-    </div>
-  ))}
-</div>
-
-    <div className="grid gap-3 lg:grid-cols-3">
-      <div className={panelCard + " p-4"}>
-        <div className="text-sm font-semibold text-[#F7F4ED]">Missing core columns</div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {broadsheet.evidenceActions.missingCoreSubjectColumns.length === 0 ? (
-            <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
-              Core columns created
-            </span>
-          ) : (
-            broadsheet.evidenceActions.missingCoreSubjectColumns.map((subject) => (
-              <span
-                key={subject}
-                className="rounded-full border border-rose-300/20 bg-rose-400/10 px-3 py-1 text-[11px] text-rose-100"
-              >
-                {subject}
-              </span>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className={panelCard + " p-4"}>
-        <div className="text-sm font-semibold text-[#F7F4ED]">Missing school aggregate columns</div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {broadsheet.evidenceActions.missingSchoolAggregateColumns.length === 0 ? (
-            <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
-              School aggregate columns created
-            </span>
-          ) : (
-            broadsheet.evidenceActions.missingSchoolAggregateColumns.map((subject) => (
-              <span
-                key={subject}
-                className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100"
-              >
-                {subject}
-              </span>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className={panelCard + " p-4"}>
-        <div className="text-sm font-semibold text-[#F7F4ED]">Elective sufficiency</div>
-        <div className="mt-2 text-[12px] leading-5 text-[#AEB6C4]">
-          Placement aggregate requires at least{" "}
-          <span className="font-semibold text-[#F7F4ED]">
-            {broadsheet.evidenceActions.requiredSubjectColumns.placementElectiveMinimum}
-          </span>{" "}
-          elective subjects.
-        </div>
-
-        <div className="mt-3">
-          {broadsheet.evidenceActions.missingElectiveColumnCount > 0 ? (
-            <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100">
-              Add {broadsheet.evidenceActions.missingElectiveColumnCount} more elective column(s)
-            </span>
-          ) : (
-            <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
-              Elective minimum satisfied
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-
-    <div className="grid gap-3 lg:grid-cols-2">
-      <div className={panelCard + " p-4"}>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold text-[#F7F4ED]">Subject score gaps</div>
-            <div className="mt-1 text-[11px] text-[#8F98A8]">
-              Subjects with missing learner scores.
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-2">
-          {broadsheet.evidenceActions.subjectScoreGaps.length === 0 ? (
-            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] text-emerald-100">
-              No subject score gaps.
-            </div>
-          ) : (
-            broadsheet.evidenceActions.subjectScoreGaps.slice(0, 8).map((gap) => (
-              <Link
-                key={gap.itemId}
-                href={gap.href}
-                className="block rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 transition hover:bg-white/[0.06]"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[12px] font-semibold text-[#F7F4ED]">{gap.subject}</div>
-                    <div className="text-[11px] text-[#AEB6C4]">
-                      {gap.scoredCount} scored • {gap.missingCount} missing
-                    </div>
+            <SectionCard
+              title="Mock evidence seal"
+              subtitle="Finalize only when required subject evidence, owner accountability, and placement readiness are complete."
+              right={
+                <button
+                  type="button"
+                  onClick={finalizeMockSession}
+                  disabled={
+                    finalizeStatus.loading ||
+                    !sealReadiness ||
+                    sealReadiness.sealed ||
+                    !sealReadiness.ready
+                  }
+                  className={goldButton}
+                >
+                  {finalizeStatus.loading
+                    ? "Finalizing..."
+                    : sealReadiness?.sealed
+                      ? "Sealed"
+                      : "Finalize Mock"}
+                </button>
+              }
+            >
+              <div className="space-y-3">
+                <div
+                  className={[
+                    "rounded-2xl border px-4 py-3 text-[12px] leading-5",
+                    sealReadiness?.sealed
+                      ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+                      : sealReadiness?.ready
+                        ? "border-sky-300/20 bg-sky-400/10 text-sky-100"
+                        : "border-amber-300/20 bg-amber-400/10 text-amber-100",
+                  ].join(" ")}
+                >
+                  <div className="font-semibold">
+                    {sealReadiness?.sealed
+                      ? "This Mock session is sealed."
+                      : sealReadiness?.ready
+                        ? "Ready to finalize."
+                        : "Not ready to finalize."}
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
-                    {formatNumber(gap.completionPercent, "%")}
-                  </span>
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className={panelCard + " p-4"}>
-        <div className="text-sm font-semibold text-[#F7F4ED]">Learner evidence gaps</div>
-        <div className="mt-1 text-[11px] text-[#8F98A8]">
-          Learners missing the most visible Mock subject scores.
-        </div>
-
-        <div className="mt-3 space-y-2">
-          {broadsheet.evidenceActions.learnerScoreGaps.length === 0 ? (
-            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] text-emerald-100">
-              No learner evidence gaps.
-            </div>
-          ) : (
-            broadsheet.evidenceActions.learnerScoreGaps.slice(0, 8).map((gap) => (
-              <div key={gap.studentId} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[12px] font-semibold text-[#F7F4ED]">{gap.name}</div>
-                    <div className="text-[11px] text-[#AEB6C4]">
-                      {gap.scoredSubjectCount} scored • {gap.missingSubjectCount} missing
-                    </div>
+                  <div className="mt-1">
+                    {sealReadiness?.sealed
+                      ? "Scores and subject columns are now protected from ordinary edits."
+                      : sealReadiness?.ready
+                        ? "All local readiness checks passed. Finalization will hard-lock the session and subject items."
+                        : "Resolve the blockers below before sealing this Mock as official evidence."}
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
-                    Avg {formatNumber(gap.averageScore)}
-                  </span>
                 </div>
 
-                {gap.missingForPlacement.length > 0 ? (
-                  <div className="mt-2 text-[10px] text-[#8F98A8]">
-                    Missing for placement: {gap.missingForPlacement.join(", ")}
+                {!sealReadiness?.sealed && sealReadiness?.blockers.length ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {sealReadiness.blockers.map((blocker) => (
+                      <div
+                        key={blocker}
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]"
+                      >
+                        {blocker}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {finalizeStatus.message ? (
+                  <div
+                    className={[
+                      "rounded-xl border px-3 py-2 text-[11px]",
+                      finalizeStatus.ok
+                        ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+                        : finalizeStatus.ok === false
+                          ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+                          : "border-white/10 bg-white/[0.04] text-[#C9CDD6]",
+                    ].join(" ")}
+                  >
+                    {finalizeStatus.message}
                   </div>
                 ) : null}
               </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+            </SectionCard>
 
-    <div className={panelCard + " p-4"}>
-<div className="text-sm font-semibold text-[#F7F4ED]">Early learner support signals</div>
-<div className="mt-1 text-[11px] text-[#8F98A8]">
-  Based only on scores already entered. These are provisional support flags, not final BECE readiness judgments.
-</div>
-
-      <div className="mt-3 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-        {broadsheet.evidenceActions.learnerRiskSignals.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[12px] text-[#AEB6C4]">
-            No low-average learner signal yet.
-          </div>
-        ) : (
-          broadsheet.evidenceActions.learnerRiskSignals.map((signal) => (
-            <Link
-              key={signal.studentId}
-              href={`/headteacher/student/${signal.studentId}`}
-              className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 transition hover:bg-rose-400/15"
+            <SectionCard
+              title="Evidence completeness command map"
+              subtitle="Bank-grade action surface: what is missing, who owns it, and where to act next."
             >
-              <div className="text-[12px] font-semibold text-rose-100">{signal.name}</div>
-              <div className="mt-1 text-[11px] text-rose-100/80">
-                Avg {formatNumber(signal.averageScore)} • {signal.scoredSubjectCount} scored
-              </div>
-              <div className="mt-2 text-[10px] text-rose-100/70">
-  Provisional support signal. Review learner context, then follow up with the responsible subject teacher.
-</div>
-            </Link>
-          ))
-        )}
-      </div>
-    </div>
-  </div>
-</SectionCard>
+              <div className="space-y-4">
+                <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#08111C]/85 p-4 md:grid-cols-[220px_1fr]">
+                  <div>
+                    <label className="mb-1 block text-[11px] font-semibold text-[#AEB6C4]">
+                      Reminder deadline
+                    </label>
+                    <input
+                      type="date"
+                      value={reminderDeadline}
+                      onChange={(e) => setReminderDeadline(e.target.value)}
+                      className={darkInput}
+                    />
+                  </div>
 
-<SectionCard
-  title="Candidate rescue profiles"
-  subtitle="Learner-by-learner BECE Mock rescue lens: missing evidence, weak subjects, near-grade opportunities, and next action."
->
-  <div className="space-y-4">
-    <div className="grid gap-3 md:grid-cols-4">
-      <MetricCard
-        label="Critical rescue"
-        value={broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "CRITICAL").length}
-        hint="Missing evidence or severe weakness"
-      />
-      <MetricCard
-        label="High rescue"
-        value={broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "HIGH").length}
-        hint="Weak subject drag"
-      />
-      <MetricCard
-        label="Improvement chances"
-        value={broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "MEDIUM").length}
-        hint="Near next grade"
-      />
-      <MetricCard
-        label="Stable monitor"
-        value={broadsheet.candidateRescueProfiles.filter((profile) => profile.priority === "LOW").length}
-        hint="No urgent signal"
-      />
-    </div>
-
-    <div className="grid gap-3 lg:grid-cols-2">
-      {broadsheet.candidateRescueProfiles.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-center text-[12px] text-[#AEB6C4]">
-          No candidate rescue profiles available yet.
-        </div>
-      ) : (
-        broadsheet.candidateRescueProfiles.slice(0, 12).map((profile) => (
-          <div key={profile.studentId} className={panelCard + " p-4"}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-[#F7F4ED]">{profile.name}</div>
-                <div className="mt-1 text-[11px] text-[#AEB6C4]">
-                  Avg {formatNumber(profile.averageScore)} • {profile.scoredSubjectCount} scored • {profile.missingSubjectCount} missing
+                  <div>
+                    <label className="mb-1 block text-[11px] font-semibold text-[#AEB6C4]">
+                      Optional headteacher note
+                    </label>
+                    <input
+                      value={reminderNote}
+                      onChange={(e) => setReminderNote(e.target.value)}
+                      placeholder="Example: Complete before Friday’s readiness review."
+                      className={darkInput}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <span
-                className={[
-                  "shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold",
-                  rescuePriorityClass(profile.priority),
-                ].join(" ")}
-              >
-                {profile.priorityLabel}
-              </span>
-            </div>
-
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
-                  School agg.
-                </div>
-                <div className="mt-1 text-[13px] font-semibold text-[#F7F4ED]">
-                  {profile.schoolAggregate.aggregate ?? "Incomplete"}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
-                  Placement agg.
-                </div>
-                <div className="mt-1 text-[13px] font-semibold text-[#F7F4ED]">
-                  {profile.placementAggregate.aggregate ?? "Incomplete"}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
-              <span className="font-semibold">Why: </span>
-              {profile.reason}
-            </div>
-
-            <div className="mt-2 rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] leading-5 text-emerald-100">
-              <span className="font-semibold">Next action: </span>
-              {profile.nextAction}
-            </div>
-
-            {profile.missingSubjects.length > 0 ? (
-              <div className="mt-3">
-                <div className="text-[11px] font-semibold text-[#F7F4ED]">Missing evidence</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {profile.missingSubjects.map((subject) => (
-                    <span
-                      key={`${profile.studentId}:missing:${subject}`}
-                      className="rounded-full border border-rose-300/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold text-rose-100"
-                    >
-                      {subject}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {profile.weakSubjects.length > 0 ? (
-              <div className="mt-3">
-                <div className="text-[11px] font-semibold text-[#F7F4ED]">Weak subjects</div>
-                <div className="mt-2 space-y-2">
-                  {profile.weakSubjects.map((subject) => (
+                <div className="grid gap-3 lg:grid-cols-3">
+                  {broadsheet.evidenceActions.headlineActions.map((action) => (
                     <div
-                      key={`${profile.studentId}:weak:${subject.canonicalSubject}`}
-                      className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[11px] text-rose-100"
+                      key={`${action.code}:${action.title}:${action.subject ?? action.studentId ?? ""}`}
+                      className="rounded-2xl border border-white/10 bg-[#08111C]/85 p-4"
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-semibold">{subject.subject}</span>
-                        <span>{formatNumber(subject.score)} • {subject.gradeLabel ?? "—"}</span>
-                      </div>
-                      <div className="mt-1 text-rose-100/75">
-                        Owner: {subjectOwnerLine(subject)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="text-sm font-semibold text-[#F7F4ED]">
+                              {action.title}
+                            </div>
+                            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-[#C9CDD6]">
+                              {actionModeLabel(action.mode)}
+                            </span>
+                          </div>
 
-            {profile.nearGradeOpportunities.length > 0 ? (
-              <div className="mt-3">
-                <div className="text-[11px] font-semibold text-[#F7F4ED]">
-                  Fast improvement opportunities
-                </div>
-                <div className="mt-2 space-y-2">
-                  {profile.nearGradeOpportunities.map((subject) => (
-                    <div
-                      key={`${profile.studentId}:near:${subject.canonicalSubject}`}
-                      className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-semibold">{subject.subject}</span>
-                        <span>
-                          {subject.pointsToNextGrade} mark(s) to Grade {subject.nextGrade}
+                          <div className="mt-2 text-[12px] leading-5 text-[#AEB6C4]">
+                            {action.detail}
+                          </div>
+                        </div>
+
+                        <span
+                          className={[
+                            "shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold",
+                            priorityClass(action.priority),
+                          ].join(" ")}
+                        >
+                          {action.priority}
                         </span>
                       </div>
-                      <div className="mt-1 text-amber-100/75">
-                        Owner: {subjectOwnerLine(subject)}
+
+                      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-[#C9CDD6]">
+                        Owner:{" "}
+                        <span className="font-semibold text-[#F7F4ED]">
+                          {action.owner}
+                        </span>
                       </div>
+
+                      <div className="mt-3 rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] text-emerald-100">
+                        Primary action:{" "}
+                        <span className="font-semibold">
+                          {action.primaryAction}
+                        </span>
+                      </div>
+
+                      {action.mode === "NOTIFY_TEACHER" ||
+                      action.mode === "REMIND_TEACHER" ? (
+                        <div
+                          className={[
+                            "mt-2 rounded-xl border px-3 py-2 text-[11px]",
+                            action.ownerStatus?.hasOwner === false
+                              ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+                              : "border-emerald-300/15 bg-emerald-400/10 text-emerald-100",
+                          ].join(" ")}
+                        >
+                          Owner status:{" "}
+                          <span className="font-semibold">
+                            {action.ownerStatus?.hasOwner === false
+                              ? "No assigned teacher found"
+                              : action.ownerStatus?.owners?.length
+                                ? action.ownerStatus.owners
+                                    .map(
+                                      (owner) =>
+                                        cleanStr(owner.name) || "Teacher",
+                                    )
+                                    .join(", ")
+                                : "Owner check pending"}
+                          </span>
+                          {action.ownerStatus?.hasOwner === false ? (
+                            <span className="block pt-1 text-rose-100/75">
+                              Assign this subject to a teacher before sending
+                              reminders.
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {action.mode === "NOTIFY_TEACHER" ||
+                      action.mode === "REMIND_TEACHER" ? (
+                        <div className="mt-2 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] text-sky-100">
+                          Reminder status:{" "}
+                          <span className="font-semibold">
+                            {reminderAuditLabel(action)}
+                          </span>
+                          {action.reminderAudit?.sentAt ? (
+                            <span className="block pt-1 text-sky-100/75">
+                              Sent:{" "}
+                              {formatDateTime(action.reminderAudit.sentAt)}
+                            </span>
+                          ) : null}
+                          {action.reminderAudit?.recipients?.length ? (
+                            <span className="block pt-1 text-sky-100/75">
+                              Recipient(s):{" "}
+                              {action.reminderAudit.recipients
+                                .map(
+                                  (recipient) =>
+                                    cleanStr(recipient.name) || "Teacher",
+                                )
+                                .join(", ")}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {action.lastResortAction ? (
+                        <div className="mt-2 rounded-xl border border-amber-300/15 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100">
+                          Last resort:{" "}
+                          <span className="font-semibold">
+                            {action.lastResortAction}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {action.ownerStatus?.hasOwner === false ? (
+                        <Link
+                          href={action.ownerStatus.assignmentHref}
+                          className="inline-flex items-center justify-center rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[11px] font-semibold text-rose-100 transition hover:bg-rose-400/15"
+                        >
+                          Assign subject owner
+                        </Link>
+                      ) : null}
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {action.mode === "NOTIFY_TEACHER" ||
+                        action.mode === "REMIND_TEACHER" ? (
+                          <button
+                            type="button"
+                            onClick={() => sendTeacherReminder(action)}
+                            disabled={
+                              !canSendTeacherReminder(action) ||
+                              !!reminderStatus[actionKey(action)]?.loading
+                            }
+                            title={
+                              canSendTeacherReminder(action)
+                                ? "Send official in-app reminder to the assigned teacher."
+                                : "This action needs a specific subject before a teacher reminder can be sent."
+                            }
+                            className={[
+                              "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+                              canSendTeacherReminder(action)
+                                ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100 hover:bg-emerald-400/15"
+                                : "border-white/10 bg-white/[0.03] text-[#8F98A8]",
+                            ].join(" ")}
+                          >
+                            {reminderButtonLabel(
+                              action,
+                              reminderStatus[actionKey(action)],
+                            )}
+                          </button>
+                        ) : null}
+
+                        <Link
+                          href={action.href}
+                          className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+                        >
+                          {action.mode === "LEARNER_SUPPORT_REVIEW"
+                            ? "Open learner profile"
+                            : action.mode === "REVIEW_ONLY"
+                              ? "Review"
+                              : "Open last-resort cockpit"}
+                        </Link>
+                      </div>
+
+                      {reminderStatus[actionKey(action)]?.message ? (
+                        <div
+                          className={[
+                            "mt-2 rounded-xl border px-3 py-2 text-[11px]",
+                            reminderStatus[actionKey(action)]?.ok
+                              ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+                              : reminderStatus[actionKey(action)]?.ok === false
+                                ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+                                : "border-white/10 bg-white/[0.03] text-[#C9CDD6]",
+                          ].join(" ")}
+                        >
+                          {reminderStatus[actionKey(action)]?.message}
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
-              </div>
-            ) : null}
 
-            {profile.strongSubjects.length > 0 ? (
-              <div className="mt-3">
-                <div className="text-[11px] font-semibold text-[#F7F4ED]">Strengths to protect</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {profile.strongSubjects.map((subject) => (
-                    <span
-                      key={`${profile.studentId}:strong:${subject.canonicalSubject}`}
-                      className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-100"
-                    >
-                      {subject.subject} • {subject.gradeLabel ?? "—"}
-                    </span>
-                  ))}
+                <div className="grid gap-3 lg:grid-cols-3">
+                  <div className={panelCard + " p-4"}>
+                    <div className="text-sm font-semibold text-[#F7F4ED]">
+                      Missing core columns
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {broadsheet.evidenceActions.missingCoreSubjectColumns
+                        .length === 0 ? (
+                        <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
+                          Core columns created
+                        </span>
+                      ) : (
+                        broadsheet.evidenceActions.missingCoreSubjectColumns.map(
+                          (subject) => (
+                            <span
+                              key={subject}
+                              className="rounded-full border border-rose-300/20 bg-rose-400/10 px-3 py-1 text-[11px] text-rose-100"
+                            >
+                              {subject}
+                            </span>
+                          ),
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={panelCard + " p-4"}>
+                    <div className="text-sm font-semibold text-[#F7F4ED]">
+                      Missing school aggregate columns
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {broadsheet.evidenceActions.missingSchoolAggregateColumns
+                        .length === 0 ? (
+                        <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
+                          School aggregate columns created
+                        </span>
+                      ) : (
+                        broadsheet.evidenceActions.missingSchoolAggregateColumns.map(
+                          (subject) => (
+                            <span
+                              key={subject}
+                              className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100"
+                            >
+                              {subject}
+                            </span>
+                          ),
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={panelCard + " p-4"}>
+                    <div className="text-sm font-semibold text-[#F7F4ED]">
+                      Elective sufficiency
+                    </div>
+                    <div className="mt-2 text-[12px] leading-5 text-[#AEB6C4]">
+                      Placement aggregate requires at least{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {
+                          broadsheet.evidenceActions.requiredSubjectColumns
+                            .placementElectiveMinimum
+                        }
+                      </span>{" "}
+                      elective subjects.
+                    </div>
+
+                    <div className="mt-3">
+                      {broadsheet.evidenceActions.missingElectiveColumnCount >
+                      0 ? (
+                        <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-[11px] text-amber-100">
+                          Add{" "}
+                          {
+                            broadsheet.evidenceActions
+                              .missingElectiveColumnCount
+                          }{" "}
+                          more elective column(s)
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[11px] text-emerald-100">
+                          Elective minimum satisfied
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className={panelCard + " p-4"}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
+                          Subject score gaps
+                        </div>
+                        <div className="mt-1 text-[11px] text-[#8F98A8]">
+                          Subjects with missing learner scores.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {broadsheet.evidenceActions.subjectScoreGaps.length ===
+                      0 ? (
+                        <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] text-emerald-100">
+                          No subject score gaps.
+                        </div>
+                      ) : (
+                        broadsheet.evidenceActions.subjectScoreGaps
+                          .slice(0, 8)
+                          .map((gap) => (
+                            <Link
+                              key={gap.itemId}
+                              href={gap.href}
+                              className="block rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 transition hover:bg-white/[0.06]"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <div className="text-[12px] font-semibold text-[#F7F4ED]">
+                                    {gap.subject}
+                                  </div>
+                                  <div className="text-[11px] text-[#AEB6C4]">
+                                    {gap.scoredCount} scored •{" "}
+                                    {gap.missingCount} missing
+                                  </div>
+                                </div>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
+                                  {formatNumber(gap.completionPercent, "%")}
+                                </span>
+                              </div>
+                            </Link>
+                          ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={panelCard + " p-4"}>
+                    <div className="text-sm font-semibold text-[#F7F4ED]">
+                      Learner evidence gaps
+                    </div>
+                    <div className="mt-1 text-[11px] text-[#8F98A8]">
+                      Learners missing the most visible Mock subject scores.
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {broadsheet.evidenceActions.learnerScoreGaps.length ===
+                      0 ? (
+                        <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[12px] text-emerald-100">
+                          No learner evidence gaps.
+                        </div>
+                      ) : (
+                        broadsheet.evidenceActions.learnerScoreGaps
+                          .slice(0, 8)
+                          .map((gap) => (
+                            <div
+                              key={gap.studentId}
+                              className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <div className="text-[12px] font-semibold text-[#F7F4ED]">
+                                    {gap.name}
+                                  </div>
+                                  <div className="text-[11px] text-[#AEB6C4]">
+                                    {gap.scoredSubjectCount} scored •{" "}
+                                    {gap.missingSubjectCount} missing
+                                  </div>
+                                </div>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
+                                  Avg {formatNumber(gap.averageScore)}
+                                </span>
+                              </div>
+
+                              {gap.missingForPlacement.length > 0 ? (
+                                <div className="mt-2 text-[10px] text-[#8F98A8]">
+                                  Missing for placement:{" "}
+                                  {gap.missingForPlacement.join(", ")}
+                                </div>
+                              ) : null}
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={panelCard + " p-4"}>
+                  <div className="text-sm font-semibold text-[#F7F4ED]">
+                    Early learner support signals
+                  </div>
+                  <div className="mt-1 text-[11px] text-[#8F98A8]">
+                    Based only on scores already entered. These are provisional
+                    support flags, not final BECE readiness judgments.
+                  </div>
+
+                  <div className="mt-3 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                    {broadsheet.evidenceActions.learnerRiskSignals.length ===
+                    0 ? (
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[12px] text-[#AEB6C4]">
+                        No low-average learner signal yet.
+                      </div>
+                    ) : (
+                      broadsheet.evidenceActions.learnerRiskSignals.map(
+                        (signal) => (
+                          <Link
+                            key={signal.studentId}
+                            href={`/headteacher/student/${signal.studentId}`}
+                            className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 transition hover:bg-rose-400/15"
+                          >
+                            <div className="text-[12px] font-semibold text-rose-100">
+                              {signal.name}
+                            </div>
+                            <div className="mt-1 text-[11px] text-rose-100/80">
+                              Avg {formatNumber(signal.averageScore)} •{" "}
+                              {signal.scoredSubjectCount} scored
+                            </div>
+                            <div className="mt-2 text-[10px] text-rose-100/70">
+                              Provisional support signal. Review learner
+                              context, then follow up with the responsible
+                              subject teacher.
+                            </div>
+                          </Link>
+                        ),
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
-            ) : null}
+            </SectionCard>
 
-            <div className="mt-3">
-              <Link
-                href={`/headteacher/student/${profile.studentId}?focus=mock-readiness`}
-                className="inline-flex rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/[0.08]"
+            <SectionCard
+              title="Candidate rescue profiles"
+              subtitle="Learner-by-learner BECE Mock rescue lens: missing evidence, weak subjects, near-grade opportunities, and next action."
+            >
+              <div className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-4">
+                  <MetricCard
+                    label="Critical rescue"
+                    value={
+                      broadsheet.candidateRescueProfiles.filter(
+                        (profile) => profile.priority === "CRITICAL",
+                      ).length
+                    }
+                    hint="Missing evidence or severe weakness"
+                  />
+                  <MetricCard
+                    label="High rescue"
+                    value={
+                      broadsheet.candidateRescueProfiles.filter(
+                        (profile) => profile.priority === "HIGH",
+                      ).length
+                    }
+                    hint="Weak subject drag"
+                  />
+                  <MetricCard
+                    label="Improvement chances"
+                    value={
+                      broadsheet.candidateRescueProfiles.filter(
+                        (profile) => profile.priority === "MEDIUM",
+                      ).length
+                    }
+                    hint="Near next grade"
+                  />
+                  <MetricCard
+                    label="Stable monitor"
+                    value={
+                      broadsheet.candidateRescueProfiles.filter(
+                        (profile) => profile.priority === "LOW",
+                      ).length
+                    }
+                    hint="No urgent signal"
+                  />
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {broadsheet.candidateRescueProfiles.length === 0 ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-center text-[12px] text-[#AEB6C4]">
+                      No candidate rescue profiles available yet.
+                    </div>
+                  ) : (
+                    broadsheet.candidateRescueProfiles
+                      .slice(0, 12)
+                      .map((profile) => (
+                        <div
+                          key={profile.studentId}
+                          className={panelCard + " p-4"}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-[#F7F4ED]">
+                                {profile.name}
+                              </div>
+                              <div className="mt-1 text-[11px] text-[#AEB6C4]">
+                                Avg {formatNumber(profile.averageScore)} •{" "}
+                                {profile.scoredSubjectCount} scored •{" "}
+                                {profile.missingSubjectCount} missing
+                              </div>
+                            </div>
+
+                            <span
+                              className={[
+                                "shrink-0 rounded-full border px-2 py-1 text-[10px] font-semibold",
+                                rescuePriorityClass(profile.priority),
+                              ].join(" ")}
+                            >
+                              {profile.priorityLabel}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                              <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
+                                School agg.
+                              </div>
+                              <div className="mt-1 text-[13px] font-semibold text-[#F7F4ED]">
+                                {profile.schoolAggregate.aggregate ??
+                                  "Incomplete"}
+                              </div>
+                            </div>
+
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                              <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
+                                Placement agg.
+                              </div>
+                              <div className="mt-1 text-[13px] font-semibold text-[#F7F4ED]">
+                                {profile.placementAggregate.aggregate ??
+                                  "Incomplete"}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
+                            <span className="font-semibold">Why: </span>
+                            {profile.reason}
+                          </div>
+
+                          <div className="mt-2 rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] leading-5 text-emerald-100">
+                            <span className="font-semibold">Next action: </span>
+                            {profile.nextAction}
+                          </div>
+
+                          {profile.missingSubjects.length > 0 ? (
+                            <div className="mt-3">
+                              <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                                Missing evidence
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {profile.missingSubjects.map((subject) => (
+                                  <span
+                                    key={`${profile.studentId}:missing:${subject}`}
+                                    className="rounded-full border border-rose-300/20 bg-rose-400/10 px-2 py-1 text-[10px] font-semibold text-rose-100"
+                                  >
+                                    {subject}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {profile.weakSubjects.length > 0 ? (
+                            <div className="mt-3">
+                              <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                                Weak subjects
+                              </div>
+                              <div className="mt-2 space-y-2">
+                                {profile.weakSubjects.map((subject) => (
+                                  <div
+                                    key={`${profile.studentId}:weak:${subject.canonicalSubject}`}
+                                    className="rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[11px] text-rose-100"
+                                  >
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="font-semibold">
+                                        {subject.subject}
+                                      </span>
+                                      <span>
+                                        {formatNumber(subject.score)} •{" "}
+                                        {subject.gradeLabel ?? "—"}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 text-rose-100/75">
+                                      Owner: {subjectOwnerLine(subject)}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {profile.nearGradeOpportunities.length > 0 ? (
+                            <div className="mt-3">
+                              <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                                Fast improvement opportunities
+                              </div>
+                              <div className="mt-2 space-y-2">
+                                {profile.nearGradeOpportunities.map(
+                                  (subject) => (
+                                    <div
+                                      key={`${profile.studentId}:near:${subject.canonicalSubject}`}
+                                      className="rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-100"
+                                    >
+                                      <div className="flex items-center justify-between gap-3">
+                                        <span className="font-semibold">
+                                          {subject.subject}
+                                        </span>
+                                        <span>
+                                          {subject.pointsToNextGrade} mark(s) to
+                                          Grade {subject.nextGrade}
+                                        </span>
+                                      </div>
+                                      <div className="mt-1 text-amber-100/75">
+                                        Owner: {subjectOwnerLine(subject)}
+                                      </div>
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {profile.strongSubjects.length > 0 ? (
+                            <div className="mt-3">
+                              <div className="text-[11px] font-semibold text-[#F7F4ED]">
+                                Strengths to protect
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {profile.strongSubjects.map((subject) => (
+                                  <span
+                                    key={`${profile.studentId}:strong:${subject.canonicalSubject}`}
+                                    className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-100"
+                                  >
+                                    {subject.subject} •{" "}
+                                    {subject.gradeLabel ?? "—"}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <div className="mt-3">
+                            <Link
+                              href={`/headteacher/student/${profile.studentId}?focus=mock-readiness`}
+                              className="inline-flex rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/[0.08]"
+                            >
+                              Open learner profile
+                            </Link>
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            </SectionCard>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <SectionCard
+                title="Subject readiness"
+                subtitle="Averages, missing scores, and strongest/weakest subjects."
               >
-                Open learner profile
-              </Link>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  </div>
-</SectionCard>
-
-<div className="grid gap-5 lg:grid-cols-2">
-              <SectionCard title="Subject readiness" subtitle="Averages, missing scores, and strongest/weakest subjects.">
                 <div className="grid gap-3 md:grid-cols-2">
                   {broadsheet.subjectSummaries.length === 0 ? (
-                    <div className="text-sm text-[#AEB6C4]">No Mock subjects created yet.</div>
+                    <div className="text-sm text-[#AEB6C4]">
+                      No Mock subjects created yet.
+                    </div>
                   ) : (
                     broadsheet.subjectSummaries.map((summary) => (
                       <div key={summary.itemId} className={panelCard + " p-4"}>
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-sm font-semibold text-[#F7F4ED]">{summary.subject}</div>
+                            <div className="text-sm font-semibold text-[#F7F4ED]">
+                              {summary.subject}
+                            </div>
                             <div className="mt-1 text-[11px] text-[#8F98A8]">
-                              {summary.scoredCount} scored • {summary.missingCount} missing
+                              {summary.scoredCount} scored •{" "}
+                              {summary.missingCount} missing
                             </div>
                           </div>
                           <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
@@ -1620,8 +1879,14 @@ async function finalizeMockSession() {
                         </div>
 
                         <div className="mt-3 grid grid-cols-2 gap-2">
-                          <MetricCard label="Avg score" value={formatNumber(summary.averageScore)} />
-                          <MetricCard label="Avg grade" value={formatNumber(summary.averageGrade)} />
+                          <MetricCard
+                            label="Avg score"
+                            value={formatNumber(summary.averageScore)}
+                          />
+                          <MetricCard
+                            label="Avg grade"
+                            value={formatNumber(summary.averageGrade)}
+                          />
                         </div>
                       </div>
                     ))
@@ -1629,19 +1894,32 @@ async function finalizeMockSession() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="Leadership focus" subtitle="Where the headteacher should pay attention first.">
+              <SectionCard
+                title="Leadership focus"
+                subtitle="Where the headteacher should pay attention first."
+              >
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className={panelCard + " p-4"}>
-                    <div className="text-sm font-semibold text-[#F7F4ED]">Weakest subjects</div>
+                    <div className="text-sm font-semibold text-[#F7F4ED]">
+                      Weakest subjects
+                    </div>
                     <div className="mt-3 space-y-2">
                       {broadsheet.weakestSubjects.length === 0 ? (
-                        <div className="text-[12px] text-[#AEB6C4]">Not enough subject evidence yet.</div>
+                        <div className="text-[12px] text-[#AEB6C4]">
+                          Not enough subject evidence yet.
+                        </div>
                       ) : (
                         broadsheet.weakestSubjects.map((subject) => (
-                          <div key={subject.itemId} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                            <div className="text-[12px] font-semibold text-[#F7F4ED]">{subject.subject}</div>
+                          <div
+                            key={subject.itemId}
+                            className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
+                          >
+                            <div className="text-[12px] font-semibold text-[#F7F4ED]">
+                              {subject.subject}
+                            </div>
                             <div className="text-[11px] text-[#AEB6C4]">
-                              Avg grade {formatNumber(subject.averageGrade)} • Avg score {formatNumber(subject.averageScore)}
+                              Avg grade {formatNumber(subject.averageGrade)} •
+                              Avg score {formatNumber(subject.averageScore)}
                             </div>
                           </div>
                         ))
@@ -1650,16 +1928,26 @@ async function finalizeMockSession() {
                   </div>
 
                   <div className={panelCard + " p-4"}>
-                    <div className="text-sm font-semibold text-[#F7F4ED]">Strongest subjects</div>
+                    <div className="text-sm font-semibold text-[#F7F4ED]">
+                      Strongest subjects
+                    </div>
                     <div className="mt-3 space-y-2">
                       {broadsheet.topSubjects.length === 0 ? (
-                        <div className="text-[12px] text-[#AEB6C4]">Not enough subject evidence yet.</div>
+                        <div className="text-[12px] text-[#AEB6C4]">
+                          Not enough subject evidence yet.
+                        </div>
                       ) : (
                         broadsheet.topSubjects.map((subject) => (
-                          <div key={subject.itemId} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
-                            <div className="text-[12px] font-semibold text-[#F7F4ED]">{subject.subject}</div>
+                          <div
+                            key={subject.itemId}
+                            className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
+                          >
+                            <div className="text-[12px] font-semibold text-[#F7F4ED]">
+                              {subject.subject}
+                            </div>
                             <div className="text-[11px] text-[#AEB6C4]">
-                              Avg grade {formatNumber(subject.averageGrade)} • Avg score {formatNumber(subject.averageScore)}
+                              Avg grade {formatNumber(subject.averageGrade)} •
+                              Avg score {formatNumber(subject.averageScore)}
                             </div>
                           </div>
                         ))
@@ -1670,28 +1958,53 @@ async function finalizeMockSession() {
               </SectionCard>
             </div>
 
-            <SectionCard title="Learner readiness broadsheet" subtitle="Placement-style aggregate stays incomplete until all required subjects exist.">
+            <SectionCard
+              title="Learner readiness broadsheet"
+              subtitle="Placement-style aggregate stays incomplete until all required subjects exist."
+            >
               <div className="overflow-auto rounded-2xl border border-white/10">
                 <table className="min-w-[980px] w-full border-collapse text-left text-[12px]">
                   <thead className="bg-white/[0.05] text-[#AEB6C4]">
                     <tr>
-                      <th className="border-b border-white/10 px-3 py-2">Learner</th>
-                      <th className="border-b border-white/10 px-3 py-2">Scored subjects</th>
-                      <th className="border-b border-white/10 px-3 py-2">Average</th>
-                      <th className="border-b border-white/10 px-3 py-2">School agg.</th>
-                      <th className="border-b border-white/10 px-3 py-2">Placement agg.</th>
-                      <th className="border-b border-white/10 px-3 py-2">Readiness</th>
-                      <th className="border-b border-white/10 px-3 py-2">Missing for placement</th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Learner
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Scored subjects
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Average
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        School agg.
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Placement agg.
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Readiness
+                      </th>
+                      <th className="border-b border-white/10 px-3 py-2">
+                        Missing for placement
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {broadsheet.students.map((student) => (
-                      <tr key={student.studentId} className="border-b border-white/5">
-                        <td className="px-3 py-2 font-semibold text-[#F7F4ED]">{student.name}</td>
-                        <td className="px-3 py-2 text-[#C9CDD6]">
-                          {student.scoredSubjectCount} scored • {student.missingSubjectCount} missing
+                      <tr
+                        key={student.studentId}
+                        className="border-b border-white/5"
+                      >
+                        <td className="px-3 py-2 font-semibold text-[#F7F4ED]">
+                          {student.name}
                         </td>
-                        <td className="px-3 py-2 text-[#C9CDD6]">{formatNumber(student.averageScore)}</td>
+                        <td className="px-3 py-2 text-[#C9CDD6]">
+                          {student.scoredSubjectCount} scored •{" "}
+                          {student.missingSubjectCount} missing
+                        </td>
+                        <td className="px-3 py-2 text-[#C9CDD6]">
+                          {formatNumber(student.averageScore)}
+                        </td>
                         <td className="px-3 py-2 text-[#C9CDD6]">
                           {student.schoolAggregate.aggregate ?? "Incomplete"}
                         </td>
@@ -1699,13 +2012,20 @@ async function finalizeMockSession() {
                           {student.placementAggregate.aggregate ?? "Incomplete"}
                         </td>
                         <td className="px-3 py-2">
-                          <span className={["inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold", readinessClass(student.readiness.code)].join(" ")}>
+                          <span
+                            className={[
+                              "inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold",
+                              readinessClass(student.readiness.code),
+                            ].join(" ")}
+                          >
                             {student.readiness.code}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-[#AEB6C4]">
                           {student.placementAggregate.missingSubjects?.length
-                            ? student.placementAggregate.missingSubjects.join(", ")
+                            ? student.placementAggregate.missingSubjects.join(
+                                ", ",
+                              )
                             : "—"}
                         </td>
                       </tr>
