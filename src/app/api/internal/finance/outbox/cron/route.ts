@@ -19,6 +19,7 @@ const SAFE_CRON_TYPES: FinanceOutboxEventType[] = [
   FinanceOutboxEventType.SMS_REFUND_NOTICE,
   FinanceOutboxEventType.SMS_ARREARS_NOTICE,
   FinanceOutboxEventType.SMS_RESULTS_RELEASE,
+  FinanceOutboxEventType.SMS_MOCK_RESULTS_RELEASE,
   FinanceOutboxEventType.PAYSTACK_WEBHOOK_CHARGE_SUCCESS,
 ];
 
