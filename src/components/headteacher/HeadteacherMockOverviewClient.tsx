@@ -267,6 +267,40 @@ type FinalizeStatus = {
   message: string;
 };
 
+type MockReleaseInfo = {
+  id: string;
+  mockExamSessionId: string;
+  classroomId: string;
+  academicYear: string;
+  term: string | null;
+  mockNumber: number;
+  mockLabel: string;
+  title: string;
+  readinessStatus: string;
+  readinessScore: number;
+  releaseSnapshotHash: string;
+  releaseMode: string | null;
+  parentVisible: boolean;
+  smsNotifiedAt: string | null;
+  releasedAt: string;
+  releasedByUser?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+  } | null;
+};
+
+type MockReleaseStatus = {
+  loading: boolean;
+  releasing: boolean;
+  ok: boolean | null;
+  message: string;
+  canRelease: boolean;
+  alreadyReleased: boolean;
+  blockers: string[];
+  release: MockReleaseInfo | null;
+};
+
 type OverviewErr = {
   ok: false;
   error: string;
@@ -627,6 +661,18 @@ export default function HeadteacherMockOverviewClient() {
     ok: null,
     message: "",
   });
+
+  const [mockReleaseStatus, setMockReleaseStatus] = useState<MockReleaseStatus>({
+    loading: false,
+    releasing: false,
+    ok: null,
+    message: "",
+    canRelease: false,
+    alreadyReleased: false,
+    blockers: [],
+    release: null,
+  });
+
   const allJhs3Classrooms = useMemo(
     () => classrooms.filter(isJhs3Classroom),
     [classrooms],
@@ -707,6 +753,21 @@ export default function HeadteacherMockOverviewClient() {
       setSessions(json.sessions ?? []);
       setSessionId(json.selectedSessionId ?? "");
       setBroadsheet(json.broadsheet ?? null);
+
+      if (json.selectedSessionId) {
+        void loadMockReleaseStatus(json.selectedSessionId);
+      } else {
+        setMockReleaseStatus({
+          loading: false,
+          releasing: false,
+          ok: null,
+          message: "",
+          canRelease: false,
+          alreadyReleased: false,
+          blockers: [],
+          release: null,
+        });
+      }
 
       if (!academicYear && json.broadsheet?.session?.academicYear) {
         setAcademicYear(json.broadsheet.session.academicYear);
@@ -801,6 +862,8 @@ export default function HeadteacherMockOverviewClient() {
         nextSessionId: sessionId,
         nextAcademicYear: academicYear,
       });
+
+      void loadMockReleaseStatus(broadsheet.session.id);
     } catch {
       setReminderStatus((prev) => ({
         ...prev,
@@ -877,6 +940,141 @@ export default function HeadteacherMockOverviewClient() {
         ok: false,
         message: "Failed to finalize Mock session.",
       });
+    }
+  }
+
+  async function loadMockReleaseStatus(nextSessionId?: string) {
+    const targetSessionId =
+      cleanStr(nextSessionId) || cleanStr(broadsheet?.session?.id) || cleanStr(sessionId);
+
+    if (!targetSessionId) {
+      setMockReleaseStatus({
+        loading: false,
+        releasing: false,
+        ok: null,
+        message: "",
+        canRelease: false,
+        alreadyReleased: false,
+        blockers: [],
+        release: null,
+      });
+      return;
+    }
+
+    try {
+      setMockReleaseStatus((prev) => ({
+        ...prev,
+        loading: true,
+        message: "Checking parent release status...",
+      }));
+
+      const res = await fetch(
+        `/api/headteacher/assessment/mock/release/status?sessionId=${encodeURIComponent(
+          targetSessionId,
+        )}`,
+        { cache: "no-store", credentials: "include" },
+      );
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.ok) {
+        setMockReleaseStatus((prev) => ({
+          ...prev,
+          loading: false,
+          ok: false,
+          message:
+            json?.message ||
+            json?.error ||
+            `Failed to load Mock release status. HTTP ${res.status}`,
+          canRelease: false,
+          alreadyReleased: false,
+          blockers: [],
+          release: null,
+        }));
+        return;
+      }
+
+      setMockReleaseStatus((prev) => ({
+        ...prev,
+        loading: false,
+        ok: true,
+        message: json.alreadyReleased
+          ? "This sealed Mock has been released to parents."
+          : json.canRelease
+            ? "This sealed Mock is ready for parent release."
+            : "This Mock is not ready for parent release.",
+        canRelease: !!json.canRelease,
+        alreadyReleased: !!json.alreadyReleased,
+        blockers: Array.isArray(json.blockers) ? json.blockers : [],
+        release: json.release ?? null,
+      }));
+    } catch {
+      setMockReleaseStatus((prev) => ({
+        ...prev,
+        loading: false,
+        ok: false,
+        message: "Failed to load Mock release status.",
+        canRelease: false,
+      }));
+    }
+  }
+
+  async function releaseMockToParents() {
+    if (!broadsheet?.session?.id) return;
+
+    try {
+      setMockReleaseStatus((prev) => ({
+        ...prev,
+        releasing: true,
+        message: "Releasing sealed Mock readiness to parents...",
+      }));
+
+      const res = await fetch("/api/headteacher/assessment/mock/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          sessionId: broadsheet.session.id,
+        }),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.ok) {
+        setMockReleaseStatus((prev) => ({
+          ...prev,
+          releasing: false,
+          ok: false,
+          message:
+            json?.message ||
+            json?.error ||
+            `Failed to release Mock to parents. HTTP ${res.status}`,
+          blockers: Array.isArray(json?.blockers) ? json.blockers : prev.blockers,
+        }));
+        return;
+      }
+
+      setMockReleaseStatus((prev) => ({
+        ...prev,
+        releasing: false,
+        ok: true,
+        message: json.alreadyReleased
+          ? "This Mock was already released to parents."
+          : "Mock readiness released to parents successfully.",
+        canRelease: false,
+        alreadyReleased: true,
+        blockers: [],
+        release: json.release ?? prev.release,
+      }));
+
+      void loadMockReleaseStatus(broadsheet.session.id);
+    } catch {
+      setMockReleaseStatus((prev) => ({
+        ...prev,
+        releasing: false,
+        ok: false,
+        message: "Failed to release Mock to parents.",
+      }));
     }
   }
 
@@ -1198,6 +1396,127 @@ export default function HeadteacherMockOverviewClient() {
                     ].join(" ")}
                   >
                     {finalizeStatus.message}
+                  </div>
+                ) : null}
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Parent Mock release"
+              subtitle="Parents can only see Mock readiness after the headteacher releases a sealed Mock session."
+              right={
+                <button
+                  type="button"
+                  onClick={releaseMockToParents}
+                  disabled={
+                    mockReleaseStatus.loading ||
+                    mockReleaseStatus.releasing ||
+                    mockReleaseStatus.alreadyReleased ||
+                    !mockReleaseStatus.canRelease ||
+                    !isSealedMockStatus(broadsheet.session.status)
+                  }
+                  className={goldButton}
+                >
+                  {mockReleaseStatus.releasing
+                    ? "Releasing..."
+                    : mockReleaseStatus.alreadyReleased
+                      ? "Released"
+                      : "Release to parents"}
+                </button>
+              }
+            >
+              <div className="space-y-3">
+                <div
+                  className={[
+                    "rounded-2xl border px-4 py-3 text-[12px] leading-5",
+                    mockReleaseStatus.alreadyReleased
+                      ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+                      : mockReleaseStatus.canRelease
+                        ? "border-sky-300/20 bg-sky-400/10 text-sky-100"
+                        : "border-amber-300/20 bg-amber-400/10 text-amber-100",
+                  ].join(" ")}
+                >
+                  <div className="font-semibold">
+                    {mockReleaseStatus.loading
+                      ? "Checking release status..."
+                      : mockReleaseStatus.alreadyReleased
+                        ? "This Mock has been released to parents."
+                        : mockReleaseStatus.canRelease
+                          ? "This sealed Mock is ready for parent release."
+                          : "This Mock is not ready for parent release."}
+                  </div>
+
+                  <div className="mt-1">
+                    {mockReleaseStatus.alreadyReleased
+                      ? "Parent visibility is now approved for this sealed Mock session. SMS notification will be handled in a later step."
+                      : mockReleaseStatus.canRelease
+                        ? "Release will make this sealed Mock session eligible for parent-facing BECE readiness views. It will not send SMS yet."
+                        : "Seal the Mock first and resolve any release blockers before exposing readiness to parents."}
+                  </div>
+                </div>
+
+                {mockReleaseStatus.release ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]">
+                      Released:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {formatDateTime(mockReleaseStatus.release.releasedAt)}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]">
+                      Released by:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {cleanStr(mockReleaseStatus.release.releasedByUser?.name) ||
+                          cleanStr(mockReleaseStatus.release.releasedByUser?.email) ||
+                          "Headteacher/Admin"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]">
+                      Snapshot hash:{" "}
+                      <span className="font-mono text-[10px] text-[#F7F4ED]">
+                        {mockReleaseStatus.release.releaseSnapshotHash.slice(0, 16)}...
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]">
+                      SMS status:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {mockReleaseStatus.release.smsNotifiedAt
+                          ? `Sent ${formatDateTime(mockReleaseStatus.release.smsNotifiedAt)}`
+                          : "Not sent yet"}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!mockReleaseStatus.alreadyReleased &&
+                mockReleaseStatus.blockers.length > 0 ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {mockReleaseStatus.blockers.map((blocker) => (
+                      <div
+                        key={blocker}
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-[#C9CDD6]"
+                      >
+                        {blocker}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {mockReleaseStatus.message ? (
+                  <div
+                    className={[
+                      "rounded-xl border px-3 py-2 text-[11px]",
+                      mockReleaseStatus.ok
+                        ? "border-emerald-300/20 bg-emerald-400/10 text-emerald-100"
+                        : mockReleaseStatus.ok === false
+                          ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+                          : "border-white/10 bg-white/[0.04] text-[#C9CDD6]",
+                    ].join(" ")}
+                  >
+                    {mockReleaseStatus.message}
                   </div>
                 ) : null}
               </div>

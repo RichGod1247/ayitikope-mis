@@ -80,6 +80,8 @@ model User {
   inviteCodes                         InviteCode[]
   inviteCodeUses                      InviteCodeUse[]
   resultsReleasesCreated              ResultsRelease[]              @relation("ResultsReleaseCreatedBy")
+  mockResultsReleasesCreated          MockResultsRelease[]          @relation("MockResultsReleaseCreatedBy")
+  mockResultsReleaseNotifyJobsCreated MockResultsReleaseNotifyJob[] @relation("MockResultsReleaseNotifyJobCreatedBy")
 
   /// ✅ Sprint 9 / Phase 1 — finance, scholarships, receipts, reconciliation
   scholarshipApplicationsReviewed  ScholarshipApplication[]  @relation("ScholarshipApplicationReviewer")
@@ -168,22 +170,24 @@ model Tenant {
   feeStructures FeeStructure[] @relation("TenantFeeStructures")
   feeRefunds    FeeRefund[]    @relation("TenantFeeRefunds")
 
-  invites                    Invite[]
-  lessonNotes                LessonNote[]
-  lessonDeliveries           LessonDelivery[]
-  memberships                Membership[]
-  roles                      Role[]
-  students                   Student[]
-  StudentHealthDaily         StudentHealthDaily[]
-  teacherHealthWeekly        TeacherHealthWeekly[]
-  teacherProfiles            TeacherProfile[]        @relation("TenantTeacherProfiles")
-  onboardingCodes            TenantOnboardingCode[]
-  lastActiveUsers            User[]                  @relation("UserLastActiveTenant")
-  tenantSettings             TenantSettings?
-  inviteCodes                InviteCode[]
-  inviteCodeUses             InviteCodeUse[]
-  tenantBootstrapInvitesUsed TenantBootstrapInvite[] @relation("TenantBootstrapInviteUsedTenant")
-  resultsReleases            ResultsRelease[]
+  invites                      Invite[]
+  lessonNotes                  LessonNote[]
+  lessonDeliveries             LessonDelivery[]
+  memberships                  Membership[]
+  roles                        Role[]
+  students                     Student[]
+  StudentHealthDaily           StudentHealthDaily[]
+  teacherHealthWeekly          TeacherHealthWeekly[]
+  teacherProfiles              TeacherProfile[]              @relation("TenantTeacherProfiles")
+  onboardingCodes              TenantOnboardingCode[]
+  lastActiveUsers              User[]                        @relation("UserLastActiveTenant")
+  tenantSettings               TenantSettings?
+  inviteCodes                  InviteCode[]
+  inviteCodeUses               InviteCodeUse[]
+  tenantBootstrapInvitesUsed   TenantBootstrapInvite[]       @relation("TenantBootstrapInviteUsedTenant")
+  resultsReleases              ResultsRelease[]
+  mockResultsReleases          MockResultsRelease[]
+  mockResultsReleaseNotifyJobs MockResultsReleaseNotifyJob[]
 
   /// ✅ Headteacher signature store
   headteacherSignatures HeadteacherSignature[]
@@ -621,6 +625,8 @@ model Classroom {
   StudentHealthDaily           StudentHealthDaily[]
   primaryTeachers              TeacherProfile[]              @relation("TeacherPrimaryClassroom")
   resultsReleases              ResultsRelease[]
+  mockResultsReleases          MockResultsRelease[]
+  mockResultsReleaseNotifyJobs MockResultsReleaseNotifyJob[]
   teacherAssessmentAssignments TeacherAssessmentAssignment[]
 
   // Legacy unique (optional). Keep it if it still exists in DB.
@@ -728,6 +734,140 @@ model ResultsReleaseNotifyRecipient {
   @@unique([jobId, guardianPhoneNorm], map: "results_release_notify_recipient_unique")
   @@index([jobId], map: "results_release_notify_recipient_job_idx")
   @@map("results_release_notify_recipient")
+}
+
+model MockResultsRelease {
+  id String @id @default(cuid())
+
+  tenantId          String @map("tenant_id")
+  mockExamSessionId String @map("mock_exam_session_id")
+  classroomId       String @map("classroom_id")
+
+  academicYear String  @map("academic_year")
+  term         String?
+
+  mockNumber Int    @map("mock_number")
+  mockLabel  String @map("mock_label") @db.VarChar(80)
+  title      String @db.VarChar(180)
+
+  /// MVP scope is CLASSROOM because Mock is currently JHS3 classroom/session-based.
+  /// Keep scope/scopeKey for future school-wide or multi-stream release patterns.
+  scope    String @default("CLASSROOM") @db.VarChar(40)
+  scopeKey String @map("scope_key") @db.VarChar(80)
+
+  /// Release must be evidence-backed.
+  readinessStatus       ResultsReleaseReadinessStatus @default(BLOCKED) @map("readiness_status")
+  readinessScore        Int                           @default(0) @map("readiness_score")
+  readinessSnapshotJson Json                          @default("{}") @map("readiness_snapshot_json")
+
+  /// Hash of the released Mock readiness snapshot.
+  /// Parent-visible Mock release must always have this.
+  releaseSnapshotHash String @map("release_snapshot_hash") @db.VarChar(64)
+
+  /// NORMAL = ordinary release after sealed readiness passes.
+  /// OVERRIDE reserved for future audited emergency release behavior.
+  releaseMode    String? @default("NORMAL") @map("release_mode") @db.VarChar(40)
+  overrideReason String? @map("override_reason") @db.Text
+
+  /// Parent visibility can be disabled later if a reseal/re-release workflow is introduced.
+  parentVisible Boolean @default(true) @map("parent_visible")
+
+  /// Set only after parent Mock release SMS has been sent.
+  /// SMS itself is still a later sprint after parent dashboard is stable.
+  smsNotifiedAt DateTime? @map("sms_notified_at") @db.Timestamptz(6)
+
+  releasedAt       DateTime @default(now()) @map("released_at") @db.Timestamptz(6)
+  releasedByUserId String   @map("released_by_user_id")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  classroom       Classroom       @relation(fields: [classroomId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  mockExamSession MockExamSession @relation(fields: [mockExamSessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  releasedByUser  User            @relation("MockResultsReleaseCreatedBy", fields: [releasedByUserId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  notifyJobs MockResultsReleaseNotifyJob[]
+
+  @@unique([tenantId, mockExamSessionId, scopeKey], name: "MockResultsRelease_scope_unique", map: "MockResultsRelease_tenant_session_scopeKey_unique")
+  @@index([tenantId, academicYear, mockNumber], map: "MockResultsRelease_tenant_year_number_idx")
+  @@index([tenantId, classroomId], map: "MockResultsRelease_tenant_classroom_idx")
+  @@index([tenantId, mockExamSessionId], map: "MockResultsRelease_tenant_session_idx")
+  @@index([tenantId, parentVisible], map: "MockResultsRelease_tenant_parentVisible_idx")
+  @@index([tenantId, readinessStatus], map: "MockResultsRelease_tenant_readiness_idx")
+  @@index([releasedByUserId], map: "MockResultsRelease_releasedBy_idx")
+  @@map("mock_results_release")
+}
+
+model MockResultsReleaseNotifyJob {
+  id String @id @default(cuid()) @db.Text
+
+  tenantId             String  @map("tenant_id")
+  mockResultsReleaseId String  @map("mock_results_release_id")
+  mockExamSessionId    String  @map("mock_exam_session_id")
+  classroomId          String? @map("classroom_id")
+
+  status String @default("PENDING") @db.VarChar(40)
+
+  totalTargets Int @default(0) @map("total_targets")
+  sentCount    Int @default(0) @map("sent_count")
+  skippedCount Int @default(0) @map("skipped_count")
+  failedCount  Int @default(0) @map("failed_count")
+
+  createdByUserId String? @map("created_by_user_id")
+
+  startedAt   DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  lastError   String?   @map("last_error") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  mockResultsRelease MockResultsRelease @relation(fields: [mockResultsReleaseId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  mockExamSession    MockExamSession    @relation(fields: [mockExamSessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  classroom          Classroom?         @relation(fields: [classroomId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  createdByUser      User?              @relation("MockResultsReleaseNotifyJobCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  recipients MockResultsReleaseNotifyRecipient[]
+
+  @@unique([tenantId, mockResultsReleaseId], map: "MockResultsReleaseNotifyJob_unique")
+  @@index([tenantId, status], map: "MockResultsReleaseNotifyJob_tenant_status_idx")
+  @@index([tenantId, mockExamSessionId], map: "MockResultsReleaseNotifyJob_tenant_session_idx")
+  @@index([tenantId, classroomId], map: "MockResultsReleaseNotifyJob_tenant_classroom_idx")
+  @@index([createdByUserId], map: "MockResultsReleaseNotifyJob_createdBy_idx")
+  @@map("mock_results_release_notify_job")
+}
+
+model MockResultsReleaseNotifyRecipient {
+  id BigInt @id @default(autoincrement())
+
+  jobId    String @map("job_id") @db.Text
+  tenantId String @map("tenant_id")
+
+  guardianPhoneNorm String @map("guardian_phone_norm") @db.VarChar(16)
+
+  /// List of child/student ids represented by this guardian phone for the released Mock.
+  /// Stored as JSON to support one guardian with more than one child without duplicate SMS.
+  studentIds Json @default("[]") @map("student_ids")
+
+  status String @default("PENDING") @db.VarChar(40)
+
+  providerMessageId         String? @map("provider_message_id") @db.VarChar(160)
+  providerStatus            Int?    @map("provider_status")
+  providerStatusDescription String? @map("provider_status_description")
+  providerRaw               Json?   @map("provider_raw")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  job MockResultsReleaseNotifyJob @relation(fields: [jobId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([jobId, guardianPhoneNorm], map: "MockResultsReleaseNotifyRecipient_unique")
+  @@index([jobId], map: "MockResultsReleaseNotifyRecipient_job_idx")
+  @@index([tenantId, status], map: "MockResultsReleaseNotifyRecipient_tenant_status_idx")
+  @@index([guardianPhoneNorm], map: "MockResultsReleaseNotifyRecipient_phone_idx")
+  @@map("mock_results_release_notify_recipient")
 }
 
 model Student {
@@ -2136,7 +2276,9 @@ model MockExamSession {
   classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   createdBy User?     @relation("MockExamSessionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
-  items AssessmentItem[]
+  items                        AssessmentItem[]
+  mockResultsReleases          MockResultsRelease[]
+  mockResultsReleaseNotifyJobs MockResultsReleaseNotifyJob[]
 
   @@unique([tenantId, classroomId, academicYear, mockNumber], map: "MockExamSession_unique")
   @@index([tenantId, classroomId, academicYear], map: "MockExamSession_tenant_class_year_idx")
@@ -3180,6 +3322,7 @@ enum FinanceOutboxEventType {
   SMS_REFUND_NOTICE
   SMS_ARREARS_NOTICE
   SMS_RESULTS_RELEASE
+  SMS_MOCK_RESULTS_RELEASE
   PAYSTACK_WEBHOOK_CHARGE_SUCCESS
   PAYSTACK_WEBHOOK_TRANSFER_EVENT
   SETTLEMENT_PAYOUT_VERIFY
