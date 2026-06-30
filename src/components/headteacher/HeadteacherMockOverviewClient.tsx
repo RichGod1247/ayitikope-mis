@@ -301,6 +301,54 @@ type MockReleaseStatus = {
   release: MockReleaseInfo | null;
 };
 
+type MockReleaseNotifyJob = {
+  id: string;
+  status: string;
+  totalTargets: number;
+  sentCount: number;
+  skippedCount: number;
+  failedCount: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+};
+
+type MockReleaseNotifyStatus = {
+  loading: boolean;
+  queueing: boolean;
+  ok: boolean | null;
+  message: string;
+  alreadyNotified: boolean;
+  canQueue: boolean;
+  blockers: string[];
+  existingJob: MockReleaseNotifyJob | null;
+  totals: {
+    activeStudents: number;
+    eligibleGuardianPhones: number;
+    eligibleLearners: number;
+    skippedNoPhone: number;
+    skippedOptOut: number;
+  } | null;
+  release: {
+    id: string;
+    mockExamSessionId: string;
+    smsNotifiedAt: string | null;
+  } | null;
+};
+
+type MockReleaseNotifyApiResponse = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  alreadyQueued?: boolean;
+  alreadyNotified?: boolean;
+  canQueue?: boolean;
+  blockers?: string[];
+  existingJob?: MockReleaseNotifyJob | null;
+  totals?: MockReleaseNotifyStatus["totals"];
+  release?: MockReleaseNotifyStatus["release"];
+};
+
 type OverviewErr = {
   ok: false;
   error: string;
@@ -313,6 +361,19 @@ type ReminderSendStatus = {
   loading: boolean;
   ok: boolean | null;
   message: string;
+};
+
+const emptyMockNotifyStatus: MockReleaseNotifyStatus = {
+  loading: false,
+  queueing: false,
+  ok: null,
+  message: "",
+  alreadyNotified: false,
+  canQueue: false,
+  blockers: [],
+  existingJob: null,
+  totals: null,
+  release: null,
 };
 
 const shellCard =
@@ -673,6 +734,9 @@ export default function HeadteacherMockOverviewClient() {
     release: null,
   });
 
+const [mockNotifyStatus, setMockNotifyStatus] =
+  useState<MockReleaseNotifyStatus>(emptyMockNotifyStatus);
+
   const allJhs3Classrooms = useMemo(
     () => classrooms.filter(isJhs3Classroom),
     [classrooms],
@@ -754,20 +818,23 @@ export default function HeadteacherMockOverviewClient() {
       setSessionId(json.selectedSessionId ?? "");
       setBroadsheet(json.broadsheet ?? null);
 
-      if (json.selectedSessionId) {
-        void loadMockReleaseStatus(json.selectedSessionId);
-      } else {
-        setMockReleaseStatus({
-          loading: false,
-          releasing: false,
-          ok: null,
-          message: "",
-          canRelease: false,
-          alreadyReleased: false,
-          blockers: [],
-          release: null,
-        });
-      }
+if (json.selectedSessionId) {
+  void loadMockReleaseStatus(json.selectedSessionId);
+  void loadMockNotifyStatus(json.selectedSessionId);
+} else {
+  setMockReleaseStatus({
+    loading: false,
+    releasing: false,
+    ok: null,
+    message: "",
+    canRelease: false,
+    alreadyReleased: false,
+    blockers: [],
+    release: null,
+  });
+
+  setMockNotifyStatus({ ...emptyMockNotifyStatus });
+}
 
       if (!academicYear && json.broadsheet?.session?.academicYear) {
         setAcademicYear(json.broadsheet.session.academicYear);
@@ -864,6 +931,7 @@ export default function HeadteacherMockOverviewClient() {
       });
 
       void loadMockReleaseStatus(broadsheet.session.id);
+      void loadMockNotifyStatus(broadsheet.session.id);
     } catch {
       setReminderStatus((prev) => ({
         ...prev,
@@ -1019,6 +1087,156 @@ export default function HeadteacherMockOverviewClient() {
     }
   }
 
+async function loadMockNotifyStatus(nextSessionId?: string | null) {
+  const targetSessionId =
+    cleanStr(nextSessionId) ||
+    cleanStr(broadsheet?.session?.id) ||
+    cleanStr(sessionId);
+
+  if (!targetSessionId) {
+    setMockNotifyStatus({ ...emptyMockNotifyStatus });
+    return;
+  }
+
+  try {
+    setMockNotifyStatus((prev) => ({
+      ...prev,
+      loading: true,
+      message: "",
+    }));
+
+    const res = await fetch(
+      `/api/headteacher/assessment/mock/release/notify?sessionId=${encodeURIComponent(
+        targetSessionId,
+      )}`,
+      { cache: "no-store", credentials: "include" },
+    );
+
+    const json = (await res
+      .json()
+      .catch(() => null)) as MockReleaseNotifyApiResponse | null;
+
+    if (!res.ok || !json?.ok) {
+      setMockNotifyStatus((prev) => ({
+        ...prev,
+        loading: false,
+        queueing: false,
+        ok: false,
+        message:
+          json?.message ||
+          json?.error ||
+          `Failed to load Mock SMS notification status. HTTP ${res.status}`,
+        alreadyNotified: !!json?.alreadyNotified,
+        canQueue: !!json?.canQueue,
+        blockers: Array.isArray(json?.blockers) ? json.blockers : [],
+        existingJob: json?.existingJob ?? null,
+        totals: json?.totals ?? null,
+        release: json?.release ?? null,
+      }));
+      return;
+    }
+
+    setMockNotifyStatus({
+      loading: false,
+      queueing: false,
+      ok: true,
+      message: "",
+      alreadyNotified: !!json.alreadyNotified,
+      canQueue: !!json.canQueue,
+      blockers: Array.isArray(json.blockers) ? json.blockers : [],
+      existingJob: json.existingJob ?? null,
+      totals: json.totals ?? null,
+      release: json.release ?? null,
+    });
+  } catch {
+    setMockNotifyStatus((prev) => ({
+      ...prev,
+      loading: false,
+      queueing: false,
+      ok: false,
+      message: "Failed to load Mock SMS notification status.",
+    }));
+  }
+}
+
+async function queueMockReleaseSms(nextSessionId?: string | null) {
+  const targetSessionId =
+    cleanStr(nextSessionId) ||
+    cleanStr(broadsheet?.session?.id) ||
+    cleanStr(sessionId);
+
+  if (!targetSessionId) return;
+
+  const confirmed = window.confirm(
+    "Notify eligible parents by SMS that this sealed Mock readiness report has been released? This will not send to opted-out guardians.",
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setMockNotifyStatus((prev) => ({
+      ...prev,
+      queueing: true,
+      message: "Queueing Mock SMS notification...",
+    }));
+
+    const res = await fetch("/api/headteacher/assessment/mock/release/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ sessionId: targetSessionId }),
+    });
+
+    const json = (await res
+      .json()
+      .catch(() => null)) as MockReleaseNotifyApiResponse | null;
+
+    if (!res.ok || !json?.ok) {
+      setMockNotifyStatus((prev) => ({
+        ...prev,
+        queueing: false,
+        ok: false,
+        message:
+          json?.message ||
+          json?.error ||
+          `Failed to queue Mock SMS notification. HTTP ${res.status}`,
+        blockers: Array.isArray(json?.blockers)
+          ? json.blockers
+          : prev.blockers,
+        existingJob: json?.existingJob ?? prev.existingJob,
+        totals: json?.totals ?? prev.totals,
+        release: json?.release ?? prev.release,
+      }));
+      return;
+    }
+
+    setMockNotifyStatus((prev) => ({
+      ...prev,
+      loading: false,
+      queueing: false,
+      ok: true,
+      message: json.alreadyQueued
+        ? "SMS notification job was already queued."
+        : "SMS notification job has been queued.",
+      alreadyNotified: !!json.alreadyNotified,
+      canQueue: !!json.canQueue,
+      blockers: Array.isArray(json.blockers) ? json.blockers : [],
+      existingJob: json.existingJob ?? null,
+      totals: json.totals ?? null,
+      release: json.release ?? null,
+    }));
+
+    void loadMockNotifyStatus(targetSessionId);
+  } catch {
+    setMockNotifyStatus((prev) => ({
+      ...prev,
+      queueing: false,
+      ok: false,
+      message: "Failed to queue Mock SMS notification.",
+    }));
+  }
+}
+
   async function releaseMockToParents() {
     if (!broadsheet?.session?.id) return;
 
@@ -1068,6 +1286,7 @@ export default function HeadteacherMockOverviewClient() {
       }));
 
       void loadMockReleaseStatus(broadsheet.session.id);
+      void loadMockNotifyStatus(broadsheet.session.id);
     } catch {
       setMockReleaseStatus((prev) => ({
         ...prev,
@@ -1448,9 +1667,9 @@ export default function HeadteacherMockOverviewClient() {
 
                   <div className="mt-1">
                     {mockReleaseStatus.alreadyReleased
-                      ? "Parent visibility is now approved for this sealed Mock session. SMS notification will be handled in a later step."
+                      ? "Parent visibility is now approved for this sealed Mock session. Use the SMS notification card below to confirm notification status."
                       : mockReleaseStatus.canRelease
-                        ? "Release will make this sealed Mock session eligible for parent-facing BECE readiness views. It will not send SMS yet."
+                        ? "Release will make this sealed Mock session eligible for parent-facing BECE readiness views. SMS notification is controlled separately below."
                         : "Seal the Mock first and resolve any release blockers before exposing readiness to parents."}
                   </div>
                 </div>
@@ -1519,6 +1738,151 @@ export default function HeadteacherMockOverviewClient() {
                     {mockReleaseStatus.message}
                   </div>
                 ) : null}
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Parent SMS notification"
+              subtitle="Notify eligible parents that the released Mock readiness report is available in the parent portal."
+            >
+              <div className="space-y-4">
+                {mockNotifyStatus.message ? (
+                  <div
+                    className={[
+                      "rounded-2xl border px-4 py-3 text-[12px]",
+                      mockNotifyStatus.ok === false
+                        ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+                        : "border-emerald-300/20 bg-emerald-400/10 text-emerald-100",
+                    ].join(" ")}
+                  >
+                    {mockNotifyStatus.message}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-3 md:grid-cols-4">
+                  <MetricCard
+                    label="Eligible phones"
+                    value={mockNotifyStatus.totals?.eligibleGuardianPhones ?? "—"}
+                    hint="One SMS per guardian phone"
+                  />
+
+                  <MetricCard
+                    label="Eligible learners"
+                    value={mockNotifyStatus.totals?.eligibleLearners ?? "—"}
+                    hint="Learners covered by SMS"
+                  />
+
+                  <MetricCard
+                    label="Opted out"
+                    value={mockNotifyStatus.totals?.skippedOptOut ?? "—"}
+                    hint="Guardians not receiving SMS"
+                  />
+
+                  <MetricCard
+                    label="No phone"
+                    value={mockNotifyStatus.totals?.skippedNoPhone ?? "—"}
+                    hint="Missing guardian phone"
+                  />
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[12px] text-[#C9CDD6]">
+                  <div className="font-semibold text-[#F7F4ED]">
+                    Notification status
+                  </div>
+
+                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                    <div>
+                      Job:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {mockNotifyStatus.existingJob?.status ?? "Not queued"}
+                      </span>
+                    </div>
+
+                    <div>
+                      SMS notified:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {mockNotifyStatus.alreadyNotified ? "Yes" : "No"}
+                      </span>
+                    </div>
+
+                    <div>
+                      Sent:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {mockNotifyStatus.existingJob?.sentCount ?? 0}
+                      </span>
+                    </div>
+
+                    <div>
+                      Failed:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {mockNotifyStatus.existingJob?.failedCount ?? 0}
+                      </span>
+                    </div>
+
+                    <div>
+                      Skipped:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {mockNotifyStatus.existingJob?.skippedCount ?? 0}
+                      </span>
+                    </div>
+
+                    <div>
+                      Targets:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {mockNotifyStatus.existingJob?.totalTargets ?? 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  {mockNotifyStatus.release?.smsNotifiedAt ? (
+                    <div className="mt-2 text-[#AEB6C4]">
+                      Completed:{" "}
+                      {formatDateTime(mockNotifyStatus.release.smsNotifiedAt)}
+                    </div>
+                  ) : null}
+                </div>
+
+                {mockNotifyStatus.blockers.length > 0 ? (
+                  <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-[12px] text-amber-100">
+                    <div className="font-semibold">SMS blockers</div>
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {mockNotifyStatus.blockers.map((blocker) => (
+                        <li key={blocker}>{blocker}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => loadMockNotifyStatus()}
+                    disabled={mockNotifyStatus.loading}
+                    className={darkButton}
+                  >
+                    {mockNotifyStatus.loading
+                      ? "Refreshing..."
+                      : "Refresh SMS status"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => queueMockReleaseSms()}
+                    disabled={
+                      mockNotifyStatus.loading ||
+                      mockNotifyStatus.queueing ||
+                      !mockNotifyStatus.canQueue ||
+                      mockNotifyStatus.alreadyNotified
+                    }
+                    className={goldButton}
+                  >
+                    {mockNotifyStatus.alreadyNotified
+                      ? "Parents already notified"
+                      : mockNotifyStatus.queueing
+                        ? "Queueing..."
+                        : "Notify eligible parents"}
+                  </button>
+                </div>
               </div>
             </SectionCard>
 
