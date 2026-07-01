@@ -222,6 +222,76 @@ type CandidateRescueProfile = {
   nearGradeOpportunities: CandidateSubjectSignal[];
 };
 
+type MockTrendLabel = "IMPROVING" | "DECLINING" | "STABLE" | "INCOMPLETE";
+
+type MockTrendSubjectMovement = {
+  subject: string;
+  canonicalSubject: string;
+  previousScore: number | null;
+  latestScore: number | null;
+  scoreMovement: number | null;
+  previousGrade: number | null;
+  latestGrade: number | null;
+  gradeMovement: number | null;
+  label: "IMPROVED" | "DECLINED" | "STABLE";
+};
+
+type MockTrendLearner = {
+  studentId: string;
+  name: string;
+  trendLabel: MockTrendLabel;
+  trendReason: string;
+  previousSessionId: string | null;
+  previousMockLabel: string | null;
+  latestSessionId: string;
+  latestMockLabel: string;
+  previousPlacementAggregate: number | null;
+  latestPlacementAggregate: number | null;
+  aggregateMovement: number | null;
+  previousAverageScore: number | null;
+  latestAverageScore: number | null;
+  averageScoreMovement: number | null;
+  improvedSubjects: MockTrendSubjectMovement[];
+  declinedSubjects: MockTrendSubjectMovement[];
+  persistentWeakSubjects: MockTrendSubjectMovement[];
+  nearGradeOpportunities: CandidateSubjectSignal[];
+  recommendedAction: string;
+};
+
+type MockTrendSessionSummary = {
+  id: string;
+  mockNumber: number;
+  mockLabel: string;
+  title: string;
+  status: string;
+  date: string | null;
+  scoredCells: number;
+  possibleCells: number;
+  completionPercent: number;
+  placementReadyCount: number;
+  classAveragePlacementAggregate: number | null;
+  classAverageScore: number | null;
+};
+
+type MockTrendIntelligence = {
+  available: boolean;
+  reason: string | null;
+  selectedSessionId: string;
+  previousSessionId: string | null;
+  lockedSessionCount: number;
+  summary: {
+    trackedLearners: number;
+    improvingCount: number;
+    decliningCount: number;
+    stableCount: number;
+    incompleteCount: number;
+    averageAggregateMovement: number | null;
+    averageScoreMovement: number | null;
+  };
+  sessionSummaries: MockTrendSessionSummary[];
+  learners: MockTrendLearner[];
+};
+
 type Broadsheet = {
   session: MockSession;
   classroom: ClassroomRow | null;
@@ -243,6 +313,7 @@ type Broadsheet = {
   topSubjects: SubjectSummary[];
   students: StudentRow[];
   candidateRescueProfiles: CandidateRescueProfile[];
+  trend: MockTrendIntelligence | null;
   evidenceActions: EvidenceActions;
   warnings: {
     aggregateMayBeIncomplete: boolean;
@@ -506,6 +577,59 @@ function actionModeLabel(mode: MockEvidenceActionMode) {
   if (mode === "REMIND_TEACHER") return "Teacher reminder";
   if (mode === "LEARNER_SUPPORT_REVIEW") return "Learner support";
   return "Leadership review";
+}
+
+function trendClass(label: MockTrendLabel) {
+  if (label === "IMPROVING") {
+    return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
+  }
+
+  if (label === "DECLINING") {
+    return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+  }
+
+  if (label === "STABLE") {
+    return "border-sky-300/25 bg-sky-400/12 text-sky-100";
+  }
+
+  return "border-amber-300/25 bg-amber-400/12 text-amber-100";
+}
+
+function movementText(value: number | null | undefined, suffix = "") {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  const n = Number(value);
+  if (n > 0) return `+${formatNumber(n)}${suffix}`;
+  return `${formatNumber(n)}${suffix}`;
+}
+
+function aggregateMovementHint(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(Number(value))) return "No movement";
+  if (value > 0) return "Better aggregate";
+  if (value < 0) return "Worse aggregate";
+  return "No aggregate change";
+}
+
+function scoreMovementHint(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(Number(value))) return "No movement";
+  if (value > 0) return "Score improved";
+  if (value < 0) return "Score declined";
+  return "No score change";
+}
+
+function movementTone(value: number | null | undefined, mode: "aggregate" | "score") {
+  if (value == null || !Number.isFinite(Number(value))) {
+    return "text-[#AEB6C4]";
+  }
+
+  const n = Number(value);
+
+  if (n === 0) return "text-sky-100";
+
+  if (mode === "aggregate") {
+    return n > 0 ? "text-emerald-100" : "text-rose-100";
+  }
+
+  return n > 0 ? "text-emerald-100" : "text-rose-100";
 }
 
 function rescuePriorityClass(priority: CandidateRescuePriority) {
@@ -1539,6 +1663,337 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                 {broadsheet.warnings.message}
               </div>
             ) : null}
+
+            <SectionCard
+              title="Multi-Mock trend intelligence"
+              subtitle="Compares sealed Mock sessions only. This protects the headteacher from treating editable scores as official trend evidence."
+            >
+              {!broadsheet.trend ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-6 text-[12px] text-[#AEB6C4]">
+                  Trend intelligence has not been returned for this Mock session yet.
+                </div>
+              ) : !broadsheet.trend.available ? (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-4 text-[12px] leading-5 text-amber-100">
+                    <div className="font-semibold">
+                      Trend intelligence is not available yet.
+                    </div>
+                    <div className="mt-1">
+                      {broadsheet.trend.reason ||
+                        "At least two sealed Mock sessions are needed before trend movement can be calculated."}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <MetricCard
+                      label="Sealed mocks"
+                      value={broadsheet.trend.lockedSessionCount}
+                      hint="Minimum needed: 2"
+                    />
+                    <MetricCard
+                      label="Tracked learners"
+                      value={broadsheet.trend.summary.trackedLearners}
+                      hint="Available after trend opens"
+                    />
+                    <MetricCard
+                      label="Selected Mock"
+                      value={broadsheet.session.mockLabel}
+                      hint={broadsheet.session.status}
+                    />
+                  </div>
+
+                  <div className="rounded-2xl border border-sky-300/15 bg-sky-400/10 px-4 py-3 text-[12px] leading-5 text-sky-100">
+                    Next leadership move: create and seal the next Mock session
+                    after teachers complete score entry. EduLife OS will then
+                    compare Mock-to-Mock movement automatically.
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <MetricCard
+                      label="Tracked"
+                      value={broadsheet.trend.summary.trackedLearners}
+                      hint="Learners compared"
+                    />
+                    <MetricCard
+                      label="Improving"
+                      value={broadsheet.trend.summary.improvingCount}
+                      hint="Aggregate/score movement up"
+                    />
+                    <MetricCard
+                      label="Declining"
+                      value={broadsheet.trend.summary.decliningCount}
+                      hint="Needs fast review"
+                    />
+                    <MetricCard
+                      label="Stable"
+                      value={broadsheet.trend.summary.stableCount}
+                      hint="Push grade boundary"
+                    />
+                    <MetricCard
+                      label="Incomplete"
+                      value={broadsheet.trend.summary.incompleteCount}
+                      hint="Missing trend evidence"
+                    />
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className={panelCard + " p-4"}>
+                      <div className="text-sm font-semibold text-[#F7F4ED]">
+                        Class movement
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
+                            Avg aggregate movement
+                          </div>
+                          <div
+                            className={[
+                              "mt-1 text-lg font-semibold",
+                              movementTone(
+                                broadsheet.trend.summary.averageAggregateMovement,
+                                "aggregate",
+                              ),
+                            ].join(" ")}
+                          >
+                            {movementText(
+                              broadsheet.trend.summary.averageAggregateMovement,
+                            )}
+                          </div>
+                          <div className="mt-1 text-[10px] text-[#AEB6C4]">
+                            {aggregateMovementHint(
+                              broadsheet.trend.summary.averageAggregateMovement,
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-[10px] uppercase tracking-[0.14em] text-[#8F98A8]">
+                            Avg score movement
+                          </div>
+                          <div
+                            className={[
+                              "mt-1 text-lg font-semibold",
+                              movementTone(
+                                broadsheet.trend.summary.averageScoreMovement,
+                                "score",
+                              ),
+                            ].join(" ")}
+                          >
+                            {movementText(
+                              broadsheet.trend.summary.averageScoreMovement,
+                            )}
+                          </div>
+                          <div className="mt-1 text-[10px] text-[#AEB6C4]">
+                            {scoreMovementHint(
+                              broadsheet.trend.summary.averageScoreMovement,
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={panelCard + " p-4"}>
+                      <div className="text-sm font-semibold text-[#F7F4ED]">
+                        Compared sessions
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        {broadsheet.trend.sessionSummaries.length === 0 ? (
+                          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[12px] text-[#AEB6C4]">
+                            No sealed comparison sessions returned.
+                          </div>
+                        ) : (
+                          broadsheet.trend.sessionSummaries.map((session) => (
+                            <div
+                              key={session.id}
+                              className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <div className="text-[12px] font-semibold text-[#F7F4ED]">
+                                    {session.title}
+                                  </div>
+                                  <div className="mt-1 text-[11px] text-[#AEB6C4]">
+                                    {session.mockLabel} • {session.status}
+                                  </div>
+                                </div>
+                                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-[#C9CDD6]">
+                                  {formatNumber(session.completionPercent, "%")}
+                                </span>
+                              </div>
+                              <div className="mt-2 text-[10px] text-[#8F98A8]">
+                                Placement-ready: {session.placementReadyCount} •
+                                Class avg agg:{" "}
+                                {formatNumber(session.classAveragePlacementAggregate)}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-auto rounded-2xl border border-white/10">
+                    <table className="min-w-[1120px] w-full border-collapse text-left text-[12px]">
+                      <thead className="bg-white/[0.05] text-[#AEB6C4]">
+                        <tr>
+                          <th className="border-b border-white/10 px-3 py-2">
+                            Learner
+                          </th>
+                          <th className="border-b border-white/10 px-3 py-2">
+                            Trend
+                          </th>
+                          <th className="border-b border-white/10 px-3 py-2">
+                            Aggregate movement
+                          </th>
+                          <th className="border-b border-white/10 px-3 py-2">
+                            Score movement
+                          </th>
+                          <th className="border-b border-white/10 px-3 py-2">
+                            Improved subjects
+                          </th>
+                          <th className="border-b border-white/10 px-3 py-2">
+                            Declined subjects
+                          </th>
+                          <th className="border-b border-white/10 px-3 py-2">
+                            Next action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {broadsheet.trend.learners.slice(0, 20).map((learner) => (
+                          <tr
+                            key={learner.studentId}
+                            className="border-b border-white/5"
+                          >
+                            <td className="px-3 py-2 font-semibold text-[#F7F4ED]">
+                              {learner.name}
+                              <div className="mt-1 text-[10px] font-normal text-[#8F98A8]">
+                                {learner.previousMockLabel ?? "Previous"} →{" "}
+                                {learner.latestMockLabel}
+                              </div>
+                            </td>
+
+                            <td className="px-3 py-2">
+                              <span
+                                className={[
+                                  "inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold",
+                                  trendClass(learner.trendLabel),
+                                ].join(" ")}
+                              >
+                                {learner.trendLabel}
+                              </span>
+                              <div className="mt-1 max-w-[220px] text-[10px] leading-4 text-[#AEB6C4]">
+                                {learner.trendReason}
+                              </div>
+                            </td>
+
+                            <td className="px-3 py-2">
+                              <div
+                                className={[
+                                  "font-semibold",
+                                  movementTone(
+                                    learner.aggregateMovement,
+                                    "aggregate",
+                                  ),
+                                ].join(" ")}
+                              >
+                                {movementText(learner.aggregateMovement)}
+                              </div>
+                              <div className="mt-1 text-[10px] text-[#8F98A8]">
+                                {learner.previousPlacementAggregate ?? "—"} →{" "}
+                                {learner.latestPlacementAggregate ?? "—"}
+                              </div>
+                            </td>
+
+                            <td className="px-3 py-2">
+                              <div
+                                className={[
+                                  "font-semibold",
+                                  movementTone(
+                                    learner.averageScoreMovement,
+                                    "score",
+                                  ),
+                                ].join(" ")}
+                              >
+                                {movementText(learner.averageScoreMovement)}
+                              </div>
+                              <div className="mt-1 text-[10px] text-[#8F98A8]">
+                                {formatNumber(learner.previousAverageScore)} →{" "}
+                                {formatNumber(learner.latestAverageScore)}
+                              </div>
+                            </td>
+
+                            <td className="px-3 py-2 text-[#C9CDD6]">
+                              {learner.improvedSubjects.length ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {learner.improvedSubjects.slice(0, 3).map(
+                                    (subject) => (
+                                      <span
+                                        key={`${learner.studentId}:up:${subject.canonicalSubject}`}
+                                        className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] text-emerald-100"
+                                      >
+                                        {subject.subject}{" "}
+                                        {movementText(subject.scoreMovement)}
+                                      </span>
+                                    ),
+                                  )}
+                                </div>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+
+                            <td className="px-3 py-2 text-[#C9CDD6]">
+                              {learner.declinedSubjects.length ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {learner.declinedSubjects.slice(0, 3).map(
+                                    (subject) => (
+                                      <span
+                                        key={`${learner.studentId}:down:${subject.canonicalSubject}`}
+                                        className="rounded-full border border-rose-300/20 bg-rose-400/10 px-2 py-1 text-[10px] text-rose-100"
+                                      >
+                                        {subject.subject}{" "}
+                                        {movementText(subject.scoreMovement)}
+                                      </span>
+                                    ),
+                                  )}
+                                </div>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+
+                            <td className="px-3 py-2">
+                              <div className="max-w-[280px] text-[11px] leading-5 text-[#C9CDD6]">
+                                {learner.recommendedAction}
+                              </div>
+
+                              {learner.nearGradeOpportunities.length > 0 ? (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {learner.nearGradeOpportunities
+                                    .slice(0, 2)
+                                    .map((subject) => (
+                                      <span
+                                        key={`${learner.studentId}:near:${subject.canonicalSubject}`}
+                                        className="rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] text-amber-100"
+                                      >
+                                        {subject.subject}:{" "}
+                                        {subject.pointsToNextGrade} mark(s)
+                                      </span>
+                                    ))}
+                                </div>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </SectionCard>
 
             <SectionCard
               title="Mock evidence seal"
