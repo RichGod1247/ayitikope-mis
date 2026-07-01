@@ -10,8 +10,8 @@ import { StudentStatus } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Parent Portal | EduLife OS",
-  description:
-  "Parent view of learners with fees, attendance, reports, and released Mock readiness summary.",
+description:
+  "Parent view of learners with fees, attendance, reports, released Mock readiness, and SMS notification proof.",
 };
 
 export const dynamic = "force-dynamic";
@@ -107,7 +107,7 @@ export default async function ParentPortalPage() {
               <p className="mt-2 max-w-2xl text-xs leading-6 text-[#C9CDD6] sm:text-sm">
   View simple{" "}
   <span className="font-semibold text-[#F7F4ED]">
-    fees, attendance, reports, and released Mock readiness
+    fees, attendance, reports, released Mock readiness, and SMS alerts
   </span>{" "}
   for each learner.
 </p>
@@ -130,7 +130,7 @@ export default async function ParentPortalPage() {
           </div>
         </header>
 
-               <section className="grid gap-4 md:grid-cols-2">
+                      <section className="grid gap-4 md:grid-cols-3">
           <Link
             href="/parent/mock-readiness"
             className="group rounded-[28px] border border-emerald-300/20 bg-[linear-gradient(135deg,rgba(16,185,129,0.16),rgba(255,255,255,0.04))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.18)] transition hover:border-emerald-200/35 hover:bg-emerald-400/15"
@@ -154,26 +154,48 @@ export default async function ParentPortalPage() {
           </Link>
 
           <Link
-  href="/parent/report"
-  className="group rounded-[28px] border border-sky-300/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.14),rgba(255,255,255,0.04))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.18)] transition hover:border-sky-200/35 hover:bg-sky-400/15"
->
-  <div className="inline-flex rounded-full border border-sky-300/20 bg-sky-400/10 px-3 py-1 text-[11px] font-semibold text-sky-100">
-    Term Report
-  </div>
+            href="/parent/report"
+            className="group rounded-[28px] border border-sky-300/20 bg-[linear-gradient(135deg,rgba(59,130,246,0.14),rgba(255,255,255,0.04))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.18)] transition hover:border-sky-200/35 hover:bg-sky-400/15"
+          >
+            <div className="inline-flex rounded-full border border-sky-300/20 bg-sky-400/10 px-3 py-1 text-[11px] font-semibold text-sky-100">
+              Term Report
+            </div>
 
-  <h2 className="mt-3 text-lg font-semibold text-[#F7F4ED]">
-    View released term report
-  </h2>
+            <h2 className="mt-3 text-lg font-semibold text-[#F7F4ED]">
+              View released term report
+            </h2>
 
-  <p className="mt-2 text-xs leading-6 text-[#C9CDD6] sm:text-sm">
-    Check the normal term report only after the headteacher has officially
-    released it. Locked reports stay protected.
-  </p>
+            <p className="mt-2 text-xs leading-6 text-[#C9CDD6] sm:text-sm">
+              Check the normal term report only after the headteacher has
+              officially released it. Locked reports stay protected.
+            </p>
 
-  <div className="mt-4 text-xs font-semibold text-sky-100 transition group-hover:translate-x-1">
-    Open term report →
-  </div>
-</Link>
+            <div className="mt-4 text-xs font-semibold text-sky-100 transition group-hover:translate-x-1">
+              Open term report →
+            </div>
+          </Link>
+
+          <Link
+            href="/parent/sms-alerts"
+            className="group rounded-[28px] border border-[#D4AF37]/25 bg-[linear-gradient(135deg,rgba(212,175,55,0.15),rgba(255,255,255,0.04))] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.18)] transition hover:border-[#E8C96A]/45 hover:bg-[#D4AF37]/15"
+          >
+            <div className="inline-flex rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/10 px-3 py-1 text-[11px] font-semibold text-[#F7F4ED]">
+              SMS Proof
+            </div>
+
+            <h2 className="mt-3 text-lg font-semibold text-[#F7F4ED]">
+              View SMS alerts history
+            </h2>
+
+            <p className="mt-2 text-xs leading-6 text-[#C9CDD6] sm:text-sm">
+              See school SMS notifications sent to your verified parent phone,
+              including Mock release notices, report alerts, and delivery proof.
+            </p>
+
+            <div className="mt-4 text-xs font-semibold text-[#E8C96A] transition group-hover:translate-x-1">
+              Open SMS alerts →
+            </div>
+          </Link>
         </section>
 
         <section className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-3 shadow-[0_20px_70px_rgba(0,0,0,0.20)] sm:p-4">

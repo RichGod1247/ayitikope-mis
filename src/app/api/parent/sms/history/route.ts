@@ -1,303 +1,414 @@
 // src/app/api/parent/sms/history/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { StudentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireParentSession, digitsOnly } from "@/lib/parentSession";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function normalisePhone(phone: string | null | undefined): string {
-  if (!phone) return "";
-  return String(phone).replace(/\D/g, "");
+type SmsHistoryRecord = {
+  id: string;
+  category: "MOCK_RESULTS_RELEASE" | "TERM_RESULTS_RELEASE" | "GENERAL";
+  source:
+    | "MockResultsReleaseNotifyRecipient"
+    | "ResultsReleaseNotifyRecipient"
+    | "SmsLog";
+  phone: string;
+  title: string;
+  message: string;
+  status: string;
+  channel: string;
+  createdAt: string;
+  students: Array<{ id: string; name: string; classroomName: string | null }>;
+  release?: {
+    type: "MOCK" | "TERM_REPORT";
+    title: string;
+    term: string | null;
+    academicYear: string | null;
+    releasedAt: string | null;
+    smsNotifiedAt?: string | null;
+    releaseSnapshotHash?: string | null;
+    mockExamSessionId?: string | null;
+  };
+  provider?: {
+    providerMessageId: string | null;
+    providerStatus: number | null;
+    providerStatusDescription: string | null;
+  };
+};
+
+function noStoreJson(payload: unknown, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: {
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
 }
 
-function phoneMatches(a: string, b: string) {
-  const A = normalisePhone(a);
-  const B = normalisePhone(b);
+function cleanStr(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function normDigits(v: unknown) {
+  return digitsOnly(String(v ?? ""));
+}
+
+function phoneMatches(a: unknown, b: unknown) {
+  const A = normDigits(a);
+  const B = normDigits(b);
   if (!A || !B) return false;
   return A.endsWith(B) || B.endsWith(A);
 }
 
-function clampInt(n: any, min: number, max: number, fallback: number) {
-  const v = Number(n);
-  if (!Number.isFinite(v)) return fallback;
-  return Math.min(Math.max(Math.trunc(v), min), max);
+function phoneMatchesAny(phone: unknown, candidates: string[]) {
+  return candidates.some((candidate) => phoneMatches(phone, candidate));
 }
 
-const ADMINISH = new Set(["ADMIN", "SCHOOL_ADMIN", "HEADTEACHER"]);
-
-async function getSafeTenantCtx() {
-  const session = await getServerSession(authOptions);
-  const u = session?.user as any;
-
-  const userId = typeof u?.id === "string" ? u.id : "";
-  const tenantId = typeof u?.tenantId === "string" ? u.tenantId : "";
-  const userPhone = normalisePhone(u?.phone ?? u?.phoneNumber ?? u?.guardianPhone ?? "");
-
-  if (!session || !userId) {
-    return { ok: false as const, status: 401, error: "UNAUTHORIZED" };
-  }
-  if (!tenantId) {
-    return { ok: false as const, status: 403, error: "NO_ACTIVE_TENANT" };
-  }
-
-  const membership = await prisma.membership.findUnique({
-    where: { userId_tenantId: { userId, tenantId } },
-    select: { status: true, role: { select: { name: true } } },
-  });
-
-  if (!membership || membership.status !== "ACTIVE") {
-    return { ok: false as const, status: 403, error: "FORBIDDEN" };
-  }
-
-  return {
-    ok: true as const,
-    userId,
-    tenantId,
-    userPhone,
-    roleName: String(membership.role?.name ?? "").trim(),
-  };
+function clampInt(v: unknown, min: number, max: number, fallback: number) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(Math.max(Math.trunc(n), min), max);
 }
 
-async function safeFindMany(model: any, argsPrimary: any, argsFallback: any) {
-  try {
-    return await model.findMany(argsPrimary);
-  } catch {
-    try {
-      return await model.findMany(argsFallback);
-    } catch {
-      return [];
-    }
+function isoDate(v: Date | string | null | undefined) {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function displayName(student: { firstName: string | null; lastName: string | null }) {
+  return [student.firstName, student.lastName].filter(Boolean).join(" ").trim() || "Learner";
+}
+
+function classroomName(
+  classroom: { name: string | null; grade: string | null; arm: string | null } | null,
+) {
+  if (!classroom) return null;
+
+  return [
+    classroom.name || classroom.grade || "",
+    classroom.arm ? `(${classroom.arm})` : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim() || null;
+}
+
+function jsonStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => cleanStr(item)).filter(Boolean);
+}
+
+function inferGenericTitle(message: string) {
+  const m = message.toLowerCase();
+
+  if (m.includes("fee") || m.includes("arrears") || m.includes("balance")) {
+    return "Fee SMS";
   }
+
+  if (m.includes("attendance") || m.includes("absent") || m.includes("late")) {
+    return "Attendance SMS";
+  }
+
+  if (m.includes("health") || m.includes("temperature") || m.includes("fever")) {
+    return "Health SMS";
+  }
+
+  return "School SMS";
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const safe = await getSafeTenantCtx();
-    if (!safe.ok) {
-      return NextResponse.json(
-        { ok: false, error: safe.error },
-        { status: safe.status, headers: { "cache-control": "no-store" } }
-      );
-    }
+    const gate = requireParentSession(req as any);
+    if (!gate.ok) return gate.res as any;
 
-    // 🔒 Role gate (Roadmap #1)
-    const isParent = safe.roleName === "PARENT";
-    const isAdminish = ADMINISH.has(safe.roleName);
-
-    if (!isParent && !isAdminish) {
-      // TEACHER and others are blocked
-      return NextResponse.json(
-        { ok: false, error: "FORBIDDEN" },
-        { status: 403, headers: { "cache-control": "no-store" } }
-      );
-    }
-
+    const sess = gate.session;
     const { searchParams } = new URL(req.url);
+    const limit = clampInt(searchParams.get("limit"), 1, 100, 30);
 
-    // Backward-compat only: tenantId must match session tenant.
-    const tenantIdParam = String(searchParams.get("tenantId") || "").trim();
-    if (tenantIdParam && tenantIdParam !== safe.tenantId) {
-      return NextResponse.json(
-        { ok: false, error: "Forbidden (tenant mismatch)." },
-        { status: 403, headers: { "cache-control": "no-store" } }
-      );
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: sess.tenantId },
+      select: { id: true, name: true, status: true },
+    });
+
+    if (!tenant || tenant.status !== "ACTIVE") {
+      return noStoreJson({ ok: false, error: "TENANT_NOT_ACTIVE" }, 403);
     }
 
-    const limit = clampInt(searchParams.get("limit"), 1, 100, 20);
+    const guardianCandidates = [
+      normDigits(sess.guardianPhoneE164),
+      normDigits(sess.guardianSuffix9),
+    ].filter((v) => v.length >= 7);
 
-    // guardianPhone rules:
-    // - PARENT: use session phone ONLY (param may exist but must match)
-    // - ADMINISH: must provide guardianPhone param for support view
-    const guardianPhoneParam = normalisePhone(searchParams.get("guardianPhone"));
-
-    let guardianPhone = "";
-
-    if (isParent) {
-      if (!safe.userPhone) {
-        return NextResponse.json(
-          { ok: false, error: "PARENT_PHONE_MISSING_IN_SESSION" },
-          { status: 400, headers: { "cache-control": "no-store" } }
-        );
-      }
-      if (guardianPhoneParam && !phoneMatches(guardianPhoneParam, safe.userPhone)) {
-        return NextResponse.json(
-          { ok: false, error: "Forbidden (guardianPhone mismatch)." },
-          { status: 403, headers: { "cache-control": "no-store" } }
-        );
-      }
-      guardianPhone = safe.userPhone;
-    } else {
-      if (!guardianPhoneParam) {
-        return NextResponse.json(
-          { ok: false, error: "guardianPhone is required for admin support view." },
-          { status: 400, headers: { "cache-control": "no-store" } }
-        );
-      }
-      guardianPhone = guardianPhoneParam;
+    if (!guardianCandidates.length) {
+      return noStoreJson({ ok: false, error: "PARENT_PHONE_MISSING_IN_SESSION" }, 400);
     }
 
-    const client = prisma as any;
+    const students = await prisma.student.findMany({
+      where: {
+        tenantId: sess.tenantId,
+        status: StudentStatus.ACTIVE,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        guardianPhone: true,
+        guardianPhoneNorm: true,
+        classroom: {
+          select: {
+            name: true,
+            grade: true,
+            arm: true,
+          },
+        },
+      },
+      take: 1000,
+    });
 
-    let smsLogRows: any[] = [];
-    let smsAuditRows: any[] = [];
+    const linkedStudents = students
+      .filter(
+        (student) =>
+          phoneMatchesAny(student.guardianPhoneNorm, guardianCandidates) ||
+          phoneMatchesAny(student.guardianPhone, guardianCandidates),
+      )
+      .map((student) => ({
+        id: student.id,
+        name: displayName(student),
+        classroomName: classroomName(student.classroom),
+      }));
 
-    // 1) Try SmsLog (tenant-scoped)
-    try {
-      if (client.smsLog) {
-        smsLogRows = await safeFindMany(
-          client.smsLog,
-          { where: { tenantId: safe.tenantId }, take: 250, orderBy: { createdAt: "desc" } },
-          { where: { tenantId: safe.tenantId }, take: 250 }
-        );
-      }
-    } catch (err) {
-      console.error("[PARENT_SMS_HISTORY] smsLog query failed", err);
-    }
+    const linkedStudentById = new Map(linkedStudents.map((student) => [student.id, student]));
+    const linkedStudentIds = new Set(linkedStudents.map((student) => student.id));
 
-    // 2) Try SMS audit model variants (tenant-scoped)
-    const auditModelCandidates = ["sMSSendAudit", "smsSendAudit", "smsSendAuditLog", "smsAudit"];
-    for (const m of auditModelCandidates) {
-      try {
-        if (client[m]) {
-          smsAuditRows = await safeFindMany(
-            client[m],
-            { where: { tenantId: safe.tenantId }, take: 250, orderBy: { createdAt: "desc" } },
-            { where: { tenantId: safe.tenantId }, take: 250 }
-          );
-          break;
-        }
-      } catch (err) {
-        console.error(`[PARENT_SMS_HISTORY] ${m} query failed`, err);
-      }
-    }
+    const records: SmsHistoryRecord[] = [];
 
-    function getRowPhone(row: any): string {
-      const candidate =
-        row.guardianPhone ||
-        row.to ||
-        row.phone ||
-        row.recipient ||
-        row.msisdn ||
-        row.destination ||
-        "";
-      return normalisePhone(String(candidate));
-    }
+    const mockRecipients = await prisma.mockResultsReleaseNotifyRecipient.findMany({
+      where: { tenantId: sess.tenantId },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      take: 300,
+      select: {
+        id: true,
+        guardianPhoneNorm: true,
+        studentIds: true,
+        status: true,
+        providerMessageId: true,
+        providerStatus: true,
+        providerStatusDescription: true,
+        createdAt: true,
+        updatedAt: true,
+        job: {
+          select: {
+            id: true,
+            status: true,
+            mockExamSessionId: true,
+            completedAt: true,
+            mockResultsRelease: {
+              select: {
+                title: true,
+                academicYear: true,
+                term: true,
+                mockLabel: true,
+                releasedAt: true,
+                smsNotifiedAt: true,
+                releaseSnapshotHash: true,
+              },
+            },
+            mockExamSession: {
+              select: {
+                id: true,
+                title: true,
+                academicYear: true,
+                term: true,
+                mockLabel: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    function getRowMessage(row: any): string {
-      return String(row.message || row.body || row.content || row.text || row.smsText || "");
-    }
+    for (const recipient of mockRecipients) {
+      if (!phoneMatchesAny(recipient.guardianPhoneNorm, guardianCandidates)) continue;
 
-    function getRowDate(row: any): Date {
-      const candidate = row.createdAt || row.sentAt || row.timestamp || row.loggedAt || row.queuedAt || null;
-      if (!candidate) return new Date(0);
-      const d = new Date(candidate);
-      return isNaN(d.getTime()) ? new Date(0) : d;
-    }
+      const rawStudentIds = jsonStringArray(recipient.studentIds);
+      const visibleStudentIds = rawStudentIds.filter((id) => linkedStudentIds.has(id));
 
-    function getRowStatus(row: any): string {
-      return String(row.status || row.deliveryStatus || row.state || row.result || "");
-    }
+      const studentsForRecord =
+        visibleStudentIds.length > 0
+          ? visibleStudentIds
+              .map((id) => linkedStudentById.get(id))
+              .filter((student): student is SmsHistoryRecord["students"][number] =>
+                Boolean(student),
+              )
+          : linkedStudents;
 
-    function getRowChannel(row: any): string {
-      return String(row.channel || row.provider || row.gateway || row.route || "SMS");
-    }
-
-    function sanitizeRow(row: any) {
-      const allow = [
-        "id",
-        "providerMessageId",
-        "messageId",
-        "status",
-        "deliveryStatus",
-        "createdAt",
-        "sentAt",
-        "to",
-        "phone",
-        "recipient",
-        "msisdn",
-        "channel",
-        "provider",
-        "gateway",
-        "brand",
-      ];
-      const out: Record<string, any> = {};
-      for (const k of allow) {
-        if (row && Object.prototype.hasOwnProperty.call(row, k)) out[k] = row[k];
-      }
-      return out;
-    }
-
-    type SimpleSmsRecord = {
-      id: string;
-      source: "SmsLog" | "SMSSendAudit";
-      phone: string;
-      message: string;
-      status: string;
-      channel: string;
-      createdAt: string;
-      meta?: Record<string, any>;
-    };
-
-    const guardianNorm = normalisePhone(guardianPhone);
-
-    const matchesGuardian = (rowPhoneNorm: string) => {
-      if (!rowPhoneNorm || !guardianNorm) return false;
-      return rowPhoneNorm.endsWith(guardianNorm) || guardianNorm.endsWith(rowPhoneNorm);
-    };
-
-    const records: SimpleSmsRecord[] = [];
-
-    for (const row of smsLogRows) {
-      const phoneNorm = getRowPhone(row);
-      if (!matchesGuardian(phoneNorm)) continue;
+      const release = recipient.job.mockResultsRelease;
+      const session = recipient.job.mockExamSession;
+      const title = release.title || session.title || "Released BECE Mock readiness";
 
       records.push({
-        id: String(row.id ?? `log_${records.length}`),
-        source: "SmsLog",
-        phone: phoneNorm,
-        message: getRowMessage(row),
-        status: getRowStatus(row),
-        channel: getRowChannel(row),
-        createdAt: getRowDate(row).toISOString(),
-        meta: sanitizeRow(row),
+        id: `mock:${String(recipient.id)}`,
+        category: "MOCK_RESULTS_RELEASE",
+        source: "MockResultsReleaseNotifyRecipient",
+        phone: recipient.guardianPhoneNorm,
+        title: "Mock readiness released",
+        message: `${title} is available in the parent portal. Open Mock readiness to view support guidance and download the PDF.`,
+        status: recipient.status || recipient.job.status || "SENT",
+        channel: "SMS",
+        createdAt:
+          isoDate(recipient.updatedAt) ||
+          isoDate(recipient.job.completedAt) ||
+          isoDate(recipient.createdAt) ||
+          new Date(0).toISOString(),
+        students: studentsForRecord,
+        release: {
+          type: "MOCK",
+          title,
+          term: release.term ?? session.term ?? null,
+          academicYear: release.academicYear ?? session.academicYear ?? null,
+          releasedAt: isoDate(release.releasedAt),
+          smsNotifiedAt: isoDate(release.smsNotifiedAt),
+          releaseSnapshotHash: release.releaseSnapshotHash ?? null,
+          mockExamSessionId: recipient.job.mockExamSessionId,
+        },
+        provider: {
+          providerMessageId: recipient.providerMessageId ?? null,
+          providerStatus: recipient.providerStatus ?? null,
+          providerStatusDescription: recipient.providerStatusDescription ?? null,
+        },
       });
     }
 
-    for (const row of smsAuditRows) {
-      const phoneNorm = getRowPhone(row);
-      if (!matchesGuardian(phoneNorm)) continue;
+    const normalRecipients = await prisma.resultsReleaseNotifyRecipient.findMany({
+      where: { tenantId: sess.tenantId },
+      orderBy: [{ createdAt: "desc" }],
+      take: 300,
+      select: {
+        id: true,
+        guardianPhoneNorm: true,
+        status: true,
+        providerMessageId: true,
+        providerStatus: true,
+        providerStatusDescription: true,
+        createdAt: true,
+        job: {
+          select: {
+            term: true,
+            academicYear: true,
+            status: true,
+            completedAt: true,
+          },
+        },
+      },
+    });
+
+    for (const recipient of normalRecipients) {
+      if (!phoneMatchesAny(recipient.guardianPhoneNorm, guardianCandidates)) continue;
 
       records.push({
-        id: String(row.id ?? `audit_${records.length}`),
-        source: "SMSSendAudit",
-        phone: phoneNorm,
-        message: getRowMessage(row),
-        status: getRowStatus(row),
-        channel: getRowChannel(row),
-        createdAt: getRowDate(row).toISOString(),
-        meta: sanitizeRow(row),
+        id: `term:${String(recipient.id)}`,
+        category: "TERM_RESULTS_RELEASE",
+        source: "ResultsReleaseNotifyRecipient",
+        phone: recipient.guardianPhoneNorm,
+        title: "Term report notification",
+        message: `The ${recipient.job.term} ${recipient.job.academicYear} term report notification was sent to this parent phone.`,
+        status: recipient.status || recipient.job.status || "SENT",
+        channel: "SMS",
+        createdAt:
+          isoDate(recipient.job.completedAt) ||
+          isoDate(recipient.createdAt) ||
+          new Date(0).toISOString(),
+        students: linkedStudents,
+        release: {
+          type: "TERM_REPORT",
+          title: `${recipient.job.term} ${recipient.job.academicYear} Term Report`,
+          term: recipient.job.term,
+          academicYear: recipient.job.academicYear,
+          releasedAt: null,
+        },
+        provider: {
+          providerMessageId: recipient.providerMessageId ?? null,
+          providerStatus: recipient.providerStatus ?? null,
+          providerStatusDescription: recipient.providerStatusDescription ?? null,
+        },
+      });
+    }
+
+    const officialMockExists = records.some(
+      (record) => record.category === "MOCK_RESULTS_RELEASE",
+    );
+    const officialTermExists = records.some(
+      (record) => record.category === "TERM_RESULTS_RELEASE",
+    );
+
+    const smsLogs = await prisma.smsLog.findMany({
+      where: { tenantId: sess.tenantId },
+      orderBy: [{ createdAt: "desc" }],
+      take: 300,
+      select: {
+        id: true,
+        createdAt: true,
+        to: true,
+        body: true,
+        brand: true,
+        providerMessageId: true,
+        providerStatus: true,
+        providerStatusDescription: true,
+      },
+    });
+
+    for (const log of smsLogs) {
+      if (!phoneMatchesAny(log.to, guardianCandidates)) continue;
+
+      const bodyLower = log.body.toLowerCase();
+
+      if ((bodyLower.includes("mock") || bodyLower.includes("bece")) && officialMockExists) {
+        continue;
+      }
+
+      if ((bodyLower.includes("result") || bodyLower.includes("report")) && officialTermExists) {
+        continue;
+      }
+
+      records.push({
+        id: `smslog:${String(log.id)}`,
+        category: "GENERAL",
+        source: "SmsLog",
+        phone: normDigits(log.to),
+        title: inferGenericTitle(log.body),
+        message: log.body,
+        status: log.providerStatusDescription || String(log.providerStatus ?? "SENT"),
+        channel: log.brand || "SMS",
+        createdAt: isoDate(log.createdAt) || new Date(0).toISOString(),
+        students: linkedStudents,
+        provider: {
+          providerMessageId: log.providerMessageId ?? null,
+          providerStatus: log.providerStatus ?? null,
+          providerStatusDescription: log.providerStatusDescription ?? null,
+        },
       });
     }
 
     records.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    return NextResponse.json(
-      {
-        ok: true,
-        tenantId: safe.tenantId,
-        guardianPhone,
-        count: records.slice(0, limit).length,
-        records: records.slice(0, limit),
-      },
-      { status: 200, headers: { "cache-control": "no-store" } }
-    );
+    const limitedRecords = records.slice(0, limit);
+
+    return noStoreJson({
+      ok: true,
+      tenantId: sess.tenantId,
+      tenantName: tenant.name,
+      guardianPhone: guardianCandidates[0] ?? "",
+      linkedStudents,
+      count: limitedRecords.length,
+      totalAvailable: records.length,
+      records: limitedRecords,
+    });
   } catch (err) {
     console.error("[PARENT_SMS_HISTORY_ERROR]", err);
-    return NextResponse.json(
-      { ok: false, error: "Failed to load parent SMS history." },
-      { status: 500, headers: { "cache-control": "no-store" } }
-    );
+    return noStoreJson({ ok: false, error: "FAILED_TO_LOAD_PARENT_SMS_HISTORY" }, 500);
   }
 }
