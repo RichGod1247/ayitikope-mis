@@ -222,6 +222,104 @@ type CandidateRescueProfile = {
   nearGradeOpportunities: CandidateSubjectSignal[];
 };
 
+type MockTrendLabel = "IMPROVING" | "DECLINING" | "STABLE" | "INCOMPLETE";
+
+type MockTrendSubjectMovement = {
+  subject: string;
+  canonicalSubject: string;
+  previousScore: number | null;
+  latestScore: number | null;
+  scoreMovement: number | null;
+  previousGrade: number | null;
+  latestGrade: number | null;
+  gradeMovement: number | null;
+  label: "IMPROVED" | "DECLINED" | "STABLE";
+};
+
+type MockTrendLearner = {
+  studentId: string;
+  name: string;
+  trendLabel: MockTrendLabel;
+  trendReason: string;
+  previousSessionId: string | null;
+  previousMockLabel: string | null;
+  latestSessionId: string;
+  latestMockLabel: string;
+  previousPlacementAggregate: number | null;
+  latestPlacementAggregate: number | null;
+  aggregateMovement: number | null;
+  previousAverageScore: number | null;
+  latestAverageScore: number | null;
+  averageScoreMovement: number | null;
+  improvedSubjects: MockTrendSubjectMovement[];
+  declinedSubjects: MockTrendSubjectMovement[];
+  persistentWeakSubjects: MockTrendSubjectMovement[];
+  nearGradeOpportunities: CandidateSubjectSignal[];
+  recommendedAction: string;
+};
+
+type MockTrendSessionSummary = {
+  id: string;
+  mockNumber: number;
+  mockLabel: string;
+  title: string;
+  status: string;
+  date: string | null;
+  scoredCells: number;
+  possibleCells: number;
+  completionPercent: number;
+  placementReadyCount: number;
+  classAveragePlacementAggregate: number | null;
+  classAverageScore: number | null;
+};
+
+type MockTrendIntelligence = {
+  available: boolean;
+  reason: string | null;
+  selectedSessionId: string;
+  previousSessionId: string | null;
+  lockedSessionCount: number;
+  summary: {
+    trackedLearners: number;
+    improvingCount: number;
+    decliningCount: number;
+    stableCount: number;
+    incompleteCount: number;
+    averageAggregateMovement: number | null;
+    averageScoreMovement: number | null;
+  };
+  sessionSummaries: MockTrendSessionSummary[];
+  learners: MockTrendLearner[];
+};
+
+type MockTrendSessionSeed = {
+  id: string;
+  classroomId: string;
+  academicYear: string;
+  term: string | null;
+  mockNumber: number;
+  mockLabel: string;
+  title: string;
+  status: string;
+  date: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+type MockTrendItemRow = {
+  id: string;
+  mockExamSessionId: string | null;
+  subject: string;
+  title: string;
+  maxScore: number;
+  status: string;
+  scores: {
+    studentId: string;
+    score: unknown;
+    comment: string | null;
+  }[];
+};
+
 function noStore(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
@@ -483,10 +581,6 @@ function ownerNormalizeKey(value: unknown) {
     .replace(/[^A-Z0-9]/g, "");
 }
 
-function isTeacherMembershipRole(value: unknown) {
-  return ownerNormalizeKey(value) === "TEACHER";
-}
-
 function ownerDisplayName(user: {
   name: string | null;
   firstName: string | null;
@@ -612,7 +706,7 @@ async function resolveMockSubjectOwnerMap(args: {
     new Set(args.subjects.map(cleanMockStr).filter(Boolean)),
   );
   const subjectKeys = new Set(subjects.map(ownerSubjectKey).filter(Boolean));
-  const subjectNorms = Array.from(
+  const _subjectNorms = Array.from(
     new Set(
       subjects
         .flatMap((subject) => [
@@ -1282,6 +1376,524 @@ function buildCandidateRescueProfiles(args: {
   });
 }
 
+function scoreToNumber(raw: unknown): number | null {
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function gradeToNumber(raw: unknown): number | null {
+  if (raw && typeof raw === "object" && "grade" in raw) {
+    return scoreToNumber((raw as { grade?: unknown }).grade);
+  }
+
+  return scoreToNumber(raw);
+}
+
+function trendStatusRank(label: MockTrendLabel) {
+  if (label === "DECLINING") return 0;
+  if (label === "INCOMPLETE") return 1;
+  if (label === "STABLE") return 2;
+  return 3;
+}
+
+function trendSessionDate(session: { date: Date | null }) {
+  return session.date ? session.date.toISOString() : null;
+}
+
+function buildTrendUnavailable(args: {
+  selectedSessionId: string;
+  reason: string;
+  lockedSessionCount?: number;
+}): MockTrendIntelligence {
+  return {
+    available: false,
+    reason: args.reason,
+    selectedSessionId: args.selectedSessionId,
+    previousSessionId: null,
+    lockedSessionCount: args.lockedSessionCount ?? 0,
+    summary: {
+      trackedLearners: 0,
+      improvingCount: 0,
+      decliningCount: 0,
+      stableCount: 0,
+      incompleteCount: 0,
+      averageAggregateMovement: null,
+      averageScoreMovement: null,
+    },
+    sessionSummaries: [],
+    learners: [],
+  };
+}
+
+function buildTrendRecommendedAction(args: {
+  trendLabel: MockTrendLabel;
+  weakestSubject: string | null;
+  aggregateMovement: number | null;
+  averageScoreMovement: number | null;
+  declinedSubjects: MockTrendSubjectMovement[];
+  improvedSubjects: MockTrendSubjectMovement[];
+  persistentWeakSubjects: MockTrendSubjectMovement[];
+}) {
+  if (args.trendLabel === "INCOMPLETE") {
+    return "Complete missing Mock evidence before using this learner for trend judgment.";
+  }
+
+  if (args.trendLabel === "DECLINING") {
+    const subject = args.declinedSubjects[0]?.subject || args.weakestSubject;
+    return `Urgent trend review needed${subject ? ` in ${subject}` : ""}. Compare scripts from the previous Mock and assign correction before the next Mock.`;
+  }
+
+  if (args.trendLabel === "IMPROVING") {
+    const subject = args.improvedSubjects[0]?.subject || args.weakestSubject;
+    return `Protect the improvement${subject ? `, especially around ${subject}` : ""}. Keep timed revision and past-question practice consistent.`;
+  }
+
+  if (args.persistentWeakSubjects.length > 0) {
+    return `Trend is stable, but persistent weakness remains in ${args.persistentWeakSubjects
+      .slice(0, 2)
+      .map((s) => s.subject)
+      .join(", ")}. Assign targeted support.`;
+  }
+
+  return "Trend is stable. Push one subject at a time for grade-boundary improvement before the next Mock.";
+}
+
+async function buildMockTrendIntelligence(args: {
+  tenantId: string;
+  classroomId: string;
+  students: StudentRow[];
+  sessions: MockTrendSessionSeed[];
+  selectedSession: MockTrendSessionSeed;
+  ownerStatusMap: Map<string, MockSubjectOwnerStatus>;
+}): Promise<MockTrendIntelligence> {
+  const selectedStatus = cleanMockStr(args.selectedSession.status).toUpperCase();
+
+  if (selectedStatus !== "LOCKED") {
+    return buildTrendUnavailable({
+      selectedSessionId: args.selectedSession.id,
+      reason: "Seal this Mock session before using it for official trend intelligence.",
+      lockedSessionCount: args.sessions.filter(
+        (session) => cleanMockStr(session.status).toUpperCase() === "LOCKED",
+      ).length,
+    });
+  }
+
+  const lockedSessions = args.sessions
+    .filter(
+      (session) =>
+        session.classroomId === args.classroomId &&
+        session.academicYear === args.selectedSession.academicYear &&
+        session.mockNumber <= args.selectedSession.mockNumber &&
+        cleanMockStr(session.status).toUpperCase() === "LOCKED",
+    )
+    .sort((a, b) => {
+      if (a.mockNumber !== b.mockNumber) return a.mockNumber - b.mockNumber;
+      return String(a.createdAt ?? "").localeCompare(String(b.createdAt ?? ""));
+    });
+
+  if (lockedSessions.length < 2) {
+    return buildTrendUnavailable({
+      selectedSessionId: args.selectedSession.id,
+      reason: "At least two sealed Mock sessions are needed before trend intelligence can be calculated.",
+      lockedSessionCount: lockedSessions.length,
+    });
+  }
+
+  const latestSession =
+    lockedSessions.find((session) => session.id === args.selectedSession.id) ??
+    lockedSessions[lockedSessions.length - 1];
+
+  const latestIndex = lockedSessions.findIndex(
+    (session) => session.id === latestSession.id,
+  );
+
+  const previousSession = lockedSessions[latestIndex - 1] ?? null;
+
+  if (!previousSession) {
+    return buildTrendUnavailable({
+      selectedSessionId: latestSession.id,
+      reason: "No previous sealed Mock session exists before this selected Mock.",
+      lockedSessionCount: lockedSessions.length,
+    });
+  }
+
+  const sessionIds = lockedSessions.map((session) => session.id);
+
+  const items = await prisma.assessmentItem.findMany({
+    where: {
+      tenantId: args.tenantId,
+      classroomId: args.classroomId,
+      mockExamSessionId: { in: sessionIds },
+      type: "MOCK",
+    },
+    orderBy: [{ subject: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      mockExamSessionId: true,
+      subject: true,
+      title: true,
+      maxScore: true,
+      status: true,
+      scores: {
+        select: {
+          studentId: true,
+          score: true,
+          comment: true,
+        },
+      },
+    },
+  });
+
+  const typedItems: MockTrendItemRow[] = items.map((item) => ({
+    id: item.id,
+    mockExamSessionId: item.mockExamSessionId,
+    subject: item.subject,
+    title: item.title,
+    maxScore: item.maxScore,
+    status: item.status,
+    scores: item.scores.map((score) => ({
+      studentId: score.studentId,
+      score: score.score,
+      comment: score.comment,
+    })),
+  }));
+
+  const itemsBySession = new Map<string, MockTrendItemRow[]>();
+
+  for (const item of typedItems) {
+    const key = cleanMockStr(item.mockExamSessionId);
+    if (!key) continue;
+    const next = itemsBySession.get(key) ?? [];
+    next.push(item);
+    itemsBySession.set(key, next);
+  }
+
+  function snapshotFor(sessionId: string, student: StudentRow) {
+    const sessionItems = itemsBySession.get(sessionId) ?? [];
+
+    const subjectCells = sessionItems.map((item) => {
+      const scoreRow =
+        item.scores.find((score) => score.studentId === student.id) ?? null;
+
+      const score = scoreToNumber(scoreRow?.score);
+      const grade = score == null ? null : mockGradeFromScore(score);
+
+      return {
+        itemId: item.id,
+        subject: item.subject,
+        canonicalSubject: canonicalMockSubject(item.subject),
+        score,
+        comment: scoreRow?.comment ?? null,
+        grade: grade?.grade ?? null,
+        gradeLabel: grade?.label ?? null,
+        remark: grade?.remark ?? null,
+        nextGrade: grade?.nextGrade ?? null,
+        pointsToNextGrade: grade?.pointsToNextGrade ?? null,
+      };
+    });
+
+    const scoredSubjects = subjectCells.filter((subject) => subject.score != null);
+
+    const averageScore =
+      scoredSubjects.length > 0
+        ? round1(
+            scoredSubjects.reduce(
+              (sum, subject) => sum + Number(subject.score ?? 0),
+              0,
+            ) / scoredSubjects.length,
+          )
+        : null;
+
+    const aggregateInputs = subjectCells.map((subject) => ({
+      subject: subject.subject,
+      score: subject.score,
+      grade: subject.grade,
+    }));
+
+    const schoolAggregate = calculateSchoolMockAggregate(aggregateInputs);
+    const placementAggregate = calculatePlacementMockAggregate(aggregateInputs);
+
+    return {
+      sessionId,
+      studentId: student.id,
+      name: studentName(student),
+      subjectCells,
+      averageScore,
+      scoredSubjectCount: scoredSubjects.length,
+      missingSubjectCount: Math.max(0, sessionItems.length - scoredSubjects.length),
+      schoolAggregate,
+      placementAggregate,
+    };
+  }
+
+  const sessionSummaries: MockTrendSessionSummary[] = lockedSessions.map((session) => {
+    const sessionItems = itemsBySession.get(session.id) ?? [];
+    const snapshots = args.students.map((student) => snapshotFor(session.id, student));
+
+    const possibleCells = args.students.length * sessionItems.length;
+    const scoredCells = snapshots.reduce(
+      (sum, snapshot) => sum + snapshot.scoredSubjectCount,
+      0,
+    );
+
+    const placementReadyRows = snapshots.filter(
+      (snapshot) => snapshot.placementAggregate.ok,
+    );
+
+    const placementAggregates = placementReadyRows
+      .map((snapshot) => snapshot.placementAggregate.aggregate)
+      .filter((value): value is number => typeof value === "number");
+
+    const averageScores = snapshots
+      .map((snapshot) => snapshot.averageScore)
+      .filter((value): value is number => typeof value === "number");
+
+    return {
+      id: session.id,
+      mockNumber: session.mockNumber,
+      mockLabel: session.mockLabel,
+      title: session.title,
+      status: session.status,
+      date: trendSessionDate(session),
+      scoredCells,
+      possibleCells,
+      completionPercent:
+        possibleCells > 0 ? round1((scoredCells / possibleCells) * 100) : 0,
+      placementReadyCount: placementReadyRows.length,
+      classAveragePlacementAggregate:
+        placementAggregates.length > 0
+          ? round1(
+              placementAggregates.reduce((sum, value) => sum + value, 0) /
+                placementAggregates.length,
+            )
+          : null,
+      classAverageScore:
+        averageScores.length > 0
+          ? round1(
+              averageScores.reduce((sum, value) => sum + value, 0) /
+                averageScores.length,
+            )
+          : null,
+    };
+  });
+
+  const learners: MockTrendLearner[] = args.students.map((student) => {
+    const previous = snapshotFor(previousSession.id, student);
+    const latest = snapshotFor(latestSession.id, student);
+
+    const previousAggregate = previous.placementAggregate.aggregate;
+    const latestAggregate = latest.placementAggregate.aggregate;
+
+    const aggregateMovement =
+      typeof previousAggregate === "number" && typeof latestAggregate === "number"
+        ? round1(previousAggregate - latestAggregate)
+        : null;
+
+    const averageScoreMovement =
+      typeof previous.averageScore === "number" && typeof latest.averageScore === "number"
+        ? round1(latest.averageScore - previous.averageScore)
+        : null;
+
+    const previousBySubject = new Map(
+      previous.subjectCells.map((subject) => [subject.canonicalSubject, subject]),
+    );
+
+    const subjectMovements = latest.subjectCells.flatMap<MockTrendSubjectMovement>(
+      (latestSubject) => {
+        const previousSubject = previousBySubject.get(
+          latestSubject.canonicalSubject,
+        );
+
+        if (!previousSubject) return [];
+
+        const previousScore = scoreToNumber(previousSubject.score);
+        const latestScore = scoreToNumber(latestSubject.score);
+        const previousGrade = gradeToNumber(previousSubject.grade);
+        const latestGrade = gradeToNumber(latestSubject.grade);
+
+        const scoreMovement =
+          previousScore != null && latestScore != null
+            ? round1(latestScore - previousScore)
+            : null;
+
+        const gradeMovement =
+          previousGrade != null && latestGrade != null
+            ? previousGrade - latestGrade
+            : null;
+
+        const label: MockTrendSubjectMovement["label"] =
+          (scoreMovement != null && scoreMovement >= 5) ||
+          (gradeMovement != null && gradeMovement >= 1)
+            ? "IMPROVED"
+            : (scoreMovement != null && scoreMovement <= -5) ||
+                (gradeMovement != null && gradeMovement <= -1)
+              ? "DECLINED"
+              : "STABLE";
+
+        return [
+          {
+            subject: latestSubject.subject,
+            canonicalSubject: latestSubject.canonicalSubject,
+            previousScore,
+            latestScore,
+            scoreMovement,
+            previousGrade,
+            latestGrade,
+            gradeMovement,
+            label,
+          },
+        ];
+      },
+    );
+
+    const improvedSubjects = subjectMovements
+      .filter((movement) => movement.label === "IMPROVED")
+      .sort((a, b) => Number(b.scoreMovement ?? 0) - Number(a.scoreMovement ?? 0))
+      .slice(0, 4);
+
+    const declinedSubjects = subjectMovements
+      .filter((movement) => movement.label === "DECLINED")
+      .sort((a, b) => Number(a.scoreMovement ?? 0) - Number(b.scoreMovement ?? 0))
+      .slice(0, 4);
+
+    const persistentWeakSubjects = subjectMovements
+      .filter(
+        (movement) =>
+          typeof movement.previousScore === "number" &&
+          typeof movement.latestScore === "number" &&
+          movement.previousScore < 50 &&
+          movement.latestScore < 50,
+      )
+      .sort((a, b) => Number(a.latestScore ?? 999) - Number(b.latestScore ?? 999))
+      .slice(0, 4);
+
+    const nearGradeOpportunities = latest.subjectCells
+      .filter(
+        (subject) =>
+          typeof subject.pointsToNextGrade === "number" &&
+          subject.pointsToNextGrade > 0 &&
+          subject.pointsToNextGrade <= 5,
+      )
+      .sort(
+        (a, b) =>
+          Number(a.pointsToNextGrade ?? 999) -
+          Number(b.pointsToNextGrade ?? 999),
+      )
+      .slice(0, 4)
+      .map((subject) => candidateSubjectSignal(subject, args.ownerStatusMap));
+
+    const weakestSubject =
+      persistentWeakSubjects[0]?.subject ||
+      declinedSubjects[0]?.subject ||
+      latest.subjectCells
+        .filter((subject) => typeof subject.score === "number")
+        .sort((a, b) => Number(a.score ?? 999) - Number(b.score ?? 999))[0]
+        ?.subject ||
+      null;
+
+    let trendLabel: MockTrendLabel = "INCOMPLETE";
+    let trendReason = "Missing aggregate or average score evidence across the compared Mock sessions.";
+
+    if (
+      typeof aggregateMovement === "number" &&
+      typeof averageScoreMovement === "number"
+    ) {
+      if (aggregateMovement >= 2 || (aggregateMovement > 0 && averageScoreMovement >= 5)) {
+        trendLabel = "IMPROVING";
+        trendReason = `Placement aggregate improved by ${aggregateMovement}; average score moved by ${averageScoreMovement}.`;
+      } else if (
+        aggregateMovement <= -2 ||
+        (aggregateMovement < 0 && averageScoreMovement <= -5)
+      ) {
+        trendLabel = "DECLINING";
+        trendReason = `Placement aggregate worsened by ${Math.abs(
+          aggregateMovement,
+        )}; average score moved by ${averageScoreMovement}.`;
+      } else {
+        trendLabel = "STABLE";
+        trendReason = "No major movement between the previous sealed Mock and this sealed Mock.";
+      }
+    }
+
+    return {
+      studentId: student.id,
+      name: studentName(student),
+      trendLabel,
+      trendReason,
+      previousSessionId: previousSession.id,
+      previousMockLabel: previousSession.mockLabel,
+      latestSessionId: latestSession.id,
+      latestMockLabel: latestSession.mockLabel,
+      previousPlacementAggregate: previousAggregate,
+      latestPlacementAggregate: latestAggregate,
+      aggregateMovement,
+      previousAverageScore: previous.averageScore,
+      latestAverageScore: latest.averageScore,
+      averageScoreMovement,
+      improvedSubjects,
+      declinedSubjects,
+      persistentWeakSubjects,
+      nearGradeOpportunities,
+      recommendedAction: buildTrendRecommendedAction({
+        trendLabel,
+        weakestSubject,
+        aggregateMovement,
+        averageScoreMovement,
+        declinedSubjects,
+        improvedSubjects,
+        persistentWeakSubjects,
+      }),
+    };
+  });
+
+  const aggregateMovements = learners
+    .map((learner) => learner.aggregateMovement)
+    .filter((value): value is number => typeof value === "number");
+
+  const averageScoreMovements = learners
+    .map((learner) => learner.averageScoreMovement)
+    .filter((value): value is number => typeof value === "number");
+
+  learners.sort((a, b) => {
+    const rankA = trendStatusRank(a.trendLabel);
+    const rankB = trendStatusRank(b.trendLabel);
+    if (rankA !== rankB) return rankA - rankB;
+
+    return Number(a.latestPlacementAggregate ?? 999) - Number(b.latestPlacementAggregate ?? 999);
+  });
+
+  return {
+    available: true,
+    reason: null,
+    selectedSessionId: latestSession.id,
+    previousSessionId: previousSession.id,
+    lockedSessionCount: lockedSessions.length,
+    summary: {
+      trackedLearners: learners.length,
+      improvingCount: learners.filter((learner) => learner.trendLabel === "IMPROVING").length,
+      decliningCount: learners.filter((learner) => learner.trendLabel === "DECLINING").length,
+      stableCount: learners.filter((learner) => learner.trendLabel === "STABLE").length,
+      incompleteCount: learners.filter((learner) => learner.trendLabel === "INCOMPLETE").length,
+      averageAggregateMovement:
+        aggregateMovements.length > 0
+          ? round1(
+              aggregateMovements.reduce((sum, value) => sum + value, 0) /
+                aggregateMovements.length,
+            )
+          : null,
+      averageScoreMovement:
+        averageScoreMovements.length > 0
+          ? round1(
+              averageScoreMovements.reduce((sum, value) => sum + value, 0) /
+                averageScoreMovements.length,
+            )
+          : null,
+    },
+    sessionSummaries,
+    learners,
+  };
+}
+
 export async function GET(req: NextRequest) {
   const auth = await requireApiUserContext(req, {
     requireTenant: true,
@@ -1637,6 +2249,28 @@ export async function GET(req: NextRequest) {
     ownerStatusMap,
   });
 
+  let trend: MockTrendIntelligence;
+
+  try {
+    trend = await buildMockTrendIntelligence({
+      tenantId: ctx.tenantId,
+      classroomId: selectedSession.classroomId,
+      students,
+      sessions,
+      selectedSession,
+      ownerStatusMap,
+    });
+  } catch (err) {
+    console.error("[HEADTEACHER_MOCK_TREND_ERROR]", err);
+    trend = buildTrendUnavailable({
+      selectedSessionId: selectedSession.id,
+      reason: "Trend intelligence could not be calculated for this Mock session.",
+      lockedSessionCount: sessions.filter(
+        (session) => cleanMockStr(session.status).toUpperCase() === "LOCKED",
+      ).length,
+    });
+  }
+
   return noStore(200, {
     ok: true,
     classrooms: classrooms.map((classroom) => ({
@@ -1692,6 +2326,7 @@ export async function GET(req: NextRequest) {
       topSubjects,
       students: studentRows,
       candidateRescueProfiles,
+      trend,
       evidenceActions,
       warnings: {
         aggregateMayBeIncomplete:
