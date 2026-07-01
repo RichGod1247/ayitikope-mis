@@ -90,6 +90,18 @@ function gradeFromPolicyScale(
   );
 }
 
+function buildBrandMark() {
+  return `
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:34px;height:34px;border-radius:8px;background:#071A3D;border:2px solid #D4AF37;color:#D4AF37;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:17pt;line-height:1">E</div>
+      <div>
+        <div style="font-size:8pt;font-weight:800;color:#D4AF37;text-transform:uppercase;letter-spacing:.12em">EduLife OS</div>
+        <div style="font-size:7pt;color:#5f6368">Ghana Basic Education</div>
+      </div>
+    </div>
+  `;
+}
+
 function buildReportHtml(data: {
   schoolName: string;
   studentName: string;
@@ -187,15 +199,16 @@ function buildReportHtml(data: {
 </head>
 <body>
 <div class="page">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #0d1b4e">
-    <div>
-      <div style="font-size:13pt;font-weight:800;color:#0d1b4e">${esc(data.schoolName)}</div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #0d1b4e;gap:10px">
+    <div style="min-width:0;flex:1">
+      ${buildBrandMark()}
+      <div style="font-size:13pt;font-weight:800;color:#0d1b4e;margin-top:7px">${esc(data.schoolName)}</div>
       <div style="font-size:9pt;color:#444;margin-top:1px">School Terminal Report Card</div>
       <div style="font-size:8pt;color:#666;margin-top:2px">${esc(data.term)} · ${esc(data.academicYear)}</div>
     </div>
-    <div style="text-align:right;font-size:8pt;color:#666">
-      <div>Ghana Basic Education</div>
+    <div style="text-align:right;font-size:8pt;color:#666;flex-shrink:0">
       <div>Policy-aware assessment</div>
+      <div>Released parent report</div>
     </div>
   </div>
 

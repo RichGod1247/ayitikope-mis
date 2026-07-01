@@ -34,11 +34,11 @@ export default function ParentMockReadinessPage() {
               </Link>
 
               <Link
-                href="/parent/results"
-                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
-              >
-                Results
-              </Link>
+  href="/parent/report"
+  className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+>
+  Term report
+</Link>
             </div>
           </div>
         </div>

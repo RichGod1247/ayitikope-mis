@@ -79,6 +79,60 @@ type ParentChildInsightsResponse =
   | ParentChildInsightsOk
   | { ok: false; error: string };
 
+type ParentMockReleaseResponse = {
+  ok: boolean;
+  released: boolean;
+  latestRelease?: {
+    id: string;
+    mockExamSessionId: string;
+    academicYear: string;
+    term: string | null;
+    mockLabel: string;
+    title: string;
+    releasedAt: string;
+    smsNotifiedAt: string | null;
+  } | null;
+  error?: string;
+  message?: string;
+};
+
+type ParentMockReadinessResponse = {
+  ok: boolean;
+  error?: string;
+  message?: string;
+  readiness?: {
+    parent?: {
+      label?: string;
+      message?: string;
+      homeSupport?: string;
+    };
+  };
+  aggregates?: {
+    school?: {
+      aggregate: number | null;
+    };
+    placement?: {
+      aggregate: number | null;
+    };
+  };
+  scores?: {
+    averageScore: number | null;
+    scoredSubjectCount: number;
+  };
+  strongestSubjects?: Array<{
+    subject: string;
+    score: number | null;
+    gradeLabel: string | null;
+  }>;
+  weakestSubjects?: Array<{
+    subject: string;
+    score: number | null;
+    gradeLabel: string | null;
+  }>;
+  parentHomeSupport?: string;
+  recommendedAction?: string;
+};
+  
 function pct(v: number | null | undefined) {
   if (v == null || !Number.isFinite(v)) return "—";
   return `${v.toFixed(1)}%`;
@@ -105,7 +159,14 @@ export function ParentPortalClient({ initialStudents }: Props) {
   const students = Array.isArray(initialStudents) ? initialStudents : [];
   const [selectedId, setSelectedId] = useState<string>(students[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ParentChildInsightsResponse | null>(null);
+const [data, setData] = useState<ParentChildInsightsResponse | null>(null);
+
+const [mockLoading, setMockLoading] = useState(false);
+const [mockRelease, setMockRelease] =
+  useState<ParentMockReleaseResponse | null>(null);
+const [mockReadiness, setMockReadiness] =
+  useState<ParentMockReadinessResponse | null>(null);
+const [mockError, setMockError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!students.length) {
@@ -155,6 +216,8 @@ export function ParentPortalClient({ initialStudents }: Props) {
   }, [students, selectedId]);
 
   const reportReleased = data?.ok ? (data as ParentChildInsightsOk).report?.released === true : false;
+  const normalData = data?.ok ? (data as ParentChildInsightsOk) : null;
+  const mockReleased = mockRelease?.released === true && !!mockReadiness;
 
   const printHref = useMemo(() => {
     if (!data?.ok) return "#";
@@ -165,6 +228,96 @@ export function ParentPortalClient({ initialStudents }: Props) {
       academicYear: (data as ParentChildInsightsOk).academicYear,
     });
   }, [data, reportReleased]);
+
+useEffect(() => {
+  if (!selectedId) {
+    setMockRelease(null);
+    setMockReadiness(null);
+    setMockError(null);
+    return;
+  }
+
+  let cancelled = false;
+
+  (async () => {
+    setMockLoading(true);
+    setMockRelease(null);
+    setMockReadiness(null);
+    setMockError(null);
+
+    try {
+      const releaseRes = await fetch(
+        `/api/parent/assessment/mock/release-status?studentId=${encodeURIComponent(
+          selectedId,
+        )}`,
+        {
+          credentials: "include",
+          cache: "no-store",
+        },
+      );
+
+      const releaseJson = (await releaseRes
+        .json()
+        .catch(() => null)) as ParentMockReleaseResponse | null;
+
+      if (cancelled) return;
+
+      if (!releaseRes.ok || !releaseJson?.ok) {
+        setMockError(
+          releaseJson?.message ||
+            releaseJson?.error ||
+            `Failed to load Mock readiness status. HTTP ${releaseRes.status}`,
+        );
+        return;
+      }
+
+      setMockRelease(releaseJson);
+
+      if (!releaseJson.released || !releaseJson.latestRelease) {
+        return;
+      }
+
+      const readinessRes = await fetch(
+        `/api/parent/assessment/mock/readiness?studentId=${encodeURIComponent(
+          selectedId,
+        )}&sessionId=${encodeURIComponent(
+          releaseJson.latestRelease.mockExamSessionId,
+        )}`,
+        {
+          credentials: "include",
+          cache: "no-store",
+        },
+      );
+
+      const readinessJson = (await readinessRes
+        .json()
+        .catch(() => null)) as ParentMockReadinessResponse | null;
+
+      if (cancelled) return;
+
+      if (!readinessRes.ok || !readinessJson?.ok) {
+        setMockError(
+          readinessJson?.message ||
+            readinessJson?.error ||
+            `Failed to load released Mock readiness. HTTP ${readinessRes.status}`,
+        );
+        return;
+      }
+
+      setMockReadiness(readinessJson);
+    } catch {
+      if (!cancelled) {
+        setMockError("Failed to load released Mock readiness.");
+      }
+    } finally {
+      if (!cancelled) setMockLoading(false);
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [selectedId]);
 
   return (
     <section className="space-y-4 text-[#F7F4ED]">
@@ -266,95 +419,268 @@ export function ParentPortalClient({ initialStudents }: Props) {
         <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-[11px] text-rose-100 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
           {data.error}
         </div>
-      ) : data && data.ok ? (
+            ) : data && data.ok ? (
         <div className="space-y-4">
           <div className={`${shellCardClass()} px-4 py-4`}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#AEB6C4]">Selected learner</p>
-                <p className="mt-1 text-lg font-semibold text-[#F7F4ED]">{data.selected.name}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#AEB6C4]">
+                  Selected learner
+                </p>
+                <p className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                  {data.selected.name}
+                </p>
                 <p className="mt-1 text-[11px] text-[#8F98A8]">
-                  {data.term} • {data.academicYear}
+                  Normal report period: {data.term} • {data.academicYear}
                 </p>
               </div>
 
-              <div className="rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/12 px-3 py-1 text-[11px] font-semibold text-[#F7F4ED]">
-                Overall performance: {reportReleased ? pct(data.performance.overallPercent) : "Locked"}
+              <div className="flex flex-wrap gap-2">
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                    reportReleased
+                      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+                      : "border-amber-300/20 bg-amber-400/12 text-amber-100"
+                  }`}
+                >
+                  Term report: {reportReleased ? "Released" : "Locked"}
+                </span>
+
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                    mockReleased
+                      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+                      : "border-sky-300/20 bg-sky-400/12 text-sky-100"
+                  }`}
+                >
+                  Mock readiness:{" "}
+                  {mockLoading
+                    ? "Checking..."
+                    : mockReleased
+                      ? "Released"
+                      : "No released Mock yet"}
+                </span>
               </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className={`${shellCardClass()} px-4 py-4`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[#F7F4ED]">
+                    Normal term report
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-[#AEB6C4]">
+                    This is the official term report. It remains locked until
+                    the headteacher releases it.
+                  </p>
+                </div>
+
+                <span
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                    reportReleased
+                      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+                      : "border-amber-300/20 bg-amber-400/12 text-amber-100"
+                  }`}
+                >
+                  {reportReleased ? "Released" : "Locked"}
+                </span>
+              </div>
+
+              {reportReleased && normalData ? (
+                <div className="mt-4 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className={`${innerPanelClass()} px-3 py-3`}>
+                      <p className="text-[10px] uppercase tracking-wide text-[#8F98A8]">
+                        Overall
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                        {pct(normalData.performance.overallPercent)}
+                      </p>
+                    </div>
+
+                    <div className={`${innerPanelClass()} px-3 py-3`}>
+                      <p className="text-[10px] uppercase tracking-wide text-[#8F98A8]">
+                        Coverage
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                        {normalData.performance.scoredAssessmentsCount} /{" "}
+                        {normalData.performance.expectedAssessmentsCount}
+                      </p>
+                      <p className="mt-1 text-[10px] text-[#AEB6C4]">
+                        Missing {normalData.performance.missingAssessmentsCount}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] leading-5 text-emerald-100">
+                    {normalData.insights.improvementFocus}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <a
+                      href="/parent/report"
+                      className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+                    >
+                      Open term report gate
+                    </a>
+
+                    <a
+                      href={printHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/12 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-[#D4AF37]/18"
+                    >
+                      Open printable report
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-400/12 px-3 py-3 text-[11px] leading-5 text-amber-100">
+                  Term report is locked. Attendance and health remain visible,
+                  but subject performance stays protected until official
+                  release.
+                  <div className="mt-3">
+                    <a
+                      href="/parent/report"
+                      className="inline-flex items-center justify-center rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[11px] font-semibold text-amber-100 transition hover:bg-amber-400/15"
+                    >
+                      Check release gate
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className={`${shellCardClass()} px-4 py-4`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[#F7F4ED]">
+                    BECE Mock readiness
+                  </p>
+                  <p className="mt-1 text-[11px] leading-5 text-[#AEB6C4]">
+                    This is separate from the normal term report. It appears only
+                    after the sealed Mock is released.
+                  </p>
+                </div>
+
+                <span
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                    mockReleased
+                      ? "border-emerald-300/20 bg-emerald-400/12 text-emerald-100"
+                      : "border-sky-300/20 bg-sky-400/12 text-sky-100"
+                  }`}
+                >
+                  {mockLoading
+                    ? "Checking..."
+                    : mockReleased
+                      ? "Released"
+                      : "Not available"}
+                </span>
+              </div>
+
+              {mockReleased && mockReadiness ? (
+                <div className="mt-4 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className={`${innerPanelClass()} px-3 py-3`}>
+                      <p className="text-[10px] uppercase tracking-wide text-[#8F98A8]">
+                        Placement agg.
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                        {mockReadiness.aggregates?.placement?.aggregate ??
+                          "Incomplete"}
+                      </p>
+                    </div>
+
+                    <div className={`${innerPanelClass()} px-3 py-3`}>
+                      <p className="text-[10px] uppercase tracking-wide text-[#8F98A8]">
+                        School agg.
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                        {mockReadiness.aggregates?.school?.aggregate ??
+                          "Incomplete"}
+                      </p>
+                    </div>
+
+                    <div className={`${innerPanelClass()} px-3 py-3`}>
+                      <p className="text-[10px] uppercase tracking-wide text-[#8F98A8]">
+                        Average
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                        {pct(mockReadiness.scores?.averageScore)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
+                    {mockReadiness.parentHomeSupport ||
+                      mockReadiness.readiness?.parent?.homeSupport ||
+                      mockReadiness.readiness?.parent?.message ||
+                      "Use the released Mock readiness page for home support guidance."}
+                  </div>
+
+                  {mockReadiness.recommendedAction ? (
+                    <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-2 text-[11px] leading-5 text-emerald-100">
+                      {mockReadiness.recommendedAction}
+                    </div>
+                  ) : null}
+
+                  <a
+                    href="/parent/mock-readiness"
+                    className="inline-flex items-center justify-center rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/12 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-[#D4AF37]/18"
+                  >
+                    Open Mock readiness
+                  </a>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-sky-300/20 bg-sky-400/12 px-3 py-3 text-[11px] leading-5 text-sky-100">
+                  {mockError
+                    ? mockError
+                    : "No released Mock readiness is available for this learner yet."}
+                  <div className="mt-3">
+                    <a
+                      href="/parent/mock-readiness"
+                      className="inline-flex items-center justify-center rounded-xl border border-sky-300/20 bg-sky-400/10 px-3 py-2 text-[11px] font-semibold text-sky-100 transition hover:bg-sky-400/15"
+                    >
+                      Check Mock readiness
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <Card title="Attendance" tone="sky">
-              <p className="text-sm font-semibold text-[#F7F4ED]">{pct(data.attendance.attendancePercent)}</p>
+              <p className="text-sm font-semibold text-[#F7F4ED]">
+                {pct(data.attendance.attendancePercent)}
+              </p>
               <p className="mt-1 text-[11px] text-[#C9CDD6]">
-                Present {data.attendance.present} • Absent {data.attendance.absent} • Late {data.attendance.late}
+                Present {data.attendance.present} • Absent{" "}
+                {data.attendance.absent} • Late {data.attendance.late}
               </p>
             </Card>
 
             <Card title="Health" tone="amber">
-              <p className="text-sm font-semibold text-[#F7F4ED]">{data.health.healthRecords} records</p>
+              <p className="text-sm font-semibold text-[#F7F4ED]">
+                {data.health.healthRecords} records
+              </p>
               <p className="mt-1 text-[11px] text-[#C9CDD6]">
-                Fever flags {data.health.feverFlags} • Threshold {data.health.feverThreshold}°C
+                Fever flags {data.health.feverFlags} • Threshold{" "}
+                {data.health.feverThreshold}°C
               </p>
             </Card>
 
-            <Card title="Assessment coverage" tone="emerald">
-              {reportReleased ? (
-                <>
-                  <p className="text-sm font-semibold text-[#F7F4ED]">
-                    {data.performance.scoredAssessmentsCount} / {data.performance.expectedAssessmentsCount}
-                  </p>
-                  <p className="mt-1 text-[11px] text-[#C9CDD6]">
-                    Missing assessments {data.performance.missingAssessmentsCount}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-[#F7F4ED]">Locked</p>
-                  <p className="mt-1 text-[11px] text-[#C9CDD6]">Visible after results are released.</p>
-                </>
-              )}
+            <Card title="Parent action focus" tone="emerald">
+              <p className="text-[11px] leading-5 text-[#D7DCE5]">
+                {mockReleased && mockReadiness?.recommendedAction
+                  ? mockReadiness.recommendedAction
+                  : reportReleased
+                    ? data.insights.improvementFocus
+                    : "Term results are locked. Protect attendance, sleep, reading, and daily revision habits while waiting for official release."}
+              </p>
             </Card>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className={`${shellCardClass()} px-4 py-4`}>
-              <p className="text-sm font-semibold text-[#F7F4ED]">Subject performance</p>
-              <div className="mt-3 space-y-2">
-                {!reportReleased ? (
-                  <p className="text-[11px] text-[#AEB6C4]">
-                    Performance is locked until the headteacher releases results for this term.
-                  </p>
-                ) : data.performance.subjects.length ? (
-                  data.performance.subjects.map((s) => (
-                    <div key={s.subject} className={`${innerPanelClass()} px-3 py-2`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-[#F7F4ED]">{s.subject}</span>
-                        <span className="text-[11px] text-[#C9CDD6]">{pct(s.percent)}</span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-[11px] text-[#AEB6C4]">No subject performance signal yet.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <SwotCard title="Strengths" tone="emerald" items={reportReleased ? data.insights.strengths : []} locked={!reportReleased} />
-              <SwotCard title="Weaknesses" tone="rose" items={reportReleased ? data.insights.weaknesses : []} locked={!reportReleased} />
-              <SwotCard title="Risks" tone="amber" items={data.insights.risks} locked={false} />
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-[#1B66D1]/20 bg-[#1B66D1]/12 px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
-            <p className="text-sm font-semibold text-[#F7F4ED]">Parent action focus</p>
-            <p className="mt-2 text-sm leading-7 text-[#D7DCE5]">
-              {reportReleased
-                ? data.insights.improvementFocus
-                : "Results are not released yet. For now: protect attendance, sleep, and daily revision habits. When released, use the report to target weak subjects calmly."}
-            </p>
           </div>
 
           {data.message ? (

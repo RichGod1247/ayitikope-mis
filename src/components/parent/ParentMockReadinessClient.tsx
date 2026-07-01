@@ -336,6 +336,13 @@ export default function ParentMockReadinessClient() {
     [children, selectedStudentId],
   );
 
+  const mockPdfHref =
+    selectedStudentId && readiness?.session?.id
+      ? `/api/parent/assessment/mock/readiness/pdf?studentId=${encodeURIComponent(
+          selectedStudentId,
+        )}&sessionId=${encodeURIComponent(readiness.session.id)}`
+      : "";
+
   async function loadChildren() {
     setLoadingChildren(true);
     setError(null);
@@ -542,6 +549,19 @@ export default function ParentMockReadinessClient() {
               </span>
             }
           >
+            {mockPdfHref ? (
+              <div className="mb-4 flex flex-wrap justify-end">
+                <a
+                  href={mockPdfHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/12 px-3 py-2 text-[12px] font-semibold text-[#F7F4ED] transition hover:bg-[#D4AF37]/18"
+                >
+                  Download Mock PDF
+                </a>
+              </div>
+            ) : null}
+
             <div className="grid gap-3 md:grid-cols-4">
               <MetricCard
                 label="Placement agg."
