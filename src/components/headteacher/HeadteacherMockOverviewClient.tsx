@@ -420,6 +420,34 @@ type MockReleaseNotifyApiResponse = {
   release?: MockReleaseNotifyStatus["release"];
 };
 
+type MockInterventionCase = {
+  id: string;
+  title: string;
+  summary: string;
+  priority: string;
+  status: string;
+  riskScore: number | null;
+  riskLevel: string | null;
+  dueAt: string | null;
+  resolutionNote: string | null;
+  metadata: unknown;
+  recommendedActions: unknown;
+  createdAt: string;
+  updatedAt: string;
+  assignedTo?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+  } | null;
+};
+
+type MockInterventionsState = {
+  loading: boolean;
+  ok: boolean | null;
+  message: string;
+  items: MockInterventionCase[];
+};
+
 type OverviewErr = {
   ok: false;
   error: string;
@@ -445,6 +473,13 @@ const emptyMockNotifyStatus: MockReleaseNotifyStatus = {
   existingJob: null,
   totals: null,
   release: null,
+};
+
+const emptyMockInterventions: MockInterventionsState = {
+  loading: false,
+  ok: null,
+  message: "",
+  items: [],
 };
 
 const shellCard =
@@ -630,6 +665,64 @@ function movementTone(value: number | null | undefined, mode: "aggregate" | "sco
   }
 
   return n > 0 ? "text-emerald-100" : "text-rose-100";
+}
+
+function interventionPriorityClass(priority: string) {
+  const p = cleanStr(priority).toUpperCase();
+
+  if (p === "CRITICAL") {
+    return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+  }
+
+  if (p === "HIGH") {
+    return "border-orange-300/25 bg-orange-400/12 text-orange-100";
+  }
+
+  if (p === "MEDIUM") {
+    return "border-amber-300/25 bg-amber-400/12 text-amber-100";
+  }
+
+  return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
+}
+
+function interventionStatusClass(status: string) {
+  const s = cleanStr(status).toUpperCase();
+
+  if (s === "RESOLVED") {
+    return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
+  }
+
+  if (s === "ESCALATED") {
+    return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+  }
+
+  if (s === "IN_PROGRESS") {
+    return "border-sky-300/25 bg-sky-400/12 text-sky-100";
+  }
+
+  if (s === "CANCELLED") {
+    return "border-white/10 bg-white/[0.04] text-[#AEB6C4]";
+  }
+
+  return "border-amber-300/25 bg-amber-400/12 text-amber-100";
+}
+
+function interventionMetadata(item: MockInterventionCase) {
+  return safeObject(item.metadata) ? item.metadata : {};
+}
+
+function interventionStudentId(item: MockInterventionCase) {
+  return cleanStr(interventionMetadata(item).studentId);
+}
+
+function learnerNeedsIntervention(learner: MockTrendLearner) {
+  return (
+    learner.trendLabel === "DECLINING" ||
+    learner.trendLabel === "INCOMPLETE" ||
+    learner.persistentWeakSubjects.length > 0 ||
+    learner.declinedSubjects.length > 0 ||
+    learner.nearGradeOpportunities.length > 0
+  );
 }
 
 function rescuePriorityClass(priority: CandidateRescuePriority) {
@@ -861,6 +954,13 @@ export default function HeadteacherMockOverviewClient() {
 const [mockNotifyStatus, setMockNotifyStatus] =
   useState<MockReleaseNotifyStatus>(emptyMockNotifyStatus);
 
+const [mockInterventions, setMockInterventions] =
+  useState<MockInterventionsState>(emptyMockInterventions);
+
+const [interventionCreateStatus, setInterventionCreateStatus] = useState<
+  Record<string, ReminderSendStatus>
+>({});
+
   const allJhs3Classrooms = useMemo(
     () => classrooms.filter(isJhs3Classroom),
     [classrooms],
@@ -878,6 +978,18 @@ const [mockNotifyStatus, setMockNotifyStatus] =
     () => (broadsheet ? buildLocalSealReadiness(broadsheet) : null),
     [broadsheet],
   );
+
+const mockInterventionsByStudentId = useMemo(() => {
+  const map = new Map<string, MockInterventionCase>();
+
+  for (const item of mockInterventions.items) {
+    const studentId = interventionStudentId(item);
+    if (!studentId) continue;
+    if (!map.has(studentId)) map.set(studentId, item);
+  }
+
+  return map;
+}, [mockInterventions.items]);
 
   const selectedExportSessionId =
     cleanStr(broadsheet?.session?.id) || cleanStr(sessionId);
@@ -945,6 +1057,7 @@ const [mockNotifyStatus, setMockNotifyStatus] =
 if (json.selectedSessionId) {
   void loadMockReleaseStatus(json.selectedSessionId);
   void loadMockNotifyStatus(json.selectedSessionId);
+  void loadMockInterventions(json.selectedSessionId);
 } else {
   setMockReleaseStatus({
     loading: false,
@@ -958,6 +1071,8 @@ if (json.selectedSessionId) {
   });
 
   setMockNotifyStatus({ ...emptyMockNotifyStatus });
+  setMockInterventions({ ...emptyMockInterventions });
+  setInterventionCreateStatus({});
 }
 
       if (!academicYear && json.broadsheet?.session?.academicYear) {
@@ -1279,6 +1394,160 @@ async function loadMockNotifyStatus(nextSessionId?: string | null) {
       queueing: false,
       ok: false,
       message: "Failed to load Mock SMS notification status.",
+    }));
+  }
+}
+
+async function loadMockInterventions(nextSessionId?: string) {
+  const targetSessionId =
+    cleanStr(nextSessionId) ||
+    cleanStr(broadsheet?.session?.id) ||
+    cleanStr(sessionId);
+
+  if (!targetSessionId) {
+    setMockInterventions({ ...emptyMockInterventions });
+    return;
+  }
+
+  try {
+    setMockInterventions((prev) => ({
+      ...prev,
+      loading: true,
+      message: "Loading Mock intervention cases...",
+    }));
+
+    const res = await fetch(
+      `/api/headteacher/assessment/mock/interventions?sessionId=${encodeURIComponent(
+        targetSessionId,
+      )}`,
+      { cache: "no-store", credentials: "include" },
+    );
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.ok) {
+      setMockInterventions({
+        loading: false,
+        ok: false,
+        message:
+          json?.message ||
+          json?.error ||
+          `Failed to load Mock interventions. HTTP ${res.status}`,
+        items: [],
+      });
+      return;
+    }
+
+    setMockInterventions({
+      loading: false,
+      ok: true,
+      message: "",
+      items: Array.isArray(json.items) ? json.items : [],
+    });
+  } catch {
+    setMockInterventions({
+      loading: false,
+      ok: false,
+      message: "Failed to load Mock interventions.",
+      items: [],
+    });
+  }
+}
+
+async function createMockIntervention(learner: MockTrendLearner) {
+  if (!broadsheet) return;
+
+  const key = learner.studentId;
+
+  try {
+    setInterventionCreateStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: true,
+        ok: null,
+        message: "Creating rescue case...",
+      },
+    }));
+
+    const res = await fetch("/api/headteacher/assessment/mock/interventions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        sessionId: broadsheet.session.id,
+        studentId: learner.studentId,
+        studentName: learner.name,
+        trendLabel: learner.trendLabel,
+        aggregateMovement: learner.aggregateMovement,
+        averageScoreMovement: learner.averageScoreMovement,
+        declinedSubjects: learner.declinedSubjects,
+        improvedSubjects: learner.improvedSubjects,
+        nearGradeOpportunities: learner.nearGradeOpportunities,
+        recommendedAction: learner.recommendedAction,
+        priority:
+          learner.trendLabel === "DECLINING"
+            ? "HIGH"
+            : learner.trendLabel === "INCOMPLETE"
+              ? "MEDIUM"
+              : learner.persistentWeakSubjects.length > 0
+                ? "MEDIUM"
+                : "LOW",
+      }),
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.ok) {
+      setInterventionCreateStatus((prev) => ({
+        ...prev,
+        [key]: {
+          loading: false,
+          ok: false,
+          message:
+            json?.message ||
+            json?.error ||
+            `Failed to create rescue case. HTTP ${res.status}`,
+        },
+      }));
+      return;
+    }
+
+    setInterventionCreateStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: false,
+        ok: true,
+        message: json.reused
+          ? "Existing rescue case reused."
+          : "Rescue case created.",
+      },
+    }));
+
+    if (json.item) {
+      setMockInterventions((prev) => {
+        const nextItems = [
+          json.item as MockInterventionCase,
+          ...prev.items.filter((item) => item.id !== json.item.id),
+        ];
+
+        return {
+          loading: false,
+          ok: true,
+          message: "",
+          items: nextItems,
+        };
+      });
+    }
+
+    void loadMockInterventions(broadsheet.session.id);
+  } catch {
+    setInterventionCreateStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: false,
+        ok: false,
+        message: "Failed to create rescue case.",
+      },
     }));
   }
 }
@@ -1834,8 +2103,55 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                     </div>
                   </div>
 
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
+                          Mock rescue intervention bridge
+                        </div>
+                        <div className="mt-1 text-[11px] leading-5 text-[#AEB6C4]">
+                          Convert declining trend evidence into accountable
+                          rescue cases for headteacher follow-up before the next
+                          Mock.
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
+                          {mockInterventions.loading
+                            ? "Loading cases..."
+                            : `${mockInterventions.items.length} linked case(s)`}
+                        </span>
+
+                        <button
+                          type="button"
+                          className={darkButton}
+                          onClick={() =>
+                            loadMockInterventions(broadsheet.session.id)
+                          }
+                          disabled={mockInterventions.loading}
+                        >
+                          Refresh cases
+                        </button>
+                      </div>
+                    </div>
+
+                    {mockInterventions.message ? (
+                      <div
+                        className={[
+                          "mt-3 rounded-xl border px-3 py-2 text-[11px]",
+                          mockInterventions.ok === false
+                            ? "border-rose-300/20 bg-rose-400/10 text-rose-100"
+                            : "border-white/10 bg-white/[0.04] text-[#AEB6C4]",
+                        ].join(" ")}
+                      >
+                        {mockInterventions.message}
+                      </div>
+                    ) : null}
+                  </div>
+
                   <div className="overflow-auto rounded-2xl border border-white/10">
-                    <table className="min-w-[1120px] w-full border-collapse text-left text-[12px]">
+                    <table className="min-w-[1320px] w-full border-collapse text-left text-[12px]">
                       <thead className="bg-white/[0.05] text-[#AEB6C4]">
                         <tr>
                           <th className="border-b border-white/10 px-3 py-2">
@@ -1859,10 +2175,18 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                           <th className="border-b border-white/10 px-3 py-2">
                             Next action
                           </th>
+                          <th className="border-b border-white/10 px-3 py-2">
+  Intervention
+</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {broadsheet.trend.learners.slice(0, 20).map((learner) => (
+                        {broadsheet.trend.learners.slice(0, 20).map((learner) => {
+  const existingCase = mockInterventionsByStudentId.get(learner.studentId);
+  const createStatus = interventionCreateStatus[learner.studentId];
+  const canCreateIntervention = learnerNeedsIntervention(learner);
+
+  return (
                           <tr
                             key={learner.studentId}
                             className="border-b border-white/5"
@@ -1986,8 +2310,78 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                                 </div>
                               ) : null}
                             </td>
-                          </tr>
-                        ))}
+                                                        <td className="px-3 py-2">
+                              {existingCase ? (
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    <span
+                                      className={[
+                                        "rounded-full border px-2 py-1 text-[10px] font-semibold",
+                                        interventionStatusClass(
+                                          existingCase.status,
+                                        ),
+                                      ].join(" ")}
+                                    >
+                                      {existingCase.status}
+                                    </span>
+
+                                    <span
+                                      className={[
+                                        "rounded-full border px-2 py-1 text-[10px] font-semibold",
+                                        interventionPriorityClass(
+                                          existingCase.priority,
+                                        ),
+                                      ].join(" ")}
+                                    >
+                                      {existingCase.priority}
+                                    </span>
+                                  </div>
+
+                                  <div className="max-w-[240px] text-[10px] leading-4 text-[#AEB6C4]">
+                                    {existingCase.title}
+                                  </div>
+
+                                  <div className="text-[10px] text-[#8F98A8]">
+                                    Opened {formatDateTime(existingCase.createdAt)}
+                                  </div>
+                                </div>
+                              ) : canCreateIntervention ? (
+                                <div className="space-y-2">
+                                  <button
+                                    type="button"
+                                    className={goldButton}
+                                    onClick={() => createMockIntervention(learner)}
+                                    disabled={createStatus?.loading}
+                                  >
+                                    {createStatus?.loading
+                                      ? "Creating..."
+                                      : "Create rescue case"}
+                                  </button>
+
+                                  {createStatus?.message ? (
+                                    <div
+                                      className={[
+                                        "max-w-[220px] text-[10px] leading-4",
+                                        createStatus.ok === false
+                                          ? "text-rose-100"
+                                          : createStatus.ok === true
+                                            ? "text-emerald-100"
+                                            : "text-[#AEB6C4]",
+                                      ].join(" ")}
+                                    >
+                                      {createStatus.message}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : (
+                                <div className="max-w-[220px] text-[10px] leading-4 text-[#8F98A8]">
+                                  No intervention required from current trend.
+                                </div>
+                              )}
+                            </td>
+                            </tr>
+  );
+})}
                       </tbody>
                     </table>
                   </div>
