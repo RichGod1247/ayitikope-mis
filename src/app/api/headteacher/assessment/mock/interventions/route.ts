@@ -175,6 +175,51 @@ function priorityRiskScore(priority: GovernanceInterventionPriority) {
   return 20;
 }
 
+type MockInterventionLifecycleAction =
+  | "START"
+  | "RESOLVE"
+  | "ESCALATE"
+  | "REOPEN"
+  | "CANCEL";
+
+function normalizeLifecycleAction(value: unknown): MockInterventionLifecycleAction | null {
+  const action = cleanMockStr(value).toUpperCase();
+
+  if (action === "START") return "START";
+  if (action === "RESOLVE") return "RESOLVE";
+  if (action === "ESCALATE") return "ESCALATE";
+  if (action === "REOPEN") return "REOPEN";
+  if (action === "CANCEL") return "CANCEL";
+
+  return null;
+}
+
+function isTerminalStatus(status: GovernanceInterventionStatus) {
+  return (
+    status === GovernanceInterventionStatus.RESOLVED ||
+    status === GovernanceInterventionStatus.CANCELLED
+  );
+}
+
+function lifecycleEventType(action: MockInterventionLifecycleAction) {
+  if (action === "RESOLVE") return GovernanceInterventionEventType.RESOLVED;
+  if (action === "ESCALATE") return GovernanceInterventionEventType.ESCALATED;
+  if (action === "REOPEN") return GovernanceInterventionEventType.REOPENED;
+  if (action === "CANCEL") return GovernanceInterventionEventType.CANCELLED;
+
+  return GovernanceInterventionEventType.STATUS_CHANGED;
+}
+
+function defaultLifecycleNote(action: MockInterventionLifecycleAction) {
+  if (action === "START") return "Mock rescue intervention work started.";
+  if (action === "RESOLVE") return "Mock rescue intervention resolved with evidence.";
+  if (action === "ESCALATE") return "Mock rescue intervention escalated for higher attention.";
+  if (action === "REOPEN") return "Mock rescue intervention reopened for continued action.";
+  if (action === "CANCEL") return "Mock rescue intervention cancelled.";
+
+  return "Mock rescue intervention updated.";
+}
+
 function mapCase(row: MockInterventionCaseRow) {
   return {
     id: row.id,
@@ -601,6 +646,263 @@ export async function POST(req: NextRequest) {
   return json(201, {
     ok: true,
     reused: false,
+    item: mapCase(item),
+  });
+}
+export async function PATCH(req: NextRequest) {
+  const auth = await requireApiUserContext(req, {
+    requireTenant: true,
+    requireRoleNames: ["HEADTEACHER", "ADMIN", "SCHOOL_ADMIN", "SUPERADMIN"],
+  });
+
+  if (!auth.ok) return auth.res;
+
+  const { ctx } = auth;
+  const body = (await req.json().catch(() => null)) ?? {};
+  const record = body as Record<string, unknown>;
+
+  const sessionId = cleanMockStr(record.sessionId);
+  const caseId = cleanMockStr(record.caseId);
+  const action = normalizeLifecycleAction(record.action);
+  const note =
+    cleanMockStr(record.note) ||
+    cleanMockStr(record.evidenceNote) ||
+    cleanMockStr(record.reason);
+
+  if (!sessionId) {
+    return json(400, { ok: false, error: "MISSING_SESSION_ID" });
+  }
+
+  if (!caseId) {
+    return json(400, { ok: false, error: "MISSING_CASE_ID" });
+  }
+
+  if (!action) {
+    return json(400, { ok: false, error: "INVALID_INTERVENTION_ACTION" });
+  }
+
+  const loaded = await loadMockSessionOrFail({
+    tenantId: ctx.tenantId,
+    sessionId,
+  });
+
+  if (!loaded.ok) return loaded.res;
+
+  const existing = await prisma.governanceInterventionCase.findFirst({
+    where: {
+      id: caseId,
+      tenantId: ctx.tenantId,
+      scopeType: GovernanceInterventionScopeType.SCHOOL,
+      metadata: {
+        path: ["mockSessionId"],
+        equals: loaded.session.id,
+      },
+    },
+    select: caseSelect,
+  });
+
+  if (!existing) {
+    return json(404, {
+      ok: false,
+      error: "MOCK_INTERVENTION_CASE_NOT_FOUND",
+    });
+  }
+
+  const fromStatus = existing.status;
+  let toStatus: GovernanceInterventionStatus = fromStatus;
+
+  if (action === "START") {
+    if (isTerminalStatus(fromStatus)) {
+      return json(409, {
+        ok: false,
+        error: "TERMINAL_CASE_CANNOT_START",
+        message: "Resolved or cancelled cases must be reopened before action can continue.",
+      });
+    }
+
+    toStatus = GovernanceInterventionStatus.IN_PROGRESS;
+  }
+
+  if (action === "RESOLVE") {
+    if (isTerminalStatus(fromStatus)) {
+      return json(409, {
+        ok: false,
+        error: "CASE_ALREADY_TERMINAL",
+        message: "This case is already resolved or cancelled.",
+      });
+    }
+
+    if (note.length < 10) {
+      return json(400, {
+        ok: false,
+        error: "EVIDENCE_NOTE_REQUIRED",
+        message: "Add a clear evidence note before resolving this rescue case.",
+      });
+    }
+
+    toStatus = GovernanceInterventionStatus.RESOLVED;
+  }
+
+  if (action === "ESCALATE") {
+    if (isTerminalStatus(fromStatus)) {
+      return json(409, {
+        ok: false,
+        error: "TERMINAL_CASE_CANNOT_ESCALATE",
+        message: "Resolved or cancelled cases must be reopened before escalation.",
+      });
+    }
+
+    if (note.length < 10) {
+      return json(400, {
+        ok: false,
+        error: "ESCALATION_REASON_REQUIRED",
+        message: "Add a clear reason before escalating this rescue case.",
+      });
+    }
+
+    toStatus = GovernanceInterventionStatus.ESCALATED;
+  }
+
+  if (action === "REOPEN") {
+    if (
+      fromStatus !== GovernanceInterventionStatus.RESOLVED &&
+      fromStatus !== GovernanceInterventionStatus.CANCELLED
+    ) {
+      return json(409, {
+        ok: false,
+        error: "ONLY_TERMINAL_CASES_CAN_REOPEN",
+        message: "Only resolved or cancelled cases can be reopened.",
+      });
+    }
+
+    if (note.length < 10) {
+      return json(400, {
+        ok: false,
+        error: "REOPEN_REASON_REQUIRED",
+        message: "Add a clear reason before reopening this rescue case.",
+      });
+    }
+
+    toStatus = GovernanceInterventionStatus.IN_PROGRESS;
+  }
+
+  if (action === "CANCEL") {
+    if (isTerminalStatus(fromStatus)) {
+      return json(409, {
+        ok: false,
+        error: "CASE_ALREADY_TERMINAL",
+        message: "This case is already resolved or cancelled.",
+      });
+    }
+
+    if (note.length < 10) {
+      return json(400, {
+        ok: false,
+        error: "CANCELLATION_REASON_REQUIRED",
+        message: "Add a clear reason before cancelling this rescue case.",
+      });
+    }
+
+    toStatus = GovernanceInterventionStatus.CANCELLED;
+  }
+
+  const finalNote = note || defaultLifecycleNote(action);
+  const now = new Date();
+
+  const item = await prisma.$transaction(async (tx) => {
+    await tx.governanceInterventionCase.update({
+      where: {
+        id: existing.id,
+      },
+      data:
+        action === "RESOLVE"
+          ? {
+              status: toStatus,
+              resolvedAt: now,
+              resolutionNote: finalNote,
+              resolvedBy: {
+                connect: { id: ctx.userId },
+              },
+            }
+          : action === "ESCALATE"
+            ? {
+                status: toStatus,
+                escalatedAt: now,
+              }
+            : action === "REOPEN"
+              ? {
+                  status: toStatus,
+                  resolvedAt: null,
+                  resolutionNote: null,
+                  cancelledAt: null,
+                  cancellationReason: null,
+                  resolvedBy: {
+                    disconnect: true,
+                  },
+                  cancelledBy: {
+                    disconnect: true,
+                  },
+                }
+              : action === "CANCEL"
+                ? {
+                    status: toStatus,
+                    cancelledAt: now,
+                    cancellationReason: finalNote,
+                    cancelledBy: {
+                      connect: { id: ctx.userId },
+                    },
+                  }
+                : {
+                    status: toStatus,
+                  },
+    });
+
+    await tx.governanceInterventionEvent.create({
+      data: {
+        caseId: existing.id,
+        actorUserId: ctx.userId,
+        eventType: lifecycleEventType(action),
+        fromStatus,
+        toStatus,
+        note: finalNote,
+        metadata: safeJsonObject({
+          source: "HEADTEACHER_MOCK_INTERVENTION_LIFECYCLE",
+          action,
+          mockSessionId: loaded.session.id,
+          mockLabel: loaded.session.mockLabel,
+          previousStatus: fromStatus,
+          nextStatus: toStatus,
+        }),
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        action: `MOCK_TREND_INTERVENTION_${action}`,
+        resource: "GovernanceInterventionCase",
+        resourceId: existing.id,
+        metadata: safeJsonObject({
+          mockSessionId: loaded.session.id,
+          caseId: existing.id,
+          previousStatus: fromStatus,
+          nextStatus: toStatus,
+        }),
+      },
+    });
+
+    return tx.governanceInterventionCase.findUniqueOrThrow({
+      where: { id: existing.id },
+      select: caseSelect,
+    });
+  });
+
+  return json(200, {
+    ok: true,
+    action,
+    previousStatus: fromStatus,
+    nextStatus: toStatus,
     item: mapCase(item),
   });
 }

@@ -420,6 +420,28 @@ type MockReleaseNotifyApiResponse = {
   release?: MockReleaseNotifyStatus["release"];
 };
 
+type MockInterventionEvent = {
+  id: string;
+  eventType: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  note: string | null;
+  metadata: unknown;
+  createdAt: string;
+  actor?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+  } | null;
+};
+
+type MockInterventionLifecycleAction =
+  | "START"
+  | "RESOLVE"
+  | "ESCALATE"
+  | "REOPEN"
+  | "CANCEL";
+
 type MockInterventionCase = {
   id: string;
   title: string;
@@ -439,6 +461,7 @@ type MockInterventionCase = {
     name: string | null;
     email: string | null;
   } | null;
+  events?: MockInterventionEvent[];
 };
 
 type MockInterventionsState = {
@@ -725,6 +748,52 @@ function learnerNeedsIntervention(learner: MockTrendLearner) {
   );
 }
 
+function caseCanStart(status: string) {
+  const s = cleanStr(status).toUpperCase();
+  return s === "OPEN" || s === "ESCALATED";
+}
+
+function caseCanResolve(status: string) {
+  const s = cleanStr(status).toUpperCase();
+  return s === "OPEN" || s === "IN_PROGRESS" || s === "ESCALATED";
+}
+
+function caseCanEscalate(status: string) {
+  const s = cleanStr(status).toUpperCase();
+  return s === "OPEN" || s === "IN_PROGRESS";
+}
+
+function caseCanReopen(status: string) {
+  const s = cleanStr(status).toUpperCase();
+  return s === "RESOLVED" || s === "CANCELLED";
+}
+
+function latestCaseEvent(item: MockInterventionCase) {
+  return Array.isArray(item.events) && item.events.length > 0
+    ? item.events[0]
+    : null;
+}
+
+function lifecyclePrompt(action: MockInterventionLifecycleAction) {
+  if (action === "RESOLVE") {
+    return "Enter evidence note: What was done, by whom, and what proof shows the learner was supported?";
+  }
+
+  if (action === "ESCALATE") {
+    return "Enter escalation reason: Why does this rescue case need higher attention?";
+  }
+
+  if (action === "REOPEN") {
+    return "Enter reopen reason: Why must this rescue case continue?";
+  }
+
+  if (action === "CANCEL") {
+    return "Enter cancellation reason: Why is this rescue case being cancelled?";
+  }
+
+  return "";
+}
+
 function rescuePriorityClass(priority: CandidateRescuePriority) {
   if (priority === "CRITICAL") {
     return "border-rose-300/25 bg-rose-400/12 text-rose-100";
@@ -961,6 +1030,10 @@ const [interventionCreateStatus, setInterventionCreateStatus] = useState<
   Record<string, ReminderSendStatus>
 >({});
 
+const [interventionUpdateStatus, setInterventionUpdateStatus] = useState<
+  Record<string, ReminderSendStatus>
+>({});
+
   const allJhs3Classrooms = useMemo(
     () => classrooms.filter(isJhs3Classroom),
     [classrooms],
@@ -1073,6 +1146,7 @@ if (json.selectedSessionId) {
   setMockNotifyStatus({ ...emptyMockNotifyStatus });
   setMockInterventions({ ...emptyMockInterventions });
   setInterventionCreateStatus({});
+  setInterventionUpdateStatus({});
 }
 
       if (!academicYear && json.broadsheet?.session?.academicYear) {
@@ -1547,6 +1621,122 @@ async function createMockIntervention(learner: MockTrendLearner) {
         loading: false,
         ok: false,
         message: "Failed to create rescue case.",
+      },
+    }));
+  }
+}
+
+async function updateMockInterventionCase(
+  item: MockInterventionCase,
+  action: MockInterventionLifecycleAction,
+) {
+  if (!broadsheet) return;
+
+  const key = item.id;
+  let note = "";
+
+  if (action !== "START") {
+    const prompted = window.prompt(lifecyclePrompt(action), "");
+    note = cleanStr(prompted);
+
+    if (note.length < 10) {
+      setInterventionUpdateStatus((prev) => ({
+        ...prev,
+        [key]: {
+          loading: false,
+          ok: false,
+          message: "Add a clear evidence/reason note of at least 10 characters.",
+        },
+      }));
+      return;
+    }
+  }
+
+  try {
+    setInterventionUpdateStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: true,
+        ok: null,
+        message:
+          action === "START"
+            ? "Starting rescue case..."
+            : action === "RESOLVE"
+              ? "Resolving rescue case..."
+              : action === "ESCALATE"
+                ? "Escalating rescue case..."
+                : action === "REOPEN"
+                  ? "Reopening rescue case..."
+                  : "Cancelling rescue case...",
+      },
+    }));
+
+    const res = await fetch("/api/headteacher/assessment/mock/interventions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        sessionId: broadsheet.session.id,
+        caseId: item.id,
+        action,
+        note,
+      }),
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.ok) {
+      setInterventionUpdateStatus((prev) => ({
+        ...prev,
+        [key]: {
+          loading: false,
+          ok: false,
+          message:
+            json?.message ||
+            json?.error ||
+            `Failed to update rescue case. HTTP ${res.status}`,
+        },
+      }));
+      return;
+    }
+
+    setInterventionUpdateStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: false,
+        ok: true,
+        message:
+          action === "START"
+            ? "Rescue case started."
+            : action === "RESOLVE"
+              ? "Rescue case resolved with evidence."
+              : action === "ESCALATE"
+                ? "Rescue case escalated."
+                : action === "REOPEN"
+                  ? "Rescue case reopened."
+                  : "Rescue case cancelled.",
+      },
+    }));
+
+    if (json.item) {
+      setMockInterventions((prev) => ({
+        ...prev,
+        ok: true,
+        message: "",
+        items: prev.items.map((existing) =>
+          existing.id === item.id ? (json.item as MockInterventionCase) : existing,
+        ),
+      }));
+    }
+
+    void loadMockInterventions(broadsheet.session.id);
+  } catch {
+    setInterventionUpdateStatus((prev) => ({
+      ...prev,
+      [key]: {
+        loading: false,
+        ok: false,
+        message: "Failed to update rescue case.",
       },
     }));
   }
@@ -2184,6 +2374,13 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                         {broadsheet.trend.learners.slice(0, 20).map((learner) => {
   const existingCase = mockInterventionsByStudentId.get(learner.studentId);
   const createStatus = interventionCreateStatus[learner.studentId];
+  const existingCaseStatus = existingCase
+  ? cleanStr(existingCase.status).toUpperCase()
+  : "";
+const caseUpdateStatus = existingCase
+  ? interventionUpdateStatus[existingCase.id]
+  : undefined;
+const latestEvent = existingCase ? latestCaseEvent(existingCase) : null;
   const canCreateIntervention = learnerNeedsIntervention(learner);
 
   return (
@@ -2344,6 +2541,103 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                                   <div className="text-[10px] text-[#8F98A8]">
                                     Opened {formatDateTime(existingCase.createdAt)}
                                   </div>
+                                                                    {latestEvent ? (
+                                    <div className="max-w-[240px] rounded-xl border border-white/10 bg-white/[0.03] px-2 py-2 text-[10px] leading-4 text-[#AEB6C4]">
+                                      <div className="font-semibold text-[#F7F4ED]">
+                                        Latest event: {latestEvent.eventType}
+                                      </div>
+                                      <div className="mt-1">
+                                        {latestEvent.note ||
+                                          `${latestEvent.fromStatus ?? "—"} → ${
+                                            latestEvent.toStatus ?? "—"
+                                          }`}
+                                      </div>
+                                      <div className="mt-1 text-[#8F98A8]">
+                                        {formatDateTime(latestEvent.createdAt)}
+                                      </div>
+                                    </div>
+                                  ) : null}
+
+                                  <div className="flex flex-wrap gap-1">
+                                    {caseCanStart(existingCaseStatus) ? (
+                                      <button
+                                        type="button"
+                                        className={darkButton}
+                                        onClick={() =>
+                                          updateMockInterventionCase(
+                                            existingCase,
+                                            "START",
+                                          )
+                                        }
+                                        disabled={caseUpdateStatus?.loading}
+                                      >
+                                        Start
+                                      </button>
+                                    ) : null}
+
+                                    {caseCanResolve(existingCaseStatus) ? (
+                                      <button
+                                        type="button"
+                                        className={goldButton}
+                                        onClick={() =>
+                                          updateMockInterventionCase(
+                                            existingCase,
+                                            "RESOLVE",
+                                          )
+                                        }
+                                        disabled={caseUpdateStatus?.loading}
+                                      >
+                                        Resolve with evidence
+                                      </button>
+                                    ) : null}
+
+                                    {caseCanEscalate(existingCaseStatus) ? (
+                                      <button
+                                        type="button"
+                                        className={darkButton}
+                                        onClick={() =>
+                                          updateMockInterventionCase(
+                                            existingCase,
+                                            "ESCALATE",
+                                          )
+                                        }
+                                        disabled={caseUpdateStatus?.loading}
+                                      >
+                                        Escalate
+                                      </button>
+                                    ) : null}
+
+                                    {caseCanReopen(existingCaseStatus) ? (
+                                      <button
+                                        type="button"
+                                        className={darkButton}
+                                        onClick={() =>
+                                          updateMockInterventionCase(
+                                            existingCase,
+                                            "REOPEN",
+                                          )
+                                        }
+                                        disabled={caseUpdateStatus?.loading}
+                                      >
+                                        Reopen
+                                      </button>
+                                    ) : null}
+                                  </div>
+
+                                  {caseUpdateStatus?.message ? (
+                                    <div
+                                      className={[
+                                        "max-w-[240px] text-[10px] leading-4",
+                                        caseUpdateStatus.ok === false
+                                          ? "text-rose-100"
+                                          : caseUpdateStatus.ok === true
+                                            ? "text-emerald-100"
+                                            : "text-[#AEB6C4]",
+                                      ].join(" ")}
+                                    >
+                                      {caseUpdateStatus.message}
+                                    </div>
+                                  ) : null}
                                 </div>
                               ) : canCreateIntervention ? (
                                 <div className="space-y-2">
