@@ -217,6 +217,53 @@ type MockBroadsheetOk = {
   };
 };
 
+type TeacherMockTrendLabel = "IMPROVING" | "DECLINING" | "STABLE" | "INCOMPLETE";
+
+type TeacherMockTrendSession = {
+  id: string;
+  mockLabel: string;
+  title: string;
+  status: string;
+};
+
+type TeacherMockTrendSummary = {
+  totalLearners: number;
+  comparedCount: number;
+  improvingCount: number;
+  decliningCount: number;
+  stableCount: number;
+  incompleteCount: number;
+  averagePreviousScore: number | null;
+  averageLatestScore: number | null;
+  averageScoreMovement: number | null;
+};
+
+type TeacherMockTrendLearner = {
+  studentId: string;
+  name: string;
+  label: TeacherMockTrendLabel;
+  previousScore: number | null;
+  latestScore: number | null;
+  scoreMovement: number | null;
+  previousGrade: number | null;
+  latestGrade: number | null;
+  latestGradeLabel: string | null;
+  latestRemark: string | null;
+  pointsToNextGrade: number | null;
+  nextGrade: number | null;
+};
+
+type TeacherMockTrendOk = {
+  ok: true;
+  available: boolean;
+  reason: string | null;
+  subject: string;
+  selectedSession: TeacherMockTrendSession;
+  previousSession: TeacherMockTrendSession | null;
+  summary: TeacherMockTrendSummary | null;
+  learners: TeacherMockTrendLearner[];
+};
+
 type ApiErr = {
   ok: false;
   error: string;
@@ -399,6 +446,63 @@ function learnerScoreToneClass(score: number | null) {
   return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
 }
 
+function teacherTrendClass(label: TeacherMockTrendLabel | string) {
+  const s = cleanStr(label).toUpperCase();
+
+  if (s === "IMPROVING") {
+    return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+  }
+
+  if (s === "DECLINING") {
+    return "border-rose-300/20 bg-rose-400/12 text-rose-100";
+  }
+
+  if (s === "STABLE") {
+    return "border-sky-300/20 bg-sky-400/12 text-sky-100";
+  }
+
+  return "border-amber-300/20 bg-amber-400/12 text-amber-100";
+}
+
+function movementText(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  const n = Number(value);
+  if (n > 0) return `+${formatNumber(n)}`;
+  return formatNumber(n);
+}
+
+function teacherTrendMovementTone(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(Number(value))) return "text-[#AEB6C4]";
+  const n = Number(value);
+  if (n > 0) return "text-emerald-100";
+  if (n < 0) return "text-rose-100";
+  return "text-sky-100";
+}
+
+function teacherTrendAction(trend: TeacherMockTrendOk | null) {
+  if (!trend?.available || !trend.summary) {
+    return "Seal at least two Mocks before trend action can be shown.";
+  }
+
+  const movement = trend.summary.averageScoreMovement;
+
+  if (movement != null && movement < 0) {
+    return `Your ${trend.subject} average declined by ${Math.abs(movement).toFixed(
+      Number.isInteger(Math.abs(movement)) ? 0 : 1,
+    )} mark(s). Review the declining learners first and assign correction before the next Mock.`;
+  }
+
+  if (trend.summary.decliningCount > 0) {
+    return `Review ${trend.summary.decliningCount} declining learner(s) in ${trend.subject}. Small corrections before the next Mock can recover lost marks.`;
+  }
+
+  if (movement != null && movement > 0) {
+    return `${trend.subject} is improving. Protect what worked, then help near-grade learners cross the next boundary.`;
+  }
+
+  return `${trend.subject} is steady. Use corrections and timed practice to push more learners into the next grade band.`;
+}
+
 function buildSubjectInterventionAction(args: {
   subject: string;
   averageScore: number | null;
@@ -540,6 +644,13 @@ const [classroomId, setClassroomId] = useState("");
   const [broadsheet, setBroadsheet] = useState<MockBroadsheetOk | null>(null);
   const [broadsheetLoading, setBroadsheetLoading] = useState(false);
   const [broadsheetError, setBroadsheetError] = useState<string | null>(null);
+
+const [teacherMockTrend, setTeacherMockTrend] =
+  useState<TeacherMockTrendOk | null>(null);
+const [teacherMockTrendLoading, setTeacherMockTrendLoading] = useState(false);
+const [teacherMockTrendError, setTeacherMockTrendError] = useState<string | null>(
+  null,
+);
 
   const allJhs3Classrooms = useMemo(() => classrooms.filter(isJhs3Classroom), [classrooms]);
 
@@ -684,13 +795,15 @@ const assignedSubjectIntelligence = useMemo(() => {
     return Array.from(new Set([...fromOptions, ...fromItems])).sort((a, b) => a.localeCompare(b));
   }, [subjectOptions, items]);
 
-  function clearDownstream() {
-    setItems([]);
-    setItemId("");
-    setScoreSheet(null);
-    setScoreDraft({});
-    setBroadsheet(null);
-  }
+function clearDownstream() {
+  setItems([]);
+  setItemId("");
+  setScoreSheet(null);
+  setScoreDraft({});
+  setBroadsheet(null);
+  setTeacherMockTrend(null);
+  setTeacherMockTrendError(null);
+}
 
   async function loadContext() {
     try {
@@ -1140,6 +1253,61 @@ const rows = scoreSheet.students.map((student) => {
     }
   }
 
+async function loadTeacherMockTrend(
+  nextSessionId = sessionId,
+  nextSubject = selectedItem?.subject || subject,
+) {
+  const targetSessionId = cleanStr(nextSessionId);
+  const targetSubject = cleanStr(nextSubject);
+
+  if (!targetSessionId || !targetSubject) {
+    setTeacherMockTrend(null);
+    setTeacherMockTrendError(null);
+    return;
+  }
+
+  try {
+    setTeacherMockTrendLoading(true);
+    setTeacherMockTrendError(null);
+
+    const params = new URLSearchParams({
+      sessionId: targetSessionId,
+      subject: targetSubject,
+    });
+
+    const res = await fetch(
+      `/api/teacher/assessment/mock/trend?${params.toString()}`,
+      {
+        cache: "no-store",
+        credentials: "include",
+      },
+    );
+
+    const json = await readJson<TeacherMockTrendOk>(res);
+
+    if (!json) {
+      setTeacherMockTrend(null);
+      setTeacherMockTrendError(`Invalid Mock trend response. HTTP ${res.status}`);
+      return;
+    }
+
+    if (!res.ok || !json.ok) {
+      setTeacherMockTrend(null);
+      setTeacherMockTrendError(
+        getErrorMessage(json, `Failed to load Mock trend. HTTP ${res.status}`),
+      );
+      return;
+    }
+
+    setTeacherMockTrend(json);
+  } catch {
+    setTeacherMockTrend(null);
+    setTeacherMockTrendError("Failed to load Mock trend.");
+  } finally {
+    setTeacherMockTrendLoading(false);
+  }
+}
+
   function updateDraft(studentId: string, patch: Partial<ScoreDraftRow>) {
     setScoreDraft((prev) => ({
       ...prev,
@@ -1187,16 +1355,25 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [sessionId]);
 
-  useEffect(() => {
-    if (!itemId) {
-      setScoreSheet(null);
-      setScoreDraft({});
-      return;
-    }
+useEffect(() => {
+  setTeacherMockTrend(null);
+  setTeacherMockTrendError(null);
 
-    void loadScores(itemId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId]);
+  if (!itemId) {
+    setScoreSheet(null);
+    setScoreDraft({});
+    return;
+  }
+
+  void loadScores(itemId);
+
+  const targetItem = items.find((item) => item.id === itemId) ?? null;
+  if (sessionId && targetItem?.subject) {
+    void loadTeacherMockTrend(sessionId, targetItem.subject);
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [itemId]);
 
     useEffect(() => {
     if (!selectedItemIsDeepLinkTarget || !scoreSheet) return;
@@ -1232,11 +1409,12 @@ useEffect(() => {
               <button
                 type="button"
                 onClick={() => {
-                  void loadSessions(classroomId, academicYear);
-                  void loadItems(sessionId);
-                  void loadScores(itemId);
-                  void loadBroadsheet(sessionId);
-                }}
+  void loadSessions(classroomId, academicYear);
+  void loadItems(sessionId);
+  void loadScores(itemId);
+  void loadBroadsheet(sessionId);
+  void loadTeacherMockTrend(sessionId, selectedItem?.subject || subject);
+}}
                 className={goldButton}
               >
                 Refresh
@@ -1699,7 +1877,212 @@ useEffect(() => {
 </div>
 
             <SectionCard
-              title="4. Assigned Subject Intelligence"
+              title="4. Mock trend"
+              subtitle={
+                selectedItem
+                  ? `${selectedItem.subject} movement from previous sealed Mock to latest sealed Mock.`
+                  : "Select a subject column to view Mock-to-Mock trend."
+              }
+              right={
+                <button
+                  type="button"
+                  onClick={() =>
+                    loadTeacherMockTrend(sessionId, selectedItem?.subject || subject)
+                  }
+                  disabled={!sessionId || !selectedItem || teacherMockTrendLoading}
+                  className={darkButton}
+                >
+                  {teacherMockTrendLoading ? "Loading..." : "Refresh trend"}
+                </button>
+              }
+            >
+              <div className="space-y-4">
+                {!selectedItem ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-8 text-center text-[12px] text-[#AEB6C4]">
+                    Select a Mock subject to see whether your learners are
+                    improving or declining.
+                  </div>
+                ) : teacherMockTrendError ? (
+                  <div className="rounded-2xl border border-rose-300/20 bg-rose-400/10 px-4 py-3 text-[12px] leading-5 text-rose-100">
+                    {teacherMockTrendError}
+                  </div>
+                ) : teacherMockTrendLoading && !teacherMockTrend ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-center text-[12px] text-[#AEB6C4]">
+                    Loading Mock trend...
+                  </div>
+                ) : !teacherMockTrend ? (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.04] px-4 py-8 text-center text-[12px] text-[#AEB6C4]">
+                    Trend will appear here after loading the selected subject.
+                  </div>
+                ) : !teacherMockTrend.available ? (
+                  <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-[12px] leading-5 text-amber-100">
+                    <div className="font-semibold">Trend not available yet</div>
+                    <div className="mt-1">
+                      {teacherMockTrend.reason ||
+                        "At least two sealed Mocks are required."}
+                    </div>
+                  </div>
+                ) : teacherMockTrend.summary ? (
+                  <>
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <MetricCard
+                        label="Subject movement"
+                        value={
+                          <span
+                            className={teacherTrendMovementTone(
+                              teacherMockTrend.summary.averageScoreMovement,
+                            )}
+                          >
+                            {movementText(
+                              teacherMockTrend.summary.averageScoreMovement,
+                            )}
+                          </span>
+                        }
+                        hint={`${formatNumber(
+                          teacherMockTrend.summary.averagePreviousScore,
+                        )} → ${formatNumber(
+                          teacherMockTrend.summary.averageLatestScore,
+                        )}`}
+                      />
+
+                      <MetricCard
+                        label="Improving"
+                        value={teacherMockTrend.summary.improvingCount}
+                        hint="Learners gaining marks"
+                      />
+
+                      <MetricCard
+                        label="Declining"
+                        value={teacherMockTrend.summary.decliningCount}
+                        hint="Review these first"
+                      />
+
+                      <MetricCard
+                        label="Compared"
+                        value={`${teacherMockTrend.summary.comparedCount}/${teacherMockTrend.summary.totalLearners}`}
+                        hint={`${teacherMockTrend.previousSession?.mockLabel ?? "Previous"} → ${teacherMockTrend.selectedSession.mockLabel}`}
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-[12px] leading-6 text-emerald-100">
+                      <span className="font-semibold">Teacher action: </span>
+                      {teacherTrendAction(teacherMockTrend)}
+                    </div>
+
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      <div className={panelCard + " p-4"}>
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
+                          Declining learners
+                        </div>
+                        <div className="mt-1 text-[11px] text-[#8F98A8]">
+                          Start correction work here.
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          {teacherMockTrend.learners.filter(
+                            (learner) => learner.label === "DECLINING",
+                          ).length === 0 ? (
+                            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-3 text-[12px] text-emerald-100">
+                              No learner declined in this subject.
+                            </div>
+                          ) : (
+                            teacherMockTrend.learners
+                              .filter((learner) => learner.label === "DECLINING")
+                              .slice(0, 6)
+                              .map((learner) => (
+                                <div
+                                  key={learner.studentId}
+                                  className="flex items-center justify-between gap-3 rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[12px]"
+                                >
+                                  <div>
+                                    <div className="font-semibold text-[#F7F4ED]">
+                                      {learner.name}
+                                    </div>
+                                    <div className="mt-1 text-[10px] text-rose-100/80">
+                                      {formatNumber(learner.previousScore)} →{" "}
+                                      {formatNumber(learner.latestScore)}
+                                    </div>
+                                  </div>
+
+                                  <span className="rounded-full border border-rose-300/20 bg-rose-400/12 px-2 py-1 text-[10px] font-semibold text-rose-100">
+                                    {movementText(learner.scoreMovement)}
+                                  </span>
+                                </div>
+                              ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div className={panelCard + " p-4"}>
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
+                          Quick wins
+                        </div>
+                        <div className="mt-1 text-[11px] text-[#8F98A8]">
+                          Improving learners and near-grade chances.
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          {teacherMockTrend.learners.filter(
+                            (learner) =>
+                              learner.label === "IMPROVING" ||
+                              (typeof learner.pointsToNextGrade === "number" &&
+                                learner.pointsToNextGrade > 0 &&
+                                learner.pointsToNextGrade <= 5),
+                          ).length === 0 ? (
+                            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[12px] text-[#AEB6C4]">
+                              No quick-win learner signal yet.
+                            </div>
+                          ) : (
+                            teacherMockTrend.learners
+                              .filter(
+                                (learner) =>
+                                  learner.label === "IMPROVING" ||
+                                  (typeof learner.pointsToNextGrade === "number" &&
+                                    learner.pointsToNextGrade > 0 &&
+                                    learner.pointsToNextGrade <= 5),
+                              )
+                              .slice(0, 6)
+                              .map((learner) => (
+                                <div
+                                  key={learner.studentId}
+                                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[12px]"
+                                >
+                                  <div>
+                                    <div className="font-semibold text-[#F7F4ED]">
+                                      {learner.name}
+                                    </div>
+                                    <div className="mt-1 text-[10px] text-[#AEB6C4]">
+                                      {learner.pointsToNextGrade != null
+                                        ? `${learner.pointsToNextGrade} mark(s) to Grade ${learner.nextGrade}`
+                                        : `${formatNumber(
+                                            learner.previousScore,
+                                          )} → ${formatNumber(
+                                            learner.latestScore,
+                                          )}`}
+                                    </div>
+                                  </div>
+
+                                  <span
+                                    className={[
+                                      "rounded-full border px-2 py-1 text-[10px] font-semibold",
+                                      teacherTrendClass(learner.label),
+                                    ].join(" ")}
+                                  >
+                                    {learner.label}
+                                  </span>
+                                </div>
+                              ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="5. Assigned Subject Intelligence"
               subtitle={
                 selectedItem
                   ? `Teacher-only insight for ${selectedItem.subject}. This does not expose all-subject headteacher broadsheet control.`
@@ -1855,7 +2238,7 @@ useEffect(() => {
             </SectionCard>
 
             <SectionCard
-             title="5. Teacher-visible Mock snapshot"
+             title="6. Teacher-visible Mock snapshot"
              subtitle="This teacher view only uses subjects visible to your account. Full BECE readiness is completed from the headteacher all-subject cockpit."
               right={
                 <button
