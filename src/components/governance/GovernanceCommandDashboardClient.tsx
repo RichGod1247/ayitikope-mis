@@ -168,6 +168,58 @@ type RiskSummary = {
   } | null;
 };
 
+type GovernanceMockTrendLabel =
+  | "IMPROVING"
+  | "DECLINING"
+  | "STABLE"
+  | "INCOMPLETE";
+
+type GovernanceMockWeakSubject = {
+  subject: string;
+  canonicalSubject: string;
+  averageScore: number | null;
+  lowScoreCount: number;
+  scoredCount: number;
+};
+
+type GovernanceMockSchoolSignal = {
+  tenantId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector: "PUBLIC" | "PRIVATE" | string;
+  circuitName: string | null;
+  districtName: string | null;
+  latestMockLabel: string | null;
+  latestMockTitle: string | null;
+  totalCandidates: number;
+  placementReadyCount: number;
+  averagePlacementAggregate: number | null;
+  previousAveragePlacementAggregate: number | null;
+  aggregateMovement: number | null;
+  trendLabel: GovernanceMockTrendLabel;
+  activeCases: number;
+  resolvedCases: number;
+  needsFollowUp: boolean;
+  followUpReason: string;
+};
+
+type GovernanceMockReadinessOverview = {
+  schools: number;
+  schoolsWithReleasedMock: number;
+  schoolsWithoutReleasedMock: number;
+  latestReleasedMockCount: number;
+  averagePlacementAggregate: number | null;
+  improvingSchools: number;
+  decliningSchools: number;
+  stableSchools: number;
+  incompleteSchools: number;
+  schoolsNeedingFollowUp: number;
+  activeInterventionCases: number;
+  resolvedInterventionCases: number;
+  weakestSubjects: GovernanceMockWeakSubject[];
+  schoolSignals: GovernanceMockSchoolSignal[];
+};
+
 type OverviewResponse =
   | {
       ok: true;
@@ -185,18 +237,19 @@ type OverviewResponse =
           parentZoneName?: string | null;
         }>;
       };
-      overview?: {
-        schools?: SchoolRow[];
-        circuitBreakdown?: CircuitBreakdownRow[];
-        interventionQueue?: InterventionQueueItem[];
-        riskSummary?: RiskSummary;
-        sectorSummary?: SectorSummary;
-        totals?: Record<string, number>;
-        signals?: Record<string, number>;
-        attendance?: AttendanceOverview;
-        emptyStates?: string[];
-        generatedAt?: string;
-      };
+overview?: {
+  schools?: SchoolRow[];
+  circuitBreakdown?: CircuitBreakdownRow[];
+  interventionQueue?: InterventionQueueItem[];
+  riskSummary?: RiskSummary;
+  sectorSummary?: SectorSummary;
+  mockReadiness?: GovernanceMockReadinessOverview;
+  totals?: Record<string, number>;
+  signals?: Record<string, number>;
+  attendance?: AttendanceOverview;
+  emptyStates?: string[];
+  generatedAt?: string;
+};
     }
   | {
       ok: false;
@@ -233,6 +286,46 @@ function numberValue(value: unknown) {
 
 function percentValue(value: unknown) {
   return `${Math.round(numberValue(value))}%`;
+}
+
+function formatOptionalNumber(value: unknown) {
+  if (value == null) return "—";
+
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
+
+  return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1);
+}
+
+function movementDisplay(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+
+  const n = Number(value);
+  const text = Number.isInteger(n) ? String(n) : n.toFixed(1);
+
+  return n > 0 ? `+${text}` : text;
+}
+
+function mockTrendLabel(label?: string | null) {
+  const s = String(label ?? "").toUpperCase();
+
+  if (s === "IMPROVING") return "Improving";
+  if (s === "DECLINING") return "Declining";
+  if (s === "STABLE") return "Stable";
+
+  return "Insufficient evidence";
+}
+
+function mockTrendTone(
+  label?: string | null,
+): "default" | "success" | "warning" | "danger" | "info" {
+  const s = String(label ?? "").toUpperCase();
+
+  if (s === "IMPROVING") return "success";
+  if (s === "DECLINING") return "danger";
+  if (s === "STABLE") return "info";
+
+  return "warning";
 }
 
 function compactDateTime(value?: string) {
@@ -373,6 +466,209 @@ function CommandTile({
   );
 }
 
+function GovernanceMockReadinessPanel({
+  mockReadiness,
+  isDistrictView,
+}: {
+  mockReadiness?: GovernanceMockReadinessOverview | null;
+  isDistrictView: boolean;
+}) {
+  if (!mockReadiness) return null;
+
+  const topSignal = mockReadiness.schoolSignals[0] ?? null;
+  const weakestSubjects = mockReadiness.weakestSubjects.slice(0, 3);
+  const releasedCoverage = `${mockReadiness.schoolsWithReleasedMock}/${mockReadiness.schools}`;
+
+  return (
+    <section className="rounded-[28px] border border-amber-300/20 bg-amber-400/10 p-4 md:p-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+            BECE Mock Readiness
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-white">
+            {isDistrictView
+              ? "District Mock risk signal"
+              : "Circuit Mock risk signal"}
+          </h2>
+          <p className="mt-1 max-w-4xl text-sm leading-6 text-amber-100/80">
+            {isDistrictView
+              ? "Director view of released Mock evidence, school/circuit risk, weak subjects, and active rescue work."
+              : "SISSO view of released Mock evidence, school risk, weak subjects, and active rescue work."}
+          </p>
+        </div>
+
+        <span className="w-fit rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold text-white">
+          Released {releasedCoverage}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
+        <StatCard
+          label="Released"
+          value={releasedCoverage}
+          tone={mockReadiness.schoolsWithReleasedMock ? "success" : "warning"}
+        />
+        <StatCard
+          label="No Mock release"
+          value={mockReadiness.schoolsWithoutReleasedMock}
+          tone={mockReadiness.schoolsWithoutReleasedMock ? "warning" : "success"}
+        />
+        <StatCard
+          label="Avg aggregate"
+          value={formatOptionalNumber(mockReadiness.averagePlacementAggregate)}
+          tone={
+            mockReadiness.averagePlacementAggregate == null
+              ? "warning"
+              : mockReadiness.averagePlacementAggregate > 24
+                ? "danger"
+                : "success"
+          }
+        />
+        <StatCard
+          label="Need follow-up"
+          value={mockReadiness.schoolsNeedingFollowUp}
+          tone={mockReadiness.schoolsNeedingFollowUp ? "danger" : "success"}
+        />
+        <StatCard
+          label="Active rescue"
+          value={mockReadiness.activeInterventionCases}
+          tone={mockReadiness.activeInterventionCases ? "warning" : "success"}
+        />
+        <StatCard
+          label="Resolved"
+          value={mockReadiness.resolvedInterventionCases}
+          tone={mockReadiness.resolvedInterventionCases ? "success" : "default"}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-white">
+                First follow-up signal
+              </p>
+              <p className="mt-1 text-xs leading-5 text-amber-100/75">
+                {isDistrictView
+                  ? "The Director should use this to know which SISSO/circuit needs attention first."
+                  : "The SISSO should use this to know which school needs attention first."}
+              </p>
+            </div>
+
+            {topSignal ? (
+              <span
+                className={cx(
+                  "w-fit rounded-full border px-3 py-1 text-xs font-semibold",
+                  riskBadgeClass(
+                    topSignal.trendLabel === "DECLINING"
+                      ? "CRITICAL"
+                      : topSignal.trendLabel === "INCOMPLETE"
+                        ? "MEDIUM"
+                        : "LOW",
+                  ),
+                )}
+              >
+                {mockTrendLabel(topSignal.trendLabel)}
+              </span>
+            ) : null}
+          </div>
+
+          {topSignal ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <p className="font-bold text-white">{topSignal.schoolName}</p>
+              <p className="mt-1 text-xs text-slate-400">
+                {topSignal.schoolCode || "No school code"} ·{" "}
+                {topSignal.circuitName || "No circuit"} ·{" "}
+                {topSignal.latestMockLabel || "No released Mock"}
+              </p>
+
+              <p className="mt-3 text-sm leading-6 text-amber-100/90">
+                {topSignal.followUpReason}
+              </p>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+                <StatCard
+                  label="Ready"
+                  value={`${topSignal.placementReadyCount}/${topSignal.totalCandidates}`}
+                  tone={
+                    topSignal.placementReadyCount < topSignal.totalCandidates
+                      ? "warning"
+                      : "success"
+                  }
+                />
+                <StatCard
+                  label="Aggregate"
+                  value={formatOptionalNumber(topSignal.averagePlacementAggregate)}
+                  tone={
+                    topSignal.averagePlacementAggregate == null
+                      ? "warning"
+                      : topSignal.averagePlacementAggregate > 24
+                        ? "danger"
+                        : "success"
+                  }
+                />
+                <StatCard
+                  label="Movement"
+                  value={movementDisplay(topSignal.aggregateMovement)}
+                  tone={mockTrendTone(topSignal.trendLabel)}
+                />
+                <StatCard
+                  label="Cases"
+                  value={`${topSignal.activeCases} active`}
+                  tone={topSignal.activeCases ? "warning" : "success"}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-300">
+              No released BECE Mock readiness evidence is available yet in this
+              governance scope.
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+          <p className="text-sm font-bold text-white">Weakest Mock subjects</p>
+          <p className="mt-1 text-xs leading-5 text-amber-100/75">
+            Ranked from released Mock evidence in this governance scope.
+          </p>
+
+          <div className="mt-3 space-y-2">
+            {weakestSubjects.length ? (
+              weakestSubjects.map((subject, index) => (
+                <div
+                  key={subject.canonicalSubject}
+                  className="rounded-xl border border-white/10 bg-black/20 px-3 py-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        {index + 1}. {subject.subject}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Low scores: {subject.lowScoreCount}/{subject.scoredCount}
+                      </p>
+                    </div>
+
+                    <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-100">
+                      Avg {formatOptionalNumber(subject.averageScore)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm text-slate-300">
+                No subject risk signal yet.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function GovernanceCommandDashboardClient({
   endpoint,
   eyebrow,
@@ -439,6 +735,7 @@ export default function GovernanceCommandDashboardClient({
   const attendance = overview?.attendance ?? null;
   const riskSummary = overview?.riskSummary ?? {};
   const sectorSummary = overview?.sectorSummary ?? {};
+  const mockReadiness = overview?.mockReadiness ?? null;
 
   const highestRiskSchools = useMemo(() => {
     const queueRows = queue.map((item) => ({
@@ -697,6 +994,11 @@ export default function GovernanceCommandDashboardClient({
           onClick={() => setActivePanel("advanced")}
         />
       </section>
+
+      <GovernanceMockReadinessPanel
+        mockReadiness={mockReadiness}
+        isDistrictView={isDistrictView}
+      />
 
       {activePanel === "risk" ? (
         <section className="rounded-[28px] border border-red-300/20 bg-red-500/10 p-4 md:p-5">
