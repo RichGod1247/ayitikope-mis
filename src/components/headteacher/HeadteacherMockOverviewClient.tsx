@@ -768,6 +768,37 @@ function caseCanReopen(status: string) {
   return s === "RESOLVED" || s === "CANCELLED";
 }
 
+function isActiveInterventionStatus(status: string) {
+  const s = cleanStr(status).toUpperCase();
+  return s === "OPEN" || s === "IN_PROGRESS" || s === "ESCALATED";
+}
+
+function interventionPriorityRank(priority: string) {
+  const p = cleanStr(priority).toUpperCase();
+
+  if (p === "CRITICAL") return 1;
+  if (p === "HIGH") return 2;
+  if (p === "MEDIUM") return 3;
+  if (p === "LOW") return 4;
+
+  return 5;
+}
+
+function dateValue(value: string | null | undefined) {
+  if (!value) return 0;
+  const n = new Date(value).getTime();
+  return Number.isFinite(n) ? n : 0;
+}
+
+function interventionStudentName(item: MockInterventionCase) {
+  const meta = interventionMetadata(item);
+  return (
+    cleanStr(meta.studentName) ||
+    cleanStr(item.title).replace(/^Mock rescue:\s*/i, "") ||
+    "Learner"
+  );
+}
+
 function latestCaseEvent(item: MockInterventionCase) {
   return Array.isArray(item.events) && item.events.length > 0
     ? item.events[0]
@@ -1063,6 +1094,82 @@ const mockInterventionsByStudentId = useMemo(() => {
 
   return map;
 }, [mockInterventions.items]);
+
+const mockInterventionBoard = useMemo(() => {
+  const counts = {
+    OPEN: 0,
+    IN_PROGRESS: 0,
+    RESOLVED: 0,
+    ESCALATED: 0,
+    CANCELLED: 0,
+    OTHER: 0,
+  };
+
+  for (const item of mockInterventions.items) {
+    const status = cleanStr(item.status).toUpperCase();
+
+    if (status in counts) {
+      counts[status as keyof typeof counts] += 1;
+    } else {
+      counts.OTHER += 1;
+    }
+  }
+
+  const total = mockInterventions.items.length;
+  const activeCount = counts.OPEN + counts.IN_PROGRESS + counts.ESCALATED;
+  const closureRate = total > 0 ? (counts.RESOLVED / total) * 100 : null;
+
+  const linkedStudentIds = new Set(
+    mockInterventions.items
+      .map((item) => interventionStudentId(item))
+      .filter(Boolean),
+  );
+
+  const rescueCandidates =
+    broadsheet?.trend?.available && Array.isArray(broadsheet.trend.learners)
+      ? broadsheet.trend.learners.filter(learnerNeedsIntervention)
+      : [];
+
+  const unlinkedCandidateCount = rescueCandidates.filter(
+    (learner) => !linkedStudentIds.has(learner.studentId),
+  ).length;
+
+  const followUpCases = [...mockInterventions.items]
+    .filter((item) => isActiveInterventionStatus(item.status))
+    .sort((a, b) => {
+      const priorityDiff =
+        interventionPriorityRank(a.priority) - interventionPriorityRank(b.priority);
+
+      if (priorityDiff !== 0) return priorityDiff;
+
+      return dateValue(b.updatedAt) - dateValue(a.updatedAt);
+    });
+
+  const recentEvents = mockInterventions.items
+    .map((item) => ({
+      item,
+      event: latestCaseEvent(item),
+    }))
+    .filter((row): row is { item: MockInterventionCase; event: MockInterventionEvent } =>
+      !!row.event,
+    )
+    .sort((a, b) => dateValue(b.event.createdAt) - dateValue(a.event.createdAt));
+
+  return {
+    total,
+    openCount: counts.OPEN,
+    inProgressCount: counts.IN_PROGRESS,
+    resolvedCount: counts.RESOLVED,
+    escalatedCount: counts.ESCALATED,
+    cancelledCount: counts.CANCELLED,
+    activeCount,
+    closureRate,
+    rescueCandidateCount: rescueCandidates.length,
+    unlinkedCandidateCount,
+    followUpCases,
+    recentEvents,
+  };
+}, [broadsheet?.trend, mockInterventions.items]);
 
   const selectedExportSessionId =
     cleanStr(broadsheet?.session?.id) || cleanStr(sessionId);
@@ -2297,6 +2404,222 @@ async function queueMockReleaseSms(nextSessionId?: string | null) {
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className="text-sm font-semibold text-[#F7F4ED]">
+                                          <div className="rounded-2xl border border-white/10 bg-[#08111C]/85 p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
+                          Mock intervention accountability board
+                        </div>
+                        <div className="mt-1 text-[11px] leading-5 text-[#AEB6C4]">
+                          Headteacher command view for open, active, escalated,
+                          and evidence-closed Mock rescue cases.
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
+                          {mockInterventionBoard.total} total case(s)
+                        </span>
+
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
+                          {mockInterventionBoard.activeCount} active
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-5">
+                      <MetricCard
+                        label="Open"
+                        value={mockInterventionBoard.openCount}
+                        hint="Awaiting action"
+                      />
+
+                      <MetricCard
+                        label="In progress"
+                        value={mockInterventionBoard.inProgressCount}
+                        hint="Action started"
+                      />
+
+                      <MetricCard
+                        label="Resolved"
+                        value={mockInterventionBoard.resolvedCount}
+                        hint="Evidence closed"
+                      />
+
+                      <MetricCard
+                        label="Escalated"
+                        value={mockInterventionBoard.escalatedCount}
+                        hint="Needs higher attention"
+                      />
+
+                      <MetricCard
+                        label="Closure rate"
+                        value={formatNumber(
+                          mockInterventionBoard.closureRate,
+                          "%",
+                        )}
+                        hint={
+                          mockInterventionBoard.total > 0
+                            ? `${mockInterventionBoard.resolvedCount}/${mockInterventionBoard.total} case(s)`
+                            : "No cases yet"
+                        }
+                      />
+                    </div>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-[1.25fr_0.75fr]">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-semibold text-[#F7F4ED]">
+                              Cases needing follow-up
+                            </div>
+                            <div className="mt-1 text-[11px] text-[#8F98A8]">
+                              Sorted by priority, then latest update.
+                            </div>
+                          </div>
+
+                          <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] font-semibold text-amber-100">
+                            {mockInterventionBoard.followUpCases.length} active
+                          </span>
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          {mockInterventionBoard.followUpCases.length === 0 ? (
+                            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-3 text-[12px] text-emerald-100">
+                              No active rescue case is waiting for follow-up.
+                            </div>
+                          ) : (
+                            mockInterventionBoard.followUpCases
+                              .slice(0, 5)
+                              .map((item) => {
+                                const event = latestCaseEvent(item);
+
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div>
+                                        <div className="text-[12px] font-semibold text-[#F7F4ED]">
+                                          {interventionStudentName(item)}
+                                        </div>
+                                        <div className="mt-1 text-[10px] text-[#8F98A8]">
+                                          {item.title}
+                                        </div>
+                                      </div>
+
+                                      <div className="flex flex-wrap gap-1">
+                                        <span
+                                          className={[
+                                            "rounded-full border px-2 py-1 text-[10px] font-semibold",
+                                            interventionStatusClass(item.status),
+                                          ].join(" ")}
+                                        >
+                                          {item.status}
+                                        </span>
+
+                                        <span
+                                          className={[
+                                            "rounded-full border px-2 py-1 text-[10px] font-semibold",
+                                            interventionPriorityClass(
+                                              item.priority,
+                                            ),
+                                          ].join(" ")}
+                                        >
+                                          {item.priority}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {event ? (
+                                      <div className="mt-2 text-[10px] leading-4 text-[#AEB6C4]">
+                                        Latest:{" "}
+                                        <span className="font-semibold text-[#F7F4ED]">
+                                          {event.eventType}
+                                        </span>{" "}
+                                        • {formatDateTime(event.createdAt)}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              })
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                        <div className="text-sm font-semibold text-[#F7F4ED]">
+                          Board signals
+                        </div>
+
+                        <div className="mt-3 space-y-2 text-[11px] text-[#C9CDD6]">
+                          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                            Rescue candidates:{" "}
+                            <span className="font-semibold text-[#F7F4ED]">
+                              {mockInterventionBoard.rescueCandidateCount}
+                            </span>
+                          </div>
+
+                          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                            Candidates without linked case:{" "}
+                            <span
+                              className={[
+                                "font-semibold",
+                                mockInterventionBoard.unlinkedCandidateCount > 0
+                                  ? "text-amber-100"
+                                  : "text-emerald-100",
+                              ].join(" ")}
+                            >
+                              {mockInterventionBoard.unlinkedCandidateCount}
+                            </span>
+                          </div>
+
+                          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                            Active workload:{" "}
+                            <span className="font-semibold text-[#F7F4ED]">
+                              {mockInterventionBoard.activeCount}
+                            </span>
+                          </div>
+
+                          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                            Cancelled:{" "}
+                            <span className="font-semibold text-[#F7F4ED]">
+                              {mockInterventionBoard.cancelledCount}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-2 text-[11px] leading-5 text-sky-100">
+                          Latest action:{" "}
+                          {mockInterventionBoard.recentEvents[0] ? (
+                            <>
+                              <span className="font-semibold">
+                                {
+                                  mockInterventionBoard.recentEvents[0].event
+                                    .eventType
+                                }
+                              </span>{" "}
+                              for{" "}
+                              <span className="font-semibold">
+                                {interventionStudentName(
+                                  mockInterventionBoard.recentEvents[0].item,
+                                )}
+                              </span>
+                              <span className="block pt-1 text-sky-100/75">
+                                {formatDateTime(
+                                  mockInterventionBoard.recentEvents[0].event
+                                    .createdAt,
+                                )}
+                              </span>
+                            </>
+                          ) : (
+                            "No case event yet."
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                           Mock rescue intervention bridge
                         </div>
                         <div className="mt-1 text-[11px] leading-5 text-[#AEB6C4]">
