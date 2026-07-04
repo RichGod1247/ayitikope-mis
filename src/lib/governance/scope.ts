@@ -3,6 +3,7 @@ import {
   AssessmentItemStatus,
   AttendanceStatus,
   ClassroomStatus,
+  GovernanceInterventionStatus,
   Prisma,
   SchoolSector,
   StudentStatus,
@@ -16,6 +17,13 @@ import {
   type ServerUserContext,
 } from "@/lib/serverAuth";
 import { normRole } from "@/lib/roleRouting";
+
+import {
+  calculatePlacementMockAggregate,
+  canonicalMockSubject,
+  mockGradeFromScore,
+  mockSubjectLabel,
+} from "@/lib/assessments/mock";
 
 export const CIRCUIT_GOVERNANCE_ROLES = ["SISSO", "CIRCUIT_SUPERVISOR"] as const;
 
@@ -186,6 +194,58 @@ type GovernanceAttendanceOverview = {
   needsAction: number;
   parentAlertsSent: number;
   schoolsNeedingFollowUp: GovernanceAttendanceFollowUpSchool[];
+};
+
+type GovernanceMockTrendLabel =
+  | "IMPROVING"
+  | "DECLINING"
+  | "STABLE"
+  | "INCOMPLETE";
+
+type GovernanceMockWeakSubject = {
+  subject: string;
+  canonicalSubject: string;
+  averageScore: number | null;
+  lowScoreCount: number;
+  scoredCount: number;
+};
+
+type GovernanceMockSchoolSignal = {
+  tenantId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector: SchoolSector;
+  circuitName: string | null;
+  districtName: string | null;
+  latestMockLabel: string | null;
+  latestMockTitle: string | null;
+  totalCandidates: number;
+  placementReadyCount: number;
+  averagePlacementAggregate: number | null;
+  previousAveragePlacementAggregate: number | null;
+  aggregateMovement: number | null;
+  trendLabel: GovernanceMockTrendLabel;
+  activeCases: number;
+  resolvedCases: number;
+  needsFollowUp: boolean;
+  followUpReason: string;
+};
+
+type GovernanceMockReadinessOverview = {
+  schools: number;
+  schoolsWithReleasedMock: number;
+  schoolsWithoutReleasedMock: number;
+  latestReleasedMockCount: number;
+  averagePlacementAggregate: number | null;
+  improvingSchools: number;
+  decliningSchools: number;
+  stableSchools: number;
+  incompleteSchools: number;
+  schoolsNeedingFollowUp: number;
+  activeInterventionCases: number;
+  resolvedInterventionCases: number;
+  weakestSubjects: GovernanceMockWeakSubject[];
+  schoolSignals: GovernanceMockSchoolSignal[];
 };
 
 type GovernanceOverview = any;
@@ -1146,6 +1206,524 @@ function buildAttendanceOverview(mappedSchools: MappedSchool[], date: string): G
   return attendance;
 }
 
+function emptyMockReadinessOverview(
+  schools = 0,
+): GovernanceMockReadinessOverview {
+  return {
+    schools,
+    schoolsWithReleasedMock: 0,
+    schoolsWithoutReleasedMock: schools,
+    latestReleasedMockCount: 0,
+    averagePlacementAggregate: null,
+    improvingSchools: 0,
+    decliningSchools: 0,
+    stableSchools: 0,
+    incompleteSchools: schools,
+    schoolsNeedingFollowUp: 0,
+    activeInterventionCases: 0,
+    resolvedInterventionCases: 0,
+    weakestSubjects: [],
+    schoolSignals: [],
+  };
+}
+
+function round1(n: number) {
+  return Math.round(n * 10) / 10;
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function averageOrNull(values: number[]) {
+  if (!values.length) return null;
+  return round1(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function mockTrendLabelFromMovement(
+  movement: number | null,
+): GovernanceMockTrendLabel {
+  if (movement == null) return "INCOMPLETE";
+  if (movement > 0) return "IMPROVING";
+  if (movement < 0) return "DECLINING";
+  return "STABLE";
+}
+
+function mockCaseStatusIsActive(status: GovernanceInterventionStatus | string) {
+  return (
+    status === GovernanceInterventionStatus.OPEN ||
+    status === GovernanceInterventionStatus.IN_PROGRESS ||
+    status === GovernanceInterventionStatus.ESCALATED
+  );
+}
+
+function buildMockFollowUpReason(args: {
+  trendLabel: GovernanceMockTrendLabel;
+  activeCases: number;
+  placementReadyCount: number;
+  totalCandidates: number;
+  latestMockLabel: string | null;
+}) {
+  if (!args.latestMockLabel) return "No released Mock readiness yet.";
+
+  if (args.placementReadyCount < args.totalCandidates) {
+    return `${args.latestMockLabel} has incomplete placement-ready evidence.`;
+  }
+
+  if (args.trendLabel === "DECLINING") {
+    return `${args.latestMockLabel} trend is declining; SISSO should check school rescue action.`;
+  }
+
+  if (args.activeCases > 0) {
+    return `${args.activeCases} active Mock rescue case(s) still need follow-up.`;
+  }
+
+  return "Released Mock evidence is currently stable.";
+}
+
+function schoolMockReleaseKey(tenantId: string, mockNumber: number) {
+  return `${tenantId}:${mockNumber}`;
+}
+
+async function buildGovernanceMockReadinessOverview(args: {
+  schools: MappedSchool[];
+  tenantIds: string[];
+}): Promise<GovernanceMockReadinessOverview> {
+  const { schools, tenantIds } = args;
+
+  if (!tenantIds.length || !schools.length) {
+    return emptyMockReadinessOverview(schools.length);
+  }
+
+  const schoolByTenantId = new Map(schools.map((school) => [school.id, school]));
+
+  const releases = await prisma.mockResultsRelease.findMany({
+    where: {
+      tenantId: { in: tenantIds },
+      parentVisible: true,
+      readinessStatus: { in: ["READY", "OVERRIDE"] },
+      releaseSnapshotHash: { not: "" },
+      mockExamSession: {
+        status: "LOCKED",
+      },
+    },
+    orderBy: [
+      { tenantId: "asc" },
+      { mockNumber: "asc" },
+      { releasedAt: "asc" },
+    ],
+    select: {
+      id: true,
+      tenantId: true,
+      mockExamSessionId: true,
+      classroomId: true,
+      academicYear: true,
+      term: true,
+      mockNumber: true,
+      mockLabel: true,
+      title: true,
+      readinessStatus: true,
+      releasedAt: true,
+    },
+  });
+
+  const releasesByTenant = new Map<string, typeof releases>();
+
+  for (const release of releases) {
+    const next = releasesByTenant.get(release.tenantId) ?? [];
+    next.push(release);
+    releasesByTenant.set(release.tenantId, next);
+  }
+
+  const latestReleases = [...releasesByTenant.values()]
+    .map((rows) => rows[rows.length - 1])
+    .filter(Boolean);
+
+  const previousReleaseByLatestKey = new Map<string, (typeof releases)[number]>();
+
+  for (const rows of releasesByTenant.values()) {
+    if (rows.length < 2) continue;
+
+    const latest = rows[rows.length - 1];
+    const previous = rows[rows.length - 2];
+
+    previousReleaseByLatestKey.set(
+      schoolMockReleaseKey(latest.tenantId, latest.mockNumber),
+      previous,
+    );
+  }
+
+  if (!latestReleases.length) {
+    return emptyMockReadinessOverview(schools.length);
+  }
+
+  const comparisonReleases = [
+    ...latestReleases,
+    ...Array.from(previousReleaseByLatestKey.values()),
+  ];
+
+  const comparisonSessionIds = Array.from(
+    new Set(comparisonReleases.map((release) => release.mockExamSessionId)),
+  );
+
+  const latestClassroomIds = Array.from(
+    new Set(latestReleases.map((release) => release.classroomId)),
+  );
+
+  const [students, items, cases] = await Promise.all([
+    prisma.student.findMany({
+      where: {
+        tenantId: { in: tenantIds },
+        classroomId: { in: latestClassroomIds },
+        status: StudentStatus.ACTIVE,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        classroomId: true,
+      },
+    }),
+
+    prisma.assessmentItem.findMany({
+      where: {
+        tenantId: { in: tenantIds },
+        mockExamSessionId: { in: comparisonSessionIds },
+        type: "MOCK",
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        mockExamSessionId: true,
+        subject: true,
+        scores: {
+          select: {
+            studentId: true,
+            score: true,
+          },
+        },
+      },
+    }),
+
+    prisma.governanceInterventionCase.findMany({
+      where: {
+        tenantId: { in: tenantIds },
+        metadata: {
+          path: ["source"],
+          equals: "HEADTEACHER_MOCK_TREND",
+        },
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        status: true,
+      },
+    }),
+  ]);
+
+  const studentsByClassroomId = new Map<string, typeof students>();
+
+  for (const student of students) {
+    const next = studentsByClassroomId.get(student.classroomId ?? "") ?? [];
+    next.push(student);
+    studentsByClassroomId.set(student.classroomId ?? "", next);
+  }
+
+  const itemsBySessionId = new Map<string, typeof items>();
+
+  for (const item of items) {
+    const key = clean(item.mockExamSessionId);
+    if (!key) continue;
+
+    const next = itemsBySessionId.get(key) ?? [];
+    next.push(item);
+    itemsBySessionId.set(key, next);
+  }
+
+  const casesByTenantId = new Map<
+    string,
+    {
+      activeCases: number;
+      resolvedCases: number;
+    }
+  >();
+
+  for (const item of cases) {
+    const row = casesByTenantId.get(item.tenantId ?? "") ?? {
+      activeCases: 0,
+      resolvedCases: 0,
+    };
+
+    if (item.status === GovernanceInterventionStatus.RESOLVED) {
+      row.resolvedCases += 1;
+    }
+
+    if (mockCaseStatusIsActive(item.status)) {
+      row.activeCases += 1;
+    }
+
+    casesByTenantId.set(item.tenantId ?? "", row);
+  }
+
+  function releaseSnapshot(release: (typeof releases)[number]) {
+    const releaseStudents = studentsByClassroomId.get(release.classroomId) ?? [];
+    const releaseItems = itemsBySessionId.get(release.mockExamSessionId) ?? [];
+
+    const placementAggregates: number[] = [];
+    const subjectScores = new Map<
+      string,
+      {
+        subject: string;
+        canonicalSubject: string;
+        totalScore: number;
+        scoredCount: number;
+        lowScoreCount: number;
+      }
+    >();
+
+    for (const student of releaseStudents) {
+      const subjectCells = releaseItems.map((item) => {
+        const scoreRow =
+          item.scores.find((score) => score.studentId === student.id) ?? null;
+
+        const score = numberOrNull(scoreRow?.score);
+        const grade = score == null ? null : mockGradeFromScore(score);
+
+        if (score != null) {
+          const canonicalSubject = canonicalMockSubject(item.subject);
+          const existing = subjectScores.get(canonicalSubject) ?? {
+            subject: item.subject || mockSubjectLabel(canonicalSubject),
+            canonicalSubject,
+            totalScore: 0,
+            scoredCount: 0,
+            lowScoreCount: 0,
+          };
+
+          existing.totalScore += score;
+          existing.scoredCount += 1;
+
+          if (score < 50) existing.lowScoreCount += 1;
+
+          subjectScores.set(canonicalSubject, existing);
+        }
+
+        return {
+          subject: item.subject,
+          score,
+          grade: grade?.grade ?? null,
+        };
+      });
+
+      const placementAggregate = calculatePlacementMockAggregate(subjectCells);
+
+      if (
+        placementAggregate.ok &&
+        typeof placementAggregate.aggregate === "number"
+      ) {
+        placementAggregates.push(placementAggregate.aggregate);
+      }
+    }
+
+    return {
+      totalCandidates: releaseStudents.length,
+      placementReadyCount: placementAggregates.length,
+      averagePlacementAggregate: averageOrNull(placementAggregates),
+      subjectRows: [...subjectScores.values()].map((row) => ({
+        subject: row.subject,
+        canonicalSubject: row.canonicalSubject,
+        averageScore:
+          row.scoredCount > 0 ? round1(row.totalScore / row.scoredCount) : null,
+        lowScoreCount: row.lowScoreCount,
+        scoredCount: row.scoredCount,
+      })),
+    };
+  }
+
+  const latestSnapshots = new Map<string, ReturnType<typeof releaseSnapshot>>();
+  const previousSnapshots = new Map<string, ReturnType<typeof releaseSnapshot>>();
+
+  for (const release of latestReleases) {
+    latestSnapshots.set(release.mockExamSessionId, releaseSnapshot(release));
+  }
+
+  for (const release of previousReleaseByLatestKey.values()) {
+    previousSnapshots.set(release.mockExamSessionId, releaseSnapshot(release));
+  }
+
+  const subjectRiskMap = new Map<
+    string,
+    {
+      subject: string;
+      canonicalSubject: string;
+      totalAverageScore: number;
+      schoolCount: number;
+      lowScoreCount: number;
+      scoredCount: number;
+    }
+  >();
+
+  const schoolSignals: GovernanceMockSchoolSignal[] = latestReleases.map(
+    (latestRelease) => {
+      const school = schoolByTenantId.get(latestRelease.tenantId);
+      const latestSnapshot = latestSnapshots.get(
+        latestRelease.mockExamSessionId,
+      );
+      const previousRelease = previousReleaseByLatestKey.get(
+        schoolMockReleaseKey(latestRelease.tenantId, latestRelease.mockNumber),
+      );
+      const previousSnapshot = previousRelease
+        ? previousSnapshots.get(previousRelease.mockExamSessionId)
+        : null;
+
+      for (const subject of latestSnapshot?.subjectRows ?? []) {
+        if (subject.averageScore == null) continue;
+
+        const existing = subjectRiskMap.get(subject.canonicalSubject) ?? {
+          subject: subject.subject,
+          canonicalSubject: subject.canonicalSubject,
+          totalAverageScore: 0,
+          schoolCount: 0,
+          lowScoreCount: 0,
+          scoredCount: 0,
+        };
+
+        existing.totalAverageScore += subject.averageScore;
+        existing.schoolCount += 1;
+        existing.lowScoreCount += subject.lowScoreCount;
+        existing.scoredCount += subject.scoredCount;
+
+        subjectRiskMap.set(subject.canonicalSubject, existing);
+      }
+
+      const averagePlacementAggregate =
+        latestSnapshot?.averagePlacementAggregate ?? null;
+      const previousAveragePlacementAggregate =
+        previousSnapshot?.averagePlacementAggregate ?? null;
+
+      const aggregateMovement =
+        averagePlacementAggregate != null &&
+        previousAveragePlacementAggregate != null
+          ? round1(previousAveragePlacementAggregate - averagePlacementAggregate)
+          : null;
+
+      const trendLabel = mockTrendLabelFromMovement(aggregateMovement);
+
+      const caseCounts = casesByTenantId.get(latestRelease.tenantId) ?? {
+        activeCases: 0,
+        resolvedCases: 0,
+      };
+
+      const totalCandidates = latestSnapshot?.totalCandidates ?? 0;
+      const placementReadyCount = latestSnapshot?.placementReadyCount ?? 0;
+
+      const needsFollowUp =
+        trendLabel === "DECLINING" ||
+        caseCounts.activeCases > 0 ||
+        placementReadyCount < totalCandidates;
+
+      return {
+        tenantId: latestRelease.tenantId,
+        schoolName: school?.name ?? "School",
+        schoolCode: school?.schoolCode ?? null,
+        schoolSector: school?.schoolSector ?? SchoolSector.PUBLIC,
+        circuitName: school?.circuit?.name ?? null,
+        districtName: school?.district?.name ?? null,
+        latestMockLabel: latestRelease.mockLabel,
+        latestMockTitle: latestRelease.title,
+        totalCandidates,
+        placementReadyCount,
+        averagePlacementAggregate,
+        previousAveragePlacementAggregate,
+        aggregateMovement,
+        trendLabel,
+        activeCases: caseCounts.activeCases,
+        resolvedCases: caseCounts.resolvedCases,
+        needsFollowUp,
+        followUpReason: buildMockFollowUpReason({
+          trendLabel,
+          activeCases: caseCounts.activeCases,
+          placementReadyCount,
+          totalCandidates,
+          latestMockLabel: latestRelease.mockLabel,
+        }),
+      };
+    },
+  );
+
+  const averagePlacementAggregates = schoolSignals
+    .map((signal) => signal.averagePlacementAggregate)
+    .filter((value): value is number => typeof value === "number");
+
+  const weakestSubjects = [...subjectRiskMap.values()]
+    .map((row) => ({
+      subject: row.subject,
+      canonicalSubject: row.canonicalSubject,
+      averageScore:
+        row.schoolCount > 0 ? round1(row.totalAverageScore / row.schoolCount) : null,
+      lowScoreCount: row.lowScoreCount,
+      scoredCount: row.scoredCount,
+    }))
+    .sort((a, b) => {
+      const avgDiff =
+        Number(a.averageScore ?? 999) - Number(b.averageScore ?? 999);
+
+      if (avgDiff !== 0) return avgDiff;
+
+      return b.lowScoreCount - a.lowScoreCount;
+    })
+    .slice(0, 5);
+
+  return {
+    schools: schools.length,
+    schoolsWithReleasedMock: schoolSignals.length,
+    schoolsWithoutReleasedMock: Math.max(0, schools.length - schoolSignals.length),
+    latestReleasedMockCount: latestReleases.length,
+    averagePlacementAggregate: averageOrNull(averagePlacementAggregates),
+    improvingSchools: schoolSignals.filter(
+      (signal) => signal.trendLabel === "IMPROVING",
+    ).length,
+    decliningSchools: schoolSignals.filter(
+      (signal) => signal.trendLabel === "DECLINING",
+    ).length,
+    stableSchools: schoolSignals.filter(
+      (signal) => signal.trendLabel === "STABLE",
+    ).length,
+    incompleteSchools:
+      Math.max(0, schools.length - schoolSignals.length) +
+      schoolSignals.filter((signal) => signal.trendLabel === "INCOMPLETE")
+        .length,
+    schoolsNeedingFollowUp: schoolSignals.filter(
+      (signal) => signal.needsFollowUp,
+    ).length,
+    activeInterventionCases: schoolSignals.reduce(
+      (sum, signal) => sum + signal.activeCases,
+      0,
+    ),
+    resolvedInterventionCases: schoolSignals.reduce(
+      (sum, signal) => sum + signal.resolvedCases,
+      0,
+    ),
+    weakestSubjects,
+    schoolSignals: schoolSignals.sort((a, b) => {
+      if (Number(b.needsFollowUp) !== Number(a.needsFollowUp)) {
+        return Number(b.needsFollowUp) - Number(a.needsFollowUp);
+      }
+
+      if (b.activeCases !== a.activeCases) {
+        return b.activeCases - a.activeCases;
+      }
+
+      if (a.trendLabel !== b.trendLabel) {
+        if (a.trendLabel === "DECLINING") return -1;
+        if (b.trendLabel === "DECLINING") return 1;
+      }
+
+      return a.schoolName.localeCompare(b.schoolName);
+    }),
+  };
+}
+
 function emptyOverview(message = "No schools are currently assigned to this governance scope.") {
   return {
     schools: [] as MappedSchool[],
@@ -1177,6 +1755,7 @@ function emptyOverview(message = "No schools are currently assigned to this gove
       districts: 0,
     },
     attendance: emptyAttendanceOverview(),
+    mockReadiness: emptyMockReadinessOverview(),
     signals: {
       attendanceSessionsToday: 0,
       openAttendanceSessionsToday: 0,
@@ -1725,6 +2304,10 @@ async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
   const circuitCount = new Set(mappedSchools.map((s) => s.circuit?.id).filter(Boolean)).size;
   const districtCount = new Set(mappedSchools.map((s) => s.district?.id).filter(Boolean)).size;
   const attendance = buildAttendanceOverview(mappedSchools, dateKey);
+  const mockReadiness = await buildGovernanceMockReadinessOverview({
+  schools: mappedSchools,
+  tenantIds: schoolIds,
+});
 
   const emptyStates: string[] = [];
 
@@ -1772,6 +2355,14 @@ async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
     emptyStates.push("No high-priority intervention school detected from current signals.");
   }
 
+if (mockReadiness.schoolsWithReleasedMock === 0) {
+  emptyStates.push("No released BECE Mock readiness evidence is available yet in this jurisdiction.");
+} else if (mockReadiness.schoolsNeedingFollowUp > 0) {
+  emptyStates.push(
+    `${mockReadiness.schoolsNeedingFollowUp} school(s) need BECE Mock follow-up from released readiness evidence.`
+  );
+}
+
   return {
     schools: mappedSchools,
     circuitBreakdown,
@@ -1789,8 +2380,9 @@ async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
       circuits: circuitCount || zones.filter((z) => z.zoneType.level === 1).length,
       districts: districtCount || zones.filter((z) => z.zoneType.level === 2).length,
     },
-    attendance,
-    signals: {
+attendance,
+mockReadiness,
+signals: {
       attendanceSessionsToday: metricTotals.attendanceSessionsToday,
       openAttendanceSessionsToday: metricTotals.openAttendanceSessionsToday,
       closedAttendanceSessionsToday: metricTotals.closedAttendanceSessionsToday,
