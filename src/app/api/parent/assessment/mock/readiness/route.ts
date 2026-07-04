@@ -67,6 +67,219 @@ function studentDisplayName(student: {
   return [student.firstName, student.lastName].filter(Boolean).join(" ").trim() || "Learner";
 }
 
+function round1(n: number) {
+  return Math.round(n * 10) / 10;
+}
+
+function canonicalSubjectKey(value: unknown) {
+  return cleanStr(value)
+    .toUpperCase()
+    .replace(/&/g, "AND")
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function buildSubjectScoreMap(row: any) {
+  const map = new Map<
+    string,
+    {
+      subject: string;
+      score: number | null;
+    }
+  >();
+
+  const cells = Array.isArray(row?.subjectCells) ? row.subjectCells : [];
+
+  for (const cell of cells) {
+    const subject = cleanStr(cell?.subject);
+    const key = canonicalSubjectKey(cell?.canonicalSubject || cell?.subject);
+    if (!subject || !key) continue;
+
+    map.set(key, {
+      subject,
+      score: numberOrNull(cell?.score),
+    });
+  }
+
+  return map;
+}
+
+function parentTrendAction(args: {
+  label: "IMPROVING" | "DECLINING" | "STABLE" | "INCOMPLETE";
+  needsSupportSubject: string | null;
+}) {
+  if (args.label === "IMPROVING") {
+    return "Celebrate the progress, keep the revision routine steady, and help your child protect the subjects that improved.";
+  }
+
+  if (args.label === "DECLINING") {
+    return `Encourage correction work before the next Mock${
+      args.needsSupportSubject ? `, especially in ${args.needsSupportSubject}` : ""
+    }. You may also speak with the school for guidance.`;
+  }
+
+  if (args.label === "STABLE") {
+    return "Keep the study routine consistent and help your child revise corrections from the latest Mock.";
+  }
+
+  return "Trend will become clearer after the school releases another Mock report for this learner.";
+}
+
+function buildParentMockTrend(args: {
+  currentRelease: {
+    mockExamSessionId: string;
+    mockLabel: string;
+    title: string;
+  };
+  currentRow: any;
+  previousRelease: {
+    mockExamSessionId: string;
+    mockLabel: string;
+    title: string;
+  } | null;
+  previousRow: any | null;
+}) {
+  if (!args.previousRelease || !args.previousRow) {
+    return {
+      available: false,
+      label: "INCOMPLETE",
+      previousMockLabel: null,
+      latestMockLabel: args.currentRelease.mockLabel,
+      previousPlacementAggregate: null,
+      latestPlacementAggregate:
+        numberOrNull(args.currentRow?.placementAggregate?.aggregate),
+      aggregateMovement: null,
+      previousAverageScore: null,
+      latestAverageScore: numberOrNull(args.currentRow?.averageScore),
+      averageScoreMovement: null,
+      bestImprovement: null,
+      needsSupport: null,
+      parentAction:
+        "Trend will appear after at least two released Mock reports are available for this learner.",
+    };
+  }
+
+  const previousPlacementAggregate = numberOrNull(
+    args.previousRow?.placementAggregate?.aggregate,
+  );
+  const latestPlacementAggregate = numberOrNull(
+    args.currentRow?.placementAggregate?.aggregate,
+  );
+
+  const previousAverageScore = numberOrNull(args.previousRow?.averageScore);
+  const latestAverageScore = numberOrNull(args.currentRow?.averageScore);
+
+  // For aggregate, lower is better, so previous - latest is positive improvement.
+  const aggregateMovement =
+    previousPlacementAggregate != null && latestPlacementAggregate != null
+      ? round1(previousPlacementAggregate - latestPlacementAggregate)
+      : null;
+
+  const averageScoreMovement =
+    previousAverageScore != null && latestAverageScore != null
+      ? round1(latestAverageScore - previousAverageScore)
+      : null;
+
+  const previousSubjects = buildSubjectScoreMap(args.previousRow);
+  const latestSubjects = buildSubjectScoreMap(args.currentRow);
+
+  const subjectMovements: {
+    subject: string;
+    previousScore: number;
+    latestScore: number;
+    scoreMovement: number;
+  }[] = [];
+
+  for (const [key, latest] of latestSubjects.entries()) {
+    const previous = previousSubjects.get(key);
+    if (!previous) continue;
+    if (previous.score == null || latest.score == null) continue;
+
+    subjectMovements.push({
+      subject: latest.subject || previous.subject,
+      previousScore: previous.score,
+      latestScore: latest.score,
+      scoreMovement: round1(latest.score - previous.score),
+    });
+  }
+
+  const bestImprovement =
+    subjectMovements
+      .filter((row) => row.scoreMovement > 0)
+      .sort((a, b) => b.scoreMovement - a.scoreMovement)[0] ?? null;
+
+  const needsSupport =
+    subjectMovements
+      .filter((row) => row.scoreMovement < 0)
+      .sort((a, b) => a.scoreMovement - b.scoreMovement)[0] ?? null;
+
+  let label: "IMPROVING" | "DECLINING" | "STABLE" | "INCOMPLETE" =
+    "INCOMPLETE";
+
+  if (
+    aggregateMovement != null ||
+    averageScoreMovement != null ||
+    subjectMovements.length > 0
+  ) {
+    if (
+      (aggregateMovement != null && aggregateMovement > 0) ||
+      (aggregateMovement == null &&
+        averageScoreMovement != null &&
+        averageScoreMovement > 0)
+    ) {
+      label = "IMPROVING";
+    } else if (
+      (aggregateMovement != null && aggregateMovement < 0) ||
+      (aggregateMovement == null &&
+        averageScoreMovement != null &&
+        averageScoreMovement < 0)
+    ) {
+      label = "DECLINING";
+    } else {
+      label = "STABLE";
+    }
+  }
+
+  return {
+    available: true,
+    label,
+    previousMockLabel: args.previousRelease.mockLabel,
+    latestMockLabel: args.currentRelease.mockLabel,
+    previousPlacementAggregate,
+    latestPlacementAggregate,
+    aggregateMovement,
+    previousAverageScore,
+    latestAverageScore,
+    averageScoreMovement,
+    bestImprovement: bestImprovement
+      ? {
+          subject: bestImprovement.subject,
+          previousScore: bestImprovement.previousScore,
+          latestScore: bestImprovement.latestScore,
+          scoreMovement: bestImprovement.scoreMovement,
+        }
+      : null,
+    needsSupport: needsSupport
+      ? {
+          subject: needsSupport.subject,
+          previousScore: needsSupport.previousScore,
+          latestScore: needsSupport.latestScore,
+          scoreMovement: needsSupport.scoreMovement,
+        }
+      : null,
+    parentAction: parentTrendAction({
+      label,
+      needsSupportSubject: needsSupport?.subject ?? null,
+    }),
+  };
+}
+
 function parentSafeReadinessCopy(row: {
   readiness: { code: string; label: string; action: string };
   placementAggregate: { ok: boolean; aggregate: number | null; missingSubjects: string[] };
@@ -307,9 +520,66 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const parentCopy = parentSafeReadinessCopy(row);
+const parentCopy = parentSafeReadinessCopy(row);
 
-    const scoredSubjects = row.subjectCells.filter((cell) => cell.score != null);
+const previousRelease = await prisma.mockResultsRelease.findFirst({
+  where: {
+    tenantId: sess.tenantId,
+    classroomId: student.classroomId,
+    parentVisible: true,
+    readinessStatus: { in: ["READY", "OVERRIDE"] },
+    releaseSnapshotHash: { not: "" },
+    mockExamSession: {
+      tenantId: sess.tenantId,
+      classroomId: student.classroomId,
+      academicYear: release.academicYear,
+      status: "LOCKED",
+      mockNumber: { lt: release.mockNumber },
+    },
+  },
+  orderBy: [
+    { mockNumber: "desc" },
+    { releasedAt: "desc" },
+  ],
+  select: {
+    id: true,
+    mockExamSessionId: true,
+    mockNumber: true,
+    mockLabel: true,
+    title: true,
+  },
+});
+
+let previousRow: any | null = null;
+
+if (previousRelease) {
+  const previousExportData = await buildHeadteacherMockExportData({
+    tenantId: sess.tenantId,
+    sessionId: previousRelease.mockExamSessionId,
+  });
+
+  previousRow =
+    previousExportData?.rows.find((r) => r.studentId === student.id) ?? null;
+}
+
+const mockTrend = buildParentMockTrend({
+  currentRelease: {
+    mockExamSessionId: release.mockExamSessionId,
+    mockLabel: release.mockLabel,
+    title: release.title,
+  },
+  currentRow: row,
+  previousRelease: previousRelease
+    ? {
+        mockExamSessionId: previousRelease.mockExamSessionId,
+        mockLabel: previousRelease.mockLabel,
+        title: previousRelease.title,
+      }
+    : null,
+  previousRow,
+});
+
+const scoredSubjects = row.subjectCells.filter((cell) => cell.score != null);
 
     const strongestSubjects = [...scoredSubjects]
       .sort((a, b) => {
@@ -397,10 +667,11 @@ export async function GET(req: NextRequest) {
         missingSubjectCount: row.missingSubjectCount,
         subjects: row.subjectCells,
       },
-      strongestSubjects,
-      weakestSubjects,
-      parentHomeSupport: parentCopy.homeSupport,
-      recommendedAction: row.recommendedAction,
+  strongestSubjects,
+weakestSubjects,
+mockTrend,
+parentHomeSupport: parentCopy.homeSupport,
+recommendedAction: row.recommendedAction,
     });
   } catch (err) {
     console.error("[PARENT_MOCK_READINESS_ERROR]", err);

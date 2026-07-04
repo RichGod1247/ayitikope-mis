@@ -131,9 +131,34 @@ type ReadinessResponse = {
     subjects: SubjectScore[];
   };
   strongestSubjects?: SubjectScore[];
-  weakestSubjects?: SubjectScore[];
-  parentHomeSupport?: string;
-  recommendedAction?: string;
+weakestSubjects?: SubjectScore[];
+mockTrend?: {
+  available: boolean;
+  label: "IMPROVING" | "DECLINING" | "STABLE" | "INCOMPLETE";
+  previousMockLabel: string | null;
+  latestMockLabel: string | null;
+  previousPlacementAggregate: number | null;
+  latestPlacementAggregate: number | null;
+  aggregateMovement: number | null;
+  previousAverageScore: number | null;
+  latestAverageScore: number | null;
+  averageScoreMovement: number | null;
+  bestImprovement: {
+    subject: string;
+    previousScore: number;
+    latestScore: number;
+    scoreMovement: number;
+  } | null;
+  needsSupport: {
+    subject: string;
+    previousScore: number;
+    latestScore: number;
+    scoreMovement: number;
+  } | null;
+  parentAction: string;
+};
+parentHomeSupport?: string;
+recommendedAction?: string;
 };
 
 const shellCard =
@@ -247,6 +272,40 @@ function flattenCandidates(value: unknown, out: any[] = []) {
   }
 
   return out;
+}
+
+function movementText(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  const n = Number(value);
+  if (n > 0) return `+${formatNumber(n)}`;
+  return formatNumber(n);
+}
+
+function parentTrendClass(label: string) {
+  const s = cleanStr(label).toUpperCase();
+
+  if (s === "IMPROVING") {
+    return "border-emerald-300/20 bg-emerald-400/12 text-emerald-100";
+  }
+
+  if (s === "DECLINING") {
+    return "border-amber-300/20 bg-amber-400/12 text-amber-100";
+  }
+
+  if (s === "STABLE") {
+    return "border-sky-300/20 bg-sky-400/12 text-sky-100";
+  }
+
+  return "border-white/10 bg-white/[0.04] text-[#C9CDD6]";
+}
+
+function parentTrendLabel(label: string) {
+  const s = cleanStr(label).toUpperCase();
+
+  if (s === "IMPROVING") return "Improving";
+  if (s === "DECLINING") return "Needs support";
+  if (s === "STABLE") return "Steady";
+  return "Not enough trend yet";
 }
 
 function readinessClass(code: string) {
@@ -591,6 +650,111 @@ export default function ParentMockReadinessClient() {
                 hint={`${readiness.summary?.classPlacementReadyCount ?? 0}/${readiness.summary?.classTotalStudents ?? 0} placement-ready`}
               />
             </div>
+
+{readiness.mockTrend ? (
+  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4">
+    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div>
+        <div className="text-sm font-semibold text-[#F7F4ED]">
+          Mock progress
+        </div>
+        <div className="mt-1 text-[11px] leading-5 text-[#AEB6C4]">
+          Simple comparison between released Mock reports.
+        </div>
+      </div>
+
+      <span
+        className={[
+          "inline-flex w-fit rounded-full border px-3 py-1 text-[11px] font-semibold",
+          parentTrendClass(readiness.mockTrend.label),
+        ].join(" ")}
+      >
+        {parentTrendLabel(readiness.mockTrend.label)}
+      </span>
+    </div>
+
+    {!readiness.mockTrend.available ? (
+      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-[12px] leading-5 text-[#C9CDD6]">
+        {readiness.mockTrend.parentAction}
+      </div>
+    ) : (
+      <div className="mt-4 space-y-3">
+        <div className="grid gap-3 md:grid-cols-3">
+          <MetricCard
+            label="Compared"
+            value={`${readiness.mockTrend.previousMockLabel ?? "Previous"} → ${
+              readiness.mockTrend.latestMockLabel ?? "Latest"
+            }`}
+            hint="Released Mocks only"
+          />
+
+          <MetricCard
+            label="Aggregate"
+            value={`${formatNumber(
+              readiness.mockTrend.previousPlacementAggregate,
+            )} → ${formatNumber(
+              readiness.mockTrend.latestPlacementAggregate,
+            )}`}
+            hint={
+              readiness.mockTrend.aggregateMovement == null
+                ? "No movement yet"
+                : `${movementText(
+                    readiness.mockTrend.aggregateMovement,
+                  )} aggregate movement`
+            }
+          />
+
+          <MetricCard
+            label="Average score"
+            value={`${formatNumber(
+              readiness.mockTrend.previousAverageScore,
+            )} → ${formatNumber(readiness.mockTrend.latestAverageScore)}`}
+            hint={`${movementText(
+              readiness.mockTrend.averageScoreMovement,
+            )} score movement`}
+          />
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-xl border border-emerald-300/15 bg-emerald-400/10 px-3 py-3 text-[12px] text-emerald-100">
+            <div className="font-semibold">Improved most</div>
+            <div className="mt-1">
+              {readiness.mockTrend.bestImprovement
+                ? `${readiness.mockTrend.bestImprovement.subject}: ${formatNumber(
+                    readiness.mockTrend.bestImprovement.previousScore,
+                  )} → ${formatNumber(
+                    readiness.mockTrend.bestImprovement.latestScore,
+                  )} (${movementText(
+                    readiness.mockTrend.bestImprovement.scoreMovement,
+                  )})`
+                : "No strong improvement signal yet."}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-amber-300/15 bg-amber-400/10 px-3 py-3 text-[12px] text-amber-100">
+            <div className="font-semibold">Needs support</div>
+            <div className="mt-1">
+              {readiness.mockTrend.needsSupport
+                ? `${readiness.mockTrend.needsSupport.subject}: ${formatNumber(
+                    readiness.mockTrend.needsSupport.previousScore,
+                  )} → ${formatNumber(
+                    readiness.mockTrend.needsSupport.latestScore,
+                  )} (${movementText(
+                    readiness.mockTrend.needsSupport.scoreMovement,
+                  )})`
+                : "No major decline signal yet."}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-sky-300/15 bg-sky-400/10 px-3 py-3 text-[12px] leading-5 text-sky-100">
+          <span className="font-semibold">What to do: </span>
+          {readiness.mockTrend.parentAction}
+        </div>
+      </div>
+    )}
+  </div>
+) : null}
 
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div className="rounded-2xl border border-emerald-300/15 bg-emerald-400/10 px-4 py-3 text-[12px] leading-5 text-emerald-100">
