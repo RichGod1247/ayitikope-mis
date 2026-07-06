@@ -210,6 +210,12 @@ type GovernanceMockWeakSubject = {
   scoredCount: number;
 };
 
+type GovernanceMockAggregateRange = {
+  mockLabel: string | null;
+  min: number | null;
+  max: number | null;
+};
+
 type GovernanceMockSchoolSignal = {
   tenantId: string;
   schoolName: string;
@@ -221,9 +227,11 @@ type GovernanceMockSchoolSignal = {
   latestMockTitle: string | null;
   totalCandidates: number;
   placementReadyCount: number;
-  averagePlacementAggregate: number | null;
-  previousAveragePlacementAggregate: number | null;
-  aggregateMovement: number | null;
+averagePlacementAggregate: number | null;
+previousAveragePlacementAggregate: number | null;
+aggregateMovement: number | null;
+latestAggregateRange: GovernanceMockAggregateRange | null;
+previousAggregateRange: GovernanceMockAggregateRange | null;
   trendLabel: GovernanceMockTrendLabel;
   activeCases: number;
   resolvedCases: number;
@@ -1242,6 +1250,19 @@ function averageOrNull(values: number[]) {
   return round1(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
+function aggregateRangeOrNull(
+  values: number[],
+  mockLabel: string | null,
+): GovernanceMockAggregateRange | null {
+  if (!values.length) return null;
+
+  return {
+    mockLabel,
+    min: round1(Math.min(...values)),
+    max: round1(Math.max(...values)),
+  };
+}
+
 function mockTrendLabelFromMovement(
   movement: number | null,
 ): GovernanceMockTrendLabel {
@@ -1525,11 +1546,15 @@ async function buildGovernanceMockReadinessOverview(args: {
       }
     }
 
-    return {
-      totalCandidates: releaseStudents.length,
-      placementReadyCount: placementAggregates.length,
-      averagePlacementAggregate: averageOrNull(placementAggregates),
-      subjectRows: [...subjectScores.values()].map((row) => ({
+return {
+  totalCandidates: releaseStudents.length,
+  placementReadyCount: placementAggregates.length,
+  averagePlacementAggregate: averageOrNull(placementAggregates),
+  aggregateRange: aggregateRangeOrNull(
+    placementAggregates,
+    release.mockLabel,
+  ),
+  subjectRows: [...subjectScores.values()].map((row) => ({
         subject: row.subject,
         canonicalSubject: row.canonicalSubject,
         averageScore:
@@ -1634,9 +1659,11 @@ async function buildGovernanceMockReadinessOverview(args: {
         totalCandidates,
         placementReadyCount,
         averagePlacementAggregate,
-        previousAveragePlacementAggregate,
-        aggregateMovement,
-        trendLabel,
+previousAveragePlacementAggregate,
+aggregateMovement,
+latestAggregateRange: latestSnapshot?.aggregateRange ?? null,
+previousAggregateRange: previousSnapshot?.aggregateRange ?? null,
+trendLabel,
         activeCases: caseCounts.activeCases,
         resolvedCases: caseCounts.resolvedCases,
         needsFollowUp,

@@ -182,6 +182,12 @@ type GovernanceMockWeakSubject = {
   scoredCount: number;
 };
 
+type GovernanceMockAggregateRange = {
+  mockLabel: string | null;
+  min: number | null;
+  max: number | null;
+};
+
 type GovernanceMockSchoolSignal = {
   tenantId: string;
   schoolName: string;
@@ -193,9 +199,11 @@ type GovernanceMockSchoolSignal = {
   latestMockTitle: string | null;
   totalCandidates: number;
   placementReadyCount: number;
-  averagePlacementAggregate: number | null;
-  previousAveragePlacementAggregate: number | null;
-  aggregateMovement: number | null;
+ averagePlacementAggregate: number | null;
+previousAveragePlacementAggregate: number | null;
+aggregateMovement: number | null;
+latestAggregateRange: GovernanceMockAggregateRange | null;
+previousAggregateRange: GovernanceMockAggregateRange | null;
   trendLabel: GovernanceMockTrendLabel;
   activeCases: number;
   resolvedCases: number;
@@ -218,6 +226,37 @@ type GovernanceMockReadinessOverview = {
   resolvedInterventionCases: number;
   weakestSubjects: GovernanceMockWeakSubject[];
   schoolSignals: GovernanceMockSchoolSignal[];
+};
+
+type CircuitMockVisitPriorityLabel =
+  | "URGENT_VISIT"
+  | "CALL_THIS_WEEK"
+  | "REQUEST_MOCK_RELEASE"
+  | "FOLLOW_UP_CASE"
+  | "MONITOR"
+  | "IMPROVING";
+
+type CircuitMockVisitPriorityRow = {
+  schoolId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector: "PUBLIC" | "PRIVATE" | string | undefined;
+  circuitName: string | null;
+  latestMockLabel: string | null;
+  priorityLabel: CircuitMockVisitPriorityLabel;
+  priorityText: string;
+  priorityScore: number;
+  trendLabel: GovernanceMockTrendLabel | "NO_RELEASE";
+  averagePlacementAggregate: number | null;
+aggregateMovement: number | null;
+latestAggregateRange: GovernanceMockAggregateRange | null;
+previousAggregateRange: GovernanceMockAggregateRange | null;
+  placementReadyCount: number;
+  totalCandidates: number;
+  activeCases: number;
+  resolvedCases: number;
+  reason: string;
+  action: string;
 };
 
 type OverviewResponse =
@@ -267,6 +306,8 @@ type Props = {
 
 type PanelKey =
   | "risk"
+  | "mock-readiness"
+  | "mock-priority"
   | "attendance"
   | "lesson"
   | "assessment"
@@ -306,6 +347,18 @@ function movementDisplay(value: number | null | undefined) {
   return n > 0 ? `+${text}` : text;
 }
 
+function aggregateRangeDisplay(
+  range?: GovernanceMockAggregateRange | null,
+) {
+  if (!range || range.min == null || range.max == null) return "—";
+
+  const label = range.mockLabel || "Mock";
+  const min = formatOptionalNumber(range.min);
+  const max = formatOptionalNumber(range.max);
+
+  return `${label}: agg. ${min}–${max}`;
+}
+
 function mockTrendLabel(label?: string | null) {
   const s = String(label ?? "").toUpperCase();
 
@@ -326,6 +379,152 @@ function mockTrendTone(
   if (s === "STABLE") return "info";
 
   return "warning";
+}
+
+function circuitMockPriorityText(label: CircuitMockVisitPriorityLabel) {
+  if (label === "URGENT_VISIT") return "Urgent visit";
+  if (label === "CALL_THIS_WEEK") return "Call this week";
+  if (label === "REQUEST_MOCK_RELEASE") return "Request Mock release";
+  if (label === "FOLLOW_UP_CASE") return "Follow up case";
+  if (label === "IMPROVING") return "Improving";
+  return "Monitor";
+}
+
+function circuitMockPriorityTone(
+  label: CircuitMockVisitPriorityLabel,
+): "default" | "success" | "warning" | "danger" | "info" {
+  if (label === "URGENT_VISIT") return "danger";
+  if (label === "CALL_THIS_WEEK") return "warning";
+  if (label === "REQUEST_MOCK_RELEASE") return "warning";
+  if (label === "FOLLOW_UP_CASE") return "warning";
+  if (label === "IMPROVING") return "success";
+  return "info";
+}
+
+function buildCircuitMockVisitPriorityRows(args: {
+  schools: SchoolRow[];
+  mockReadiness?: GovernanceMockReadinessOverview | null;
+}): CircuitMockVisitPriorityRow[] {
+  const signalByTenantId = new Map(
+    (args.mockReadiness?.schoolSignals ?? []).map((signal) => [
+      signal.tenantId,
+      signal,
+    ]),
+  );
+
+  return args.schools
+    .map((school): CircuitMockVisitPriorityRow => {
+      const signal = signalByTenantId.get(school.id);
+
+      if (!signal) {
+        return {
+          schoolId: school.id,
+          schoolName: school.name,
+          schoolCode: school.schoolCode,
+          schoolSector: school.schoolSector,
+          circuitName: school.circuit?.name ?? null,
+          latestMockLabel: null,
+          priorityLabel: "REQUEST_MOCK_RELEASE",
+          priorityText: circuitMockPriorityText("REQUEST_MOCK_RELEASE"),
+          priorityScore: 75,
+          trendLabel: "NO_RELEASE",
+          averagePlacementAggregate: null,
+aggregateMovement: null,
+latestAggregateRange: null,
+previousAggregateRange: null,
+placementReadyCount: 0,
+          totalCandidates: 0,
+          activeCases: 0,
+          resolvedCases: 0,
+          reason: "No released BECE Mock readiness evidence is available for this school.",
+          action:
+            "Call the headteacher and set a clear deadline to lock and release JHS 3 Mock readiness evidence.",
+        };
+      }
+
+      const incompletePlacement =
+        signal.totalCandidates > 0 &&
+        signal.placementReadyCount < signal.totalCandidates;
+
+      let priorityLabel: CircuitMockVisitPriorityLabel = "MONITOR";
+      let priorityScore = 20;
+      let action =
+        "Keep this school under routine monitoring and review after the next released Mock.";
+
+      if (signal.trendLabel === "IMPROVING") {
+        priorityLabel = "IMPROVING";
+        priorityScore = 15;
+        action =
+          "Document what improved and encourage the school to protect the routine before the next Mock.";
+      }
+
+      if (signal.activeCases > 0) {
+        priorityLabel = "FOLLOW_UP_CASE";
+        priorityScore = 70;
+        action =
+          "Follow up the active Mock rescue case and require evidence of correction work before the next Mock.";
+      }
+
+      if (incompletePlacement) {
+        priorityLabel = "CALL_THIS_WEEK";
+        priorityScore = 78;
+        action =
+          "Call the headteacher this week and require completion of placement-ready Mock evidence.";
+      }
+
+      if (signal.trendLabel === "DECLINING") {
+        priorityLabel = "CALL_THIS_WEEK";
+        priorityScore = 85;
+        action =
+          "Call the headteacher and request a subject correction plan before the next Mock.";
+      }
+
+      if (signal.trendLabel === "DECLINING" && signal.activeCases > 0) {
+        priorityLabel = "URGENT_VISIT";
+        priorityScore = 100;
+        action =
+          "Visit or call urgently, verify the correction plan, and check whether the active rescue case has real evidence.";
+      }
+
+      if (
+        signal.averagePlacementAggregate != null &&
+        signal.averagePlacementAggregate > 24
+      ) {
+        priorityScore += 5;
+      }
+
+      return {
+        schoolId: school.id,
+        schoolName: signal.schoolName || school.name,
+        schoolCode: signal.schoolCode ?? school.schoolCode,
+        schoolSector: signal.schoolSector ?? school.schoolSector,
+        circuitName: signal.circuitName ?? school.circuit?.name ?? null,
+        latestMockLabel: signal.latestMockLabel,
+        priorityLabel,
+        priorityText: circuitMockPriorityText(priorityLabel),
+        priorityScore,
+        trendLabel: signal.trendLabel,
+        averagePlacementAggregate: signal.averagePlacementAggregate,
+aggregateMovement: signal.aggregateMovement,
+latestAggregateRange: signal.latestAggregateRange ?? null,
+previousAggregateRange: signal.previousAggregateRange ?? null,
+placementReadyCount: signal.placementReadyCount,
+        totalCandidates: signal.totalCandidates,
+        activeCases: signal.activeCases,
+        resolvedCases: signal.resolvedCases,
+        reason: signal.followUpReason,
+        action,
+      };
+    })
+    .sort((a, b) => {
+      if (b.priorityScore !== a.priorityScore) {
+        return b.priorityScore - a.priorityScore;
+      }
+
+      if (b.activeCases !== a.activeCases) return b.activeCases - a.activeCases;
+
+      return a.schoolName.localeCompare(b.schoolName);
+    });
 }
 
 function compactDateTime(value?: string) {
@@ -669,6 +868,184 @@ function GovernanceMockReadinessPanel({
   );
 }
 
+function CircuitMockVisitPriorityPanel({
+  schools,
+  mockReadiness,
+}: {
+  schools: SchoolRow[];
+  mockReadiness?: GovernanceMockReadinessOverview | null;
+}) {
+  const rows = buildCircuitMockVisitPriorityRows({ schools, mockReadiness });
+
+  if (!rows.length) return null;
+
+  const urgentCount = rows.filter(
+    (row) => row.priorityLabel === "URGENT_VISIT",
+  ).length;
+  const missingReleaseCount = rows.filter(
+    (row) => row.priorityLabel === "REQUEST_MOCK_RELEASE",
+  ).length;
+  const activeCaseCount = rows.reduce((sum, row) => sum + row.activeCases, 0);
+  const firstSchool = rows[0] ?? null;
+
+  return (
+    <section className="rounded-[28px] border border-red-300/20 bg-red-500/10 p-4 md:p-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-200">
+            Circuit Mock Visit Priority
+          </p>
+          <h2 className="mt-1 text-lg font-bold text-white">
+            Schools ranked by BECE Mock follow-up urgency
+          </h2>
+          <p className="mt-1 max-w-4xl text-sm leading-6 text-red-100/80">
+            This turns released Mock evidence into a practical SISSO visit queue:
+            where to act first, why, and what to do next.
+          </p>
+        </div>
+
+        {firstSchool ? (
+          <span className="w-fit rounded-full border border-red-300/25 bg-black/20 px-3 py-1 text-xs font-semibold text-red-100">
+            First: {firstSchool.schoolName}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          label="Schools ranked"
+          value={rows.length}
+          tone={rows.length ? "info" : "default"}
+        />
+        <StatCard
+          label="Urgent visit"
+          value={urgentCount}
+          tone={urgentCount ? "danger" : "success"}
+        />
+        <StatCard
+          label="No Mock release"
+          value={missingReleaseCount}
+          tone={missingReleaseCount ? "warning" : "success"}
+        />
+        <StatCard
+          label="Active cases"
+          value={activeCaseCount}
+          tone={activeCaseCount ? "warning" : "success"}
+        />
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {rows.slice(0, 8).map((row, index) => (
+          <div
+            key={row.schoolId}
+            className="rounded-2xl border border-white/10 bg-slate-950/50 p-4"
+          >
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
+                    #{index + 1}
+                  </span>
+
+                  <span
+                    className={cx(
+                      "rounded-full border px-3 py-1 text-xs font-semibold",
+                      toneClass(circuitMockPriorityTone(row.priorityLabel)),
+                      smallToneText(circuitMockPriorityTone(row.priorityLabel)),
+                    )}
+                  >
+                    {row.priorityText}
+                  </span>
+
+                  <span
+                    className={cx(
+                      "rounded-full border px-3 py-1 text-xs font-semibold",
+                      riskBadgeClass(
+                        row.trendLabel === "DECLINING"
+                          ? "CRITICAL"
+                          : row.trendLabel === "NO_RELEASE"
+                            ? "MEDIUM"
+                            : row.trendLabel === "IMPROVING"
+                              ? "LOW"
+                              : "MEDIUM",
+                      ),
+                    )}
+                  >
+                    {row.trendLabel === "NO_RELEASE"
+                      ? "No Mock evidence"
+                      : mockTrendLabel(row.trendLabel)}
+                  </span>
+                </div>
+
+                <p className="mt-3 font-bold text-white">{row.schoolName}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {row.schoolCode || "No school code"} ·{" "}
+                  {sectorLabel(row.schoolSector)} ·{" "}
+                  {row.circuitName || "No circuit"} ·{" "}
+                  {row.latestMockLabel || "No released Mock"}
+                </p>
+
+                <p className="mt-3 text-sm leading-6 text-red-100/90">
+                  <span className="font-semibold text-white">Why: </span>
+                  {row.reason}
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-emerald-100/90">
+                  <span className="font-semibold text-white">Action: </span>
+                  {row.action}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 xl:min-w-[560px]">
+             <StatCard
+  label="Aggregate range"
+  value={aggregateRangeDisplay(row.latestAggregateRange)}
+  helper={
+    row.previousAggregateRange
+      ? aggregateRangeDisplay(row.previousAggregateRange)
+      : "No previous released Mock"
+  }
+  tone={
+    row.averagePlacementAggregate == null
+      ? "warning"
+      : row.averagePlacementAggregate > 24
+        ? "danger"
+        : "success"
+  }
+/>
+                <StatCard
+                  label="Movement"
+                  value={movementDisplay(row.aggregateMovement)}
+                  tone={mockTrendTone(row.trendLabel)}
+                />
+                <StatCard
+                  label="Ready"
+                  value={
+                    row.totalCandidates
+                      ? `${row.placementReadyCount}/${row.totalCandidates}`
+                      : "—"
+                  }
+                  tone={
+                    row.totalCandidates &&
+                    row.placementReadyCount < row.totalCandidates
+                      ? "warning"
+                      : "success"
+                  }
+                />
+                <StatCard
+                  label="Cases"
+                  value={`${row.activeCases} active`}
+                  tone={row.activeCases ? "warning" : "success"}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function GovernanceCommandDashboardClient({
   endpoint,
   eyebrow,
@@ -823,9 +1200,29 @@ export default function GovernanceCommandDashboardClient({
     numberValue(signals.assessmentCompletionRate) ||
     numberValue(totals.assessmentCompletionRate);
 
-  const generatedAt = compactDateTime(overview?.generatedAt);
+const generatedAt = compactDateTime(overview?.generatedAt);
 
-  const riskTone = criticalRisk ? "danger" : highRisk ? "warning" : "success";
+const riskTone = criticalRisk ? "danger" : highRisk ? "warning" : "success";
+
+const mockReleasedCoverage = mockReadiness
+  ? `${mockReadiness.schoolsWithReleasedMock}/${mockReadiness.schools}`
+  : "—";
+
+const mockPriorityRows = useMemo(
+  () =>
+    isCircuitView
+      ? buildCircuitMockVisitPriorityRows({ schools, mockReadiness })
+      : [],
+  [isCircuitView, schools, mockReadiness],
+);
+
+const mockUrgentVisits = mockPriorityRows.filter(
+  (row) => row.priorityLabel === "URGENT_VISIT",
+).length;
+
+const mockMissingReleases = mockPriorityRows.filter(
+  (row) => row.priorityLabel === "REQUEST_MOCK_RELEASE",
+).length;
 
   return (
     <main className="space-y-5">
@@ -909,7 +1306,7 @@ export default function GovernanceCommandDashboardClient({
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
         <CommandTile
           icon="🔥"
           title="Risk board"
@@ -919,6 +1316,44 @@ export default function GovernanceCommandDashboardClient({
           active={activePanel === "risk"}
           onClick={() => setActivePanel("risk")}
         />
+                <CommandTile
+          icon="🎯"
+          title="Mock readiness"
+          description="BECE Mock readiness overview."
+          value={mockReleasedCoverage}
+          tone={
+            mockReadiness?.schoolsNeedingFollowUp
+              ? "warning"
+              : mockReadiness?.schoolsWithReleasedMock
+                ? "success"
+                : "default"
+          }
+          active={activePanel === "mock-readiness"}
+          onClick={() => setActivePanel("mock-readiness")}
+        />
+                {isCircuitView ? (
+          <CommandTile
+            icon="🧭"
+            title="Mock visit queue"
+            description="Schools ranked for SISSO follow-up."
+            value={
+              mockUrgentVisits
+                ? `${mockUrgentVisits} urgent`
+                : mockMissingReleases
+                  ? `${mockMissingReleases} missing`
+                  : "Ready"
+            }
+            tone={
+              mockUrgentVisits
+                ? "danger"
+                : mockMissingReleases
+                  ? "warning"
+                  : "success"
+            }
+            active={activePanel === "mock-priority"}
+            onClick={() => setActivePanel("mock-priority")}
+          />
+        ) : null}
         <CommandTile
           icon="✅"
           title="Attendance"
@@ -995,10 +1430,19 @@ export default function GovernanceCommandDashboardClient({
         />
       </section>
 
-      <GovernanceMockReadinessPanel
-        mockReadiness={mockReadiness}
-        isDistrictView={isDistrictView}
-      />
+      {activePanel === "mock-readiness" ? (
+        <GovernanceMockReadinessPanel
+          mockReadiness={mockReadiness}
+          isDistrictView={isDistrictView}
+        />
+      ) : null}
+
+      {activePanel === "mock-priority" && isCircuitView ? (
+        <CircuitMockVisitPriorityPanel
+          schools={schools}
+          mockReadiness={mockReadiness}
+        />
+      ) : null}
 
       {activePanel === "risk" ? (
         <section className="rounded-[28px] border border-red-300/20 bg-red-500/10 p-4 md:p-5">
