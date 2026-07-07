@@ -236,26 +236,29 @@ export default async function TeacherDashboardPage() {
             <p className="mt-1 text-xs text-[#AEB6C4]">{me?.email}</p>
           </div>
 
-          <div className="flex flex-wrap gap-2 text-[11px]">
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#F7F4ED]">
-              Term: {term}
-            </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#F7F4ED]">
-              Year: {year}
-            </span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#F7F4ED]">
-              Role: {safe.roleName ?? "TEACHER"}
-            </span>
+          <div className="flex flex-col items-start gap-3 xl:items-end">
+            {isTeacherOnly ? (
+              <OfficialNoticeSummaryCard
+                href="/teacher/notices"
+                portalLabel="Teacher"
+                variant="icon"
+              />
+            ) : null}
+
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#F7F4ED]">
+                Term: {term}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#F7F4ED]">
+                Year: {year}
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-medium text-[#F7F4ED]">
+                Role: {safe.roleName ?? "TEACHER"}
+              </span>
+            </div>
           </div>
         </div>
       </div>
-
-      {isTeacherOnly ? (
-  <OfficialNoticeSummaryCard
-    href="/teacher/notices"
-    portalLabel="Teacher"
-  />
-) : null}
 
       <section className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">
@@ -333,7 +336,7 @@ export default async function TeacherDashboardPage() {
         </div>
 
         <p className="mt-4 text-xs text-[#8F98A8]">
-          Option A (shippable): teachers take attendance and record health only for their assigned primary class.
+          Teachers can record attendance and health only for their assigned primary class.
         </p>
       </section>
 
@@ -342,7 +345,7 @@ export default async function TeacherDashboardPage() {
           <div>
             <h2 className="text-base font-semibold text-[#F7F4ED] md:text-lg">Your workspace</h2>
             <p className="mt-1 text-xs md:text-sm text-[#C9CDD6]">
-              Click a tile to jump straight into work. Hover to dance.
+              Click a tile to begin today’s work.
             </p>
           </div>
 

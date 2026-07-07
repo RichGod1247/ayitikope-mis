@@ -27,6 +27,19 @@ function normalizeLabel(value: string | null | undefined): string | null {
   return trimmed.length ? trimmed : null;
 }
 
+function normalizeClassLabel(value: string | null | undefined): string | null {
+  const trimmed = normalizeLabel(value);
+  if (!trimmed) return null;
+
+  const compact = trimmed.replace(/\s+/g, " ");
+  const duplicatePhase = compact.match(/^([A-Za-z]+)\s*[–-]\s*\1\s*(.+)$/i);
+  if (duplicatePhase?.[1] && duplicatePhase?.[2]) {
+    return `${duplicatePhase[1].toUpperCase()} ${duplicatePhase[2].trim()}`.replace(/\s+/g, " ");
+  }
+
+  return compact;
+}
+
 function clean(v: unknown) {
   return String(v ?? "").trim();
 }
@@ -1648,13 +1661,12 @@ export default async function Page({ params, searchParams }: PageProps) {
   const teacherName = teacherRow?.name ?? "__________________________";
   const teacherEmail = teacherRow?.email ?? "";
 
-  const classroomName = normalizeLabel(classroomRow?.name);
-  const phaseLabel = normalizeLabel(note.phase ?? unitRow?.phase ?? indicatorContext?.phase ?? null);
-  const levelLabel = normalizeLabel(note.level ?? unitRow?.level ?? indicatorContext?.level ?? null);
+  const classroomName = normalizeClassLabel(classroomRow?.name);
+  const phaseLabel = normalizeClassLabel(note.phase ?? unitRow?.phase ?? indicatorContext?.phase ?? null);
+  const levelLabel = normalizeClassLabel(note.level ?? unitRow?.level ?? indicatorContext?.level ?? null);
 
   const classLabel =
     classroomName ??
-    (phaseLabel && levelLabel ? `${phaseLabel} – ${levelLabel}` : null) ??
     levelLabel ??
     phaseLabel ??
     "________________";
@@ -1673,21 +1685,6 @@ export default async function Page({ params, searchParams }: PageProps) {
     indicatorCode,
     contentStandardCode,
   });
-
-  const dbPerf =
-    normalizeLabel((note as any).performanceIndicator) ??
-    normalizeLabel((unitRow as any)?.performanceIndicator);
-
-  const perfFromIndicator = indicator ? `Learners can ${clean(indicator).toLowerCase()}` : "";
-  const perfFromExemplar = exemplarText.length
-    ? `Learners can ${firstMeaningfulLine(exemplarText[0]!).replace(/^[•\-\s]+/g, "")}`
-    : "";
-
-  const performanceIndicatorText =
-    dbPerf ??
-    (perfFromIndicator ||
-      perfFromExemplar ||
-      `Learners can explain ${topic} and give relevant examples.`);
 
   const dbCore =
     normalizeLabel(note.coreCompetencies) ?? normalizeLabel((unitRow as any)?.coreCompetencies);
@@ -1879,22 +1876,6 @@ export default async function Page({ params, searchParams }: PageProps) {
                   {indicatorCode
                     ? `${indicatorCode} – ${indicator || "______________________________________________"}`
                     : indicator || "______________________________________________"}
-                </td>
-              </tr>
-
-              <tr>
-                <td className="border border-black px-1 py-1 font-semibold">LESSON TITLE</td>
-                <td className="border border-black px-1 py-1 break-words" colSpan={9}>
-                  {lessonTitle}
-                </td>
-              </tr>
-
-              <tr>
-                <td className="border border-black px-1 py-1 font-semibold align-top">
-                  PERFORMANCE INDICATOR(S)
-                </td>
-                <td className="border border-black px-1 py-1 break-words" colSpan={9}>
-                  {performanceIndicatorText}
                 </td>
               </tr>
 

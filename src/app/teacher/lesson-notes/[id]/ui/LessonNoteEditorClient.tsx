@@ -797,7 +797,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
                   ? "Locked while submitted/approved."
                   : submitChecks.canSubmit
                     ? ""
-                    : "Link a unit and fill objectives, lesson development, assessment."
+                    : "Link a unit and fill objectives/indicators, lesson development, assessment."
               }
             >
               {submitting ? "Submitting…" : "Submit"}
@@ -818,7 +818,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
         <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
           <ChecklistItem ok={submitChecks.hasUnit} label="Unit linked (scheme-backed)" />
           <ChecklistItem ok={submitChecks.hasIndicator} label="Indicator present" />
-          <ChecklistItem ok={submitChecks.hasObjectives} label="Objectives filled" />
+          <ChecklistItem ok={submitChecks.hasObjectives} label="Objectives/Indicators filled" />
           <ChecklistItem ok={submitChecks.hasDev} label="Lesson development filled" />
           <ChecklistItem ok={submitChecks.hasAssessment} label="Assessment filled" />
         </div>
@@ -1003,7 +1003,7 @@ export default function LessonNoteEditorClient({ id }: { id: string }) {
               placeholder={lessonTitlePlaceholder}
               hint="Leave blank until you link a unit. Title will auto-fill from Sub-strand."
             />
-            <Field label="Objectives" value={objectives} onChange={setObjectives} disabled={locked} rows={6} />
+            <Field label="Objectives/Indicators" value={objectives} onChange={setObjectives} disabled={locked} rows={6} />
             <Field label="Teaching & learning resources" value={tlr} onChange={setTlr} disabled={locked} rows={6} />
             <Field label="Introduction" value={intro} onChange={setIntro} disabled={locked} rows={5} />
             <Field label="Lesson development" value={dev} onChange={setDev} disabled={locked} rows={10} />
