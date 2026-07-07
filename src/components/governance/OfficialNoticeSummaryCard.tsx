@@ -39,6 +39,8 @@ type SummaryResponse =
 type Props = {
   href: string;
   portalLabel: string;
+  variant?: "card" | "icon";
+  className?: string;
 };
 
 function dateLabel(value: string | null) {
@@ -55,7 +57,12 @@ function dateLabel(value: string | null) {
   }
 }
 
-export default function OfficialNoticeSummaryCard({ href, portalLabel }: Props) {
+export default function OfficialNoticeSummaryCard({
+  href,
+  portalLabel,
+  variant = "card",
+  className = "",
+}: Props) {
   const [summary, setSummary] = useState<NoticeSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,7 +83,7 @@ export default function OfficialNoticeSummaryCard({ href, portalLabel }: Props) 
 
       if (!res.ok || !json?.ok) {
         setSummary(null);
-        setError(json && !json.ok ? json.error : `Failed to load notice summary (${res.status})`);
+        setError(json && "error" in json ? json.error : `Failed to load notice summary (${res.status})`);
         return;
       }
 
@@ -97,8 +104,61 @@ export default function OfficialNoticeSummaryCard({ href, portalLabel }: Props) 
   const unread = summary?.unread ?? 0;
   const latest = summary?.latest?.[0] ?? null;
 
+  if (variant === "icon") {
+    const badgeCount = unread;
+    const urgent = unacknowledged > 0;
+
+    return (
+      <Link
+        href={href}
+        className={`group relative inline-flex min-h-11 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-left shadow-[0_12px_36px_rgba(0,0,0,0.16)] transition hover:border-violet-300/35 hover:bg-white/10 ${className}`}
+        aria-label={`${portalLabel} official notices${badgeCount ? `, ${badgeCount} unread` : ""}`}
+        title={
+          latest
+            ? `Latest notice: ${latest.notice.title}`
+            : loading
+              ? "Loading official notices"
+              : error
+                ? "Official notices unavailable"
+                : "No unread official notices"
+        }
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-violet-300/25 bg-violet-400/12 text-lg text-violet-100">
+          ✉
+        </span>
+
+        <span className="hidden sm:block">
+          <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-100">
+            Notices
+          </span>
+          <span className="block text-xs text-[#C9CDD6]">
+            {loading
+              ? "Checking…"
+              : error
+                ? "Unavailable"
+                : badgeCount
+                  ? `${badgeCount} unread`
+                  : "All read"}
+          </span>
+        </span>
+
+        {badgeCount > 0 ? (
+          <span
+            className={`absolute -right-2 -top-2 inline-flex min-w-6 items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-bold ${
+              urgent
+                ? "border-red-200/50 bg-red-500 text-white"
+                : "border-amber-200/50 bg-amber-400 text-[#071A3D]"
+            }`}
+          >
+            {badgeCount > 99 ? "99+" : badgeCount}
+          </span>
+        ) : null}
+      </Link>
+    );
+  }
+
   return (
-    <section className="rounded-[28px] border border-violet-300/20 bg-[linear-gradient(135deg,rgba(22,17,46,0.88),rgba(33,26,68,0.78),rgba(12,19,32,0.92))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.20)]">
+    <section className={`rounded-[28px] border border-violet-300/20 bg-[linear-gradient(135deg,rgba(22,17,46,0.88),rgba(33,26,68,0.78),rgba(12,19,32,0.92))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.20)] ${className}`}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200">

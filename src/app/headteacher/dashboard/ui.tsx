@@ -35,10 +35,6 @@ type WeeklyOk = {
 
 type WeeklyResp = WeeklyOk | { ok: false; error: string };
 
-type ExplainResp =
-  | { ok: true; summary: string; suggestions?: string; meta?: unknown }
-  | { ok: false; error: string };
-
 type PendingResp =
   | {
       ok: true;
@@ -219,20 +215,29 @@ function MajorTile(props: {
   title: string;
   desc: string;
   cta: string;
-  onClick: () => void;
+  onClick?: () => void;
   toneClass: string;
   accentClass: string;
+  badge?: string;
+  disabled?: boolean;
 }) {
+  const isDisabled = props.disabled || !props.onClick;
+
   return (
     <button
       type="button"
       onClick={props.onClick}
-      className={`group w-full rounded-[28px] border bg-gradient-to-br p-4 text-left shadow-[0_12px_36px_rgba(0,0,0,0.20)] transition hover:-translate-y-1 ${props.toneClass}`}
+      disabled={isDisabled}
+      className={`group w-full rounded-[28px] border bg-gradient-to-br p-4 text-left shadow-[0_12px_36px_rgba(0,0,0,0.20)] transition ${
+        isDisabled ? "cursor-not-allowed opacity-80" : "hover:-translate-y-1"
+      } ${props.toneClass}`}
     >
-      <div
-        className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${props.accentClass}`}
-      >
-        Open
+      <div className="flex items-center justify-between gap-2">
+        <div
+          className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${props.accentClass}`}
+        >
+          {props.badge ?? "Open"}
+        </div>
       </div>
       <div className="mt-4 text-base font-semibold text-[#F7F4ED]">{props.title}</div>
       <div className="mt-2 text-xs leading-6 text-[#D9DEE8]">{props.desc}</div>
@@ -240,6 +245,38 @@ function MajorTile(props: {
         {props.cta}
       </div>
     </button>
+  );
+}
+
+function StudentsAttendanceTile({ onDaily, onWeekly }: { onDaily: () => void; onWeekly: () => void }) {
+  return (
+    <div className="w-full rounded-[28px] border border-cyan-300/20 bg-gradient-to-br from-[#091C24] via-[#0D2530] to-[#08111C] p-4 text-left shadow-[0_12px_36px_rgba(0,0,0,0.20)]">
+      <div className="inline-flex rounded-full border border-cyan-300/25 bg-cyan-400/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
+        Open
+      </div>
+
+      <div className="mt-4 text-base font-semibold text-[#F7F4ED]">Students Attendance</div>
+      <div className="mt-2 text-xs leading-6 text-[#D9DEE8]">
+        Mark today’s register or review weekly attendance patterns.
+      </div>
+
+      <div className="mt-4 grid gap-2">
+        <button
+          type="button"
+          onClick={onDaily}
+          className="min-h-11 rounded-2xl border border-[#D4AF37]/25 bg-[#D4AF37]/12 px-3 py-2 text-sm font-semibold text-[#F7F4ED] transition hover:bg-[#D4AF37]/18"
+        >
+          Daily attendance →
+        </button>
+        <button
+          type="button"
+          onClick={onWeekly}
+          className="min-h-11 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+        >
+          Weekly attendance →
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -303,18 +340,17 @@ export default function HeadteacherDashboardClient() {
   const router = useRouter();
 
   const initial = useMemo(() => defaultRange(), []);
-  const [start, setStart] = useState(initial.start);
-  const [end, setEnd] = useState(initial.end);
+  const [start] = useState(initial.start);
+  const [end] = useState(initial.end);
 
   const [weekly, setWeekly] = useState<WeeklyResp | null>(null);
   const [pending, setPending] = useState<PendingResp | null>(null);
-  const [explain, setExplain] = useState<ExplainResp | null>(null);
   const [pendingNotes, setPendingNotes] = useState<PendingLessonNotesResp | null>(null);
   const [releaseStatus, setReleaseStatus] = useState<ReleaseStatusResp | null>(null);
   const [governance, setGovernance] = useState<GovernanceResp | null>(null);
   const [riskBoard, setRiskBoard] = useState<RiskBoardResp | null>(null);
 
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [busyCertifyId, setBusyCertifyId] = useState<string | null>(null);
   const [noteBySessionId, setNoteBySessionId] = useState<Record<string, string>>({});
 
@@ -327,7 +363,6 @@ export default function HeadteacherDashboardClient() {
       const bad = { ok: false, error: "Start date cannot be after end date." } as const;
       setWeekly(bad);
       setPending(bad);
-      setExplain(bad);
       setPendingNotes(bad);
       setReleaseStatus(bad);
       setGovernance(bad);
@@ -370,20 +405,11 @@ export default function HeadteacherDashboardClient() {
       setGovernance(g);
       setRiskBoard(rb);
 
-      const e = await fetchJson<ExplainResp>(`/api/headteacher/attendance/explain`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ start, end }),
-      });
-
-      if (mySeq !== reqSeq.current) return;
-      setExplain(e);
     } catch {
       if (mySeq !== reqSeq.current) return;
       const bad = { ok: false, error: "Failed to load dashboard data." } as const;
       setWeekly(bad);
       setPending(bad);
-      setExplain(bad);
       setPendingNotes(bad);
       setReleaseStatus({ ok: false, error: "Failed to load results release status." });
       setGovernance({ ok: false, error: "Failed to load governance insights." });
@@ -428,14 +454,8 @@ export default function HeadteacherDashboardClient() {
     }
   }
 
-  const csvHref = useMemo(() => {
-    const qs = `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
-    return `/api/headteacher/attendance/weekly/csv?${qs}`;
-  }, [start, end]);
-
   const weeklyOk = weekly && (weekly as any).ok === true;
   const pendingOk = pending && (pending as any).ok === true;
-  const explainOk = explain && (explain as any).ok === true;
   const pendingNotesOk = pendingNotes && (pendingNotes as any).ok === true;
   const governanceOk = governance && (governance as any).ok === true;
   const riskOk = riskBoard && (riskBoard as any).ok === true;
@@ -457,76 +477,39 @@ export default function HeadteacherDashboardClient() {
 
   return (
     <div className="space-y-6">
-      <div className={panelClass("p-4 sm:p-5")}>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[#F7F4ED]">Headteacher control center</p>
-            <p className="mt-1 text-xs leading-6 text-[#C9CDD6]">
-              Focus on academic performance, attendance health, lesson-note review, parent result access,
-              and governance discipline.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col">
-                <label className="mb-1 text-xs text-[#C9CDD6]">Start</label>
-                <input
-                  className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-2 text-sm text-[#F7F4ED] outline-none focus:border-[#E8C96A]/35"
-                  type="date"
-                  value={start}
-                  onChange={(e) => setStart(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-col">
-                <label className="mb-1 text-xs text-[#C9CDD6]">End</label>
-                <input
-                  className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-2 text-sm text-[#F7F4ED] outline-none focus:border-[#E8C96A]/35"
-                  type="date"
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#F7F4ED] hover:bg-white/10 disabled:opacity-60"
-                onClick={() => void loadAll()}
-                disabled={loading}
-              >
-                {loading ? "Refreshing..." : "Refresh"}
-              </button>
-
-              <a
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-[#F7F4ED] hover:bg-white/10"
-                href={csvHref}
-              >
-                Download CSV
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MajorTile
-          title="Assessment Insights"
-          desc="See class-by-class academic health, remark bands, and improvement patterns."
-          cta="Open assessment overview"
+          title="Students Assessment"
+          desc="See class performance, weak learners, and subjects needing support."
+          cta="Open students assessment"
           toneClass="border-indigo-300/20 from-[#1A1034] via-[#25194A] to-[#0C1320]"
           accentClass="border-indigo-300/25 bg-indigo-400/12 text-indigo-100"
           onClick={() => router.push("/headteacher/assessment/overview")}
         />
 
+        <StudentsAttendanceTile
+          onDaily={() => router.push("/headteacher/day")}
+          onWeekly={() => router.push("/headteacher/attendance/weekly")}
+        />
+
         <MajorTile
-          title="Attendance Weekly"
-          desc="Open the schoolwide weekly attendance pulse and the server-trusted explainer."
-          cta="Open weekly attendance"
-          toneClass="border-cyan-300/20 from-[#091C24] via-[#0D2530] to-[#08111C]"
-          accentClass="border-cyan-300/25 bg-cyan-400/12 text-cyan-100"
-          onClick={() => router.push("/headteacher/attendance/weekly")}
+          title="Teacher Attendance"
+          desc="Staff attendance register for headteacher marking and supervision."
+          cta="Coming next: A15.3"
+          badge="Next"
+          disabled
+          toneClass="border-lime-300/20 from-[#101F0A] via-[#1D2D10] to-[#08121C]"
+          accentClass="border-lime-300/25 bg-lime-400/12 text-lime-100"
+        />
+
+        <MajorTile
+          title="Teacher Appraisal"
+          desc="Teacher preparation, lesson delivery, classroom culture, and supervision evidence."
+          cta="Coming next: A15.4"
+          badge="Next"
+          disabled
+          toneClass="border-fuchsia-300/20 from-[#26102B] via-[#351642] to-[#0C1320]"
+          accentClass="border-fuchsia-300/25 bg-fuchsia-400/12 text-fuchsia-100"
         />
 
         <MajorTile
@@ -540,7 +523,7 @@ export default function HeadteacherDashboardClient() {
 
         <MajorTile
           title="Learner Term Report"
-          desc="Jump straight into a single learner’s printable report view."
+          desc="Open one learner’s printable report."
           cta="Open learner report"
           toneClass="border-sky-300/20 from-[#0C1730] via-[#10244A] to-[#07111F]"
           accentClass="border-sky-300/25 bg-sky-400/12 text-sky-100"
@@ -549,7 +532,7 @@ export default function HeadteacherDashboardClient() {
 
         <MajorTile
           title="Parent Result Release"
-          desc="Control when parents can see end-of-term results and send notification batches."
+          desc="Control when parents can view released results."
           cta="Open release controls"
           toneClass="border-amber-300/20 from-[#271408] via-[#362111] to-[#0C1320]"
           accentClass="border-amber-300/25 bg-amber-400/12 text-amber-100"
@@ -558,7 +541,7 @@ export default function HeadteacherDashboardClient() {
 
         <MajorTile
           title="Lesson Notes Inbox"
-          desc="Review submitted lesson notes quickly and clear your approval queue."
+          desc="Review submitted lesson notes and clear your approval queue."
           cta="Open lesson-note inbox"
           toneClass="border-rose-300/20 from-[#251013] via-[#30151B] to-[#0C1320]"
           accentClass="border-rose-300/25 bg-rose-400/12 text-rose-100"
@@ -748,115 +731,7 @@ export default function HeadteacherDashboardClient() {
         )}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))]">
-          <div className="border-b border-white/10 p-4">
-            <p className="text-sm font-semibold text-[#F7F4ED]">Per-class weekly attendance</p>
-            <p className="text-xs text-[#C9CDD6]">Spot weak classes quickly before certifying attendance.</p>
-          </div>
-
-          <div className="p-4 md:hidden">
-            {!weekly ? (
-              <p className="text-sm text-[#C9CDD6]">Loading…</p>
-            ) : weeklyOk ? (
-              (weekly as WeeklyOk).rows.length ? (
-                <div className="space-y-3">
-                  {(weekly as WeeklyOk).rows.map((r) => (
-                    <div key={r.classroomId} className="rounded-2xl border border-white/10 bg-[#0C1730] p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-[#F7F4ED]">{r.classLabel}</p>
-                          <p className="mt-1 text-[11px] text-[#C9CDD6]">
-                            Enrolled {r.enrolled} • Marks {r.marks}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-[#F7F4ED]">{pctLabel(r.pct)}</p>
-                          <p className="text-[10px] text-[#8F98A8]">Present %</p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-[#C9CDD6]">
-                        <div className="rounded-xl bg-white/5 px-3 py-2">
-                          Present: <span className="font-semibold text-[#F7F4ED]">{r.present}</span>
-                        </div>
-                        <div className="rounded-xl bg-white/5 px-3 py-2">
-                          Absent: <span className="font-semibold text-[#F7F4ED]">{r.absent}</span>
-                        </div>
-                        <div className="rounded-xl bg-white/5 px-3 py-2">
-                          Late: <span className="font-semibold text-[#F7F4ED]">{r.late}</span>
-                        </div>
-                        <div className="rounded-xl bg-white/5 px-3 py-2">
-                          Excused: <span className="font-semibold text-[#F7F4ED]">{r.excused}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-[#C9CDD6]">No class rows found for this range.</p>
-              )
-            ) : (
-              <p className="text-sm text-rose-200">{(weekly as any).error || "Failed to load weekly totals."}</p>
-            )}
-          </div>
-
-          <div className="hidden overflow-x-auto md:block">
-            <table className="min-w-full text-sm">
-              <thead className="bg-white/5 text-[#C9CDD6]">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Class</th>
-                  <th className="px-4 py-3 text-right font-medium">Enrolled</th>
-                  <th className="px-4 py-3 text-right font-medium">Marks</th>
-                  <th className="px-4 py-3 text-right font-medium">Present</th>
-                  <th className="px-4 py-3 text-right font-medium">Absent</th>
-                  <th className="px-4 py-3 text-right font-medium">Late</th>
-                  <th className="px-4 py-3 text-right font-medium">Excused</th>
-                  <th className="px-4 py-3 text-right font-medium">Present %</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {!weekly ? (
-                  <tr>
-                    <td className="px-4 py-4 text-[#C9CDD6]" colSpan={8}>
-                      Loading…
-                    </td>
-                  </tr>
-                ) : weeklyOk ? (
-                  (weekly as WeeklyOk).rows.length ? (
-                    (weekly as WeeklyOk).rows.map((r) => (
-                      <tr key={r.classroomId} className="border-t border-white/10 text-[#E5E8EF]">
-                        <td className="px-4 py-3">{r.classLabel}</td>
-                        <td className="px-4 py-3 text-right">{r.enrolled}</td>
-                        <td className="px-4 py-3 text-right">{r.marks}</td>
-                        <td className="px-4 py-3 text-right">{r.present}</td>
-                        <td className="px-4 py-3 text-right">{r.absent}</td>
-                        <td className="px-4 py-3 text-right">{r.late}</td>
-                        <td className="px-4 py-3 text-right">{r.excused}</td>
-                        <td className="px-4 py-3 text-right font-medium text-[#F7F4ED]">{pctLabel(r.pct)}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td className="px-4 py-4 text-[#C9CDD6]" colSpan={8}>
-                        No class rows found for this range.
-                      </td>
-                    </tr>
-                  )
-                ) : (
-                  <tr>
-                    <td className="px-4 py-4 text-rose-200" colSpan={8}>
-                      {(weekly as any).error || "Failed to load weekly totals."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
           <div className={panelClass("p-4")}>
             <div>
               <p className="text-sm font-semibold text-[#F7F4ED]">Pending lesson notes</p>
@@ -961,121 +836,92 @@ export default function HeadteacherDashboardClient() {
               )}
             </div>
           </div>
-        </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-        <div className={panelClass("p-4")}>
+      <div className={panelClass("p-4")}>
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-[#F7F4ED]">Weekly explanation</p>
-            <p className="text-xs leading-6 text-[#C9CDD6]">Server-trusted summary from the attendance data.</p>
+            <p className="text-sm font-semibold text-[#F7F4ED]">Governance copilot</p>
+            <p className="text-xs leading-6 text-[#C9CDD6]">
+              Measures whether school leadership is enforcing the chain:
+              approved note → delivered lesson → linked assessment → scored assessment.
+            </p>
           </div>
 
-          <div className="mt-4">
-            {!explain ? (
-              <p className="text-sm text-[#C9CDD6]">Loading…</p>
-            ) : explainOk ? (
-              <div className="space-y-3">
-                <pre className="whitespace-pre-wrap text-sm leading-7 text-[#E5E8EF]">
-                  {(explain as any).summary}
-                </pre>
-                {(explain as any).suggestions ? (
-                  <pre className="whitespace-pre-wrap border-t border-white/10 pt-3 text-sm leading-7 text-[#E5E8EF]">
-                    {(explain as any).suggestions}
-                  </pre>
-                ) : null}
-              </div>
-            ) : (
-              <p className="text-sm text-rose-200">{(explain as any).error || "Failed to load explanation."}</p>
-            )}
-          </div>
+          {governanceOk ? (
+            statusPill(
+              `Score ${pctLabel((governance as any).metrics.headteacherScore)}`,
+              (governance as any).metrics.headteacherScore >= 80 ? "green" : "amber"
+            )
+          ) : null}
         </div>
 
-        <div className={panelClass("p-4")}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-[#F7F4ED]">Governance copilot</p>
-              <p className="text-xs leading-6 text-[#C9CDD6]">
-                Measures whether school leadership is enforcing the chain:
-                approved note → delivered lesson → linked assessment → scored assessment.
-              </p>
-            </div>
+        <div className="mt-4">
+          {!governance ? (
+            <p className="text-sm text-[#C9CDD6]">Loading…</p>
+          ) : governanceOk ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <StatCard
+                  title="Attendance Certification"
+                  value={pctLabel((governance as any).metrics.attendance.attendanceCertificationRate)}
+                  sub={`${(governance as any).metrics.attendance.pendingCertification} pending`}
+                />
+                <StatCard
+                  title="Delivery Coverage"
+                  value={pctLabel((governance as any).metrics.pipeline.deliveryCoveragePercent)}
+                  sub={`${(governance as any).metrics.pipeline.deliveredLessonsCount} delivered`}
+                />
+                <StatCard
+                  title="Scoring Coverage"
+                  value={pctLabel((governance as any).metrics.pipeline.scoringCoveragePercent)}
+                  sub={`${(governance as any).metrics.pipeline.scoredAssessmentsCount} scored`}
+                />
+              </div>
 
-            {governanceOk ? (
-              statusPill(
-                `Score ${pctLabel((governance as any).metrics.headteacherScore)}`,
-                (governance as any).metrics.headteacherScore >= 80 ? "green" : "amber"
-              )
-            ) : null}
-          </div>
-
-          <div className="mt-4">
-            {!governance ? (
-              <p className="text-sm text-[#C9CDD6]">Loading…</p>
-            ) : governanceOk ? (
-              <div className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  <StatCard
-                    title="Attendance Certification"
-                    value={pctLabel((governance as any).metrics.attendance.attendanceCertificationRate)}
-                    sub={`${(governance as any).metrics.attendance.pendingCertification} pending`}
-                  />
-                  <StatCard
-                    title="Delivery Coverage"
-                    value={pctLabel((governance as any).metrics.pipeline.deliveryCoveragePercent)}
-                    sub={`${(governance as any).metrics.pipeline.deliveredLessonsCount} delivered`}
-                  />
-                  <StatCard
-                    title="Scoring Coverage"
-                    value={pctLabel((governance as any).metrics.pipeline.scoringCoveragePercent)}
-                    sub={`${(governance as any).metrics.pipeline.scoredAssessmentsCount} scored`}
-                  />
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
-                    <div className="text-[#8F98A8]">Approved not delivered</div>
-                    <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
-                      {(governance as any).anomalies.approvedNotDelivered.length}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
-                    <div className="text-[#8F98A8]">Delivered not assessed</div>
-                    <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
-                      {(governance as any).anomalies.deliveredNotAssessed.length}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
-                    <div className="text-[#8F98A8]">Assessed not linked</div>
-                    <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
-                      {(governance as any).anomalies.assessedNotLinked.length}
-                    </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
+                  <div className="text-[#8F98A8]">Approved not delivered</div>
+                  <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                    {(governance as any).anomalies.approvedNotDelivered.length}
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-[#F7F4ED]">Priority actions</p>
-                  {(governance as any).actions.length ? (
-                    (governance as any).actions.map((a: any) => (
-                      <div key={a.code} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-[#F7F4ED]">{a.code}</p>
-                          {priorityChip(a.priority)}
-                        </div>
-                        <p className="mt-1 text-xs leading-5 text-[#C9CDD6]">{a.message}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-2xl border border-emerald-300/25 bg-emerald-400/12 px-3 py-3 text-xs text-emerald-100">
-                      Governance is stable in this range. Keep the same discipline.
-                    </div>
-                  )}
+                <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
+                  <div className="text-[#8F98A8]">Delivered not assessed</div>
+                  <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                    {(governance as any).anomalies.deliveredNotAssessed.length}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3 text-xs">
+                  <div className="text-[#8F98A8]">Assessed not linked</div>
+                  <div className="mt-1 text-lg font-semibold text-[#F7F4ED]">
+                    {(governance as any).anomalies.assessedNotLinked.length}
+                  </div>
                 </div>
               </div>
-            ) : (
-              <p className="text-sm text-rose-200">{(governance as any).error || "Failed to load governance insights."}</p>
-            )}
-          </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-[#F7F4ED]">Priority actions</p>
+                {(governance as any).actions.length ? (
+                  (governance as any).actions.map((a: any) => (
+                    <div key={a.code} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-[#F7F4ED]">{a.code}</p>
+                        {priorityChip(a.priority)}
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-[#C9CDD6]">{a.message}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-emerald-300/25 bg-emerald-400/12 px-3 py-3 text-xs text-emerald-100">
+                    Governance is stable in this range. Keep the same discipline.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-rose-200">{(governance as any).error || "Failed to load governance insights."}</p>
+          )}
         </div>
       </div>
     </div>
