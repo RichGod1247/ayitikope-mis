@@ -80,6 +80,12 @@ model User {
   teacherAttendanceSessionsOpened     TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionOpenedBy")
   teacherAttendanceSessionsClosed     TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionClosedBy")
   teacherAttendanceSessionsCertified  TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionCertifiedBy")
+
+  /// ✅ A15.4B — teacher appraisal evidence spine
+  teacherAppraisalsAsTeacher   TeacherAppraisal[] @relation("TeacherAppraisalTeacher")
+  teacherAppraisalsAsAppraiser TeacherAppraisal[] @relation("TeacherAppraisalAppraiser")
+  teacherAppraisalsFinalized   TeacherAppraisal[] @relation("TeacherAppraisalFinalizedBy")
+
   teacherProfiles                     TeacherProfile[]              @relation("UserTeacherProfiles")
   lastActiveTenant                    Tenant?                       @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
   inviteCodes                         InviteCode[]
@@ -175,16 +181,20 @@ model Tenant {
   feeStructures FeeStructure[] @relation("TenantFeeStructures")
   feeRefunds    FeeRefund[]    @relation("TenantFeeRefunds")
 
-  invites                      Invite[]
-  lessonNotes                  LessonNote[]
-  lessonDeliveries             LessonDelivery[]
-  memberships                  Membership[]
-  roles                        Role[]
-  students                     Student[]
-  StudentHealthDaily           StudentHealthDaily[]
-  teacherHealthWeekly          TeacherHealthWeekly[]
-  teacherAttendanceSessions    TeacherAttendanceSession[]
-  teacherAttendanceRecords     TeacherAttendanceRecord[]
+  invites                   Invite[]
+  lessonNotes               LessonNote[]
+  lessonDeliveries          LessonDelivery[]
+  memberships               Membership[]
+  roles                     Role[]
+  students                  Student[]
+  StudentHealthDaily        StudentHealthDaily[]
+  teacherHealthWeekly       TeacherHealthWeekly[]
+  teacherAttendanceSessions TeacherAttendanceSession[]
+  teacherAttendanceRecords  TeacherAttendanceRecord[]
+
+  /// ✅ A15.4B — teacher appraisal evidence spine
+  teacherAppraisals TeacherAppraisal[]
+
   teacherProfiles              TeacherProfile[]              @relation("TenantTeacherProfiles")
   onboardingCodes              TenantOnboardingCode[]
   lastActiveUsers              User[]                        @relation("UserLastActiveTenant")
@@ -621,13 +631,17 @@ model Classroom {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  Assessment                   Assessment[]
-  assessmentItems              AssessmentItem[]
-  mockExamSessions             MockExamSession[]
-  AttendanceSession            AttendanceSession[]
-  attendanceScanEvents         AttendanceScanEvent[]
-  lessonNotes                  LessonNote[]
-  lessonDeliveries             LessonDelivery[]
+  Assessment           Assessment[]
+  assessmentItems      AssessmentItem[]
+  mockExamSessions     MockExamSession[]
+  AttendanceSession    AttendanceSession[]
+  attendanceScanEvents AttendanceScanEvent[]
+  lessonNotes          LessonNote[]
+  lessonDeliveries     LessonDelivery[]
+
+  /// ✅ A15.4B — teacher appraisal evidence spine
+  teacherAppraisals TeacherAppraisal[]
+
   students                     Student[]
   StudentHealthDaily           StudentHealthDaily[]
   primaryTeachers              TeacherProfile[]              @relation("TeacherPrimaryClassroom")
@@ -1189,6 +1203,133 @@ model TeacherAttendanceRecord {
   @@index([teacherUserId, date], map: "TeacherAttendanceRecord_teacher_date_idx")
   @@index([markedByUserId], map: "TeacherAttendanceRecord_markedBy_idx")
   @@index([tenantId, status, date], map: "TeacherAttendanceRecord_tenant_status_date_idx")
+}
+
+/// *
+/// * =======================
+/// * Teacher Appraisal — A15.4B
+/// * =======================
+/// Evidence-backed headteacher monitoring and inspection record.
+/// One appraisal represents one observed lesson.
+/// FINALIZED records are locked in application logic and must not be edited.
+model TeacherAppraisal {
+  id String @id @default(cuid())
+
+  tenantId String
+
+  /// Teacher being appraised.
+  teacherUserId String
+
+  /// Headteacher/admin who created/conducted the appraisal.
+  appraiserUserId String
+
+  /// Set only when finalized.
+  finalizedByUserId String?
+
+  classroomId String?
+
+  /// Official form header fields.
+  dateObserved DateTime @db.Date
+  classTaught  String?  @db.VarChar(80)
+
+  term         String? @db.VarChar(40)
+  academicYear String? @db.VarChar(40)
+
+  subject   String? @db.VarChar(120)
+  subStrand String? @db.Text
+
+  durationMinutes      Int?
+  yearsInService       Int?
+  yearsInPresentSchool Int?
+
+  /// Snapshot fields protect finalized reports from later profile/school renames.
+  teacherNameSnapshot   String? @db.VarChar(180)
+  schoolNameSnapshot    String? @db.VarChar(180)
+  circuitSnapshot       String? @db.VarChar(180)
+  appraiserNameSnapshot String? @db.VarChar(180)
+
+  /// Evidence links.
+  schemeOfWorkId   String?
+  lessonNoteId     String?
+  lessonDeliveryId String?
+
+  /// Stores assessment item ids/counts and other V1 evidence hints without overbuilding relations.
+  evidenceSnapshotJson Json @default("{}")
+
+  status TeacherAppraisalStatus @default(DRAFT)
+
+  /// Section percentages are calculated from TeacherAppraisalScore rows.
+  /// N/A rows are excluded from the denominator in API logic.
+  preparationPercent             Float?
+  lessonDeliveryPercent          Float?
+  classroomCulturePercent        Float?
+  learnerParticipationPercent    Float?
+  understandingStrategiesPercent Float?
+  evaluationStrategiesPercent    Float?
+  overallPercentage              Float?
+
+  generalComment String? @db.Text
+
+  finalizedAt DateTime? @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  teacher     User   @relation("TeacherAppraisalTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  appraiser   User   @relation("TeacherAppraisalAppraiser", fields: [appraiserUserId], references: [id], onDelete: Restrict)
+  finalizedBy User?  @relation("TeacherAppraisalFinalizedBy", fields: [finalizedByUserId], references: [id], onDelete: SetNull)
+
+  classroom      Classroom?      @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  schemeOfWork   SchemeOfWork?   @relation(fields: [schemeOfWorkId], references: [id], onDelete: SetNull)
+  lessonNote     LessonNote?     @relation(fields: [lessonNoteId], references: [id], onDelete: SetNull)
+  lessonDelivery LessonDelivery? @relation(fields: [lessonDeliveryId], references: [id], onDelete: SetNull)
+
+  scores TeacherAppraisalScore[]
+
+  @@index([tenantId, status], map: "TeacherAppraisal_tenant_status_idx")
+  @@index([tenantId, teacherUserId, status], map: "TeacherAppraisal_tenant_teacher_status_idx")
+  @@index([tenantId, appraiserUserId, status], map: "TeacherAppraisal_tenant_appraiser_status_idx")
+  @@index([tenantId, dateObserved], map: "TeacherAppraisal_tenant_date_idx")
+  @@index([tenantId, classroomId], map: "TeacherAppraisal_tenant_classroom_idx")
+  @@index([tenantId, term, academicYear], map: "TeacherAppraisal_tenant_term_year_idx")
+  @@index([schemeOfWorkId], map: "TeacherAppraisal_scheme_idx")
+  @@index([lessonNoteId], map: "TeacherAppraisal_lessonNote_idx")
+  @@index([lessonDeliveryId], map: "TeacherAppraisal_lessonDelivery_idx")
+}
+
+model TeacherAppraisalScore {
+  id String @id @default(cuid())
+
+  tenantId    String
+  appraisalId String
+
+  /// Example: PREPARATION, LESSON_DELIVERY, CLASSROOM_CULTURE
+  sectionKey      String @db.VarChar(60)
+  sectionTitle    String @db.VarChar(180)
+  sectionOrder    Int
+  sectionMaxScore Int
+
+  /// Example: 1.1, 1.2, 2.1
+  itemKey   String @db.VarChar(20)
+  itemLabel String @db.Text
+  itemOrder Int
+
+  /// Null score + notApplicable=true means N/A.
+  /// Valid scored rows are 1..5, enforced by API.
+  score         Int?
+  notApplicable Boolean @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  appraisal TeacherAppraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  @@unique([appraisalId, itemKey], map: "TeacherAppraisalScore_appraisal_item_unique")
+  @@index([tenantId, sectionKey], map: "TeacherAppraisalScore_tenant_section_idx")
+  @@index([appraisalId, sectionOrder, itemOrder], map: "TeacherAppraisalScore_appraisal_order_idx")
 }
 
 /// *
@@ -2002,6 +2143,9 @@ model LessonNote {
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "LessonNote_tenant_fkey")
   lessonDeliveries LessonDelivery[]
 
+  /// ✅ A15.4B — teacher appraisal evidence spine
+  teacherAppraisals TeacherAppraisal[]
+
   @@index([classroomId], map: "LessonNote_classroom_idx")
   @@index([status])
   @@index([teacherUserId], map: "LessonNote_teacher_idx")
@@ -2223,6 +2367,9 @@ model SchemeOfWork {
   reviewedByUserId   String?
   items              SchemeOfWorkItem[]
 
+  /// ✅ A15.4B — teacher appraisal evidence spine
+  teacherAppraisals TeacherAppraisal[]
+
   @@index([subject, term, academicYear], map: "SchemeOfWork_subject_term_year_idx")
   @@index([tenantId, teacherUserId], map: "SchemeOfWork_tenant_teacher_idx")
 }
@@ -2398,6 +2545,9 @@ model LessonDelivery {
   lessonNote      LessonNote?      @relation(fields: [lessonNoteId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   curriculumUnit  CurriculumUnit?  @relation(fields: [curriculumUnitId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   assessmentItems AssessmentItem[]
+
+  /// ✅ A15.4B — teacher appraisal evidence spine
+  teacherAppraisals TeacherAppraisal[]
 
   @@index([tenantId, classroomId, dateTaught], map: "LessonDelivery_tenant_classroom_date_idx")
   @@index([tenantId, term, academicYear], map: "LessonDelivery_tenant_term_year_idx")
@@ -3190,6 +3340,11 @@ enum SchemeStatus {
   SUBMITTED
   APPROVED
   RETURNED
+}
+
+enum TeacherAppraisalStatus {
+  DRAFT
+  FINALIZED
 }
 
 enum SchoolSector {
