@@ -495,11 +495,11 @@ export default function HeadteacherDashboardClient() {
         <MajorTile
           title="Teacher Attendance"
           desc="Staff attendance register for headteacher marking and supervision."
-          cta="Coming next: A15.3"
-          badge="Next"
-          disabled
+          cta="Open teacher attendance"
+          badge="New"
           toneClass="border-lime-300/20 from-[#101F0A] via-[#1D2D10] to-[#08121C]"
           accentClass="border-lime-300/25 bg-lime-400/12 text-lime-100"
+          onClick={() => router.push("/headteacher/teacher-attendance")}
         />
 
         <MajorTile

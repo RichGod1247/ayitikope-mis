@@ -75,6 +75,11 @@ model User {
   memberships                         Membership[]
   sessions                            Session[]
   teacherHealthWeekly                 TeacherHealthWeekly[]
+  teacherAttendanceRecords            TeacherAttendanceRecord[]     @relation("TeacherAttendanceTeacher")
+  teacherAttendanceMarked             TeacherAttendanceRecord[]     @relation("TeacherAttendanceMarkedBy")
+  teacherAttendanceSessionsOpened     TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionOpenedBy")
+  teacherAttendanceSessionsClosed     TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionClosedBy")
+  teacherAttendanceSessionsCertified  TeacherAttendanceSession[]    @relation("TeacherAttendanceSessionCertifiedBy")
   teacherProfiles                     TeacherProfile[]              @relation("UserTeacherProfiles")
   lastActiveTenant                    Tenant?                       @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
   inviteCodes                         InviteCode[]
@@ -178,6 +183,8 @@ model Tenant {
   students                     Student[]
   StudentHealthDaily           StudentHealthDaily[]
   teacherHealthWeekly          TeacherHealthWeekly[]
+  teacherAttendanceSessions    TeacherAttendanceSession[]
+  teacherAttendanceRecords     TeacherAttendanceRecord[]
   teacherProfiles              TeacherProfile[]              @relation("TenantTeacherProfiles")
   onboardingCodes              TenantOnboardingCode[]
   lastActiveUsers              User[]                        @relation("UserLastActiveTenant")
@@ -1105,6 +1112,83 @@ model TeacherHealthWeekly {
   @@unique([tenantId, userId, weekStart], name: "TeacherHealthWeekly_unique_tenant_user_week", map: "TeacherHealthWeekly_unique_tenant_user_week")
   @@index([tenantId, weekStart], map: "idx_thw_tenant_week")
   @@index([userId, weekStart], map: "idx_thw_user_week")
+}
+
+/// *
+/// * =======================
+/// * Teacher Daily Attendance
+/// * =======================
+/// School-wide staff attendance lifecycle.
+/// A session must be opened, marked, closed, then certified before governance trusts it.
+model TeacherAttendanceSession {
+  id String @id @default(cuid())
+
+  tenantId String
+  date     DateTime @db.Date
+
+  openedByUserId String
+  openedAt       DateTime @default(now()) @db.Timestamptz(6)
+
+  isClosed       Boolean   @default(false)
+  closedAt       DateTime? @db.Timestamptz(6)
+  closedByUserId String?
+
+  certifiedAt       DateTime? @db.Timestamptz(6)
+  certifiedByUserId String?
+  certifiedNote     String?   @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  openedBy    User   @relation("TeacherAttendanceSessionOpenedBy", fields: [openedByUserId], references: [id], onDelete: Restrict)
+  closedBy    User?  @relation("TeacherAttendanceSessionClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull)
+  certifiedBy User?  @relation("TeacherAttendanceSessionCertifiedBy", fields: [certifiedByUserId], references: [id], onDelete: SetNull)
+
+  records TeacherAttendanceRecord[]
+
+  @@unique([tenantId, date], map: "TeacherAttendanceSession_tenant_date_unique")
+  @@index([tenantId, date, isClosed, certifiedAt], map: "TeacherAttendanceSession_tenant_date_state_idx")
+  @@index([openedByUserId], map: "TeacherAttendanceSession_openedBy_idx")
+  @@index([closedByUserId], map: "TeacherAttendanceSession_closedBy_idx")
+  @@index([certifiedByUserId], map: "TeacherAttendanceSession_certifiedBy_idx")
+}
+
+/// Headteacher/admin marked staff attendance.
+/// Teachers must never self-mark this record.
+model TeacherAttendanceRecord {
+  id String @id @default(cuid())
+
+  tenantId  String
+  sessionId String
+
+  teacherUserId String
+
+  /// Denormalized date for fast reports and simple governance filters.
+  /// Must match the parent session date at application level.
+  date DateTime @db.Date
+
+  status AttendanceStatus
+  note   String?          @db.Text
+
+  markedByUserId String
+  markedAt       DateTime @default(now()) @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  tenant   Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session  TeacherAttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  teacher  User                     @relation("TeacherAttendanceTeacher", fields: [teacherUserId], references: [id], onDelete: Cascade)
+  markedBy User                     @relation("TeacherAttendanceMarkedBy", fields: [markedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, teacherUserId], map: "TeacherAttendanceRecord_session_teacher_unique")
+  @@unique([tenantId, teacherUserId, date], map: "TeacherAttendanceRecord_tenant_teacher_date_unique")
+  @@index([tenantId, date], map: "TeacherAttendanceRecord_tenant_date_idx")
+  @@index([tenantId, sessionId], map: "TeacherAttendanceRecord_tenant_session_idx")
+  @@index([teacherUserId, date], map: "TeacherAttendanceRecord_teacher_date_idx")
+  @@index([markedByUserId], map: "TeacherAttendanceRecord_markedBy_idx")
+  @@index([tenantId, status, date], map: "TeacherAttendanceRecord_tenant_status_date_idx")
 }
 
 /// *
