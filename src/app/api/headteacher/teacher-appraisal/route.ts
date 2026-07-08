@@ -1,7 +1,8 @@
 //src/app/api/headteacher/teacher-appraisal/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { TeacherAppraisalStatus } from "@prisma/client";
+import { ClassroomStatus, TeacherAppraisalStatus } from "@prisma/client";
+import { normalizeJhsAssignmentsLoose, normalizeLevelToken } from "@/lib/teacherScope";
 import { prisma } from "@/lib/prisma";
 import { getHeadteacherApiContext } from "@/lib/headteacherAuth";
 
@@ -215,6 +216,155 @@ function classLabel(c: { name?: string | null; grade?: string | null; arm?: stri
   return name || [grade, arm].filter(Boolean).join(" ") || null;
 }
 
+type EvidenceOption = { value: string; label: string; classroomId?: string | null };
+
+function optionKey(v: unknown) {
+  return clean(v).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function addOptionUnique(list: EvidenceOption[], option: EvidenceOption | null | undefined) {
+  if (!option?.label) return;
+  const value = clean(option.value) || `label:${optionKey(option.label)}`;
+  const key = `${value}::${optionKey(option.label)}`;
+  if (list.some((x) => `${clean(x.value) || `label:${optionKey(x.label)}`}::${optionKey(x.label)}` === key)) return;
+  list.push({ ...option, value });
+}
+
+function classroomMatchesLevel(c: { name?: string | null; grade?: string | null; arm?: string | null }, targetLevel: string) {
+  const target = normalizeLevelToken(targetLevel);
+  if (!target) return false;
+
+  const candidates = [c.name, c.grade, classLabel(c)].filter(Boolean);
+  return candidates.some((v) => normalizeLevelToken(v) === target);
+}
+
+function findClassroomsByLevel(
+  classrooms: Array<{ id: string; name: string; grade: string | null; arm: string | null }>,
+  level: string
+) {
+  return classrooms.filter((c) => classroomMatchesLevel(c, level));
+}
+
+function findUniqueClassroomByLevel(
+  classrooms: Array<{ id: string; name: string; grade: string | null; arm: string | null }>,
+  level: string
+) {
+  const matches = findClassroomsByLevel(classrooms, level);
+
+  // Bank-grade multistream rule:
+  // If B6/JHS3 has multiple arms, do not guess which arm the teacher owns.
+  // Use only exact assignment classroomId or primaryClassroomId in that case.
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function buildClassOptions(args: {
+  profile: {
+    phase: string | null;
+    classLevel: string | null;
+    jhsAssignments: unknown;
+    primaryClassroomId: string | null;
+    primaryClassroom: { id: string; name: string; grade: string | null; arm: string | null } | null;
+  } | null;
+  classrooms: Array<{ id: string; name: string; grade: string | null; arm: string | null }>;
+  assessmentAssignments: Array<{
+    classroomId: string | null;
+    phase: string | null;
+    level: string | null;
+    classroom: { id: string; name: string; grade: string | null; arm: string | null } | null;
+  }>;
+}) {
+  const out: EvidenceOption[] = [];
+
+  const addClassroom = (c: { id: string; name: string; grade: string | null; arm: string | null } | null | undefined, fallbackLabel?: string | null) => {
+    const label = classLabel(c) || clean(fallbackLabel);
+    if (!label) return;
+    addOptionUnique(out, { value: c?.id ?? `label:${optionKey(label)}`, label, classroomId: c?.id ?? null });
+  };
+
+  // Strongest truth: explicit active teacher assignment rows.
+  // This prevents approved notes/deliveries from widening the appraisal class dropdown.
+  for (const assignment of args.assessmentAssignments) {
+    if (assignment.classroom) addClassroom(assignment.classroom);
+  }
+
+  // KG/Primary class ownership is exact only when primaryClassroomId exists.
+  if (args.profile?.phase === "KG" || args.profile?.phase === "PRIMARY") {
+    addClassroom(args.profile.primaryClassroom);
+
+    // Fallback for old single-stream data only. In multistream, do not guess.
+    if (!args.profile.primaryClassroomId && args.profile.classLevel) {
+      addClassroom(findUniqueClassroomByLevel(args.classrooms, args.profile.classLevel), args.profile.classLevel);
+    }
+  }
+
+  // JHS profile assignments may only say JHS 1/JHS 2/JHS 3.
+  // In multistream arms mode, use them only if the level resolves to one class.
+  // Otherwise require exact TeacherAssessmentAssignment.classroomId.
+  if (args.profile?.phase === "JHS") {
+    for (const row of normalizeJhsAssignmentsLoose(args.profile.jhsAssignments)) {
+      for (const cls of row.classes) addClassroom(findUniqueClassroomByLevel(args.classrooms, cls), cls);
+    }
+  }
+
+  return out;
+}
+
+function buildSubjectOptions(args: {
+  profile: { phase: string | null; classLevel: string | null; jhsAssignments: unknown } | null;
+  curriculumSubjects: Array<{ name: string; phase: string | null; level: string | null }>;
+  schemes: Array<{ subject: string | null }>;
+  notes: Array<{ subject: string | null }>;
+  deliveries: Array<{ subject: string | null }>;
+}) {
+  const out: EvidenceOption[] = [];
+  const addSubject = (subject: unknown) => {
+    const label = clean(subject);
+    if (!label) return;
+    addOptionUnique(out, { value: label, label });
+  };
+
+  if (args.profile?.phase === "JHS") {
+    for (const row of normalizeJhsAssignmentsLoose(args.profile.jhsAssignments)) addSubject(row.subject);
+  }
+
+  if (args.profile?.phase === "KG" || args.profile?.phase === "PRIMARY") {
+    const classToken = normalizeLevelToken(args.profile.classLevel);
+    for (const s of args.curriculumSubjects) {
+      if (clean(s.phase) && clean(s.phase).toUpperCase() !== args.profile.phase) continue;
+      const subjectLevel = normalizeLevelToken(s.level);
+      if (classToken && subjectLevel && subjectLevel !== classToken) continue;
+      addSubject(s.name);
+    }
+  }
+
+  for (const row of [...args.schemes, ...args.notes, ...args.deliveries]) addSubject(row.subject);
+
+  return out.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function buildTermOptions(current: string | null, rows: Array<{ term: string | null }>) {
+  const out: EvidenceOption[] = [];
+  for (const t of [current, "1st Term", "2nd Term", "3rd Term", ...rows.map((r) => r.term)]) {
+    const label = clean(t);
+    if (label) addOptionUnique(out, { value: label, label });
+  }
+  return out;
+}
+
+function buildAcademicYearOptions(current: string | null, rows: Array<{ academicYear: string | null }>) {
+  const out: EvidenceOption[] = [];
+  for (const y of [current, ...rows.map((r) => r.academicYear)]) {
+    const label = clean(y);
+    if (label) addOptionUnique(out, { value: label, label });
+  }
+
+  const now = new Date();
+  const start = now.getUTCMonth() >= 8 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+  for (let y = start - 1; y <= start + 1; y++) addOptionUnique(out, { value: `${y}/${y + 1}`, label: `${y}/${y + 1}` });
+
+  return out;
+}
+
 function calculatePercentages(rows: Array<{ itemKey: string; score: number | null; notApplicable: boolean }>) {
   const byKey = new Map(rows.map((r) => [r.itemKey, r]));
   const sectionPercents: Record<string, number | null> = {};
@@ -322,7 +472,26 @@ async function loadTeacherForTenant(tenantId: string, teacherUserId: string) {
     select: {
       userId: true,
       staffId: true,
-      user: { select: { id: true, name: true, firstName: true, lastName: true, email: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          teacherProfiles: {
+            where: { tenantId },
+            select: {
+              phase: true,
+              classLevel: true,
+              jhsAssignments: true,
+              primaryClassroomId: true,
+              primaryClassroom: { select: { id: true, name: true, grade: true, arm: true } },
+            },
+            take: 1,
+          },
+        },
+      },
       tenant: { select: { name: true, circuit: true } },
     },
   });
@@ -551,30 +720,62 @@ export async function GET(req: NextRequest) {
       if (teacher.userId === ctx.userId) return jsonNoStore({ ok: false, error: "You cannot appraise yourself.", reqId }, 403);
 
       const current = await getCurrentTermYear(ctx.tenantId);
-      const term = clean(searchParams.get("term")) || current.term || undefined;
-      const academicYear = clean(searchParams.get("academicYear")) || current.academicYear || undefined;
+
+      // Do not silently filter by current term/year here. The form needs all recent
+      // approved evidence for the selected teacher, then the UI can choose the right
+      // term/year from dropdowns without making the scheme dropdown look stale.
+      const requestedTerm = clean(searchParams.get("term"));
+      const requestedAcademicYear = clean(searchParams.get("academicYear"));
 
       const base: any = { tenantId: ctx.tenantId, teacherUserId };
-      if (term) base.term = term;
-      if (academicYear) base.academicYear = academicYear;
+      if (requestedTerm) base.term = requestedTerm;
+      if (requestedAcademicYear) base.academicYear = requestedAcademicYear;
 
-      const [schemes, notes, deliveries] = await Promise.all([
+      const profile = teacher.user.teacherProfiles?.[0] ?? null;
+
+      const [classrooms, curriculumSubjects, assessmentAssignments, schemes, notes, deliveries] = await Promise.all([
+        prisma.classroom.findMany({
+          where: { tenantId: ctx.tenantId, status: ClassroomStatus.ACTIVE },
+          orderBy: [{ name: "asc" }, { arm: "asc" }],
+          take: 200,
+          select: { id: true, name: true, grade: true, arm: true },
+        }),
+        prisma.curriculumSubject.findMany({
+          where: {
+            isActive: true,
+            OR: [{ tenantId: ctx.tenantId }, { tenantId: null }],
+          },
+          orderBy: [{ phase: "asc" }, { level: "asc" }, { orderIndex: "asc" }, { name: "asc" }],
+          take: 300,
+          select: { name: true, phase: true, level: true },
+        }),
+        prisma.teacherAssessmentAssignment.findMany({
+          where: { tenantId: ctx.tenantId, teacherUserId, status: "ACTIVE" },
+          orderBy: [{ createdAt: "asc" }],
+          take: 200,
+          select: {
+            classroomId: true,
+            phase: true,
+            level: true,
+            classroom: { select: { id: true, name: true, grade: true, arm: true } },
+          },
+        }),
         prisma.schemeOfWork.findMany({
           where: { ...base, status: "APPROVED" },
           orderBy: [{ updatedAt: "desc" }],
-          take: 50,
+          take: 80,
           select: { id: true, subject: true, level: true, term: true, academicYear: true, classroomId: true, approvedAt: true, updatedAt: true, _count: { select: { items: true } } },
         }),
         prisma.lessonNote.findMany({
           where: { ...base, status: "APPROVED" },
           orderBy: [{ approvedAt: "desc" }, { updatedAt: "desc" }],
-          take: 50,
+          take: 80,
           select: { id: true, subject: true, level: true, term: true, academicYear: true, classroomId: true, lessonTitle: true, substrand: true, weekNumber: true, approvedAt: true, updatedAt: true },
         }),
         prisma.lessonDelivery.findMany({
           where: base,
           orderBy: [{ dateTaught: "desc" }, { createdAt: "desc" }],
-          take: 50,
+          take: 80,
           select: {
             id: true,
             classroomId: true,
@@ -590,11 +791,21 @@ export async function GET(req: NextRequest) {
         }),
       ]);
 
+      const classOptions = buildClassOptions({ profile, classrooms, assessmentAssignments });
+      const subjectOptions = buildSubjectOptions({ profile, curriculumSubjects, schemes, notes, deliveries });
+      const evidenceRows = [...schemes, ...notes, ...deliveries];
+      const termOptions = buildTermOptions(current.term, evidenceRows);
+      const academicYearOptions = buildAcademicYearOptions(current.academicYear, evidenceRows);
+
       return jsonNoStore({
         ok: true,
         reqId,
         current,
         teacher: { teacherUserId: teacher.userId, name: userName(teacher.user), staffId: teacher.staffId ?? null },
+        classOptions,
+        subjectOptions,
+        termOptions,
+        academicYearOptions,
         schemes: schemes.map((s) => ({ ...s, approvedAt: toIsoOrNull(s.approvedAt), updatedAt: toIsoOrNull(s.updatedAt), itemCount: s._count.items })),
         lessonNotes: notes.map((n) => ({ ...n, approvedAt: toIsoOrNull(n.approvedAt), updatedAt: toIsoOrNull(n.updatedAt) })),
         lessonDeliveries: deliveries.map((d) => ({
