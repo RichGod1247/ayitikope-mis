@@ -503,6 +503,16 @@ export default function HeadteacherDashboardClient() {
         />
 
         <MajorTile
+          title="Scheme Vetting"
+          desc="Review teacher schemes of work before lesson notes and appraisal evidence are trusted."
+          cta="Open scheme vetting"
+          badge="New"
+          toneClass="border-teal-300/20 from-[#071F1C] via-[#0D2F2A] to-[#08121C]"
+          accentClass="border-teal-300/25 bg-teal-400/12 text-teal-100"
+          onClick={() => router.push("/headteacher/schemes")}
+        />
+
+        <MajorTile
           title="Teacher Appraisal"
           desc="Teacher preparation, lesson delivery, classroom culture, and supervision evidence."
           cta="Coming next: A15.4"
