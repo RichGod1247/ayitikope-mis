@@ -512,14 +512,14 @@ export default function HeadteacherDashboardClient() {
           onClick={() => router.push("/headteacher/schemes")}
         />
 
-        <MajorTile
+                <MajorTile
           title="Teacher Appraisal"
           desc="Teacher preparation, lesson delivery, classroom culture, and supervision evidence."
-          cta="Coming next: A15.4"
-          badge="Next"
-          disabled
+          cta="Open teacher appraisal"
+          badge="New"
           toneClass="border-fuchsia-300/20 from-[#26102B] via-[#351642] to-[#0C1320]"
           accentClass="border-fuchsia-300/25 bg-fuchsia-400/12 text-fuchsia-100"
+          onClick={() => router.push("/headteacher/teacher-appraisal")}
         />
 
         <MajorTile
