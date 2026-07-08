@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
  * Read-only summary page + canonical entry to Scheme Builder.
  */
 
+type SchemeStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "RETURNED";
+
 type SchemeOfWorkSummary = {
   id: string;
   subject: string;
@@ -22,6 +24,13 @@ type SchemeOfWorkSummary = {
   teacherName?: string | null;
   totalItems: number;
   weekNumbers: number[];
+  status: SchemeStatus;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  approvedAt?: string | null;
+  returnedAt?: string | null;
+  headteacherComment?: string | null;
+  isEditable?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -76,6 +85,20 @@ function formatWeeks(weekNumbers: number[]) {
   return weekNumbers.slice().sort((a, b) => a - b).join(", ");
 }
 
+function statusLabel(status: SchemeStatus) {
+  if (status === "SUBMITTED") return "Submitted";
+  if (status === "APPROVED") return "Approved";
+  if (status === "RETURNED") return "Returned";
+  return "Draft";
+}
+
+function statusClass(status: SchemeStatus) {
+  if (status === "APPROVED") return "border-emerald-300/25 bg-emerald-400/14 text-emerald-100";
+  if (status === "SUBMITTED") return "border-amber-300/25 bg-amber-400/14 text-amber-100";
+  if (status === "RETURNED") return "border-rose-300/25 bg-rose-400/14 text-rose-100";
+  return "border-white/10 bg-white/10 text-[#C9CDD6]";
+}
+
 export default function TeacherSchemesPage() {
   const router = useRouter();
 
@@ -86,6 +109,7 @@ export default function TeacherSchemesPage() {
   const [selectedSchemeId, setSelectedSchemeId] = useState<string | null>(null);
 
   const [schemeNavLoading, setSchemeNavLoading] = useState(false);
+  const [submitBusyId, setSubmitBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -192,6 +216,59 @@ export default function TeacherSchemesPage() {
       router.push(`/teacher/curriculum?${p.toString()}`);
     } finally {
       setSchemeNavLoading(false);
+    }
+  }
+
+  async function submitScheme(scheme: SchemeOfWorkSummary) {
+    if (submitBusyId) return;
+
+    if (scheme.totalItems < 1) {
+      setError("Add at least one week/indicator before submitting this scheme.");
+      return;
+    }
+
+    const ok = window.confirm(
+      "Submit this scheme to the headteacher? You cannot edit it again unless it is returned."
+    );
+
+    if (!ok) return;
+
+    setSubmitBusyId(scheme.id);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/schemes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          action: "submit",
+          schemeId: scheme.id,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.ok) {
+        setError(data?.error ?? "Failed to submit scheme.");
+        return;
+      }
+
+      const reload = await fetch("/api/schemes?mode=summary", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const next = (await reload.json().catch(() => ({}))) as SchemesSummaryResponse;
+
+      if (reload.ok && next.ok && next.items) {
+        setSchemes(next.items);
+        setSelectedSchemeId(scheme.id);
+      }
+    } catch {
+      setError("Network error while submitting scheme.");
+    } finally {
+      setSubmitBusyId(null);
     }
   }
 
@@ -329,7 +406,15 @@ export default function TeacherSchemesPage() {
                                 </div>
                               </div>
 
-                              <div className="text-right space-y-0.5">
+                              <div className="space-y-1 text-right">
+                                <div
+                                  className={cx(
+                                    "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                                    statusClass(s.status)
+                                  )}
+                                >
+                                  {statusLabel(s.status)}
+                                </div>
                                 <div className="rounded-full border border-emerald-300/20 bg-emerald-400/12 px-2 py-0.5 text-[10px] font-medium text-emerald-100">
                                   {s.totalItems} indicator{s.totalItems === 1 ? "" : "s"}
                                 </div>
@@ -388,9 +473,21 @@ export default function TeacherSchemesPage() {
                       Total indicators: <span className="font-semibold text-[#F7F4ED]">{selectedScheme.totalItems}</span>
                     </p>
                     <p>
+                      Status:{" "}
+                      <span className="font-semibold text-[#F7F4ED]">
+                        {statusLabel(selectedScheme.status)}
+                      </span>
+                    </p>
+                    <p>
                       Weeks covered:{" "}
                       <span className="font-semibold text-[#F7F4ED]">{formatWeeks(selectedScheme.weekNumbers)}</span>
                     </p>
+                    {selectedScheme.headteacherComment && (
+                      <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-3 py-2 text-xs leading-6 text-rose-100">
+                        <span className="font-bold">Headteacher comment: </span>
+                        {selectedScheme.headteacherComment}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
@@ -403,6 +500,17 @@ export default function TeacherSchemesPage() {
                       <Link href={`/teacher/schemes/${selectedScheme.id}`} className={btnOutline}>
                         Open full scheme
                       </Link>
+
+                      {(selectedScheme.status === "DRAFT" || selectedScheme.status === "RETURNED") && (
+                        <button
+                          type="button"
+                          onClick={() => submitScheme(selectedScheme)}
+                          className={btnPrimary}
+                          disabled={submitBusyId === selectedScheme.id}
+                        >
+                          {submitBusyId === selectedScheme.id ? "Submitting…" : "Submit for Review"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

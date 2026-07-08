@@ -15,6 +15,8 @@ type SchemeOfWorkItemDto = {
   indicatorDescription: string;
 };
 
+type SchemeStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "RETURNED";
+
 type SchemeOfWorkDetail = {
   id: string;
   subject: string;
@@ -24,6 +26,13 @@ type SchemeOfWorkDetail = {
   academicYear: string;
   teacherName?: string | null;
   className?: string | null;
+  status: SchemeStatus;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  approvedAt?: string | null;
+  returnedAt?: string | null;
+  headteacherComment?: string | null;
+  isEditable?: boolean;
   createdAt: string;
   updatedAt?: string | null;
   items: SchemeOfWorkItemDto[];
@@ -138,6 +147,20 @@ function formatWeeks(items: SchemeOfWorkItemDto[]) {
   return weeks.sort((a, b) => a - b).join(", ");
 }
 
+function statusLabel(status: SchemeStatus) {
+  if (status === "SUBMITTED") return "Submitted";
+  if (status === "APPROVED") return "Approved";
+  if (status === "RETURNED") return "Returned";
+  return "Draft";
+}
+
+function statusClass(status: SchemeStatus) {
+  if (status === "APPROVED") return "border-emerald-300/25 bg-emerald-400/14 text-emerald-100";
+  if (status === "SUBMITTED") return "border-amber-300/25 bg-amber-400/14 text-amber-100";
+  if (status === "RETURNED") return "border-rose-300/25 bg-rose-400/14 text-rose-100";
+  return "border-white/10 bg-white/10 text-[#C9CDD6]";
+}
+
 export default function SchemeDetailPage({
   params,
 }: {
@@ -149,6 +172,7 @@ export default function SchemeDetailPage({
   const [loading, setLoading] = useState(true);
   const [scheme, setScheme] = useState<SchemeOfWorkDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [submitBusy, setSubmitBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -291,6 +315,58 @@ export default function SchemeDetailPage({
       }));
   }, [scheme]);
 
+  async function submitScheme() {
+    if (!scheme || submitBusy) return;
+
+    if (scheme.items.length < 1) {
+      setError("Add at least one week/indicator before submitting this scheme.");
+      return;
+    }
+
+    const ok = window.confirm(
+      "Submit this scheme to the headteacher? It will lock until returned or approved."
+    );
+
+    if (!ok) return;
+
+    setSubmitBusy(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/schemes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          action: "submit",
+          schemeId: scheme.id,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data?.ok) {
+        setError(data?.error ?? "Failed to submit scheme.");
+        return;
+      }
+
+      const reload = await fetch(`/api/schemes?id=${encodeURIComponent(scheme.id)}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const next = (await reload.json().catch(() => ({}))) as SchemeDetailResponse;
+
+      if (reload.ok && next.ok && next.scheme) {
+        setScheme(next.scheme);
+      }
+    } catch {
+      setError("Network error while submitting scheme.");
+    } finally {
+      setSubmitBusy(false);
+    }
+  }
+
   const hasItems = !!scheme && scheme.items.length > 0;
 
   return (
@@ -307,6 +383,16 @@ export default function SchemeDetailPage({
                 <span className={cx(pillBase, "border-emerald-300/25 bg-emerald-400/14 text-emerald-100")}>
                   EduLife OS · Teacher · Scheme of Work
                 </span>
+                {scheme && (
+                  <span
+                    className={cx(
+                      "inline-flex rounded-full border px-3 py-1 text-xs font-bold print:hidden",
+                      statusClass(scheme.status)
+                    )}
+                  >
+                    {statusLabel(scheme.status)}
+                  </span>
+                )}
                 {scheme && (
                   <span className="text-[11px] text-[#AEB6C4]">
                     {scheme.subject} · {scheme.term} · {scheme.academicYear}
@@ -345,6 +431,9 @@ export default function SchemeDetailPage({
                       Teacher: <span className="font-semibold text-[#F7F4ED] print:text-black">{scheme.teacherName}</span>
                     </p>
                   )}
+                  <p className="print:hidden">
+                    Status: <span className="font-semibold text-[#F7F4ED] print:text-black">{statusLabel(scheme.status)}</span>
+                  </p>
                 </>
               )}
 
@@ -360,6 +449,16 @@ export default function SchemeDetailPage({
                 >
                   Print Scheme of Work
                 </button>
+                {scheme && (scheme.status === "DRAFT" || scheme.status === "RETURNED") && (
+                  <button
+                    type="button"
+                    onClick={submitScheme}
+                    className={btnPrimary}
+                    disabled={submitBusy || !scheme || scheme.items.length < 1}
+                  >
+                    {submitBusy ? "Submitting…" : "Submit for Review"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -380,6 +479,13 @@ export default function SchemeDetailPage({
         {!loading && !error && !scheme && (
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-[#C9CDD6]">
             Scheme of Work not found.
+          </div>
+        )}
+
+        {scheme?.headteacherComment && (
+          <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-sm leading-7 text-rose-100 print:hidden">
+            <span className="font-bold">Headteacher comment: </span>
+            {scheme.headteacherComment}
           </div>
         )}
 

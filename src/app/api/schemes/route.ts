@@ -654,6 +654,32 @@ function schemaOutOfSyncPublicMessage() {
   );
 }
 
+type SchemeStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "RETURNED";
+
+function normalizeSchemeStatus(raw: unknown): SchemeStatus {
+  const s = String(raw ?? "DRAFT").trim().toUpperCase();
+  if (s === "SUBMITTED" || s === "APPROVED" || s === "RETURNED") return s;
+  return "DRAFT";
+}
+
+function isSchemeEditableStatus(raw: unknown) {
+  const status = normalizeSchemeStatus(raw);
+  return status === "DRAFT" || status === "RETURNED";
+}
+
+function isoOrNull(v: Date | string | null | undefined) {
+  if (!v) return null;
+  const d = v instanceof Date ? v : new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function requestMeta(req: NextRequest) {
+  return {
+    ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+    userAgent: req.headers.get("user-agent") || null,
+  };
+}
+
 function parseSchemaParamFromUrl(url: string | undefined) {
   if (!url) return null;
   try {
@@ -678,6 +704,15 @@ const schemeSelect = {
   academicYear: true,
   title: true,
   notes: true,
+
+  status: true,
+  submittedAt: true,
+  reviewedAt: true,
+  approvedAt: true,
+  returnedAt: true,
+  headteacherComment: true,
+  reviewedByUserId: true,
+
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -974,6 +1009,16 @@ export async function GET(req: NextRequest) {
         teacherName: formatTeacherName(teacher),
         totalItems: weekNumbers.length,
         weekNumbers,
+
+        status: normalizeSchemeStatus(s.status),
+        submittedAt: isoOrNull(s.submittedAt),
+        reviewedAt: isoOrNull(s.reviewedAt),
+        approvedAt: isoOrNull(s.approvedAt),
+        returnedAt: isoOrNull(s.returnedAt),
+        headteacherComment: s.headteacherComment ?? null,
+        reviewedByUserId: s.reviewedByUserId ?? null,
+        isEditable: isSchemeEditableStatus(s.status),
+
         createdAt: s.createdAt.toISOString(),
         updatedAt: s.updatedAt.toISOString(),
       };
@@ -1075,6 +1120,16 @@ export async function GET(req: NextRequest) {
             academicYear: scheme.academicYear,
             teacherName: formatTeacherName(teacher),
             className: formatClassroomName(classroom),
+
+            status: normalizeSchemeStatus(scheme.status),
+            submittedAt: isoOrNull(scheme.submittedAt),
+            reviewedAt: isoOrNull(scheme.reviewedAt),
+            approvedAt: isoOrNull(scheme.approvedAt),
+            returnedAt: isoOrNull(scheme.returnedAt),
+            headteacherComment: scheme.headteacherComment ?? null,
+            reviewedByUserId: scheme.reviewedByUserId ?? null,
+            isEditable: isSchemeEditableStatus(scheme.status),
+
             createdAt: scheme.createdAt.toISOString(),
             updatedAt: scheme.updatedAt?.toISOString?.() ?? null,
             items,
@@ -1389,6 +1444,21 @@ export async function POST(req: NextRequest) {
           { status: 404 },
         );
 
+      if (!isSchemeEditableStatus(scheme.status)) {
+        return jsonNoStore(
+          {
+            ok: false,
+            error:
+              normalizeSchemeStatus(scheme.status) === "SUBMITTED"
+                ? "This scheme has already been submitted and is waiting for headteacher review."
+                : "This scheme has already been approved and is locked as evidence.",
+            status: normalizeSchemeStatus(scheme.status),
+            reqId,
+          },
+          { status: 409 },
+        );
+      }
+
       const schemeSlug = normalizeSubjectSlug(scheme.subjectSlug);
       if (!schemeSlug || schemeSlug !== canonicalSlug) {
         return jsonNoStore(
@@ -1450,6 +1520,21 @@ export async function POST(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         select: schemeSelect,
       });
+
+      if (scheme && !isSchemeEditableStatus(scheme.status)) {
+        return jsonNoStore(
+          {
+            ok: false,
+            error:
+              normalizeSchemeStatus(scheme.status) === "SUBMITTED"
+                ? "This scheme has already been submitted and is waiting for headteacher review."
+                : "This scheme has already been approved and is locked as evidence.",
+            status: normalizeSchemeStatus(scheme.status),
+            reqId,
+          },
+          { status: 409 },
+        );
+      }
 
       if (!scheme) {
         const autoTitle =
@@ -1584,3 +1669,197 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+
+type PatchBody = {
+  action?: string | null;
+  schemeId?: string | null;
+};
+
+export async function PATCH(req: NextRequest) {
+  const reqId = randomUUID();
+
+  const ctx = await getCtx();
+  if (!ctx) {
+    return jsonNoStore(
+      { ok: false, error: "Unauthorized.", reqId },
+      { status: 401 },
+    );
+  }
+
+  const body = await readJson<PatchBody>(req);
+  if (!body) {
+    return jsonNoStore(
+      { ok: false, error: "Invalid JSON body.", reqId },
+      { status: 400 },
+    );
+  }
+
+  const action = cleanStr(body.action).toLowerCase();
+  const schemeId = cleanStr(body.schemeId);
+
+  if (action !== "submit") {
+    return jsonNoStore(
+      { ok: false, error: "Invalid action. Use submit.", reqId },
+      { status: 400 },
+    );
+  }
+
+  if (!schemeId || !isPlausibleId(schemeId)) {
+    return jsonNoStore(
+      { ok: false, error: "Invalid schemeId.", reqId },
+      { status: 400 },
+    );
+  }
+
+  const meta = requestMeta(req);
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const scheme = await tx.schemeOfWork.findFirst({
+        where: {
+          id: schemeId,
+          tenantId: ctx.tenantId,
+          teacherUserId: ctx.userId,
+        },
+        select: schemeSelect,
+      });
+
+      if (!scheme) {
+        return { kind: "NOT_FOUND" as const };
+      }
+
+      const status = normalizeSchemeStatus(scheme.status);
+
+      if (status === "APPROVED") {
+        return { kind: "LOCKED_APPROVED" as const, status };
+      }
+
+      if (status === "SUBMITTED") {
+        return { kind: "ALREADY_SUBMITTED" as const, scheme };
+      }
+
+      const itemCount = await tx.schemeOfWorkItem.count({
+        where: { schemeOfWorkId: scheme.id },
+      });
+
+      if (itemCount < 1) {
+        return { kind: "EMPTY" as const };
+      }
+
+      const updated = await tx.schemeOfWork.update({
+        where: { id: scheme.id },
+        data: {
+          status: "SUBMITTED",
+          submittedAt: new Date(),
+          reviewedAt: null,
+          approvedAt: null,
+          returnedAt: null,
+          reviewedByUserId: null,
+          headteacherComment: null,
+        },
+        select: schemeSelect,
+      });
+
+      await tx.auditLog.create({
+        data: {
+          tenantId: ctx.tenantId,
+          userId: ctx.userId,
+          action: "SCHEME_OF_WORK_SUBMITTED",
+          resource: "SchemeOfWork",
+          resourceId: scheme.id,
+          ip: meta.ip ?? undefined,
+          userAgent: meta.userAgent ?? undefined,
+          metadata: {
+            reqId,
+            previousStatus: status,
+            subject: scheme.subject,
+            level: scheme.level,
+            term: scheme.term,
+            academicYear: scheme.academicYear,
+            itemCount,
+          },
+        },
+      });
+
+      return { kind: "OK" as const, scheme: updated, itemCount };
+    });
+
+    if (result.kind === "NOT_FOUND") {
+      return jsonNoStore(
+        { ok: false, error: "Scheme not found.", reqId },
+        { status: 404 },
+      );
+    }
+
+    if (result.kind === "EMPTY") {
+      return jsonNoStore(
+        {
+          ok: false,
+          error: "Add at least one week/indicator before submitting this scheme.",
+          reqId,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (result.kind === "LOCKED_APPROVED") {
+      return jsonNoStore(
+        {
+          ok: false,
+          error: "This scheme is already approved and locked as evidence.",
+          status: result.status,
+          reqId,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (result.kind === "ALREADY_SUBMITTED") {
+      return jsonNoStore(
+        {
+          ok: true,
+          reqId,
+          reused: true,
+          scheme: {
+            id: result.scheme.id,
+            status: normalizeSchemeStatus(result.scheme.status),
+            submittedAt: isoOrNull(result.scheme.submittedAt),
+          },
+        },
+        { status: 200 },
+      );
+    }
+
+    return jsonNoStore(
+      {
+        ok: true,
+        reqId,
+        scheme: {
+          id: result.scheme.id,
+          status: normalizeSchemeStatus(result.scheme.status),
+          submittedAt: isoOrNull(result.scheme.submittedAt),
+          reviewedAt: isoOrNull(result.scheme.reviewedAt),
+          approvedAt: isoOrNull(result.scheme.approvedAt),
+          returnedAt: isoOrNull(result.scheme.returnedAt),
+        },
+      },
+      { status: 200 },
+    );
+  } catch (err) {
+    console.error("SCHEMES_SUBMIT_ERROR", { reqId, err });
+
+    if (isPrismaSchemaOutOfSyncError(err)) {
+      return jsonNoStore(
+        { ok: false, error: schemaOutOfSyncPublicMessage(), reqId },
+        { status: 500 },
+      );
+    }
+
+    return jsonNoStore(
+      { ok: false, error: "Failed to submit scheme.", reqId },
+      { status: 500 },
+    );
+  }
+}
+
