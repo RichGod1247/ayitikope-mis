@@ -196,6 +196,49 @@ type GovernanceAttendanceOverview = {
   schoolsNeedingFollowUp: GovernanceAttendanceFollowUpSchool[];
 };
 
+type GovernanceTeacherAttendanceFollowUpSchool = {
+  tenantId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector: SchoolSector;
+  circuitName: string | null;
+  districtName: string | null;
+  teachers: number;
+  hasSession: boolean;
+  isCertified: boolean;
+  isClosed: boolean;
+  marked: number;
+  unmarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  completionPct: number;
+  presentPct: number;
+  reason: string;
+};
+
+type GovernanceTeacherAttendanceOverview = {
+  date: string;
+  schools: number;
+  schoolsWithAnySession: number;
+  schoolsCertified: number;
+  schoolsUncertified: number;
+  schoolsMissingSession: number;
+  teachers: number;
+  marked: number;
+  unmarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  absentOrLate: number;
+  completionPct: number;
+  presentPct: number;
+  needsAction: number;
+  schoolsNeedingFollowUp: GovernanceTeacherAttendanceFollowUpSchool[];
+};
+
 type GovernanceMockTrendLabel =
   | "IMPROVING"
   | "DECLINING"
@@ -1097,6 +1140,31 @@ async function loadSchoolMetricsForTenants(args: {
   return metricsByTenantId;
 }
 
+function emptyTeacherAttendanceOverview(
+  date = todayDateKey(todayRangeUtcForGhana().start),
+): GovernanceTeacherAttendanceOverview {
+  return {
+    date,
+    schools: 0,
+    schoolsWithAnySession: 0,
+    schoolsCertified: 0,
+    schoolsUncertified: 0,
+    schoolsMissingSession: 0,
+    teachers: 0,
+    marked: 0,
+    unmarked: 0,
+    present: 0,
+    absent: 0,
+    late: 0,
+    excused: 0,
+    absentOrLate: 0,
+    completionPct: 0,
+    presentPct: 0,
+    needsAction: 0,
+    schoolsNeedingFollowUp: [],
+  };
+}
+
 function emptyAttendanceOverview(date = todayDateKey(todayRangeUtcForGhana().start)): GovernanceAttendanceOverview {
   return {
     date,
@@ -1212,6 +1280,193 @@ function buildAttendanceOverview(mappedSchools: MappedSchool[], date: string): G
     .slice(0, 20);
 
   return attendance;
+}
+
+async function buildTeacherAttendanceOverview(args: {
+  mappedSchools: MappedSchool[];
+  tenantIds: string[];
+  todayStart: Date;
+  todayEnd: Date;
+  dateKey: string;
+}): Promise<GovernanceTeacherAttendanceOverview> {
+  const { mappedSchools, tenantIds, todayStart, todayEnd, dateKey } = args;
+
+  const overview = emptyTeacherAttendanceOverview(dateKey);
+  overview.schools = mappedSchools.length;
+
+  if (!tenantIds.length || !mappedSchools.length) return overview;
+
+  const activeTeacherMemberships = await prisma.membership.findMany({
+    where: {
+      tenantId: { in: tenantIds },
+      status: "ACTIVE",
+      role: {
+        name: {
+          equals: "TEACHER",
+          mode: "insensitive",
+        },
+      },
+    },
+    select: {
+      tenantId: true,
+      userId: true,
+    },
+  });
+
+  const activeTeacherIdsByTenant = new Map<string, Set<string>>();
+
+  for (const membership of activeTeacherMemberships) {
+    const set = activeTeacherIdsByTenant.get(membership.tenantId) ?? new Set<string>();
+    set.add(membership.userId);
+    activeTeacherIdsByTenant.set(membership.tenantId, set);
+  }
+
+  const sessions = await prisma.teacherAttendanceSession.findMany({
+    where: {
+      tenantId: { in: tenantIds },
+      date: { gte: todayStart, lt: todayEnd },
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      isClosed: true,
+      certifiedAt: true,
+      records: {
+        select: {
+          teacherUserId: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  const sessionByTenantId = new Map<string, (typeof sessions)[number]>();
+
+  for (const session of sessions) {
+    const existing = sessionByTenantId.get(session.tenantId);
+
+    if (!existing) {
+      sessionByTenantId.set(session.tenantId, session);
+      continue;
+    }
+
+    // There should be one session per tenant/date. If bad historical data exists,
+    // prefer the certified session because governance trusts only certified truth.
+    if (!existing.certifiedAt && session.certifiedAt) {
+      sessionByTenantId.set(session.tenantId, session);
+    }
+  }
+
+  for (const school of mappedSchools) {
+    const teacherIds = activeTeacherIdsByTenant.get(school.id) ?? new Set<string>();
+    const teachers = teacherIds.size || school.metrics.teachers || 0;
+    const session = sessionByTenantId.get(school.id) ?? null;
+
+    overview.teachers += teachers;
+
+    const reasons: string[] = [];
+
+    let marked = 0;
+    let present = 0;
+    let absent = 0;
+    let late = 0;
+    let excused = 0;
+
+    if (session) {
+      overview.schoolsWithAnySession += 1;
+
+      if (session.certifiedAt) {
+        overview.schoolsCertified += 1;
+
+        for (const record of session.records) {
+          if (teacherIds.size && !teacherIds.has(record.teacherUserId)) continue;
+
+          marked += 1;
+          if (record.status === AttendanceStatus.PRESENT) present += 1;
+          if (record.status === AttendanceStatus.ABSENT) absent += 1;
+          if (record.status === AttendanceStatus.LATE) late += 1;
+          if (record.status === AttendanceStatus.EXCUSED) excused += 1;
+        }
+
+        overview.marked += marked;
+        overview.present += present;
+        overview.absent += absent;
+        overview.late += late;
+        overview.excused += excused;
+      } else {
+        overview.schoolsUncertified += 1;
+
+        if (session.isClosed) {
+          reasons.push("Teacher attendance register is closed but not certified.");
+        } else {
+          reasons.push("Teacher attendance register is still open.");
+        }
+      }
+    } else {
+      overview.schoolsMissingSession += 1;
+      if (teachers > 0) {
+        reasons.push("No teacher attendance register has been opened today.");
+      }
+    }
+
+    const unmarked = Math.max(0, teachers - marked);
+    const completionPct = pct(marked, teachers);
+    const presentPct = pct(present, marked);
+    const isCertified = Boolean(session?.certifiedAt);
+
+    if (!isCertified && teachers > 0) {
+      if (!reasons.length) reasons.push("Teacher attendance is not certified yet.");
+    }
+
+    if (isCertified && unmarked > 0) {
+      reasons.push(`${unmarked} active teacher(s) are missing from the certified register.`);
+    }
+
+    if (isCertified && (absent > 0 || late > 0)) {
+      reasons.push(`${absent} absent and ${late} late teacher mark(s) need supervision attention.`);
+    }
+
+    if (reasons.length) {
+      overview.schoolsNeedingFollowUp.push({
+        tenantId: school.id,
+        schoolName: school.name,
+        schoolCode: school.schoolCode,
+        schoolSector: school.schoolSector,
+        circuitName: school.circuit?.name ?? null,
+        districtName: school.district?.name ?? null,
+        teachers,
+        hasSession: Boolean(session),
+        isCertified,
+        isClosed: Boolean(session?.isClosed),
+        marked,
+        unmarked,
+        present,
+        absent,
+        late,
+        excused,
+        completionPct,
+        presentPct,
+        reason: reasons.join(" "),
+      });
+    }
+  }
+
+  overview.unmarked = Math.max(0, overview.teachers - overview.marked);
+  overview.absentOrLate = overview.absent + overview.late;
+  overview.completionPct = pct(overview.marked, overview.teachers);
+  overview.presentPct = pct(overview.present, overview.marked);
+  overview.needsAction = overview.schoolsNeedingFollowUp.length;
+
+  overview.schoolsNeedingFollowUp.sort((a, b) => {
+    if (a.isCertified !== b.isCertified) return a.isCertified ? 1 : -1;
+    if (b.unmarked !== a.unmarked) return b.unmarked - a.unmarked;
+    if (b.absent + b.late !== a.absent + a.late) {
+      return b.absent + b.late - (a.absent + a.late);
+    }
+    return a.schoolName.localeCompare(b.schoolName);
+  });
+
+  return overview;
 }
 
 function emptyMockReadinessOverview(
@@ -1781,7 +2036,8 @@ function emptyOverview(message = "No schools are currently assigned to this gove
       circuits: 0,
       districts: 0,
     },
-    attendance: emptyAttendanceOverview(),
+        attendance: emptyAttendanceOverview(),
+    teacherAttendance: emptyTeacherAttendanceOverview(),
     mockReadiness: emptyMockReadinessOverview(),
     signals: {
       attendanceSessionsToday: 0,
@@ -1790,6 +2046,17 @@ function emptyOverview(message = "No schools are currently assigned to this gove
       certifiedAttendanceSessionsToday: 0,
       closedButUncertifiedAttendanceSessionsToday: 0,
       missingAttendanceSessionsToday: 0,
+      teacherAttendanceSchoolsCertified: 0,
+      teacherAttendanceSchoolsMissingSession: 0,
+      teacherAttendanceSchoolsUncertified: 0,
+      teacherAttendanceMarkedToday: 0,
+      teacherAttendancePresentToday: 0,
+      teacherAttendanceAbsentToday: 0,
+      teacherAttendanceLateToday: 0,
+      teacherAttendanceExcusedToday: 0,
+      teacherAttendanceCompletionRateToday: 0,
+      teacherAttendancePresentRateToday: 0,
+      teacherAttendanceNeedsAction: 0,
       parentAlertsSentToday: 0,
       attendanceMarksToday: 0,
       presentMarksToday: 0,
@@ -2330,11 +2597,21 @@ async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
 
   const circuitCount = new Set(mappedSchools.map((s) => s.circuit?.id).filter(Boolean)).size;
   const districtCount = new Set(mappedSchools.map((s) => s.district?.id).filter(Boolean)).size;
+
   const attendance = buildAttendanceOverview(mappedSchools, dateKey);
+
+  const teacherAttendance = await buildTeacherAttendanceOverview({
+    mappedSchools,
+    tenantIds: schoolIds,
+    todayStart: start,
+    todayEnd: end,
+    dateKey,
+  });
+
   const mockReadiness = await buildGovernanceMockReadinessOverview({
-  schools: mappedSchools,
-  tenantIds: schoolIds,
-});
+    schools: mappedSchools,
+    tenantIds: schoolIds,
+  });
 
   const emptyStates: string[] = [];
 
@@ -2390,6 +2667,14 @@ if (mockReadiness.schoolsWithReleasedMock === 0) {
   );
 }
 
+  if (teacherAttendance.schoolsCertified === 0) {
+    emptyStates.push("No certified teacher attendance register is available today in this jurisdiction.");
+  } else if (teacherAttendance.needsAction > 0) {
+    emptyStates.push(
+      `${teacherAttendance.needsAction} school(s) need teacher attendance follow-up today.`
+    );
+  }
+
   return {
     schools: mappedSchools,
     circuitBreakdown,
@@ -2407,9 +2692,21 @@ if (mockReadiness.schoolsWithReleasedMock === 0) {
       circuits: circuitCount || zones.filter((z) => z.zoneType.level === 1).length,
       districts: districtCount || zones.filter((z) => z.zoneType.level === 2).length,
     },
-attendance,
-mockReadiness,
-signals: {
+    attendance,
+    teacherAttendance,
+    mockReadiness,
+    signals: {
+            teacherAttendanceSchoolsCertified: teacherAttendance.schoolsCertified,
+      teacherAttendanceSchoolsMissingSession: teacherAttendance.schoolsMissingSession,
+      teacherAttendanceSchoolsUncertified: teacherAttendance.schoolsUncertified,
+      teacherAttendanceMarkedToday: teacherAttendance.marked,
+      teacherAttendancePresentToday: teacherAttendance.present,
+      teacherAttendanceAbsentToday: teacherAttendance.absent,
+      teacherAttendanceLateToday: teacherAttendance.late,
+      teacherAttendanceExcusedToday: teacherAttendance.excused,
+      teacherAttendanceCompletionRateToday: teacherAttendance.completionPct,
+      teacherAttendancePresentRateToday: teacherAttendance.presentPct,
+      teacherAttendanceNeedsAction: teacherAttendance.needsAction,
       attendanceSessionsToday: metricTotals.attendanceSessionsToday,
       openAttendanceSessionsToday: metricTotals.openAttendanceSessionsToday,
       closedAttendanceSessionsToday: metricTotals.closedAttendanceSessionsToday,

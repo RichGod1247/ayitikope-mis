@@ -138,6 +138,49 @@ type AttendanceOverview = {
   schoolsNeedingFollowUp: AttendanceFollowUpSchool[];
 };
 
+type TeacherAttendanceFollowUpSchool = {
+  tenantId: string;
+  schoolName: string;
+  schoolCode: string | null;
+  schoolSector?: "PUBLIC" | "PRIVATE" | string;
+  circuitName: string | null;
+  districtName: string | null;
+  teachers: number;
+  hasSession: boolean;
+  isCertified: boolean;
+  isClosed: boolean;
+  marked: number;
+  unmarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  completionPct: number;
+  presentPct: number;
+  reason: string;
+};
+
+type TeacherAttendanceOverview = {
+  date: string;
+  schools: number;
+  schoolsWithAnySession: number;
+  schoolsCertified: number;
+  schoolsUncertified: number;
+  schoolsMissingSession: number;
+  teachers: number;
+  marked: number;
+  unmarked: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+  absentOrLate: number;
+  completionPct: number;
+  presentPct: number;
+  needsAction: number;
+  schoolsNeedingFollowUp: TeacherAttendanceFollowUpSchool[];
+};
+
 type SectorSummary = {
   public?: {
     schools: number;
@@ -318,6 +361,7 @@ overview?: {
   totals?: Record<string, number>;
   signals?: Record<string, number>;
   attendance?: AttendanceOverview;
+  teacherAttendance?: TeacherAttendanceOverview;
   emptyStates?: string[];
   generatedAt?: string;
 };
@@ -341,9 +385,11 @@ type PanelKey =
   | "mock-readiness"
   | "mock-priority"
   | "mock-circuit-priority"
-  | "attendance"
+  | "students-attendance"
+  | "teacher-attendance"
+  | "teacher-appraisal"
   | "lesson"
-  | "assessment"
+  | "students-assessment"
   | "sector"
   | "notices"
   | "accountability"
@@ -916,14 +962,25 @@ function StatCard({
   value,
   helper,
   tone = "default",
+  onClick,
+  active = false,
 }: {
   label: string;
   value: string | number;
   helper?: string;
   tone?: "default" | "success" | "warning" | "danger" | "info";
+  onClick?: () => void;
+  active?: boolean;
 }) {
-  return (
-    <div className={cx("rounded-[24px] border p-4", toneClass(tone))}>
+  const className = cx(
+    "rounded-[24px] border p-4",
+    toneClass(tone),
+    onClick ? "w-full text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06]" : "",
+    active ? "ring-2 ring-white/20" : "",
+  );
+
+  const content = (
+    <>
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
         {label}
       </p>
@@ -933,8 +990,23 @@ function StatCard({
           {helper}
         </p>
       ) : null}
-    </div>
+      {onClick ? (
+        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+          Tap to open
+        </p>
+      ) : null}
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }
 
 function CommandTile({
@@ -1759,6 +1831,7 @@ export default function GovernanceCommandDashboardClient({
   const totals = overview?.totals ?? {};
   const signals = overview?.signals ?? {};
   const attendance = overview?.attendance ?? null;
+    const teacherAttendance = overview?.teacherAttendance ?? null;
   const riskSummary = overview?.riskSummary ?? {};
   const sectorSummary = overview?.sectorSummary ?? {};
   const mockReadiness = overview?.mockReadiness ?? null;
@@ -1812,6 +1885,9 @@ export default function GovernanceCommandDashboardClient({
   const schoolCount =
     numberValue(totals.schools) || schools.length || scope?.tenantCount || 0;
 
+const circuitCount =
+  numberValue(totals.circuits) || circuits.length || 0;
+
   const criticalRisk =
     numberValue(riskSummary.critical) +
     numberValue(sectorSummary.public?.criticalRiskSchools) +
@@ -1840,6 +1916,19 @@ export default function GovernanceCommandDashboardClient({
   );
   const attendanceAbsent = numberValue(attendance?.absent ?? signals.absentMarksToday);
   const attendanceFollowUpSchools = attendance?.schoolsNeedingFollowUp ?? [];
+
+  const teacherAttendanceNeedsAction = numberValue(teacherAttendance?.needsAction);
+  const teacherAttendanceCertifiedSchools = numberValue(teacherAttendance?.schoolsCertified);
+  const teacherAttendanceMissingSchools = numberValue(teacherAttendance?.schoolsMissingSession);
+  const teacherAttendanceUncertifiedSchools = numberValue(teacherAttendance?.schoolsUncertified);
+  const teacherAttendancePresent = numberValue(teacherAttendance?.present);
+  const teacherAttendanceAbsent = numberValue(teacherAttendance?.absent);
+  const teacherAttendanceLate = numberValue(teacherAttendance?.late);
+  const teacherAttendanceMarked = numberValue(teacherAttendance?.marked);
+  const teacherAttendanceTeachers = numberValue(teacherAttendance?.teachers);
+  const teacherAttendanceCompletion = numberValue(teacherAttendance?.completionPct);
+  const teacherAttendancePresentRate = numberValue(teacherAttendance?.presentPct);
+  const teacherAttendanceFollowUpSchools = teacherAttendance?.schoolsNeedingFollowUp ?? [];
 
   const lessonCompliance =
     numberValue(signals.lessonDeliveryComplianceRate) ||
@@ -1936,42 +2025,60 @@ const mockMissingReleases = mockPriorityRows.filter(
             </div>
           ) : null}
 
-          <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard
-              label="Schools"
-              value={schoolCount}
-              helper={`${publicSchools} public · ${privateSchools} private`}
-              tone="info"
-            />
-            <StatCard
-              label="Attendance today"
-              value={attendanceRate ? percentValue(attendanceRate) : "0%"}
-              helper={
-                attendanceNeedsAction
-                  ? `${attendanceNeedsAction} school(s) need follow-up · ${percentValue(attendanceCompletion)} completion`
-                  : `${percentValue(attendanceCompletion)} completion`
-              }
-              tone={
-                attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"
-              }
-            />
-            <StatCard
-              label="Risk load"
-              value={criticalRisk + highRisk}
-              helper={`${criticalRisk} critical · ${highRisk} high`}
-              tone={riskTone}
-            />
-            <StatCard
-              label="Active queue"
-              value={queue.length}
-              helper={
-                queue.length
-                  ? "Schools need supervision follow-up"
-                  : "No current queue pressure"
-              }
-              tone={queue.length ? "warning" : "success"}
-            />
-          </div>
+<div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+  <StatCard
+    label="Schools"
+    value={schoolCount}
+    helper={`${publicSchools} public · ${privateSchools} private`}
+    tone="info"
+  />
+
+  {isDistrictView ? (
+    <StatCard
+      label="Circuits"
+      value={circuitCount}
+      helper={`${schoolCount} school(s) under district command`}
+      tone="info"
+    />
+  ) : (
+    <StatCard
+      label="Attendance today"
+      value={attendanceRate ? percentValue(attendanceRate) : "0%"}
+      helper={
+        attendanceNeedsAction
+          ? `${attendanceNeedsAction} school(s) need follow-up · ${percentValue(attendanceCompletion)} completion`
+          : `${percentValue(attendanceCompletion)} completion`
+      }
+      tone={
+        attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"
+      }
+      onClick={() => setActivePanel("students-attendance")}
+      active={activePanel === "students-attendance"}
+    />
+  )}
+
+  <StatCard
+    label="Risk load"
+    value={criticalRisk + highRisk}
+    helper={`${criticalRisk} critical · ${highRisk} high`}
+    tone={riskTone}
+    onClick={() => setActivePanel("risk")}
+    active={activePanel === "risk"}
+  />
+
+  <StatCard
+    label="Active queue"
+    value={queue.length}
+    helper={
+      queue.length
+        ? "Schools need supervision follow-up"
+        : "No current queue pressure"
+    }
+    tone={queue.length ? "warning" : "success"}
+    onClick={() => setActivePanel("risk")}
+    active={activePanel === "risk"}
+  />
+</div>
         </div>
       </section>
 
@@ -2047,22 +2154,43 @@ const mockMissingReleases = mockPriorityRows.filter(
           />
         ) : null}
         <CommandTile
-          icon="✅"
-          title="Attendance"
-          description="Today's capture signal."
-          value={
-            attendanceNeedsAction
-              ? `${attendanceNeedsAction} follow-up`
-              : attendanceRate
-                ? percentValue(attendanceRate)
-                : "0%"
-          }
-          tone={
-            attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"
-          }
-          active={activePanel === "attendance"}
-          onClick={() => setActivePanel("attendance")}
-        />
+  icon="🧒"
+  title="Students Attendance"
+  description="Learner register capture and certification."
+  value={
+    attendanceNeedsAction
+      ? `${attendanceNeedsAction} follow-up`
+      : attendanceRate
+        ? percentValue(attendanceRate)
+        : "0%"
+  }
+  tone={
+    attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"
+  }
+  active={activePanel === "students-attendance"}
+  onClick={() => setActivePanel("students-attendance")}
+/>
+<CommandTile
+  icon="👨‍🏫"
+  title="Teacher Attendance"
+  description="Certified staff presence by school."
+  value={
+    teacherAttendanceNeedsAction
+      ? `${teacherAttendanceNeedsAction} follow-up`
+      : teacherAttendanceCertifiedSchools
+        ? `${teacherAttendanceCertifiedSchools} certified`
+        : "0 certified"
+  }
+  tone={
+    teacherAttendanceNeedsAction
+      ? "warning"
+      : teacherAttendanceCertifiedSchools
+        ? "success"
+        : "info"
+  }
+  active={activePanel === "teacher-attendance"}
+  onClick={() => setActivePanel("teacher-attendance")}
+/>
         <CommandTile
           icon="📘"
           title="Lesson delivery"
@@ -2073,20 +2201,29 @@ const mockMissingReleases = mockPriorityRows.filter(
           onClick={() => setActivePanel("lesson")}
         />
         <CommandTile
-          icon="📊"
-          title="Assessment"
-          description="Scoring and assessment proof."
-          value={
-            assessmentCompletion ? percentValue(assessmentCompletion) : "—"
-          }
-          tone={
-            assessmentCompletion && assessmentCompletion < 60
-              ? "warning"
-              : "info"
-          }
-          active={activePanel === "assessment"}
-          onClick={() => setActivePanel("assessment")}
-        />
+  icon="📊"
+  title="Students Assessment"
+  description="Learner scoring and assessment proof."
+  value={
+    assessmentCompletion ? percentValue(assessmentCompletion) : "—"
+  }
+  tone={
+    assessmentCompletion && assessmentCompletion < 60
+      ? "warning"
+      : "info"
+  }
+  active={activePanel === "students-assessment"}
+  onClick={() => setActivePanel("students-assessment")}
+/>
+<CommandTile
+  icon="📝"
+  title="Teacher Appraisal"
+  description="Teacher work-quality review and scoring."
+  value="Next"
+  tone="default"
+  active={activePanel === "teacher-appraisal"}
+  onClick={() => setActivePanel("teacher-appraisal")}
+/>
         <CommandTile
           icon="🏛️"
           title="Sector boundary"
@@ -2149,14 +2286,14 @@ const mockMissingReleases = mockPriorityRows.filter(
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-200">
-                Priority risk board
+                Risk load and active queue
               </p>
               <h2 className="mt-1 text-lg font-bold text-white">
-                First schools to inspect
+                Schools behind the risk numbers
               </h2>
               <p className="mt-1 text-sm leading-6 text-red-100/80">
-                This board shows the schools most likely to need immediate
-                supervision attention.
+              This board explains the Risk load and Active queue numbers above,
+showing which schools need supervision attention first.
               </p>
             </div>
 
@@ -2229,15 +2366,15 @@ const mockMissingReleases = mockPriorityRows.filter(
         </section>
       ) : null}
 
-      {activePanel === "attendance" ? (
+      {activePanel === "students-attendance" ? (
         <section className="rounded-[28px] border border-emerald-300/20 bg-emerald-400/10 p-4 md:p-5">
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
-                Attendance command signal
+                Students Attendance command signal
               </p>
               <h2 className="mt-1 text-lg font-bold text-white">
-                Today’s attendance truth
+                Today’s learner attendance truth
               </h2>
               <p className="mt-1 text-sm leading-6 text-emerald-100/80">
                 This view reads the same AttendanceSession and AttendanceMark
@@ -2383,6 +2520,195 @@ const mockMissingReleases = mockPriorityRows.filter(
         </section>
       ) : null}
 
+{activePanel === "teacher-attendance" ? (
+  <section className="rounded-[28px] border border-sky-300/20 bg-sky-500/10 p-4 md:p-5">
+    <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
+          Teacher Attendance command signal
+        </p>
+        <h2 className="mt-1 text-lg font-bold text-white">
+          Certified staff attendance truth
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-sky-100/80">
+          This panel counts only certified teacher attendance registers as
+          governance truth. Open, closed-but-uncertified, or missing registers
+          remain follow-up signals.
+        </p>
+      </div>
+
+      <span className="w-fit rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold text-white">
+        {teacherAttendance?.date ?? "Today"}
+      </span>
+    </div>
+
+    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+      <StatCard
+        label="Schools certified"
+        value={teacherAttendanceCertifiedSchools}
+        helper={`${teacherAttendance?.schools ?? schoolCount} school(s) in scope`}
+        tone={teacherAttendanceCertifiedSchools ? "success" : "warning"}
+      />
+      <StatCard
+        label="Missing register"
+        value={teacherAttendanceMissingSchools}
+        tone={teacherAttendanceMissingSchools ? "warning" : "success"}
+      />
+      <StatCard
+        label="Uncertified"
+        value={teacherAttendanceUncertifiedSchools}
+        helper="Open or closed but not certified"
+        tone={teacherAttendanceUncertifiedSchools ? "warning" : "success"}
+      />
+      <StatCard
+        label="Completion"
+        value={percentValue(teacherAttendanceCompletion)}
+        helper={`${teacherAttendanceMarked}/${teacherAttendanceTeachers} teacher marks`}
+        tone={teacherAttendanceCompletion < 100 ? "warning" : "success"}
+      />
+      <StatCard
+        label="Present"
+        value={teacherAttendancePresent}
+        helper={`${percentValue(teacherAttendancePresentRate)} of marked`}
+        tone="success"
+      />
+      <StatCard
+        label="Absent"
+        value={teacherAttendanceAbsent}
+        tone={teacherAttendanceAbsent ? "warning" : "success"}
+      />
+      <StatCard
+        label="Late"
+        value={teacherAttendanceLate}
+        tone={teacherAttendanceLate ? "warning" : "success"}
+      />
+      <StatCard
+        label="Follow-up"
+        value={teacherAttendanceNeedsAction}
+        tone={teacherAttendanceNeedsAction ? "warning" : "success"}
+      />
+    </div>
+
+    <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/45 p-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-bold text-white">
+            Schools needing teacher-attendance follow-up
+          </p>
+          <p className="text-xs leading-5 text-sky-100/75">
+            Missing registers, open registers, uncertified registers, and
+            certified registers with absent/late teacher marks appear here.
+          </p>
+        </div>
+        <span className="w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white">
+          {teacherAttendanceFollowUpSchools.length} shown
+        </span>
+      </div>
+
+      <div className="mt-3 space-y-3">
+        {teacherAttendanceFollowUpSchools.length ? (
+          teacherAttendanceFollowUpSchools.map((school) => (
+            <article
+              key={school.tenantId}
+              className="rounded-2xl border border-white/10 bg-black/20 p-3"
+            >
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={cx(
+                        "rounded-full border px-3 py-1 text-[11px] font-semibold",
+                        sectorBadgeClass(school.schoolSector),
+                      )}
+                    >
+                      {sectorLabel(school.schoolSector)}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-slate-200">
+                      {school.circuitName ?? "No circuit"}
+                    </span>
+                    <span
+                      className={cx(
+                        "rounded-full border px-3 py-1 text-[11px] font-semibold",
+                        school.isCertified
+                          ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"
+                          : "border-amber-300/25 bg-amber-400/10 text-amber-100",
+                      )}
+                    >
+                      {school.isCertified ? "Certified" : school.hasSession ? "Not certified" : "No register"}
+                    </span>
+                  </div>
+
+                  <h3 className="mt-2 text-sm font-bold text-white">
+                    {school.schoolName}
+                  </h3>
+                  <p className="mt-1 text-xs leading-5 text-sky-100/80">
+                    {school.schoolCode || "No school code"} · {school.reason}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 xl:min-w-[560px]">
+                  <StatCard
+                    label="Teachers"
+                    value={school.teachers}
+                    tone="default"
+                  />
+                  <StatCard
+                    label="Marked"
+                    value={`${school.marked}/${school.teachers}`}
+                    helper={`${school.completionPct}% complete`}
+                    tone={school.completionPct < 100 ? "warning" : "success"}
+                  />
+                  <StatCard
+                    label="Present"
+                    value={school.present}
+                    helper={`${school.presentPct}% of marked`}
+                    tone="success"
+                  />
+                  <StatCard
+                    label="Absent / Late"
+                    value={school.absent + school.late}
+                    helper={`${school.absent} absent · ${school.late} late`}
+                    tone={school.absent + school.late ? "warning" : "success"}
+                  />
+                </div>
+              </div>
+            </article>
+          ))
+        ) : (
+          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
+            No teacher-attendance follow-up school detected from certified
+            staff attendance truth.
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+) : null}
+
+{activePanel === "teacher-appraisal" ? (
+  <section className="rounded-[28px] border border-violet-300/20 bg-violet-500/10 p-4 md:p-5">
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200">
+        Teacher Appraisal command signal
+      </p>
+      <h2 className="mt-1 text-lg font-bold text-white">
+        Teacher work-quality review
+      </h2>
+      <p className="mt-1 max-w-4xl text-sm leading-6 text-violet-100/80">
+        This comes after certified teacher attendance visibility. Attendance
+        proves presence; appraisal proves quality of work.
+      </p>
+    </div>
+
+    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <StatCard label="Teachers appraised" value="Next" tone="default" />
+      <StatCard label="Lesson evidence" value="Next" tone="default" />
+      <StatCard label="Conduct" value="Next" tone="default" />
+      <StatCard label="Follow-up" value="Next" tone="default" />
+    </div>
+  </section>
+) : null}
+
       {activePanel === "lesson" ? (
         <section className="rounded-[28px] border border-sky-300/20 bg-sky-500/10 p-4 md:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
@@ -2424,13 +2750,13 @@ const mockMissingReleases = mockPriorityRows.filter(
         </section>
       ) : null}
 
-      {activePanel === "assessment" ? (
+      {activePanel === "students-assessment" ? (
         <section className="rounded-[28px] border border-indigo-300/20 bg-indigo-500/10 p-4 md:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200">
-            Assessment command signal
+            Students Assessment command signal
           </p>
           <h2 className="mt-1 text-lg font-bold text-white">
-            Assessment proof and scoring health
+            Students Assessment proof and scoring health
           </h2>
 
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -2555,78 +2881,6 @@ const mockMissingReleases = mockPriorityRows.filter(
             title={`${title} · Advanced workbench`}
             description={description}
           />
-        </section>
-      ) : null}
-
-      {isDistrictView && circuits.length ? (
-        <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            District circuit snapshot
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-white">
-            Circuits ranked for quick review
-          </h2>
-
-          <div className="mt-4 space-y-3">
-            {circuits.slice(0, 5).map((row) => (
-              <article
-                key={row.circuitId}
-                className="rounded-2xl border border-white/10 bg-slate-950/45 p-4"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="font-bold text-white">{row.circuitName}</p>
-                    <p className="mt-1 text-xs text-slate-400">
-                      {row.schools} school(s) · {row.learners} learner(s) ·{" "}
-                      {row.teachers} teacher(s)
-                    </p>
-                  </div>
-
-                  <span
-                    className={cx(
-                      "w-fit rounded-full border px-3 py-1 text-xs font-semibold",
-                      riskBadgeClass(
-                        numberValue(row.criticalRiskSchools)
-                          ? "CRITICAL"
-                          : numberValue(row.highRiskSchools)
-                            ? "HIGH"
-                            : "LOW",
-                      ),
-                    )}
-                  >
-                    Risk: {numberValue(row.highestRiskScore)}
-                  </span>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-                  <StatCard
-                    label="Public"
-                    value={numberValue(row.publicSchools)}
-                    tone="success"
-                  />
-                  <StatCard
-                    label="Private"
-                    value={numberValue(row.privateSchools)}
-                    tone="info"
-                  />
-                  <StatCard
-                    label="Attendance"
-                    value={percentValue(row.attendanceRateToday)}
-                    tone={
-                      numberValue(row.attendanceRateToday) < 70
-                        ? "warning"
-                        : "success"
-                    }
-                  />
-                  <StatCard
-                    label="Alerts"
-                    value={numberValue(row.healthAlertsToday)}
-                    tone={row.healthAlertsToday ? "warning" : "success"}
-                  />
-                </div>
-              </article>
-            ))}
-          </div>
         </section>
       ) : null}
 
