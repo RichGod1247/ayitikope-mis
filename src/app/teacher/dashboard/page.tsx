@@ -151,6 +151,19 @@ export default async function TeacherDashboardPage() {
       rightNote: "MVP: stub allowed",
     },
 
+    {
+      title: "My Appraisals",
+      subtitle: "Finalized feedback · Growth map",
+      desc: "View finalized appraisal feedback from observed lessons. See section scores, comments, and evidence without editing anything.",
+      pill: "Feedback",
+      icon: "🧭",
+      href: "/teacher/appraisals",
+      enabled: true,
+      grad: "from-[#101527] via-[#171F3B] to-[#0C1320]",
+      border: "border-indigo-300/20",
+      pillCls: "border-indigo-300/25 bg-indigo-400/14 text-indigo-100",
+    },
+
     ...(isTeacherOnly
   ? [
       {
