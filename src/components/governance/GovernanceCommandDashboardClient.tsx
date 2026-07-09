@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import GovernanceDashboardClient from "@/components/governance/GovernanceDashboardClient";
 import GovernanceSentNoticeAccountabilityClient from "@/components/governance/GovernanceSentNoticeAccountabilityClient";
+import GovernanceAppraisalDrilldownPanel from "@/components/governance/GovernanceAppraisalDrilldownPanel";
 
 type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -2218,9 +2219,9 @@ const mockMissingReleases = mockPriorityRows.filter(
 <CommandTile
   icon="📝"
   title="Teacher Appraisal"
-  description="Teacher work-quality review and scoring."
-  value="Next"
-  tone="default"
+  description="Finalized teacher appraisal reports."
+  value="Reports"
+  tone="info"
   active={activePanel === "teacher-appraisal"}
   onClick={() => setActivePanel("teacher-appraisal")}
 />
@@ -2686,27 +2687,10 @@ showing which schools need supervision attention first.
 ) : null}
 
 {activePanel === "teacher-appraisal" ? (
-  <section className="rounded-[28px] border border-violet-300/20 bg-violet-500/10 p-4 md:p-5">
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200">
-        Teacher Appraisal command signal
-      </p>
-      <h2 className="mt-1 text-lg font-bold text-white">
-        Teacher work-quality review
-      </h2>
-      <p className="mt-1 max-w-4xl text-sm leading-6 text-violet-100/80">
-        This comes after certified teacher attendance visibility. Attendance
-        proves presence; appraisal proves quality of work.
-      </p>
-    </div>
-
-    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-      <StatCard label="Teachers appraised" value="Next" tone="default" />
-      <StatCard label="Lesson evidence" value="Next" tone="default" />
-      <StatCard label="Conduct" value="Next" tone="default" />
-      <StatCard label="Follow-up" value="Next" tone="default" />
-    </div>
-  </section>
+  <GovernanceAppraisalDrilldownPanel
+    isDistrictView={isDistrictView}
+    isCircuitView={isCircuitView}
+  />
 ) : null}
 
       {activePanel === "lesson" ? (

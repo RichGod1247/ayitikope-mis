@@ -189,10 +189,12 @@ type AppraisalReport = {
 
   scores?: ScoreRow[];
 
-  officialHeader?: {
-    teacherName?: string | null;
-    schoolName?: string | null;
-    circuitName?: string | null;
+officialHeader?: {
+  directorateName?: string | null;
+  districtName?: string | null;
+  teacherName?: string | null;
+  schoolName?: string | null;
+  circuitName?: string | null;
     dateObserved?: string | null;
     classTaught?: string | null;
     yearsInService?: number | null;
@@ -418,6 +420,27 @@ function formatDateTime(value?: string | null) {
   }).format(d);
 }
 
+function normalizeDirectorateName(raw: unknown) {
+  const value = String(raw ?? "").trim();
+
+  const base = value || "Akatsi South Municipal Education Directorate";
+
+  if (/education\s+directorate/i.test(base)) {
+    return base.toUpperCase();
+  }
+
+  return `${base} Education Directorate`.toUpperCase();
+}
+
+function directorateTitleFromReport(report: AppraisalReport) {
+  return normalizeDirectorateName(
+    report.officialHeader?.directorateName ??
+      report.officialHeader?.districtName ??
+      report.school?.districtName ??
+      null,
+  );
+}
+
 function toneClass(tone: Tone) {
   if (tone === "success") return "border-emerald-300/20 bg-emerald-400/10 text-emerald-100";
   if (tone === "warning") return "border-amber-300/20 bg-amber-400/10 text-amber-100";
@@ -628,13 +651,14 @@ function OfficialAppraisalForm({
   rubric: RubricSection[];
 }) {
   const sections = rubric.length ? rubric : SECTION_ORDER;
+  const directorateTitle = directorateTitleFromReport(report);
   const evidence = evidenceForReport(report);
 
   return (
     <article className="overflow-hidden rounded-[28px] border border-white/10 bg-white text-slate-950 shadow-2xl">
       <div className="border-b border-slate-300 p-4 text-center">
         <p className="text-xs font-bold uppercase tracking-[0.16em]">
-          Akatsi South Municipal Education Directorate
+          {directorateTitle}
         </p>
         <h3 className="mt-1 text-sm font-black uppercase">
           Monitoring and Inspection Sheet (Teachers)
