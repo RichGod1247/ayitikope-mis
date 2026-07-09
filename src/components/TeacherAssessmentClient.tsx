@@ -699,6 +699,8 @@ const [broadsheetNotice, setBroadsheetNotice] = useState<string | null>(null);
 
 const shouldLoadInsights = tab === "insights";
 const shouldLoadPipeline = tab === "pipeline";
+const shouldLoadSubjects = tab === "items" || tab === "broadsheet" || hasLessonDeliveryContext;
+const shouldLoadLessonDeliveries = tab === "items" || hasLessonDeliveryContext;
 
   const selectedItem = useMemo(() => items.find((i) => i.id === selectedItemId) ?? null, [items, selectedItemId]);
 
@@ -1003,6 +1005,11 @@ setClassroomId(def);
         return;
       }
 
+      if (!shouldLoadSubjects) {
+        setSubjectOptionsLoading(false);
+        return;
+      }
+
       try {
         setSubjectOptionsLoading(true);
         setSubjectOptionsError(null);
@@ -1039,13 +1046,18 @@ setClassroomId(def);
     };
 
     loadSubjects();
-  }, [classroomId, urlSubject]);
+  }, [classroomId, urlSubject, shouldLoadSubjects]);
 
   useEffect(() => {
     const loadLessonDeliveries = async () => {
       if (!classroomId) {
         setLessonDeliveries([]);
         setLessonDeliveriesError(null);
+        setLessonDeliveriesLoading(false);
+        return;
+      }
+
+      if (!shouldLoadLessonDeliveries) {
         setLessonDeliveriesLoading(false);
         return;
       }
@@ -1093,7 +1105,7 @@ setClassroomId(def);
     };
 
     loadLessonDeliveries();
-  }, [classroomId, term, academicYear, urlCurriculumUnitId, urlLessonDeliveryId]);
+  }, [classroomId, term, academicYear, urlCurriculumUnitId, urlLessonDeliveryId, shouldLoadLessonDeliveries]);
 
 useEffect(() => {
   const loadSummary = async () => {
@@ -1767,9 +1779,9 @@ setSavingScoresState("saved");
 />
       ) : null}
 
-      <div className={tab === "broadsheet" ? "hidden" : "grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"}>
-        <div className={["space-y-4", "md:block", tab === "pipeline" ? "hidden md:block" : ""].join(" ")}>
-          <div className={tab !== "insights" ? "hidden md:block" : ""}>
+      <div className={tab === "broadsheet" ? "hidden" : "grid gap-4"}>
+        <div className={tab === "items" || tab === "insights" ? "space-y-4" : "hidden"}>
+          <div className={tab !== "insights" ? "hidden" : ""}>
             <SectionCard
               title="Insights"
               subtitle="Quick signals to help you teach better, not to punish you."
@@ -1796,7 +1808,7 @@ setSavingScoresState("saved");
             </SectionCard>
           </div>
 
-          <div className={tab !== "items" ? "hidden md:block" : ""}>
+          <div className={tab !== "items" ? "hidden" : ""}>
             <SectionCard
               title="Assessment items"
               subtitle="Create class test, homework, quiz, exam, etc."
@@ -2113,8 +2125,8 @@ setSavingScoresState("saved");
           </div>
         </div>
 
-        <div className={["space-y-4", tab === "items" ? "hidden md:block" : ""].join(" ")}>
-          <div className={tab !== "pipeline" ? "hidden md:block" : ""}>
+        <div className={tab === "scores" || tab === "pipeline" ? "space-y-4" : "hidden"}>
+          <div className={tab !== "pipeline" ? "hidden" : ""}>
             <SectionCard
               title="Teaching pipeline health"
               subtitle="Approved note → delivered lesson → linked assessment → scored assessment"
@@ -2264,7 +2276,7 @@ setSavingScoresState("saved");
             </SectionCard>
           </div>
 
-          <div className={tab !== "scores" ? "hidden md:block" : ""}>
+          <div className={tab !== "scores" ? "hidden" : ""}>
             <SectionCard
               title="Learner scores"
               subtitle={selectedItem ? "Enter score for each learner, then save." : "Select an item first."}

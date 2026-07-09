@@ -456,6 +456,8 @@ const {
   const [loading, setLoading] = useState(false);
   const [learnerQuery, setLearnerQuery] = useState("");
 const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
+const [showComponentEvidenceMap, setShowComponentEvidenceMap] = useState(false);
+const [showNextActionMap, setShowNextActionMap] = useState(false);
 
   useEffect(() => {
     setSubject((prev) => {
@@ -535,6 +537,18 @@ useEffect(() => {
   void loadBroadsheet();
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [classroomId, term, academicYear, subject, refreshKey]);
+
+useEffect(() => {
+  if (!showComponentEvidenceMap) return;
+  const timer = window.setTimeout(() => setShowComponentEvidenceMap(false), 40000);
+  return () => window.clearTimeout(timer);
+}, [showComponentEvidenceMap]);
+
+useEffect(() => {
+  if (!showNextActionMap) return;
+  const timer = window.setTimeout(() => setShowNextActionMap(false), 40000);
+  return () => window.clearTimeout(timer);
+}, [showNextActionMap]);
 
   const sheet =
     data?.broadsheets?.find((s) => sameSubject(s.subject, subject)) ??
@@ -746,23 +760,42 @@ useEffect(() => {
 
             {sheet ? (
               <>
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.65fr)]">
-                  <div className={panel + " p-3"}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-[12px] font-semibold text-[#F7F4ED]">
-                          Component evidence map
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-[#AEB6C4]">
-                          Shows which assessment item feeds each required component.
-                        </div>
-                      </div>
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
-                        {sheet.components.length} components
-                      </span>
-                    </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowComponentEvidenceMap((v) => !v)}
+                    className="inline-flex items-center rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/[0.09]"
+                  >
+                    {showComponentEvidenceMap ? "Hide component evidence" : "Show component evidence"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNextActionMap((v) => !v)}
+                    className="inline-flex items-center rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/[0.09]"
+                  >
+                    {showNextActionMap ? "Hide next actions" : "Show next actions"}
+                  </button>
+                </div>
 
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {(showComponentEvidenceMap || showNextActionMap) ? (
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.65fr)]">
+                    {showComponentEvidenceMap ? (
+                      <div className={panel + " p-3"}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-[12px] font-semibold text-[#F7F4ED]">
+                              Component evidence map
+                            </div>
+                            <div className="mt-0.5 text-[11px] text-[#AEB6C4]">
+                              Shows which assessment item feeds each required component. This hides automatically.
+                            </div>
+                          </div>
+                          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] text-[#C9CDD6]">
+                            {sheet.components.length} components
+                          </span>
+                        </div>
+
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                       {componentSummaries.map(({ component, stats }) => {
                         const chip = itemStatusChip(component.itemStatus);
 
@@ -852,13 +885,15 @@ useEffect(() => {
                           </div>
                         );
                       })}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
+                    ) : null}
 
-                  <div className={panel + " p-3"}>
-                    <div className="text-[12px] font-semibold text-[#F7F4ED]">
-                      Next action map
-                    </div>
+                    {showNextActionMap ? (
+                      <div className={panel + " p-3"}>
+                        <div className="text-[12px] font-semibold text-[#F7F4ED]">
+                          Next action map
+                        </div>
                     <div className="mt-0.5 text-[11px] text-[#AEB6C4]">
                       What the teacher must fix before the broadsheet is trusted.
                     </div>
@@ -874,12 +909,14 @@ useEffect(() => {
                       ))}
                     </div>
 
-                    <div className="mt-3 rounded-xl border border-indigo-300/20 bg-indigo-400/12 px-3 py-2 text-[11px] text-indigo-100">
-                      DRAFT items count for teacher working readiness. Final parent/report
-                      release can later demand PUBLISHED or LOCKED evidence.
-                    </div>
+                        <div className="mt-3 rounded-xl border border-indigo-300/20 bg-indigo-400/12 px-3 py-2 text-[11px] text-indigo-100">
+                          DRAFT items count for teacher working readiness. Final parent/report
+                          release can later demand PUBLISHED or LOCKED evidence.
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
-                </div>
+                ) : null}
 
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div className="text-[11px] text-[#C9CDD6]">

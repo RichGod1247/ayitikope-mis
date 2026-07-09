@@ -652,6 +652,12 @@ const [teacherMockTrendError, setTeacherMockTrendError] = useState<string | null
   null,
 );
 
+const [showMockSessionChooser, setShowMockSessionChooser] = useState(false);
+const [showSubjectColumnChooser, setShowSubjectColumnChooser] = useState(false);
+const [showMockTrendPanel, setShowMockTrendPanel] = useState(false);
+const [showSubjectIntelligencePanel, setShowSubjectIntelligencePanel] = useState(false);
+const [showMockSnapshotPanel, setShowMockSnapshotPanel] = useState(false);
+
   const allJhs3Classrooms = useMemo(() => classrooms.filter(isJhs3Classroom), [classrooms]);
 
 const jhs3Classrooms = useMemo(() => {
@@ -1367,10 +1373,8 @@ useEffect(() => {
 
   void loadScores(itemId);
 
-  const targetItem = items.find((item) => item.id === itemId) ?? null;
-  if (sessionId && targetItem?.subject) {
-    void loadTeacherMockTrend(sessionId, targetItem.subject);
-  }
+  // Trend is intentionally loaded only when the teacher opens that helper panel.
+  // This keeps the score-entry screen fast on weak networks.
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [itemId]);
@@ -1412,8 +1416,8 @@ useEffect(() => {
   void loadSessions(classroomId, academicYear);
   void loadItems(sessionId);
   void loadScores(itemId);
-  void loadBroadsheet(sessionId);
-  void loadTeacherMockTrend(sessionId, selectedItem?.subject || subject);
+  if (showSubjectIntelligencePanel || showMockSnapshotPanel) void loadBroadsheet(sessionId);
+  if (showMockTrendPanel) void loadTeacherMockTrend(sessionId, selectedItem?.subject || subject);
 }}
                 className={goldButton}
               >
@@ -1508,16 +1512,25 @@ useEffect(() => {
           <div className="space-y-5">
             <SectionCard
               title="1. Mock session"
-              subtitle="Create or select the mock exam container."
+              subtitle="Choose the mock exam. Keep this closed after selection."
               right={
-                <button
-                  type="button"
-                  onClick={saveSession}
-                  disabled={sessionSaving || !classroomId}
-                  className={goldButton}
-                >
-                  {sessionSaving ? "Saving..." : "Create / load"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowMockSessionChooser((v) => !v)}
+                    className={darkButton}
+                  >
+                    {showMockSessionChooser ? "Hide" : "Choose"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveSession}
+                    disabled={sessionSaving || !classroomId}
+                    className={goldButton}
+                  >
+                    {sessionSaving ? "Saving..." : "Create / load"}
+                  </button>
+                </div>
               }
             >
               <div className="space-y-3">
@@ -1527,7 +1540,30 @@ useEffect(() => {
                   </div>
                 ) : null}
 
-                <div className={panelCard + " max-h-[280px] overflow-auto p-2"}>
+                {selectedSession ? (
+                  <div className={panelCard + " px-3 py-3 text-[12px] text-[#C9CDD6]"}>
+                    <div className="font-semibold text-[#F7F4ED]">{selectedSession.title}</div>
+                    <div className="mt-1">{selectedSession.mockLabel} • {selectedSession.status}</div>
+                  </div>
+                ) : null}
+
+                <div className={(showMockSessionChooser ? "block" : "hidden") + " " + panelCard + " max-h-[280px] overflow-auto p-2"}>
+                  <div className="mb-2 md:hidden">
+                    <select
+                      value={sessionId}
+                      onChange={(e) => setSessionId(e.target.value)}
+                      className={darkInput}
+                    >
+                      <option value="">Select Mock session</option>
+                      {sessions.map((session) => (
+                        <option key={session.id} value={session.id}>
+                          {session.title} • {session.status}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="hidden md:block">
                   {sessionsLoading ? (
                     <div className="px-3 py-4 text-[12px] text-[#AEB6C4]">Loading sessions...</div>
                   ) : sessions.length === 0 ? (
@@ -1571,22 +1607,32 @@ useEffect(() => {
                       })}
                     </div>
                   )}
+                  </div>
                 </div>
               </div>
             </SectionCard>
 
             <SectionCard
               title="2. Subject columns"
-              subtitle="Open one Mock item per assigned subject."
+              subtitle="Choose one subject, then enter marks."
               right={
-                <button
-                  type="button"
-                  onClick={() => createSubjectItem(subject)}
-                  disabled={itemSaving || !sessionId || !subject || !selectedSessionIsOpen}
-                  className={emeraldButton}
-                >
-                  {itemSaving ? "Opening..." : "+ Subject"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSubjectColumnChooser((v) => !v)}
+                    className={darkButton}
+                  >
+                    {showSubjectColumnChooser ? "Hide" : "Choose"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => createSubjectItem(subject)}
+                    disabled={itemSaving || !sessionId || !subject || !selectedSessionIsOpen}
+                    className={emeraldButton}
+                  >
+                    {itemSaving ? "Opening..." : "+ Subject"}
+                  </button>
+                </div>
               }
             >
               <div className="space-y-3">
@@ -1596,6 +1642,14 @@ useEffect(() => {
                   </div>
                 ) : null}
 
+                {selectedItem ? (
+                  <div className={panelCard + " px-3 py-3 text-[12px] text-[#C9CDD6]"}>
+                    <div className="font-semibold text-[#F7F4ED]">{selectedItem.subject}</div>
+                    <div className="mt-1">{selectedItem.title} • Max {selectedItem.maxScore}</div>
+                  </div>
+                ) : null}
+
+                <div className={showSubjectColumnChooser ? "block space-y-3" : "hidden"}>
                 <select value={subject} onChange={(e) => setSubject(e.target.value)} className={darkInput}>
                   <option value="">Select subject</option>
                   {visibleSubjects.map((s) => (
@@ -1605,7 +1659,7 @@ useEffect(() => {
                   ))}
                 </select>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="hidden flex-wrap gap-2 md:flex">
                   {subjectOptions.map((s) => (
                     <button
                       key={s}
@@ -1622,7 +1676,26 @@ useEffect(() => {
                   ))}
                 </div>
 
-                <div className={panelCard + " max-h-[300px] overflow-auto p-2"}>
+                <div className="md:hidden">
+                  <select
+                    value={itemId}
+                    onChange={(e) => {
+                      const nextItem = items.find((item) => item.id === e.target.value);
+                      if (nextItem) setSubject(nextItem.subject);
+                      setItemId(e.target.value);
+                    }}
+                    className={darkInput}
+                  >
+                    <option value="">Select subject column</option>
+                    {items.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.subject} • {item.scoresCount ?? 0} scored
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={panelCard + " hidden max-h-[300px] overflow-auto p-2 md:block"}>
                   {itemsLoading ? (
                     <div className="px-3 py-4 text-[12px] text-[#AEB6C4]">Loading subjects...</div>
                   ) : items.length === 0 ? (
@@ -1674,6 +1747,7 @@ useEffect(() => {
                       })}
                     </div>
                   )}
+                </div>
                 </div>
               </div>
             </SectionCard>
@@ -1876,6 +1950,40 @@ useEffect(() => {
   </SectionCard>
 </div>
 
+            <div className="grid gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMockTrendPanel((v) => !v);
+                  if (!showMockTrendPanel) void loadTeacherMockTrend(sessionId, selectedItem?.subject || subject);
+                }}
+                className={darkButton}
+              >
+                {showMockTrendPanel ? "Hide trend" : "Show trend"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSubjectIntelligencePanel((v) => !v);
+                  if (!showSubjectIntelligencePanel) void loadBroadsheet(sessionId);
+                }}
+                className={darkButton}
+              >
+                {showSubjectIntelligencePanel ? "Hide subject help" : "Show subject help"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMockSnapshotPanel((v) => !v);
+                  if (!showMockSnapshotPanel) void loadBroadsheet(sessionId);
+                }}
+                className={darkButton}
+              >
+                {showMockSnapshotPanel ? "Hide snapshot" : "Show snapshot"}
+              </button>
+            </div>
+
+            {showMockTrendPanel ? (
             <SectionCard
               title="4. Mock trend"
               subtitle={
@@ -2080,7 +2188,9 @@ useEffect(() => {
                 ) : null}
               </div>
             </SectionCard>
+            ) : null}
 
+            {showSubjectIntelligencePanel ? (
             <SectionCard
               title="5. Assigned Subject Intelligence"
               subtitle={
@@ -2236,7 +2346,9 @@ useEffect(() => {
                 )}
               </div>
             </SectionCard>
+            ) : null}
 
+            {showMockSnapshotPanel ? (
             <SectionCard
              title="6. Teacher-visible Mock snapshot"
              subtitle="This teacher view only uses subjects visible to your account. Full BECE readiness is completed from the headteacher all-subject cockpit."
@@ -2369,6 +2481,7 @@ useEffect(() => {
                 )}
               </div>
             </SectionCard>
+            ) : null}
           </div>
         </div>
 
