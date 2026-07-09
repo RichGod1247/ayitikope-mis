@@ -10,6 +10,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type AppraisalStatus = "DRAFT" | "FINALIZED";
+
+type EvidenceGuardrailWarning = {
+  code: string;
+  title: string;
+  detail: string;
+  severity: "WARNING";
+};
 type ScoreInput = { itemKey?: string | null; score?: number | null; notApplicable?: boolean | null };
 
 type SaveBody = {
@@ -398,6 +405,100 @@ function calculatePercentages(rows: Array<{ itemKey: string; score: number | nul
   };
 }
 
+function scoreAtLeast(
+  rows: Array<{ itemKey: string; score: number | null; notApplicable: boolean }>,
+  itemKey: string,
+  minimum: number,
+) {
+  const row = rows.find((r) => r.itemKey === itemKey);
+  return !row?.notApplicable && typeof row?.score === "number" && row.score >= minimum;
+}
+
+function sectionHasScoreAtLeast(
+  rows: Array<{ sectionKey: string; score: number | null; notApplicable: boolean }>,
+  sectionKey: string,
+  minimum: number,
+) {
+  return rows.some(
+    (row) =>
+      row.sectionKey === sectionKey &&
+      !row.notApplicable &&
+      typeof row.score === "number" &&
+      row.score >= minimum,
+  );
+}
+
+function deliveryAssessmentScoreCount(delivery: any) {
+  const items = Array.isArray(delivery?.assessmentItems) ? delivery.assessmentItems : [];
+  return items.reduce((sum: number, item: any) => sum + Number(item?._count?.scores ?? 0), 0);
+}
+
+function buildEvidenceGuardrailWarnings(args: {
+  scoreRows: Array<{ sectionKey: string; itemKey: string; score: number | null; notApplicable: boolean }>;
+  evidence: { scheme: unknown; note: unknown; delivery: unknown };
+}): EvidenceGuardrailWarning[] {
+  const warnings: EvidenceGuardrailWarning[] = [];
+
+  if (scoreAtLeast(args.scoreRows, "1.1", 4) && !args.evidence.scheme) {
+    warnings.push({
+      code: "HIGH_SCHEME_SCORE_WITHOUT_APPROVED_SCHEME",
+      title: "High scheme score without approved scheme",
+      detail:
+        "Item 1.1 is scored Good/Very Good, but no approved scheme of work is linked to this appraisal.",
+      severity: "WARNING",
+    });
+  }
+
+  if (scoreAtLeast(args.scoreRows, "1.2", 4) && !args.evidence.note) {
+    warnings.push({
+      code: "HIGH_NOTE_SCORE_WITHOUT_APPROVED_NOTE",
+      title: "High learner-note score without approved lesson note",
+      detail:
+        "Item 1.2 is scored Good/Very Good, but no approved lesson note is linked to this appraisal.",
+      severity: "WARNING",
+    });
+  }
+
+  if (sectionHasScoreAtLeast(args.scoreRows, "LESSON_DELIVERY", 4) && !args.evidence.delivery) {
+    warnings.push({
+      code: "HIGH_DELIVERY_SCORE_WITHOUT_DELIVERY_EVIDENCE",
+      title: "High lesson-delivery score without delivery evidence",
+      detail:
+        "One or more lesson-delivery rows are scored Good/Very Good, but no lesson delivery evidence is linked.",
+      severity: "WARNING",
+    });
+  }
+
+  if (
+    sectionHasScoreAtLeast(args.scoreRows, "EVALUATION_STRATEGIES", 4) &&
+    (!args.evidence.delivery || deliveryAssessmentScoreCount(args.evidence.delivery) <= 0)
+  ) {
+    warnings.push({
+      code: "HIGH_EVALUATION_SCORE_WITHOUT_ASSESSMENT_EVIDENCE",
+      title: "High evaluation score without assessment score evidence",
+      detail:
+        "One or more evaluation rows are scored Good/Very Good, but the linked lesson delivery has no assessment score evidence.",
+      severity: "WARNING",
+    });
+  }
+
+  return warnings;
+}
+
+function extractEvidenceGuardrailWarnings(metadata: unknown): EvidenceGuardrailWarning[] {
+  const raw = (metadata as { evidenceWarnings?: unknown } | null | undefined)?.evidenceWarnings;
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((item: any) => ({
+      code: clean(item?.code),
+      title: clean(item?.title),
+      detail: clean(item?.detail),
+      severity: "WARNING" as const,
+    }))
+    .filter((item) => item.code && item.title && item.detail);
+}
+
 function buildScoreRows(inputScores: ScoreInput[] | null | undefined, requireComplete: boolean) {
   const inputMap = new Map<string, ScoreInput>();
 
@@ -630,6 +731,7 @@ async function serializeAppraisal(id: string, tenantId: string) {
       overallPercentage: true,
       generalComment: true,
       finalizedAt: true,
+      metadata: true,
       createdAt: true,
       updatedAt: true,
       teacher: { select: { name: true, firstName: true, lastName: true, email: true } },
@@ -648,6 +750,7 @@ async function serializeAppraisal(id: string, tenantId: string) {
     classroomName: classLabel(appraisal.classroom),
     dateObserved: appraisal.dateObserved.toISOString().slice(0, 10),
     finalizedAt: toIsoOrNull(appraisal.finalizedAt),
+    evidenceWarnings: extractEvidenceGuardrailWarnings(appraisal.metadata),
     createdAt: appraisal.createdAt.toISOString(),
     updatedAt: appraisal.updatedAt.toISOString(),
   };
@@ -938,6 +1041,9 @@ export async function POST(req: NextRequest) {
 
     const scoreRows = buildScoreRows(raw.scores ?? [], finalizing);
     const percentages = calculatePercentages(scoreRows);
+    const evidenceWarnings = finalizing
+      ? buildEvidenceGuardrailWarnings({ scoreRows, evidence })
+      : [];
 
     if (finalizing && percentages.overallPercentage == null) {
       return jsonNoStore({ ok: false, error: "At least one scored appraisal section is required before finalizing.", reqId }, 400);
@@ -985,7 +1091,7 @@ export async function POST(req: NextRequest) {
         evaluationStrategiesPercent: percentages.evaluationStrategiesPercent,
         overallPercentage: percentages.overallPercentage,
         generalComment: clean(raw.generalComment) || null,
-        metadata: { source: "HEADTEACHER_APPRAISAL_V1", reqId },
+        metadata: { source: "HEADTEACHER_APPRAISAL_V1", reqId, evidenceWarnings },
       };
 
       const appraisal = existing
@@ -1014,6 +1120,7 @@ export async function POST(req: NextRequest) {
             schemeOfWorkId,
             lessonNoteId,
             lessonDeliveryId,
+            evidenceWarnings,
           },
         },
       });
@@ -1022,7 +1129,7 @@ export async function POST(req: NextRequest) {
     });
 
     const item = await serializeAppraisal(saved.id, ctx.tenantId);
-    return jsonNoStore({ ok: true, reqId, item, sections: APPRAISAL_SECTIONS }, finalizing ? 201 : 200);
+    return jsonNoStore({ ok: true, reqId, item, sections: APPRAISAL_SECTIONS, evidenceWarnings }, finalizing ? 201 : 200);
   } catch (err: any) {
     if (String(err?.message ?? "") === "INVALID_SCORE") {
       return jsonNoStore({ ok: false, error: "Scores must be whole numbers from 1 to 5, or N/A.", reqId }, 400);

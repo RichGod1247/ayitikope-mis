@@ -7,6 +7,13 @@ import Link from "next/link";
 type ScoreChoice = 1 | 2 | 3 | 4 | 5 | "na" | null;
 type AppraisalStatus = "DRAFT" | "FINALIZED";
 
+type EvidenceGuardrailWarning = {
+  code: string;
+  title: string;
+  detail: string;
+  severity: "WARNING";
+};
+
 type RubricItem = { key: string; order: number; label: string };
 type RubricSection = {
   key: string;
@@ -120,9 +127,10 @@ type AppraisalItem = {
   finalizedAt: string | null;
   updatedAt: string;
   scores?: AppraisalScore[];
+  evidenceWarnings?: EvidenceGuardrailWarning[];
 };
 
-type LoadResp<T> = ({ ok: true } & T) | { ok: false; error: string };
+type LoadResp<T> = ({ ok: true } & T & { evidenceWarnings?: EvidenceGuardrailWarning[] }) | { ok: false; error: string };
 
 type FormState = {
   id: string | null;
@@ -239,6 +247,66 @@ function scoreToChoice(score?: AppraisalScore | null): ScoreChoice {
   return null;
 }
 
+function scoreChoiceAtLeast(scores: Record<string, ScoreChoice>, itemKey: string, minimum: number) {
+  const choice = scores[itemKey];
+  return typeof choice === "number" && choice >= minimum;
+}
+
+function scorePrefixAtLeast(scores: Record<string, ScoreChoice>, prefix: string, minimum: number) {
+  return Object.entries(scores).some(
+    ([itemKey, choice]) => itemKey.startsWith(prefix) && typeof choice === "number" && choice >= minimum,
+  );
+}
+
+function buildClientEvidenceGuardrailWarnings(args: {
+  form: Pick<FormState, "schemeOfWorkId" | "lessonNoteId" | "lessonDeliveryId">;
+  evidence: EvidenceResp | null;
+  scores: Record<string, ScoreChoice>;
+}): EvidenceGuardrailWarning[] {
+  const warnings: EvidenceGuardrailWarning[] = [];
+  const delivery = args.evidence?.ok
+    ? args.evidence.lessonDeliveries.find((item) => item.id === args.form.lessonDeliveryId)
+    : null;
+
+  if (scoreChoiceAtLeast(args.scores, "1.1", 4) && !args.form.schemeOfWorkId) {
+    warnings.push({
+      code: "HIGH_SCHEME_SCORE_WITHOUT_APPROVED_SCHEME",
+      title: "High scheme score without approved scheme",
+      detail: "Item 1.1 is Good/Very Good, but no approved scheme is linked.",
+      severity: "WARNING",
+    });
+  }
+
+  if (scoreChoiceAtLeast(args.scores, "1.2", 4) && !args.form.lessonNoteId) {
+    warnings.push({
+      code: "HIGH_NOTE_SCORE_WITHOUT_APPROVED_NOTE",
+      title: "High learner-note score without approved lesson note",
+      detail: "Item 1.2 is Good/Very Good, but no approved lesson note is linked.",
+      severity: "WARNING",
+    });
+  }
+
+  if (scorePrefixAtLeast(args.scores, "2.", 4) && !args.form.lessonDeliveryId) {
+    warnings.push({
+      code: "HIGH_DELIVERY_SCORE_WITHOUT_DELIVERY_EVIDENCE",
+      title: "High lesson-delivery score without delivery evidence",
+      detail: "Lesson delivery is scored Good/Very Good, but no delivery evidence is linked.",
+      severity: "WARNING",
+    });
+  }
+
+  if (scorePrefixAtLeast(args.scores, "6.", 4) && (!args.form.lessonDeliveryId || Number(delivery?.assessmentScoreCount ?? 0) <= 0)) {
+    warnings.push({
+      code: "HIGH_EVALUATION_SCORE_WITHOUT_ASSESSMENT_EVIDENCE",
+      title: "High evaluation score without assessment score evidence",
+      detail: "Evaluation is scored Good/Very Good, but no assessment score evidence is linked.",
+      severity: "WARNING",
+    });
+  }
+
+  return warnings;
+}
+
 function choiceTone(choice: ScoreChoice) {
   if (choice === "na") return "border-slate-400/30 bg-slate-400/10 text-slate-100";
   if (choice == null) return "border-white/10 bg-white/[0.03] text-slate-300";
@@ -259,6 +327,7 @@ export default function TeacherAppraisalClient() {
   const [saving, setSaving] = useState<"save" | "finalize" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [guardrailWarnings, setGuardrailWarnings] = useState<EvidenceGuardrailWarning[]>([]);
 
   const allItems = useMemo(() => sections.flatMap((s) => s.items.map((item) => ({ ...item, section: s }))), [sections]);
   const selectedTeacher = useMemo(
@@ -335,6 +404,11 @@ export default function TeacherAppraisalClient() {
 
   const canFinalize = Boolean(form.teacherUserId && form.dateObserved && allItems.length && completion === 100);
 
+  const liveGuardrailWarnings = useMemo(
+    () => buildClientEvidenceGuardrailWarnings({ form, evidence, scores }),
+    [form, evidence, scores],
+  );
+
   const loadList = useCallback(async () => {
     const json = await fetchJson<LoadResp<{ items: AppraisalItem[] }>>("/api/headteacher/teacher-appraisal");
     if (!json.ok) throw new Error(json.error);
@@ -405,6 +479,7 @@ export default function TeacherAppraisalClient() {
     setEvidence(null);
     setSuccess(null);
     setError(null);
+    setGuardrailWarnings([]);
     if (teacherUserId) void loadEvidence(teacherUserId);
   }
 
@@ -440,6 +515,7 @@ export default function TeacherAppraisalClient() {
       const nextScores: Record<string, ScoreChoice> = {};
       for (const s of item.scores ?? []) nextScores[s.itemKey] = scoreToChoice(s);
       setScores(nextScores);
+      setGuardrailWarnings(item.evidenceWarnings ?? []);
       await loadEvidence(item.teacherUserId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load appraisal detail.");
@@ -463,6 +539,7 @@ export default function TeacherAppraisalClient() {
     setScores({});
     setSuccess(null);
     setError(null);
+    setGuardrailWarnings([]);
     void loadEvidence(teacherUserId);
   }
 
@@ -548,9 +625,25 @@ export default function TeacherAppraisalClient() {
   }
 
   async function submit(action: "save" | "finalize") {
-    setSaving(action);
     setError(null);
     setSuccess(null);
+
+    const nextWarnings = action === "finalize" ? liveGuardrailWarnings : [];
+    setGuardrailWarnings(nextWarnings);
+
+    if (action === "finalize" && nextWarnings.length) {
+      const message = [
+        "Evidence warning before locking this appraisal:",
+        "",
+        ...nextWarnings.map((warning, index) => `${index + 1}. ${warning.title}`),
+        "",
+        "This will not block finalization, but it will be saved in the audit trail. Continue?",
+      ].join("\n");
+
+      if (!window.confirm(message)) return;
+    }
+
+    setSaving(action);
 
     try {
       const json = await fetchJson<LoadResp<{ item: AppraisalItem }>>("/api/headteacher/teacher-appraisal", {
@@ -579,6 +672,7 @@ export default function TeacherAppraisalClient() {
 
       if (!json.ok) throw new Error(json.error);
       setForm((prev) => ({ ...prev, id: json.item.id }));
+      setGuardrailWarnings(json.evidenceWarnings ?? json.item.evidenceWarnings ?? nextWarnings);
       setSuccess(action === "finalize" ? "Appraisal finalized and locked." : "Draft saved.");
       await loadList();
     } catch (err) {
@@ -592,6 +686,8 @@ export default function TeacherAppraisalClient() {
     if (!form.id) return false;
     return items.some((item) => item.id === form.id && item.status === "FINALIZED");
   }, [form.id, items]);
+
+  const activeGuardrailWarnings = formIsFinalized ? guardrailWarnings : liveGuardrailWarnings;
 
   return (
     <div className="min-h-screen bg-[#070B12] px-4 py-6 text-[#F7F4ED] md:px-8">
@@ -620,6 +716,22 @@ export default function TeacherAppraisalClient() {
 
         {error ? <div className="rounded-3xl border border-rose-300/25 bg-rose-500/10 p-4 text-sm text-rose-100">{error}</div> : null}
         {success ? <div className="rounded-3xl border border-emerald-300/25 bg-emerald-500/10 p-4 text-sm text-emerald-100">{success}</div> : null}
+        {activeGuardrailWarnings.length ? (
+          <div className="rounded-3xl border border-amber-300/25 bg-amber-400/10 p-4 text-sm text-amber-100">
+            <p className="font-bold text-white">Evidence warning before locking</p>
+            <p className="mt-1 text-xs leading-5 text-amber-100/80">
+              These warnings do not block finalization, but they help prevent unsupported high scores.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {activeGuardrailWarnings.map((warning) => (
+                <li key={warning.code} className="rounded-2xl border border-amber-300/15 bg-black/20 p-3">
+                  <p className="font-semibold text-white">{warning.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-amber-100/80">{warning.detail}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <section className="grid gap-4 md:grid-cols-4">
           <StatCard label="Teachers" value={teachers.length} />
