@@ -420,6 +420,10 @@ function formatDateTime(value?: string | null) {
   }).format(d);
 }
 
+function appraisalPrintHref(id: string) {
+  return `/governance/appraisals/${encodeURIComponent(id)}/print`;
+}
+
 function normalizeDirectorateName(raw: unknown) {
   const value = String(raw ?? "").trim();
 
@@ -878,15 +882,25 @@ function ReportsList({
     <div className="space-y-2">
       {reports.length ? (
         reports.map((report) => (
-          <RowButton
-            key={report.id}
-            active={selectedReportId === report.id}
-            eyebrow={formatDate(report.dateObserved)}
-            title={`${report.teacherName} · ${report.subject || "No subject"}`}
-            meta={`${report.schoolName || "School"} · ${report.classTaught || "Class not set"} · Finalized ${formatDateTime(report.finalizedAt)}`}
-            right={formatPercent(report.overallPercentage)}
-            onClick={() => onOpenReport(report.id)}
-          />
+          <div key={report.id} className="space-y-2">
+            <RowButton
+              active={selectedReportId === report.id}
+              eyebrow={formatDate(report.dateObserved)}
+              title={`${report.teacherName} · ${report.subject || "No subject"}`}
+              meta={`${report.schoolName || "School"} · ${report.classTaught || "Class not set"} · Finalized ${formatDateTime(report.finalizedAt)}`}
+              right={formatPercent(report.overallPercentage)}
+              onClick={() => onOpenReport(report.id)}
+            />
+
+            <a
+              href={appraisalPrintHref(report.id)}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-1 inline-flex w-fit rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-white/10"
+            >
+              Print form
+            </a>
+          </div>
         ))
       ) : (
         <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-6 text-slate-300">
@@ -1291,7 +1305,27 @@ export default function GovernanceAppraisalDrilldownPanel({
             </div>
 
             {report ? (
-              <OfficialAppraisalForm report={report} rubric={rubric} />
+              <>
+                <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
+                  <div>
+                    <p className="text-sm font-bold text-white">Official printable form</p>
+                    <p className="mt-1 text-xs leading-5 text-emerald-100/80">
+                      Open this finalized appraisal as a clean print-ready monitoring sheet.
+                    </p>
+                  </div>
+
+                  <a
+                    href={appraisalPrintHref(report.id)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-fit rounded-full border border-emerald-300/25 bg-emerald-400/15 px-4 py-2 text-xs font-bold text-emerald-100 hover:bg-emerald-400/25"
+                  >
+                    Print form
+                  </a>
+                </div>
+
+                <OfficialAppraisalForm report={report} rubric={rubric} />
+              </>
             ) : (
               <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm leading-6 text-slate-300">
                 Open a finalized appraisal report to display the Director-style
