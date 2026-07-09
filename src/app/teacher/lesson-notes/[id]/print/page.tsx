@@ -21,6 +21,31 @@ function formatDate(value: Date | string | null | undefined) {
   });
 }
 
+function fridayOfWeek(value: Date | string | null | undefined) {
+  if (!value) return null;
+
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+
+  // Use midday to avoid timezone edge cases around midnight.
+  d.setHours(12, 0, 0, 0);
+
+  // JS: Sunday = 0, Monday = 1, ..., Friday = 5.
+  // Ghana/GES lesson-note practice: week ending is Friday of the selected week.
+  const diffToFriday = 5 - d.getDay();
+  d.setDate(d.getDate() + diffToFriday);
+
+  return d;
+}
+
+function officialNaccaReference(subjectRaw: string) {
+  const subject = clean(subjectRaw).replace(/\s+curriculum$/i, "").trim();
+
+  if (!subject) return "Official NaCCA Curriculum";
+
+  return `Official NaCCA ${subject} Curriculum`;
+}
+
 function normalizeLabel(value: string | null | undefined): string | null {
   if (!value) return null;
   const trimmed = value.trim();
@@ -1677,8 +1702,8 @@ export default async function Page({ params, searchParams }: PageProps) {
     typeof note.weekNumber === "number" ? note.weekNumber.toString() : "____";
   const durationLabel = "40 minutes";
 
-  const weekEndingSource = note.lessonDate ?? note.createdAt;
-  const weekEndingLabel = formatDate(weekEndingSource);
+const weekEndingSource = note.lessonDate ?? note.createdAt;
+const weekEndingLabel = formatDate(fridayOfWeek(weekEndingSource));
 
   const exemplarText: string[] = await fetchExemplarText({
     indicatorId: indicatorContext?.id ?? indicatorIdExact,
@@ -1776,7 +1801,7 @@ export default async function Page({ params, searchParams }: PageProps) {
   const isApproved = String(note.status ?? "").toUpperCase() === "APPROVED";
   const signatureDataUrl = signatureDataUrlFromSvg(note.approvalSignatureSvg);
 
-  const referencesText = `Official NaCCA ${subject || "Curriculum"}; Teacher Resource Pack; EduLife OS Teacher Lesson Design Studio printout.`;
+  const referencesText = `${officialNaccaReference(subject)}; Teacher Resource Pack; EduLife OS Teacher Lesson Design Studio printout.`;
 
   const classroomExample = classroomExampleFor(subject, topic);
 
