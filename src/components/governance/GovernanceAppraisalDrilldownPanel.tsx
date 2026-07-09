@@ -141,6 +141,14 @@ type EvidenceLessonDelivery = {
   }>;
 };
 
+type EvidenceWarning = {
+  code?: string | null;
+  title?: string | null;
+  detail?: string | null;
+  message?: string | null;
+  severity?: string | null;
+};
+
 type EvidenceSnapshot = Record<string, unknown> & {
   scheme?: EvidenceScheme | null;
   lessonNote?: EvidenceLessonNote | null;
@@ -183,6 +191,7 @@ type AppraisalReport = {
   overallPercentage?: number | null;
 
   generalComment?: string | null;
+  evidenceWarnings?: EvidenceWarning[] | null;
   finalizedAt?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -640,6 +649,29 @@ function evidenceForReport(report: AppraisalReport) {
   };
 }
 
+
+function clean(v: unknown) {
+  return String(v ?? "").trim();
+}
+
+function evidenceWarningsForReport(report: AppraisalReport): EvidenceWarning[] {
+  const warnings = report.evidenceWarnings;
+  if (!Array.isArray(warnings)) return [];
+
+  return warnings
+    .filter((warning): warning is EvidenceWarning => {
+      return !!warning && typeof warning === "object" && !Array.isArray(warning);
+    })
+    .map((warning) => ({
+      code: typeof warning.code === "string" ? warning.code : null,
+      title: clean(warning.title || warning.message || "Evidence warning"),
+      detail: clean(warning.detail || warning.message || "This appraisal score needs stronger linked evidence."),
+      message: typeof warning.message === "string" ? warning.message : null,
+      severity: typeof warning.severity === "string" ? warning.severity : null,
+    }))
+    .filter((warning) => warning.title || warning.detail);
+}
+
 function compactParts(parts: Array<string | number | null | undefined>) {
   return parts
     .map((part) => String(part ?? "").trim())
@@ -657,6 +689,7 @@ function OfficialAppraisalForm({
   const sections = rubric.length ? rubric : SECTION_ORDER;
   const directorateTitle = directorateTitleFromReport(report);
   const evidence = evidenceForReport(report);
+  const evidenceWarnings = evidenceWarningsForReport(report);
 
   return (
     <article className="overflow-hidden rounded-[28px] border border-white/10 bg-white text-slate-950 shadow-2xl">
@@ -792,6 +825,25 @@ function OfficialAppraisalForm({
           </tbody>
         </table>
       </div>
+
+      {evidenceWarnings.length ? (
+        <div className="border-t border-amber-300 bg-amber-50 p-4 text-slate-950">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-amber-900">
+            Evidence Warnings
+          </p>
+          <p className="mt-1 text-xs text-amber-900/80">
+            These warnings did not block finalization, but they show where high scores needed stronger linked evidence.
+          </p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {evidenceWarnings.map((warning) => (
+              <div key={`${warning.code}-${warning.title}`} className="rounded-xl border border-amber-300 bg-white p-3 text-xs">
+                <p className="font-black text-amber-950">{warning.title}</p>
+                <p className="mt-1 leading-5 text-slate-700">{warning.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid border-t border-slate-300 md:grid-cols-2">
         <div className="border-b border-slate-300 p-4 md:border-b-0 md:border-r">
