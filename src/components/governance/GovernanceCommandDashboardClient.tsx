@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import GovernanceDashboardClient from "@/components/governance/GovernanceDashboardClient";
 import GovernanceSentNoticeAccountabilityClient from "@/components/governance/GovernanceSentNoticeAccountabilityClient";
 import GovernanceAppraisalDrilldownPanel from "@/components/governance/GovernanceAppraisalDrilldownPanel";
+import GovernanceSchemeCoveragePanel from "@/components/governance/GovernanceSchemeCoveragePanel";
 
 type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -388,6 +389,7 @@ type PanelKey =
   | "mock-circuit-priority"
   | "students-attendance"
   | "teacher-attendance"
+  | "scheme-coverage"
   | "teacher-appraisal"
   | "lesson"
   | "students-assessment"
@@ -2217,6 +2219,15 @@ const mockMissingReleases = mockPriorityRows.filter(
   onClick={() => setActivePanel("students-assessment")}
 />
 <CommandTile
+  icon="📚"
+  title="Scheme Coverage"
+  description="Prepared, submitted, approved, and missing schemes."
+  value="Prep"
+  tone="info"
+  active={activePanel === "scheme-coverage"}
+  onClick={() => setActivePanel("scheme-coverage")}
+/>
+<CommandTile
   icon="📝"
   title="Teacher Appraisal"
   description="Finalized teacher appraisal reports."
@@ -2684,6 +2695,13 @@ showing which schools need supervision attention first.
       </div>
     </div>
   </section>
+) : null}
+
+{activePanel === "scheme-coverage" ? (
+  <GovernanceSchemeCoveragePanel
+    isDistrictView={isDistrictView}
+    isCircuitView={isCircuitView}
+  />
 ) : null}
 
 {activePanel === "teacher-appraisal" ? (
