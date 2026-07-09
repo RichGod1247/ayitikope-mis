@@ -9,6 +9,13 @@ export const dynamic = "force-dynamic";
 
 type JsonObject = Record<string, unknown>;
 
+type EvidenceWarning = {
+  code: string;
+  title: string;
+  detail: string;
+  severity: "WARNING";
+};
+
 function jsonNoStore(status: number, payload: unknown) {
   return NextResponse.json(payload, {
     status,
@@ -51,6 +58,23 @@ function asObject(v: unknown): JsonObject {
 function safeText(v: unknown, fallback = "") {
   const s = clean(v);
   return s || fallback;
+}
+
+function evidenceWarningsFromMetadata(raw: unknown): EvidenceWarning[] {
+  const metadata = asObject(raw);
+  const warnings = Array.isArray(metadata.evidenceWarnings) ? metadata.evidenceWarnings : [];
+
+  return warnings
+    .map((item) => {
+      const o = asObject(item);
+      return {
+        code: clean(o.code),
+        title: clean(o.title),
+        detail: clean(o.detail ?? o.message),
+        severity: "WARNING" as const,
+      };
+    })
+    .filter((item) => item.code && item.title && item.detail);
 }
 
 function safeEvidenceSummary(raw: unknown) {
@@ -182,6 +206,7 @@ export async function GET(req: Request) {
         overallPercentage: true,
         generalComment: true,
         finalizedAt: true,
+        metadata: true,
         scores: {
           orderBy: [{ sectionOrder: "asc" }, { itemOrder: "asc" }],
           select: {
@@ -221,6 +246,7 @@ export async function GET(req: Request) {
           lessonDeliveryId: item.lessonDeliveryId ?? null,
           summary: safeEvidenceSummary(item.evidenceSnapshotJson),
         },
+        evidenceWarnings: evidenceWarningsFromMetadata(item.metadata),
         scores: item.scores.map((s) => ({
           id: s.id,
           sectionKey: s.sectionKey,

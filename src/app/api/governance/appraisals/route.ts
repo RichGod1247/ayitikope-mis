@@ -153,6 +153,13 @@ type SchoolIdentity = {
   districtName: string | null;
 };
 
+type EvidenceWarning = {
+  code: string;
+  title: string;
+  detail: string;
+  severity: "WARNING";
+};
+
 type AggregationBucket = {
   finalizedCount: number;
   teacherIds: Set<string>;
@@ -173,6 +180,28 @@ function jsonNoStore(payload: unknown, status = 200) {
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
+}
+
+function asObject(v: unknown): Record<string, unknown> {
+  if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
+  return {};
+}
+
+function evidenceWarningsFromMetadata(raw: unknown): EvidenceWarning[] {
+  const metadata = asObject(raw);
+  const warnings = Array.isArray(metadata.evidenceWarnings) ? metadata.evidenceWarnings : [];
+
+  return warnings
+    .map((item) => {
+      const o = asObject(item);
+      return {
+        code: clean(o.code),
+        title: clean(o.title),
+        detail: clean(o.detail ?? o.message),
+        severity: "WARNING" as const,
+      };
+    })
+    .filter((item) => item.code && item.title && item.detail);
 }
 
 function isLikelyId(id: string) {
@@ -692,6 +721,7 @@ async function buildReport(scope: GovernanceScope, id: string) {
       overallPercentage: true,
       generalComment: true,
       finalizedAt: true,
+      metadata: true,
       createdAt: true,
       updatedAt: true,
       teacher: { select: { name: true, firstName: true, lastName: true, email: true } },
@@ -855,6 +885,7 @@ async function buildReport(scope: GovernanceScope, id: string) {
     },
     sections,
     generalComment: appraisal.generalComment,
+    evidenceWarnings: evidenceWarningsFromMetadata(appraisal.metadata),
     evidence: {
       schemeOfWork: appraisal.schemeOfWork
         ? {

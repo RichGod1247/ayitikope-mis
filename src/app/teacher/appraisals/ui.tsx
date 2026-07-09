@@ -37,6 +37,13 @@ type ScoreRow = {
   notApplicable: boolean;
 };
 
+type EvidenceWarning = {
+  code: string;
+  title: string;
+  detail: string;
+  severity?: string;
+};
+
 type EvidenceSummary = {
   schemeOfWorkId: string | null;
   lessonNoteId: string | null;
@@ -63,6 +70,7 @@ type AppraisalDetail = AppraisalSummary & {
   circuitSnapshot: string | null;
   sectionPercentages: SectionPercentages;
   evidence: EvidenceSummary;
+  evidenceWarnings?: EvidenceWarning[];
   scores: ScoreRow[];
 };
 
@@ -126,6 +134,32 @@ function percentTone(value: number | null | undefined) {
   if (value >= 80) return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
   if (value >= 60) return "border-amber-300/25 bg-amber-400/12 text-amber-100";
   return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+}
+
+function EvidenceWarningsBox({ warnings }: { warnings?: EvidenceWarning[] }) {
+  if (!warnings?.length) return null;
+
+  return (
+    <div className="rounded-2xl border border-amber-300/25 bg-amber-400/10 p-4">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-100">
+        Evidence warnings
+      </p>
+      <p className="mt-1 text-xs leading-5 text-amber-100/80">
+        These warnings did not block finalization, but they show where high scores needed stronger linked evidence.
+      </p>
+      <div className="mt-3 space-y-2">
+        {warnings.map((warning) => (
+          <div
+            key={`${warning.code}-${warning.title}`}
+            className="rounded-xl border border-amber-300/20 bg-black/20 p-3"
+          >
+            <p className="text-sm font-bold text-amber-100">{warning.title}</p>
+            <p className="mt-1 text-sm leading-6 text-[#F7F4ED]">{warning.detail}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function sectionTitleFromKey(key: keyof SectionPercentages) {
@@ -346,6 +380,8 @@ export default function TeacherAppraisalsClient() {
                   <p className="mt-2 text-sm leading-7 text-[#F7F4ED]">{detail.generalComment}</p>
                 </div>
               ) : null}
+
+              <EvidenceWarningsBox warnings={detail.evidenceWarnings} />
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {(Object.keys(detail.sectionPercentages) as Array<keyof SectionPercentages>).map((key) => (
