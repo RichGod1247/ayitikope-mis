@@ -112,6 +112,7 @@ export default async function TeacherDashboardPage() {
     border: string;
     pillCls: string;
     rightNote?: string;
+    disabledReason?: string;
   }> = [
     {
       title: "Lesson Notes",
@@ -202,28 +203,29 @@ export default async function TeacherDashboardPage() {
     },
     {
       title: "Wellbeing & Health",
-      subtitle: "Care that’s trackable",
-      desc: "Record daily health notes (consent-aware) for your assigned primary class.",
-      pill: "Care",
+      subtitle: "Care workflow not yet live",
+      desc: "Coming soon. This will be enabled after the health workflow is fully wired and safe for daily use.",
+      pill: "Coming soon",
       icon: "🫶",
       href: "/teacher/health",
-      enabled: hasPrimary,
+      enabled: false,
       grad: "from-[#251013] via-[#30151B] to-[#0C1320]",
       border: "border-rose-300/20",
       pillCls: "border-rose-300/25 bg-rose-400/14 text-rose-100",
+      disabledReason: "Coming soon — not yet wired for use.",
     },
     {
       title: "Communication Support",
-      subtitle: "Stay connected with ease",
-      desc: "Communication tools and parent messaging shortcuts.",
-      pill: "Support",
+      subtitle: "Messaging tools not yet live",
+      desc: "Coming soon. Parent messaging and communication shortcuts will be enabled after the workflow is fully wired.",
+      pill: "Coming soon",
       icon: "📶",
       href: "/teacher/communications",
-      enabled: true,
+      enabled: false,
       grad: "from-[#091C24] via-[#0D2530] to-[#08111C]",
       border: "border-sky-300/20",
       pillCls: "border-sky-300/25 bg-sky-400/14 text-sky-100",
-      rightNote: "MVP: stub allowed",
+      disabledReason: "Coming soon — not yet wired for use.",
     },
   ];
 
@@ -328,24 +330,9 @@ export default async function TeacherDashboardPage() {
             {quickAttendanceLabel}
           </Link>
 
-          <Link
-            href="/teacher/health"
-            className={cx(
-              "rounded-full border px-5 py-2.5 text-sm font-medium transition",
-              hasPrimary
-                ? "border-white/12 bg-white/5 text-[#F7F4ED] hover:bg-white/10"
-                : "pointer-events-none border-white/8 bg-white/5 text-[#7D8796]"
-            )}
-          >
-            Record Health
-          </Link>
-
-          <Link
-            href="/app"
-            className="rounded-full border border-white/12 bg-white/5 px-5 py-2.5 text-sm font-medium text-[#F7F4ED] hover:bg-white/10"
-          >
-            Portal
-          </Link>
+          <span className="inline-flex cursor-not-allowed items-center rounded-full border border-white/8 bg-white/[0.04] px-5 py-2.5 text-sm font-medium text-[#7D8796]">
+            Health coming soon
+          </span>
         </div>
 
         <p className="mt-4 text-xs text-[#8F98A8]">
@@ -415,7 +402,7 @@ export default async function TeacherDashboardPage() {
 
                 {!t.enabled ? (
                   <div className="relative mt-3 text-[11px] text-[#C9CDD6]">
-                    🔒 Disabled until a primary class is assigned.
+                    🔒 {t.disabledReason || "Disabled until a primary class is assigned."}
                   </div>
                 ) : null}
 
