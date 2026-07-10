@@ -116,6 +116,7 @@ type GovernanceOk = {
 type GovernanceResp = GovernanceOk | { ok: false; error: string };
 
 type StreamMode = "single" | "multi";
+type AssessmentSpine = "sba" | "mock";
 
 const DEFAULT_TERM = "1st Term";
 const DEFAULT_YEAR = "2025/2026";
@@ -347,6 +348,9 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   const [remarkError, setRemarkError] = useState<string | null>(null);
 
   const [streamMode, setStreamMode] = useState<StreamMode>("single");
+  const [selectedSpine, setSelectedSpine] = useState<AssessmentSpine>("sba");
+  const [showGovernancePanel, setShowGovernancePanel] = useState(false);
+  const [showRemarkBandPanel, setShowRemarkBandPanel] = useState(false);
 
   const classes: ClassOverview[] = overview?.classes ?? [];
   const governanceOk = governance && (governance as any).ok === true;
@@ -444,22 +448,15 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   async function loadOverviewAndGovernance(termValue: string, yearValue: string) {
     setLoading(true);
     setLoadError(null);
-    setGovError(null);
 
     try {
       setRemarkBandsByClassroom({});
 
       const params = new URLSearchParams({ term: termValue, academicYear: yearValue });
-
-      const [oRes, gRes] = await Promise.all([
-        fetch(`/api/headteacher/assessment/overview?${params.toString()}`, { cache: "no-store" }),
-        fetch(`/api/headteacher/insights/governance?${params.toString()}`, { cache: "no-store" }),
-      ]);
-
-      const [oJson, gJson] = await Promise.all([
-        safeJson<HeadteacherAssessmentOverviewResponse>(oRes),
-        safeJson<GovernanceResp>(gRes),
-      ]);
+      const oRes = await fetch(`/api/headteacher/assessment/overview?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const oJson = await safeJson<HeadteacherAssessmentOverviewResponse>(oRes);
 
       if (!oRes.ok || !oJson?.ok) {
         setLoadError("Unexpected server error while loading overview.");
@@ -474,6 +471,23 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
 
         setSelectedClassroomId(nextSelected);
       }
+    } catch {
+      setLoadError("Network error while loading overview data.");
+      setOverview(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadGovernance(termValue: string, yearValue: string) {
+    setGovError(null);
+
+    try {
+      const params = new URLSearchParams({ term: termValue, academicYear: yearValue });
+      const gRes = await fetch(`/api/headteacher/insights/governance?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const gJson = await safeJson<GovernanceResp>(gRes);
 
       if (!gRes.ok || !gJson || (gJson as any).ok === false) {
         const err = (gJson as any)?.error || `Failed to load governance (HTTP ${gRes.status}).`;
@@ -483,12 +497,8 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
         setGovernance(gJson);
       }
     } catch {
-      setLoadError("Network error while loading overview data.");
-      setOverview(null);
       setGovError("Network error while loading governance.");
       setGovernance({ ok: false, error: "Network error while loading governance." });
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -498,11 +508,12 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   }, [term, academicYear]);
 
   useEffect(() => {
+    if (!showRemarkBandPanel) return;
     if (!selectedClassroomId) return;
     if (remarkBandsByClassroom[selectedClassroomId]) return;
     void loadRemarkSummaryForClass(selectedClassroomId, term, academicYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClassroomId, term, academicYear]);
+  }, [showRemarkBandPanel, selectedClassroomId, term, academicYear]);
 
   const totalClasses = classes.length;
 
@@ -601,14 +612,13 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E8C96A]">
-              Headteacher • Assessment Insights
+              Headteacher • Student Assessment Insights
             </div>
             <div className="text-lg font-semibold text-[#F7F4ED] md:text-2xl">
-              Class performance health for support, diagnosis, and improvement
+              SBA and Mock evidence for school improvement
             </div>
             <div className="max-w-3xl text-[12px] leading-6 text-[#C9CDD6]">
-              Teachers record real assessment scores from lessons delivered. This view helps you spot weak classes, weak learners,
-              and weak learning areas that need support or verification against exercise books and marked scripts.
+              Review term SBA evidence and BECE Mock readiness without mixing their records.
             </div>
           </div>
 
@@ -638,7 +648,10 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => void loadOverviewAndGovernance(term, academicYear)}
+              onClick={() => {
+                void loadOverviewAndGovernance(term, academicYear);
+                if (showGovernancePanel) void loadGovernance(term, academicYear);
+              }}
               disabled={loading}
               className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-60"
             >
@@ -653,38 +666,53 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
         Parent-facing release stays separate and should be used only for end-of-term exam results for now.
       </div>
 
-<div className="rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.13),rgba(255,255,255,0.04))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-cyan-300/25 bg-cyan-400/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
-          JHS 3 Only
-        </span>
-        <span className="rounded-full border border-amber-300/25 bg-amber-400/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-100">
-          Separate from 30/70 reports
-        </span>
-      </div>
+<div className="grid gap-3 md:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setSelectedSpine("sba")}
+          className={[
+            "rounded-[24px] border p-4 text-left shadow-[0_14px_42px_rgba(0,0,0,0.18)] transition",
+            selectedSpine === "sba"
+              ? "border-emerald-300/30 bg-emerald-400/12"
+              : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]",
+          ].join(" ")}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-base font-semibold text-[#F7F4ED]">SBA</div>
+              <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-100">
+                Standards Based Assessment
+              </div>
+            </div>
+            <span className="rounded-full border border-emerald-300/25 bg-emerald-400/12 px-3 py-1 text-[10px] font-semibold text-emerald-100">
+              Active
+            </span>
+          </div>
+          <p className="mt-3 text-[12px] leading-6 text-[#C9CDD6]">
+            Review class assessment evidence, averages, and readiness for the selected term.
+          </p>
+        </button>
 
-      <div>
-        <h2 className="text-base font-semibold text-[#F7F4ED]">
-          BECE Mock Readiness
-        </h2>
-        <p className="mt-1 max-w-3xl text-[12px] leading-6 text-[#C9CDD6]">
-          Monitor JHS3 Mock evidence, subject ownership, teacher reminders,
-          predicted aggregate readiness, missing core subjects, and early
-          intervention signals without mixing Mock scores into normal term reports.
-        </p>
+        <Link
+          href="/headteacher/assessment/mock"
+          className="rounded-[24px] border border-cyan-300/20 bg-cyan-400/10 p-4 text-left shadow-[0_14px_42px_rgba(0,0,0,0.18)] transition hover:bg-cyan-400/14"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-base font-semibold text-[#F7F4ED]">BECE Mock</div>
+              <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
+                Readiness
+              </div>
+            </div>
+            <span className="rounded-full border border-cyan-300/25 bg-cyan-400/12 px-3 py-1 text-[10px] font-semibold text-cyan-100">
+              Open
+            </span>
+          </div>
+          <p className="mt-3 text-[12px] leading-6 text-[#C9CDD6]">
+            Track Mock completion, missing subjects, aggregates, and rescue signals.
+          </p>
+        </Link>
       </div>
-    </div>
-
-    <Link
-      href="/headteacher/assessment/mock"
-      className="inline-flex items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/12 px-4 py-2 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-400/18"
-    >
-      Open BECE Mock cockpit
-    </Link>
-  </div>
-</div>
 
       {loadError && (
         <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-xs text-rose-100">
@@ -692,12 +720,35 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
         </div>
       )}
 
-      {govError && !loadError ? (
+      {showGovernancePanel && govError && !loadError ? (
         <div className="rounded-2xl border border-amber-300/20 bg-amber-400/12 px-4 py-3 text-xs text-amber-100">
           Governance: {govError}
         </div>
       ) : null}
 
+      <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_14px_42px_rgba(0,0,0,0.16)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-[#F7F4ED]">Governance chain check</div>
+            <div className="mt-1 text-[11px] text-[#C9CDD6]">
+              Optional: open only when you need delivery, linking, and scoring discipline checks.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !showGovernancePanel;
+              setShowGovernancePanel(next);
+              if (next && !governance) void loadGovernance(term, academicYear);
+            }}
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+          >
+            {showGovernancePanel ? "Hide chain check" : "Show chain check"}
+          </button>
+        </div>
+      </div>
+
+      {showGovernancePanel ? (
       <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] px-4 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -782,6 +833,8 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
           </div>
         )}
       </div>
+
+      ) : null}
 
       {!loading && !loadError && !classes.length && (
         <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.04] px-4 py-6 text-center text-xs text-[#C9CDD6]">
@@ -905,10 +958,36 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
                         >
                           Open learner report
                         </Link>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowGovernancePanel(true);
+                            if (!governance) void loadGovernance(term, academicYear);
+                          }}
+                          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+                        >
+                          Chain checks
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !showRemarkBandPanel;
+                            setShowRemarkBandPanel(next);
+                            if (next && selectedClass) {
+                              void loadRemarkSummaryForClass(selectedClass.classroomId, term, academicYear);
+                            }
+                          }}
+                          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+                        >
+                          {showRemarkBandPanel ? "Hide bands" : "Remark bands"}
+                        </button>
                       </div>
                     </div>
                   </div>
 
+                  {showGovernancePanel ? (
                   <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -1013,6 +1092,9 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
                     )}
                   </div>
 
+                  ) : null}
+
+                  {showRemarkBandPanel ? (
                   <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl">
                     <h3 className="text-sm font-semibold text-[#F7F4ED]">Learner distribution by remark band</h3>
 
@@ -1061,6 +1143,7 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
                       )}
                     </div>
                   </div>
+                  ) : null}
                 </>
               )}
             </div>
