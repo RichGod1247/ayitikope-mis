@@ -4,6 +4,7 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import AssessmentBroadsheetPanel from "@/components/teacher/AssessmentBroadsheetPanel";
 
 type ClassBandSummary = {
   grade: number;
@@ -114,6 +115,73 @@ type GovernanceOk = {
 };
 
 type GovernanceResp = GovernanceOk | { ok: false; error: string };
+
+type SbaClassScope = {
+  classroomId: string;
+  classLabel: string;
+  grade?: string | null;
+  arm?: string | null;
+  stageBucket?: string | null;
+  subjects: string[];
+};
+
+type SbaTeacherScope = {
+  userId: string;
+  name: string;
+  email: string;
+  classes: SbaClassScope[];
+};
+
+type SbaBucket = {
+  key: "EXERCISE" | "CLASS_TEST" | "HOMEWORK" | string;
+  label: string;
+  count: number;
+  scoredCount: number;
+  averagePercent: number | null;
+};
+
+type SbaOutputOk = {
+  ok: true;
+  term: string;
+  academicYear: string;
+  teacher: SbaTeacherScope;
+  classroom: { classroomId: string; classLabel: string };
+  subject: string;
+  workOutput: {
+    itemCount: number;
+    learnerCount: number;
+    scoredEntries: number;
+    buckets: SbaBucket[];
+  };
+  items: Array<{
+    id: string;
+    title: string;
+    type: string;
+    maxScore: number;
+    status: string;
+    scoresCount: number;
+  }>;
+  broadsheet: {
+    subject: string;
+    readiness: { status: string; score: number; blockedReasons?: string[] };
+    rows: Array<{
+      studentId: string;
+      name: string;
+      totalPercent: number | null;
+      grade: string | null;
+      gradeLabel?: string | null;
+      remark?: string | null;
+      position?: number | null;
+      complete?: boolean;
+    }>;
+  };
+};
+
+type SbaRosterResp =
+  | { ok: true; term: string; academicYear: string; teachers: SbaTeacherScope[] }
+  | { ok: false; error: string };
+
+type SbaOutputResp = SbaOutputOk | { ok: false; error: string };
 
 type StreamMode = "single" | "multi";
 type AssessmentSpine = "sba" | "mock";
@@ -287,6 +355,107 @@ function buildSingleStreamClasses(
   ];
 }
 
+
+function getStageBucketForSbaClass(c: SbaClassScope) {
+  return (
+    normalizeStageBucket(c.stageBucket) ??
+    normalizeStageBucket(c.grade) ??
+    normalizeStageBucket(c.classLabel)
+  );
+}
+
+function hasDuplicateSbaStageBuckets(list: SbaClassScope[]) {
+  const seen = new Set<string>();
+  for (const c of list) {
+    const bucket = getStageBucketForSbaClass(c);
+    if (!bucket) continue;
+    if (seen.has(bucket)) return true;
+    seen.add(bucket);
+  }
+  return false;
+}
+
+function singleSbaClassLabel(c: SbaClassScope) {
+  return getStageBucketForSbaClass(c) || c.classLabel;
+}
+
+function pickSingleSbaRepresentative(
+  group: SbaClassScope[],
+  preferredClassroomId: string | null
+) {
+  const preferred = group.find((x) => x.classroomId === preferredClassroomId) ?? null;
+
+  if (preferred && !cleanStr(preferred.arm)) return preferred;
+
+  const armLess = group
+    .filter((x) => !cleanStr(x.arm))
+    .sort((a, b) => a.classLabel.localeCompare(b.classLabel));
+
+  if (armLess.length > 0) return armLess[0];
+
+  return preferred ?? [...group].sort((a, b) => a.classLabel.localeCompare(b.classLabel))[0];
+}
+
+function buildSingleStreamSbaClasses(
+  list: SbaClassScope[],
+  preferredClassroomId: string | null
+): SbaClassScope[] {
+  const orderedBuckets = [
+    "KG 1",
+    "KG 2",
+    "PRIMARY 1",
+    "PRIMARY 2",
+    "PRIMARY 3",
+    "PRIMARY 4",
+    "PRIMARY 5",
+    "PRIMARY 6",
+    "JHS 1",
+    "JHS 2",
+    "JHS 3",
+  ] as const;
+
+  const grouped = new Map<string, SbaClassScope[]>();
+  const others: SbaClassScope[] = [];
+
+  for (const c of list) {
+    const bucket = getStageBucketForSbaClass(c);
+    if (!bucket) {
+      others.push(c);
+      continue;
+    }
+
+    const arr = grouped.get(bucket) ?? [];
+    arr.push(c);
+    grouped.set(bucket, arr);
+  }
+
+  const picked: SbaClassScope[] = [];
+
+  for (const bucket of orderedBuckets) {
+    const group = grouped.get(bucket) ?? [];
+    if (!group.length) continue;
+    picked.push(pickSingleSbaRepresentative(group, preferredClassroomId));
+  }
+
+  return [
+    ...picked,
+    ...others.sort((a, b) => a.classLabel.localeCompare(b.classLabel)),
+  ];
+}
+
+function pickDefaultSbaClass(
+  teacher: SbaTeacherScope | null,
+  mode: StreamMode,
+  preferredClassroomId: string | null
+) {
+  if (!teacher) return null;
+  const options =
+    mode === "multi"
+      ? teacher.classes
+      : buildSingleStreamSbaClasses(teacher.classes, preferredClassroomId);
+  return options.find((c) => c.classroomId === preferredClassroomId) ?? options[0] ?? null;
+}
+
 function pctLabel(v: number | null | undefined) {
   if (v == null || !Number.isFinite(v)) return "—";
   return `${Math.max(0, Math.min(100, v)).toFixed(1)}%`;
@@ -351,6 +520,17 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
   const [selectedSpine, setSelectedSpine] = useState<AssessmentSpine>("sba");
   const [showGovernancePanel, setShowGovernancePanel] = useState(false);
   const [showRemarkBandPanel, setShowRemarkBandPanel] = useState(false);
+  const [showSbaPanel, setShowSbaPanel] = useState(false);
+  const [sbaTeachers, setSbaTeachers] = useState<SbaTeacherScope[]>([]);
+  const [sbaTeacherUserId, setSbaTeacherUserId] = useState("");
+  const [sbaClassroomId, setSbaClassroomId] = useState("");
+  const [sbaSubject, setSbaSubject] = useState("");
+  const [sbaLoading, setSbaLoading] = useState(false);
+  const [sbaOutputLoading, setSbaOutputLoading] = useState(false);
+  const [sbaError, setSbaError] = useState<string | null>(null);
+  const [sbaOutput, setSbaOutput] = useState<SbaOutputOk | null>(null);
+  const [showSbaBroadsheet, setShowSbaBroadsheet] = useState(false);
+  const [sbaStreamMode, setSbaStreamMode] = useState<StreamMode>("single");
 
   const classes: ClassOverview[] = overview?.classes ?? [];
   const governanceOk = governance && (governance as any).ok === true;
@@ -376,6 +556,106 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
 
     return visibleClasses[0] ?? classes[0] ?? null;
   }, [visibleClasses, classes, selectedClassroomId]);
+
+  const selectedSbaTeacher = useMemo(
+    () => sbaTeachers.find((teacher) => teacher.userId === sbaTeacherUserId) ?? null,
+    [sbaTeachers, sbaTeacherUserId]
+  );
+
+  const canToggleSbaMultiStream = useMemo(
+    () => hasDuplicateSbaStageBuckets(selectedSbaTeacher?.classes ?? []),
+    [selectedSbaTeacher]
+  );
+
+  const sbaClassOptions = useMemo(() => {
+    const list = selectedSbaTeacher?.classes ?? [];
+    if (!list.length) return [];
+    if (!canToggleSbaMultiStream || sbaStreamMode === "multi") return list;
+    return buildSingleStreamSbaClasses(list, sbaClassroomId);
+  }, [selectedSbaTeacher, canToggleSbaMultiStream, sbaStreamMode, sbaClassroomId]);
+
+  const selectedSbaClass = useMemo(
+    () => selectedSbaTeacher?.classes.find((c) => c.classroomId === sbaClassroomId) ?? null,
+    [selectedSbaTeacher, sbaClassroomId]
+  );
+
+  const selectedSbaSubjects = selectedSbaClass?.subjects ?? [];
+  const canLoadSbaOutput = !!sbaTeacherUserId && !!sbaClassroomId && !!sbaSubject;
+
+  function applySbaDefaults(teachers: SbaTeacherScope[]) {
+    const teacher = teachers.find((t) => t.userId === sbaTeacherUserId) ?? teachers[0] ?? null;
+    const cls = pickDefaultSbaClass(teacher, sbaStreamMode, sbaClassroomId);
+    const subject = cls?.subjects.find((x) => x === sbaSubject) ?? cls?.subjects[0] ?? "";
+
+    setSbaTeacherUserId(teacher?.userId ?? "");
+    setSbaClassroomId(cls?.classroomId ?? "");
+    setSbaSubject(subject);
+  }
+
+  async function loadSbaRoster(termValue: string, yearValue: string) {
+    setSbaLoading(true);
+    setSbaError(null);
+
+    try {
+      const params = new URLSearchParams({ term: termValue, academicYear: yearValue });
+      const res = await fetch(`/api/headteacher/assessment/sba/work-output?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const json = await safeJson<SbaRosterResp>(res);
+
+      if (!res.ok || !json?.ok) {
+        const err = json && "error" in json ? json.error : "Failed to load SBA teacher list.";
+        setSbaTeachers([]);
+        setSbaError(err);
+        return;
+      }
+
+      setSbaTeachers(json.teachers);
+      applySbaDefaults(json.teachers);
+    } catch {
+      setSbaTeachers([]);
+      setSbaError("Network error while loading SBA teacher list.");
+    } finally {
+      setSbaLoading(false);
+    }
+  }
+
+  async function loadSbaWorkOutput(options?: { showBroadsheet?: boolean }) {
+    if (!canLoadSbaOutput) return;
+
+    setSbaOutputLoading(true);
+    setSbaError(null);
+
+    try {
+      const params = new URLSearchParams({
+        term,
+        academicYear,
+        teacherUserId: sbaTeacherUserId,
+        classroomId: sbaClassroomId,
+        subject: sbaSubject,
+      });
+
+      const res = await fetch(`/api/headteacher/assessment/sba/work-output?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const json = await safeJson<SbaOutputResp>(res);
+
+      if (!res.ok || !json?.ok) {
+        const err = json && "error" in json ? json.error : "Failed to load teacher work output.";
+        setSbaOutput(null);
+        setSbaError(err);
+        return;
+      }
+
+      setSbaOutput(json);
+      if (options?.showBroadsheet) setShowSbaBroadsheet(true);
+    } catch {
+      setSbaOutput(null);
+      setSbaError("Network error while loading teacher work output.");
+    } finally {
+      setSbaOutputLoading(false);
+    }
+  }
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -504,6 +784,13 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
 
   useEffect(() => {
     void loadOverviewAndGovernance(term, academicYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term, academicYear]);
+
+  useEffect(() => {
+    setSbaOutput(null);
+    setShowSbaBroadsheet(false);
+    if (showSbaPanel) void loadSbaRoster(term, academicYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term, academicYear]);
 
@@ -669,7 +956,11 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
 <div className="grid gap-3 md:grid-cols-2">
         <button
           type="button"
-          onClick={() => setSelectedSpine("sba")}
+          onClick={() => {
+            setSelectedSpine("sba");
+            setShowSbaPanel(true);
+            if (!sbaTeachers.length) void loadSbaRoster(term, academicYear);
+          }}
           className={[
             "rounded-[24px] border p-4 text-left shadow-[0_14px_42px_rgba(0,0,0,0.18)] transition",
             selectedSpine === "sba"
@@ -685,7 +976,7 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
               </div>
             </div>
             <span className="rounded-full border border-emerald-300/25 bg-emerald-400/12 px-3 py-1 text-[10px] font-semibold text-emerald-100">
-              Active
+              {showSbaPanel ? "Open" : "Choose"}
             </span>
           </div>
           <p className="mt-3 text-[12px] leading-6 text-[#C9CDD6]">
@@ -713,6 +1004,81 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
           </p>
         </Link>
       </div>
+
+            {showSbaPanel ? (
+        <SbaWorkOutputPanel
+          term={term}
+          academicYear={academicYear}
+          teachers={sbaTeachers}
+          selectedTeacher={selectedSbaTeacher}
+          selectedClass={selectedSbaClass}
+          classOptions={sbaClassOptions}
+          selectedSubjects={selectedSbaSubjects}
+          streamMode={sbaStreamMode}
+          canToggleMultiStream={canToggleSbaMultiStream}
+          teacherUserId={sbaTeacherUserId}
+          classroomId={sbaClassroomId}
+          subject={sbaSubject}
+          loadingRoster={sbaLoading}
+          loadingOutput={sbaOutputLoading}
+          error={sbaError}
+          output={sbaOutput}
+          showBroadsheet={showSbaBroadsheet}
+          canLoadOutput={canLoadSbaOutput}
+          onRefreshRoster={() => void loadSbaRoster(term, academicYear)}
+          onClose={() => setShowSbaPanel(false)}
+          onTeacherChange={(userId) => {
+            const teacher = sbaTeachers.find((t) => t.userId === userId) ?? null;
+            const cls = pickDefaultSbaClass(teacher, sbaStreamMode, null);
+
+            setSbaTeacherUserId(userId);
+            setSbaClassroomId(cls?.classroomId ?? "");
+            setSbaSubject(cls?.subjects[0] ?? "");
+            setSbaOutput(null);
+            setShowSbaBroadsheet(false);
+          }}
+          onClassChange={(classroomId) => {
+            const cls =
+              selectedSbaTeacher?.classes.find((c) => c.classroomId === classroomId) ??
+              null;
+
+            setSbaClassroomId(classroomId);
+            setSbaSubject(cls?.subjects[0] ?? "");
+            setSbaOutput(null);
+            setShowSbaBroadsheet(false);
+          }}
+          onStreamModeChange={(mode) => {
+            setSbaStreamMode(mode);
+
+            const cls = pickDefaultSbaClass(
+              selectedSbaTeacher,
+              mode,
+              sbaClassroomId
+            );
+
+            setSbaClassroomId(cls?.classroomId ?? "");
+            setSbaSubject(
+              cls?.subjects.find((x) => x === sbaSubject) ?? cls?.subjects[0] ?? ""
+            );
+            setSbaOutput(null);
+            setShowSbaBroadsheet(false);
+          }}
+          onSubjectChange={(nextSubject) => {
+            setSbaSubject(nextSubject);
+            setSbaOutput(null);
+            setShowSbaBroadsheet(false);
+          }}
+          onLoadOutput={() => void loadSbaWorkOutput()}
+          onToggleBroadsheet={() => {
+            if (!sbaOutput) {
+              void loadSbaWorkOutput({ showBroadsheet: true });
+              return;
+            }
+
+            setShowSbaBroadsheet((prev) => !prev);
+          }}
+        />
+      ) : null}
 
       {loadError && (
         <div className="rounded-2xl border border-rose-300/20 bg-rose-400/12 px-4 py-3 text-xs text-rose-100">
@@ -1153,6 +1519,225 @@ const HeadteacherAssessmentOverviewClient: React.FC = () => {
     </div>
   );
 };
+
+
+function SbaWorkOutputPanel(props: {
+  term: string;
+  academicYear: string;
+  teachers: SbaTeacherScope[];
+  selectedTeacher: SbaTeacherScope | null;
+  selectedClass: SbaClassScope | null;
+  classOptions: SbaClassScope[];
+  selectedSubjects: string[];
+  streamMode: StreamMode;
+  canToggleMultiStream: boolean;
+  teacherUserId: string;
+  classroomId: string;
+  subject: string;
+  loadingRoster: boolean;
+  loadingOutput: boolean;
+  error: string | null;
+  output: SbaOutputOk | null;
+  showBroadsheet: boolean;
+  canLoadOutput: boolean;
+  onRefreshRoster: () => void;
+  onClose: () => void;
+  onTeacherChange: (userId: string) => void;
+  onClassChange: (classroomId: string) => void;
+  onStreamModeChange: (mode: StreamMode) => void;
+  onSubjectChange: (subject: string) => void;
+  onLoadOutput: () => void;
+  onToggleBroadsheet: () => void;
+}) {
+const buckets = props.output?.workOutput.buckets ?? [];
+
+  return (
+    <section className="rounded-[28px] border border-emerald-300/20 bg-[linear-gradient(180deg,rgba(16,185,129,0.12),rgba(255,255,255,0.035))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-100">
+            SBA teacher work output
+          </div>
+          <h2 className="mt-1 text-base font-semibold text-[#F7F4ED]">
+            Select teacher, class, and subject
+          </h2>
+          <p className="mt-1 max-w-2xl text-[12px] leading-6 text-[#C9CDD6]">
+            Shows exercises, class tests, homework, and the matching broadsheet in simple evidence form.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={props.onRefreshRoster}
+            disabled={props.loadingRoster}
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-60"
+          >
+            {props.loadingRoster ? "Loading…" : "Refresh teachers"}
+          </button>
+          <button
+            type="button"
+            onClick={props.onClose}
+            className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-semibold text-[#C9CDD6] transition hover:bg-white/10"
+          >
+            Hide SBA
+          </button>
+        </div>
+      </div>
+
+      {props.error ? (
+        <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-400/12 px-3 py-3 text-[11px] text-amber-100">
+          {props.error}
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        <label className="space-y-1">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9AA4B2]">Teacher</span>
+          <select
+            value={props.teacherUserId}
+            onChange={(e) => props.onTeacherChange(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[12px] text-[#F7F4ED] focus:border-emerald-300/35 focus:outline-none focus:ring-2 focus:ring-emerald-300/15"
+          >
+            <option value="">Choose teacher</option>
+            {props.teachers.map((teacher) => (
+              <option key={teacher.userId} value={teacher.userId}>
+                {teacher.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="space-y-1">
+          <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9AA4B2]">
+            <span>Class</span>
+            {props.canToggleMultiStream ? (
+              <span className="inline-flex items-center gap-1 normal-case tracking-normal text-[10px] text-[#C9CDD6]">
+                <input
+                  type="checkbox"
+                  checked={props.streamMode === "multi"}
+                  onChange={(e) => props.onStreamModeChange(e.target.checked ? "multi" : "single")}
+                />
+                Multi-stream
+              </span>
+            ) : null}
+          </span>
+          <select
+            value={props.classroomId}
+            onChange={(e) => props.onClassChange(e.target.value)}
+            disabled={!props.selectedTeacher}
+            className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[12px] text-[#F7F4ED] focus:border-emerald-300/35 focus:outline-none focus:ring-2 focus:ring-emerald-300/15 disabled:opacity-55"
+          >
+            <option value="">Choose class</option>
+            {props.classOptions.map((cls) => (
+              <option key={cls.classroomId} value={cls.classroomId}>
+                {props.streamMode === "single" ? singleSbaClassLabel(cls) : cls.classLabel}
+              </option>
+            ))}
+          </select>
+          {props.canToggleMultiStream && props.streamMode === "single" ? (
+            <span className="block text-[10px] text-[#8F98A8]">Single-stream view. Turn on multi-stream only when needed.</span>
+          ) : null}
+        </label>
+
+        <label className="space-y-1">
+          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9AA4B2]">Subject</span>
+          <select
+            value={props.subject}
+            onChange={(e) => props.onSubjectChange(e.target.value)}
+            disabled={!props.selectedClass}
+            className="w-full rounded-xl border border-white/10 bg-[#07111F] px-3 py-2 text-[12px] text-[#F7F4ED] focus:border-emerald-300/35 focus:outline-none focus:ring-2 focus:ring-emerald-300/15 disabled:opacity-55"
+          >
+            <option value="">Choose subject</option>
+            {props.selectedSubjects.map((subject) => (
+              <option key={subject} value={subject}>
+                {subject}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={props.onLoadOutput}
+          disabled={!props.canLoadOutput || props.loadingOutput}
+          className="rounded-xl border border-emerald-300/25 bg-emerald-400/12 px-4 py-2 text-[12px] font-semibold text-emerald-100 transition hover:bg-emerald-400/18 disabled:cursor-not-allowed disabled:opacity-55"
+        >
+          {props.loadingOutput ? "Loading work…" : "Work Output"}
+        </button>
+        <button
+          type="button"
+          onClick={props.onToggleBroadsheet}
+          disabled={!props.canLoadOutput || props.loadingOutput}
+          className="rounded-xl border border-cyan-300/25 bg-cyan-400/12 px-4 py-2 text-[12px] font-semibold text-cyan-100 transition hover:bg-cyan-400/18 disabled:cursor-not-allowed disabled:opacity-55"
+        >
+          {props.showBroadsheet ? "Hide Broadsheet" : "Assessment Broadsheet"}
+        </button>
+      </div>
+
+      {props.output ? (
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            {buckets.map((bucket) => (
+              <div key={bucket.key} className="rounded-[22px] border border-white/10 bg-[#0C1730]/78 p-3">
+                <div className="text-[11px] font-semibold text-[#F7F4ED]">{bucket.label}</div>
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <div>
+                    <div className="text-2xl font-semibold text-[#F7F4ED]">{formatNumber(bucket.count)}</div>
+<div className="text-[10px] text-[#8F98A8]">items</div>
+<div className="mt-1 text-[10px] text-[#8F98A8]">
+  {formatNumber(bucket.scoredCount)} scores
+</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-emerald-100">{formatPercent(bucket.averagePercent)}</div>
+                    <div className="text-[10px] text-[#8F98A8]">score avg</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[11px] leading-6 text-[#C9CDD6]">
+  {props.output.teacher.name} • {props.output.classroom.classLabel} • {props.output.subject} — {formatNumber(props.output.workOutput.itemCount)} items, {formatNumber(props.output.workOutput.scoredEntries)} score entries.
+  <div className="mt-1 text-[#8F98A8]">
+    Work Output uses raw score averages. Broadsheet uses official weighted SBA policy.
+  </div>
+</div>
+
+          {props.showBroadsheet ? (
+  <div className="mt-2">
+    <AssessmentBroadsheetPanel
+  classroomId={props.classroomId}
+  term={props.term}
+  academicYear={props.academicYear}
+  subjectOptions={
+    props.subject
+      ? [props.subject]
+      : props.selectedSubjects.length
+        ? props.selectedSubjects
+        : []
+  }
+  currentSubject={props.subject}
+  minimal
+/>
+  </div>
+) : null}
+        </div>
+      ) : props.loadingRoster ? (
+        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-[11px] text-[#C9CDD6]">
+          Loading teacher assignments…
+        </div>
+      ) : props.teachers.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-dashed border-white/12 bg-white/[0.04] px-3 py-3 text-[11px] text-[#C9CDD6]">
+          No teacher assessment assignments found for this term yet.
+        </div>
+      ) : null}
+    </section>
+  );
+}
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (

@@ -152,6 +152,12 @@ type Props = {
   currentSubject: string;
   refreshKey?: number;
   onCreateEvidenceItem?: (args: CreateEvidenceItemArgs) => void;
+
+  /**
+   * Used by headteacher SBA drilldown.
+   * Hides teacher repair controls and keeps only the learner broadsheet table.
+   */
+  minimal?: boolean;
 };
 
 type CreateEvidenceItemArgs = {
@@ -448,6 +454,7 @@ const {
   currentSubject,
   refreshKey = 0,
   onCreateEvidenceItem,
+  minimal = false,
 } = props;
 
   const [subject, setSubject] = useState("");
@@ -608,7 +615,7 @@ useEffect(() => {
 
   return (
     <div className={card}>
-      <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 md:flex-row md:items-start md:justify-between">
+      <div className={minimal ? "hidden" : "flex flex-col gap-3 border-b border-white/10 px-4 py-4 md:flex-row md:items-start md:justify-between"}>
         <div>
           <div className="text-sm font-semibold text-[#F7F4ED]">Broadsheet view</div>
           <div className="mt-1 text-[11px] text-[#AEB6C4]">
@@ -674,7 +681,7 @@ useEffect(() => {
 
         {data ? (
           <>
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className={minimal ? "hidden" : "grid gap-3 md:grid-cols-4"}>
               <MiniStat
                 label="Overall readiness"
                 value={`${data.readiness.score}%`}
@@ -693,7 +700,7 @@ useEffect(() => {
               <MiniStat label="Policy" value={data.policy.levelBand} tone="NEUTRAL" />
             </div>
 
-            <div className={panel + " p-3"}>
+           <div className={minimal ? "hidden" : panel + " p-3"}>
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="text-[12px] font-semibold text-[#F7F4ED]">
@@ -760,7 +767,7 @@ useEffect(() => {
 
             {sheet ? (
               <>
-                <div className="flex flex-wrap gap-2">
+                <div className={minimal ? "hidden" : "flex flex-wrap gap-2"}>
                   <button
                     type="button"
                     onClick={() => setShowComponentEvidenceMap((v) => !v)}
@@ -777,7 +784,7 @@ useEffect(() => {
                   </button>
                 </div>
 
-                {(showComponentEvidenceMap || showNextActionMap) ? (
+                {!minimal && (showComponentEvidenceMap || showNextActionMap) ? (
                   <div className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.65fr)]">
                     {showComponentEvidenceMap ? (
                       <div className={panel + " p-3"}>
