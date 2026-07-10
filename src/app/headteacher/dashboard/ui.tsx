@@ -349,6 +349,10 @@ export default function HeadteacherDashboardClient() {
   const [releaseStatus, setReleaseStatus] = useState<ReleaseStatusResp | null>(null);
   const [governance, setGovernance] = useState<GovernanceResp | null>(null);
   const [riskBoard, setRiskBoard] = useState<RiskBoardResp | null>(null);
+  const [showRiskBoard, setShowRiskBoard] = useState(false);
+  const [showGovernance, setShowGovernance] = useState(false);
+  const [governanceLoading, setGovernanceLoading] = useState(false);
+  const [riskBoardLoading, setRiskBoardLoading] = useState(false);
 
   const [, setLoading] = useState(false);
   const [busyCertifyId, setBusyCertifyId] = useState<string | null>(null);
@@ -356,7 +360,7 @@ export default function HeadteacherDashboardClient() {
 
   const reqSeq = useRef(0);
 
-  async function loadAll() {
+  async function loadCore() {
     const mySeq = ++reqSeq.current;
 
     if (start && end && start > end) {
@@ -365,8 +369,6 @@ export default function HeadteacherDashboardClient() {
       setPending(bad);
       setPendingNotes(bad);
       setReleaseStatus(bad);
-      setGovernance(bad);
-      setRiskBoard(bad);
       return;
     }
 
@@ -375,7 +377,7 @@ export default function HeadteacherDashboardClient() {
     try {
       const qs = `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
 
-      const [w, p, pn, rs, g, rb] = await Promise.all([
+      const [w, p, pn, rs] = await Promise.all([
         fetchJson<WeeklyResp>(`/api/headteacher/attendance/weekly/summary?${qs}`, {
           cache: "no-store",
         }),
@@ -388,12 +390,6 @@ export default function HeadteacherDashboardClient() {
         fetchJson<ReleaseStatusResp>(`/api/headteacher/results/release/status`, {
           cache: "no-store",
         }),
-        fetchJson<GovernanceResp>(`/api/headteacher/insights/governance?${qs}`, {
-          cache: "no-store",
-        }),
-        fetchJson<RiskBoardResp>(`/api/headteacher/insights/risk-board?${qs}`, {
-          cache: "no-store",
-        }),
       ]);
 
       if (mySeq !== reqSeq.current) return;
@@ -402,9 +398,6 @@ export default function HeadteacherDashboardClient() {
       setPending(p);
       setPendingNotes(pn);
       setReleaseStatus(rs);
-      setGovernance(g);
-      setRiskBoard(rb);
-
     } catch {
       if (mySeq !== reqSeq.current) return;
       const bad = { ok: false, error: "Failed to load dashboard data." } as const;
@@ -412,15 +405,65 @@ export default function HeadteacherDashboardClient() {
       setPending(bad);
       setPendingNotes(bad);
       setReleaseStatus({ ok: false, error: "Failed to load results release status." });
-      setGovernance({ ok: false, error: "Failed to load governance insights." });
-      setRiskBoard({ ok: false, error: "Failed to load risk board." });
     } finally {
       if (mySeq === reqSeq.current) setLoading(false);
     }
   }
 
+  async function loadGovernance() {
+    if (start && end && start > end) {
+      setGovernance({ ok: false, error: "Start date cannot be after end date." });
+      return;
+    }
+
+    setGovernanceLoading(true);
+
+    try {
+      const qs = `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+      const g = await fetchJson<GovernanceResp>(`/api/headteacher/insights/governance?${qs}`, {
+        cache: "no-store",
+      });
+      setGovernance(g);
+    } catch {
+      setGovernance({ ok: false, error: "Failed to load governance insights." });
+    } finally {
+      setGovernanceLoading(false);
+    }
+  }
+
+  async function loadRiskBoard() {
+    if (start && end && start > end) {
+      setRiskBoard({ ok: false, error: "Start date cannot be after end date." });
+      return;
+    }
+
+    setRiskBoardLoading(true);
+
+    try {
+      const qs = `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+      const rb = await fetchJson<RiskBoardResp>(`/api/headteacher/insights/risk-board?${qs}`, {
+        cache: "no-store",
+      });
+      setRiskBoard(rb);
+    } catch {
+      setRiskBoard({ ok: false, error: "Failed to load risk board." });
+    } finally {
+      setRiskBoardLoading(false);
+    }
+  }
+
+  function openGovernance() {
+    setShowGovernance(true);
+    if (!governance && !governanceLoading) void loadGovernance();
+  }
+
+  function openRiskBoard() {
+    setShowRiskBoard(true);
+    if (!riskBoard && !riskBoardLoading) void loadRiskBoard();
+  }
+
   useEffect(() => {
-    void loadAll();
+    void loadCore();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -446,7 +489,9 @@ export default function HeadteacherDashboardClient() {
         return next;
       });
 
-      await loadAll();
+      await loadCore();
+      if (showGovernance) void loadGovernance();
+      if (showRiskBoard) void loadRiskBoard();
     } catch {
       window.alert("Server error certifying attendance.");
     } finally {
@@ -465,15 +510,9 @@ export default function HeadteacherDashboardClient() {
 
   const releasePill = releaseOk
     ? releasedSchool
-      ? statusPill(
-          `Parent access ON • ${(releaseStatus as any).term} • ${(releaseStatus as any).academicYear}`,
-          "green"
-        )
-      : statusPill(
-          `Parent access OFF • ${(releaseStatus as any).term} • ${(releaseStatus as any).academicYear}`,
-          "amber"
-        )
-    : statusPill("Parent access unavailable", "slate");
+      ? statusPill("Status: ON", "green")
+      : statusPill("Status: OFF", "amber")
+    : statusPill("Status: —", "slate");
 
   return (
     <div className="space-y-6">
@@ -559,31 +598,23 @@ export default function HeadteacherDashboardClient() {
         />
       </div>
 
-      <div className={panelClass("p-4")}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+      <div className={panelClass("p-3")}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-[#F7F4ED]">Parent result access</p>
-            <p className="text-xs leading-6 text-[#C9CDD6]">
-              This is separate from teacher assessment entry. It only controls whether parents can view released results.
+            <p className="mt-0.5 text-[11px] text-[#8F98A8]">
+              {(releaseStatus as any)?.term ?? "Term"} • {(releaseStatus as any)?.academicYear ?? "Year"}
             </p>
           </div>
 
-          <div>{releasePill}</div>
+          <div className="shrink-0">{releasePill}</div>
         </div>
 
-        {releaseOk && releasedSchool ? (
-          <p className="mt-3 text-[11px] text-[#C9CDD6]">
-            Parents can currently access released end-of-term results.
+        {!releaseOk ? (
+          <p className="mt-2 text-[11px] text-rose-200">
+            {(releaseStatus as any)?.error || "Release status unavailable."}
           </p>
-        ) : releaseOk ? (
-          <p className="mt-3 text-[11px] text-[#C9CDD6]">
-            Parents are currently blocked from viewing results until release is turned on.
-          </p>
-        ) : (
-          <p className="mt-3 text-[11px] text-rose-200">
-            {(releaseStatus as any)?.error || "Failed to load release status."}
-          </p>
-        )}
+        ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -610,11 +641,158 @@ export default function HeadteacherDashboardClient() {
         />
 
         <StatCard
-          title="Headteacher Score"
-          value={governanceOk ? pctLabel((governance as any).metrics.headteacherScore) : "—"}
-          sub={governanceOk ? "Governance discipline index" : errorOf(governance)}
+          title="Pending Cert."
+          value={pendingOk ? String((pending as any).count) : "—"}
+          sub={pendingOk ? "Attendance sessions" : errorOf(pending)}
         />
       </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+          <div className={panelClass("p-4")}>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-[#F7F4ED]">Pending lesson notes</p>
+              {pendingNotesOk ? (
+                <span className="rounded-full border border-amber-300/25 bg-amber-400/12 px-3 py-1 text-[11px] font-semibold text-amber-100">
+                  Pending: {(pendingNotes as any).count}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="mt-4">
+              {!pendingNotes ? (
+                <p className="text-sm text-[#C9CDD6]">Loading…</p>
+              ) : pendingNotesOk ? (
+                <>
+                  <div className="rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-3">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-[#8F98A8]">Pending status</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#F7F4ED]">{String((pendingNotes as any).count)}</p>
+                  </div>
+
+                  {(pendingNotes as any).items.length ? (
+                    <div className="mt-4 space-y-2">
+                      {(pendingNotes as any).items.map((it: any) => {
+                        const teacherLabel = (it.teacherName ?? it.teacherUserId ?? "Teacher —") as string;
+
+                        return (
+                          <button
+                            key={it.id}
+                            type="button"
+                            onClick={() => router.push(`/headteacher/lesson-notes/${encodeURIComponent(it.id)}`)}
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:bg-white/8"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-[#F7F4ED]">
+                                  {(it.subject ?? "Subject —")} • {(it.term ?? "Term —")} • {(it.academicYear ?? "Year —")}
+                                </p>
+                                <p className="text-[11px] text-[#C9CDD6]">
+                                  {it.weekNumber != null ? `Week ${it.weekNumber}` : "Week —"} • Updated:{" "}
+                                  {formatDateShort(it.updatedAt)}
+                                </p>
+                                <p className="text-[11px] text-[#8F98A8]">
+                                  Teacher: <span className="font-medium text-[#F7F4ED]">{teacherLabel}</span>
+                                </p>
+                              </div>
+
+                              <span className="font-mono text-[11px] text-[#8F98A8]">{String(it.id).slice(0, 8)}…</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm text-[#C9CDD6]">No submitted lesson notes right now.</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-rose-200">{(pendingNotes as any).error || "Failed to load pending lesson notes."}</p>
+              )}
+            </div>
+          </div>
+
+          <div className={panelClass("p-4")}>
+            <div>
+              <p className="text-sm font-semibold text-[#F7F4ED]">Pending attendance certifications</p>
+              <p className="text-xs leading-6 text-[#C9CDD6]">Only closed sessions should be certified.</p>
+            </div>
+
+            <div className="mt-4">
+              {!pending ? (
+                <p className="text-sm text-[#C9CDD6]">Loading…</p>
+              ) : pendingOk ? (
+                (pending as any).items.length ? (
+                  <div className="space-y-3">
+                    {(pending as any).items.map((it: any) => (
+                      <div key={it.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                        <p className="text-sm font-semibold text-[#F7F4ED]">
+                          {it.classLabel} <span className="font-normal text-[#8F98A8]">· {it.date}</span>
+                        </p>
+
+                        <div className="mt-3 flex flex-col gap-2">
+                          <input
+                            className="w-full rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-2 text-sm text-[#F7F4ED] outline-none focus:border-[#E8C96A]/35"
+                            placeholder="Optional certification note"
+                            value={noteBySessionId[it.id] ?? ""}
+                            onChange={(e) => setNoteBySessionId((m) => ({ ...m, [it.id]: e.target.value }))}
+                          />
+
+                          <button
+                            className="w-full rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] sm:w-auto"
+                            onClick={() => void certify(it.id)}
+                            disabled={busyCertifyId === it.id}
+                          >
+                            {busyCertifyId === it.id ? "Certifying…" : "Certify"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[#C9CDD6]">No pending certifications for this range.</p>
+                )
+              ) : (
+                <p className="text-sm text-rose-200">{(pending as any).error || "Failed to load pending sessions."}</p>
+              )}
+            </div>
+          </div>
+      </div>
+
+      {!showRiskBoard ? (
+        <div className={panelClass("p-4")}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[#F7F4ED]">Schoolwide risk board</p>
+              <p className="mt-1 text-xs text-[#C9CDD6]">Hidden until needed so the dashboard opens faster.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={openRiskBoard}
+              className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-indigo-300/25 bg-indigo-400/12 px-4 py-2 text-sm font-semibold text-indigo-100 transition hover:bg-indigo-400/18"
+            >
+              Show risk board
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowRiskBoard(false)}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+            >
+              Hide risk board
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadRiskBoard()}
+              disabled={riskBoardLoading}
+              className="rounded-xl border border-indigo-300/20 bg-indigo-400/12 px-3 py-2 text-[11px] font-semibold text-indigo-100 transition hover:bg-indigo-400/18 disabled:opacity-60"
+            >
+              {riskBoardLoading ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
 
       <div className={panelClass("p-4 space-y-3")}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -741,112 +919,46 @@ export default function HeadteacherDashboardClient() {
         )}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-          <div className={panelClass("p-4")}>
+
+        </div>
+      )}
+
+      {!showGovernance ? (
+        <div className={panelClass("p-4")}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-[#F7F4ED]">Pending lesson notes</p>
-              <p className="text-xs leading-6 text-[#C9CDD6]">Clear these quickly. This is one of the main headteacher bottlenecks.</p>
+              <p className="text-sm font-semibold text-[#F7F4ED]">Governance copilot</p>
+              <p className="mt-1 text-xs text-[#C9CDD6]">Open only when you want the leadership evidence chain.</p>
             </div>
 
-            <div className="mt-4">
-              {!pendingNotes ? (
-                <p className="text-sm text-[#C9CDD6]">Loading…</p>
-              ) : pendingNotesOk ? (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <StatCard title="Pending" value={String((pendingNotes as any).count)} sub="Submitted" />
-                    <StatCard title="Review SLA" value="Today" sub="Aim same-day feedback" />
-                    <StatCard title="Scope" value="Tenant" sub="Session-scoped" />
-                  </div>
-
-                  {(pendingNotes as any).items.length ? (
-                    <div className="mt-4 space-y-2">
-                      {(pendingNotes as any).items.map((it: any) => {
-                        const teacherLabel = (it.teacherName ?? it.teacherUserId ?? "Teacher —") as string;
-
-                        return (
-                          <button
-                            key={it.id}
-                            type="button"
-                            onClick={() => router.push(`/headteacher/lesson-notes/${encodeURIComponent(it.id)}`)}
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:bg-white/8"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-[#F7F4ED]">
-                                  {(it.subject ?? "Subject —")} • {(it.term ?? "Term —")} • {(it.academicYear ?? "Year —")}
-                                </p>
-                                <p className="text-[11px] text-[#C9CDD6]">
-                                  {it.weekNumber != null ? `Week ${it.weekNumber}` : "Week —"} • Updated:{" "}
-                                  {formatDateShort(it.updatedAt)}
-                                </p>
-                                <p className="text-[11px] text-[#8F98A8]">
-                                  Teacher: <span className="font-medium text-[#F7F4ED]">{teacherLabel}</span>
-                                </p>
-                              </div>
-
-                              <span className="font-mono text-[11px] text-[#8F98A8]">{String(it.id).slice(0, 8)}…</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="mt-4 text-sm text-[#C9CDD6]">No submitted lesson notes right now.</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-rose-200">{(pendingNotes as any).error || "Failed to load pending lesson notes."}</p>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={openGovernance}
+              className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/12 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/18"
+            >
+              Show governance help
+            </button>
           </div>
-
-          <div className={panelClass("p-4")}>
-            <div>
-              <p className="text-sm font-semibold text-[#F7F4ED]">Pending attendance certifications</p>
-              <p className="text-xs leading-6 text-[#C9CDD6]">Only closed sessions should be certified.</p>
-            </div>
-
-            <div className="mt-4">
-              {!pending ? (
-                <p className="text-sm text-[#C9CDD6]">Loading…</p>
-              ) : pendingOk ? (
-                (pending as any).items.length ? (
-                  <div className="space-y-3">
-                    {(pending as any).items.map((it: any) => (
-                      <div key={it.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                        <p className="text-sm font-semibold text-[#F7F4ED]">
-                          {it.classLabel} <span className="font-normal text-[#8F98A8]">· {it.date}</span>
-                        </p>
-
-                        <div className="mt-3 flex flex-col gap-2">
-                          <input
-                            className="w-full rounded-2xl border border-white/10 bg-[#0C1730] px-3 py-2 text-sm text-[#F7F4ED] outline-none focus:border-[#E8C96A]/35"
-                            placeholder="Optional certification note"
-                            value={noteBySessionId[it.id] ?? ""}
-                            onChange={(e) => setNoteBySessionId((m) => ({ ...m, [it.id]: e.target.value }))}
-                          />
-
-                          <button
-                            className="w-full rounded-full bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-sm font-semibold text-[#071A3D] sm:w-auto"
-                            onClick={() => void certify(it.id)}
-                            disabled={busyCertifyId === it.id}
-                          >
-                            {busyCertifyId === it.id ? "Certifying…" : "Certify"}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-[#C9CDD6]">No pending certifications for this range.</p>
-                )
-              ) : (
-                <p className="text-sm text-rose-200">{(pending as any).error || "Failed to load pending sessions."}</p>
-              )}
-            </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowGovernance(false)}
+              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-semibold text-[#F7F4ED] transition hover:bg-white/10"
+            >
+              Hide governance help
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadGovernance()}
+              disabled={governanceLoading}
+              className="rounded-xl border border-cyan-300/20 bg-cyan-400/12 px-3 py-2 text-[11px] font-semibold text-cyan-100 transition hover:bg-cyan-400/18 disabled:opacity-60"
+            >
+              {governanceLoading ? "Refreshing…" : "Refresh"}
+            </button>
           </div>
-      </div>
 
       <div className={panelClass("p-4")}>
         <div className="flex items-start justify-between gap-3">
@@ -934,6 +1046,10 @@ export default function HeadteacherDashboardClient() {
           )}
         </div>
       </div>
+
+        </div>
+      )}
+
     </div>
   );
 }
