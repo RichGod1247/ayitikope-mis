@@ -239,6 +239,21 @@ const ASSESSMENT_TYPES: { value: string; label: string }[] = [
   { value: "OTHER", label: "Other" },
 ];
 
+const TERM_OPTIONS = ["1st Term", "2nd Term", "3rd Term"];
+
+const ACADEMIC_YEAR_OPTIONS = [
+  "2024/2025",
+  "2025/2026",
+  "2026/2027",
+  "2027/2028",
+];
+
+function optionListWithCurrent(base: string[], current: string) {
+  const cleanCurrent = cleanStr(current);
+  const merged = cleanCurrent ? [cleanCurrent, ...base] : base;
+  return Array.from(new Set(merged.map(cleanStr).filter(Boolean)));
+}
+
 function assessmentTypeFromComponent(args: {
   componentCode: string;
   componentLabel: string;
@@ -648,6 +663,12 @@ export default function TeacherAssessmentClient() {
 
   const [term, setTerm] = useState<string>("1st Term");
   const [academicYear, setAcademicYear] = useState<string>("2025/2026");
+
+  const termOptions = useMemo(() => optionListWithCurrent(TERM_OPTIONS, term), [term]);
+  const academicYearOptions = useMemo(
+    () => optionListWithCurrent(ACADEMIC_YEAR_OPTIONS, academicYear),
+    [academicYear]
+  );
 
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
@@ -1561,84 +1582,101 @@ setSavingScoresState("saved");
             </div>
           </div>
 
-<div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+<div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
   <button
     type="button"
     onClick={() => setTab("broadsheet")}
     className={
-      tab === "broadsheet"
+      (tab === "broadsheet"
         ? `${broadsheetButton} ring-2 ring-[#E8C96A]/35`
-        : broadsheetButton
+        : broadsheetButton) + " w-full justify-center px-3 py-2 sm:w-auto"
     }
   >
-    📊 Open broadsheet
+    Broadsheet
   </button>
 
-  <Link href={mockAssessmentHref} className={goldButton}>
+  <Link href={mockAssessmentHref} className={goldButton + " w-full justify-center px-3 py-2 sm:w-auto"}>
     BECE Mock
   </Link>
 
-  <Link href={lessonDeliveriesPageHref} className={emeraldButton}>
-    Record lesson delivery
+  <Link href={lessonDeliveriesPageHref} className={emeraldButton + " w-full justify-center px-3 py-2 sm:w-auto"}>
+    Lesson Delivery
   </Link>
 
-  <Link href={termDashboardHref} className={indigoButton}>
-    View term dashboard
+  <Link href={termDashboardHref} className={indigoButton + " w-full justify-center px-3 py-2 sm:w-auto"}>
+    Term Dashboard
   </Link>
 </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-[#C9CDD6]">Class</label>
-            <select
-              className={darkInput}
-              value={classroomId}
-              onChange={(e) => setClassroomId(e.target.value)}
-            >
-              {visibleClassrooms.length === 0 ? (
-                <option value="">No classes</option>
-              ) : (
-                visibleClassrooms.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {canToggleMultiStream && !showMultiStream ? singleStreamLabel(c) : fullClassroomLabel(c)}
+        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="col-span-2 space-y-1 sm:col-span-1">
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#AEB6C4]">Class</label>
+                {canToggleMultiStream ? (
+                  <label className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-semibold text-[#C9CDD6]">
+                    <input
+                      type="checkbox"
+                      checked={showMultiStream}
+                      onChange={(e) => setShowMultiStream(e.target.checked)}
+                      className="h-3 w-3"
+                    />
+                    Multi-stream
+                  </label>
+                ) : null}
+              </div>
+
+              <select
+                className={darkInput + " py-1.5 text-[11px]"}
+                value={classroomId}
+                onChange={(e) => setClassroomId(e.target.value)}
+              >
+                {visibleClassrooms.length === 0 ? (
+                  <option value="">No classes</option>
+                ) : (
+                  visibleClassrooms.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {canToggleMultiStream && !showMultiStream ? singleStreamLabel(c) : fullClassroomLabel(c)}
+                    </option>
+                  ))
+                )}
+              </select>
+
+              {canToggleMultiStream && !showMultiStream ? (
+                <p className="hidden text-[10px] text-[#8F98A8] sm:block">{streamModeHelp}</p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#AEB6C4]">Term</label>
+              <select
+                className={darkInput + " py-1.5 text-[11px]"}
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+              >
+                {termOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
-                ))
-              )}
-            </select>
+                ))}
+              </select>
+            </div>
 
-            {canToggleMultiStream ? (
-              <label className="mt-1 inline-flex items-center gap-2 text-[11px] text-[#C9CDD6]">
-                <input
-                  type="checkbox"
-                  checked={showMultiStream}
-                  onChange={(e) => setShowMultiStream(e.target.checked)}
-                />
-                Show multi-stream classes
-              </label>
-            ) : null}
-
-            {canToggleMultiStream && !showMultiStream ? (
-              <p className="text-[10px] text-[#8F98A8]">{streamModeHelp}</p>
-            ) : null}
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-[#C9CDD6]">Term</label>
-            <input
-              className={darkInput}
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-[#C9CDD6]">Academic year</label>
-            <input
-              className={darkInput}
-              value={academicYear}
-              onChange={(e) => setAcademicYear(e.target.value)}
-            />
+            <div className="space-y-1">
+              <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[#AEB6C4]">Year</label>
+              <select
+                className={darkInput + " py-1.5 text-[11px]"}
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+              >
+                {academicYearOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
