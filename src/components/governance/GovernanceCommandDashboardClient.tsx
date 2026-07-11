@@ -1,8 +1,9 @@
 // src/components/governance/GovernanceCommandDashboardClient.tsx
 "use client";
 
+import dynamic from "next/dynamic";
 import { signOut } from "next-auth/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import GovernanceDashboardClient from "@/components/governance/GovernanceDashboardClient";
 import GovernanceSentNoticeAccountabilityClient from "@/components/governance/GovernanceSentNoticeAccountabilityClient";
 import GovernanceAppraisalDrilldownPanel from "@/components/governance/GovernanceAppraisalDrilldownPanel";
@@ -11,6 +12,23 @@ import GovernanceOfficialNoticeComposer from "@/components/governance/Governance
 import GovernanceTeacherAbsenteeismRiskPanel, {
   type GovernanceTeacherAbsenteeismOverview,
 } from "@/components/governance/GovernanceTeacherAbsenteeismRiskPanel";
+
+const GovernanceInterventionLogbookClient = dynamic(
+  () =>
+    import(
+      "@/components/governance/GovernanceInterventionLogbookClient"
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+        <div className="rounded-2xl border border-sky-300/20 bg-slate-950 px-5 py-4 text-sm text-sky-100">
+          Loading governance logbook...
+        </div>
+      </div>
+    ),
+  },
+);
 
 type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -1802,6 +1820,26 @@ export default function GovernanceCommandDashboardClient({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<PanelKey>("risk");
+  const [isGovernanceLogbookOpen, setIsGovernanceLogbookOpen] =
+    useState(false);
+  const panelContentRef = useRef<HTMLDivElement | null>(null);
+
+  function openPanel(panel: PanelKey) {
+    setActivePanel(panel);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const prefersReducedMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+
+        panelContentRef.current?.scrollIntoView({
+          behavior: prefersReducedMotion ? "auto" : "smooth",
+          block: "start",
+        });
+      });
+    });
+  }
 
   const isDistrictView = endpoint.includes("/district/");
   const isCircuitView = endpoint.includes("/circuit/");
@@ -2084,7 +2122,7 @@ const mockPanelActive =
       tone={
         attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"
       }
-      onClick={() => setActivePanel("students-attendance")}
+      onClick={() => openPanel("students-attendance")}
       active={activePanel === "students-attendance"}
     />
   )}
@@ -2098,7 +2136,7 @@ const mockPanelActive =
         : "No teacher reached 3 days"
     }
     tone={absenteeRiskTone}
-    onClick={() => setActivePanel("risk")}
+    onClick={() => openPanel("risk")}
     active={activePanel === "risk"}
   />
 
@@ -2111,7 +2149,7 @@ const mockPanelActive =
         : "Tap to see teachers"
     }
     tone={absenteeRiskTone}
-    onClick={() => setActivePanel("risk")}
+    onClick={() => openPanel("risk")}
     active={activePanel === "risk"}
   />
 </div>
@@ -2126,7 +2164,7 @@ const mockPanelActive =
     value={absenteeTeacherCount}
     tone={absenteeRiskTone}
     active={activePanel === "risk"}
-    onClick={() => setActivePanel("risk")}
+    onClick={() => openPanel("risk")}
   />
 
   <div
@@ -2157,7 +2195,7 @@ const mockPanelActive =
     <div className="mt-3 grid grid-cols-2 gap-2">
       <button
         type="button"
-        onClick={() => setActivePanel("mock-readiness")}
+        onClick={() => openPanel("mock-readiness")}
         className={cx(
           "rounded-2xl border px-3 py-2 text-left transition hover:bg-white/[0.08]",
           activePanel === "mock-readiness"
@@ -2175,7 +2213,7 @@ const mockPanelActive =
 
       <button
         type="button"
-        onClick={() => setActivePanel(mockQueuePanelKey)}
+        onClick={() => openPanel(mockQueuePanelKey)}
         className={cx(
           "rounded-2xl border px-3 py-2 text-left transition hover:bg-white/[0.08]",
           activePanel === mockQueuePanelKey
@@ -2206,7 +2244,7 @@ const mockPanelActive =
     }
     tone={attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"}
     active={activePanel === "students-attendance"}
-    onClick={() => setActivePanel("students-attendance")}
+    onClick={() => openPanel("students-attendance")}
   />
 
   <CommandTile
@@ -2216,7 +2254,7 @@ const mockPanelActive =
     value={assessmentCompletion ? percentValue(assessmentCompletion) : "—"}
     tone={assessmentCompletion && assessmentCompletion < 60 ? "warning" : "info"}
     active={activePanel === "students-assessment"}
-    onClick={() => setActivePanel("students-assessment")}
+    onClick={() => openPanel("students-assessment")}
   />
 
   <CommandTile
@@ -2238,7 +2276,7 @@ const mockPanelActive =
           : "info"
     }
     active={activePanel === "teacher-attendance"}
-    onClick={() => setActivePanel("teacher-attendance")}
+    onClick={() => openPanel("teacher-attendance")}
   />
 
   <CommandTile
@@ -2248,7 +2286,7 @@ const mockPanelActive =
     value="Reports"
     tone="info"
     active={activePanel === "teacher-appraisal"}
-    onClick={() => setActivePanel("teacher-appraisal")}
+    onClick={() => openPanel("teacher-appraisal")}
   />
 
   <CommandTile
@@ -2258,7 +2296,7 @@ const mockPanelActive =
     value="Prep"
     tone="info"
     active={activePanel === "scheme-coverage"}
-    onClick={() => setActivePanel("scheme-coverage")}
+    onClick={() => openPanel("scheme-coverage")}
   />
 
   <CommandTile
@@ -2268,7 +2306,7 @@ const mockPanelActive =
     value={lessonCompliance ? percentValue(lessonCompliance) : "—"}
     tone={lessonCompliance && lessonCompliance < 70 ? "warning" : "info"}
     active={activePanel === "lesson"}
-    onClick={() => setActivePanel("lesson")}
+    onClick={() => openPanel("lesson")}
   />
 
   <CommandTile
@@ -2277,7 +2315,7 @@ const mockPanelActive =
     description="Send official notice."
     tone="info"
     active={activePanel === "notices"}
-    onClick={() => setActivePanel("notices")}
+    onClick={() => openPanel("notices")}
   />
 
   <CommandTile
@@ -2286,7 +2324,7 @@ const mockPanelActive =
     description="Read, ACK, response trail."
     tone="default"
     active={activePanel === "accountability"}
-    onClick={() => setActivePanel("accountability")}
+    onClick={() => openPanel("accountability")}
   />
 
   <CommandTile
@@ -2295,9 +2333,15 @@ const mockPanelActive =
     description="Full old workbench."
     tone="default"
     active={activePanel === "advanced"}
-    onClick={() => setActivePanel("advanced")}
+    onClick={() => openPanel("advanced")}
   />
 </section>
+
+      <div
+        ref={panelContentRef}
+        className="scroll-mt-4"
+        aria-hidden="true"
+      />
 
       {activePanel === "mock-readiness" ? (
         <GovernanceMockReadinessPanel
@@ -2746,11 +2790,46 @@ const mockPanelActive =
       ) : null}
 
       {activePanel === "notices" ? (
-        <GovernanceOfficialNoticeComposer
+        <section className="space-y-4">
+          <GovernanceOfficialNoticeComposer
+            isDistrictView={isDistrictView}
+            isCircuitView={isCircuitView}
+            assignments={scope?.assignments ?? []}
+            schools={schools}
+          />
+
+          <section className="rounded-[28px] border border-sky-300/20 bg-sky-500/10 p-4 md:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
+                  Governance Logbook
+                </p>
+                <h2 className="mt-1 text-lg font-bold text-white">
+                  Intervention evidence timeline
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm leading-6 text-sky-100/80">
+                  Open only when you need the reference record of cases, notices,
+                  acknowledgements, responses, escalations, directives, and closure
+                  evidence.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsGovernanceLogbookOpen(true)}
+                className="min-h-12 rounded-2xl border border-sky-300/25 bg-sky-500/20 px-5 py-2 text-sm font-semibold text-sky-100 hover:bg-sky-500/30"
+              >
+                Open logbook
+              </button>
+            </div>
+          </section>
+        </section>
+      ) : null}
+
+      {isGovernanceLogbookOpen ? (
+        <GovernanceInterventionLogbookClient
           isDistrictView={isDistrictView}
-          isCircuitView={isCircuitView}
-          assignments={scope?.assignments ?? []}
-          schools={schools}
+          onClose={() => setIsGovernanceLogbookOpen(false)}
         />
       ) : null}
 
