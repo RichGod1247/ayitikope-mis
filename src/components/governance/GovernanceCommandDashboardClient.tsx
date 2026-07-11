@@ -1,11 +1,16 @@
 // src/components/governance/GovernanceCommandDashboardClient.tsx
 "use client";
 
+import { signOut } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
 import GovernanceDashboardClient from "@/components/governance/GovernanceDashboardClient";
 import GovernanceSentNoticeAccountabilityClient from "@/components/governance/GovernanceSentNoticeAccountabilityClient";
 import GovernanceAppraisalDrilldownPanel from "@/components/governance/GovernanceAppraisalDrilldownPanel";
 import GovernanceSchemeCoveragePanel from "@/components/governance/GovernanceSchemeCoveragePanel";
+import GovernanceOfficialNoticeComposer from "@/components/governance/GovernanceOfficialNoticeComposer";
+import GovernanceTeacherAbsenteeismRiskPanel, {
+  type GovernanceTeacherAbsenteeismOverview,
+} from "@/components/governance/GovernanceTeacherAbsenteeismRiskPanel";
 
 type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -364,6 +369,7 @@ overview?: {
   signals?: Record<string, number>;
   attendance?: AttendanceOverview;
   teacherAttendance?: TeacherAttendanceOverview;
+  teacherAbsenteeism?: GovernanceTeacherAbsenteeismOverview;
   emptyStates?: string[];
   generatedAt?: string;
 };
@@ -976,7 +982,7 @@ function StatCard({
   active?: boolean;
 }) {
   const className = cx(
-    "rounded-[24px] border p-4",
+    "min-w-0 rounded-2xl border px-2 py-2 md:px-3 md:py-2.5",
     toneClass(tone),
     onClick ? "w-full text-left transition hover:-translate-y-0.5 hover:bg-white/[0.06]" : "",
     active ? "ring-2 ring-white/20" : "",
@@ -984,17 +990,31 @@ function StatCard({
 
   const content = (
     <>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+      <p
+        title={label}
+        className="truncate text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-400 md:text-[10px] md:tracking-[0.1em]"
+      >
         {label}
       </p>
-      <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+
+      <p
+        title={String(value)}
+        className="mt-0.5 truncate text-base font-bold leading-none text-white md:mt-1 md:text-xl"
+      >
+        {value}
+      </p>
+
       {helper ? (
-        <p className={cx("mt-1 text-xs leading-5", smallToneText(tone))}>
+        <p
+          title={helper}
+          className={cx("mt-0.5 truncate text-[9px] leading-tight md:text-[11px]", smallToneText(tone))}
+        >
           {helper}
         </p>
       ) : null}
+
       {onClick ? (
-        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <p className="mt-1 hidden text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 sm:block">
           Tap to open
         </p>
       ) : null}
@@ -1830,50 +1850,25 @@ export default function GovernanceCommandDashboardClient({
 
   const schools = useMemo(() => overview?.schools ?? [], [overview]);
   const circuits = useMemo(() => overview?.circuitBreakdown ?? [], [overview]);
-  const queue = useMemo(() => overview?.interventionQueue ?? [], [overview]);
   const totals = overview?.totals ?? {};
   const signals = overview?.signals ?? {};
   const attendance = overview?.attendance ?? null;
-    const teacherAttendance = overview?.teacherAttendance ?? null;
-  const riskSummary = overview?.riskSummary ?? {};
+  const teacherAttendance = overview?.teacherAttendance ?? null;
+  const teacherAbsenteeism = overview?.teacherAbsenteeism ?? null;
   const sectorSummary = overview?.sectorSummary ?? {};
+
+  const absenteeTeacherCount = numberValue(
+    teacherAbsenteeism?.flaggedTeachers,
+  );
+  const absenteeSchoolCount = numberValue(
+    teacherAbsenteeism?.schoolsWithCases,
+  );
+  const absenteeCircuitCount = numberValue(
+    teacherAbsenteeism?.circuitsWithCases,
+  );
+  const absenteeRiskTone: "danger" | "success" =
+    absenteeTeacherCount > 0 ? "danger" : "success";
   const mockReadiness = overview?.mockReadiness ?? null;
-
-  const highestRiskSchools = useMemo(() => {
-    const queueRows = queue.map((item) => ({
-      id: item.schoolId,
-      name: item.schoolName,
-      schoolCode: item.schoolCode,
-      schoolSector: item.schoolSector,
-      circuitName: item.circuitName,
-      riskScore: numberValue(item.riskScore),
-      riskLevel: String(item.riskLevel ?? "LOW"),
-      reason: item.reasons?.[0] ?? "Risk evidence available.",
-      action:
-        item.recommendedActions?.[0] ?? "Review school evidence and follow up.",
-    }));
-
-    if (queueRows.length) {
-      return queueRows.sort((a, b) => b.riskScore - a.riskScore).slice(0, 5);
-    }
-
-    return schools
-      .map((school) => ({
-        id: school.id,
-        name: school.name,
-        schoolCode: school.schoolCode,
-        schoolSector: school.schoolSector,
-        circuitName: school.circuit?.name ?? "No circuit",
-        riskScore: numberValue(school.metrics?.riskScore),
-        riskLevel: String(school.metrics?.riskLevel ?? "LOW"),
-        reason: school.metrics?.riskReasons?.[0] ?? "No major risk reason.",
-        action:
-          school.metrics?.recommendedActions?.[0] ??
-          "Keep monitoring school evidence.",
-      }))
-      .sort((a, b) => b.riskScore - a.riskScore)
-      .slice(0, 5);
-  }, [queue, schools]);
 
   const publicSchools =
     numberValue(totals.publicSchools) ||
@@ -1890,16 +1885,6 @@ export default function GovernanceCommandDashboardClient({
 
 const circuitCount =
   numberValue(totals.circuits) || circuits.length || 0;
-
-  const criticalRisk =
-    numberValue(riskSummary.critical) +
-    numberValue(sectorSummary.public?.criticalRiskSchools) +
-    numberValue(sectorSummary.private?.criticalRiskSchools);
-
-  const highRisk =
-    numberValue(riskSummary.high) +
-    numberValue(sectorSummary.public?.highRiskSchools) +
-    numberValue(sectorSummary.private?.highRiskSchools);
 
   const attendanceRate = numberValue(
     attendance?.presentPct ?? signals.attendanceRateToday ?? totals.attendanceRateToday,
@@ -1943,8 +1928,6 @@ const circuitCount =
 
 const generatedAt = compactDateTime(overview?.generatedAt);
 
-const riskTone = criticalRisk ? "danger" : highRisk ? "warning" : "success";
-
 const mockReleasedCoverage = mockReadiness
   ? `${mockReadiness.schoolsWithReleasedMock}/${mockReadiness.schools}`
   : "—";
@@ -1985,6 +1968,42 @@ const mockMissingReleases = mockPriorityRows.filter(
   (row) => row.priorityLabel === "REQUEST_MOCK_RELEASE",
 ).length;
 
+const mockQueuePanelKey: PanelKey = isDistrictView
+  ? "mock-circuit-priority"
+  : "mock-priority";
+
+const mockQueueTitle = isDistrictView ? "Circuit queue" : "School queue";
+
+const mockQueueValue = isDistrictView
+  ? mockUrgentCircuits
+    ? `${mockUrgentCircuits} urgent`
+    : mockCoverageGapCircuits
+      ? `${mockCoverageGapCircuits} coverage`
+      : "Ready"
+  : mockUrgentVisits
+    ? `${mockUrgentVisits} urgent`
+    : mockMissingReleases
+      ? `${mockMissingReleases} missing`
+      : "Ready";
+
+const mockQueueTone: "success" | "warning" | "danger" =
+  isDistrictView
+    ? mockUrgentCircuits
+      ? "danger"
+      : mockCoverageGapCircuits
+        ? "warning"
+        : "success"
+    : mockUrgentVisits
+      ? "danger"
+      : mockMissingReleases
+        ? "warning"
+        : "success";
+
+const mockPanelActive =
+  activePanel === "mock-readiness" ||
+  activePanel === "mock-priority" ||
+  activePanel === "mock-circuit-priority";
+
   return (
     <main className="space-y-5">
       <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.94),rgba(7,26,61,0.94),rgba(5,7,11,0.97))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
@@ -2012,14 +2031,24 @@ const mockMissingReleases = mockPriorityRows.filter(
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => void load()}
-              disabled={loading}
-              className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:bg-white/10 disabled:opacity-50"
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
+            <div className="flex flex-wrap gap-2">
+  <button
+    type="button"
+    onClick={() => void signOut({ callbackUrl: "/auth/signin" })}
+    className="w-fit rounded-full border border-red-300/20 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-100 hover:bg-red-500/20"
+  >
+    Logout
+  </button>
+
+  <button
+    type="button"
+    onClick={() => void load()}
+    disabled={loading}
+    className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:bg-white/10 disabled:opacity-50"
+  >
+    {loading ? "Refreshing..." : "Refresh"}
+  </button>
+</div>
           </div>
 
           {error ? (
@@ -2028,7 +2057,7 @@ const mockMissingReleases = mockPriorityRows.filter(
             </div>
           ) : null}
 
-<div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+<div className="mt-4 grid grid-cols-4 gap-1.5 sm:gap-2 lg:gap-3">
   <StatCard
     label="Schools"
     value={schoolCount}
@@ -2061,23 +2090,27 @@ const mockMissingReleases = mockPriorityRows.filter(
   )}
 
   <StatCard
-    label="Risk load"
-    value={criticalRisk + highRisk}
-    helper={`${criticalRisk} critical · ${highRisk} high`}
-    tone={riskTone}
+    label="Absent teachers"
+    value={absenteeTeacherCount}
+    helper={
+      absenteeTeacherCount
+        ? "3+ certified absent days"
+        : "No teacher reached 3 days"
+    }
+    tone={absenteeRiskTone}
     onClick={() => setActivePanel("risk")}
     active={activePanel === "risk"}
   />
 
   <StatCard
-    label="Active queue"
-    value={queue.length}
+    label="Affected schools"
+    value={absenteeSchoolCount}
     helper={
-      queue.length
-        ? "Schools need supervision follow-up"
-        : "No current queue pressure"
+      isDistrictView
+        ? `${absenteeCircuitCount} circuit(s)`
+        : "Tap to see teachers"
     }
-    tone={queue.length ? "warning" : "success"}
+    tone={absenteeRiskTone}
     onClick={() => setActivePanel("risk")}
     active={activePanel === "risk"}
   />
@@ -2086,190 +2119,185 @@ const mockMissingReleases = mockPriorityRows.filter(
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
-        <CommandTile
-          icon="🔥"
-          title="Risk board"
-          description="Top schools needing follow-up."
-          value={criticalRisk + highRisk}
-          tone={riskTone}
-          active={activePanel === "risk"}
-          onClick={() => setActivePanel("risk")}
-        />
-                <CommandTile
-          icon="🎯"
-          title="Mock readiness"
-          description="BECE Mock readiness overview."
-          value={mockReleasedCoverage}
-          tone={
-            mockReadiness?.schoolsNeedingFollowUp
-              ? "warning"
-              : mockReadiness?.schoolsWithReleasedMock
-                ? "success"
-                : "default"
-          }
-          active={activePanel === "mock-readiness"}
-          onClick={() => setActivePanel("mock-readiness")}
-        />
-                {isCircuitView ? (
-          <CommandTile
-            icon="🧭"
-            title="Mock visit queue"
-            description="Schools ranked for SISSO follow-up."
-            value={
-              mockUrgentVisits
-                ? `${mockUrgentVisits} urgent`
-                : mockMissingReleases
-                  ? `${mockMissingReleases} missing`
-                  : "Ready"
-            }
-            tone={
-              mockUrgentVisits
-                ? "danger"
-                : mockMissingReleases
-                  ? "warning"
-                  : "success"
-            }
-            active={activePanel === "mock-priority"}
-            onClick={() => setActivePanel("mock-priority")}
-          />
-        ) : null}
-                {isDistrictView ? (
-          <CommandTile
-            icon="🛰️"
-            title="Mock circuit queue"
-            description="Circuits ranked for Director follow-up."
-            value={
-              mockUrgentCircuits
-                ? `${mockUrgentCircuits} urgent`
-                : mockCoverageGapCircuits
-                  ? `${mockCoverageGapCircuits} coverage`
-                  : "Ready"
-            }
-            tone={
-              mockUrgentCircuits
-                ? "danger"
-                : mockCoverageGapCircuits
-                  ? "warning"
-                  : "success"
-            }
-            active={activePanel === "mock-circuit-priority"}
-            onClick={() => setActivePanel("mock-circuit-priority")}
-          />
-        ) : null}
-        <CommandTile
-  icon="🧒"
-  title="Students Attendance"
-  description="Learner register capture and certification."
-  value={
-    attendanceNeedsAction
-      ? `${attendanceNeedsAction} follow-up`
-      : attendanceRate
-        ? percentValue(attendanceRate)
-        : "0%"
-  }
-  tone={
-    attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"
-  }
-  active={activePanel === "students-attendance"}
-  onClick={() => setActivePanel("students-attendance")}
-/>
-<CommandTile
-  icon="👨‍🏫"
-  title="Teacher Attendance"
-  description="Certified staff presence by school."
-  value={
-    teacherAttendanceNeedsAction
-      ? `${teacherAttendanceNeedsAction} follow-up`
-      : teacherAttendanceCertifiedSchools
-        ? `${teacherAttendanceCertifiedSchools} certified`
-        : "0 certified"
-  }
-  tone={
-    teacherAttendanceNeedsAction
-      ? "warning"
-      : teacherAttendanceCertifiedSchools
-        ? "success"
-        : "info"
-  }
-  active={activePanel === "teacher-attendance"}
-  onClick={() => setActivePanel("teacher-attendance")}
-/>
-        <CommandTile
-          icon="📘"
-          title="Lesson delivery"
-          description="Teaching evidence health."
-          value={lessonCompliance ? percentValue(lessonCompliance) : "—"}
-          tone={lessonCompliance && lessonCompliance < 70 ? "warning" : "info"}
-          active={activePanel === "lesson"}
-          onClick={() => setActivePanel("lesson")}
-        />
-        <CommandTile
-  icon="📊"
-  title="Students Assessment"
-  description="Learner scoring and assessment proof."
-  value={
-    assessmentCompletion ? percentValue(assessmentCompletion) : "—"
-  }
-  tone={
-    assessmentCompletion && assessmentCompletion < 60
-      ? "warning"
-      : "info"
-  }
-  active={activePanel === "students-assessment"}
-  onClick={() => setActivePanel("students-assessment")}
-/>
-<CommandTile
-  icon="📚"
-  title="Scheme Coverage"
-  description="Prepared, submitted, approved, and missing schemes."
-  value="Prep"
-  tone="info"
-  active={activePanel === "scheme-coverage"}
-  onClick={() => setActivePanel("scheme-coverage")}
-/>
-<CommandTile
-  icon="📝"
-  title="Teacher Appraisal"
-  description="Finalized teacher appraisal reports."
-  value="Reports"
-  tone="info"
-  active={activePanel === "teacher-appraisal"}
-  onClick={() => setActivePanel("teacher-appraisal")}
-/>
-        <CommandTile
-          icon="🏛️"
-          title="Sector boundary"
-          description="Public/private command scope."
-          value={`${publicSchools}/${privateSchools}`}
-          tone="default"
-          active={activePanel === "sector"}
-          onClick={() => setActivePanel("sector")}
-        />
-        <CommandTile
-          icon="📨"
-          title="Notices"
-          description="Send official notice."
-          tone="info"
-          active={activePanel === "notices"}
-          onClick={() => setActivePanel("notices")}
-        />
-        <CommandTile
-          icon="📬"
-          title="Accountability"
-          description="Read, ACK, response trail."
-          tone="default"
-          active={activePanel === "accountability"}
-          onClick={() => setActivePanel("accountability")}
-        />
-        <CommandTile
-          icon="🧰"
-          title="Advanced"
-          description="Full old workbench."
-          tone="default"
-          active={activePanel === "advanced"}
-          onClick={() => setActivePanel("advanced")}
-        />
-      </section>
+  <CommandTile
+    icon="🔥"
+    title="Risk board"
+    description="Teachers absent for 3 certified days or more."
+    value={absenteeTeacherCount}
+    tone={absenteeRiskTone}
+    active={activePanel === "risk"}
+    onClick={() => setActivePanel("risk")}
+  />
+
+  <div
+    className={cx(
+      "rounded-[24px] border p-3 transition",
+      toneClass(
+        mockReadiness?.schoolsNeedingFollowUp || mockQueueTone !== "success"
+          ? mockQueueTone
+          : mockReadiness?.schoolsWithReleasedMock
+            ? "success"
+            : "default",
+      ),
+      mockPanelActive ? "ring-2 ring-white/20" : "",
+    )}
+  >
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-xl">🎯</span>
+      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-white">
+        Mock
+      </span>
+    </div>
+
+    <p className="mt-3 text-sm font-bold text-white">BECE Mock Command</p>
+    <p className="mt-1 text-xs leading-5 text-slate-300">
+      Readiness and follow-up queue in one place.
+    </p>
+
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => setActivePanel("mock-readiness")}
+        className={cx(
+          "rounded-2xl border px-3 py-2 text-left transition hover:bg-white/[0.08]",
+          activePanel === "mock-readiness"
+            ? "border-amber-200/40 bg-amber-400/15"
+            : "border-white/10 bg-black/20",
+        )}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          Readiness
+        </p>
+        <p className="mt-0.5 truncate text-sm font-bold text-white">
+          {mockReleasedCoverage}
+        </p>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setActivePanel(mockQueuePanelKey)}
+        className={cx(
+          "rounded-2xl border px-3 py-2 text-left transition hover:bg-white/[0.08]",
+          activePanel === mockQueuePanelKey
+            ? "border-red-200/40 bg-red-500/15"
+            : "border-white/10 bg-black/20",
+        )}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          {mockQueueTitle}
+        </p>
+        <p className="mt-0.5 truncate text-sm font-bold text-white">
+          {mockQueueValue}
+        </p>
+      </button>
+    </div>
+  </div>
+
+  <CommandTile
+    icon="🧒"
+    title="Students Attendance"
+    description="Learner register capture and certification."
+    value={
+      attendanceNeedsAction
+        ? `${attendanceNeedsAction} follow-up`
+        : attendanceRate
+          ? percentValue(attendanceRate)
+          : "0%"
+    }
+    tone={attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"}
+    active={activePanel === "students-attendance"}
+    onClick={() => setActivePanel("students-attendance")}
+  />
+
+  <CommandTile
+    icon="📊"
+    title="Students Assessment"
+    description="Learner scoring and assessment proof."
+    value={assessmentCompletion ? percentValue(assessmentCompletion) : "—"}
+    tone={assessmentCompletion && assessmentCompletion < 60 ? "warning" : "info"}
+    active={activePanel === "students-assessment"}
+    onClick={() => setActivePanel("students-assessment")}
+  />
+
+  <CommandTile
+    icon="👨‍🏫"
+    title="Teacher Attendance"
+    description="Certified staff presence by school."
+    value={
+      teacherAttendanceNeedsAction
+        ? `${teacherAttendanceNeedsAction} follow-up`
+        : teacherAttendanceCertifiedSchools
+          ? `${teacherAttendanceCertifiedSchools} certified`
+          : "0 certified"
+    }
+    tone={
+      teacherAttendanceNeedsAction
+        ? "warning"
+        : teacherAttendanceCertifiedSchools
+          ? "success"
+          : "info"
+    }
+    active={activePanel === "teacher-attendance"}
+    onClick={() => setActivePanel("teacher-attendance")}
+  />
+
+  <CommandTile
+    icon="📝"
+    title="Teacher Appraisal"
+    description="Finalized teacher appraisal reports."
+    value="Reports"
+    tone="info"
+    active={activePanel === "teacher-appraisal"}
+    onClick={() => setActivePanel("teacher-appraisal")}
+  />
+
+  <CommandTile
+    icon="📚"
+    title="Scheme Coverage"
+    description="Prepared, submitted, approved, and missing schemes."
+    value="Prep"
+    tone="info"
+    active={activePanel === "scheme-coverage"}
+    onClick={() => setActivePanel("scheme-coverage")}
+  />
+
+  <CommandTile
+    icon="📘"
+    title="Lesson delivery"
+    description="Teaching evidence health."
+    value={lessonCompliance ? percentValue(lessonCompliance) : "—"}
+    tone={lessonCompliance && lessonCompliance < 70 ? "warning" : "info"}
+    active={activePanel === "lesson"}
+    onClick={() => setActivePanel("lesson")}
+  />
+
+  <CommandTile
+    icon="📨"
+    title="Notices"
+    description="Send official notice."
+    tone="info"
+    active={activePanel === "notices"}
+    onClick={() => setActivePanel("notices")}
+  />
+
+  <CommandTile
+    icon="📬"
+    title="Accountability"
+    description="Read, ACK, response trail."
+    tone="default"
+    active={activePanel === "accountability"}
+    onClick={() => setActivePanel("accountability")}
+  />
+
+  <CommandTile
+    icon="🧰"
+    title="Advanced"
+    description="Full old workbench."
+    tone="default"
+    active={activePanel === "advanced"}
+    onClick={() => setActivePanel("advanced")}
+  />
+</section>
 
       {activePanel === "mock-readiness" ? (
         <GovernanceMockReadinessPanel
@@ -2294,88 +2322,10 @@ const mockMissingReleases = mockPriorityRows.filter(
       ) : null}
 
       {activePanel === "risk" ? (
-        <section className="rounded-[28px] border border-red-300/20 bg-red-500/10 p-4 md:p-5">
-          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-200">
-                Risk load and active queue
-              </p>
-              <h2 className="mt-1 text-lg font-bold text-white">
-                Schools behind the risk numbers
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-red-100/80">
-              This board explains the Risk load and Active queue numbers above,
-showing which schools need supervision attention first.
-              </p>
-            </div>
-
-            <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-semibold text-white">
-              {highestRiskSchools.length} shown
-            </span>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {highestRiskSchools.length ? (
-              highestRiskSchools.map((school, index) => (
-                <article
-                  key={school.id}
-                  className="rounded-2xl border border-white/10 bg-slate-950/55 p-4"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-200">
-                          #{index + 1}
-                        </span>
-                        <span
-                          className={cx(
-                            "rounded-full border px-3 py-1 text-xs font-semibold",
-                            riskBadgeClass(school.riskLevel),
-                          )}
-                        >
-                          {school.riskLevel} · {school.riskScore}
-                        </span>
-                        <span
-                          className={cx(
-                            "rounded-full border px-3 py-1 text-xs font-semibold",
-                            sectorBadgeClass(school.schoolSector),
-                          )}
-                        >
-                          {sectorLabel(school.schoolSector)}
-                        </span>
-                      </div>
-
-                      <h3 className="mt-3 text-base font-bold text-white">
-                        {school.name}
-                      </h3>
-
-                      <p className="mt-1 text-xs text-slate-400">
-                        {school.schoolCode || "No school code"} ·{" "}
-                        {school.circuitName || "No circuit"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="mt-3 text-sm leading-6 text-slate-100">
-                    <span className="font-semibold text-amber-200">
-                      Evidence:
-                    </span>{" "}
-                    {school.reason}
-                  </p>
-
-                  <p className="mt-2 text-sm leading-6 text-emerald-100">
-                    <span className="font-semibold">Recommended action:</span>{" "}
-                    {school.action}
-                  </p>
-                </article>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4 text-sm text-emerald-100">
-                No risk queue is available for this governance scope.
-              </div>
-            )}
-          </div>
-        </section>
+        <GovernanceTeacherAbsenteeismRiskPanel
+          data={teacherAbsenteeism}
+          isDistrictView={isDistrictView}
+        />
       ) : null}
 
       {activePanel === "students-attendance" ? (
@@ -2795,63 +2745,13 @@ showing which schools need supervision attention first.
         </section>
       ) : null}
 
-      {activePanel === "sector" ? (
-        <section className="rounded-[28px] border border-purple-300/20 bg-purple-500/10 p-4 md:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-purple-200">
-            Sector-aware governance boundary
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-white">
-            Public and private school command scope
-          </h2>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <StatCard
-              label="Public schools"
-              value={publicSchools}
-              helper={`${numberValue(sectorSummary.public?.criticalRiskSchools)} critical · ${numberValue(
-                sectorSummary.public?.highRiskSchools,
-              )} high`}
-              tone="success"
-            />
-            <StatCard
-              label="Private schools"
-              value={privateSchools}
-              helper={`${numberValue(sectorSummary.private?.criticalRiskSchools)} critical · ${numberValue(
-                sectorSummary.private?.highRiskSchools,
-              )} high`}
-              tone="info"
-            />
-          </div>
-
-          <p className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-purple-100/90">
-            {sectorSummary.governanceRule ??
-              "Public schools are normal GES governance targets. Private schools must only be included where explicitly authorized."}
-          </p>
-        </section>
-      ) : null}
-
       {activePanel === "notices" ? (
-        <section className="rounded-[28px] border border-indigo-300/20 bg-indigo-500/10 p-4 md:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-200">
-            Official notice tools
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-white">
-            Use advanced workbench to send notices
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-indigo-100/80">
-            The notice composer is kept inside the advanced governance workbench
-            because it performs protected recipient resolution, idempotency,
-            SMS, email, and in-app delivery.
-          </p>
-
-          <button
-            type="button"
-            onClick={() => setActivePanel("advanced")}
-            className="mt-4 rounded-full border border-indigo-300/25 bg-indigo-500/20 px-5 py-2 text-sm font-semibold text-indigo-100 hover:bg-indigo-500/30"
-          >
-            Open advanced notice workbench
-          </button>
-        </section>
+        <GovernanceOfficialNoticeComposer
+          isDistrictView={isDistrictView}
+          isCircuitView={isCircuitView}
+          assignments={scope?.assignments ?? []}
+          schools={schools}
+        />
       ) : null}
 
       {activePanel === "accountability" ? (

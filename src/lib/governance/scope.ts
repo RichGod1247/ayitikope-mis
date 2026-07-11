@@ -25,6 +25,11 @@ import {
   mockSubjectLabel,
 } from "@/lib/assessments/mock";
 
+import {
+  buildGovernanceTeacherAbsenteeismOverview,
+  emptyTeacherAbsenteeismOverview,
+} from "@/lib/governance/teacherAbsenteeism";
+
 export const CIRCUIT_GOVERNANCE_ROLES = ["SISSO", "CIRCUIT_SUPERVISOR"] as const;
 
 export const DISTRICT_GOVERNANCE_ROLES = [
@@ -2038,7 +2043,8 @@ function emptyOverview(message = "No schools are currently assigned to this gove
     },
         attendance: emptyAttendanceOverview(),
     teacherAttendance: emptyTeacherAttendanceOverview(),
-    mockReadiness: emptyMockReadinessOverview(),
+teacherAbsenteeism: emptyTeacherAbsenteeismOverview(),
+mockReadiness: emptyMockReadinessOverview(),
     signals: {
       attendanceSessionsToday: 0,
       openAttendanceSessionsToday: 0,
@@ -2601,14 +2607,21 @@ async function buildGovernanceOverviewUncached(scope: GovernanceScope) {
   const attendance = buildAttendanceOverview(mappedSchools, dateKey);
 
   const teacherAttendance = await buildTeacherAttendanceOverview({
-    mappedSchools,
-    tenantIds: schoolIds,
+  mappedSchools,
+  tenantIds: schoolIds,
+  todayStart: start,
+  todayEnd: end,
+  dateKey,
+});
+
+const teacherAbsenteeism =
+  await buildGovernanceTeacherAbsenteeismOverview({
+    schools: mappedSchools,
     todayStart: start,
     todayEnd: end,
-    dateKey,
   });
 
-  const mockReadiness = await buildGovernanceMockReadinessOverview({
+const mockReadiness = await buildGovernanceMockReadinessOverview({
     schools: mappedSchools,
     tenantIds: schoolIds,
   });
@@ -2693,8 +2706,9 @@ if (mockReadiness.schoolsWithReleasedMock === 0) {
       districts: districtCount || zones.filter((z) => z.zoneType.level === 2).length,
     },
     attendance,
-    teacherAttendance,
-    mockReadiness,
+teacherAttendance,
+teacherAbsenteeism,
+mockReadiness,
     signals: {
             teacherAttendanceSchoolsCertified: teacherAttendance.schoolsCertified,
       teacherAttendanceSchoolsMissingSession: teacherAttendance.schoolsMissingSession,
