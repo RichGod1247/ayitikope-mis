@@ -234,12 +234,12 @@ export default function HeadteacherSchemesClient() {
               </p>
             </div>
 
-            <div className="rounded-3xl border border-amber-300/20 bg-amber-400/10 px-5 py-4 text-amber-50">
-              <div className="text-3xl font-black">{pendingCount}</div>
-              <div className="text-xs font-semibold uppercase tracking-wide">
-                Pending review
-              </div>
-            </div>
+           <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-amber-50 md:rounded-3xl md:px-5 md:py-4">
+  <div className="text-xl font-black leading-none md:text-3xl">{pendingCount}</div>
+  <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] md:text-xs md:tracking-wide">
+    Pending review
+  </div>
+</div>
           </div>
         </header>
 
@@ -267,12 +267,12 @@ export default function HeadteacherSchemesClient() {
           </div>
         )}
 
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Metric label="Draft" value={summary?.draft ?? 0} />
-          <Metric label="Pending" value={summary?.submitted ?? 0} />
-          <Metric label="Returned" value={summary?.returned ?? 0} />
-          <Metric label="Approved" value={summary?.approved ?? 0} />
-        </section>
+        <section className="grid grid-cols-4 gap-1.5 md:gap-3">
+  <Metric label="Draft" value={summary?.draft ?? 0} />
+  <Metric label="Pending" value={summary?.submitted ?? 0} />
+  <Metric label="Returned" value={summary?.returned ?? 0} />
+  <Metric label="Approved" value={summary?.approved ?? 0} />
+</section>
 
         {loading && (
           <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-sm text-[#C9CDD6]">
@@ -469,9 +469,14 @@ export default function HeadteacherSchemesClient() {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-      <div className="text-3xl font-black text-[#F7F4ED]">{value}</div>
-      <div className="mt-1 text-xs font-bold uppercase tracking-wide text-[#AEB6C4]">
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-2 md:rounded-3xl md:p-4">
+      <div className="text-lg font-black leading-none text-[#F7F4ED] md:text-3xl">
+        {value}
+      </div>
+      <div
+        title={label}
+        className="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.06em] text-[#AEB6C4] md:mt-1 md:text-xs md:tracking-wide"
+      >
         {label}
       </div>
     </div>
