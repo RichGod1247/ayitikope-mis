@@ -2312,29 +2312,12 @@ const mockPanelActive =
   <CommandTile
     icon="📨"
     title="Notices"
-    description="Send official notice."
+    description="Send notices and check follow-up."
     tone="info"
     active={activePanel === "notices"}
     onClick={() => openPanel("notices")}
   />
 
-  <CommandTile
-    icon="📬"
-    title="Accountability"
-    description="Read, ACK, response trail."
-    tone="default"
-    active={activePanel === "accountability"}
-    onClick={() => openPanel("accountability")}
-  />
-
-  <CommandTile
-    icon="🧰"
-    title="Advanced"
-    description="Full old workbench."
-    tone="default"
-    active={activePanel === "advanced"}
-    onClick={() => openPanel("advanced")}
-  />
 </section>
 
       <div
@@ -2799,27 +2782,44 @@ const mockPanelActive =
           />
 
           <section className="rounded-[28px] border border-sky-300/20 bg-sky-500/10 p-4 md:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
-                  Governance Logbook
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
+                Notice follow-up
+              </p>
+              <h2 className="mt-1 text-lg font-bold text-white">
+                Check delivery and intervention evidence
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-sky-100/80">
+                Open only the record you need. Detailed accountability and the
+                intervention logbook stay out of the main dashboard cards.
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => openPanel("accountability")}
+                className="min-h-14 rounded-2xl border border-indigo-300/25 bg-indigo-500/15 px-4 py-3 text-left hover:bg-indigo-500/25"
+              >
+                <p className="text-sm font-bold text-white">
+                  Notice accountability
                 </p>
-                <h2 className="mt-1 text-lg font-bold text-white">
-                  Intervention evidence timeline
-                </h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-sky-100/80">
-                  Open only when you need the reference record of cases, notices,
-                  acknowledgements, responses, escalations, directives, and closure
-                  evidence.
+                <p className="mt-1 text-xs leading-5 text-indigo-100/80">
+                  See sent, read, acknowledged, and response records.
                 </p>
-              </div>
+              </button>
 
               <button
                 type="button"
                 onClick={() => setIsGovernanceLogbookOpen(true)}
-                className="min-h-12 rounded-2xl border border-sky-300/25 bg-sky-500/20 px-5 py-2 text-sm font-semibold text-sky-100 hover:bg-sky-500/30"
+                className="min-h-14 rounded-2xl border border-sky-300/25 bg-sky-500/20 px-4 py-3 text-left hover:bg-sky-500/30"
               >
-                Open logbook
+                <p className="text-sm font-bold text-white">
+                  Governance logbook
+                </p>
+                <p className="mt-1 text-xs leading-5 text-sky-100/80">
+                  Review cases, notices, directives, responses, and closure evidence.
+                </p>
               </button>
             </div>
           </section>
@@ -2865,23 +2865,22 @@ const mockPanelActive =
         </section>
       ) : null}
 
+      {activePanel !== "advanced" ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => openPanel("advanced")}
+            className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/[0.07] hover:text-white"
+          >
+            Expert tools
+          </button>
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-slate-300">
           Loading governance command dashboard...
         </div>
-      ) : null}
-
-      {!loading && !error && overview?.emptyStates?.length ? (
-        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Empty state notes
-          </p>
-          <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-300">
-            {overview.emptyStates.map((item) => (
-              <li key={item}>• {item}</li>
-            ))}
-          </ul>
-        </section>
       ) : null}
 
       {isCircuitView ? (
