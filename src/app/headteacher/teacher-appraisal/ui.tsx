@@ -328,6 +328,8 @@ export default function TeacherAppraisalClient() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [guardrailWarnings, setGuardrailWarnings] = useState<EvidenceGuardrailWarning[]>([]);
+  const [showSavedRecords, setShowSavedRecords] = useState(false);
+  const [mobileStep, setMobileStep] = useState(0);
 
   const allItems = useMemo(() => sections.flatMap((s) => s.items.map((item) => ({ ...item, section: s }))), [sections]);
   const selectedTeacher = useMemo(
@@ -480,6 +482,8 @@ export default function TeacherAppraisalClient() {
     setSuccess(null);
     setError(null);
     setGuardrailWarnings([]);
+    setMobileStep(0);
+setShowSavedRecords(false);
     if (teacherUserId) void loadEvidence(teacherUserId);
   }
 
@@ -516,6 +520,8 @@ export default function TeacherAppraisalClient() {
       for (const s of item.scores ?? []) nextScores[s.itemKey] = scoreToChoice(s);
       setScores(nextScores);
       setGuardrailWarnings(item.evidenceWarnings ?? []);
+      setMobileStep(0);
+setShowSavedRecords(false);
       await loadEvidence(item.teacherUserId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load appraisal detail.");
@@ -540,6 +546,7 @@ export default function TeacherAppraisalClient() {
     setSuccess(null);
     setError(null);
     setGuardrailWarnings([]);
+    setMobileStep(0);
     void loadEvidence(teacherUserId);
   }
 
@@ -688,6 +695,56 @@ export default function TeacherAppraisalClient() {
   }, [form.id, items]);
 
   const activeGuardrailWarnings = formIsFinalized ? guardrailWarnings : liveGuardrailWarnings;
+  const mobileFinalStep = Math.max(1, sections.length + 1);
+const safeMobileStep = Math.min(mobileStep, mobileFinalStep);
+
+const activeMobileSection =
+  safeMobileStep > 0 && safeMobileStep <= sections.length
+    ? sections[safeMobileStep - 1]
+    : null;
+
+const mobileTotalSteps = mobileFinalStep + 1;
+
+const mobileStepTitle =
+  safeMobileStep === 0
+    ? "Teacher and lesson"
+    : activeMobileSection
+      ? `Section ${activeMobileSection.order}`
+      : "Evidence and submit";
+
+const mobileStepHint =
+  safeMobileStep === 0
+    ? "Choose teacher, class, subject and lesson details."
+    : activeMobileSection
+      ? activeMobileSection.title
+      : "Link evidence, add comment, then save or finalize.";
+
+const mobileNextLabel =
+  safeMobileStep === 0
+    ? "Next: Section 1"
+    : safeMobileStep < sections.length
+      ? `Next: Section ${safeMobileStep + 1}`
+      : safeMobileStep === sections.length
+        ? "Next: Evidence"
+        : "Done";
+
+const mobileNextDisabled = safeMobileStep === 0 && !form.teacherUserId;
+
+function scrollMobileTop() {
+  window.setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, 40);
+}
+
+function goMobileBack() {
+  setMobileStep((prev) => Math.max(0, prev - 1));
+  scrollMobileTop();
+}
+
+function goMobileNext() {
+  setMobileStep((prev) => Math.min(mobileFinalStep, prev + 1));
+  scrollMobileTop();
+}
 
   return (
     <div className="min-h-screen bg-[#070B12] px-4 py-6 text-[#F7F4ED] md:px-8">
@@ -733,16 +790,99 @@ export default function TeacherAppraisalClient() {
           </div>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid grid-cols-4 gap-1.5 md:gap-4">
           <StatCard label="Teachers" value={teachers.length} />
           <StatCard label="Saved appraisals" value={items.length} />
           <StatCard label="Score completion" value={`${completion}%`} />
           <StatCard label="Overall score" value={fmtPercent(items.find((i) => i.id === form.id)?.overallPercentage ?? null)} />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[360px_1fr]">
-          <aside className="space-y-4">
-            <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
+<section className="md:hidden">
+  <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-3">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-white">Saved records</p>
+        <p className="text-[11px] text-slate-400">{items.length} saved appraisal{items.length === 1 ? "" : "s"}</p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowSavedRecords((prev) => !prev)}
+        className="shrink-0 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-[11px] font-bold text-white hover:bg-white/[0.1]"
+      >
+        {showSavedRecords ? "Hide" : "Show"}
+      </button>
+    </div>
+
+    {showSavedRecords ? (
+      <div className="mt-3 space-y-2">
+        {loading ? <p className="text-sm text-slate-300">Loading...</p> : null}
+        {!loading && items.length === 0 ? <p className="text-sm text-slate-300">No appraisal records yet.</p> : null}
+
+        {items.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => void loadDetail(item.id)}
+            className={cx(
+              "w-full rounded-2xl border p-3 text-left text-sm transition hover:bg-white/[0.08]",
+              form.id === item.id ? "border-fuchsia-300/40 bg-fuchsia-400/10" : "border-white/10 bg-black/20",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-white">{item.teacherName}</span>
+              <span
+                className={cx(
+                  "rounded-full px-2 py-1 text-[10px] font-bold",
+                  item.status === "FINALIZED"
+                    ? "bg-emerald-400/15 text-emerald-100"
+                    : "bg-amber-400/15 text-amber-100",
+                )}
+              >
+                {item.status}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-slate-300">{fmtDate(item.dateObserved)} · {item.subject ?? "No subject"}</p>
+            <p className="mt-1 text-xs text-slate-400">Overall: {fmtPercent(item.overallPercentage)}</p>
+          </button>
+        ))}
+      </div>
+    ) : null}
+  </div>
+</section>
+
+<section className="sticky top-2 z-20 md:hidden">
+  <div className="rounded-[24px] border border-fuchsia-300/20 bg-[#100A19]/95 p-3 shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur">
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#E8C96A]">
+          4. Score the observation
+        </p>
+        <h2 className="mt-1 truncate text-base font-semibold text-white">{mobileStepTitle}</h2>
+        <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-300">{mobileStepHint}</p>
+      </div>
+
+      <span className="shrink-0 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[11px] font-bold text-white">
+        {completion}%
+      </span>
+    </div>
+
+    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+      <div
+        className="h-full rounded-full bg-[linear-gradient(90deg,#D4AF37,#E879F9,#34D399)] transition-all duration-300"
+        style={{ width: `${Math.max(0, Math.min(100, completion))}%` }}
+      />
+    </div>
+
+    <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+      <span>Page {safeMobileStep + 1} of {mobileTotalSteps}</span>
+      <span>{canFinalize ? "Ready to finalize" : "Keep going"}</span>
+    </div>
+  </div>
+</section>
+
+        <section className="grid gap-4 xl:grid-cols-[360px_1fr] xl:gap-6">
+          <aside className="order-1 space-y-4">
+            <div className={cx("mobile-appraisal-step rounded-[28px] border border-white/10 bg-white/[0.04] p-4", safeMobileStep === 0 ? "block" : "hidden", "md:block")}>
               <h2 className="text-lg font-semibold text-white">1. Choose teacher</h2>
               <p className="mt-1 text-sm text-slate-300">Start with the teacher being observed.</p>
               <select
@@ -767,35 +907,53 @@ export default function TeacherAppraisalClient() {
               ) : null}
             </div>
 
-            <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4">
-              <h2 className="text-lg font-semibold text-white">Saved records</h2>
-              <p className="mt-1 text-sm text-slate-300">Drafts can be reopened. Finalized records are locked.</p>
-              <div className="mt-4 space-y-2">
-                {loading ? <p className="text-sm text-slate-300">Loading...</p> : null}
-                {!loading && items.length === 0 ? <p className="text-sm text-slate-300">No appraisal records yet.</p> : null}
-                {items.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => void loadDetail(item.id)}
-                    className={cx(
-                      "w-full rounded-2xl border p-3 text-left text-sm transition hover:bg-white/[0.08]",
-                      form.id === item.id ? "border-fuchsia-300/40 bg-fuchsia-400/10" : "border-white/10 bg-black/20",
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-white">{item.teacherName}</span>
-                      <span className={cx("rounded-full px-2 py-1 text-[10px] font-bold", item.status === "FINALIZED" ? "bg-emerald-400/15 text-emerald-100" : "bg-amber-400/15 text-amber-100")}>{item.status}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-300">{fmtDate(item.dateObserved)} · {item.subject ?? "No subject"}</p>
-                    <p className="mt-1 text-xs text-slate-400">Overall: {fmtPercent(item.overallPercentage)}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="hidden rounded-[24px] border border-white/10 bg-white/[0.04] p-3 md:block md:rounded-[28px] md:p-4">
+  <div className="flex items-center justify-between gap-3">
+    <div className="min-w-0">
+      <h2 className="text-base font-semibold text-white md:text-lg">Saved records</h2>
+      <p className="mt-1 hidden text-sm text-slate-300 md:block">
+        Drafts can be reopened. Finalized records are locked.
+      </p>
+      <p className="mt-0.5 text-[11px] text-slate-400 md:hidden">
+        {items.length} saved
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => setShowSavedRecords((prev) => !prev)}
+      className="shrink-0 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-[11px] font-bold text-white hover:bg-white/[0.1] md:hidden"
+    >
+      {showSavedRecords ? "Hide" : "Show"}
+    </button>
+  </div>
+
+  <div className={cx("mt-3 space-y-2 md:mt-4 md:block", showSavedRecords ? "block" : "hidden")}>
+    {loading ? <p className="text-sm text-slate-300">Loading...</p> : null}
+    {!loading && items.length === 0 ? <p className="text-sm text-slate-300">No appraisal records yet.</p> : null}
+    {items.map((item) => (
+      <button
+        key={item.id}
+        onClick={() => void loadDetail(item.id)}
+        className={cx(
+          "w-full rounded-2xl border p-3 text-left text-sm transition hover:bg-white/[0.08]",
+          form.id === item.id ? "border-fuchsia-300/40 bg-fuchsia-400/10" : "border-white/10 bg-black/20",
+        )}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-semibold text-white">{item.teacherName}</span>
+          <span className={cx("rounded-full px-2 py-1 text-[10px] font-bold", item.status === "FINALIZED" ? "bg-emerald-400/15 text-emerald-100" : "bg-amber-400/15 text-amber-100")}>{item.status}</span>
+        </div>
+        <p className="mt-1 text-xs text-slate-300">{fmtDate(item.dateObserved)} · {item.subject ?? "No subject"}</p>
+        <p className="mt-1 text-xs text-slate-400">Overall: {fmtPercent(item.overallPercentage)}</p>
+      </button>
+    ))}
+  </div>
+</div>
           </aside>
 
-          <main className="space-y-6">
-            <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+          <main className="order-2 space-y-5 md:space-y-6">
+            <section className={cx("mobile-appraisal-step rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5", safeMobileStep === 0 ? "block" : "hidden", "md:block")}>
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-white">2. Lesson details</h2>
@@ -816,7 +974,7 @@ export default function TeacherAppraisalClient() {
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+            <section className={cx("mobile-appraisal-step rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5", safeMobileStep === mobileFinalStep ? "block" : "hidden", "md:block")}>
               <h2 className="text-lg font-semibold text-white">3. Link evidence</h2>
               <p className="mt-1 text-sm text-slate-300">Evidence is optional for draft, but it makes the appraisal defensible.</p>
 
@@ -865,7 +1023,7 @@ export default function TeacherAppraisalClient() {
             </section>
 
             <section className="space-y-4">
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+              <div className="hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:block md:p-5">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-white">4. Score the observation</h2>
@@ -876,7 +1034,14 @@ export default function TeacherAppraisalClient() {
               </div>
 
               {sections.map((section) => (
-                <div key={section.key} className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+                <div
+  key={section.key}
+  className={cx(
+    "mobile-appraisal-step rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5",
+    safeMobileStep === section.order ? "block" : "hidden",
+    "md:block",
+  )}
+>
                   <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#E8C96A]">Section {section.order} · Max {section.maxScore}</p>
@@ -925,7 +1090,7 @@ export default function TeacherAppraisalClient() {
               ))}
             </section>
 
-            <section className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5">
+            <section className={cx("mobile-appraisal-step rounded-[28px] border border-white/10 bg-white/[0.04] p-4 md:p-5", safeMobileStep === mobileFinalStep ? "block" : "hidden", "md:block")}>
               <h2 className="text-lg font-semibold text-white">5. Comment and submit</h2>
               <textarea
                 value={form.generalComment}
@@ -957,6 +1122,69 @@ export default function TeacherAppraisalClient() {
             </section>
           </main>
         </section>
+
+        <section className="md:hidden">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={goMobileBack}
+              disabled={safeMobileStep === 0}
+              className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Back
+            </button>
+
+            {safeMobileStep < mobileFinalStep ? (
+              <button
+                type="button"
+                onClick={goMobileNext}
+                disabled={mobileNextDisabled}
+                className="min-h-12 rounded-2xl border border-fuchsia-300/25 bg-fuchsia-400/15 px-4 py-3 text-sm font-bold text-fuchsia-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {mobileNextLabel}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}
+                className="min-h-12 rounded-2xl border border-emerald-300/25 bg-emerald-400/15 px-4 py-3 text-sm font-bold text-emerald-50"
+              >
+                Save / finalize
+              </button>
+            )}
+          </div>
+
+          {mobileNextDisabled ? (
+            <p className="mt-2 text-center text-[11px] text-amber-100">
+              Choose a teacher before moving to Section 1.
+            </p>
+          ) : null}
+        </section>
+
+        <style>{`
+          @keyframes mobileAppraisalStepIn {
+            from {
+              opacity: 0.45;
+              transform: translateY(10px) scale(0.99);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+
+          @media (max-width: 767px) {
+            .mobile-appraisal-step {
+              animation: mobileAppraisalStepIn 220ms ease-out both;
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .mobile-appraisal-step {
+              animation: none;
+            }
+          }
+        `}</style>
       </div>
     </div>
   );
@@ -964,9 +1192,16 @@ export default function TeacherAppraisalClient() {
 
 function StatCard(props: { label: string; value: string | number }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
-      <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{props.label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white">{props.value}</p>
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-2 md:rounded-[24px] md:p-4">
+      <p
+        title={props.label}
+        className="truncate text-[9px] font-semibold uppercase tracking-[0.06em] text-slate-400 md:text-xs md:tracking-[0.16em]"
+      >
+        {props.label}
+      </p>
+      <p className="mt-0.5 truncate text-base font-semibold leading-none text-white md:mt-2 md:text-2xl">
+        {props.value}
+      </p>
     </div>
   );
 }
