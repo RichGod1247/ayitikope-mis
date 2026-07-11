@@ -146,10 +146,24 @@ function sessionState(session: TeacherAttendanceSession | null) {
 
 function StatCard(props: { label: string; value: number; hint?: string }) {
   return (
-    <div className="rounded-[24px] border border-white/10 bg-white/[0.05] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.16)]">
-      <div className="text-xs uppercase tracking-[0.16em] text-[#8F98A8]">{props.label}</div>
-      <div className="mt-2 text-2xl font-bold text-[#F7F4ED]">{props.value}</div>
-      {props.hint ? <div className="mt-1 text-xs text-[#C9CDD6]">{props.hint}</div> : null}
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.05] px-2 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.14)] sm:rounded-[24px] sm:p-4 sm:shadow-[0_12px_40px_rgba(0,0,0,0.16)]">
+      <div
+        title={props.label}
+        className="truncate text-[9px] font-semibold uppercase tracking-[0.06em] text-[#8F98A8] sm:text-xs sm:tracking-[0.16em]"
+      >
+        {props.label}
+      </div>
+      <div className="mt-0.5 text-lg font-bold leading-none text-[#F7F4ED] sm:mt-2 sm:text-2xl">
+        {props.value}
+      </div>
+      {props.hint ? (
+        <div
+          title={props.hint}
+          className="mt-0.5 truncate text-[9px] leading-tight text-[#C9CDD6] sm:mt-1 sm:text-xs"
+        >
+          {props.hint}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -523,7 +537,7 @@ export default function TeacherAttendanceClient() {
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="grid grid-cols-5 gap-1.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-5">
         <StatCard label="Teachers" value={counts.totalTeachers} hint="Active teacher accounts" />
         <StatCard label="Marked" value={counts.marked} hint={`${completion}% complete`} />
         <StatCard label="Present" value={counts.present} />
