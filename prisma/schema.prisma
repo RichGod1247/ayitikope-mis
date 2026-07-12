@@ -127,7 +127,8 @@ model User {
   governanceOfficerInvitesAccepted GovernanceOfficerInvite[] @relation("GovernanceOfficerInviteAcceptedBy")
   governanceOfficerInvitesRevoked  GovernanceOfficerInvite[] @relation("GovernanceOfficerInviteRevokedBy")
 
-  /// ✅ Sprint 10 B.3/B.4 — governance intervention + official notice spine
+  /// ✅ Sprint 10 B.3/B.4 + A16 — governance intervention,
+  /// official notice, selected-recipient, and attachment spine.
   governanceInterventionsCreated   GovernanceInterventionCase[]        @relation("GovernanceInterventionCreatedBy")
   governanceInterventionsAssigned  GovernanceInterventionCase[]        @relation("GovernanceInterventionAssignedTo")
   governanceInterventionsResolved  GovernanceInterventionCase[]        @relation("GovernanceInterventionResolvedBy")
@@ -135,6 +136,9 @@ model User {
   governanceInterventionEvents     GovernanceInterventionEvent[]       @relation("GovernanceInterventionEventActor")
   governanceOfficialNoticesSent    GovernanceOfficialNotice[]          @relation("GovernanceOfficialNoticeSender")
   governanceNoticeRecipients       GovernanceOfficialNoticeRecipient[] @relation("GovernanceNoticeRecipientUser")
+
+  governanceNoticeAttachmentsUploaded GovernanceOfficialNoticeAttachment[]       @relation("GovernanceNoticeAttachmentUploader")
+  governanceNoticeAttachmentAccesses  GovernanceOfficialNoticeAttachmentAccess[] @relation("GovernanceNoticeAttachmentAccessActor")
 
   @@index([twoFactorEnabled])
   @@index([lastActiveTenantId])
@@ -239,10 +243,11 @@ model Tenant {
   /// Sprint 10 placeholder — keep because current schema already has SchoolRiskSnapshot.
   riskSnapshots SchoolRiskSnapshot[]
 
-  /// ✅ Sprint 10 B.3/B.4 — governance intervention + official notice spine
-  governanceInterventions    GovernanceInterventionCase[]
-  governanceOfficialNotices  GovernanceOfficialNotice[]
-  governanceNoticeRecipients GovernanceOfficialNoticeRecipient[]
+  /// ✅ Sprint 10 B.3/B.4 + A16 — governance communication spine
+  governanceInterventions     GovernanceInterventionCase[]
+  governanceOfficialNotices   GovernanceOfficialNotice[]
+  governanceNoticeRecipients  GovernanceOfficialNoticeRecipient[]
+  governanceNoticeAttachments GovernanceOfficialNoticeAttachment[]
 
   @@index([status])
   @@index([schoolSector])
@@ -2867,9 +2872,10 @@ model AdminZone {
   officerAssignments GovernanceOfficerAssignment[]
   officerInvites     GovernanceOfficerInvite[]
 
-  /// ✅ Sprint 10 B.3/B.4 — governance intervention + official notice spine
-  governanceInterventions   GovernanceInterventionCase[]
-  governanceOfficialNotices GovernanceOfficialNotice[]
+  /// ✅ Sprint 10 B.3/B.4 + A16 — governance communication spine
+  governanceInterventions     GovernanceInterventionCase[]
+  governanceOfficialNotices   GovernanceOfficialNotice[]
+  governanceNoticeAttachments GovernanceOfficialNoticeAttachment[]
 
   isActive Boolean @default(true)
 
@@ -3102,6 +3108,12 @@ model GovernanceOfficialNotice {
   priority GovernanceInterventionPriority @default(MEDIUM)
   status   GovernanceOfficialNoticeStatus @default(QUEUED)
 
+  /// How the sender selected the recipients:
+  /// ROLE_SCOPE = role within school/zone
+  /// INDIVIDUALS = one or more selected users
+  /// SCHOOL_SET = selected schools whose authorized members were resolved
+  audienceMode GovernanceOfficialNoticeAudienceMode @default(ROLE_SCOPE)
+
   /// Example: ["IN_APP", "SMS", "EMAIL"]
   channels Json @default("[]")
 
@@ -3125,14 +3137,17 @@ model GovernanceOfficialNotice {
   zone   AdminZone?                  @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   sender User                        @relation("GovernanceOfficialNoticeSender", fields: [senderUserId], references: [id], onDelete: Restrict)
 
-  recipients GovernanceOfficialNoticeRecipient[]
-  deliveries GovernanceOfficialNoticeDelivery[]
+  recipients         GovernanceOfficialNoticeRecipient[]
+  deliveries         GovernanceOfficialNoticeDelivery[]
+  attachments        GovernanceOfficialNoticeAttachment[]
+  attachmentAccesses GovernanceOfficialNoticeAttachmentAccess[]
 
   @@index([caseId], map: "GovernanceOfficialNotice_case_idx")
   @@index([tenantId, status], map: "GovernanceOfficialNotice_tenant_status_idx")
   @@index([zoneId, status], map: "GovernanceOfficialNotice_zone_status_idx")
   @@index([senderUserId], map: "GovernanceOfficialNotice_sender_idx")
   @@index([status, createdAt], map: "GovernanceOfficialNotice_status_created_idx")
+  @@index([audienceMode, createdAt], map: "GovernanceOfficialNotice_audience_created_idx")
   @@index([caseId, idempotencyScope], map: "GovernanceOfficialNotice_case_idempotencyScope_idx")
   @@index([tenantId, idempotencyScope], map: "GovernanceOfficialNotice_tenant_idempotencyScope_idx")
   @@index([zoneId, idempotencyScope], map: "GovernanceOfficialNotice_zone_idempotencyScope_idx")
@@ -3148,6 +3163,7 @@ model GovernanceOfficialNoticeRecipient {
 
   recipientType GovernanceOfficialNoticeRecipientType
 
+  /// Immutable recipient snapshot captured when the notice is sent.
   displayName String? @db.VarChar(160)
   roleLabel   String? @db.VarChar(120)
 
@@ -3172,8 +3188,12 @@ model GovernanceOfficialNoticeRecipient {
   tenant        Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   recipientUser User?                    @relation("GovernanceNoticeRecipientUser", fields: [recipientUserId], references: [id], onDelete: SetNull)
 
-  deliveries GovernanceOfficialNoticeDelivery[]
+  deliveries         GovernanceOfficialNoticeDelivery[]
+  attachmentAccesses GovernanceOfficialNoticeAttachmentAccess[]
 
+  /// DB truth:
+  /// GovernanceNoticeRecipient_notice_user_unique prevents the same
+  /// non-null recipientUserId from being inserted twice for one notice.
   @@index([noticeId], map: "GovernanceNoticeRecipient_notice_idx")
   @@index([tenantId], map: "GovernanceNoticeRecipient_tenant_idx")
   @@index([recipientUserId, readAt], map: "GovernanceNoticeRecipient_user_read_idx")
@@ -3216,6 +3236,120 @@ model GovernanceOfficialNoticeDelivery {
   @@index([noticeId, channel], map: "GovernanceNoticeDelivery_notice_channel_idx")
   @@index([status, channel], map: "GovernanceNoticeDelivery_status_channel_idx")
   @@index([lastAttemptAt], map: "GovernanceNoticeDelivery_lastAttempt_idx")
+}
+
+/// A16.3 — private document attachment stored in Cloudflare R2.
+///
+/// Upload lifecycle:
+/// PENDING_UPLOAD → UPLOADED → READY → SEALED
+///
+/// Only READY attachments may be joined to a notice.
+/// Once the notice is sent, the attachment becomes SEALED and immutable.
+model GovernanceOfficialNoticeAttachment {
+  id String @id @default(cuid())
+
+  /// Null while the file is an unsealed upload draft.
+  noticeId String?
+
+  /// At least one scope boundary must exist.
+  tenantId String?
+  zoneId   String?
+
+  uploadedByUserId String
+
+  originalFilename String @db.VarChar(255)
+  displayFilename  String @db.VarChar(255)
+
+  /// Allowed initially:
+  /// pdf, doc, docx, ppt, pptx, xls, xlsx
+  extension String @db.VarChar(12)
+  mimeType  String @db.VarChar(160)
+  sizeBytes BigInt
+
+  storageProvider String @default("R2") @db.VarChar(40)
+
+  /// Private R2 object key. Never expose this directly to recipients.
+  objectKey String @unique(map: "GovernanceNoticeAttachment_objectKey_unique") @db.VarChar(500)
+
+  etag       String? @db.VarChar(160)
+  sha256Hash String? @db.VarChar(64)
+
+  /// Prevents repeated upload initialization after retries or weak networks.
+  uploadIdempotencyKey String @db.VarChar(180)
+
+  status GovernanceOfficialNoticeAttachmentStatus @default(PENDING_UPLOAD)
+
+  /// Attachment must not be sent until scanStatus is CLEAN.
+  scanStatus GovernanceOfficialNoticeAttachmentScanStatus @default(PENDING)
+
+  /// Confidential files should be accessed only through an authenticated,
+  /// short-lived download route—not permanent email or public URLs.
+  confidential     Boolean @default(false)
+  recipientVisible Boolean @default(true)
+
+  uploadedAt DateTime? @db.Timestamptz(6)
+  verifiedAt DateTime? @db.Timestamptz(6)
+  sealedAt   DateTime? @db.Timestamptz(6)
+
+  rejectedAt      DateTime? @db.Timestamptz(6)
+  rejectionReason String?   @db.Text
+
+  deletedAt DateTime? @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  notice GovernanceOfficialNotice? @relation(fields: [noticeId], references: [id], onDelete: Restrict)
+  tenant Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  zone   AdminZone?                @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  uploadedBy User @relation("GovernanceNoticeAttachmentUploader", fields: [uploadedByUserId], references: [id], onDelete: Restrict)
+
+  accessEvents GovernanceOfficialNoticeAttachmentAccess[]
+
+  @@unique([uploadedByUserId, uploadIdempotencyKey], map: "GovernanceNoticeAttachment_uploader_idempotency_unique")
+  @@index([noticeId, status], map: "GovernanceNoticeAttachment_notice_status_idx")
+  @@index([tenantId, status], map: "GovernanceNoticeAttachment_tenant_status_idx")
+  @@index([zoneId, status], map: "GovernanceNoticeAttachment_zone_status_idx")
+  @@index([uploadedByUserId, createdAt], map: "GovernanceNoticeAttachment_uploader_created_idx")
+  @@index([scanStatus, status], map: "GovernanceNoticeAttachment_scan_status_idx")
+  @@index([createdAt], map: "GovernanceNoticeAttachment_created_idx")
+}
+
+/// Successful authenticated attachment access.
+/// Rejected/unauthorized attempts remain in the general AuditLog.
+model GovernanceOfficialNoticeAttachmentAccess {
+  id String @id @default(cuid())
+
+  attachmentId String
+  noticeId     String
+
+  /// Present when the access is linked to a resolved notice recipient.
+  recipientId String?
+
+  /// Present for authenticated portal access.
+  actorUserId String?
+
+  action GovernanceOfficialNoticeAttachmentAccessAction
+
+  ip        String?
+  userAgent String?
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  attachment GovernanceOfficialNoticeAttachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  notice     GovernanceOfficialNotice           @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  recipient  GovernanceOfficialNoticeRecipient? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+  actor      User?                              @relation("GovernanceNoticeAttachmentAccessActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([attachmentId, createdAt], map: "GovernanceNoticeAttachmentAccess_attachment_created_idx")
+  @@index([noticeId, createdAt], map: "GovernanceNoticeAttachmentAccess_notice_created_idx")
+  @@index([recipientId, createdAt], map: "GovernanceNoticeAttachmentAccess_recipient_created_idx")
+  @@index([actorUserId, createdAt], map: "GovernanceNoticeAttachmentAccess_actor_created_idx")
 }
 
 enum GovernanceOfficerRole {
@@ -3274,6 +3408,17 @@ enum GovernanceInterventionEventType {
   REOPENED
 }
 
+enum GovernanceOfficialNoticeAudienceMode {
+  /// Existing behaviour: role within an authorized zone or school.
+  ROLE_SCOPE
+
+  /// One or more explicitly selected authorized users.
+  INDIVIDUALS
+
+  /// Authorized users resolved from several selected schools.
+  SCHOOL_SET
+}
+
 enum GovernanceOfficialNoticeStatus {
   DRAFT
   QUEUED
@@ -3303,6 +3448,27 @@ enum GovernanceOfficialNoticeDeliveryStatus {
   SENT
   FAILED
   SKIPPED
+}
+
+enum GovernanceOfficialNoticeAttachmentStatus {
+  PENDING_UPLOAD
+  UPLOADED
+  READY
+  SEALED
+  REJECTED
+  DELETED
+}
+
+enum GovernanceOfficialNoticeAttachmentScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
+enum GovernanceOfficialNoticeAttachmentAccessAction {
+  VIEW
+  DOWNLOAD
 }
 
 enum AttendanceStatus {
