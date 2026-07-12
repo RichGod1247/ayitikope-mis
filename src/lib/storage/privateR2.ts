@@ -319,6 +319,94 @@ export async function headPrivateR2Object(
 }
 
 /**
+ * Reads a private object into memory for server-side security inspection.
+ *
+ * Callers must keep maxBytes low. Governance notice attachments are currently
+ * capped at 10 MB, so this helper intentionally does not support large files.
+ */
+export async function readPrivateR2ObjectBytes(args: {
+  key: string;
+  maxBytes: number;
+}) {
+  const config = privateR2Config();
+  const key = assertSafeObjectKey(args.key);
+  const maxBytes = Math.max(1, Math.trunc(Number(args.maxBytes)));
+
+  if (!Number.isFinite(maxBytes)) {
+    throw new Error("Invalid private R2 maximum read size.");
+  }
+
+  const result = await privateR2Client().send(
+    new GetObjectCommand({
+      Bucket: config.bucketName,
+      Key: key,
+    }),
+  );
+
+  const declaredLength =
+    typeof result.ContentLength === "number"
+      ? result.ContentLength
+      : null;
+
+  if (declaredLength !== null && declaredLength > maxBytes) {
+    throw new Error("Private R2 object exceeds the permitted inspection size.");
+  }
+
+  const body = result.Body as
+    | {
+        transformToByteArray?: () => Promise<Uint8Array>;
+        [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array>;
+      }
+    | undefined;
+
+  if (!body) {
+    throw new Error("Private R2 object body is empty.");
+  }
+
+  let bytes: Buffer;
+
+  if (typeof body.transformToByteArray === "function") {
+    const value = await body.transformToByteArray();
+
+    if (value.byteLength > maxBytes) {
+      throw new Error("Private R2 object exceeds the permitted inspection size.");
+    }
+
+    bytes = Buffer.from(value);
+  } else if (body[Symbol.asyncIterator]) {
+    const chunks: Buffer[] = [];
+    let total = 0;
+
+    for await (const chunk of body as AsyncIterable<Uint8Array>) {
+      const buffer = Buffer.from(chunk);
+      total += buffer.length;
+
+      if (total > maxBytes) {
+        throw new Error(
+          "Private R2 object exceeds the permitted inspection size.",
+        );
+      }
+
+      chunks.push(buffer);
+    }
+
+    bytes = Buffer.concat(chunks, total);
+  } else {
+    throw new Error("Private R2 object stream is not readable.");
+  }
+
+  return {
+    key,
+    bytes,
+    contentLength: declaredLength ?? bytes.length,
+    contentType: result.ContentType ?? null,
+    etag: result.ETag?.replace(/^"|"$/g, "") ?? null,
+    metadata: result.Metadata ?? {},
+    lastModified: result.LastModified ?? null,
+  };
+}
+
+/**
  * Deletes an abandoned or rejected unsealed upload.
  *
  * Application logic must refuse deletion after an attachment is SEALED.
