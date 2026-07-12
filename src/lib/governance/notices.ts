@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import {
   GovernanceInterventionEventType,
   GovernanceInterventionPriority,
+  GovernanceOfficialNoticeAudienceMode,
   GovernanceOfficialNoticeChannel,
   GovernanceOfficialNoticeDeliveryStatus,
   GovernanceOfficialNoticeRecipientType,
@@ -17,6 +18,11 @@ import type { GovernanceScope } from "@/lib/governance/scope";
 import { sendViaHubtel } from "@/lib/sms/hubtel";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { writeAuditLog } from "@/lib/audit";
+import {
+  GovernanceNoticeRecipientSelectionError,
+  resolveGovernanceSelectedRecipients,
+  type ResolvedGovernanceSelectedRecipient,
+} from "@/lib/governance/noticeRecipientSelection";
 
 export class GovernanceNoticeError extends Error {
   status: number;
@@ -50,6 +56,13 @@ type SendNoticeInput = {
   channels?: unknown;
   targetRoles?: unknown;
   recipients?: unknown;
+
+  /**
+   * Server-verifiable membership/assignment references returned by the
+   * authorized recipient search and preview endpoints.
+   */
+  selectionIds?: unknown;
+
   metadata?: unknown;
 
   /**
@@ -262,8 +275,13 @@ function buildNoticeIdempotencyKey(args: {
     );
   }
 
+  const audienceMode = noticeAudienceMode(args.input);
+
   const payload = {
-    version: "governance-official-notice-v1",
+    version:
+      audienceMode === GovernanceOfficialNoticeAudienceMode.INDIVIDUALS
+        ? "governance-official-notice-v2"
+        : "governance-official-notice-v1",
     caseId: args.target.caseId,
     tenantId: args.target.tenantId,
     zoneId: args.target.zoneId,
@@ -271,6 +289,10 @@ function buildNoticeIdempotencyKey(args: {
     body: normalizeIntentText(args.body),
     priority: args.priority,
     channels: args.channels.map(String).sort(),
+    ...(audienceMode ===
+    GovernanceOfficialNoticeAudienceMode.INDIVIDUALS
+      ? { audienceMode }
+      : {}),
     targetRoles: roles,
     recipients: args.recipients.map((r) => recipientKey(r)).sort(),
   };
@@ -282,6 +304,15 @@ function officialNoticeRefFromId(noticeId: string) {
   return `GOV-${noticeId.slice(-8).toUpperCase()}`;
 }
 
+function noticeFingerprintVersion(
+  audienceMode: GovernanceOfficialNoticeAudienceMode
+) {
+  return audienceMode ===
+    GovernanceOfficialNoticeAudienceMode.INDIVIDUALS
+    ? "governance-official-notice-authenticity-v2"
+    : "governance-official-notice-authenticity-v1";
+}
+
 function buildNoticeAuthenticityFingerprint(args: {
   senderUserId: string;
   target: NoticeTarget;
@@ -290,10 +321,11 @@ function buildNoticeAuthenticityFingerprint(args: {
   title: string;
   body: string;
   priority: GovernanceInterventionPriority;
+  audienceMode: GovernanceOfficialNoticeAudienceMode;
 }) {
   return sha256(
     stableStringify({
-      version: "governance-official-notice-authenticity-v1",
+      version: noticeFingerprintVersion(args.audienceMode),
       senderUserId: args.senderUserId,
       caseId: args.target.caseId,
       tenantId: args.target.tenantId,
@@ -301,6 +333,10 @@ function buildNoticeAuthenticityFingerprint(args: {
       title: normalizeIntentText(args.title),
       body: normalizeIntentText(args.body),
       priority: args.priority,
+      ...(args.audienceMode ===
+      GovernanceOfficialNoticeAudienceMode.INDIVIDUALS
+        ? { audienceMode: args.audienceMode }
+        : {}),
       channels: args.channels.map(String).sort(),
       recipients: args.recipients.map((r) => recipientKey(r)).sort(),
     })
@@ -468,6 +504,23 @@ function targetRolesArray(value: unknown): string[] {
   return value.map((v) => upper(v)).filter(Boolean);
 }
 
+function selectedRecipientIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => clean(item)).filter(Boolean);
+}
+
+function hasSelectedRecipientInput(input: SendNoticeInput) {
+  return selectedRecipientIds(input.selectionIds).length > 0;
+}
+
+function noticeAudienceMode(
+  input: SendNoticeInput
+): GovernanceOfficialNoticeAudienceMode {
+  return hasSelectedRecipientInput(input)
+    ? GovernanceOfficialNoticeAudienceMode.INDIVIDUALS
+    : GovernanceOfficialNoticeAudienceMode.ROLE_SCOPE;
+}
+
 function smsSafe(value: unknown) {
   return clean(value)
     .replace(/[·•]/g, "-")
@@ -594,13 +647,20 @@ function assertOfficialCommunicationAuthority(args: {
   if (!isOfficialCommunicationInput(input)) return;
 
   if (hasExplicitRecipientInput(input)) {
-    throw new GovernanceNoticeError(403, "CUSTOM_RECIPIENTS_BLOCKED_FOR_OFFICIAL_COMMUNICATION");
+    throw new GovernanceNoticeError(
+      403,
+      "CUSTOM_RECIPIENTS_BLOCKED_FOR_OFFICIAL_COMMUNICATION"
+    );
   }
 
   const roles = b7RequestedRoleKeys(input);
+  const selectedMode = hasSelectedRecipientInput(input);
 
-  if (!roles.length) {
-    throw new GovernanceNoticeError(400, "OFFICIAL_COMMUNICATION_TARGET_ROLES_REQUIRED");
+  if (selectedMode && roles.length) {
+    throw new GovernanceNoticeError(
+      400,
+      "NOTICE_AUDIENCE_MODE_CONFLICT"
+    );
   }
 
   const senderRoles = scopeRoleKeys(scope);
@@ -612,6 +672,22 @@ function assertOfficialCommunicationAuthority(args: {
     scope.isSuperAdmin ||
     senderRoles.has("SISSO") ||
     senderRoles.has("CIRCUIT_SUPERVISOR");
+
+  if (selectedMode) {
+    if (isDistrictDirector || isCircuitOfficer) return;
+
+    throw new GovernanceNoticeError(
+      403,
+      "OFFICIAL_COMMUNICATION_SENDER_FORBIDDEN"
+    );
+  }
+
+  if (!roles.length) {
+    throw new GovernanceNoticeError(
+      400,
+      "OFFICIAL_COMMUNICATION_TARGET_ROLES_REQUIRED"
+    );
+  }
 
   const districtAllowed = new Set([
     "SISSO",
@@ -625,7 +701,10 @@ function assertOfficialCommunicationAuthority(args: {
   if (isDistrictDirector) {
     const invalid = roles.find((role) => !districtAllowed.has(role));
     if (invalid) {
-      throw new GovernanceNoticeError(403, "DISTRICT_NOTICE_TARGET_ROLE_FORBIDDEN");
+      throw new GovernanceNoticeError(
+        403,
+        "DISTRICT_NOTICE_TARGET_ROLE_FORBIDDEN"
+      );
     }
 
     return;
@@ -634,13 +713,19 @@ function assertOfficialCommunicationAuthority(args: {
   if (isCircuitOfficer) {
     const invalid = roles.find((role) => !circuitAllowed.has(role));
     if (invalid) {
-      throw new GovernanceNoticeError(403, "CIRCUIT_NOTICE_TARGET_ROLE_FORBIDDEN");
+      throw new GovernanceNoticeError(
+        403,
+        "CIRCUIT_NOTICE_TARGET_ROLE_FORBIDDEN"
+      );
     }
 
     return;
   }
 
-  throw new GovernanceNoticeError(403, "OFFICIAL_COMMUNICATION_SENDER_FORBIDDEN");
+  throw new GovernanceNoticeError(
+    403,
+    "OFFICIAL_COMMUNICATION_SENDER_FORBIDDEN"
+  );
 }
 
 async function collectNoticeDescendantZoneIds(seedZoneId: string) {
@@ -1088,6 +1173,95 @@ async function governanceOfficerRecipients(
     }));
 }
 
+function selectedRecipientToNormalized(
+  recipient: ResolvedGovernanceSelectedRecipient
+): NormalizedRecipient {
+  return {
+    recipientUserId: recipient.recipientUserId,
+    tenantId: recipient.tenantId,
+    recipientType: recipient.recipientType,
+    displayName: recipient.displayName,
+    roleLabel: recipient.roleLabel,
+    phone: recipient.phone,
+    email: recipient.email,
+    metadata: recipient.metadata,
+  };
+}
+
+async function assertSelectedRecipientsWithinTarget(args: {
+  scope: GovernanceScope;
+  target: NoticeTarget;
+  recipients: ResolvedGovernanceSelectedRecipient[];
+}) {
+  const { scope, target, recipients } = args;
+
+  if (target.tenantId) {
+    const outsideSchool = recipients.find(
+      (recipient) => recipient.tenantId !== target.tenantId
+    );
+
+    if (outsideSchool) {
+      throw new GovernanceNoticeError(
+        403,
+        "SELECTED_RECIPIENT_OUTSIDE_NOTICE_TARGET"
+      );
+    }
+
+    return;
+  }
+
+  if (target.zoneId) {
+    const allowedZoneIds = new Set(
+      await noticeTargetZoneIds(target, scope)
+    );
+
+    const outsideZone = recipients.find((recipient) => {
+      const metadata = inputObject(recipient.metadata);
+      const recipientZoneId = clean(metadata.zoneId);
+
+      return !recipientZoneId || !allowedZoneIds.has(recipientZoneId);
+    });
+
+    if (outsideZone) {
+      throw new GovernanceNoticeError(
+        403,
+        "SELECTED_RECIPIENT_OUTSIDE_NOTICE_TARGET"
+      );
+    }
+  }
+}
+
+async function selectedRecipientsForNotice(args: {
+  scope: GovernanceScope;
+  target: NoticeTarget;
+  input: SendNoticeInput;
+  sectorTarget: NoticeSectorTarget;
+}): Promise<NormalizedRecipient[]> {
+  let selected: ResolvedGovernanceSelectedRecipient[];
+
+  try {
+    selected = await resolveGovernanceSelectedRecipients({
+      scope: args.scope,
+      selectionIds: args.input.selectionIds,
+      sectorTarget: args.sectorTarget,
+    });
+  } catch (error) {
+    if (error instanceof GovernanceNoticeRecipientSelectionError) {
+      throw new GovernanceNoticeError(error.status, error.code);
+    }
+
+    throw error;
+  }
+
+  await assertSelectedRecipientsWithinTarget({
+    scope: args.scope,
+    target: args.target,
+    recipients: selected,
+  });
+
+  return selected.map(selectedRecipientToNormalized);
+}
+
 async function resolveRecipients(args: {
   scope: GovernanceScope;
   target: NoticeTarget;
@@ -1098,27 +1272,63 @@ async function resolveRecipients(args: {
   const strictOfficialCommunication = isOfficialCommunicationInput(input);
   const sectorTarget = normalizeNoticeSectorTarget(input);
   const requestedRoles = targetRolesArray(input.targetRoles);
+  const selectedMode = hasSelectedRecipientInput(input);
 
-  const explicit = strictOfficialCommunication
-    ? []
-    : await explicitRecipients(input);
+  if (
+    selectedMode &&
+    (hasExplicitRecipientInput(input) || requestedRoles.length)
+  ) {
+    throw new GovernanceNoticeError(
+      400,
+      "NOTICE_AUDIENCE_MODE_CONFLICT"
+    );
+  }
+
+  const selectedRecipients = selectedMode
+    ? await selectedRecipientsForNotice({
+        scope,
+        target,
+        input,
+        sectorTarget,
+      })
+    : [];
+
+  const explicit =
+    selectedMode || strictOfficialCommunication
+      ? []
+      : await explicitRecipients(input);
 
   const schoolRoles =
-    requestedRoles.length || target.tenantId || target.zoneId
-      ? await schoolRoleRecipients(target, requestedRoles, scope, sectorTarget)
+    !selectedMode &&
+    (requestedRoles.length || target.tenantId || target.zoneId)
+      ? await schoolRoleRecipients(
+          target,
+          requestedRoles,
+          scope,
+          sectorTarget
+        )
       : [];
 
   const governanceRoles =
-    requestedRoles.length && target.zoneId
-      ? await governanceOfficerRecipients(target, requestedRoles, scope)
+    !selectedMode && requestedRoles.length && target.zoneId
+      ? await governanceOfficerRecipients(
+          target,
+          requestedRoles,
+          scope
+        )
       : [];
 
-  const merged = [...explicit, ...schoolRoles, ...governanceRoles];
+  const merged = [
+    ...selectedRecipients,
+    ...explicit,
+    ...schoolRoles,
+    ...governanceRoles,
+  ];
 
   const deduped = new Map<string, NormalizedRecipient>();
-  for (const r of merged) {
-    const key = recipientKey(r);
-    if (!deduped.has(key)) deduped.set(key, r);
+  for (const recipient of merged) {
+    const key = recipientKey(recipient);
+    if (!deduped.has(key)) deduped.set(key, recipient);
   }
 
   const recipients = Array.from(deduped.values());
@@ -1126,12 +1336,16 @@ async function resolveRecipients(args: {
   if (strictOfficialCommunication) {
     const custom = recipients.find(
       (recipient) =>
-        recipient.recipientType === GovernanceOfficialNoticeRecipientType.CUSTOM ||
+        recipient.recipientType ===
+          GovernanceOfficialNoticeRecipientType.CUSTOM ||
         !recipient.recipientUserId
     );
 
     if (custom) {
-      throw new GovernanceNoticeError(403, "CUSTOM_RECIPIENTS_BLOCKED_FOR_OFFICIAL_COMMUNICATION");
+      throw new GovernanceNoticeError(
+        403,
+        "CUSTOM_RECIPIENTS_BLOCKED_FOR_OFFICIAL_COMMUNICATION"
+      );
     }
   }
 
@@ -1244,6 +1458,7 @@ const noticeSelect = {
   priority: true,
   status: true,
   channels: true,
+  audienceMode: true,
   audienceSummary: true,
   idempotencyKey: true,
   idempotencyScope: true,
@@ -1542,6 +1757,7 @@ export async function sendGovernanceOfficialNotice(args: {
   const target = await resolveNoticeTarget(scope, input);
   const metadataInput = inputObject(input.metadata);
   const sectorTarget = normalizeNoticeSectorTarget(input);
+  const audienceMode = noticeAudienceMode(input);
 
   assertOfficialCommunicationAuthority({
     scope,
@@ -1595,6 +1811,7 @@ export async function sendGovernanceOfficialNotice(args: {
     title,
     body,
     priority,
+    audienceMode,
   });
 
   if (idempotencyKey) {
@@ -1617,6 +1834,7 @@ export async function sendGovernanceOfficialNotice(args: {
           zoneId: existing.zoneId ?? target.zoneId,
           idempotencyKey,
           idempotencyScope,
+          audienceMode,
           duplicateSafe: true,
           message: "Duplicate official notice send suppressed before dispatch.",
         },
@@ -1644,6 +1862,7 @@ export async function sendGovernanceOfficialNotice(args: {
           body,
           priority,
           status: GovernanceOfficialNoticeStatus.QUEUED,
+          audienceMode,
           channels: jsonArray(channels),
           audienceSummary,
           idempotencyKey,
@@ -1652,6 +1871,12 @@ export async function sendGovernanceOfficialNotice(args: {
             ...metadataInput,
             source: metadataInput.source ?? "governance-official-notice",
             targetLabel: target.label,
+            audienceMode,
+            selectedRecipientCount:
+              audienceMode ===
+              GovernanceOfficialNoticeAudienceMode.INDIVIDUALS
+                ? recipients.length
+                : null,
             senderUserId: actorUserId,
             senderScope: {
               isSuperAdmin: scope.isSuperAdmin,
@@ -1691,7 +1916,8 @@ export async function sendGovernanceOfficialNotice(args: {
             targetRoles: targetRolesArray(input.targetRoles),
             noticeFingerprint,
             fingerprintAlgorithm: "sha256",
-            fingerprintVersion: "governance-official-notice-authenticity-v1",
+            fingerprintVersion:
+              noticeFingerprintVersion(audienceMode),
             officialReferenceRule:
               "Official reference is derived from the final notice id as GOV-{last8}.",
             securityRule:
@@ -1764,6 +1990,7 @@ export async function sendGovernanceOfficialNotice(args: {
               noticeId: notice.id,
               channels,
               recipientCount: recipients.length,
+              audienceMode,
               audienceSummary,
               idempotencyKey,
               idempotencyScope: idempotencyKey ? idempotencyScope : null,
@@ -1795,6 +2022,7 @@ export async function sendGovernanceOfficialNotice(args: {
             zoneId: existing.zoneId ?? target.zoneId,
             idempotencyKey,
             idempotencyScope,
+            audienceMode,
             duplicateSafe: true,
             message:
               "Duplicate official notice send suppressed by DB unique constraint.",
@@ -1827,12 +2055,14 @@ export async function sendGovernanceOfficialNotice(args: {
       zoneId: target.zoneId,
       channels,
       recipientCount: recipients.length,
+      audienceMode,
       audienceSummary,
       idempotencyKey,
       idempotencyScope: idempotencyKey ? idempotencyScope : null,
       noticeFingerprint,
       governanceSectorTarget: sectorTarget,
       fingerprintAlgorithm: "sha256",
+      fingerprintVersion: noticeFingerprintVersion(audienceMode),
       securityRule:
         "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference.",
     },
@@ -1893,6 +2123,7 @@ export async function listGovernanceNoticeInbox(args: {
           priority: true,
           status: true,
           channels: true,
+          audienceMode: true,
           audienceSummary: true,
           idempotencyKey: true,
           idempotencyScope: true,
@@ -2483,6 +2714,7 @@ export async function listGovernanceSentNoticeAccountability(args: {
       priority: true,
       status: true,
             channels: true,
+      audienceMode: true,
       audienceSummary: true,
       idempotencyKey: true,
       idempotencyScope: true,
