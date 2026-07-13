@@ -3,6 +3,8 @@ import { createHash } from "crypto";
 import {
   GovernanceInterventionEventType,
   GovernanceInterventionPriority,
+  GovernanceOfficialNoticeAttachmentScanStatus,
+  GovernanceOfficialNoticeAttachmentStatus,
   GovernanceOfficialNoticeAudienceMode,
   GovernanceOfficialNoticeChannel,
   GovernanceOfficialNoticeDeliveryStatus,
@@ -63,6 +65,13 @@ type SendNoticeInput = {
    */
   selectionIds?: unknown;
 
+  /**
+   * Private attachment records initialized, uploaded, verified, and inspected
+   * through the governance attachment API. Browser-supplied object keys or
+   * storage URLs are never accepted here.
+   */
+  attachmentIds?: unknown;
+
   metadata?: unknown;
 
   /**
@@ -118,6 +127,28 @@ type NormalizedRecipient = {
   phone: string | null;
   email: string | null;
   metadata: Prisma.InputJsonValue;
+};
+
+type ResolvedNoticeAttachment = {
+  id: string;
+  noticeId: string | null;
+  tenantId: string | null;
+  zoneId: string | null;
+  uploadedByUserId: string;
+  displayFilename: string;
+  extension: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256Hash: string;
+  confidential: boolean;
+  recipientVisible: boolean;
+  status: GovernanceOfficialNoticeAttachmentStatus;
+  scanStatus: GovernanceOfficialNoticeAttachmentScanStatus;
+};
+
+type ResolvedNoticeAttachmentSet = {
+  items: ResolvedNoticeAttachment[];
+  sealedNoticeId: string | null;
 };
 
 type NoticeSectorTarget = "PUBLIC" | "PRIVATE" | "ALL_AUTHORIZED";
@@ -248,6 +279,7 @@ function buildNoticeIdempotencyKey(args: {
   input: SendNoticeInput;
   target: NoticeTarget;
   recipients: NormalizedRecipient[];
+  attachments: ResolvedNoticeAttachment[];
   channels: GovernanceOfficialNoticeChannel[];
   title: string;
   body: string;
@@ -295,6 +327,7 @@ function buildNoticeIdempotencyKey(args: {
       : {}),
     targetRoles: roles,
     recipients: args.recipients.map((r) => recipientKey(r)).sort(),
+    attachments: noticeAttachmentManifest(args.attachments),
   };
 
   return `gov-notice:${sha256(stableStringify(payload))}`.slice(0, 220);
@@ -305,8 +338,13 @@ function officialNoticeRefFromId(noticeId: string) {
 }
 
 function noticeFingerprintVersion(
-  audienceMode: GovernanceOfficialNoticeAudienceMode
+  audienceMode: GovernanceOfficialNoticeAudienceMode,
+  attachmentCount = 0
 ) {
+  if (attachmentCount > 0) {
+    return "governance-official-notice-authenticity-v3";
+  }
+
   return audienceMode ===
     GovernanceOfficialNoticeAudienceMode.INDIVIDUALS
     ? "governance-official-notice-authenticity-v2"
@@ -317,6 +355,7 @@ function buildNoticeAuthenticityFingerprint(args: {
   senderUserId: string;
   target: NoticeTarget;
   recipients: NormalizedRecipient[];
+  attachments: ResolvedNoticeAttachment[];
   channels: GovernanceOfficialNoticeChannel[];
   title: string;
   body: string;
@@ -325,7 +364,10 @@ function buildNoticeAuthenticityFingerprint(args: {
 }) {
   return sha256(
     stableStringify({
-      version: noticeFingerprintVersion(args.audienceMode),
+      version: noticeFingerprintVersion(
+        args.audienceMode,
+        args.attachments.length
+      ),
       senderUserId: args.senderUserId,
       caseId: args.target.caseId,
       tenantId: args.target.tenantId,
@@ -339,6 +381,7 @@ function buildNoticeAuthenticityFingerprint(args: {
         : {}),
       channels: args.channels.map(String).sort(),
       recipients: args.recipients.map((r) => recipientKey(r)).sort(),
+      attachments: noticeAttachmentManifest(args.attachments),
     })
   );
 }
@@ -519,6 +562,57 @@ function noticeAudienceMode(
   return hasSelectedRecipientInput(input)
     ? GovernanceOfficialNoticeAudienceMode.INDIVIDUALS
     : GovernanceOfficialNoticeAudienceMode.ROLE_SCOPE;
+}
+
+function noticeAttachmentIds(value: unknown): string[] {
+  if (value === undefined || value === null) return [];
+
+  if (!Array.isArray(value)) {
+    throw new GovernanceNoticeError(
+      400,
+      "NOTICE_ATTACHMENT_IDS_MUST_BE_AN_ARRAY"
+    );
+  }
+
+  const ids = value.map((item) => clean(item)).filter(Boolean);
+
+  if (ids.length > 3) {
+    throw new GovernanceNoticeError(
+      400,
+      "NOTICE_ATTACHMENT_LIMIT_EXCEEDED"
+    );
+  }
+
+  if (new Set(ids).size !== ids.length) {
+    throw new GovernanceNoticeError(
+      409,
+      "DUPLICATE_NOTICE_ATTACHMENT_ID"
+    );
+  }
+
+  return ids;
+}
+
+function noticeAttachmentManifest(
+  attachments: ResolvedNoticeAttachment[]
+) {
+  return attachments
+    .map((attachment) => ({
+      id: attachment.id,
+      sha256Hash: attachment.sha256Hash,
+      sizeBytes: attachment.sizeBytes,
+      mimeType: attachment.mimeType,
+      recipientVisible: attachment.recipientVisible,
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function noticeAttachmentManifestHash(
+  attachments: ResolvedNoticeAttachment[]
+) {
+  return sha256(
+    stableStringify(noticeAttachmentManifest(attachments))
+  );
 }
 
 function smsSafe(value: unknown) {
@@ -1356,6 +1450,264 @@ async function resolveRecipients(args: {
   return recipients;
 }
 
+async function resolveNoticeAttachments(args: {
+  scope: GovernanceScope;
+  target: NoticeTarget;
+  actorUserId: string;
+  input: SendNoticeInput;
+  sectorTarget: NoticeSectorTarget;
+}): Promise<ResolvedNoticeAttachmentSet> {
+  const ids = noticeAttachmentIds(args.input.attachmentIds);
+
+  if (!ids.length) {
+    return { items: [], sealedNoticeId: null };
+  }
+
+  const rows =
+    await prisma.governanceOfficialNoticeAttachment.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        noticeId: true,
+        tenantId: true,
+        zoneId: true,
+        uploadedByUserId: true,
+        displayFilename: true,
+        extension: true,
+        mimeType: true,
+        sizeBytes: true,
+        sha256Hash: true,
+        confidential: true,
+        recipientVisible: true,
+        status: true,
+        scanStatus: true,
+        sealedAt: true,
+        rejectedAt: true,
+        deletedAt: true,
+      },
+    });
+
+  if (rows.length !== ids.length) {
+    throw new GovernanceNoticeError(
+      404,
+      "NOTICE_ATTACHMENT_NOT_FOUND"
+    );
+  }
+
+  const rowMap = new Map(rows.map((row) => [row.id, row]));
+  const orderedRows = ids.map((id) => rowMap.get(id));
+
+  if (orderedRows.some((row) => !row)) {
+    throw new GovernanceNoticeError(
+      404,
+      "NOTICE_ATTACHMENT_NOT_FOUND"
+    );
+  }
+
+  const allowedZoneIds = args.target.zoneId
+    ? new Set(
+        await noticeTargetZoneIds(args.target, args.scope)
+      )
+    : new Set<string>();
+
+  const allowedTenantIds = args.target.zoneId
+    ? new Set(
+        await noticeTargetTenantIds(
+          args.target,
+          args.scope,
+          args.sectorTarget
+        )
+      )
+    : new Set<string>();
+
+  const items: ResolvedNoticeAttachment[] = [];
+
+  for (const row of orderedRows) {
+    if (!row) continue;
+
+    if (row.uploadedByUserId !== args.actorUserId) {
+      throw new GovernanceNoticeError(
+        403,
+        "NOTICE_ATTACHMENT_UPLOAD_OWNER_MISMATCH"
+      );
+    }
+
+    const scopeAllowed =
+      args.scope.isSuperAdmin ||
+      (Boolean(row.tenantId) &&
+        args.scope.tenantIds.includes(row.tenantId as string)) ||
+      (Boolean(row.zoneId) &&
+        args.scope.zoneIds.includes(row.zoneId as string));
+
+    if (!scopeAllowed) {
+      throw new GovernanceNoticeError(
+        403,
+        "NOTICE_ATTACHMENT_OUT_OF_GOVERNANCE_SCOPE"
+      );
+    }
+
+    if (args.target.tenantId) {
+      if (row.tenantId !== args.target.tenantId) {
+        throw new GovernanceNoticeError(
+          403,
+          "NOTICE_ATTACHMENT_OUTSIDE_NOTICE_TARGET"
+        );
+      }
+    } else if (args.target.zoneId) {
+      const insideTarget =
+        (Boolean(row.tenantId) &&
+          allowedTenantIds.has(row.tenantId as string)) ||
+        (Boolean(row.zoneId) &&
+          allowedZoneIds.has(row.zoneId as string));
+
+      if (!insideTarget) {
+        throw new GovernanceNoticeError(
+          403,
+          "NOTICE_ATTACHMENT_OUTSIDE_NOTICE_TARGET"
+        );
+      }
+    }
+
+    if (
+      row.rejectedAt ||
+      row.deletedAt ||
+      !clean(row.sha256Hash)
+    ) {
+      throw new GovernanceNoticeError(
+        409,
+        "NOTICE_ATTACHMENT_NOT_READY"
+      );
+    }
+
+    const isReady =
+      !row.noticeId &&
+      !row.sealedAt &&
+      row.status ===
+        GovernanceOfficialNoticeAttachmentStatus.READY &&
+      row.scanStatus ===
+        GovernanceOfficialNoticeAttachmentScanStatus.CLEAN;
+
+    const isSealed =
+      Boolean(row.noticeId) &&
+      Boolean(row.sealedAt) &&
+      row.status ===
+        GovernanceOfficialNoticeAttachmentStatus.SEALED &&
+      row.scanStatus ===
+        GovernanceOfficialNoticeAttachmentScanStatus.CLEAN;
+
+    if (!isReady && !isSealed) {
+      throw new GovernanceNoticeError(
+        409,
+        "NOTICE_ATTACHMENT_NOT_READY"
+      );
+    }
+
+    items.push({
+      id: row.id,
+      noticeId: row.noticeId,
+      tenantId: row.tenantId,
+      zoneId: row.zoneId,
+      uploadedByUserId: row.uploadedByUserId,
+      displayFilename: row.displayFilename,
+      extension: row.extension,
+      mimeType: row.mimeType,
+      sizeBytes: Number(row.sizeBytes),
+      sha256Hash: clean(row.sha256Hash),
+      confidential: row.confidential,
+      recipientVisible: row.recipientVisible,
+      status: row.status,
+      scanStatus: row.scanStatus,
+    });
+  }
+
+  const totalBytes = items.reduce(
+    (sum, attachment) => sum + attachment.sizeBytes,
+    0
+  );
+
+  if (totalBytes > 20 * 1024 * 1024) {
+    throw new GovernanceNoticeError(
+      400,
+      "NOTICE_ATTACHMENT_COMBINED_SIZE_EXCEEDED"
+    );
+  }
+
+  const sealedNoticeIds = new Set(
+    items
+      .map((attachment) => attachment.noticeId)
+      .filter(Boolean) as string[]
+  );
+
+  if (sealedNoticeIds.size > 1) {
+    throw new GovernanceNoticeError(
+      409,
+      "NOTICE_ATTACHMENTS_ALREADY_SEALED_TO_DIFFERENT_NOTICES"
+    );
+  }
+
+  const sealedCount = items.filter(
+    (attachment) =>
+      attachment.status ===
+      GovernanceOfficialNoticeAttachmentStatus.SEALED
+  ).length;
+
+  if (sealedCount > 0 && sealedCount !== items.length) {
+    throw new GovernanceNoticeError(
+      409,
+      "NOTICE_ATTACHMENT_STATE_CONFLICT"
+    );
+  }
+
+  return {
+    items,
+    sealedNoticeId:
+      sealedNoticeIds.size === 1
+        ? Array.from(sealedNoticeIds)[0]
+        : null,
+  };
+}
+
+function assertExistingNoticeAttachmentMatch(args: {
+  existing: {
+    id: string;
+    attachments: Array<{
+      id: string;
+      sha256Hash: string | null;
+    }>;
+  };
+  attachments: ResolvedNoticeAttachment[];
+  sealedNoticeId: string | null;
+}) {
+  const expected = args.attachments
+    .map((attachment) =>
+      `${attachment.id}:${attachment.sha256Hash}`
+    )
+    .sort();
+
+  const actual = args.existing.attachments
+    .map((attachment) =>
+      `${attachment.id}:${clean(attachment.sha256Hash)}`
+    )
+    .sort();
+
+  if (stableStringify(expected) !== stableStringify(actual)) {
+    throw new GovernanceNoticeError(
+      409,
+      "IDEMPOTENCY_KEY_ATTACHMENT_MISMATCH"
+    );
+  }
+
+  if (
+    args.sealedNoticeId &&
+    args.sealedNoticeId !== args.existing.id
+  ) {
+    throw new GovernanceNoticeError(
+      409,
+      "NOTICE_ATTACHMENT_ALREADY_SEALED"
+    );
+  }
+}
+
 function buildAudienceSummary(recipients: NormalizedRecipient[]) {
   const counts = new Map<string, number>();
 
@@ -1499,6 +1851,22 @@ const noticeSelect = {
           level: true,
         },
       },
+    },
+  },
+  attachments: {
+    orderBy: { createdAt: "asc" as const },
+    select: {
+      id: true,
+      displayFilename: true,
+      extension: true,
+      mimeType: true,
+      sha256Hash: true,
+      confidential: true,
+      recipientVisible: true,
+      status: true,
+      scanStatus: true,
+      sealedAt: true,
+      createdAt: true,
     },
   },
   recipients: {
@@ -1770,6 +2138,19 @@ export async function sendGovernanceOfficialNotice(args: {
     input,
   });
 
+  const attachmentSet = await resolveNoticeAttachments({
+    scope,
+    target,
+    actorUserId,
+    input,
+    sectorTarget,
+  });
+  const attachments = attachmentSet.items;
+  const attachmentManifest =
+    noticeAttachmentManifest(attachments);
+  const attachmentManifestHash =
+    noticeAttachmentManifestHash(attachments);
+
   const channels = normalizeChannels(input.channels);
 
   const title = clean(input.title);
@@ -1797,6 +2178,7 @@ export async function sendGovernanceOfficialNotice(args: {
         input,
         target,
         recipients,
+        attachments,
         channels,
         title,
         body,
@@ -1807,6 +2189,7 @@ export async function sendGovernanceOfficialNotice(args: {
     senderUserId: actorUserId,
     target,
     recipients,
+    attachments,
     channels,
     title,
     body,
@@ -1821,6 +2204,12 @@ export async function sendGovernanceOfficialNotice(args: {
     });
 
     if (existing) {
+      assertExistingNoticeAttachmentMatch({
+        existing,
+        attachments,
+        sealedNoticeId: attachmentSet.sealedNoticeId,
+      });
+
       await writeAuditLog({
         action: "GOVERNANCE_OFFICIAL_NOTICE_SEND_DEDUPED",
         tenantId: existing.tenantId ?? target.tenantId ?? undefined,
@@ -1835,6 +2224,8 @@ export async function sendGovernanceOfficialNotice(args: {
           idempotencyKey,
           idempotencyScope,
           audienceMode,
+          attachmentCount: attachments.length,
+          attachmentManifestHash,
           duplicateSafe: true,
           message: "Duplicate official notice send suppressed before dispatch.",
         },
@@ -1846,6 +2237,13 @@ export async function sendGovernanceOfficialNotice(args: {
         duplicateSafe: true,
       };
     }
+  }
+
+  if (attachmentSet.sealedNoticeId) {
+    throw new GovernanceNoticeError(
+      409,
+      "NOTICE_ATTACHMENT_ALREADY_SEALED"
+    );
   }
 
   let created: { id: string };
@@ -1914,10 +2312,19 @@ export async function sendGovernanceOfficialNotice(args: {
                 }).requiresResponse
               ),
             targetRoles: targetRolesArray(input.targetRoles),
+            attachmentCount: attachments.length,
+            attachmentIds: attachments.map(
+              (attachment) => attachment.id
+            ),
+            attachmentManifest,
+            attachmentManifestHash,
             noticeFingerprint,
             fingerprintAlgorithm: "sha256",
             fingerprintVersion:
-              noticeFingerprintVersion(audienceMode),
+              noticeFingerprintVersion(
+                audienceMode,
+                attachments.length
+              ),
             officialReferenceRule:
               "Official reference is derived from the final notice id as GOV-{last8}.",
             securityRule:
@@ -1929,6 +2336,43 @@ export async function sendGovernanceOfficialNotice(args: {
         },
         select: { id: true },
       });
+
+      if (attachments.length) {
+        const sealedAt = new Date();
+
+        const sealed =
+          await tx.governanceOfficialNoticeAttachment.updateMany({
+            where: {
+              id: {
+                in: attachments.map(
+                  (attachment) => attachment.id
+                ),
+              },
+              noticeId: null,
+              uploadedByUserId: actorUserId,
+              status:
+                GovernanceOfficialNoticeAttachmentStatus.READY,
+              scanStatus:
+                GovernanceOfficialNoticeAttachmentScanStatus.CLEAN,
+              sealedAt: null,
+              rejectedAt: null,
+              deletedAt: null,
+            },
+            data: {
+              noticeId: notice.id,
+              status:
+                GovernanceOfficialNoticeAttachmentStatus.SEALED,
+              sealedAt,
+            },
+          });
+
+        if (sealed.count !== attachments.length) {
+          throw new GovernanceNoticeError(
+            409,
+            "NOTICE_ATTACHMENT_SEAL_CONFLICT"
+          );
+        }
+      }
 
       for (const recipient of recipients) {
         const row = await tx.governanceOfficialNoticeRecipient.create({
@@ -1992,6 +2436,8 @@ export async function sendGovernanceOfficialNotice(args: {
               recipientCount: recipients.length,
               audienceMode,
               audienceSummary,
+              attachmentCount: attachments.length,
+              attachmentManifestHash,
               idempotencyKey,
               idempotencyScope: idempotencyKey ? idempotencyScope : null,
             }),
@@ -2009,6 +2455,12 @@ export async function sendGovernanceOfficialNotice(args: {
       });
 
       if (existing) {
+        assertExistingNoticeAttachmentMatch({
+          existing,
+          attachments,
+          sealedNoticeId: attachmentSet.sealedNoticeId,
+        });
+
         await writeAuditLog({
           action: "GOVERNANCE_OFFICIAL_NOTICE_SEND_DEDUPED_RACE",
           tenantId: existing.tenantId ?? target.tenantId ?? undefined,
@@ -2023,6 +2475,8 @@ export async function sendGovernanceOfficialNotice(args: {
             idempotencyKey,
             idempotencyScope,
             audienceMode,
+            attachmentCount: attachments.length,
+            attachmentManifestHash,
             duplicateSafe: true,
             message:
               "Duplicate official notice send suppressed by DB unique constraint.",
@@ -2057,12 +2511,20 @@ export async function sendGovernanceOfficialNotice(args: {
       recipientCount: recipients.length,
       audienceMode,
       audienceSummary,
+      attachmentCount: attachments.length,
+      attachmentIds: attachments.map(
+        (attachment) => attachment.id
+      ),
+      attachmentManifestHash,
       idempotencyKey,
       idempotencyScope: idempotencyKey ? idempotencyScope : null,
       noticeFingerprint,
       governanceSectorTarget: sectorTarget,
       fingerprintAlgorithm: "sha256",
-      fingerprintVersion: noticeFingerprintVersion(audienceMode),
+      fingerprintVersion: noticeFingerprintVersion(
+        audienceMode,
+        attachments.length
+      ),
       securityRule:
         "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference.",
     },
@@ -2161,6 +2623,27 @@ export async function listGovernanceNoticeInbox(args: {
                   level: true,
                 },
               },
+            },
+          },
+          attachments: {
+            where: {
+              recipientVisible: true,
+              status:
+                GovernanceOfficialNoticeAttachmentStatus.SEALED,
+            },
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              displayFilename: true,
+              extension: true,
+              mimeType: true,
+              sha256Hash: true,
+              confidential: true,
+              recipientVisible: true,
+              status: true,
+              scanStatus: true,
+              sealedAt: true,
+              createdAt: true,
             },
           },
         },
@@ -2755,6 +3238,22 @@ export async function listGovernanceSentNoticeAccountability(args: {
               level: true,
             },
           },
+        },
+      },
+      attachments: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          displayFilename: true,
+          extension: true,
+          mimeType: true,
+          sha256Hash: true,
+          confidential: true,
+          recipientVisible: true,
+          status: true,
+          scanStatus: true,
+          sealedAt: true,
+          createdAt: true,
         },
       },
       recipients: {
