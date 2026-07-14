@@ -2626,26 +2626,35 @@ export async function listGovernanceNoticeInbox(args: {
             },
           },
           attachments: {
-            where: {
-              recipientVisible: true,
-              status:
-                GovernanceOfficialNoticeAttachmentStatus.SEALED,
-            },
-            orderBy: { createdAt: "asc" },
-            select: {
-              id: true,
-              displayFilename: true,
-              extension: true,
-              mimeType: true,
-              sha256Hash: true,
-              confidential: true,
-              recipientVisible: true,
-              status: true,
-              scanStatus: true,
-              sealedAt: true,
-              createdAt: true,
-            },
-          },
+  where: {
+    recipientVisible: true,
+    status:
+      GovernanceOfficialNoticeAttachmentStatus.SEALED,
+    scanStatus:
+      GovernanceOfficialNoticeAttachmentScanStatus.CLEAN,
+    sealedAt: {
+      not: null,
+    },
+    deletedAt: null,
+  },
+  orderBy: {
+    createdAt: "asc",
+  },
+  select: {
+    id: true,
+    displayFilename: true,
+    extension: true,
+    mimeType: true,
+    sizeBytes: true,
+    sha256Hash: true,
+    confidential: true,
+    recipientVisible: true,
+    status: true,
+    scanStatus: true,
+    sealedAt: true,
+    createdAt: true,
+  },
+},
         },
       },
       deliveries: {
@@ -2689,10 +2698,21 @@ export async function listGovernanceNoticeInbox(args: {
       title: row.notice.title,
     });
 
-    return {
-      ...row,
-      actionRequirement: requirement,
-    };
+   return {
+  ...row,
+  notice: {
+    ...row.notice,
+    attachments: row.notice.attachments.map(
+      (attachment) => ({
+        ...attachment,
+        sizeBytes: Number(
+          attachment.sizeBytes,
+        ),
+      }),
+    ),
+  },
+  actionRequirement: requirement,
+};
   });
 }
 
@@ -3241,21 +3261,34 @@ export async function listGovernanceSentNoticeAccountability(args: {
         },
       },
       attachments: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          displayFilename: true,
-          extension: true,
-          mimeType: true,
-          sha256Hash: true,
-          confidential: true,
-          recipientVisible: true,
-          status: true,
-          scanStatus: true,
-          sealedAt: true,
-          createdAt: true,
-        },
-      },
+  where: {
+    status:
+      GovernanceOfficialNoticeAttachmentStatus.SEALED,
+    scanStatus:
+      GovernanceOfficialNoticeAttachmentScanStatus.CLEAN,
+    sealedAt: {
+      not: null,
+    },
+    deletedAt: null,
+  },
+  orderBy: {
+    createdAt: "asc",
+  },
+  select: {
+    id: true,
+    displayFilename: true,
+    extension: true,
+    mimeType: true,
+    sizeBytes: true,
+    sha256Hash: true,
+    confidential: true,
+    recipientVisible: true,
+    status: true,
+    scanStatus: true,
+    sealedAt: true,
+    createdAt: true,
+  },
+},
       recipients: {
         orderBy: { createdAt: "asc" },
         select: {
@@ -3350,8 +3383,16 @@ createdAt: true,
     }, {});
 
     return {
-      ...row,
-      accountability: {
+  ...row,
+  attachments: row.attachments.map(
+    (attachment) => ({
+      ...attachment,
+      sizeBytes: Number(
+        attachment.sizeBytes,
+      ),
+    }),
+  ),
+  accountability: {
         mode,
         totalRecipients,
         readRecipients,
