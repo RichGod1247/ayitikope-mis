@@ -2,6 +2,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import GovernanceNoticeAttachmentList, {
+  type GovernanceNoticeAttachmentItem,
+} from "@/components/governance/GovernanceNoticeAttachmentList";
 
 type NoticeDelivery = {
   id: string;
@@ -46,6 +49,7 @@ type NoticeInboxItem = {
     idempotencyKey?: string | null;
     idempotencyScope?: string | null;
     metadata?: Record<string, unknown> | null;
+    attachments: GovernanceNoticeAttachmentItem[];
     sentAt: string | null;
     createdAt: string;
     sender: {
@@ -832,7 +836,11 @@ export default function OfficialNoticeInboxClient({
 
                     <AuthenticityBanner notice={item.notice} />
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+<GovernanceNoticeAttachmentList
+  attachments={item.notice.attachments}
+/>
+
+<div className="mt-4 flex flex-wrap gap-2">
                       {channels.map((channel) => (
                         <span
                           key={channel}

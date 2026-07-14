@@ -2,6 +2,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import GovernanceNoticeAttachmentList, {
+  type GovernanceNoticeAttachmentItem,
+} from "@/components/governance/GovernanceNoticeAttachmentList";
 
 type AccountabilityMode = "mine" | "jurisdiction";
 
@@ -27,7 +30,10 @@ type SentNotice = {
   priority: string;
   status: string;
   channels: unknown;
-  audienceSummary: string | null;
+    audienceSummary: string | null;
+  idempotencyKey?: string | null;
+  idempotencyScope?: string | null;
+  metadata?: Record<string, unknown> | null;
   sentAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -49,6 +55,7 @@ type SentNotice = {
     name: string;
     zoneType: { name: string; level: number } | null;
   } | null;
+  attachments: GovernanceNoticeAttachmentItem[];
   recipients: Array<{
     id: string;
     recipientUserId: string | null;
@@ -138,6 +145,168 @@ function responseStatusClass(recipient: SentNotice["recipients"][number]) {
   }
 
   return "border-red-300/25 bg-red-500/10 text-red-100";
+}
+
+function sentMetadataString(
+  metadata: Record<string, unknown> | null | undefined,
+  key: string
+) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return "";
+  }
+
+  const value = metadata[key];
+  return typeof value === "string" ? value : "";
+}
+
+function sentMetadataBoolean(
+  metadata: Record<string, unknown> | null | undefined,
+  key: string
+) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return false;
+  }
+
+  return metadata[key] === true;
+}
+
+function sentOfficialNoticeRef(item: SentNotice) {
+  return `GOV-${item.id.slice(-8).toUpperCase()}`;
+}
+
+function sentScopeLabel(item: SentNotice) {
+  if (item.tenant) {
+    return `${item.tenant.name}${
+      item.tenant.schoolCode ? ` · ${item.tenant.schoolCode}` : ""
+    }`;
+  }
+
+  if (item.zone) {
+    return `${item.zone.name}${
+      item.zone.zoneType?.name ? ` · ${item.zone.zoneType.name}` : ""
+    }`;
+  }
+
+  return "General governance scope";
+}
+
+function sentSenderLabel(item: SentNotice) {
+  return item.sender?.name || item.sender?.email || "Verified system sender";
+}
+
+function SentAuthenticityBanner({ item }: { item: SentNotice }) {
+  const targetLabel =
+    sentMetadataString(
+      item.metadata,
+      "targetLabel",
+    ) || sentScopeLabel(item);
+
+  const noticeKind = sentMetadataString(
+    item.metadata,
+    "noticeKind",
+  );
+
+  const requiresAcknowledgement =
+    sentMetadataBoolean(
+      item.metadata,
+      "requiresAcknowledgement",
+    );
+
+  const requiresResponse =
+    sentMetadataBoolean(
+      item.metadata,
+      "requiresResponse",
+    );
+
+  const securityRule =
+    sentMetadataString(
+      item.metadata,
+      "securityRule",
+    ) ||
+    "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference.";
+
+  return (
+    <div className="mt-3 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
+            Verified official notice
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-emerald-100/85">
+            Verified sender, audience and required action.
+          </p>
+        </div>
+
+        <span className="rounded-full border border-emerald-300/25 bg-emerald-400/15 px-3 py-1 text-[11px] font-bold text-emerald-100">
+          {sentOfficialNoticeRef(item)}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-5">
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+          <p className="text-[11px] text-slate-400">
+            Sender
+          </p>
+          <p className="mt-1 break-words text-xs font-semibold text-white">
+            {sentSenderLabel(item)}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+          <p className="text-[11px] text-slate-400">
+            Sent
+          </p>
+          <p className="mt-1 text-xs font-semibold text-white">
+            {dateLabel(
+              item.sentAt ??
+                item.createdAt,
+            )}
+          </p>
+        </div>
+
+        <div className="col-span-2 rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 xl:col-span-1">
+          <p className="text-[11px] text-slate-400">
+            Audience
+          </p>
+          <p className="mt-1 break-words text-xs font-semibold text-white">
+            {targetLabel}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+          <p className="text-[11px] text-slate-400">
+            Notice type
+          </p>
+          <p className="mt-1 text-xs font-semibold text-white">
+            {noticeKind
+              ? noticeKind.replaceAll(
+                  "_",
+                  " ",
+                )
+              : "Not specified"}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2">
+          <p className="text-[11px] text-slate-400">
+            Action
+          </p>
+          <p className="mt-1 text-xs font-semibold text-white">
+            {requiresResponse
+              ? "Response required"
+              : requiresAcknowledgement
+                ? "Acknowledge"
+                : "Information only"}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-2 text-[11px] leading-5 text-emerald-100/75">
+        {securityRule}
+      </p>
+    </div>
+  );
 }
 
 export default function GovernanceSentNoticeAccountabilityClient({
@@ -321,27 +490,59 @@ export default function GovernanceSentNoticeAccountabilityClient({
                   </p>
                 </div>
 
-                <div className="grid min-w-[260px] grid-cols-2 gap-2 text-xs">
-                  <span className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-slate-300">
-                    Recipients<br />
-                    <b className="text-lg text-white">{item.accountability.totalRecipients}</b>
-                  </span>
-                  <span className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3 text-emerald-100">
-                    Ack rate<br />
-                    <b className="text-lg">{ackRate}%</b>
-                  </span>
-                  <span className="rounded-2xl border border-blue-300/20 bg-blue-400/10 p-3 text-blue-100">
-                    Responded<br />
-                    <b className="text-lg">{respondedCount}</b>
-                  </span>
-                  <span className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3 text-amber-100">
-                    Awaiting response<br />
-                    <b className="text-lg">{awaitingResponse}</b>
-                  </span>
-                </div>
+                <div className="grid w-full grid-cols-2 gap-2 text-[11px] sm:grid-cols-4 xl:w-auto xl:min-w-[430px]">
+  <span className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-slate-300">
+    <span>Recipients</span>
+    <b className="ml-2 text-sm text-white">
+      {item.accountability.totalRecipients}
+    </b>
+  </span>
+
+  <span className="flex items-center justify-between rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-emerald-100">
+    <span>Ack rate</span>
+    <b className="ml-2 text-sm">
+      {ackRate}%
+    </b>
+  </span>
+
+  <span className="flex items-center justify-between rounded-xl border border-blue-300/20 bg-blue-400/10 px-3 py-2 text-blue-100">
+    <span>Responded</span>
+    <b className="ml-2 text-sm">
+      {respondedCount}
+    </b>
+  </span>
+
+  <span className="flex items-center justify-between rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-amber-100">
+    <span>Awaiting</span>
+    <b className="ml-2 text-sm">
+      {awaitingResponse}
+    </b>
+  </span>
+</div>
+                            </div>
+
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Official notice body
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-200">
+                  {item.body}
+                </p>
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <SentAuthenticityBanner item={item} />
+
+<GovernanceNoticeAttachmentList
+  attachments={item.attachments}
+  heading={
+    item.attachments.length === 1
+      ? "Sealed notice document"
+      : "Sealed notice documents"
+  }
+  showVisibility
+/>
+
+<div className="mt-4 grid gap-3 lg:grid-cols-2">
                 {item.recipients.map((recipient) => (
                   <div
                     key={recipient.id}
