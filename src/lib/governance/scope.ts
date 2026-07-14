@@ -744,6 +744,22 @@ async function buildGovernanceScope(
   };
 }
 
+/**
+ * Resolves the current active governance jurisdiction for an already
+ * authenticated user.
+ *
+ * Ordinary school users without an active governance assignment receive null.
+ * This allows mixed-access resources—such as official notice attachments—to
+ * authorize exact recipients first, then fall back to governance jurisdiction.
+ */
+export async function resolveGovernanceScopeForContext(
+  ctx: ServerUserContext
+): Promise<GovernanceScope | null> {
+  return buildGovernanceScope(ctx, {
+    allowedRoles: ALL_GOVERNANCE_ROLES,
+  });
+}
+
 export async function requireGovernanceApiContext(req: Request, opts?: GovernanceOptions) {
   const auth = await requireApiUserContext(req, { requireTenant: false });
 
