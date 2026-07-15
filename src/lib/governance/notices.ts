@@ -493,11 +493,29 @@ function noticeActionRequirement(args: {
     };
   }
 
-  return {
+    return {
     noticeKind: "INFORMATION_ONLY",
     requiresAcknowledgement: false,
     requiresResponse: false,
   };
+}
+
+function noticePortalActionText(
+  requirement: NoticeActionRequirement
+) {
+  if (requirement.noticeKind === "URGENT_DIRECTIVE") {
+    return "view, take urgent action, and respond";
+  }
+
+  if (requirement.requiresResponse) {
+    return "view and respond";
+  }
+
+  if (requirement.requiresAcknowledgement) {
+    return "view and acknowledge";
+  }
+
+  return "view this official notice";
 }
 
 function isUniqueConstraintError(err: unknown) {
@@ -1759,12 +1777,25 @@ function initialDeliveryDescription(
   return null;
 }
 
-function buildSmsBody(args: { noticeId: string; title: string; body: string }) {
-  const ref = args.noticeId.slice(-8).toUpperCase();
+function buildSmsBody(args: {
+  noticeId: string;
+  title: string;
+  metadata: unknown;
+  caseId?: string | null;
+}) {
+  const ref = officialNoticeRefFromId(args.noticeId);
+
+  const requirement = noticeActionRequirement({
+    metadata: args.metadata,
+    caseId: args.caseId,
+    title: args.title,
+  });
+
+  const actionText = noticePortalActionText(requirement);
 
   return truncate(
     smsSafe(
-      `EduLife OS Official Notice. Ref: ${ref}. Log in to EduLife OS to view and acknowledge. Do not rely on WhatsApp copies without this reference.`
+      `EduLife OS Official Notice. Ref: ${ref}. Log in to EduLife OS to ${actionText}. Do not rely on WhatsApp copies without this reference.`
     ),
     240
   );
@@ -1774,9 +1805,19 @@ function buildEmailText(args: {
   noticeId: string;
   title: string;
   body: string;
+  metadata: unknown;
+  caseId?: string | null;
   senderName?: string | null;
 }) {
-  const ref = args.noticeId.slice(-8).toUpperCase();
+  const ref = officialNoticeRefFromId(args.noticeId);
+
+  const requirement = noticeActionRequirement({
+    metadata: args.metadata,
+    caseId: args.caseId,
+    title: args.title,
+  });
+
+  const actionText = noticePortalActionText(requirement);
 
   return [
     "EduLife OS Official Governance Notice",
@@ -1788,12 +1829,13 @@ function buildEmailText(args: {
     "",
     args.body,
     "",
+    "Required action:",
+    `Please sign in to EduLife OS to ${actionText}.`,
+    "",
     "Security note:",
     "EduLife OS portal is the source of truth for official instructions.",
     "SMS and email are delivery alerts/copies.",
     "Do not rely on WhatsApp screenshots, forwards, or copied text unless the notice exists in EduLife OS with the same reference.",
-    "",
-    "Please sign in to EduLife OS to read, acknowledge, and respond where required.",
   ]
     .filter((line) => line !== "")
     .join("\n");
@@ -1971,13 +2013,15 @@ async function dispatchNoticeDeliveries(noticeId: string, actorUserId: string) {
       id: true,
       channel: true,
       toAddress: true,
-      notice: {
-        select: {
-          id: true,
-          title: true,
-          body: true,
-          tenantId: true,
-          sender: {
+     notice: {
+  select: {
+    id: true,
+    caseId: true,
+    title: true,
+    body: true,
+    metadata: true,
+    tenantId: true,
+    sender: {
             select: {
               name: true,
               email: true,
@@ -2005,10 +2049,11 @@ async function dispatchNoticeDeliveries(noticeId: string, actorUserId: string) {
         const result = await sendViaHubtel({
           to: delivery.toAddress ?? "",
           body: buildSmsBody({
-            noticeId: delivery.notice.id,
-            title: delivery.notice.title,
-            body: delivery.notice.body,
-          }),
+  noticeId: delivery.notice.id,
+  title: delivery.notice.title,
+  metadata: delivery.notice.metadata,
+  caseId: delivery.notice.caseId,
+}),
           tenantId: delivery.recipient.tenantId ?? delivery.notice.tenantId ?? undefined,
           actorId: actorUserId,
           meta: {
@@ -2063,11 +2108,16 @@ async function dispatchNoticeDeliveries(noticeId: string, actorUserId: string) {
           to: delivery.toAddress ?? "",
           subject: `EduLife OS Official Notice: ${delivery.notice.title}`,
           text: buildEmailText({
-            noticeId: delivery.notice.id,
-            title: delivery.notice.title,
-            body: delivery.notice.body,
-            senderName: delivery.notice.sender?.name ?? delivery.notice.sender?.email ?? null,
-          }),
+  noticeId: delivery.notice.id,
+  title: delivery.notice.title,
+  body: delivery.notice.body,
+  metadata: delivery.notice.metadata,
+  caseId: delivery.notice.caseId,
+  senderName:
+    delivery.notice.sender?.name ??
+    delivery.notice.sender?.email ??
+    null,
+}),
           meta: {
             source: "governance-official-notice",
             noticeId: delivery.notice.id,

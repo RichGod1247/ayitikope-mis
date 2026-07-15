@@ -128,20 +128,52 @@ function statusClass(value: string) {
   return "border-white/10 bg-white/5 text-slate-200";
 }
 
-function responseStatusLabel(recipient: SentNotice["recipients"][number]) {
-  if (recipient.respondedAt) return "Responded";
-  if (recipient.acknowledgedAt) return "Acknowledged · awaiting response";
-  if (recipient.readAt) return "Read · awaiting acknowledgement";
-  return "Pending";
+function responseStatusLabel(
+  recipient: SentNotice["recipients"][number],
+  requirement: ReturnType<typeof sentNoticeActionRequirement>,
+) {
+  if (!requirement.requiresAcknowledgement) {
+    return recipient.readAt ? "Read" : "Unread";
+  }
+
+  if (requirement.requiresResponse) {
+    if (recipient.respondedAt) return "Responded";
+    if (recipient.acknowledgedAt) {
+      return "Acknowledged · awaiting response";
+    }
+    if (recipient.readAt) {
+      return "Read · awaiting acknowledgement";
+    }
+
+    return "Response required";
+  }
+
+  if (recipient.acknowledgedAt) return "Acknowledged";
+  if (recipient.readAt) {
+    return "Read · awaiting acknowledgement";
+  }
+
+  return "Acknowledgement required";
 }
 
-function responseStatusClass(recipient: SentNotice["recipients"][number]) {
-  if (recipient.respondedAt) {
+function responseStatusClass(
+  recipient: SentNotice["recipients"][number],
+  requirement: ReturnType<typeof sentNoticeActionRequirement>,
+) {
+  if (!requirement.requiresAcknowledgement) {
+    return recipient.readAt
+      ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"
+      : "border-slate-300/20 bg-white/5 text-slate-200";
+  }
+
+  if (requirement.requiresResponse && recipient.respondedAt) {
     return "border-blue-300/25 bg-blue-400/10 text-blue-100";
   }
 
   if (recipient.acknowledgedAt) {
-    return "border-amber-300/25 bg-amber-400/10 text-amber-100";
+    return requirement.requiresResponse
+      ? "border-amber-300/25 bg-amber-400/10 text-amber-100"
+      : "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
   }
 
   return "border-red-300/25 bg-red-500/10 text-red-100";
@@ -168,6 +200,98 @@ function sentMetadataBoolean(
   }
 
   return metadata[key] === true;
+}
+
+function sentNoticeActionRequirement(item: SentNotice) {
+  const noticeKind = sentMetadataString(
+    item.metadata,
+    "noticeKind",
+  );
+
+  const hasAcknowledgementFlag =
+    !!item.metadata &&
+    typeof item.metadata === "object" &&
+    !Array.isArray(item.metadata) &&
+    Object.prototype.hasOwnProperty.call(
+      item.metadata,
+      "requiresAcknowledgement",
+    );
+
+  const hasResponseFlag =
+    !!item.metadata &&
+    typeof item.metadata === "object" &&
+    !Array.isArray(item.metadata) &&
+    Object.prototype.hasOwnProperty.call(
+      item.metadata,
+      "requiresResponse",
+    );
+
+  if (noticeKind === "INFORMATION_ONLY") {
+    return {
+      noticeKind,
+      requiresAcknowledgement: false,
+      requiresResponse: false,
+    };
+  }
+
+  if (noticeKind === "ACKNOWLEDGEMENT_REQUIRED") {
+    return {
+      noticeKind,
+      requiresAcknowledgement: true,
+      requiresResponse: false,
+    };
+  }
+
+  if (
+    noticeKind === "RESPONSE_REQUIRED" ||
+    noticeKind === "URGENT_DIRECTIVE"
+  ) {
+    return {
+      noticeKind,
+      requiresAcknowledgement: true,
+      requiresResponse: true,
+    };
+  }
+
+  if (hasAcknowledgementFlag || hasResponseFlag) {
+    const requiresResponse = sentMetadataBoolean(
+      item.metadata,
+      "requiresResponse",
+    );
+
+    const requiresAcknowledgement =
+      sentMetadataBoolean(
+        item.metadata,
+        "requiresAcknowledgement",
+      ) || requiresResponse;
+
+    return {
+      noticeKind: requiresResponse
+        ? "RESPONSE_REQUIRED"
+        : requiresAcknowledgement
+          ? "ACKNOWLEDGEMENT_REQUIRED"
+          : "INFORMATION_ONLY",
+      requiresAcknowledgement,
+      requiresResponse,
+    };
+  }
+
+  if (
+    item.caseId ||
+    item.title.toLowerCase().includes("intervention")
+  ) {
+    return {
+      noticeKind: "LEGACY_INTERVENTION",
+      requiresAcknowledgement: true,
+      requiresResponse: true,
+    };
+  }
+
+  return {
+    noticeKind: "INFORMATION_ONLY",
+    requiresAcknowledgement: false,
+    requiresResponse: false,
+  };
 }
 
 function sentOfficialNoticeRef(item: SentNotice) {
@@ -356,29 +480,74 @@ export default function GovernanceSentNoticeAccountabilityClient({
   }, [load]);
 
   const totals = useMemo(() => {
-    return items.reduce(
-      (acc, item) => {
-        const responded = item.recipients.filter((r) => Boolean(r.respondedAt)).length;
+  return items.reduce(
+    (acc, item) => {
+      const requirement =
+        sentNoticeActionRequirement(item);
 
-        acc.sent += 1;
-        acc.recipients += item.accountability.totalRecipients;
-        acc.unacknowledged += item.accountability.unacknowledgedRecipients;
-        acc.acknowledged += item.accountability.acknowledgedRecipients;
-        acc.responded += responded;
-        acc.awaitingResponse += Math.max(0, item.recipients.length - responded);
+      const totalRecipients =
+        item.recipients.length;
 
-        return acc;
-      },
-      {
-        sent: 0,
-        recipients: 0,
-        acknowledged: 0,
-        unacknowledged: 0,
-        responded: 0,
-        awaitingResponse: 0,
-      }
-    );
-  }, [items]);
+      const readRecipients =
+        item.recipients.filter((recipient) =>
+          Boolean(recipient.readAt),
+        ).length;
+
+      const acknowledgedRecipients =
+        item.recipients.filter((recipient) =>
+          Boolean(recipient.acknowledgedAt),
+        ).length;
+
+      const respondedRecipients =
+        item.recipients.filter((recipient) =>
+          Boolean(recipient.respondedAt),
+        ).length;
+
+      const unreadRecipients = Math.max(
+        0,
+        totalRecipients - readRecipients,
+      );
+
+      const pendingAcknowledgements =
+        requirement.requiresAcknowledgement
+          ? Math.max(
+              0,
+              totalRecipients -
+                acknowledgedRecipients,
+            )
+          : 0;
+
+      const pendingResponses =
+        requirement.requiresResponse
+          ? Math.max(
+              0,
+              totalRecipients -
+                respondedRecipients,
+            )
+          : 0;
+
+      const needsAction =
+        requirement.requiresResponse
+          ? pendingResponses
+          : requirement.requiresAcknowledgement
+            ? pendingAcknowledgements
+            : unreadRecipients;
+
+      acc.notices += 1;
+      acc.recipients += totalRecipients;
+      acc.read += readRecipients;
+      acc.needsAction += needsAction;
+
+      return acc;
+    },
+    {
+      notices: 0,
+      recipients: 0,
+      read: 0,
+      needsAction: 0,
+    },
+  );
+}, [items]);
 
   const modeLabel =
     mode === "jurisdiction" ? "Jurisdiction-wide" : "My sent notices";
@@ -397,26 +566,30 @@ export default function GovernanceSentNoticeAccountabilityClient({
         </div>
 
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
-            Notices: <b className="text-white">{totals.sent}</b>
-          </span>
-          <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-emerald-100">
-            Acknowledged: <b>{totals.acknowledged}</b>
-          </span>
-          <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-blue-100">
-            Responded: <b>{totals.responded}</b>
-          </span>
-          <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-red-100">
-            Pending response: <b>{totals.awaitingResponse}</b>
-          </span>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold text-slate-100 hover:bg-white/10"
-          >
-            Refresh
-          </button>
-        </div>
+  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">
+    Notices: <b className="text-white">{totals.notices}</b>
+  </span>
+
+  <span className="rounded-full border border-indigo-300/25 bg-indigo-400/10 px-3 py-1 text-indigo-100">
+    Recipients: <b>{totals.recipients}</b>
+  </span>
+
+  <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-emerald-100">
+    Read: <b>{totals.read}</b>
+  </span>
+
+  <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-amber-100">
+    Need follow-up: <b>{totals.needsAction}</b>
+  </span>
+
+  <button
+    type="button"
+    onClick={() => void load()}
+    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold text-slate-100 hover:bg-white/10"
+  >
+    Refresh
+  </button>
+</div>
       </div>
 
       {loading ? (
@@ -439,10 +612,55 @@ export default function GovernanceSentNoticeAccountabilityClient({
 
       <div className="mt-5 space-y-4">
         {items.map((item) => {
-          const unack = item.accountability.unacknowledgedRecipients;
-          const ackRate = item.accountability.acknowledgementRate ?? 0;
-          const respondedCount = item.recipients.filter((r) => Boolean(r.respondedAt)).length;
-          const awaitingResponse = Math.max(0, item.recipients.length - respondedCount);
+          const requirement =
+  sentNoticeActionRequirement(item);
+
+const requiresAcknowledgement =
+  requirement.requiresAcknowledgement;
+
+const requiresResponse =
+  requirement.requiresResponse;
+
+const informationOnly =
+  !requiresAcknowledgement &&
+  !requiresResponse;
+
+const readCount = item.recipients.filter(
+  (recipient) => Boolean(recipient.readAt),
+).length;
+
+const unreadCount = Math.max(
+  0,
+  item.recipients.length - readCount,
+);
+
+const acknowledgedCount =
+  item.recipients.filter((recipient) =>
+    Boolean(recipient.acknowledgedAt),
+  ).length;
+
+const pendingAcknowledgement =
+  requiresAcknowledgement
+    ? Math.max(
+        0,
+        item.recipients.length -
+          acknowledgedCount,
+      )
+    : 0;
+
+const respondedCount =
+  item.recipients.filter((recipient) =>
+    Boolean(recipient.respondedAt),
+  ).length;
+
+const awaitingResponse =
+  requiresResponse
+    ? Math.max(
+        0,
+        item.recipients.length -
+          respondedCount,
+      )
+    : 0;
 
           return (
             <article
@@ -458,20 +676,37 @@ export default function GovernanceSentNoticeAccountabilityClient({
                     <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${statusClass(item.status)}`}>
                       {item.status.replaceAll("_", " ")}
                     </span>
-                    {unack > 0 ? (
-                      <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-100">
-                        Acknowledgement pending
-                      </span>
-                    ) : null}
-                    {awaitingResponse > 0 ? (
-                      <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold text-amber-100">
-                        Response follow-up needed
-                      </span>
-                    ) : (
-                      <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-[11px] font-semibold text-blue-100">
-                        Response received
-                      </span>
-                    )}
+                    {informationOnly ? (
+  <span
+    className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+      unreadCount
+        ? "border-slate-300/20 bg-white/5 text-slate-200"
+        : "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"
+    }`}
+  >
+    {unreadCount
+      ? `${unreadCount} unread`
+      : "Read"}
+  </span>
+) : requiresResponse ? (
+  awaitingResponse > 0 ? (
+    <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold text-amber-100">
+      Response follow-up needed
+    </span>
+  ) : (
+    <span className="rounded-full border border-blue-300/25 bg-blue-400/10 px-3 py-1 text-[11px] font-semibold text-blue-100">
+      Response received
+    </span>
+  )
+) : pendingAcknowledgement > 0 ? (
+  <span className="rounded-full border border-red-300/25 bg-red-500/10 px-3 py-1 text-[11px] font-semibold text-red-100">
+    Acknowledgement pending
+  </span>
+) : (
+  <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold text-emerald-100">
+    Acknowledged
+  </span>
+)}
                   </div>
 
                   <h3 className="mt-3 text-lg font-semibold text-white">{item.title}</h3>
@@ -499,23 +734,27 @@ export default function GovernanceSentNoticeAccountabilityClient({
   </span>
 
   <span className="flex items-center justify-between rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-emerald-100">
-    <span>Ack rate</span>
+    <span>Read</span>
     <b className="ml-2 text-sm">
-      {ackRate}%
+      {readCount}
+    </b>
+  </span>
+
+  <span className="flex items-center justify-between rounded-xl border border-indigo-300/20 bg-indigo-400/10 px-3 py-2 text-indigo-100">
+    <span>Acknowledged</span>
+    <b className="ml-2 text-sm">
+      {requiresAcknowledgement
+        ? acknowledgedCount
+        : "—"}
     </b>
   </span>
 
   <span className="flex items-center justify-between rounded-xl border border-blue-300/20 bg-blue-400/10 px-3 py-2 text-blue-100">
     <span>Responded</span>
     <b className="ml-2 text-sm">
-      {respondedCount}
-    </b>
-  </span>
-
-  <span className="flex items-center justify-between rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-amber-100">
-    <span>Awaiting</span>
-    <b className="ml-2 text-sm">
-      {awaitingResponse}
+      {requiresResponse
+        ? respondedCount
+        : "—"}
     </b>
   </span>
 </div>
@@ -558,22 +797,39 @@ export default function GovernanceSentNoticeAccountabilityClient({
                         </p>
                       </div>
 
-                      <span className={`rounded-full border px-3 py-1 font-semibold ${responseStatusClass(recipient)}`}>
-                        {responseStatusLabel(recipient)}
-                      </span>
+                      <span
+  className={`rounded-full border px-3 py-1 font-semibold ${responseStatusClass(
+    recipient,
+    requirement,
+  )}`}
+>
+  {responseStatusLabel(
+    recipient,
+    requirement,
+  )}
+</span>
                     </div>
 
                     <p className="mt-3 text-slate-400">
                       Read: <span className="text-slate-200">{dateLabel(recipient.readAt)}</span>
                     </p>
-                    <p className="mt-1 text-slate-400">
-                      Acknowledged:{" "}
-                      <span className="text-slate-200">{dateLabel(recipient.acknowledgedAt)}</span>
-                    </p>
-                    <p className="mt-1 text-slate-400">
-                      Responded:{" "}
-                      <span className="text-slate-200">{dateLabel(recipient.respondedAt)}</span>
-                    </p>
+                    {requiresAcknowledgement ? (
+  <p className="mt-1 text-slate-400">
+    Acknowledged:{" "}
+    <span className="text-slate-200">
+      {dateLabel(recipient.acknowledgedAt)}
+    </span>
+  </p>
+) : null}
+
+{requiresResponse ? (
+  <p className="mt-1 text-slate-400">
+    Responded:{" "}
+    <span className="text-slate-200">
+      {dateLabel(recipient.respondedAt)}
+    </span>
+  </p>
+) : null}
 
                     {recipient.responseBody ? (
                       <div className="mt-3 rounded-2xl border border-blue-300/15 bg-blue-400/[0.06] p-3">

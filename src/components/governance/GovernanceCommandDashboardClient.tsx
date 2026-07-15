@@ -2834,14 +2834,24 @@ const mockPanelActive =
       ) : null}
 
       {activePanel === "accountability" ? (
-        <section className="space-y-4">
-          <GovernanceSentNoticeAccountabilityClient
-            mode="jurisdiction"
-            title={accountabilityTitle}
-            description={accountabilityDescription}
-          />
-        </section>
-      ) : null}
+  <section className="space-y-4">
+    <div className="flex justify-end">
+      <button
+        type="button"
+        onClick={() => openPanel("notices")}
+        className="min-h-11 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/[0.08] hover:text-white"
+      >
+        Hide accountability
+      </button>
+    </div>
+
+    <GovernanceSentNoticeAccountabilityClient
+      mode="jurisdiction"
+      title={accountabilityTitle}
+      description={accountabilityDescription}
+    />
+  </section>
+) : null}
 
       {activePanel === "advanced" ? (
         <section className="space-y-4 rounded-[28px] border border-white/10 bg-white/[0.03] p-3 md:p-4">

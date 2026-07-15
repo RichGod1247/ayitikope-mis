@@ -2,7 +2,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import GovernanceNoticeRecipientPicker, {
+  type GovernanceNoticeVerifiedRecipients,
+} from "@/components/governance/GovernanceNoticeRecipientPicker";
 
+type OfficialNoticeAudienceChoice = "GROUP" | "INDIVIDUALS";
 type OfficialNoticeTargetRole = "SISSO" | "HEADTEACHER" | "TEACHER";
 type OfficialNoticePriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 type OfficialNoticeScopeMode = "ZONE" | "SCHOOL";
@@ -49,6 +53,19 @@ function makeDraftKey() {
   }
 
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function sameSelectionIds(
+  currentIds: string[],
+  nextIds: string[],
+) {
+  if (currentIds.length !== nextIds.length) return false;
+
+  const nextSet = new Set(nextIds);
+
+  return currentIds.every((selectionId) =>
+    nextSet.has(selectionId),
+  );
 }
 
 function targetRoleLabel(role: OfficialNoticeTargetRole) {
@@ -222,6 +239,11 @@ const restoredDraftKeyRef = useRef<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [audienceChoice, setAudienceChoice] =
+  useState<OfficialNoticeAudienceChoice>("GROUP");
+
+const [verifiedRecipients, setVerifiedRecipients] =
+  useState<GovernanceNoticeVerifiedRecipients | null>(null);
   useEffect(() => {
   if (typeof window === "undefined") return;
 
@@ -383,6 +405,10 @@ useEffect(() => {
     }
   }, [targetRole, targetRoles]);
 
+useEffect(() => {
+  setVerifiedRecipients(null);
+}, [sectorTarget, targetRole]);
+
   useEffect(() => {
     if (!targetZoneId && assignmentOptions[0]?.zoneId) {
       setTargetZoneId(assignmentOptions[0].zoneId);
@@ -413,12 +439,81 @@ useEffect(() => {
         ? `${selectedAssignment.zoneName} ${selectedAssignment.zoneTypeName}`
         : "your authorized scope";
 
+const currentAudienceSummary =
+  audienceChoice === "GROUP"
+    ? `${targetRoleLabel(targetRole)} in ${targetSummary}`
+    : verifiedRecipients?.items.length
+      ? `${verifiedRecipients.items.length} verified specific recipient${
+          verifiedRecipients.items.length === 1 ? "" : "s"
+        }`
+      : `specific ${targetRoleLabel(targetRole).toLowerCase()}`;
+
+function handleVerifiedRecipientsChange(
+  value: GovernanceNoticeVerifiedRecipients | null,
+) {
+  const currentSelectionIds =
+    verifiedRecipients?.selectionIds ?? [];
+
+  const nextSelectionIds =
+    value?.selectionIds ?? [];
+
+  const audienceChanged = !sameSelectionIds(
+    currentSelectionIds,
+    nextSelectionIds,
+  );
+
+  setVerifiedRecipients(value);
+
+  if (audienceChanged) {
+    setDraftKey(makeDraftKey());
+  }
+
+  setSendError(null);
+  setSendSuccess(null);
+}
+
   async function sendOfficialNotice() {
     setSendError(null);
     setSendSuccess(null);
 
     const cleanTitle = title.trim();
-    const cleanBody = body.trim();
+const cleanBody = body.trim();
+
+const individualSelectionIds =
+  verifiedRecipients?.selectionIds ?? [];
+
+const effectiveZoneId =
+  targetZoneId || selectedAssignment?.zoneId || "";
+
+const selectedRecipientZoneIds = Array.from(
+  new Set(
+    (verifiedRecipients?.items ?? [])
+      .map((item) => item.zone?.id ?? null)
+      .filter((value): value is string => Boolean(value)),
+  ),
+);
+
+const selectedRecipientTenantIds = Array.from(
+  new Set(
+    (verifiedRecipients?.items ?? [])
+      .map((item) => item.tenantId)
+      .filter((value): value is string => Boolean(value)),
+  ),
+);
+
+const individualZoneId =
+  effectiveZoneId ||
+  (selectedRecipientZoneIds.length === 1
+    ? selectedRecipientZoneIds[0]
+    : "");
+
+const individualTenantId =
+  !individualZoneId && selectedRecipientTenantIds.length === 1
+    ? selectedRecipientTenantIds[0]
+    : "";
+
+const individualScopeMode =
+  individualZoneId ? "ZONE" : "SCHOOL";
 
     if (cleanTitle.length < 6) {
       setSendError("Write a clear notice title of at least 6 characters.");
@@ -432,17 +527,44 @@ useEffect(() => {
       return;
     }
 
-    if (scopeMode === "ZONE" && !targetZoneId) {
-      setSendError(
-        "No authorized governance zone is available for this notice.",
-      );
-      return;
-    }
+   if (audienceChoice === "INDIVIDUALS") {
+  if (
+    !verifiedRecipients?.items.length ||
+    !individualSelectionIds.length
+  ) {
+    setSendError(
+      "Select and check at least one specific person before sending.",
+    );
+    return;
+  }
 
-    if (scopeMode === "SCHOOL" && !selectedSchoolId) {
-      setSendError("Select the school that should receive this notice.");
-      return;
-    }
+  if (!individualZoneId && !individualTenantId) {
+  setSendError(
+    "The selected people do not share one verified school or governance area. Select people within one area, or use an authorized district or circuit account.",
+  );
+  return;
+}
+}
+
+if (
+  audienceChoice === "GROUP" &&
+  scopeMode === "ZONE" &&
+  !effectiveZoneId
+) {
+  setSendError(
+    "No authorized governance zone is available for this notice.",
+  );
+  return;
+}
+
+if (
+  audienceChoice === "GROUP" &&
+  scopeMode === "SCHOOL" &&
+  !selectedSchoolId
+) {
+  setSendError("Select the school that should receive this notice.");
+  return;
+}
 
     setBusy(true);
 
@@ -453,16 +575,48 @@ useEffect(() => {
           ? "CIRCUIT"
           : "GOVERNANCE";
 
-      const targetId =
-        scopeMode === "SCHOOL"
-          ? selectedSchoolId
-          : targetZoneId || selectedAssignment?.zoneId || "scope";
+      const resolvedScopeMode =
+  audienceChoice === "INDIVIDUALS"
+    ? individualScopeMode
+    : scopeMode;
 
-      const idempotencyKey =
-        `b7-official:${scopeLabel}:${targetRole}:${scopeMode}:${sectorTarget}:${targetId}:${draftKey}`.slice(
-          0,
-          220,
-        );
+const targetId =
+  audienceChoice === "INDIVIDUALS"
+    ? `individuals:${
+        individualZoneId || individualTenantId
+      }:${individualSelectionIds.length}`
+    : resolvedScopeMode === "SCHOOL"
+      ? selectedSchoolId
+      : effectiveZoneId || "scope";
+
+const idempotencyKey =
+  `b7-official:${scopeLabel}:${audienceChoice}:${targetRole}:${resolvedScopeMode}:${sectorTarget}:${targetId}:${draftKey}`.slice(
+    0,
+    220,
+  );
+
+const audiencePayload =
+  audienceChoice === "INDIVIDUALS"
+    ? individualZoneId
+      ? {
+          zoneId: individualZoneId,
+          selectionIds: individualSelectionIds,
+        }
+      : {
+          tenantId: individualTenantId,
+          selectionIds: individualSelectionIds,
+        }
+    : {
+        tenantId:
+          scopeMode === "SCHOOL"
+            ? selectedSchoolId
+            : undefined,
+        zoneId:
+          scopeMode === "ZONE"
+            ? effectiveZoneId
+            : undefined,
+        targetRoles: [targetRole],
+      };
 
       const res = await fetch("/api/governance/notices/send", {
         method: "POST",
@@ -473,36 +627,42 @@ useEffect(() => {
           Accept: "application/json",
         },
         body: JSON.stringify({
-          tenantId: scopeMode === "SCHOOL" ? selectedSchoolId : undefined,
-          zoneId: scopeMode === "ZONE" ? targetZoneId : undefined,
-          title: cleanTitle,
-          body: cleanBody,
-          priority,
-          channels: ["IN_APP", "SMS", "EMAIL"],
-          targetRoles: [targetRole],
-          idempotencyKey,
-          idempotencyScope: "B7_OFFICIAL_COMMUNICATION",
-          metadata: {
-            source: "B7-official-governance-communication",
-            noticeIntent: "OFFICIAL_COMMUNICATION",
-            composer: "B7C-governance-command-notice-composer",
-            scopeLabel,
-            scopeMode,
-            targetAudience: targetRole,
-            targetLabel: targetSummary,
-            governanceSectorTarget: sectorTarget,
-            schoolSectorTarget: sectorTarget,
-            sectorTarget,
-            sectorRule:
-              "Public/private targeting is enforced server-side before recipients are created.",
-            noticeKind,
-            requiresAcknowledgement,
-            requiresResponse,
-            deadlineAt: deadlineAt || null,
-            securityRule:
-              "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference.",
-          },
-        }),
+  ...audiencePayload,
+  title: cleanTitle,
+  body: cleanBody,
+  priority,
+  channels: ["IN_APP", "SMS", "EMAIL"],
+  idempotencyKey,
+  idempotencyScope: "B7_OFFICIAL_COMMUNICATION",
+  metadata: {
+    source: "B7-official-governance-communication",
+    noticeIntent: "OFFICIAL_COMMUNICATION",
+    composer: "B7C-governance-command-notice-composer",
+    scopeLabel,
+scopeMode: resolvedScopeMode,
+audienceChoice,
+    targetAudience:
+      audienceChoice === "INDIVIDUALS"
+        ? "INDIVIDUALS"
+        : targetRole,
+    targetLabel: currentAudienceSummary,
+    selectedRecipientCount:
+      audienceChoice === "INDIVIDUALS"
+        ? individualSelectionIds.length
+        : null,
+    governanceSectorTarget: sectorTarget,
+    schoolSectorTarget: sectorTarget,
+    sectorTarget,
+    sectorRule:
+      "Public/private targeting is enforced server-side before recipients are created.",
+    noticeKind,
+    requiresAcknowledgement,
+    requiresResponse,
+    deadlineAt: deadlineAt || null,
+    securityRule:
+      "EduLife OS portal is the source of truth. SMS and email are alerts/copies. WhatsApp is not authoritative without a matching EduLife OS notice reference.",
+  },
+}),
       });
 
       const json = (await res.json().catch(() => null)) as
@@ -523,24 +683,37 @@ useEffect(() => {
         ? json.item.recipients.length
         : null;
 
-      setSendSuccess(
-        reused
-          ? "This notice was already sent; duplicate delivery was safely suppressed."
-          : `Official notice sent to ${targetRoleLabel(targetRole)}${
-              recipientCount !== null
-                ? ` (${recipientCount} recipient(s))`
-                : ""
-            }.`,
-      );
+      const individualRecipientCount =
+  verifiedRecipients?.items.length ??
+  recipientCount ??
+  0;
+
+setSendSuccess(
+  reused
+    ? "This notice was already sent; duplicate delivery was safely suppressed."
+    : audienceChoice === "INDIVIDUALS"
+      ? `Official notice sent to ${individualRecipientCount} specific recipient${
+          individualRecipientCount === 1 ? "" : "s"
+        }.`
+      : `Official notice sent to ${targetRoleLabel(targetRole)}${
+          recipientCount !== null
+            ? ` (${recipientCount} recipient(s))`
+            : ""
+        }.`,
+);
 
 if (typeof window !== "undefined") {
   window.sessionStorage.removeItem(draftStorageKey);
 }
 
       setTitle("");
-      setBody("");
-      setDeadlineAt("");
-      setDraftKey(makeDraftKey());
+setBody("");
+setDeadlineAt("");
+setAudienceChoice("GROUP");
+setVerifiedRecipients(null);
+setScopeMode("ZONE");
+setSelectedSchoolId("");
+setDraftKey(makeDraftKey());
     } catch {
       setSendError("Network/server error while sending official notice.");
     } finally {
@@ -566,7 +739,7 @@ return (
 
       <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-200">
         <span className="font-semibold text-white">Currently sending to:</span>{" "}
-        {targetRoleLabel(targetRole)} in {targetSummary}
+{currentAudienceSummary}
       </div>
     </div>
 
@@ -587,7 +760,67 @@ return (
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+<div className="mt-4 grid gap-2 sm:grid-cols-2">
+  <button
+    type="button"
+    aria-pressed={audienceChoice === "GROUP"}
+    onClick={() => {
+  if (audienceChoice === "GROUP") return;
+
+  setAudienceChoice("GROUP");
+  setVerifiedRecipients(null);
+  setDraftKey(makeDraftKey());
+  setSendError(null);
+  setSendSuccess(null);
+}}
+    className={`min-h-20 rounded-2xl border p-3 text-left ${
+      audienceChoice === "GROUP"
+        ? "border-indigo-300/50 bg-indigo-500/25"
+        : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+    }`}
+  >
+    <p className="text-sm font-bold text-white">
+      Send to a staff group
+    </p>
+    <p className="mt-1 text-xs leading-5 text-slate-400">
+      Send to all authorized people in one staff category.
+    </p>
+  </button>
+
+  <button
+    type="button"
+    aria-pressed={audienceChoice === "INDIVIDUALS"}
+    onClick={() => {
+  if (audienceChoice === "INDIVIDUALS") return;
+
+  setAudienceChoice("INDIVIDUALS");
+  setScopeMode("ZONE");
+  setSelectedSchoolId("");
+  setVerifiedRecipients(null);
+  setDraftKey(makeDraftKey());
+  setSendError(null);
+  setSendSuccess(null);
+}}
+    className={`min-h-20 rounded-2xl border p-3 text-left ${
+      audienceChoice === "INDIVIDUALS"
+        ? "border-indigo-300/50 bg-indigo-500/25"
+        : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+    }`}
+  >
+    <p className="text-sm font-bold text-white">
+      Send to specific people
+    </p>
+    <p className="mt-1 text-xs leading-5 text-slate-400">
+      Search for and verify particular officers or school staff.
+    </p>
+  </button>
+</div>
+
+        <div
+  className={`mt-4 grid gap-3 md:grid-cols-2 ${
+    audienceChoice === "GROUP" ? "" : "hidden"
+  }`}
+>
           <label className="block">
             <span className="text-xs font-semibold text-slate-300">
               Recipients
@@ -703,8 +936,49 @@ return (
                 ))}
               </select>
             </label>
-          )}
+                    )}
         </div>
+
+        {audienceChoice === "INDIVIDUALS" ? (
+          <div className="mt-4 space-y-3">
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-300">
+                Type of person
+              </span>
+
+              <select
+                value={targetRole}
+                onChange={(event) => {
+                  setTargetRole(
+                    event.target.value as OfficialNoticeTargetRole,
+                  );
+                  setVerifiedRecipients(null);
+                  setSendError(null);
+                  setSendSuccess(null);
+                }}
+                className="mt-2 min-h-12 w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-indigo-300/50"
+              >
+                {targetRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {targetRoleLabel(role)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <GovernanceNoticeRecipientPicker
+              key={`${targetRole}:${sectorTarget}`}
+              role={targetRole}
+              sectorTarget={sectorTarget}
+              onVerifiedChange={handleVerifiedRecipientsChange}
+            />
+
+            <p className="rounded-xl border border-amber-300/20 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100">
+  The Send button becomes available only after EduLife OS verifies the
+  selected people.
+</p>
+          </div>
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-slate-950/35 p-3 sm:p-4">
@@ -971,16 +1245,24 @@ return (
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <div className="rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2">
           <p className="text-slate-400">Recipients</p>
-          <p className="mt-1 font-semibold text-white">
-            {targetRoleLabel(targetRole)}
-          </p>
+<p className="mt-1 font-semibold text-white">
+  {audienceChoice === "GROUP"
+    ? targetRoleLabel(targetRole)
+    : verifiedRecipients?.items.length
+      ? `${verifiedRecipients.items.length} verified person${
+          verifiedRecipients.items.length === 1 ? "" : "s"
+        }`
+      : "Specific people not checked"}
+</p>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2">
           <p className="text-slate-400">Area</p>
-          <p className="mt-1 break-words font-semibold text-white">
-            {targetSummary}
-          </p>
+<p className="mt-1 break-words font-semibold text-white">
+  {audienceChoice === "GROUP"
+    ? targetSummary
+    : "Individually selected recipients"}
+</p>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2">
@@ -1053,10 +1335,19 @@ return (
       <button
         type="button"
         onClick={() => void sendOfficialNotice()}
-        disabled={busy}
+        disabled={
+  busy ||
+  (audienceChoice === "INDIVIDUALS" &&
+    !verifiedRecipients?.items.length)
+}
         className="min-h-14 w-full rounded-2xl border border-indigo-300/30 bg-indigo-500/25 px-5 py-3 text-base font-bold text-white hover:bg-indigo-500/35 disabled:cursor-wait disabled:opacity-60 sm:w-auto sm:min-w-56"
       >
-        {busy ? "Sending—please wait" : "Send official notice"}
+       {busy
+  ? "Sending—please wait"
+  : audienceChoice === "INDIVIDUALS" &&
+      !verifiedRecipients?.items.length
+    ? "Check selected people before sending"
+    : "Send official notice"}
       </button>
     </div>
   </section>
