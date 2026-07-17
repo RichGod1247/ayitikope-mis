@@ -3279,8 +3279,24 @@ model GovernanceOfficialNoticeAttachment {
 
   status GovernanceOfficialNoticeAttachmentStatus @default(PENDING_UPLOAD)
 
-  /// Attachment must not be sent until scanStatus is CLEAN.
+  /// File-signature, container, and active-content inspection.
+  /// This does not represent an antivirus or malware-engine verdict.
   scanStatus GovernanceOfficialNoticeAttachmentScanStatus @default(PENDING)
+
+  /// Independent server-side malware-scanner verdict.
+  /// Historical attachments and new unscanned uploads remain NOT_SCANNED.
+  malwareScanStatus GovernanceOfficialNoticeAttachmentMalwareScanStatus @default(NOT_SCANNED)
+
+  /// Scanner evidence and durable retry state.
+  malwareScanEngine        String?   @db.VarChar(120)
+  malwareSignatureVersion  String?   @db.VarChar(160)
+  malwareScanQueuedAt      DateTime? @db.Timestamptz(6)
+  malwareScanStartedAt     DateTime? @db.Timestamptz(6)
+  malwareScannedAt         DateTime? @db.Timestamptz(6)
+  malwareScanAttempts      Int       @default(0)
+  malwareScanNextAttemptAt DateTime? @db.Timestamptz(6)
+  malwareScanLastError     String?   @db.Text
+  malwareDetectedThreat    String?   @db.VarChar(255)
 
   /// Confidential files should be accessed only through an authenticated,
   /// short-lived download route—not permanent email or public URLs.
@@ -3315,6 +3331,8 @@ model GovernanceOfficialNoticeAttachment {
   @@index([zoneId, status], map: "GovernanceNoticeAttachment_zone_status_idx")
   @@index([uploadedByUserId, createdAt], map: "GovernanceNoticeAttachment_uploader_created_idx")
   @@index([scanStatus, status], map: "GovernanceNoticeAttachment_scan_status_idx")
+  @@index([malwareScanStatus, malwareScanNextAttemptAt], map: "GovernanceNoticeAttachment_malware_dispatch_idx")
+  @@index([status, scanStatus, malwareScanStatus], map: "GovernanceNoticeAttachment_security_readiness_idx")
   @@index([createdAt], map: "GovernanceNoticeAttachment_created_idx")
 }
 
@@ -3463,6 +3481,26 @@ enum GovernanceOfficialNoticeAttachmentScanStatus {
   PENDING
   CLEAN
   INFECTED
+  FAILED
+}
+
+enum GovernanceOfficialNoticeAttachmentMalwareScanStatus {
+  /// No malware engine has examined this object.
+  NOT_SCANNED
+
+  /// Verified object is queued and held in private quarantine.
+  PENDING
+
+  /// A scanner worker has claimed the object.
+  SCANNING
+
+  /// Malware engine completed successfully and found no known threat.
+  CLEAN
+
+  /// Malware engine detected a known threat.
+  INFECTED
+
+  /// Scanner could not produce a trustworthy verdict.
   FAILED
 }
 
