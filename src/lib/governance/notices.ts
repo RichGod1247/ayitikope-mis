@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import {
   GovernanceInterventionEventType,
   GovernanceInterventionPriority,
+  GovernanceOfficialNoticeAttachmentMalwareScanStatus,
   GovernanceOfficialNoticeAttachmentScanStatus,
   GovernanceOfficialNoticeAttachmentStatus,
   GovernanceOfficialNoticeAudienceMode,
@@ -1497,8 +1498,9 @@ async function resolveNoticeAttachments(args: {
         sha256Hash: true,
         confidential: true,
         recipientVisible: true,
-        status: true,
+                status: true,
         scanStatus: true,
+        malwareScanStatus: true,
         sealedAt: true,
         rejectedAt: true,
         deletedAt: true,
@@ -1597,14 +1599,26 @@ async function resolveNoticeAttachments(args: {
       );
     }
 
-    const isReady =
+        const isReady =
       !row.noticeId &&
       !row.sealedAt &&
       row.status ===
         GovernanceOfficialNoticeAttachmentStatus.READY &&
       row.scanStatus ===
-        GovernanceOfficialNoticeAttachmentScanStatus.CLEAN;
+        GovernanceOfficialNoticeAttachmentScanStatus.CLEAN &&
+      row.malwareScanStatus ===
+        GovernanceOfficialNoticeAttachmentMalwareScanStatus.CLEAN;
 
+        /*
+     * SEALED rows are accepted here only so an idempotent retry can resolve
+     * the attachment manifest already linked to its existing notice.
+     *
+     * The existing-notice attachment comparison and sealedNoticeId conflict
+     * below prevent the row from being reused for a different notice.
+     *
+     * Historical sealed rows may truthfully remain malware NOT_SCANNED until
+     * the scanner backfill is available.
+     */
     const isSealed =
       Boolean(row.noticeId) &&
       Boolean(row.sealedAt) &&
@@ -2400,10 +2414,12 @@ export async function sendGovernanceOfficialNotice(args: {
               },
               noticeId: null,
               uploadedByUserId: actorUserId,
-              status:
+                            status:
                 GovernanceOfficialNoticeAttachmentStatus.READY,
               scanStatus:
                 GovernanceOfficialNoticeAttachmentScanStatus.CLEAN,
+              malwareScanStatus:
+                GovernanceOfficialNoticeAttachmentMalwareScanStatus.CLEAN,
               sealedAt: null,
               rejectedAt: null,
               deletedAt: null,

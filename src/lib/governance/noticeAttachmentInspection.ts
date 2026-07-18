@@ -3,6 +3,7 @@ import "server-only";
 
 import { createHash } from "crypto";
 import {
+  GovernanceOfficialNoticeAttachmentMalwareScanStatus,
   GovernanceOfficialNoticeAttachmentScanStatus,
   GovernanceOfficialNoticeAttachmentStatus,
   Prisma,
@@ -56,6 +57,16 @@ const attachmentSelect = {
   uploadIdempotencyKey: true,
   status: true,
   scanStatus: true,
+    malwareScanStatus: true,
+  malwareScanEngine: true,
+  malwareSignatureVersion: true,
+  malwareScanQueuedAt: true,
+  malwareScanStartedAt: true,
+  malwareScannedAt: true,
+  malwareScanAttempts: true,
+  malwareScanNextAttemptAt: true,
+  malwareScanLastError: true,
+  malwareDetectedThreat: true,
   confidential: true,
   recipientVisible: true,
   uploadedAt: true,
@@ -358,8 +369,19 @@ async function rejectAttachment(args: {
   await prisma.governanceOfficialNoticeAttachment.update({
     where: { id: args.row.id },
     data: {
-      status: GovernanceOfficialNoticeAttachmentStatus.REJECTED,
+            status: GovernanceOfficialNoticeAttachmentStatus.REJECTED,
       scanStatus: GovernanceOfficialNoticeAttachmentScanStatus.FAILED,
+      malwareScanStatus:
+        GovernanceOfficialNoticeAttachmentMalwareScanStatus.NOT_SCANNED,
+      malwareScanEngine: null,
+      malwareSignatureVersion: null,
+      malwareScanQueuedAt: null,
+      malwareScanStartedAt: null,
+      malwareScannedAt: null,
+      malwareScanAttempts: 0,
+      malwareScanNextAttemptAt: null,
+      malwareScanLastError: null,
+      malwareDetectedThreat: null,
       rejectedAt: now,
       rejectionReason: args.reason,
       metadata: jsonObject({
@@ -416,14 +438,18 @@ export async function inspectGovernanceNoticeAttachment(args: {
     );
   }
 
-  if (
-    row.status === GovernanceOfficialNoticeAttachmentStatus.READY &&
+    if (
+    (row.status === GovernanceOfficialNoticeAttachmentStatus.UPLOADED ||
+      row.status === GovernanceOfficialNoticeAttachmentStatus.READY) &&
     row.scanStatus === GovernanceOfficialNoticeAttachmentScanStatus.CLEAN
   ) {
     return {
       attachment: serializeAttachment(row),
       reused: true,
       inspectionEngine: INSPECTION_ENGINE,
+      malwareScanRequired:
+        row.malwareScanStatus !==
+        GovernanceOfficialNoticeAttachmentMalwareScanStatus.CLEAN,
     };
   }
 
@@ -503,9 +529,24 @@ export async function inspectGovernanceNoticeAttachment(args: {
   const updated =
     await prisma.governanceOfficialNoticeAttachment.update({
       where: { id: row.id },
-      data: {
-        status: GovernanceOfficialNoticeAttachmentStatus.READY,
+            data: {
+        /*
+         * Structural inspection alone must never make the attachment sendable.
+         * READY is reserved for a future successful malware-engine verdict.
+         */
+        status: GovernanceOfficialNoticeAttachmentStatus.UPLOADED,
         scanStatus: GovernanceOfficialNoticeAttachmentScanStatus.CLEAN,
+        malwareScanStatus:
+          GovernanceOfficialNoticeAttachmentMalwareScanStatus.PENDING,
+        malwareScanEngine: null,
+        malwareSignatureVersion: null,
+        malwareScanQueuedAt: now,
+        malwareScanStartedAt: null,
+        malwareScannedAt: null,
+        malwareScanAttempts: 0,
+        malwareScanNextAttemptAt: now,
+        malwareScanLastError: null,
+        malwareDetectedThreat: null,
         verifiedAt: now,
         sha256Hash,
         etag: object.etag ?? row.etag,
@@ -523,15 +564,18 @@ export async function inspectGovernanceNoticeAttachment(args: {
           activeContentDetected: inspection.activeContentDetected,
           inspectionNotes: inspection.notes,
           externalAntivirusScanner: false,
+                    malwareScanRequired: true,
+          malwareScanQueuedAt: now.toISOString(),
         }),
       },
       select: attachmentSelect,
     });
 
-  return {
+    return {
     attachment: serializeAttachment(updated),
     reused: false,
     inspectionEngine: INSPECTION_ENGINE,
     inspection,
+    malwareScanRequired: true,
   };
 }

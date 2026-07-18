@@ -2,6 +2,7 @@
 import "server-only";
 
 import {
+  GovernanceOfficialNoticeAttachmentMalwareScanStatus,
   GovernanceOfficialNoticeAttachmentScanStatus,
   GovernanceOfficialNoticeAttachmentStatus,
   Prisma,
@@ -119,6 +120,16 @@ const attachmentSelect = {
   uploadIdempotencyKey: true,
   status: true,
   scanStatus: true,
+    malwareScanStatus: true,
+  malwareScanEngine: true,
+  malwareSignatureVersion: true,
+  malwareScanQueuedAt: true,
+  malwareScanStartedAt: true,
+  malwareScannedAt: true,
+  malwareScanAttempts: true,
+  malwareScanNextAttemptAt: true,
+  malwareScanLastError: true,
+  malwareDetectedThreat: true,
   confidential: true,
   recipientVisible: true,
   uploadedAt: true,
@@ -662,8 +673,10 @@ export async function initializeGovernanceNoticeAttachment(args: {
           uploadIdempotencyKey,
           status:
             GovernanceOfficialNoticeAttachmentStatus.PENDING_UPLOAD,
-          scanStatus:
+                    scanStatus:
             GovernanceOfficialNoticeAttachmentScanStatus.PENDING,
+          malwareScanStatus:
+            GovernanceOfficialNoticeAttachmentMalwareScanStatus.NOT_SCANNED,
           confidential: boolish(args.input.confidential, true),
           recipientVisible: true,
           metadata: jsonObject({
@@ -730,9 +743,20 @@ async function rejectUploadedAttachment(args: {
   await prisma.governanceOfficialNoticeAttachment.update({
     where: { id: args.attachmentId },
     data: {
-      status: GovernanceOfficialNoticeAttachmentStatus.REJECTED,
+           status: GovernanceOfficialNoticeAttachmentStatus.REJECTED,
       scanStatus:
         GovernanceOfficialNoticeAttachmentScanStatus.FAILED,
+      malwareScanStatus:
+        GovernanceOfficialNoticeAttachmentMalwareScanStatus.NOT_SCANNED,
+      malwareScanEngine: null,
+      malwareSignatureVersion: null,
+      malwareScanQueuedAt: null,
+      malwareScanStartedAt: null,
+      malwareScannedAt: null,
+      malwareScanAttempts: 0,
+      malwareScanNextAttemptAt: null,
+      malwareScanLastError: null,
+      malwareDetectedThreat: null,
       rejectedAt: new Date(),
       rejectionReason: args.reason,
       metadata: jsonObject({
@@ -805,11 +829,12 @@ export async function verifyGovernanceNoticeAttachmentUpload(args: {
     return {
       attachment: serializeAttachment(row),
       reused: true,
-      securityInspectionRequired:
-        row.status !==
-          GovernanceOfficialNoticeAttachmentStatus.READY ||
+            securityInspectionRequired:
         row.scanStatus !==
-          GovernanceOfficialNoticeAttachmentScanStatus.CLEAN,
+        GovernanceOfficialNoticeAttachmentScanStatus.CLEAN,
+      malwareScanRequired:
+        row.malwareScanStatus !==
+        GovernanceOfficialNoticeAttachmentMalwareScanStatus.CLEAN,
     };
   }
 
@@ -865,9 +890,20 @@ export async function verifyGovernanceNoticeAttachmentUpload(args: {
     await prisma.governanceOfficialNoticeAttachment.update({
       where: { id: row.id },
       data: {
-        status: GovernanceOfficialNoticeAttachmentStatus.UPLOADED,
+                status: GovernanceOfficialNoticeAttachmentStatus.UPLOADED,
         scanStatus:
           GovernanceOfficialNoticeAttachmentScanStatus.PENDING,
+        malwareScanStatus:
+          GovernanceOfficialNoticeAttachmentMalwareScanStatus.NOT_SCANNED,
+        malwareScanEngine: null,
+        malwareSignatureVersion: null,
+        malwareScanQueuedAt: null,
+        malwareScanStartedAt: null,
+        malwareScannedAt: null,
+        malwareScanAttempts: 0,
+        malwareScanNextAttemptAt: null,
+        malwareScanLastError: null,
+        malwareDetectedThreat: null,
         uploadedAt: row.uploadedAt ?? now,
         etag: head.etag,
         metadata: jsonObject({
@@ -878,15 +914,17 @@ export async function verifyGovernanceNoticeAttachmentUpload(args: {
           storageLastModified:
             head.lastModified?.toISOString() ?? null,
           securityInspectionRequired: true,
+                    malwareScanRequired: true,
         }),
       },
       select: attachmentSelect,
     });
 
-  return {
+    return {
     attachment: serializeAttachment(updated),
     reused: false,
     securityInspectionRequired: true,
+    malwareScanRequired: true,
   };
 }
 
