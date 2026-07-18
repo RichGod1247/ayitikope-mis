@@ -3268,8 +3268,22 @@ model GovernanceOfficialNoticeAttachment {
 
   storageProvider String @default("R2") @db.VarChar(40)
 
-  /// Private R2 object key. Never expose this directly to recipients.
+  /// Current authoritative private R2 key.
+  ///
+  /// Before immutable promotion this is the browser-writable staging key.
+  /// After malware-clean promotion this must equal immutableObjectKey.
+  /// Never expose either storage key to ordinary attachment clients.
   objectKey String @unique(map: "GovernanceNoticeAttachment_objectKey_unique") @db.VarChar(500)
+
+  /// Server-generated destination key that is never used in a browser PUT URL.
+  ///
+  /// New uploads receive this key at initialization. Historical attachments may
+  /// remain null until a deliberate backfill is performed.
+  immutableObjectKey String? @unique(map: "GovernanceNoticeAttachment_immutableObjectKey_unique") @db.VarChar(500)
+
+  /// Time at which the authoritative objectKey was switched to the immutable
+  /// destination after an exact conditional storage promotion.
+  immutableAt DateTime? @db.Timestamptz(6)
 
   etag       String? @db.VarChar(160)
   sha256Hash String? @db.VarChar(64)
@@ -3346,6 +3360,7 @@ model GovernanceOfficialNoticeAttachment {
   @@index([scanStatus, status], map: "GovernanceNoticeAttachment_scan_status_idx")
   @@index([malwareScanStatus, malwareScanNextAttemptAt], map: "GovernanceNoticeAttachment_malware_dispatch_idx")
   @@index([malwareScanStatus, malwareScanLeaseExpiresAt], map: "GovernanceNoticeAttachment_malware_lease_idx")
+  @@index([immutableAt], map: "GovernanceNoticeAttachment_immutableAt_idx")
   @@index([status, scanStatus, malwareScanStatus], map: "GovernanceNoticeAttachment_security_readiness_idx")
   @@index([createdAt], map: "GovernanceNoticeAttachment_created_idx")
 }
