@@ -3288,12 +3288,25 @@ model GovernanceOfficialNoticeAttachment {
   malwareScanStatus GovernanceOfficialNoticeAttachmentMalwareScanStatus @default(NOT_SCANNED)
 
   /// Scanner evidence and durable retry state.
-  malwareScanEngine        String?   @db.VarChar(120)
-  malwareSignatureVersion  String?   @db.VarChar(160)
-  malwareScanQueuedAt      DateTime? @db.Timestamptz(6)
-  malwareScanStartedAt     DateTime? @db.Timestamptz(6)
-  malwareScannedAt         DateTime? @db.Timestamptz(6)
-  malwareScanAttempts      Int       @default(0)
+  malwareScanEngine       String?   @db.VarChar(120)
+  malwareSignatureVersion String?   @db.VarChar(160)
+  malwareScanQueuedAt     DateTime? @db.Timestamptz(6)
+  malwareScanStartedAt    DateTime? @db.Timestamptz(6)
+  malwareScannedAt        DateTime? @db.Timestamptz(6)
+
+  /// Number of malware-scan claims already attempted.
+  malwareScanAttempts    Int @default(0)
+  malwareScanMaxAttempts Int @default(5)
+
+  /// Opaque identity of the worker holding the active scan lease.
+  malwareScanWorkerId String? @db.VarChar(160)
+
+  /// Random token required for guarded completion or failure.
+  malwareScanLeaseToken String? @db.VarChar(80)
+
+  /// A crashed or abandoned scan may be reclaimed only after this time.
+  malwareScanLeaseExpiresAt DateTime? @db.Timestamptz(6)
+
   malwareScanNextAttemptAt DateTime? @db.Timestamptz(6)
   malwareScanLastError     String?   @db.Text
   malwareDetectedThreat    String?   @db.VarChar(255)
@@ -3332,6 +3345,7 @@ model GovernanceOfficialNoticeAttachment {
   @@index([uploadedByUserId, createdAt], map: "GovernanceNoticeAttachment_uploader_created_idx")
   @@index([scanStatus, status], map: "GovernanceNoticeAttachment_scan_status_idx")
   @@index([malwareScanStatus, malwareScanNextAttemptAt], map: "GovernanceNoticeAttachment_malware_dispatch_idx")
+  @@index([malwareScanStatus, malwareScanLeaseExpiresAt], map: "GovernanceNoticeAttachment_malware_lease_idx")
   @@index([status, scanStatus, malwareScanStatus], map: "GovernanceNoticeAttachment_security_readiness_idx")
   @@index([createdAt], map: "GovernanceNoticeAttachment_created_idx")
 }
