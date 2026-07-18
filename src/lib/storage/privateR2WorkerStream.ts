@@ -1,7 +1,9 @@
 // src/lib/storage/privateR2WorkerStream.ts
 
 import {
+  CopyObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 
@@ -41,6 +43,17 @@ export type PrivateR2WorkerObjectStream = {
   etag: string | null;
   lastModified: Date | null;
   stream: AsyncIterable<Uint8Array>;
+};
+
+export type PrivateR2WorkerPromotionResult = {
+  sourceKey: string;
+  destinationKey: string;
+  sourceEtag: string;
+  destinationEtag: string;
+  contentLength: number;
+  contentType: string;
+  sha256Hash: string;
+  lastModified: Date | null;
 };
 
 function clean(value: unknown) {
@@ -162,6 +175,84 @@ function normalizeEtag(
 
 function quotedIfMatchEtag(etag: string) {
   return `"${etag.replace(/"/g, "")}"`;
+}
+
+function requiredEtag(
+  value: unknown,
+  code: string,
+) {
+  const etag = normalizeEtag(value);
+
+  if (!etag) {
+    throw new PrivateR2WorkerStreamError(
+      code,
+      "Required private R2 ETag is missing.",
+    );
+  }
+
+  return etag;
+}
+
+function requiredSha256(value: unknown) {
+  const hash = clean(value).toLowerCase();
+
+  if (!/^[a-f0-9]{64}$/.test(hash)) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_SHA256_INVALID",
+      "Verified SHA-256 hash is invalid.",
+    );
+  }
+
+  return hash;
+}
+
+function requiredContentType(value: unknown) {
+  const contentType =
+    clean(value)
+      .toLowerCase()
+      .split(";")[0]
+      ?.trim() ?? "";
+
+  if (
+    !contentType ||
+    contentType.length > 255 ||
+    !/^[\x20-\x7e]+$/.test(contentType)
+  ) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_CONTENT_TYPE_INVALID",
+      "Verified content type is invalid.",
+    );
+  }
+
+  return contentType;
+}
+
+function encodedCopySource(
+  bucketName: string,
+  sourceKey: string,
+) {
+  return [
+    bucketName,
+    ...sourceKey.split("/"),
+  ]
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+}
+
+function normalizedMetadata(
+  value:
+    | Record<string, string>
+    | undefined,
+) {
+  const output: Record<string, string> = {};
+
+  for (const [key, metadataValue] of
+    Object.entries(value ?? {})) {
+    output[key.toLowerCase()] =
+      clean(metadataValue);
+  }
+
+  return output;
 }
 
 function readHttpStatus(error: unknown) {
@@ -423,5 +514,227 @@ export async function openPrivateR2WorkerObjectStream(
     lastModified:
       result.LastModified ?? null,
     stream,
+  };
+}
+
+/**
+ * Conditionally promotes the exact scanned staging object to a destination
+ * that was never authorized for browser PUT.
+ *
+ * This operation does not mutate the database and does not delete the staging
+ * object. Those transitions belong to the guarded verdict transaction.
+ */
+export async function promotePrivateR2WorkerObject(
+  args: {
+    sourceKey: string;
+    destinationKey: string;
+    expectedSourceEtag: string;
+    expectedSizeBytes: number;
+    expectedContentType: string;
+    expectedSha256: string;
+    abortSignal?: AbortSignal;
+  },
+): Promise<PrivateR2WorkerPromotionResult> {
+  const current = config();
+
+  const sourceKey = safeObjectKey(
+    args.sourceKey,
+  );
+
+  const destinationKey = safeObjectKey(
+    args.destinationKey,
+  );
+
+  if (
+    !sourceKey.startsWith(
+      "governance-notices-staging/",
+    )
+  ) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_SOURCE_PREFIX_INVALID",
+      "Promotion source is not a governance staging object.",
+    );
+  }
+
+  if (
+    !destinationKey.startsWith(
+      "governance-notices-immutable/",
+    )
+  ) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_DESTINATION_PREFIX_INVALID",
+      "Promotion destination is not an immutable governance object.",
+    );
+  }
+
+  if (sourceKey === destinationKey) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_KEYS_IDENTICAL",
+      "Promotion source and destination must be different.",
+    );
+  }
+
+  const expectedSourceEtag =
+    requiredEtag(
+      args.expectedSourceEtag,
+      "R2_PROMOTION_SOURCE_ETAG_REQUIRED",
+    );
+
+  const expectedSizeBytes =
+    normalizePositiveInteger(
+      args.expectedSizeBytes,
+      "R2_PROMOTION_SIZE_INVALID",
+      "expectedSizeBytes",
+    );
+
+  if (
+    expectedSizeBytes >
+    ABSOLUTE_MAX_STREAM_BYTES
+  ) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_SIZE_EXCEEDS_POLICY",
+      "Promotion size exceeds worker policy.",
+    );
+  }
+
+  const expectedContentType =
+    requiredContentType(
+      args.expectedContentType,
+    );
+
+  const expectedSha256 =
+    requiredSha256(args.expectedSha256);
+
+  try {
+    await client().send(
+      new CopyObjectCommand({
+        Bucket: current.bucketName,
+        Key: destinationKey,
+
+        CopySource: encodedCopySource(
+          current.bucketName,
+          sourceKey,
+        ),
+
+        CopySourceIfMatch:
+          quotedIfMatchEtag(
+            expectedSourceEtag,
+          ),
+
+        MetadataDirective: "REPLACE",
+        ContentType: expectedContentType,
+
+        Metadata: {
+          "edulife-immutable": "true",
+          "edulife-source-etag":
+            expectedSourceEtag,
+          "edulife-sha256":
+            expectedSha256,
+        },
+      }),
+      args.abortSignal
+        ? {
+            abortSignal:
+              args.abortSignal,
+          }
+        : undefined,
+    );
+  } catch (error) {
+    const status = readHttpStatus(error);
+
+    if (status === 412) {
+      throw new PrivateR2WorkerStreamError(
+        "R2_PROMOTION_SOURCE_ETAG_MISMATCH",
+        "Staging object changed after inspection and cannot be promoted.",
+      );
+    }
+
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_COPY_FAILED",
+      "Private R2 object promotion failed.",
+    );
+  }
+
+  let head;
+
+  try {
+    head = await client().send(
+      new HeadObjectCommand({
+        Bucket: current.bucketName,
+        Key: destinationKey,
+      }),
+      args.abortSignal
+        ? {
+            abortSignal:
+              args.abortSignal,
+          }
+        : undefined,
+    );
+  } catch {
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_DESTINATION_HEAD_FAILED",
+      "Promoted private R2 object could not be verified.",
+    );
+  }
+
+  const contentLength =
+    typeof head.ContentLength === "number"
+      ? head.ContentLength
+      : null;
+
+  if (
+    contentLength !== expectedSizeBytes
+  ) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_DESTINATION_SIZE_MISMATCH",
+      "Promoted object size does not match the scanned attachment.",
+    );
+  }
+
+  const contentType =
+    requiredContentType(head.ContentType);
+
+  if (
+    contentType !== expectedContentType
+  ) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_DESTINATION_CONTENT_TYPE_MISMATCH",
+      "Promoted object content type does not match the verified attachment.",
+    );
+  }
+
+  const destinationEtag =
+    requiredEtag(
+      head.ETag,
+      "R2_PROMOTION_DESTINATION_ETAG_MISSING",
+    );
+
+  const metadata =
+    normalizedMetadata(head.Metadata);
+
+  if (
+    metadata["edulife-immutable"] !==
+      "true" ||
+    metadata["edulife-source-etag"] !==
+      expectedSourceEtag ||
+    metadata["edulife-sha256"] !==
+      expectedSha256
+  ) {
+    throw new PrivateR2WorkerStreamError(
+      "R2_PROMOTION_DESTINATION_METADATA_MISMATCH",
+      "Promoted object metadata does not match the scanned attachment.",
+    );
+  }
+
+  return {
+    sourceKey,
+    destinationKey,
+    sourceEtag: expectedSourceEtag,
+    destinationEtag,
+    contentLength,
+    contentType,
+    sha256Hash: expectedSha256,
+    lastModified:
+      head.LastModified ?? null,
   };
 }

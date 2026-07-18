@@ -24,6 +24,12 @@ export const GOVERNANCE_NOTICE_ATTACHMENT_POLICY = {
   uploadUrlExpiresInSeconds: 15 * 60,
 } as const;
 
+const GOVERNANCE_NOTICE_STAGING_PREFIX =
+  "governance-notices-staging";
+
+const GOVERNANCE_NOTICE_IMMUTABLE_PREFIX =
+  "governance-notices-immutable";
+
 type AllowedExtension =
   | "pdf"
   | "doc"
@@ -115,6 +121,8 @@ const attachmentSelect = {
   sizeBytes: true,
   storageProvider: true,
   objectKey: true,
+  immutableObjectKey: true,
+  immutableAt: true,
   etag: true,
   sha256Hash: true,
   uploadIdempotencyKey: true,
@@ -349,10 +357,55 @@ function serializeAttachment(
     select: typeof attachmentSelect;
   }>,
 ) {
+  const {
+    immutableObjectKey: hiddenImmutableObjectKey,
+    ...safeRow
+  } = row;
+
+  void hiddenImmutableObjectKey;
+
   return {
-    ...row,
+    ...safeRow,
     sizeBytes: Number(row.sizeBytes),
   };
+}
+
+function assertPrePromotionStorageContract(row: {
+  status: GovernanceOfficialNoticeAttachmentStatus;
+  objectKey: string;
+  immutableObjectKey: string | null;
+  immutableAt: Date | null;
+}) {
+  if (
+    row.status !==
+      GovernanceOfficialNoticeAttachmentStatus.PENDING_UPLOAD &&
+    row.status !==
+      GovernanceOfficialNoticeAttachmentStatus.UPLOADED
+  ) {
+    return;
+  }
+
+  const stagingKey = clean(row.objectKey);
+  const immutableKey = clean(
+    row.immutableObjectKey,
+  );
+
+  const valid =
+    stagingKey.startsWith(
+      `${GOVERNANCE_NOTICE_STAGING_PREFIX}/`,
+    ) &&
+    immutableKey.startsWith(
+      `${GOVERNANCE_NOTICE_IMMUTABLE_PREFIX}/`,
+    ) &&
+    stagingKey !== immutableKey &&
+    row.immutableAt === null;
+
+  if (!valid) {
+    throw new GovernanceNoticeAttachmentError(
+      409,
+      "ATTACHMENT_IMMUTABLE_STORAGE_CONTRACT_MISSING",
+    );
+  }
 }
 
 function assertTenantInScope(scope: GovernanceScope, tenantId: string) {
@@ -524,6 +577,8 @@ async function signedUploadResponse(
   }>,
   reused: boolean,
 ) {
+  assertPrePromotionStorageContract(row);
+
   if (
     row.status !==
     GovernanceOfficialNoticeAttachmentStatus.PENDING_UPLOAD
@@ -650,10 +705,21 @@ export async function initializeGovernanceNoticeAttachment(args: {
     );
   }
 
+  const storageInitializedAt = new Date();
+
   const objectKey = buildPrivateR2ObjectKey({
-    prefix: "governance-notices",
+    prefix: GOVERNANCE_NOTICE_STAGING_PREFIX,
     extension: file.extension,
+    now: storageInitializedAt,
   });
+
+  const immutableObjectKey =
+    buildPrivateR2ObjectKey({
+      prefix:
+        GOVERNANCE_NOTICE_IMMUTABLE_PREFIX,
+      extension: file.extension,
+      now: storageInitializedAt,
+    });
 
   try {
     const created =
@@ -670,6 +736,8 @@ export async function initializeGovernanceNoticeAttachment(args: {
           sizeBytes: BigInt(file.sizeBytes),
           storageProvider: "R2",
           objectKey,
+          immutableObjectKey,
+          immutableAt: null,
           uploadIdempotencyKey,
           status:
             GovernanceOfficialNoticeAttachmentStatus.PENDING_UPLOAD,
@@ -683,14 +751,19 @@ export async function initializeGovernanceNoticeAttachment(args: {
             draftKey,
             declaredMimeType: file.declaredMimeType,
             canonicalMimeType: file.canonicalMimeType,
-            policyVersion: "A16.3-v1",
+            policyVersion:
+              "A16.3C.6-immutable-promotion-v1",
+            storageLifecycle:
+              "BROWSER_STAGING_TO_SERVER_IMMUTABLE",
+            immutablePromotionRequired: true,
             maxFileBytes:
               GOVERNANCE_NOTICE_ATTACHMENT_POLICY.maxFileBytes,
             maxFilesPerDraft:
               GOVERNANCE_NOTICE_ATTACHMENT_POLICY.maxFilesPerDraft,
             maxCombinedBytes:
               GOVERNANCE_NOTICE_ATTACHMENT_POLICY.maxCombinedBytes,
-            uploadInitializedAt: new Date().toISOString(),
+            uploadInitializedAt:
+              storageInitializedAt.toISOString(),
           }),
         },
         select: attachmentSelect,
@@ -821,6 +894,8 @@ export async function verifyGovernanceNoticeAttachmentUpload(args: {
       "ATTACHMENT_IS_NOT_ACTIVE",
     );
   }
+
+  assertPrePromotionStorageContract(row);
 
   if (
     row.status === GovernanceOfficialNoticeAttachmentStatus.UPLOADED ||
