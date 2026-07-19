@@ -23,7 +23,9 @@
     "seed:ts": "ts-node --project tsconfig.seed.json prisma/seed.ts",
     "worker:malware:build": "node scripts/build-governance-malware-worker.mjs",
     "worker:malware:runtime:qa": "npm run worker:malware:build && node dist-workers/governance-malware-worker.cjs --runtime-smoke",
-    "worker:malware:cycle:qa": "tsc -p scripts/tsconfig.json --noEmit && ts-node --project scripts/tsconfig.json scripts/governance-malware-worker-cycle-selftest.ts"
+    "worker:malware:cycle:qa": "tsc -p scripts/tsconfig.json --noEmit && ts-node --project scripts/tsconfig.json scripts/governance-malware-worker-cycle-selftest.ts",
+    "worker:malware:once": "node dist-workers/governance-malware-worker.cjs --once",
+    "worker:malware:guard:qa": "npm run worker:malware:build && node scripts/governance-malware-worker-guard-selftest.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1085.0",
