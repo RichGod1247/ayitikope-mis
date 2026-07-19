@@ -9,6 +9,7 @@
   },
   "include": [
   "./clamav-adapter-selftest.ts",
+  "./governance-malware-worker-cycle-selftest.ts",
   "./governance-malware-worker.ts"
 ]
 }
