@@ -8,6 +8,7 @@
     "types": ["node"]
   },
   "include": [
-    "./clamav-adapter-selftest.ts"
-  ]
+  "./clamav-adapter-selftest.ts",
+  "./governance-malware-worker.ts"
+]
 }
