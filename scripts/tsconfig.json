@@ -7,9 +7,10 @@
     "incremental": false,
     "types": ["node"]
   },
-  "include": [
+"include": [
   "./clamav-adapter-selftest.ts",
   "./governance-malware-worker-cycle-selftest.ts",
+  "./governance-malware-worker-service-selftest.ts",
   "./governance-malware-worker.ts"
 ]
 }
