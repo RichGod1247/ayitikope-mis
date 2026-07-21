@@ -26,7 +26,9 @@
     "worker:malware:cycle:qa": "tsc -p scripts/tsconfig.json --noEmit && ts-node --project scripts/tsconfig.json scripts/governance-malware-worker-cycle-selftest.ts",
     "worker:malware:once": "node dist-workers/governance-malware-worker.cjs --once",
     "worker:malware:guard:qa": "npm run worker:malware:build && node scripts/governance-malware-worker-guard-selftest.mjs",
-    "worker:malware:service:qa": "tsc -p scripts/tsconfig.json --noEmit && ts-node --project scripts/tsconfig.json scripts/governance-malware-worker-service-selftest.ts"
+    "worker:malware:service:qa": "tsc -p scripts/tsconfig.json --noEmit && ts-node --project scripts/tsconfig.json scripts/governance-malware-worker-service-selftest.ts",
+    "worker:malware:service": "node dist-workers/governance-malware-worker.cjs --service",
+    "worker:malware:service:process:qa": "npm run worker:malware:build && node scripts/governance-malware-worker-service-process-selftest.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1085.0",
