@@ -517,15 +517,6 @@ export default function HeadteacherDashboardClient() {
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MajorTile
-          title="Students Assessment"
-          desc="See class performance, weak learners, and subjects needing support."
-          cta="Open students assessment"
-          toneClass="border-indigo-300/20 from-[#1A1034] via-[#25194A] to-[#0C1320]"
-          accentClass="border-indigo-300/25 bg-indigo-400/12 text-indigo-100"
-          onClick={() => router.push("/headteacher/assessment/overview")}
-        />
-
         <StudentsAttendanceTile
           onDaily={() => router.push("/headteacher/day")}
           onWeekly={() => router.push("/headteacher/attendance/weekly")}
@@ -551,7 +542,25 @@ export default function HeadteacherDashboardClient() {
           onClick={() => router.push("/headteacher/schemes")}
         />
 
-                <MajorTile
+        <MajorTile
+          title="Lesson Notes"
+          desc="Review submitted lesson notes and clear your approval queue."
+          cta="Open lesson notes"
+          toneClass="border-rose-300/20 from-[#251013] via-[#30151B] to-[#0C1320]"
+          accentClass="border-rose-300/25 bg-rose-400/12 text-rose-100"
+          onClick={() => router.push("/headteacher/lesson-notes")}
+        />
+
+        <MajorTile
+          title="Students Assessment"
+          desc="See class performance, weak learners, and subjects needing support."
+          cta="Open students assessment"
+          toneClass="border-indigo-300/20 from-[#1A1034] via-[#25194A] to-[#0C1320]"
+          accentClass="border-indigo-300/25 bg-indigo-400/12 text-indigo-100"
+          onClick={() => router.push("/headteacher/assessment/overview")}
+        />
+
+        <MajorTile
           title="Teacher Appraisal"
           desc="Teacher preparation, lesson delivery, classroom culture, and supervision evidence."
           cta="Open teacher appraisal"
@@ -559,6 +568,16 @@ export default function HeadteacherDashboardClient() {
           toneClass="border-fuchsia-300/20 from-[#26102B] via-[#351642] to-[#0C1320]"
           accentClass="border-fuchsia-300/25 bg-fuchsia-400/12 text-fuchsia-100"
           onClick={() => router.push("/headteacher/teacher-appraisal")}
+        />
+
+        <MajorTile
+          title="My Appraisal"
+          desc="Request and view your own appraisal after the authorized Director-approved workflow is opened."
+          cta="Available after Director approval"
+          badge="Locked"
+          disabled
+          toneClass="border-slate-300/20 from-[#121722] via-[#1A2230] to-[#0C1320]"
+          accentClass="border-slate-300/20 bg-white/8 text-slate-200"
         />
 
         <MajorTile
@@ -580,21 +599,12 @@ export default function HeadteacherDashboardClient() {
         />
 
         <MajorTile
-          title="Parent Result Release"
+          title="Parent Results Release"
           desc="Control when parents can view released results."
           cta="Open release controls"
           toneClass="border-amber-300/20 from-[#271408] via-[#362111] to-[#0C1320]"
           accentClass="border-amber-300/25 bg-amber-400/12 text-amber-100"
           onClick={() => router.push("/headteacher/reports/release")}
-        />
-
-        <MajorTile
-          title="Lesson Notes Inbox"
-          desc="Review submitted lesson notes and clear your approval queue."
-          cta="Open lesson-note inbox"
-          toneClass="border-rose-300/20 from-[#251013] via-[#30151B] to-[#0C1320]"
-          accentClass="border-rose-300/25 bg-rose-400/12 text-rose-100"
-          onClick={() => router.push("/headteacher/lesson-notes")}
         />
       </div>
 
