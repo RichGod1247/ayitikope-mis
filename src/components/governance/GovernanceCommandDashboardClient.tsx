@@ -414,6 +414,7 @@ type PanelKey =
   | "students-attendance"
   | "teacher-attendance"
   | "scheme-coverage"
+  | "appraisals"
   | "teacher-appraisal"
   | "lesson"
   | "students-assessment"
@@ -1092,6 +1093,39 @@ function CommandTile({
         Open
       </p>
     </button>
+  );
+}
+
+
+function LockedCommandTile({
+  icon,
+  title,
+  description,
+  badge = "Locked",
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  badge?: string;
+}) {
+  return (
+    <div
+      aria-disabled="true"
+      className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left opacity-75"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-xl">{icon}</span>
+        <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-slate-300">
+          {badge}
+        </span>
+      </div>
+
+      <p className="mt-3 text-sm font-bold text-white">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-300">{description}</p>
+      <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+        Not yet active
+      </p>
+    </div>
   );
 }
 
@@ -2042,6 +2076,72 @@ const mockPanelActive =
   activePanel === "mock-priority" ||
   activePanel === "mock-circuit-priority";
 
+const mockCommandTile = (
+  <div
+    className={cx(
+      "rounded-[24px] border p-3 transition",
+      toneClass(
+        mockReadiness?.schoolsNeedingFollowUp || mockQueueTone !== "success"
+          ? mockQueueTone
+          : mockReadiness?.schoolsWithReleasedMock
+            ? "success"
+            : "default",
+      ),
+      mockPanelActive ? "ring-2 ring-white/20" : "",
+    )}
+  >
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-xl">🎯</span>
+      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-white">
+        Mock
+      </span>
+    </div>
+
+    <p className="mt-3 text-sm font-bold text-white">BECE Mock Command</p>
+    <p className="mt-1 text-xs leading-5 text-slate-300">
+      Readiness and follow-up queue in one place.
+    </p>
+
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => openPanel("mock-readiness")}
+        className={cx(
+          "rounded-2xl border px-3 py-2 text-left transition hover:bg-white/[0.08]",
+          activePanel === "mock-readiness"
+            ? "border-amber-200/40 bg-amber-400/15"
+            : "border-white/10 bg-black/20",
+        )}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          Readiness
+        </p>
+        <p className="mt-0.5 truncate text-sm font-bold text-white">
+          {mockReleasedCoverage}
+        </p>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => openPanel(mockQueuePanelKey)}
+        className={cx(
+          "rounded-2xl border px-3 py-2 text-left transition hover:bg-white/[0.08]",
+          activePanel === mockQueuePanelKey
+            ? "border-red-200/40 bg-red-500/15"
+            : "border-white/10 bg-black/20",
+        )}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          {mockQueueTitle}
+        </p>
+        <p className="mt-0.5 truncate text-sm font-bold text-white">
+          {mockQueueValue}
+        </p>
+      </button>
+    </div>
+  </div>
+);
+
   return (
     <main className="space-y-5">
       <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,7,11,0.94),rgba(7,26,61,0.94),rgba(5,7,11,0.97))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.28)] md:p-6">
@@ -2157,167 +2257,253 @@ const mockPanelActive =
       </section>
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
-  <CommandTile
-    icon="🔥"
-    title="Risk board"
-    description="Teachers absent for 3 certified days or more."
-    value={absenteeTeacherCount}
-    tone={absenteeRiskTone}
-    active={activePanel === "risk"}
-    onClick={() => openPanel("risk")}
-  />
+  {isDistrictView ? (
+    <>
+      <CommandTile
+        icon="🔥"
+        title="Risk Board"
+        description="Teachers absent for 3 certified days or more."
+        value={absenteeTeacherCount}
+        tone={absenteeRiskTone}
+        active={activePanel === "risk"}
+        onClick={() => openPanel("risk")}
+      />
 
-  <div
-    className={cx(
-      "rounded-[24px] border p-3 transition",
-      toneClass(
-        mockReadiness?.schoolsNeedingFollowUp || mockQueueTone !== "success"
-          ? mockQueueTone
-          : mockReadiness?.schoolsWithReleasedMock
-            ? "success"
-            : "default",
-      ),
-      mockPanelActive ? "ring-2 ring-white/20" : "",
-    )}
-  >
-    <div className="flex items-start justify-between gap-3">
-      <span className="text-xl">🎯</span>
-      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-white">
-        Mock
-      </span>
-    </div>
+      <CommandTile
+        icon="🧒"
+        title="Students Attendance"
+        description="Learner register capture and certification."
+        value={
+          attendanceNeedsAction
+            ? `${attendanceNeedsAction} follow-up`
+            : attendanceRate
+              ? percentValue(attendanceRate)
+              : "0%"
+        }
+        tone={
+          attendanceNeedsAction || attendanceRate < 70
+            ? "warning"
+            : "success"
+        }
+        active={activePanel === "students-attendance"}
+        onClick={() => openPanel("students-attendance")}
+      />
 
-    <p className="mt-3 text-sm font-bold text-white">BECE Mock Command</p>
-    <p className="mt-1 text-xs leading-5 text-slate-300">
-      Readiness and follow-up queue in one place.
-    </p>
+      <CommandTile
+        icon="👨‍🏫"
+        title="Teacher Attendance"
+        description="Certified staff presence by school."
+        value={
+          teacherAttendanceNeedsAction
+            ? `${teacherAttendanceNeedsAction} follow-up`
+            : teacherAttendanceCertifiedSchools
+              ? `${teacherAttendanceCertifiedSchools} certified`
+              : "0 certified"
+        }
+        tone={
+          teacherAttendanceNeedsAction
+            ? "warning"
+            : teacherAttendanceCertifiedSchools
+              ? "success"
+              : "info"
+        }
+        active={activePanel === "teacher-attendance"}
+        onClick={() => openPanel("teacher-attendance")}
+      />
 
-    <div className="mt-3 grid grid-cols-2 gap-2">
-      <button
-        type="button"
-        onClick={() => openPanel("mock-readiness")}
-        className={cx(
-          "rounded-2xl border px-3 py-2 text-left transition hover:bg-white/[0.08]",
-          activePanel === "mock-readiness"
-            ? "border-amber-200/40 bg-amber-400/15"
-            : "border-white/10 bg-black/20",
-        )}
-      >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-          Readiness
-        </p>
-        <p className="mt-0.5 truncate text-sm font-bold text-white">
-          {mockReleasedCoverage}
-        </p>
-      </button>
+      <CommandTile
+        icon="📚"
+        title="Scheme Coverage"
+        description="Prepared, submitted, approved, and missing schemes."
+        value="Prep"
+        tone="info"
+        active={activePanel === "scheme-coverage"}
+        onClick={() => openPanel("scheme-coverage")}
+      />
 
-      <button
-        type="button"
-        onClick={() => openPanel(mockQueuePanelKey)}
-        className={cx(
-          "rounded-2xl border px-3 py-2 text-left transition hover:bg-white/[0.08]",
-          activePanel === mockQueuePanelKey
-            ? "border-red-200/40 bg-red-500/15"
-            : "border-white/10 bg-black/20",
-        )}
-      >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-          {mockQueueTitle}
-        </p>
-        <p className="mt-0.5 truncate text-sm font-bold text-white">
-          {mockQueueValue}
-        </p>
-      </button>
-    </div>
-  </div>
+      <CommandTile
+        icon="📘"
+        title="Lesson Delivery"
+        description="Teaching evidence health."
+        value={lessonCompliance ? percentValue(lessonCompliance) : "—"}
+        tone={
+          lessonCompliance && lessonCompliance < 70 ? "warning" : "info"
+        }
+        active={activePanel === "lesson"}
+        onClick={() => openPanel("lesson")}
+      />
 
-  <CommandTile
-    icon="🧒"
-    title="Students Attendance"
-    description="Learner register capture and certification."
-    value={
-      attendanceNeedsAction
-        ? `${attendanceNeedsAction} follow-up`
-        : attendanceRate
-          ? percentValue(attendanceRate)
-          : "0%"
-    }
-    tone={attendanceNeedsAction || attendanceRate < 70 ? "warning" : "success"}
-    active={activePanel === "students-attendance"}
-    onClick={() => openPanel("students-attendance")}
-  />
+      <CommandTile
+        icon="📊"
+        title="Students Assessment"
+        description="Learner scoring and assessment proof."
+        value={
+          assessmentCompletion ? percentValue(assessmentCompletion) : "—"
+        }
+        tone={
+          assessmentCompletion && assessmentCompletion < 60
+            ? "warning"
+            : "info"
+        }
+        active={activePanel === "students-assessment"}
+        onClick={() => openPanel("students-assessment")}
+      />
 
-  <CommandTile
-    icon="📊"
-    title="Students Assessment"
-    description="Learner scoring and assessment proof."
-    value={assessmentCompletion ? percentValue(assessmentCompletion) : "—"}
-    tone={assessmentCompletion && assessmentCompletion < 60 ? "warning" : "info"}
-    active={activePanel === "students-assessment"}
-    onClick={() => openPanel("students-assessment")}
-  />
+      <CommandTile
+        icon="🧭"
+        title="Appraisals"
+        description="Assess, review reports, and view governance feedback."
+        value="Hub"
+        tone="info"
+        active={
+          activePanel === "appraisals" ||
+          activePanel === "teacher-appraisal"
+        }
+        onClick={() => openPanel("appraisals")}
+      />
 
-  <CommandTile
-    icon="👨‍🏫"
-    title="Teacher Attendance"
-    description="Certified staff presence by school."
-    value={
-      teacherAttendanceNeedsAction
-        ? `${teacherAttendanceNeedsAction} follow-up`
-        : teacherAttendanceCertifiedSchools
-          ? `${teacherAttendanceCertifiedSchools} certified`
-          : "0 certified"
-    }
-    tone={
-      teacherAttendanceNeedsAction
-        ? "warning"
-        : teacherAttendanceCertifiedSchools
-          ? "success"
-          : "info"
-    }
-    active={activePanel === "teacher-attendance"}
-    onClick={() => openPanel("teacher-attendance")}
-  />
+      {mockCommandTile}
 
-  <CommandTile
-    icon="📝"
-    title="Teacher Appraisal"
-    description="Finalized teacher appraisal reports."
-    value="Reports"
-    tone="info"
-    active={activePanel === "teacher-appraisal"}
-    onClick={() => openPanel("teacher-appraisal")}
-  />
+      <LockedCommandTile
+        icon="📈"
+        title="BECE Results Analysis"
+        description="Official BECE result trends and school comparisons will appear here after the results-analysis workflow is verified."
+        badge="Planned"
+      />
 
-  <CommandTile
-    icon="📚"
-    title="Scheme Coverage"
-    description="Prepared, submitted, approved, and missing schemes."
-    value="Prep"
-    tone="info"
-    active={activePanel === "scheme-coverage"}
-    onClick={() => openPanel("scheme-coverage")}
-  />
+      <CommandTile
+        icon="📨"
+        title="Official Notices"
+        description="Send official notices and check follow-up evidence."
+        tone="info"
+        active={activePanel === "notices"}
+        onClick={() => openPanel("notices")}
+      />
+    </>
+  ) : (
+    <>
+      <CommandTile
+        icon="🔥"
+        title="Risk Board"
+        description="Teachers absent for 3 certified days or more."
+        value={absenteeTeacherCount}
+        tone={absenteeRiskTone}
+        active={activePanel === "risk"}
+        onClick={() => openPanel("risk")}
+      />
 
-  <CommandTile
-    icon="📘"
-    title="Lesson delivery"
-    description="Teaching evidence health."
-    value={lessonCompliance ? percentValue(lessonCompliance) : "—"}
-    tone={lessonCompliance && lessonCompliance < 70 ? "warning" : "info"}
-    active={activePanel === "lesson"}
-    onClick={() => openPanel("lesson")}
-  />
+      <CommandTile
+        icon="🧒"
+        title="Students Attendance"
+        description="Learner register capture and certification."
+        value={
+          attendanceNeedsAction
+            ? `${attendanceNeedsAction} follow-up`
+            : attendanceRate
+              ? percentValue(attendanceRate)
+              : "0%"
+        }
+        tone={
+          attendanceNeedsAction || attendanceRate < 70
+            ? "warning"
+            : "success"
+        }
+        active={activePanel === "students-attendance"}
+        onClick={() => openPanel("students-attendance")}
+      />
 
-  <CommandTile
-    icon="📨"
-    title="Notices"
-    description="Send notices and check follow-up."
-    tone="info"
-    active={activePanel === "notices"}
-    onClick={() => openPanel("notices")}
-  />
+      <CommandTile
+        icon="👨‍🏫"
+        title="Teacher Attendance"
+        description="Certified staff presence by school."
+        value={
+          teacherAttendanceNeedsAction
+            ? `${teacherAttendanceNeedsAction} follow-up`
+            : teacherAttendanceCertifiedSchools
+              ? `${teacherAttendanceCertifiedSchools} certified`
+              : "0 certified"
+        }
+        tone={
+          teacherAttendanceNeedsAction
+            ? "warning"
+            : teacherAttendanceCertifiedSchools
+              ? "success"
+              : "info"
+        }
+        active={activePanel === "teacher-attendance"}
+        onClick={() => openPanel("teacher-attendance")}
+      />
 
+      <CommandTile
+        icon="📚"
+        title="Scheme Coverage"
+        description="Prepared, submitted, approved, and missing schemes."
+        value="Prep"
+        tone="info"
+        active={activePanel === "scheme-coverage"}
+        onClick={() => openPanel("scheme-coverage")}
+      />
+
+      <CommandTile
+        icon="📘"
+        title="Lesson Delivery"
+        description="Teaching evidence health."
+        value={lessonCompliance ? percentValue(lessonCompliance) : "—"}
+        tone={
+          lessonCompliance && lessonCompliance < 70 ? "warning" : "info"
+        }
+        active={activePanel === "lesson"}
+        onClick={() => openPanel("lesson")}
+      />
+
+      <CommandTile
+        icon="📊"
+        title="Students Assessment"
+        description="Learner scoring and assessment proof."
+        value={
+          assessmentCompletion ? percentValue(assessmentCompletion) : "—"
+        }
+        tone={
+          assessmentCompletion && assessmentCompletion < 60
+            ? "warning"
+            : "info"
+        }
+        active={activePanel === "students-assessment"}
+        onClick={() => openPanel("students-assessment")}
+      />
+
+      <CommandTile
+        icon="🧭"
+        title="Appraisals"
+        description="Assess, review reports, and view governance feedback."
+        value="Hub"
+        tone="info"
+        active={
+          activePanel === "appraisals" ||
+          activePanel === "teacher-appraisal"
+        }
+        onClick={() => openPanel("appraisals")}
+      />
+
+      {mockCommandTile}
+
+      <LockedCommandTile
+        icon="📈"
+        title="BECE Results Analysis"
+        description="Circuit-level BECE result trends and school comparisons will appear here after the results-analysis workflow is verified."
+        badge="Planned"
+      />
+
+      <CommandTile
+        icon="📨"
+        title="Official Notices"
+        description="Send official notices and check follow-up evidence."
+        tone="info"
+        active={activePanel === "notices"}
+        onClick={() => openPanel("notices")}
+      />
+    </>
+  )}
 </section>
 
       <div
@@ -2679,6 +2865,91 @@ const mockPanelActive =
     isDistrictView={isDistrictView}
     isCircuitView={isCircuitView}
   />
+) : null}
+
+{activePanel === "appraisals" && (isDistrictView || isCircuitView) ? (
+  <section className="rounded-[28px] border border-fuchsia-300/20 bg-fuchsia-500/10 p-4 md:p-5">
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fuchsia-200">
+        {isDistrictView ? "District Appraisals" : "Circuit Appraisals"}
+      </p>
+      <h2 className="mt-1 text-lg font-bold text-white">
+        One place for assessment, review, and governance feedback
+      </h2>
+      <p className="mt-1 max-w-4xl text-sm leading-6 text-fuchsia-100/80">
+        Teacher appraisal reports are available now. Headteacher appraisal and
+        governance-officer feedback remain locked until their controlled,
+        confidential workflows are implemented.
+      </p>
+    </div>
+
+    <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <button
+        type="button"
+        onClick={() => openPanel("teacher-appraisal")}
+        className="rounded-2xl border border-emerald-300/25 bg-emerald-400/10 p-4 text-left transition hover:-translate-y-0.5 hover:bg-emerald-400/15"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-xl">📝</span>
+          <span className="rounded-full border border-emerald-300/25 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-emerald-100">
+            Available
+          </span>
+        </div>
+        <p className="mt-3 text-sm font-bold text-white">
+          Teacher Appraisal
+        </p>
+        <p className="mt-1 text-xs leading-5 text-emerald-100/80">
+          Review finalized teacher appraisal reports within{" "}
+          {isDistrictView ? "district" : "circuit"} scope.
+        </p>
+        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-100">
+          Open reports
+        </p>
+      </button>
+
+      <div
+        aria-disabled="true"
+        className="rounded-2xl border border-white/10 bg-black/20 p-4 opacity-75"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-xl">🏫</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300">
+            Locked
+          </span>
+        </div>
+        <p className="mt-3 text-sm font-bold text-white">
+          Headteacher Appraisal
+        </p>
+        <p className="mt-1 text-xs leading-5 text-slate-300">
+          Governance assessment and confidential teacher feedback will open
+          here after the Director-approved workflow is implemented.
+        </p>
+      </div>
+
+      <div
+        aria-disabled="true"
+        className="rounded-2xl border border-white/10 bg-black/20 p-4 opacity-75"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-xl">🧭</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300">
+            Locked
+          </span>
+        </div>
+        <p className="mt-3 text-sm font-bold text-white">My Appraisal</p>
+        <p className="mt-1 text-xs leading-5 text-slate-300">
+          Confidential headteacher feedback about the{" "}
+          {isDistrictView ? "governance officer" : "SISSO"} will appear here
+          after the governance-appraisal workflow is verified.
+        </p>
+      </div>
+    </div>
+
+    <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+      Confidential appraisal identities and reports must remain restricted to
+      authorized officers and auditable review paths.
+    </div>
+  </section>
 ) : null}
 
 {activePanel === "teacher-appraisal" ? (
