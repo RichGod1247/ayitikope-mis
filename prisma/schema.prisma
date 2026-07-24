@@ -86,6 +86,31 @@ model User {
   teacherAppraisalsAsAppraiser TeacherAppraisal[] @relation("TeacherAppraisalAppraiser")
   teacherAppraisalsFinalized   TeacherAppraisal[] @relation("TeacherAppraisalFinalizedBy")
 
+  /// ✅ D3 — generalized appraisal workflow spine
+  appraisalInstrumentsCreated          AppraisalInstrument[]        @relation("AppraisalInstrumentCreatedBy")
+  appraisalInstrumentVersionsPublished AppraisalInstrumentVersion[] @relation("AppraisalInstrumentVersionPublishedBy")
+
+  appraisalCyclesAsTarget  AppraisalCycle[] @relation("AppraisalCycleTargetUser")
+  appraisalCyclesRequested AppraisalCycle[] @relation("AppraisalCycleRequestedBy")
+  appraisalCyclesApproved  AppraisalCycle[] @relation("AppraisalCycleApprovedBy")
+  appraisalCyclesOpened    AppraisalCycle[] @relation("AppraisalCycleOpenedBy")
+  appraisalCyclesClosed    AppraisalCycle[] @relation("AppraisalCycleClosedBy")
+  appraisalCyclesReleased  AppraisalCycle[] @relation("AppraisalCycleReleasedBy")
+  appraisalCyclesCancelled AppraisalCycle[] @relation("AppraisalCycleCancelledBy")
+  appraisalCyclesExtended  AppraisalCycle[] @relation("AppraisalCycleExtendedBy")
+
+  appraisalParticipations      AppraisalParticipant[] @relation("AppraisalParticipantRespondent")
+  appraisalParticipantsRevoked AppraisalParticipant[] @relation("AppraisalParticipantRevokedBy")
+  appraisalResponsesFinalized  AppraisalResponse[]    @relation("AppraisalResponseFinalizedBy")
+
+  appraisalAssessmentsConducted AppraisalAssessment[] @relation("AppraisalAssessmentAssessor")
+  appraisalAssessmentsFinalized AppraisalAssessment[] @relation("AppraisalAssessmentFinalizedBy")
+  appraisalReviewsAuthored      AppraisalReview[]     @relation("AppraisalReviewReviewer")
+
+  appraisalAggregatesGenerated AppraisalAggregateSnapshot[] @relation("AppraisalAggregateGeneratedBy")
+  appraisalIdentityAccesses    AppraisalIdentityAccess[]    @relation("AppraisalIdentityAccessActor")
+  appraisalNotifications       AppraisalNotification[]      @relation("AppraisalNotificationRecipient")
+
   teacherProfiles                     TeacherProfile[]              @relation("UserTeacherProfiles")
   lastActiveTenant                    Tenant?                       @relation("UserLastActiveTenant", fields: [lastActiveTenantId], references: [id], onUpdate: NoAction, map: "User_lastActiveTenant_fkey")
   inviteCodes                         InviteCode[]
@@ -198,6 +223,11 @@ model Tenant {
 
   /// ✅ A15.4B — teacher appraisal evidence spine
   teacherAppraisals TeacherAppraisal[]
+
+  /// ✅ D3 — generalized appraisal workflow spine
+  appraisalCyclesAsTarget AppraisalCycle[]        @relation("AppraisalCycleTargetTenant")
+  appraisalParticipants   AppraisalParticipant[]  @relation("AppraisalParticipantTenant")
+  appraisalNotifications  AppraisalNotification[] @relation("AppraisalNotificationTenant")
 
   teacherProfiles              TeacherProfile[]              @relation("TenantTeacherProfiles")
   onboardingCodes              TenantOnboardingCode[]
@@ -2872,6 +2902,10 @@ model AdminZone {
   officerAssignments GovernanceOfficerAssignment[]
   officerInvites     GovernanceOfficerInvite[]
 
+  /// ✅ D3 — generalized appraisal workflow jurisdiction
+  appraisalCyclesInScope  AppraisalCycle[] @relation("AppraisalCycleScopeZone")
+  appraisalCyclesAsTarget AppraisalCycle[] @relation("AppraisalCycleTargetZone")
+
   /// ✅ Sprint 10 B.3/B.4 + A16 — governance communication spine
   governanceInterventions     GovernanceInterventionCase[]
   governanceOfficialNotices   GovernanceOfficialNotice[]
@@ -2935,6 +2969,12 @@ model GovernanceOfficerAssignment {
   zone      AdminZone @relation(fields: [zoneId], references: [id], onDelete: Restrict)
   createdBy User?     @relation("GovernanceOfficerAssignmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   revokedBy User?     @relation("GovernanceOfficerAssignmentRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+
+  /// ✅ D3 — appraisal subject, assessor, reviewer, and identity-access provenance
+  appraisalCyclesAsTarget   AppraisalCycle[]          @relation("AppraisalCycleTargetAssignment")
+  appraisalAssessments      AppraisalAssessment[]     @relation("AppraisalAssessmentAssessorAssignment")
+  appraisalReviews          AppraisalReview[]         @relation("AppraisalReviewReviewerAssignment")
+  appraisalIdentityAccesses AppraisalIdentityAccess[] @relation("AppraisalIdentityAccessActorAssignment")
 
   @@index([userId])
   @@index([zoneId])
@@ -3399,10 +3439,555 @@ model GovernanceOfficialNoticeAttachmentAccess {
   @@index([actorUserId, createdAt], map: "GovernanceNoticeAttachmentAccess_actor_created_idx")
 }
 
+/// *
+/// * =======================
+/// * D3 — Generalized Appraisal Foundation
+/// * =======================
+/// * Existing TeacherAppraisal/TeacherAppraisalScore remain unchanged.
+/// * These models support headteacher feedback cycles, governance assessments,
+/// * governance-officer feedback, review, release, confidentiality, and audit.
+model AppraisalInstrument {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  code        String                     @unique(map: "AppraisalInstrument_code_unique") @db.VarChar(80)
+  purpose     AppraisalInstrumentPurpose
+  subjectType AppraisalSubjectType
+  name        String                     @db.VarChar(180)
+  description String?                    @db.Text
+  isActive    Boolean                    @default(true)
+
+  createdByUserId String?
+  metadata        Json    @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  createdBy User?                        @relation("AppraisalInstrumentCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull, map: "AppraisalInstrument_createdBy_fkey")
+  versions  AppraisalInstrumentVersion[]
+
+  @@index([purpose, isActive], map: "AppraisalInstrument_purpose_active_idx")
+  @@index([subjectType, isActive], map: "AppraisalInstrument_subject_active_idx")
+  @@index([createdByUserId], map: "AppraisalInstrument_createdBy_idx")
+  @@map("appraisal_instrument")
+}
+
+model AppraisalInstrumentVersion {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  instrumentId String                           @db.Uuid
+  version      Int
+  status       AppraisalInstrumentVersionStatus @default(DRAFT)
+
+  title           String  @db.VarChar(220)
+  directorateName String? @db.VarChar(220)
+  instructions    String? @db.Text
+
+  calculationMethod  AppraisalCalculationMethod @default(AVERAGE_VALID_SECTION_PERCENTAGES)
+  scaleMin           Int                        @default(1)
+  scaleMax           Int                        @default(5)
+  allowNotApplicable Boolean                    @default(true)
+  allowComments      Boolean                    @default(false)
+
+  contentHash String? @db.VarChar(64)
+
+  publishedByUserId String?
+  publishedAt       DateTime? @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  instrument  AppraisalInstrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade, map: "AppraisalInstrumentVersion_instrument_fkey")
+  publishedBy User?               @relation("AppraisalInstrumentVersionPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull, map: "AppraisalInstrumentVersion_publishedBy_fkey")
+
+  sections    AppraisalInstrumentSection[]
+  cycles      AppraisalCycle[]
+  responses   AppraisalResponse[]
+  assessments AppraisalAssessment[]
+
+  @@unique([instrumentId, version], map: "AppraisalInstrumentVersion_instrument_version_unique")
+  @@unique([instrumentId, contentHash], map: "AppraisalInstrumentVersion_instrument_hash_unique")
+  @@index([instrumentId, status], map: "AppraisalInstrumentVersion_instrument_status_idx")
+  @@index([publishedByUserId], map: "AppraisalInstrumentVersion_publishedBy_idx")
+  @@index([publishedAt], map: "AppraisalInstrumentVersion_publishedAt_idx")
+  @@map("appraisal_instrument_version")
+}
+
+model AppraisalInstrumentSection {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  instrumentVersionId String @db.Uuid
+
+  key         String  @db.VarChar(80)
+  title       String  @db.VarChar(220)
+  description String? @db.Text
+  order       Int
+  maxScore    Int
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  instrumentVersion AppraisalInstrumentVersion @relation(fields: [instrumentVersionId], references: [id], onDelete: Cascade, map: "AppraisalInstrumentSection_version_fkey")
+  items             AppraisalInstrumentItem[]
+
+  @@unique([instrumentVersionId, key], map: "AppraisalInstrumentSection_version_key_unique")
+  @@unique([instrumentVersionId, order], map: "AppraisalInstrumentSection_version_order_unique")
+  @@index([instrumentVersionId, order], map: "AppraisalInstrumentSection_version_order_idx")
+  @@map("appraisal_instrument_section")
+}
+
+model AppraisalInstrumentItem {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  sectionId String @db.Uuid
+
+  key        String  @db.VarChar(80)
+  label      String  @db.Text
+  order      Int
+  maxScore   Int     @default(5)
+  isRequired Boolean @default(true)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  section          AppraisalInstrumentSection @relation(fields: [sectionId], references: [id], onDelete: Cascade, map: "AppraisalInstrumentItem_section_fkey")
+  responseScores   AppraisalResponseScore[]
+  assessmentScores AppraisalAssessmentScore[]
+
+  @@unique([sectionId, key], map: "AppraisalInstrumentItem_section_key_unique")
+  @@unique([sectionId, order], map: "AppraisalInstrumentItem_section_order_unique")
+  @@index([sectionId, order], map: "AppraisalInstrumentItem_section_order_idx")
+  @@map("appraisal_instrument_item")
+}
+
+model AppraisalCycle {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  instrumentVersionId String @db.Uuid
+  scopeZoneId         String
+
+  targetUserId                 String
+  targetTenantId               String?
+  targetZoneId                 String?
+  targetGovernanceAssignmentId String?
+
+  status             AppraisalCycleStatus                  @default(DRAFT)
+  identityVisibility AppraisalRespondentIdentityVisibility @default(DIRECTOR_ONLY)
+
+  idempotencyKey     String @unique(map: "AppraisalCycle_idempotency_unique") @db.VarChar(180)
+  responseWindowDays Int    @default(7)
+  minimumResponses   Int    @default(1)
+  extensionCount     Int    @default(0)
+
+  requestReason       String? @db.Text
+  approvalNote        String? @db.Text
+  releaseNote         String? @db.Text
+  cancellationReason  String? @db.Text
+  lastExtensionReason String? @db.Text
+
+  targetNameSnapshot       String? @db.VarChar(180)
+  targetRoleSnapshot       String? @db.VarChar(100)
+  targetSchoolNameSnapshot String? @db.VarChar(180)
+  targetZoneNameSnapshot   String? @db.VarChar(180)
+
+  requestedByUserId    String
+  approvedByUserId     String?
+  openedByUserId       String?
+  closedByUserId       String?
+  releasedByUserId     String?
+  cancelledByUserId    String?
+  lastExtendedByUserId String?
+
+  requestedAt     DateTime  @default(now()) @db.Timestamptz(6)
+  approvedAt      DateTime? @db.Timestamptz(6)
+  openedAt        DateTime? @db.Timestamptz(6)
+  deadlineAt      DateTime? @db.Timestamptz(6)
+  closedAt        DateTime? @db.Timestamptz(6)
+  reviewStartedAt DateTime? @db.Timestamptz(6)
+  releasedAt      DateTime? @db.Timestamptz(6)
+  cancelledAt     DateTime? @db.Timestamptz(6)
+  lastExtendedAt  DateTime? @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  instrumentVersion          AppraisalInstrumentVersion   @relation(fields: [instrumentVersionId], references: [id], onDelete: Restrict, map: "AppraisalCycle_version_fkey")
+  scopeZone                  AdminZone                    @relation("AppraisalCycleScopeZone", fields: [scopeZoneId], references: [id], onDelete: Restrict, map: "AppraisalCycle_scopeZone_fkey")
+  targetUser                 User                         @relation("AppraisalCycleTargetUser", fields: [targetUserId], references: [id], onDelete: Restrict, map: "AppraisalCycle_targetUser_fkey")
+  targetTenant               Tenant?                      @relation("AppraisalCycleTargetTenant", fields: [targetTenantId], references: [id], onDelete: SetNull, map: "AppraisalCycle_targetTenant_fkey")
+  targetZone                 AdminZone?                   @relation("AppraisalCycleTargetZone", fields: [targetZoneId], references: [id], onDelete: SetNull, map: "AppraisalCycle_targetZone_fkey")
+  targetGovernanceAssignment GovernanceOfficerAssignment? @relation("AppraisalCycleTargetAssignment", fields: [targetGovernanceAssignmentId], references: [id], onDelete: SetNull, map: "AppraisalCycle_targetAssignment_fkey")
+
+  requestedBy    User  @relation("AppraisalCycleRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Restrict, map: "AppraisalCycle_requestedBy_fkey")
+  approvedBy     User? @relation("AppraisalCycleApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull, map: "AppraisalCycle_approvedBy_fkey")
+  openedBy       User? @relation("AppraisalCycleOpenedBy", fields: [openedByUserId], references: [id], onDelete: SetNull, map: "AppraisalCycle_openedBy_fkey")
+  closedBy       User? @relation("AppraisalCycleClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull, map: "AppraisalCycle_closedBy_fkey")
+  releasedBy     User? @relation("AppraisalCycleReleasedBy", fields: [releasedByUserId], references: [id], onDelete: SetNull, map: "AppraisalCycle_releasedBy_fkey")
+  cancelledBy    User? @relation("AppraisalCycleCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull, map: "AppraisalCycle_cancelledBy_fkey")
+  lastExtendedBy User? @relation("AppraisalCycleExtendedBy", fields: [lastExtendedByUserId], references: [id], onDelete: SetNull, map: "AppraisalCycle_extendedBy_fkey")
+
+  participants     AppraisalParticipant[]
+  responses        AppraisalResponse[]
+  assessments      AppraisalAssessment[]
+  reviews          AppraisalReview[]
+  aggregates       AppraisalAggregateSnapshot[]
+  identityAccesses AppraisalIdentityAccess[]
+  notifications    AppraisalNotification[]
+
+  @@index([instrumentVersionId, status], map: "AppraisalCycle_version_status_idx")
+  @@index([scopeZoneId, status], map: "AppraisalCycle_scope_status_idx")
+  @@index([targetUserId, status], map: "AppraisalCycle_target_status_idx")
+  @@index([targetTenantId, status], map: "AppraisalCycle_tenant_status_idx")
+  @@index([targetZoneId, status], map: "AppraisalCycle_targetZone_status_idx")
+  @@index([targetGovernanceAssignmentId], map: "AppraisalCycle_targetAssignment_idx")
+  @@index([deadlineAt, status], map: "AppraisalCycle_deadline_status_idx")
+  @@index([requestedByUserId, requestedAt], map: "AppraisalCycle_requestedBy_requestedAt_idx")
+  @@map("appraisal_cycle")
+}
+
+model AppraisalParticipant {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  cycleId            String  @db.Uuid
+  respondentUserId   String
+  respondentTenantId String?
+
+  status AppraisalParticipantStatus @default(NOT_STARTED)
+
+  respondentRoleSnapshot  String? @db.VarChar(100)
+  eligibilitySnapshotJson Json    @default("{}")
+
+  selectedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  invitedAt   DateTime? @db.Timestamptz(6)
+  startedAt   DateTime? @db.Timestamptz(6)
+  finalizedAt DateTime? @db.Timestamptz(6)
+  expiredAt   DateTime? @db.Timestamptz(6)
+  revokedAt   DateTime? @db.Timestamptz(6)
+
+  revokedByUserId String?
+  revokeReason    String? @db.Text
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  cycle            AppraisalCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalParticipant_cycle_fkey")
+  respondent       User           @relation("AppraisalParticipantRespondent", fields: [respondentUserId], references: [id], onDelete: Restrict, map: "AppraisalParticipant_respondent_fkey")
+  respondentTenant Tenant?        @relation("AppraisalParticipantTenant", fields: [respondentTenantId], references: [id], onDelete: SetNull, map: "AppraisalParticipant_tenant_fkey")
+  revokedBy        User?          @relation("AppraisalParticipantRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull, map: "AppraisalParticipant_revokedBy_fkey")
+
+  response         AppraisalResponse?
+  identityAccesses AppraisalIdentityAccess[]
+
+  @@unique([cycleId, respondentUserId], map: "AppraisalParticipant_cycle_respondent_unique")
+  @@index([cycleId, status], map: "AppraisalParticipant_cycle_status_idx")
+  @@index([respondentUserId, status], map: "AppraisalParticipant_respondent_status_idx")
+  @@index([respondentTenantId, status], map: "AppraisalParticipant_tenant_status_idx")
+  @@index([finalizedAt], map: "AppraisalParticipant_finalizedAt_idx")
+  @@map("appraisal_participant")
+}
+
+model AppraisalResponse {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  cycleId             String @db.Uuid
+  participantId       String @unique(map: "AppraisalResponse_participant_unique") @db.Uuid
+  instrumentVersionId String @db.Uuid
+
+  status AppraisalResponseStatus @default(DRAFT)
+
+  overallPercentage      Float?
+  sectionPercentagesJson Json    @default("{}")
+  generalComment         String? @db.Text
+  responseHash           String? @db.VarChar(64)
+
+  finalizedByUserId String?
+  finalizedAt       DateTime? @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  cycle             AppraisalCycle             @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalResponse_cycle_fkey")
+  participant       AppraisalParticipant       @relation(fields: [participantId], references: [id], onDelete: Cascade, map: "AppraisalResponse_participant_fkey")
+  instrumentVersion AppraisalInstrumentVersion @relation(fields: [instrumentVersionId], references: [id], onDelete: Restrict, map: "AppraisalResponse_version_fkey")
+  finalizedBy       User?                      @relation("AppraisalResponseFinalizedBy", fields: [finalizedByUserId], references: [id], onDelete: SetNull, map: "AppraisalResponse_finalizedBy_fkey")
+
+  scores           AppraisalResponseScore[]
+  identityAccesses AppraisalIdentityAccess[]
+
+  @@index([cycleId, status], map: "AppraisalResponse_cycle_status_idx")
+  @@index([instrumentVersionId], map: "AppraisalResponse_version_idx")
+  @@index([finalizedAt], map: "AppraisalResponse_finalizedAt_idx")
+  @@map("appraisal_response")
+}
+
+model AppraisalResponseScore {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  responseId       String @db.Uuid
+  instrumentItemId String @db.Uuid
+
+  sectionKey      String @db.VarChar(80)
+  sectionTitle    String @db.VarChar(220)
+  sectionOrder    Int
+  sectionMaxScore Int
+
+  itemKey      String @db.VarChar(80)
+  itemLabel    String @db.Text
+  itemOrder    Int
+  itemMaxScore Int    @default(5)
+
+  score         Int?
+  notApplicable Boolean @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  response       AppraisalResponse       @relation(fields: [responseId], references: [id], onDelete: Cascade, map: "AppraisalResponseScore_response_fkey")
+  instrumentItem AppraisalInstrumentItem @relation(fields: [instrumentItemId], references: [id], onDelete: Restrict, map: "AppraisalResponseScore_item_fkey")
+
+  @@unique([responseId, instrumentItemId], map: "AppraisalResponseScore_response_item_unique")
+  @@index([responseId, sectionOrder, itemOrder], map: "AppraisalResponseScore_response_order_idx")
+  @@index([instrumentItemId], map: "AppraisalResponseScore_item_idx")
+  @@map("appraisal_response_score")
+}
+
+model AppraisalAssessment {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  cycleId             String @db.Uuid
+  instrumentVersionId String @db.Uuid
+
+  assessorUserId       String
+  assessorAssignmentId String?
+
+  status   AppraisalAssessmentStatus @default(DRAFT)
+  revision Int                       @default(1)
+
+  priorAssessmentId String? @db.Uuid
+
+  dateObserved DateTime? @db.Date
+
+  overallPercentage      Float?
+  sectionPercentagesJson Json    @default("{}")
+  generalComment         String? @db.Text
+  evidenceSnapshotJson   Json    @default("{}")
+  assessmentHash         String? @db.VarChar(64)
+
+  finalizedByUserId String?
+  finalizedAt       DateTime? @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  cycle              AppraisalCycle               @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalAssessment_cycle_fkey")
+  instrumentVersion  AppraisalInstrumentVersion   @relation(fields: [instrumentVersionId], references: [id], onDelete: Restrict, map: "AppraisalAssessment_version_fkey")
+  assessor           User                         @relation("AppraisalAssessmentAssessor", fields: [assessorUserId], references: [id], onDelete: Restrict, map: "AppraisalAssessment_assessor_fkey")
+  assessorAssignment GovernanceOfficerAssignment? @relation("AppraisalAssessmentAssessorAssignment", fields: [assessorAssignmentId], references: [id], onDelete: SetNull, map: "AppraisalAssessment_assignment_fkey")
+  finalizedBy        User?                        @relation("AppraisalAssessmentFinalizedBy", fields: [finalizedByUserId], references: [id], onDelete: SetNull, map: "AppraisalAssessment_finalizedBy_fkey")
+
+  priorAssessment AppraisalAssessment?  @relation("AppraisalAssessmentRevision", fields: [priorAssessmentId], references: [id], onDelete: SetNull, map: "AppraisalAssessment_prior_fkey")
+  revisions       AppraisalAssessment[] @relation("AppraisalAssessmentRevision")
+
+  scores  AppraisalAssessmentScore[]
+  reviews AppraisalReview[]
+
+  @@unique([cycleId, assessorUserId, revision], map: "AppraisalAssessment_cycle_assessor_revision_unique")
+  @@index([cycleId, status], map: "AppraisalAssessment_cycle_status_idx")
+  @@index([instrumentVersionId], map: "AppraisalAssessment_version_idx")
+  @@index([assessorUserId, status], map: "AppraisalAssessment_assessor_status_idx")
+  @@index([assessorAssignmentId], map: "AppraisalAssessment_assignment_idx")
+  @@index([priorAssessmentId], map: "AppraisalAssessment_prior_idx")
+  @@index([finalizedAt], map: "AppraisalAssessment_finalizedAt_idx")
+  @@map("appraisal_assessment")
+}
+
+model AppraisalAssessmentScore {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  assessmentId     String @db.Uuid
+  instrumentItemId String @db.Uuid
+
+  sectionKey      String @db.VarChar(80)
+  sectionTitle    String @db.VarChar(220)
+  sectionOrder    Int
+  sectionMaxScore Int
+
+  itemKey      String @db.VarChar(80)
+  itemLabel    String @db.Text
+  itemOrder    Int
+  itemMaxScore Int    @default(5)
+
+  score         Int?
+  notApplicable Boolean @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  assessment     AppraisalAssessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade, map: "AppraisalAssessmentScore_assessment_fkey")
+  instrumentItem AppraisalInstrumentItem @relation(fields: [instrumentItemId], references: [id], onDelete: Restrict, map: "AppraisalAssessmentScore_item_fkey")
+
+  @@unique([assessmentId, instrumentItemId], map: "AppraisalAssessmentScore_assessment_item_unique")
+  @@index([assessmentId, sectionOrder, itemOrder], map: "AppraisalAssessmentScore_assessment_order_idx")
+  @@index([instrumentItemId], map: "AppraisalAssessmentScore_item_idx")
+  @@map("appraisal_assessment_score")
+}
+
+model AppraisalReview {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  cycleId      String @db.Uuid
+  assessmentId String @db.Uuid
+
+  reviewerUserId       String
+  reviewerAssignmentId String?
+
+  stage     Int                     @default(1)
+  decision  AppraisalReviewDecision @default(PENDING)
+  note      String?                 @db.Text
+  decidedAt DateTime?               @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  cycle              AppraisalCycle               @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalReview_cycle_fkey")
+  assessment         AppraisalAssessment          @relation(fields: [assessmentId], references: [id], onDelete: Cascade, map: "AppraisalReview_assessment_fkey")
+  reviewer           User                         @relation("AppraisalReviewReviewer", fields: [reviewerUserId], references: [id], onDelete: Restrict, map: "AppraisalReview_reviewer_fkey")
+  reviewerAssignment GovernanceOfficerAssignment? @relation("AppraisalReviewReviewerAssignment", fields: [reviewerAssignmentId], references: [id], onDelete: SetNull, map: "AppraisalReview_assignment_fkey")
+
+  @@unique([assessmentId, stage], map: "AppraisalReview_assessment_stage_unique")
+  @@index([cycleId, decision], map: "AppraisalReview_cycle_decision_idx")
+  @@index([reviewerUserId, decision], map: "AppraisalReview_reviewer_decision_idx")
+  @@index([reviewerAssignmentId], map: "AppraisalReview_assignment_idx")
+  @@index([decidedAt], map: "AppraisalReview_decidedAt_idx")
+  @@map("appraisal_review")
+}
+
+model AppraisalAggregateSnapshot {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  cycleId String @db.Uuid
+  version Int    @default(1)
+
+  eligibleResponses  Int @default(0)
+  finalizedResponses Int @default(0)
+  expiredResponses   Int @default(0)
+  minimumResponses   Int @default(1)
+
+  releaseEligible Boolean @default(false)
+
+  overallPercentage   Float?
+  sectionAveragesJson Json   @default("{}")
+  itemAveragesJson    Json   @default("{}")
+  sourceHash          String @db.VarChar(64)
+
+  generatedByUserId String?
+  generatedAt       DateTime @default(now()) @db.Timestamptz(6)
+
+  metadata Json @default("{}")
+
+  cycle       AppraisalCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalAggregate_cycle_fkey")
+  generatedBy User?          @relation("AppraisalAggregateGeneratedBy", fields: [generatedByUserId], references: [id], onDelete: SetNull, map: "AppraisalAggregate_generatedBy_fkey")
+
+  @@unique([cycleId, version], map: "AppraisalAggregate_cycle_version_unique")
+  @@unique([cycleId, sourceHash], map: "AppraisalAggregate_cycle_hash_unique")
+  @@index([cycleId, generatedAt], map: "AppraisalAggregate_cycle_generatedAt_idx")
+  @@index([generatedByUserId], map: "AppraisalAggregate_generatedBy_idx")
+  @@map("appraisal_aggregate_snapshot")
+}
+
+model AppraisalIdentityAccess {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  cycleId       String  @db.Uuid
+  participantId String? @db.Uuid
+  responseId    String? @db.Uuid
+
+  actorUserId       String
+  actorAssignmentId String?
+
+  purpose AppraisalIdentityAccessPurpose
+  reason  String                         @db.Text
+
+  ip        String? @db.VarChar(64)
+  userAgent String? @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  cycle           AppraisalCycle               @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalIdentityAccess_cycle_fkey")
+  participant     AppraisalParticipant?        @relation(fields: [participantId], references: [id], onDelete: SetNull, map: "AppraisalIdentityAccess_participant_fkey")
+  response        AppraisalResponse?           @relation(fields: [responseId], references: [id], onDelete: SetNull, map: "AppraisalIdentityAccess_response_fkey")
+  actor           User                         @relation("AppraisalIdentityAccessActor", fields: [actorUserId], references: [id], onDelete: Restrict, map: "AppraisalIdentityAccess_actor_fkey")
+  actorAssignment GovernanceOfficerAssignment? @relation("AppraisalIdentityAccessActorAssignment", fields: [actorAssignmentId], references: [id], onDelete: SetNull, map: "AppraisalIdentityAccess_assignment_fkey")
+
+  @@index([cycleId, createdAt], map: "AppraisalIdentityAccess_cycle_createdAt_idx")
+  @@index([participantId, createdAt], map: "AppraisalIdentityAccess_participant_createdAt_idx")
+  @@index([responseId, createdAt], map: "AppraisalIdentityAccess_response_createdAt_idx")
+  @@index([actorUserId, createdAt], map: "AppraisalIdentityAccess_actor_createdAt_idx")
+  @@index([actorAssignmentId], map: "AppraisalIdentityAccess_assignment_idx")
+  @@map("appraisal_identity_access")
+}
+
+model AppraisalNotification {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  cycleId String @db.Uuid
+
+  recipientUserId   String
+  recipientTenantId String?
+
+  channel AppraisalNotificationChannel
+  type    AppraisalNotificationType
+  status  AppraisalNotificationStatus  @default(PENDING)
+
+  idempotencyKey String @unique(map: "AppraisalNotification_idempotency_unique") @db.VarChar(180)
+  payload        Json   @default("{}")
+
+  attempts    Int @default(0)
+  maxAttempts Int @default(5)
+  priority    Int @default(5)
+
+  nextAttemptAt DateTime  @default(now()) @db.Timestamptz(6)
+  lockedAt      DateTime? @db.Timestamptz(6)
+  lockedBy      String?   @db.VarChar(120)
+
+  lastError String?   @db.Text
+  sentAt    DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  cycle           AppraisalCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade, map: "AppraisalNotification_cycle_fkey")
+  recipient       User           @relation("AppraisalNotificationRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict, map: "AppraisalNotification_recipient_fkey")
+  recipientTenant Tenant?        @relation("AppraisalNotificationTenant", fields: [recipientTenantId], references: [id], onDelete: SetNull, map: "AppraisalNotification_tenant_fkey")
+
+  @@index([cycleId, type], map: "AppraisalNotification_cycle_type_idx")
+  @@index([recipientUserId, status], map: "AppraisalNotification_recipient_status_idx")
+  @@index([recipientTenantId, status], map: "AppraisalNotification_tenant_status_idx")
+  @@index([status, nextAttemptAt, priority], map: "AppraisalNotification_dispatch_idx")
+  @@map("appraisal_notification")
+}
+
 enum GovernanceOfficerRole {
   SISSO
   CIRCUIT_SUPERVISOR
   DISTRICT_DIRECTOR
+  HEAD_OF_SUPERVISION
+  BASIC_SCHOOL_COORDINATOR
   DISTRICT_MIS_OFFICER
   DISTRICT_SHEP_OFFICER
   DISTRICT_ASSESSMENT_OFFICER
@@ -3578,6 +4163,106 @@ enum SchemeStatus {
 enum TeacherAppraisalStatus {
   DRAFT
   FINALIZED
+}
+
+enum AppraisalInstrumentPurpose {
+  TEACHER_OBSERVATION
+  HEADTEACHER_STAFF_FEEDBACK
+  HEADTEACHER_SUPERVISORY_ASSESSMENT
+  GOVERNANCE_OFFICER_FEEDBACK
+}
+
+enum AppraisalSubjectType {
+  TEACHER
+  HEADTEACHER
+  GOVERNANCE_OFFICER
+}
+
+enum AppraisalInstrumentVersionStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AppraisalCalculationMethod {
+  AVERAGE_VALID_SECTION_PERCENTAGES
+}
+
+enum AppraisalCycleStatus {
+  DRAFT
+  PENDING_APPROVAL
+  OPEN
+  CLOSED
+  UNDER_REVIEW
+  RELEASED
+  CANCELLED
+}
+
+enum AppraisalRespondentIdentityVisibility {
+  TARGET_VISIBLE
+  AUTHORIZED_GOVERNANCE_ONLY
+  DIRECTOR_ONLY
+}
+
+enum AppraisalParticipantStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  FINALIZED
+  EXPIRED
+  REVOKED
+}
+
+enum AppraisalResponseStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum AppraisalAssessmentStatus {
+  DRAFT
+  FINALIZED
+  RETURNED
+  SUPERSEDED
+}
+
+enum AppraisalReviewDecision {
+  PENDING
+  ACCEPTED
+  RETURNED
+  HELD
+}
+
+enum AppraisalIdentityAccessPurpose {
+  ACCOUNTABILITY_REVIEW
+  INVESTIGATION
+  SUPPORT
+  LEGAL_COMPLIANCE
+}
+
+enum AppraisalNotificationChannel {
+  IN_APP
+  SMS
+  EMAIL
+}
+
+enum AppraisalNotificationType {
+  REQUEST_SUBMITTED
+  CYCLE_OPENED
+  DEADLINE_EXTENDED
+  DEADLINE_REMINDER
+  RESPONSE_FINALIZED
+  REVIEW_READY
+  FEEDBACK_RELEASED
+  CYCLE_CANCELLED
+}
+
+enum AppraisalNotificationStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+  CANCELLED
+  DEAD
 }
 
 enum SchoolSector {

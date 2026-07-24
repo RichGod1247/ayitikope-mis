@@ -30,10 +30,15 @@ import {
   emptyTeacherAbsenteeismOverview,
 } from "@/lib/governance/teacherAbsenteeism";
 
-export const CIRCUIT_GOVERNANCE_ROLES = ["SISSO", "CIRCUIT_SUPERVISOR"] as const;
+export const CIRCUIT_GOVERNANCE_ROLES = [
+  "SISSO",
+  "CIRCUIT_SUPERVISOR",
+] as const;
 
 export const DISTRICT_GOVERNANCE_ROLES = [
   "DISTRICT_DIRECTOR",
+  "HEAD_OF_SUPERVISION",
+  "BASIC_SCHOOL_COORDINATOR",
   "DISTRICT_MIS_OFFICER",
   "DISTRICT_SHEP_OFFICER",
   "DISTRICT_ASSESSMENT_OFFICER",
