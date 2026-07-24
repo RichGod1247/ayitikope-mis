@@ -74,6 +74,15 @@ type AppraisalDetail = AppraisalSummary & {
   scores: ScoreRow[];
 };
 
+type GroupedScoreSection = {
+  key: string;
+  sectionKey: string;
+  title: string;
+  sectionOrder: number;
+  sectionMaxScore: number;
+  rows: ScoreRow[];
+};
+
 type ListResponse = { ok: true; items: AppraisalSummary[] } | { ok: false; error: string };
 type DetailResponse = { ok: true; item: AppraisalDetail } | { ok: false; error: string };
 
@@ -121,12 +130,29 @@ function scoreText(row: ScoreRow) {
   return "—";
 }
 
-function scoreTone(score: number | null, na: boolean) {
-  if (na) return "border-white/10 bg-white/5 text-[#C9CDD6]";
-  if (score == null) return "border-white/10 bg-white/5 text-[#C9CDD6]";
-  if (score >= 4) return "border-emerald-300/25 bg-emerald-400/12 text-emerald-100";
-  if (score === 3) return "border-amber-300/25 bg-amber-400/12 text-amber-100";
-  return "border-rose-300/25 bg-rose-400/12 text-rose-100";
+function scoreDescriptor(score: number | null, na: boolean) {
+  if (na) return "Not applicable";
+  if (score === 1) return "Very poor";
+  if (score === 2) return "Poor";
+  if (score === 3) return "Acceptable";
+  if (score === 4) return "Good";
+  if (score === 5) return "Very good";
+  return "Not scored";
+}
+
+function paperScoreTone(score: number | null, na: boolean) {
+  if (na) return "border-slate-300 bg-slate-100 text-slate-800";
+  if (score == null) return "border-slate-300 bg-slate-100 text-slate-500";
+  if (score >= 4) return "border-emerald-300 bg-emerald-100 text-emerald-950";
+  if (score === 3) return "border-amber-300 bg-amber-100 text-amber-950";
+  return "border-rose-300 bg-rose-100 text-rose-950";
+}
+
+function paperPercentTone(value: number | null | undefined) {
+  if (value == null) return "border-slate-300 bg-slate-100 text-slate-700";
+  if (value >= 80) return "border-emerald-300 bg-emerald-100 text-emerald-950";
+  if (value >= 60) return "border-amber-300 bg-amber-100 text-amber-950";
+  return "border-rose-300 bg-rose-100 text-rose-950";
 }
 
 function percentTone(value: number | null | undefined) {
@@ -162,16 +188,47 @@ function EvidenceWarningsBox({ warnings }: { warnings?: EvidenceWarning[] }) {
   );
 }
 
-function sectionTitleFromKey(key: keyof SectionPercentages) {
-  const map: Record<keyof SectionPercentages, string> = {
-    preparation: "1.0 Preparation",
-    lessonDelivery: "2.0 Lesson delivery",
-    classroomCulture: "3.0 Classroom culture",
-    learnerParticipation: "4.0 Learner participation",
-    understandingStrategies: "5.0 Understanding strategies",
-    evaluationStrategies: "6.0 Evaluation strategies",
-  };
-  return map[key];
+function compactParts(parts: Array<string | number | null | undefined>) {
+  return parts
+    .map((part) => String(part ?? "").trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function formatNumber(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? String(value) : "—";
+}
+
+function sectionPercentForOrder(detail: AppraisalDetail, order: number) {
+  if (order === 1) return detail.sectionPercentages.preparation;
+  if (order === 2) return detail.sectionPercentages.lessonDelivery;
+  if (order === 3) return detail.sectionPercentages.classroomCulture;
+  if (order === 4) return detail.sectionPercentages.learnerParticipation;
+  if (order === 5) return detail.sectionPercentages.understandingStrategies;
+  if (order === 6) return detail.sectionPercentages.evaluationStrategies;
+  return null;
+}
+
+function scoredTotal(rows: ScoreRow[]) {
+  return rows.reduce((sum, row) => {
+    if (row.notApplicable || typeof row.score !== "number") return sum;
+    return sum + row.score;
+  }, 0);
+}
+
+function applicableMaximum(rows: ScoreRow[]) {
+  return rows.filter((row) => !row.notApplicable).length * 5;
+}
+
+function selectedChoice(row: ScoreRow, value: number | "N/A") {
+  if (value === "N/A") return row.notApplicable;
+  return !row.notApplicable && row.score === value;
+}
+
+function choiceCellTone(row: ScoreRow, value: number | "N/A") {
+  if (!selectedChoice(row, value)) return "border-slate-200 bg-white text-slate-300";
+  if (value === "N/A") return "border-slate-400 bg-slate-200 text-slate-950";
+  return paperScoreTone(value, false);
 }
 
 const cardShell =
@@ -179,6 +236,347 @@ const cardShell =
 const panel = "rounded-2xl border border-white/10 bg-[#0C1730]/78";
 const outlineBtn =
   "rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-[#F7F4ED] transition hover:bg-white/10 disabled:opacity-60";
+
+function TeacherOfficialAppraisalForm({
+  detail,
+  selectedSummary,
+  sections,
+}: {
+  detail: AppraisalDetail;
+  selectedSummary: AppraisalSummary | null;
+  sections: GroupedScoreSection[];
+}) {
+  const teacherName =
+    detail.teacherNameSnapshot || detail.evidence.summary.teacherName || "—";
+  const schoolName =
+    detail.schoolNameSnapshot || detail.evidence.summary.schoolName || "—";
+  const circuitName =
+    detail.circuitSnapshot || detail.evidence.summary.circuit || "—";
+  const subject =
+    detail.subject || selectedSummary?.subject || "Observed lesson";
+
+  const particulars: Array<[string, string]> = [
+    ["Name of Teacher", teacherName],
+    ["Number of Years in the Service", formatNumber(detail.yearsInService)],
+    ["Name of School", schoolName],
+    ["Number of Years in Present School", formatNumber(detail.yearsInPresentSchool)],
+    ["Name of Circuit", circuitName],
+    ["Subject Being Observed", subject],
+    ["Date Observed", fmtDate(detail.dateObserved)],
+    ["Sub-strand", detail.subStrand || "—"],
+    ["Class Taught", detail.classTaught || "—"],
+    [
+      "Duration of Lesson",
+      detail.durationMinutes != null ? `${detail.durationMinutes} minutes` : "—",
+    ],
+    ["Academic Context", compactParts([detail.term, detail.academicYear]) || "—"],
+    ["Appraiser", detail.appraiserNameSnapshot || "Headteacher"],
+    ["Finalized", fmtDateTime(detail.finalizedAt)],
+  ];
+
+  return (
+    <div className="space-y-5">
+      <article className="overflow-hidden rounded-[24px] border border-slate-300 bg-white text-slate-950 shadow-[0_20px_60px_rgba(0,0,0,0.24)]">
+        <header className="border-b border-slate-300 px-4 py-5 text-center md:px-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">
+            EduLife OS · Finalized teacher appraisal
+          </p>
+          <h2 className="mt-2 text-base font-black uppercase md:text-lg">
+            Monitoring and Inspection Sheet (Teachers)
+          </h2>
+          <p className="mt-2 text-xs text-slate-600">
+            Read-only official feedback · {schoolName}
+          </p>
+        </header>
+
+        <section className="grid border-b border-slate-300 text-xs md:grid-cols-2">
+          {particulars.map(([label, value]) => (
+            <div
+              key={label}
+              className="grid grid-cols-[minmax(132px,42%)_1fr] border-b border-slate-200"
+            >
+              <div className="border-r border-slate-200 bg-slate-100 px-3 py-2 font-bold uppercase leading-5">
+                {label}
+              </div>
+              <div className="min-w-0 break-words px-3 py-2 leading-5">{value}</div>
+            </div>
+          ))}
+        </section>
+
+        <section className="border-b border-slate-300 bg-slate-50 px-4 py-4 md:px-6">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-700">
+            Scoring guide
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+            {[
+              { label: "N/A", detail: "Not applicable", score: null, na: true },
+              { label: "1", detail: "Very poor", score: 1, na: false },
+              { label: "2", detail: "Poor", score: 2, na: false },
+              { label: "3", detail: "Acceptable", score: 3, na: false },
+              { label: "4", detail: "Good", score: 4, na: false },
+              { label: "5", detail: "Very good", score: 5, na: false },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className={cx(
+                  "rounded-xl border px-3 py-2 text-center",
+                  paperScoreTone(item.score, item.na)
+                )}
+              >
+                <p className="text-sm font-black">{item.label}</p>
+                <p className="mt-0.5 text-[11px] font-semibold">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div>
+          {sections.map((section) => {
+            const rows = [...section.rows].sort(
+              (a, b) => a.itemOrder - b.itemOrder
+            );
+            const total = scoredTotal(rows);
+            const maximum = applicableMaximum(rows) || section.sectionMaxScore;
+            const percentage = sectionPercentForOrder(
+              detail,
+              section.sectionOrder
+            );
+
+            return (
+              <section
+                key={section.key}
+                className="border-b border-slate-300 last:border-b-0"
+              >
+                <div className="bg-slate-800 px-4 py-3 text-white md:px-6">
+                  <p className="text-xs font-black uppercase leading-5">
+                    {section.sectionOrder}.0 {section.title}
+                  </p>
+                </div>
+
+                <div className="space-y-2 p-3 md:hidden">
+                  {rows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="rounded-xl border border-slate-200 bg-white p-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="shrink-0 font-black text-slate-700">
+                          {row.itemKey}
+                        </span>
+                        <p className="text-sm leading-6 text-slate-800">
+                          {row.itemLabel}
+                        </p>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <span
+                          className={cx(
+                            "rounded-full border px-3 py-1.5 text-xs font-black",
+                            paperScoreTone(row.score, row.notApplicable)
+                          )}
+                        >
+                          {scoreText(row)} ·{" "}
+                          {scoreDescriptor(row.score, row.notApplicable)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[780px] border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="bg-slate-100">
+                        <th className="w-[52px] border border-slate-300 px-2 py-2">
+                          S/N
+                        </th>
+                        <th className="border border-slate-300 px-2 py-2">
+                          Behavioural competence
+                        </th>
+                        <th className="w-[48px] border border-slate-300 px-2 py-2 text-center">
+                          N/A
+                        </th>
+                        {[1, 2, 3, 4, 5].map((score) => (
+                          <th
+                            key={score}
+                            className="w-[42px] border border-slate-300 px-2 py-2 text-center"
+                          >
+                            {score}
+                          </th>
+                        ))}
+                        <th className="w-[112px] border border-slate-300 px-2 py-2 text-center">
+                          Final score
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr key={row.id}>
+                          <td className="border border-slate-300 px-2 py-2 font-bold">
+                            {row.itemKey}
+                          </td>
+                          <td className="border border-slate-300 px-2 py-2 leading-5">
+                            {row.itemLabel}
+                          </td>
+                          <td
+                            className={cx(
+                              "border px-2 py-2 text-center font-black",
+                              choiceCellTone(row, "N/A")
+                            )}
+                          >
+                            {selectedChoice(row, "N/A") ? "✓" : ""}
+                          </td>
+                          {[1, 2, 3, 4, 5].map((score) => (
+                            <td
+                              key={score}
+                              className={cx(
+                                "border px-2 py-2 text-center font-black",
+                                choiceCellTone(row, score)
+                              )}
+                            >
+                              {selectedChoice(row, score) ? "✓" : ""}
+                            </td>
+                          ))}
+                          <td className="border border-slate-300 px-2 py-2 text-center">
+                            <span
+                              className={cx(
+                                "inline-flex rounded-full border px-2.5 py-1 font-black",
+                                paperScoreTone(row.score, row.notApplicable)
+                              )}
+                            >
+                              {scoreText(row)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid gap-2 border-t border-slate-200 bg-slate-50 p-3 text-xs font-bold sm:grid-cols-[1fr_auto_auto] sm:items-center md:px-6">
+                  <span>TOTAL SCORE</span>
+                  <span>
+                    {total} / {maximum}
+                  </span>
+                  <span
+                    className={cx(
+                      "rounded-full border px-3 py-1 text-center",
+                      paperPercentTone(percentage)
+                    )}
+                  >
+                    {pct(percentage)}
+                  </span>
+                </div>
+
+                <div className="border-t border-slate-200 bg-slate-50 px-3 py-2 text-center text-[11px] font-bold text-slate-700 md:px-6">
+                  PERCENTAGE SCORE = (TOTAL SCORE / {maximum}) × 100 ={" "}
+                  {pct(percentage)}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        <section className="grid border-t border-slate-300 bg-slate-100 p-4 text-sm font-black sm:grid-cols-[1fr_auto] sm:items-center md:px-6">
+          <span>
+            OVERALL PERCENTAGE (1.0 + 2.0 + 3.0 + 4.0 + 5.0 + 6.0) ÷ 6
+          </span>
+          <span
+            className={cx(
+              "mt-3 rounded-xl border px-4 py-2 text-center text-xl sm:mt-0",
+              paperPercentTone(detail.overallPercentage)
+            )}
+          >
+            {pct(detail.overallPercentage)}
+          </span>
+        </section>
+
+        <section className="grid border-t border-slate-300 md:grid-cols-2">
+          <div className="border-b border-slate-300 p-4 md:border-b-0 md:border-r md:p-6">
+            <p className="text-xs font-black uppercase tracking-[0.12em]">
+              General comment(s)
+            </p>
+            <p className="mt-3 min-h-20 whitespace-pre-line text-sm leading-7">
+              {detail.generalComment || "—"}
+            </p>
+          </div>
+
+          <div className="p-4 md:p-6">
+            <p className="text-xs font-black uppercase tracking-[0.12em]">
+              Finalization record
+            </p>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div>
+                <dt className="font-bold text-slate-600">Appraiser</dt>
+                <dd className="mt-1">{detail.appraiserNameSnapshot || "Headteacher"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-slate-600">Finalized</dt>
+                <dd className="mt-1">{fmtDateTime(detail.finalizedAt)}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-slate-600">Status</dt>
+                <dd className="mt-1">Finalized · Read only</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <footer className="border-t border-slate-300 bg-slate-100 px-4 py-3 text-[11px] leading-5 text-slate-700 md:px-6">
+          N/A responses are excluded from the section denominator. The final
+          overall percentage is the average of the six valid section percentages.
+        </footer>
+      </article>
+
+      <EvidenceWarningsBox warnings={detail.evidenceWarnings} />
+
+      <section className={cx(panel, "p-4 md:p-5")}>
+        <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#E8C96A]">
+          Evidence linked
+        </h3>
+        <div className="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <p className="text-xs text-[#8F98A8]">Approved scheme</p>
+            <p className="mt-1 text-[#F7F4ED]">
+              {detail.evidence.summary.scheme.title ||
+                (detail.evidence.schemeOfWorkId ? "Linked" : "Not linked")}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <p className="text-xs text-[#8F98A8]">Approved lesson note</p>
+            <p className="mt-1 text-[#F7F4ED]">
+              {detail.evidence.summary.lessonNote.title ||
+                (detail.evidence.lessonNoteId ? "Linked" : "Not linked")}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <p className="text-xs text-[#8F98A8]">Lesson delivery</p>
+            <p className="mt-1 text-[#F7F4ED]">
+              {detail.evidence.summary.lessonDelivery.dateTaught
+                ? fmtDate(detail.evidence.summary.lessonDelivery.dateTaught)
+                : detail.evidence.lessonDeliveryId
+                  ? "Linked"
+                  : "Not linked"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+            <p className="text-xs text-[#8F98A8]">Assessment evidence</p>
+            <p className="mt-1 text-[#F7F4ED]">
+              {typeof detail.evidence.summary.assessment.count === "number"
+                ? `${detail.evidence.summary.assessment.count} item(s)`
+                : "Not stated"}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="rounded-2xl border border-sky-300/20 bg-sky-400/10 p-4 text-sm leading-7 text-sky-100">
+        <strong>How to read your score:</strong> each item is scored from 1 to 5.
+        N/A items are not counted. Each section becomes a percentage, then the six
+        section percentages are averaged into the overall score.
+      </div>
+    </div>
+  );
+}
 
 export default function TeacherAppraisalsClient() {
   const [items, setItems] = useState<AppraisalSummary[]>([]);
@@ -236,15 +634,31 @@ export default function TeacherAppraisalsClient() {
     void loadDetail(selectedId);
   }, [selectedId]);
 
-  const groupedScores = useMemo(() => {
-    const m = new Map<string, { title: string; rows: ScoreRow[] }>();
+  const groupedScores = useMemo<GroupedScoreSection[]>(() => {
+    const groups = new Map<string, GroupedScoreSection>();
+
     for (const row of detail?.scores ?? []) {
       const key = `${row.sectionOrder}:${row.sectionKey}`;
-      const current = m.get(key);
-      if (current) current.rows.push(row);
-      else m.set(key, { title: row.sectionTitle, rows: [row] });
+      const current = groups.get(key);
+
+      if (current) {
+        current.rows.push(row);
+        continue;
+      }
+
+      groups.set(key, {
+        key,
+        sectionKey: row.sectionKey,
+        title: row.sectionTitle,
+        sectionOrder: row.sectionOrder,
+        sectionMaxScore: row.sectionMaxScore,
+        rows: [row],
+      });
     }
-    return Array.from(m.entries()).map(([key, value]) => ({ key, ...value }));
+
+    return Array.from(groups.values()).sort(
+      (a, b) => a.sectionOrder - b.sectionOrder
+    );
   }, [detail]);
 
   const selectedSummary = items.find((x) => x.id === selectedId) ?? null;
@@ -354,89 +768,11 @@ export default function TeacherAppraisalsClient() {
               Select an appraisal to view the feedback details.
             </div>
           ) : (
-            <div className="space-y-5">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-[#F7F4ED]">
-                    {detail.subject || selectedSummary?.subject || "Observed lesson"}
-                  </h2>
-                  <p className="mt-1 text-sm text-[#C9CDD6]">
-                    {fmtDate(detail.dateObserved)} · {detail.classTaught || "Class not stated"} · {detail.term || "—"} · {detail.academicYear || "—"}
-                  </p>
-                  <p className="mt-1 text-xs text-[#AEB6C4]">
-                    Finalized: {fmtDateTime(detail.finalizedAt)} · Appraiser: {detail.appraiserNameSnapshot || "Headteacher"}
-                  </p>
-                </div>
-
-                <div className={cx("rounded-2xl border px-4 py-3 text-center", percentTone(detail.overallPercentage))}>
-                  <p className="text-xs opacity-80">Overall score</p>
-                  <p className="mt-1 text-2xl font-extrabold">{pct(detail.overallPercentage)}</p>
-                </div>
-              </div>
-
-              {detail.generalComment ? (
-                <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#D4AF37]/10 p-4">
-                  <p className="text-xs uppercase tracking-[0.14em] text-[#E8C96A]">General comment</p>
-                  <p className="mt-2 text-sm leading-7 text-[#F7F4ED]">{detail.generalComment}</p>
-                </div>
-              ) : null}
-
-              <EvidenceWarningsBox warnings={detail.evidenceWarnings} />
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {(Object.keys(detail.sectionPercentages) as Array<keyof SectionPercentages>).map((key) => (
-                  <div key={key} className={cx("rounded-2xl border p-4", percentTone(detail.sectionPercentages[key]))}>
-                    <p className="text-xs opacity-80">{sectionTitleFromKey(key)}</p>
-                    <p className="mt-2 text-lg font-bold">{pct(detail.sectionPercentages[key])}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className={cx(panel, "p-4")}>
-                <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#E8C96A]">Evidence linked</h3>
-                <div className="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs text-[#8F98A8]">Approved scheme</p>
-                    <p className="mt-1 text-[#F7F4ED]">{detail.evidence.summary.scheme.title || (detail.evidence.schemeOfWorkId ? "Linked" : "Not linked")}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs text-[#8F98A8]">Approved lesson note</p>
-                    <p className="mt-1 text-[#F7F4ED]">{detail.evidence.summary.lessonNote.title || (detail.evidence.lessonNoteId ? "Linked" : "Not linked")}</p>
-                  </div>
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs text-[#8F98A8]">Lesson delivery</p>
-                    <p className="mt-1 text-[#F7F4ED]">{detail.evidence.summary.lessonDelivery.dateTaught || (detail.evidence.lessonDeliveryId ? "Linked" : "Not linked")}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-sky-300/20 bg-sky-400/10 p-4 text-sm leading-7 text-sky-100">
-                <strong>How to read your score:</strong> each item is scored from 1 to 5. N/A items are not counted.
-                Each section becomes a percentage, then the six section percentages are averaged into the overall score.
-              </div>
-
-              <div className="space-y-4">
-                {groupedScores.map((section) => (
-                  <div key={section.key} className={cx(panel, "p-4")}>
-                    <h3 className="font-semibold text-[#F7F4ED]">{section.title}</h3>
-                    <div className="mt-3 space-y-2">
-                      {section.rows.map((row) => (
-                        <div
-                          key={row.id}
-                          className="grid grid-cols-[52px_1fr_auto] items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm"
-                        >
-                          <span className="font-semibold text-[#E8C96A]">{row.itemKey}</span>
-                          <span className="leading-6 text-[#E1E6EF]">{row.itemLabel}</span>
-                          <span className={cx("rounded-full border px-3 py-1 text-xs font-bold", scoreTone(row.score, row.notApplicable))}>
-                            {scoreText(row)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <TeacherOfficialAppraisalForm
+              detail={detail}
+              selectedSummary={selectedSummary}
+              sections={groupedScores}
+            />
           )}
         </main>
       </section>
