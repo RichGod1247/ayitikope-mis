@@ -13,6 +13,11 @@ const CANONICAL_DEFINITION_SCHEMA_VERSION = 1;
 const DEFINITION_HASH_ALGORITHM = "sha256";
 const PUBLICATION_RESOURCE = "AppraisalInstrumentVersion";
 
+export const APPRAISAL_PUBLICATION_TRANSACTION_OPTIONS = Object.freeze({
+  maxWait: 10_000,
+  timeout: 30_000,
+});
+
 type JsonObject = Record<string, Prisma.InputJsonValue>;
 
 type StoredInstrumentIdentity = {
@@ -59,6 +64,10 @@ export type AppraisalPublicationDatabase = {
   };
   $transaction<T>(
     callback: (tx: AppraisalPublicationTransaction) => Promise<T>,
+    options?: {
+      maxWait?: number;
+      timeout?: number;
+    },
   ): Promise<T>;
 };
 
@@ -637,7 +646,7 @@ export async function publishAppraisalInstrumentVersion(
         itemCount: itemCount(definition),
         publishedAt: createdVersion.publishedAt.toISOString(),
       };
-    });
+    }, APPRAISAL_PUBLICATION_TRANSACTION_OPTIONS);
   } catch (error) {
     if (isUniqueConflict(error)) {
       const existing = await findExistingPublication(

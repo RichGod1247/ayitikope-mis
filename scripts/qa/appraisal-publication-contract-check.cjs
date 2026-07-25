@@ -109,6 +109,7 @@ class FakePublicationDatabase {
     this.auditLogs = [];
     this.versionStatusTransitions = [];
     this.transactionCalls = 0;
+    this.transactionOptions = [];
     this.instrumentSequence = 0;
     this.versionSequence = 0;
     this.sectionSequence = 0;
@@ -298,8 +299,9 @@ class FakePublicationDatabase {
     };
   }
 
-  async $transaction(callback) {
+  async $transaction(callback, options) {
     this.transactionCalls += 1;
+    this.transactionOptions.push(clone(options ?? null));
     return callback(this.transactionClient());
   }
 }
@@ -322,6 +324,7 @@ async function main() {
     serializeCanonicalAppraisalInstrumentDefinition,
     hashAppraisalInstrumentDefinition,
     publishAppraisalInstrumentVersion,
+    APPRAISAL_PUBLICATION_TRANSACTION_OPTIONS,
   } = publication;
 
   const directorCode =
@@ -427,6 +430,21 @@ async function main() {
   assertEqual(database.sections.length, 7, "Section row count");
   assertEqual(database.items.length, 35, "Item row count");
   assertEqual(database.auditLogs.length, 1, "Publication audit count");
+  assertEqual(
+    JSON.stringify(database.transactionOptions[0]),
+    JSON.stringify(APPRAISAL_PUBLICATION_TRANSACTION_OPTIONS),
+    "Bounded publication transaction options",
+  );
+  assertEqual(
+    APPRAISAL_PUBLICATION_TRANSACTION_OPTIONS.maxWait,
+    10_000,
+    "Publication transaction max-wait",
+  );
+  assertEqual(
+    APPRAISAL_PUBLICATION_TRANSACTION_OPTIONS.timeout,
+    30_000,
+    "Publication transaction timeout",
+  );
   assertEqual(
     database.auditLogs[0].action,
     "APPRAISAL_INSTRUMENT_VERSION_PUBLISHED",
@@ -630,6 +648,7 @@ async function main() {
   console.log("Director V1 raw maximum      : 175");
   console.log("Jurisdiction hardcoding      : absent");
   console.log("Draft-to-active sequence     : verified");
+  console.log("Transaction timeout          : 30 seconds, bounded");
   console.log("Atomic nested publication    : verified");
   console.log("Publication audit            : verified");
   console.log("Same-hash idempotency        : verified");
