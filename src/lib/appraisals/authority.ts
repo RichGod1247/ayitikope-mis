@@ -1,4 +1,4 @@
-//src/lib/appraisals/authority.ts
+//src\lib\appraisals\authority.ts
 import { effectiveRole } from "@/lib/roleRouting";
 
 export const APPRAISAL_CAPABILITIES = [
@@ -11,6 +11,9 @@ export const APPRAISAL_CAPABILITIES = [
   "ASSESS_HEADTEACHER",
   "REVIEW_HEADTEACHER_APPRAISAL",
   "RELEASE_HEADTEACHER_FEEDBACK",
+  "OPEN_DIRECTOR_FEEDBACK_CYCLE",
+  "EXTEND_DIRECTOR_FEEDBACK_CYCLE",
+  "VIEW_DIRECTOR_FEEDBACK_RESULTS",
   "VIEW_CONFIDENTIAL_RESPONDENTS",
   "ASSESS_GOVERNANCE_OFFICER",
   "VIEW_OWN_GOVERNANCE_APPRAISAL",
@@ -64,7 +67,8 @@ const ROLE_CAPABILITIES = {
     "ASSESS_HEADTEACHER",
     "REVIEW_HEADTEACHER_APPRAISAL",
     "RELEASE_HEADTEACHER_FEEDBACK",
-    "VIEW_CONFIDENTIAL_RESPONDENTS",
+    "OPEN_DIRECTOR_FEEDBACK_CYCLE",
+    "VIEW_DIRECTOR_FEEDBACK_RESULTS",
     "ASSESS_GOVERNANCE_OFFICER",
     "VIEW_OWN_GOVERNANCE_APPRAISAL",
   ],
@@ -171,5 +175,7 @@ export const APPRAISAL_AUTHORITY_RULES = {
   scopeMustBeCheckedSeparately: true,
   selfAppraisalForbidden: true,
   confidentialIdentityAccessRequiresAudit: true,
+  directorFeedbackIdentityAccessIsSuperadminOnly: true,
+  directorCannotExtendOrReopenOwnFeedbackCycle: true,
   dashboardAccessDoesNotGrantAppraisalAuthority: true,
 } as const;

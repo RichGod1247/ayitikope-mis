@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS QA harness intentionally loads TypeScript source through a local transpile hook. */
+
 const fs = require("fs");
 const path = require("path");
 const Module = require("module");
@@ -379,10 +381,18 @@ function main() {
 
   assert(
     hasAppraisalCapability(
+      "SUPERADMIN",
+      "VIEW_CONFIDENTIAL_RESPONDENTS",
+    ),
+    "Superadmin confidential-identity capability",
+  );
+
+  assert(
+    !hasAppraisalCapability(
       "DISTRICT_DIRECTOR",
       "VIEW_CONFIDENTIAL_RESPONDENTS",
     ),
-    "Director confidential-identity capability",
+    "Director must not see confidential respondent identities",
   );
 
   assert(
@@ -391,6 +401,38 @@ function main() {
       "VIEW_CONFIDENTIAL_RESPONDENTS",
     ),
     "Head of Supervision must not see confidential respondent identities",
+  );
+
+  assert(
+    hasAppraisalCapability(
+      "DISTRICT_DIRECTOR",
+      "OPEN_DIRECTOR_FEEDBACK_CYCLE",
+    ),
+    "Director may open the interim feedback cycle",
+  );
+
+  assert(
+    hasAppraisalCapability(
+      "DISTRICT_DIRECTOR",
+      "VIEW_DIRECTOR_FEEDBACK_RESULTS",
+    ),
+    "Director may view released masked feedback results",
+  );
+
+  assert(
+    !hasAppraisalCapability(
+      "DISTRICT_DIRECTOR",
+      "EXTEND_DIRECTOR_FEEDBACK_CYCLE",
+    ),
+    "Director must not extend or reopen his own feedback cycle",
+  );
+
+  assert(
+    hasAppraisalCapability(
+      "SUPERADMIN",
+      "EXTEND_DIRECTOR_FEEDBACK_CYCLE",
+    ),
+    "Superadmin may extend or reopen Director feedback with audit",
   );
 
   assert(
@@ -625,7 +667,7 @@ function main() {
   console.log("Director raw maximum         : 175");
   console.log("Shared headteacher item bank : true");
   console.log("Jurisdiction hardcoding      : absent");
-  console.log("Confidential identity scope  : Director only");
+  console.log("Confidential identity scope  : Superadmin only");
   console.log("Workflow transitions         : verified");
   console.log("N/A-aware scoring            : verified");
   console.log("Multi-response aggregation   : verified");
