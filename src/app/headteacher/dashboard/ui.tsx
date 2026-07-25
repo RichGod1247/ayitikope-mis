@@ -1,4 +1,4 @@
-//src/app/headteacher/dashboard/ui.tsx
+// src/app/headteacher/dashboard/ui.tsx
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -75,6 +75,18 @@ type ReleaseStatusResp =
       classroomReleaseMap: Record<string, { releasedAt: string }>;
     }
   | { ok: false; error: string; role?: string };
+
+type DirectorFeedbackAssignmentsResp =
+  | {
+      ok: true;
+      items: Array<{
+        cycleId: string;
+        canContinue: boolean;
+        responseStatus: string | null;
+        completionPercentage: number;
+      }>;
+    }
+  | { ok: false; error: string };
 
 type GovernanceResp =
   | {
@@ -347,6 +359,8 @@ export default function HeadteacherDashboardClient() {
   const [pending, setPending] = useState<PendingResp | null>(null);
   const [pendingNotes, setPendingNotes] = useState<PendingLessonNotesResp | null>(null);
   const [releaseStatus, setReleaseStatus] = useState<ReleaseStatusResp | null>(null);
+  const [directorFeedback, setDirectorFeedback] =
+    useState<DirectorFeedbackAssignmentsResp | null>(null);
   const [governance, setGovernance] = useState<GovernanceResp | null>(null);
   const [riskBoard, setRiskBoard] = useState<RiskBoardResp | null>(null);
   const [showRiskBoard, setShowRiskBoard] = useState(false);
@@ -369,6 +383,7 @@ export default function HeadteacherDashboardClient() {
       setPending(bad);
       setPendingNotes(bad);
       setReleaseStatus(bad);
+      setDirectorFeedback(bad);
       return;
     }
 
@@ -377,7 +392,7 @@ export default function HeadteacherDashboardClient() {
     try {
       const qs = `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
 
-      const [w, p, pn, rs] = await Promise.all([
+      const [w, p, pn, rs, df] = await Promise.all([
         fetchJson<WeeklyResp>(`/api/headteacher/attendance/weekly/summary?${qs}`, {
           cache: "no-store",
         }),
@@ -390,6 +405,9 @@ export default function HeadteacherDashboardClient() {
         fetchJson<ReleaseStatusResp>(`/api/headteacher/results/release/status`, {
           cache: "no-store",
         }),
+        fetchJson<DirectorFeedbackAssignmentsResp>(`/api/headteacher/director-feedback`, {
+          cache: "no-store",
+        }),
       ]);
 
       if (mySeq !== reqSeq.current) return;
@@ -398,6 +416,7 @@ export default function HeadteacherDashboardClient() {
       setPending(p);
       setPendingNotes(pn);
       setReleaseStatus(rs);
+      setDirectorFeedback(df);
     } catch {
       if (mySeq !== reqSeq.current) return;
       const bad = { ok: false, error: "Failed to load dashboard data." } as const;
@@ -405,6 +424,7 @@ export default function HeadteacherDashboardClient() {
       setPending(bad);
       setPendingNotes(bad);
       setReleaseStatus({ ok: false, error: "Failed to load results release status." });
+      setDirectorFeedback({ ok: false, error: "Failed to load Director feedback status." });
     } finally {
       if (mySeq === reqSeq.current) setLoading(false);
     }
@@ -514,6 +534,46 @@ export default function HeadteacherDashboardClient() {
       : statusPill("Status: OFF", "amber")
     : statusPill("Status: —", "slate");
 
+  const directorFeedbackItems =
+    directorFeedback?.ok === true ? directorFeedback.items : [];
+
+  const directorFeedbackFinalized = directorFeedbackItems.some(
+    (item) => item.responseStatus === "FINALIZED",
+  );
+
+  const directorFeedbackAvailable = directorFeedbackItems.some(
+    (item) => item.canContinue || item.responseStatus === "FINALIZED",
+  );
+
+  const directorFeedbackInProgress = directorFeedbackItems.some(
+    (item) =>
+      item.canContinue &&
+      item.responseStatus !== "FINALIZED" &&
+      item.completionPercentage > 0,
+  );
+
+  const directorFeedbackBadge =
+    directorFeedback === null
+      ? "Checking"
+      : directorFeedbackFinalized
+        ? "Submitted"
+        : directorFeedbackInProgress
+          ? "In progress"
+          : directorFeedbackAvailable
+            ? "Requested"
+            : "Awaiting request";
+
+  const directorFeedbackCta =
+    directorFeedback === null
+      ? "Checking request status"
+      : directorFeedbackFinalized
+        ? "View submitted response"
+        : directorFeedbackInProgress
+          ? "Continue confidential feedback"
+          : directorFeedbackAvailable
+            ? "Open confidential feedback"
+            : "Available when Director opens feedback";
+
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -578,6 +638,21 @@ export default function HeadteacherDashboardClient() {
           disabled
           toneClass="border-slate-300/20 from-[#121722] via-[#1A2230] to-[#0C1320]"
           accentClass="border-slate-300/20 bg-white/8 text-slate-200"
+        />
+
+        <MajorTile
+          title="Director Feedback"
+          desc={
+            directorFeedbackAvailable
+              ? "Give honest, confidential feedback on the Municipal Director using the official seven-section form."
+              : "This confidential form opens only after the Municipal Director requests feedback."
+          }
+          cta={directorFeedbackCta}
+          badge={directorFeedbackBadge}
+          disabled={!directorFeedbackAvailable}
+          toneClass="border-cyan-300/20 from-[#071B26] via-[#0D2A3A] to-[#08121C]"
+          accentClass="border-cyan-300/25 bg-cyan-400/12 text-cyan-100"
+          onClick={() => router.push("/headteacher/director-feedback")}
         />
 
         <MajorTile
