@@ -5,6 +5,7 @@ export type SendEmailArgs = {
   text: string;
   html?: string | null;
   replyTo?: string | null;
+  idempotencyKey?: string | null;
   meta?: Record<string, unknown>;
 };
 
@@ -25,13 +26,20 @@ function isEmailLike(v: string) {
   return v.includes("@");
 }
 
+function cleanIdempotencyKey(value: unknown) {
+  const key = cleanStr(value).slice(0, 256);
+  return key || null;
+}
+
 export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
   const toRaw = cleanStr(args.to);
   const subject = cleanStr(args.subject);
   const text = cleanStr(args.text);
   const html = args.html ? String(args.html) : null;
+  const idempotencyKey = cleanIdempotencyKey(args.idempotencyKey);
 
-  const testMode = (process.env.EMAIL_TEST_MODE ?? "false").toLowerCase() === "true";
+  const testMode =
+    (process.env.EMAIL_TEST_MODE ?? "false").toLowerCase() === "true";
   const testTo = cleanStr(process.env.EMAIL_TEST_TO || "");
 
   let to = toRaw;
@@ -49,7 +57,9 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
 
   const apiKey = cleanStr(process.env.RESEND_API_KEY || "");
   const from = cleanStr(process.env.EMAIL_FROM || "");
-  const replyTo = cleanStr(args.replyTo || process.env.EMAIL_REPLY_TO || "");
+  const replyTo = cleanStr(
+    args.replyTo || process.env.EMAIL_REPLY_TO || "",
+  );
 
   if (!apiKey || !from) {
     return {
@@ -62,35 +72,49 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
   }
 
   try {
-    const payload: any = {
+    const payload: {
+      from: string;
+      to: string[];
+      subject: string;
+      text: string;
+      html?: string;
+      reply_to?: string;
+    } = {
       from,
       to: [to],
       subject,
       text,
     };
+
     if (html) payload.html = html;
     if (replyTo) payload.reply_to = replyTo;
 
-    const r = await fetch("https://api.resend.com/emails", {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    };
+
+    if (idempotencyKey) {
+      headers["Idempotency-Key"] = idempotencyKey;
+    }
+
+    const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(payload),
       cache: "no-store",
     });
 
-    const body = await r.json().catch(() => ({} as any));
+    const body = await response.json().catch(() => ({} as unknown));
 
-    if (!r.ok) {
+    if (!response.ok) {
       return {
         ok: false,
         provider: "RESEND",
         to,
         testMode,
         providerResponse: body,
-        error: `HTTP_${r.status}`,
+        error: `HTTP_${response.status}`,
       };
     }
 
@@ -101,13 +125,16 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
       testMode,
       providerResponse: body,
     };
-  } catch (e: any) {
+  } catch (error: unknown) {
     return {
       ok: false,
       provider: "RESEND",
       to,
       testMode,
-      error: String(e?.message || "EMAIL_SEND_FAILED"),
+      error:
+        error instanceof Error
+          ? error.message
+          : "EMAIL_SEND_FAILED",
     };
   }
 }
