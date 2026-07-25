@@ -107,6 +107,7 @@ class FakePublicationDatabase {
     this.sections = [];
     this.items = [];
     this.auditLogs = [];
+    this.versionStatusTransitions = [];
     this.transactionCalls = 0;
     this.instrumentSequence = 0;
     this.versionSequence = 0;
@@ -178,6 +179,18 @@ class FakePublicationDatabase {
 
         create: async (args) => {
           const data = clone(args.data);
+
+          if (
+            data.sections?.create?.length &&
+            data.status !== "DRAFT"
+          ) {
+            const error = new Error(
+              "PUBLISHED_APPRAISAL_INSTRUMENT_CONTENT_IS_IMMUTABLE",
+            );
+            error.code = "P0001";
+            throw error;
+          }
+
           const row = {
             id: `version-${++this.versionSequence}`,
             instrumentId: data.instrumentId,
@@ -193,9 +206,13 @@ class FakePublicationDatabase {
             allowComments: data.allowComments,
             contentHash: data.contentHash,
             publishedByUserId: data.publishedByUserId,
-            publishedAt: new Date(data.publishedAt),
+            publishedAt: data.publishedAt
+              ? new Date(data.publishedAt)
+              : null,
             metadata: data.metadata,
           };
+
+          this.versionStatusTransitions.push(row.status);
 
           this.versionsByInstrumentVersion.set(
             this.key(row.instrumentId, row.version),
@@ -226,10 +243,47 @@ class FakePublicationDatabase {
 
           if (this.raceOnVersionCreate) {
             this.raceOnVersionCreate = false;
+
+            row.status = "ACTIVE";
+            row.publishedByUserId = "concurrent-publisher";
+            row.publishedAt = new Date("2026-07-25T12:00:00.000Z");
+            this.versionStatusTransitions.push(row.status);
+
             const error = new Error("Unique constraint race");
             error.code = "P2002";
             throw error;
           }
+
+          return selected(row);
+        },
+
+        update: async (args) => {
+          const row = [...this.versionsByInstrumentVersion.values()].find(
+            (candidate) => candidate.id === args.where.id,
+          );
+
+          if (!row) {
+            throw new Error("Instrument version not found");
+          }
+
+          if (
+            row.status !== "DRAFT" ||
+            args.data.status !== "ACTIVE"
+          ) {
+            const error = new Error(
+              "PUBLISHED_APPRAISAL_INSTRUMENT_VERSION_IS_IMMUTABLE",
+            );
+            error.code = "P0001";
+            throw error;
+          }
+
+          row.status = args.data.status;
+          row.publishedByUserId = args.data.publishedByUserId;
+          row.publishedAt = args.data.publishedAt
+            ? new Date(args.data.publishedAt)
+            : null;
+
+          this.versionStatusTransitions.push(row.status);
 
           return selected(row);
         },
@@ -356,6 +410,11 @@ async function main() {
   assertEqual(created.version, 1, "Published version");
   assertEqual(created.contentHash, contentHash, "Stored content hash");
   assertEqual(created.status, "ACTIVE", "Published status");
+  assertEqual(
+    JSON.stringify(database.versionStatusTransitions),
+    JSON.stringify(["DRAFT", "ACTIVE"]),
+    "Publication must build content in DRAFT before activation",
+  );
   assertEqual(created.sectionCount, 7, "Published section count");
   assertEqual(created.itemCount, 35, "Published item count");
   assertEqual(created.publishedAt, now.toISOString(), "Published timestamp");
@@ -570,6 +629,7 @@ async function main() {
   console.log("Director V1 sections/items   : 7 / 35");
   console.log("Director V1 raw maximum      : 175");
   console.log("Jurisdiction hardcoding      : absent");
+  console.log("Draft-to-active sequence     : verified");
   console.log("Atomic nested publication    : verified");
   console.log("Publication audit            : verified");
   console.log("Same-hash idempotency        : verified");

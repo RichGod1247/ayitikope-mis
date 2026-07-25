@@ -1,4 +1,3 @@
-//src/lib/appraisals/publication.ts
 import { createHash } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -47,6 +46,7 @@ export type AppraisalPublicationTransaction = {
     findUnique(args: unknown): Promise<StoredInstrumentVersion | null>;
     findFirst(args: unknown): Promise<StoredInstrumentVersion | null>;
     create(args: unknown): Promise<StoredInstrumentVersion>;
+    update(args: unknown): Promise<StoredInstrumentVersion>;
   };
   auditLog: {
     create(args: unknown): Promise<unknown>;
@@ -541,12 +541,12 @@ export async function publishAppraisalInstrumentVersion(
         });
       }
 
-      const createdVersion =
+      const draftVersion =
         await tx.appraisalInstrumentVersion.create({
           data: {
             instrumentId: instrument.id,
             version: definition.version,
-            status: "ACTIVE",
+            status: "DRAFT",
             title: definition.documentTitle,
             directorateName: null,
             instructions: definition.instructions,
@@ -556,12 +556,30 @@ export async function publishAppraisalInstrumentVersion(
             allowNotApplicable: definition.allowNotApplicable,
             allowComments: definition.allowComments,
             contentHash,
-            publishedByUserId: actorUserId,
-            publishedAt,
+            publishedByUserId: null,
+            publishedAt: null,
             metadata: versionMetadata(definition, contentHash),
             sections: {
               create: sectionCreateData(definition),
             },
+          },
+          select: {
+            id: true,
+            version: true,
+            status: true,
+            contentHash: true,
+            publishedByUserId: true,
+            publishedAt: true,
+          },
+        });
+
+      const createdVersion =
+        await tx.appraisalInstrumentVersion.update({
+          where: { id: draftVersion.id },
+          data: {
+            status: "ACTIVE",
+            publishedByUserId: actorUserId,
+            publishedAt,
           },
           select: {
             id: true,
