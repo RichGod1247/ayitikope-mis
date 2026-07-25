@@ -2,6 +2,7 @@ export * from "./audit";
 export * from "./authority";
 export * from "./directorFeedback";
 export * from "./directorFeedbackResponse";
+export * from "./directorFeedbackNotifications";
 export * from "./instruments";
 export * from "./publication";
 export * from "./scoring";

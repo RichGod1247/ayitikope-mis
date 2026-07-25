@@ -1920,6 +1920,17 @@ export default function GovernanceCommandDashboardClient({
   const overview = data?.ok ? data.overview : null;
   const scope = data?.ok ? data.scope : null;
 
+  const canRequestDirectorFeedback =
+    isDistrictView &&
+    Boolean(
+      scope?.assignments?.some(
+        (assignment) =>
+          String(assignment.role ?? "")
+            .trim()
+            .toUpperCase() === "DISTRICT_DIRECTOR",
+      ),
+    );
+
   const schools = useMemo(() => overview?.schools ?? [], [overview]);
   const circuits = useMemo(() => overview?.circuitBreakdown ?? [], [overview]);
   const totals = overview?.totals ?? {};
@@ -2877,9 +2888,7 @@ const mockCommandTile = (
         One place for assessment, review, and governance feedback
       </h2>
       <p className="mt-1 max-w-4xl text-sm leading-6 text-fuchsia-100/80">
-        Teacher appraisal reports are available now. Headteacher appraisal and
-        governance-officer feedback remain locked until their controlled,
-        confidential workflows are implemented.
+        Teacher appraisal reports are available now. Other appraisal options open only when their controlled workflows are available.
       </p>
     </div>
 
@@ -2926,23 +2935,53 @@ const mockCommandTile = (
         </p>
       </div>
 
-      <div
-        aria-disabled="true"
-        className="rounded-2xl border border-white/10 bg-black/20 p-4 opacity-75"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <span className="text-xl">🧭</span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300">
-            Locked
-          </span>
+      {canRequestDirectorFeedback ? (
+        <div className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-xl">🧭</span>
+            <span className="rounded-full border border-cyan-300/25 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-cyan-100">
+              Available
+            </span>
+          </div>
+
+          <p className="mt-3 text-sm font-bold text-white">
+            My Appraisal
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-cyan-100/80">
+            Request confidential headteacher feedback on your leadership.
+          </p>
+
+          <a
+            href="/district/director-feedback"
+            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-xs font-bold text-[#071A3D]"
+          >
+            Request for Appraisal
+          </a>
         </div>
-        <p className="mt-3 text-sm font-bold text-white">My Appraisal</p>
-        <p className="mt-1 text-xs leading-5 text-slate-300">
-          Confidential headteacher feedback about the{" "}
-          {isDistrictView ? "governance officer" : "SISSO"} will appear here
-          after the governance-appraisal workflow is verified.
-        </p>
-      </div>
+      ) : (
+        <div
+          aria-disabled="true"
+          className="rounded-2xl border border-white/10 bg-black/20 p-4 opacity-75"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-xl">🧭</span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold text-slate-300">
+              Locked
+            </span>
+          </div>
+
+          <p className="mt-3 text-sm font-bold text-white">
+            My Appraisal
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-slate-300">
+            Confidential headteacher feedback about the{" "}
+            {isDistrictView ? "governance officer" : "SISSO"} will appear here
+            after the governance-appraisal workflow is verified.
+          </p>
+        </div>
+      )}
     </div>
 
     <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
