@@ -2952,12 +2952,21 @@ const mockCommandTile = (
             Request confidential headteacher feedback on your leadership.
           </p>
 
-          <a
-            href="/district/director-feedback"
-            className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-xs font-bold text-[#071A3D]"
-          >
-            Request for Appraisal
-          </a>
+         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+  <a
+    href="/district/director-feedback"
+    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-4 py-2 text-center text-xs font-bold text-[#071A3D]"
+  >
+    Request for Appraisal
+  </a>
+
+  <a
+    href="/district/director-feedback/review"
+    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-2 text-center text-xs font-bold text-cyan-50 transition hover:bg-cyan-400/20"
+  >
+    Review Appraisal
+  </a>
+</div>
         </div>
       ) : (
         <div
