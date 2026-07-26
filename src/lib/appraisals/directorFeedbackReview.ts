@@ -4,7 +4,10 @@ import { AppraisalCycleStatus, Prisma } from "@prisma/client";
 import { APPRAISAL_AUDIT_ACTIONS } from "@/lib/appraisals/audit";
 import { assertAppraisalAuthority } from "@/lib/appraisals/authority";
 import { DIRECTOR_FEEDBACK_POLICY } from "@/lib/appraisals/directorFeedback";
-import { assertAppraisalCycleTransition } from "@/lib/appraisals/workflow";
+import {
+  appraisalReleaseReadiness,
+  assertAppraisalCycleTransition,
+} from "@/lib/appraisals/workflow";
 import { prisma } from "@/lib/prisma";
 import { effectiveRole } from "@/lib/roleRouting";
 
@@ -18,6 +21,7 @@ export const DIRECTOR_FEEDBACK_REVIEW_POLICY = {
   transactionMaxWaitMs: 5_000,
   transactionTimeoutMs: 15_000,
   individualFormsAvailable: false,
+  interimSupervisoryAssessmentRequired: false,
   respondentIdentityVisible: false,
   schoolIdentityVisible: false,
 } as const;
@@ -49,6 +53,7 @@ export type DirectorFeedbackReviewCycleSource = {
   deadlineAt: Date | null;
   closedAt: Date | null;
   reviewStartedAt: Date | null;
+  releasedAt: Date | null;
   minimumResponses: number;
   metadata: unknown;
   aggregate: ReviewSnapshotSource | null;
@@ -80,12 +85,15 @@ export type DirectorFeedbackReviewWorkspace = {
     deadlineAt: string | null;
     closedAt: string | null;
     reviewStartedAt: string | null;
+    releasedAt: string | null;
   };
   readiness: {
     reviewAvailable: boolean;
     canBeginReview: boolean;
     canViewScores: boolean;
+    canRelease: boolean;
     reasons: string[];
+    releaseReasons: string[];
   };
   aggregate: null | {
     version: number;
@@ -255,7 +263,9 @@ export function buildDirectorFeedbackReviewWorkspace(
         reviewAvailable: false,
         canBeginReview: false,
         canViewScores: false,
+        canRelease: false,
         reasons: ["DIRECTOR_FEEDBACK_CYCLE_NOT_FOUND"],
+        releaseReasons: ["DIRECTOR_FEEDBACK_CYCLE_NOT_FOUND"],
       },
       aggregate: null,
       privacy: privacyContract(),
@@ -265,6 +275,7 @@ export function buildDirectorFeedbackReviewWorkspace(
   const snapshot = cycle.aggregate;
   const isClosed = cycle.status === AppraisalCycleStatus.CLOSED;
   const isUnderReview = cycle.status === AppraisalCycleStatus.UNDER_REVIEW;
+  const isReleased = cycle.status === AppraisalCycleStatus.RELEASED;
   const thresholdMet = snapshot?.releaseEligible === true;
   const reasons: string[] = [];
 
@@ -284,8 +295,42 @@ export function buildDirectorFeedbackReviewWorkspace(
   }
 
   const canBeginReview = isClosed && Boolean(snapshot) && thresholdMet;
-  const canViewScores = isUnderReview && Boolean(snapshot) && thresholdMet;
-  const reviewAvailable = (isClosed || isUnderReview) && Boolean(snapshot);
+  const canViewScores =
+    (isUnderReview || isReleased) && Boolean(snapshot) && thresholdMet;
+  const reviewAvailable =
+    (isClosed || isUnderReview || isReleased) && Boolean(snapshot);
+
+  const releaseEvaluation = appraisalReleaseReadiness({
+    status: cycle.status,
+    finalizedResponses: snapshot?.finalizedResponses ?? 0,
+    minimumResponses: snapshot?.minimumResponses ?? cycle.minimumResponses,
+    aggregateSnapshotPresent: Boolean(snapshot),
+    supervisoryAssessmentRequired:
+      DIRECTOR_FEEDBACK_REVIEW_POLICY.interimSupervisoryAssessmentRequired,
+    supervisoryAssessmentAccepted: true,
+  });
+
+  const releaseReasons = [...releaseEvaluation.reasons];
+  if (!cycle.reviewStartedAt) {
+    releaseReasons.push("DIRECTOR_FEEDBACK_REVIEW_NOT_STARTED");
+  }
+  if (snapshot && !snapshot.releaseEligible) {
+    releaseReasons.push("DIRECTOR_FEEDBACK_MINIMUM_RESPONSES_NOT_MET");
+  }
+  if (isReleased) {
+    releaseReasons.splice(
+      0,
+      releaseReasons.length,
+      "DIRECTOR_FEEDBACK_ALREADY_RELEASED",
+    );
+  }
+
+  const canRelease =
+    isUnderReview &&
+    Boolean(cycle.reviewStartedAt) &&
+    Boolean(snapshot) &&
+    thresholdMet &&
+    releaseEvaluation.ready;
 
   return {
     cycle: {
@@ -297,12 +342,15 @@ export function buildDirectorFeedbackReviewWorkspace(
       deadlineAt: cycle.deadlineAt?.toISOString() ?? null,
       closedAt: cycle.closedAt?.toISOString() ?? null,
       reviewStartedAt: cycle.reviewStartedAt?.toISOString() ?? null,
+      releasedAt: cycle.releasedAt?.toISOString() ?? null,
     },
     readiness: {
       reviewAvailable,
       canBeginReview,
       canViewScores,
+      canRelease,
       reasons: canViewScores ? [] : reasons,
+      releaseReasons: canRelease ? [] : Array.from(new Set(releaseReasons)),
     },
     aggregate: snapshot
       ? {
@@ -348,6 +396,7 @@ const REVIEW_CYCLE_SELECT = {
   deadlineAt: true,
   closedAt: true,
   reviewStartedAt: true,
+  releasedAt: true,
   minimumResponses: true,
   metadata: true,
   aggregates: {
@@ -385,6 +434,7 @@ function toReviewSource(cycle: ReviewCycleRecord): DirectorFeedbackReviewCycleSo
     deadlineAt: cycle.deadlineAt,
     closedAt: cycle.closedAt,
     reviewStartedAt: cycle.reviewStartedAt,
+    releasedAt: cycle.releasedAt,
     minimumResponses: cycle.minimumResponses,
     metadata: cycle.metadata,
     aggregate: cycle.aggregates[0] ?? null,

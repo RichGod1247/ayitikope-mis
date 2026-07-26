@@ -30,12 +30,15 @@ type Workspace = {
     deadlineAt: string | null;
     closedAt: string | null;
     reviewStartedAt: string | null;
+    releasedAt: string | null;
   };
   readiness: {
     reviewAvailable: boolean;
     canBeginReview: boolean;
     canViewScores: boolean;
+    canRelease: boolean;
     reasons: string[];
+    releaseReasons: string[];
   };
   aggregate: null | {
     version: number;
@@ -72,7 +75,11 @@ type ApiResponse =
   | {
       ok: true;
       reqId: string;
-      outcome?: "STARTED" | "ALREADY_STARTED";
+      outcome?:
+        | "STARTED"
+        | "ALREADY_STARTED"
+        | "RELEASED"
+        | "ALREADY_RELEASED";
       workspace: Workspace;
     }
   | {
@@ -114,7 +121,15 @@ function friendlyError(code: string) {
     case "DIRECTOR_FEEDBACK_MINIMUM_RESPONSES_NOT_MET":
       return "The minimum response threshold was not met, so scores remain protected.";
     case "DIRECTOR_FEEDBACK_REVIEW_SCOPE_FORBIDDEN":
+    case "DIRECTOR_FEEDBACK_RELEASE_SCOPE_FORBIDDEN":
       return "This review does not belong to your Director account.";
+    case "DIRECTOR_FEEDBACK_RELEASE_CONFIRMATION_REQUIRED":
+      return "Confirm the developmental purpose before completing the review.";
+    case "DIRECTOR_FEEDBACK_CYCLE_NOT_READY_FOR_RELEASE":
+    case "DIRECTOR_FEEDBACK_REVIEW_NOT_STARTED":
+      return "Begin the private review before completing it.";
+    case "DIRECTOR_FEEDBACK_RELEASE_READINESS_BLOCKED":
+      return "The review cannot be completed because its protected release checks did not pass.";
     case "UNAUTHORIZED":
     case "GOVERNANCE_FORBIDDEN":
       return "Your Director session is not authorized for this review.";
@@ -150,6 +165,8 @@ export default function DirectorFeedbackReviewClient() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [releaseConfirmed, setReleaseConfirmed] = useState(false);
+  const [releasing, setReleasing] = useState(false);
   const [online, setOnline] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -264,6 +281,69 @@ export default function DirectorFeedbackReviewClient() {
     }
   }
 
+  async function completeReview() {
+    const cycleId = workspace?.cycle?.id;
+    if (!cycleId || !releaseConfirmed) {
+      setError("Confirm the developmental purpose before completing review.");
+      return;
+    }
+    if (!online) {
+      setError("You are offline. Reconnect before completing review.");
+      return;
+    }
+
+    setReleasing(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch(
+        "/api/district/director-feedback/review/release",
+        {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            acknowledgeDevelopmentalPurpose: true,
+            confirm: true,
+            cycleId,
+          }),
+        },
+      );
+      const payload = (await response.json().catch(() => null)) as
+        | ApiResponse
+        | null;
+
+      if (!response.ok || !payload?.ok) {
+        setError(
+          friendlyError(
+            payload && !payload.ok
+              ? payload.error
+              : "FAILED_TO_RELEASE_DIRECTOR_FEEDBACK",
+          ),
+        );
+        return;
+      }
+
+      setWorkspace(payload.workspace);
+      setReleaseConfirmed(false);
+      setNotice(
+        payload.outcome === "RELEASED"
+          ? "The private review was sealed and completed with an audit record."
+          : "This private review was already completed and reopened safely.",
+      );
+    } catch {
+      setError(
+        "The server response could not be confirmed. Refresh safely; completion is idempotent.",
+      );
+    } finally {
+      setReleasing(false);
+    }
+  }
+
   const cycle = workspace?.cycle ?? null;
   const aggregate = workspace?.aggregate ?? null;
   const readiness = workspace?.readiness ?? null;
@@ -286,7 +366,7 @@ export default function DirectorFeedbackReviewClient() {
       {!online ? (
         <div className="rounded-2xl border border-amber-300/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
           You are offline. Existing information remains visible, but review
-          cannot begin until the connection returns.
+          cannot begin or be completed until the connection returns.
         </div>
       ) : null}
 
@@ -331,10 +411,14 @@ export default function DirectorFeedbackReviewClient() {
 
               <div className="rounded-2xl border border-white/10 bg-[#0A1628] px-4 py-3">
                 <div className="text-[11px] text-[#8F98A8]">
-                  Review started
+                  {cycle.status === "RELEASED" ? "Review completed" : "Review started"}
                 </div>
                 <div className="mt-1 text-sm font-bold">
-                  {formatDate(cycle.reviewStartedAt)}
+                  {formatDate(
+                    cycle.status === "RELEASED"
+                      ? cycle.releasedAt
+                      : cycle.reviewStartedAt,
+                  )}
                 </div>
               </div>
             </div>
@@ -538,6 +622,54 @@ export default function DirectorFeedbackReviewClient() {
                 ) : null}
               </section>
             </>
+          ) : null}
+
+          {readiness?.canRelease && aggregate ? (
+            <section className={panel("p-5")}>
+              <h2 className="text-lg font-bold">Complete private review</h2>
+              <p className="mt-3 text-sm leading-6 text-[#D9DEE8]">
+                Completing the review seals this protected aggregate as the
+                final developmental feedback record. It does not replace the
+                Regional Director&apos;s official appraisal and it does not reveal
+                any respondent or school identity.
+              </p>
+
+              <label className="mt-5 flex items-start gap-3 rounded-2xl border border-white/10 bg-[#0A1628] p-4">
+                <input
+                  type="checkbox"
+                  checked={releaseConfirmed}
+                  onChange={(event) => setReleaseConfirmed(event.target.checked)}
+                  className="mt-1 h-5 w-5"
+                />
+                <span className="text-sm leading-6">
+                  I have reviewed the aggregated findings and understand that
+                  this is confidential developmental feedback, not the Regional
+                  Director&apos;s official appraisal.
+                </span>
+              </label>
+
+              <button
+                type="button"
+                disabled={!releaseConfirmed || releasing || !online}
+                onClick={() => void completeReview()}
+                className="mt-5 min-h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-bold text-[#071A3D] disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto"
+              >
+                {releasing ? "Completing safely…" : "Seal and Complete Review"}
+              </button>
+            </section>
+          ) : null}
+
+          {cycle.status === "RELEASED" ? (
+            <section className="rounded-[28px] border border-emerald-300/25 bg-emerald-400/10 p-5">
+              <h2 className="text-lg font-bold text-emerald-50">
+                Private review completed
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-emerald-100/90">
+                This feedback record was sealed on {formatDate(cycle.releasedAt)}.
+                The aggregate remains available as read-only evidence, while
+                respondent and school identities remain protected.
+              </p>
+            </section>
           ) : null}
         </>
       )}
