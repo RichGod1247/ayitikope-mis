@@ -208,6 +208,9 @@ type TransactionClient = {
     create(args: unknown): Promise<CycleSummaryRecord>;
     update(args: unknown): Promise<CycleMutationRecord>;
   };
+  appraisalParticipant: {
+    updateMany(args: unknown): Promise<{ count: number }>;
+  };
   auditLog: {
     create(args: unknown): Promise<unknown>;
   };
@@ -925,6 +928,40 @@ export async function extendOrReopenDirectorFeedbackCycle(
         },
       });
 
+      let restoredNotStarted = 0;
+      let restoredInProgress = 0;
+
+      if (priorStatus === "CLOSED") {
+        const notStarted = await tx.appraisalParticipant.updateMany({
+          where: {
+            cycleId: cycle.id,
+            status: "EXPIRED",
+            startedAt: null,
+            finalizedAt: null,
+          },
+          data: {
+            status: "NOT_STARTED",
+            expiredAt: null,
+          },
+        });
+
+        const inProgress = await tx.appraisalParticipant.updateMany({
+          where: {
+            cycleId: cycle.id,
+            status: "EXPIRED",
+            startedAt: { not: null },
+            finalizedAt: null,
+          },
+          data: {
+            status: "IN_PROGRESS",
+            expiredAt: null,
+          },
+        });
+
+        restoredNotStarted = notStarted.count;
+        restoredInProgress = inProgress.count;
+      }
+
       await tx.auditLog.create({
         data: {
           userId: actorUserId,
@@ -945,6 +982,8 @@ export async function extendOrReopenDirectorFeedbackCycle(
             extensionCount,
             deadlineAt: deadlineAt.toISOString(),
             controlledReopen: priorStatus === "CLOSED",
+            restoredNotStartedParticipants: restoredNotStarted,
+            restoredInProgressParticipants: restoredInProgress,
           },
         },
       });

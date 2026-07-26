@@ -2,6 +2,10 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getDirectorFeedbackLifecycleHealth,
+  runDirectorFeedbackLifecycleWorker,
+} from "@/lib/appraisals/directorFeedbackClosure";
+import {
   getAppraisalNotificationHealth,
   runAppraisalNotificationWorker,
 } from "@/lib/appraisals/notificationWorker";
@@ -9,10 +13,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function jsonNoStore(
-  payload: unknown,
-  status = 200,
-) {
+function jsonNoStore(payload: unknown, status = 200) {
   return NextResponse.json(payload, {
     status,
     headers: {
@@ -25,22 +26,15 @@ function jsonNoStore(
 }
 
 function sha256(value: string) {
-  return crypto
-    .createHash("sha256")
-    .update(value)
-    .digest();
+  return crypto.createHash("sha256").update(value).digest();
 }
 
 function safeEqual(a: string, b: string) {
-  return crypto.timingSafeEqual(
-    sha256(a),
-    sha256(b),
-  );
+  return crypto.timingSafeEqual(sha256(a), sha256(b));
 }
 
 function presentedSecrets(req: NextRequest) {
-  const bearer =
-    req.headers.get("authorization") ?? "";
+  const bearer = req.headers.get("authorization") ?? "";
   const token = bearer.startsWith("Bearer ")
     ? bearer.slice(7).trim()
     : "";
@@ -73,11 +67,7 @@ function authorized(req: NextRequest) {
     };
   }
 
-  if (
-    !candidates.some((candidate) =>
-      safeEqual(candidate, secret),
-    )
-  ) {
+  if (!candidates.some((candidate) => safeEqual(candidate, secret))) {
     return {
       ok: false as const,
       reason: "CRON_SECRET_INVALID",
@@ -98,20 +88,32 @@ function unauthorized(reason: string) {
   );
 }
 
+function safeWorkerError(error: unknown) {
+  const value = error as { code?: unknown; message?: unknown };
+  const candidate = String(value?.code ?? value?.message ?? "").trim();
+  return /^[A-Z0-9_:-]{3,160}$/.test(candidate)
+    ? candidate
+    : "APPRAISAL_WORKER_FAILED";
+}
+
 export async function GET(req: NextRequest) {
   const auth = authorized(req);
   if (!auth.ok) return unauthorized(auth.reason);
 
-  const health = await getAppraisalNotificationHealth();
+  const [health, lifecycle] = await Promise.all([
+    getAppraisalNotificationHealth(),
+    getDirectorFeedbackLifecycleHealth(),
+  ]);
 
   return jsonNoStore({
     ok: true,
     mode: "HEALTH_ONLY",
     message:
-      "Appraisal notification cron is authorized and reachable. GET does not deliver messages.",
+      "Appraisal cron is authorized and reachable. GET does not deliver messages, close cycles, or generate snapshots.",
     checkedAt: new Date().toISOString(),
     channels: ["SMS", "EMAIL"],
     health,
+    lifecycle,
   });
 }
 
@@ -119,26 +121,64 @@ export async function POST(req: NextRequest) {
   const auth = authorized(req);
   if (!auth.ok) return unauthorized(auth.reason);
 
-  const before =
-    await getAppraisalNotificationHealth();
+  const [before, lifecycleBefore] = await Promise.all([
+    getAppraisalNotificationHealth(),
+    getDirectorFeedbackLifecycleHealth(),
+  ]);
 
-  const result =
-    await runAppraisalNotificationWorker({
-      workerId:
-        "appraisal-notification-cron",
-      limit: 25,
-      staleProcessingAfterMinutes: 15,
-    });
+  const notificationAttempt = await runAppraisalNotificationWorker({
+    workerId: "appraisal-notification-cron",
+    limit: 25,
+    staleProcessingAfterMinutes: 15,
+  })
+    .then((value) => ({ ok: true as const, value }))
+    .catch((error: unknown) => ({
+      ok: false as const,
+      error: safeWorkerError(error),
+    }));
 
-  const after =
-    await getAppraisalNotificationHealth();
+  const lifecycleAttempt = await runDirectorFeedbackLifecycleWorker({
+    limit: 10,
+  })
+    .then((value) => ({ ok: true as const, value }))
+    .catch((error: unknown) => ({
+      ok: false as const,
+      error: safeWorkerError(error),
+    }));
 
-  return jsonNoStore({
-    ok: true,
-    mode: "WORKER_EXECUTED",
-    executedAt: new Date().toISOString(),
-    before,
-    result,
-    after,
-  });
+  const [after, lifecycleAfter] = await Promise.all([
+    getAppraisalNotificationHealth(),
+    getDirectorFeedbackLifecycleHealth(),
+  ]);
+
+  const ok = notificationAttempt.ok && lifecycleAttempt.ok;
+
+  return jsonNoStore(
+    {
+      ok,
+      mode: "WORKER_EXECUTED",
+      executedAt: new Date().toISOString(),
+      before,
+      result: notificationAttempt.ok
+        ? notificationAttempt.value
+        : {
+            claimed: 0,
+            sent: 0,
+            failed: 0,
+            dead: 0,
+            ambiguousSmsDead: 0,
+            expiredEmailDead: 0,
+            error: notificationAttempt.error,
+          },
+      after,
+      lifecycle: {
+        before: lifecycleBefore,
+        result: lifecycleAttempt.ok
+          ? lifecycleAttempt.value
+          : { error: lifecycleAttempt.error },
+        after: lifecycleAfter,
+      },
+    },
+    ok ? 200 : 500,
+  );
 }

@@ -173,6 +173,9 @@ function makeDatabase(fixture) {
       const data = clone(args.data);
       const participants = (data.participants?.create ?? []).map((row, index) => ({
         id: `participant-${state.cycles.length + 1}-${index + 1}`,
+        startedAt: null,
+        finalizedAt: null,
+        expiredAt: null,
         ...row,
       }));
       const cycle = {
@@ -206,8 +209,29 @@ function makeDatabase(fixture) {
     },
   };
 
+  const participantDelegate = {
+    async updateMany(args) {
+      const where = args.where ?? {};
+      const cycle = state.cycles.find((row) => row.id === where.cycleId);
+      if (!cycle) return { count: 0 };
+
+      let count = 0;
+      for (const participant of cycle.participants) {
+        if (where.status && participant.status !== where.status) continue;
+        if (where.finalizedAt === null && participant.finalizedAt !== null) continue;
+        if (where.startedAt === null && participant.startedAt !== null) continue;
+        if (where.startedAt?.not === null && participant.startedAt === null) continue;
+
+        Object.assign(participant, clone(args.data));
+        count += 1;
+      }
+      return { count };
+    },
+  };
+
   const tx = {
     appraisalCycle: cycleDelegate,
+    appraisalParticipant: participantDelegate,
     auditLog: {
       async create(args) {
         state.audits.push(clone(args.data));
@@ -401,6 +425,17 @@ async function main() {
   database.state.cycles[0].status = "CLOSED";
   database.state.cycles[0].closedAt = new Date("2026-08-04T10:00:00.000Z");
   database.state.cycles[0].closedByUserId = "system-user";
+  database.state.cycles[0].participants[0].status = "EXPIRED";
+  database.state.cycles[0].participants[0].expiredAt = new Date(
+    "2026-08-04T10:00:00.000Z",
+  );
+  database.state.cycles[0].participants[1].status = "EXPIRED";
+  database.state.cycles[0].participants[1].startedAt = new Date(
+    "2026-07-28T10:00:00.000Z",
+  );
+  database.state.cycles[0].participants[1].expiredAt = new Date(
+    "2026-08-04T10:00:00.000Z",
+  );
 
   const reopened = await extendOrReopenDirectorFeedbackCycle({
     actorUserId: "superadmin-user",
@@ -415,6 +450,21 @@ async function main() {
   assertEqual(reopened.outcome, "REOPENED", "Superadmin reopen outcome");
   assertEqual(database.state.cycles[0].status, "OPEN", "Reopened status");
   assertEqual(database.state.cycles[0].closedAt, null, "Closure timestamp cleared");
+  assertEqual(
+    database.state.cycles[0].participants[0].status,
+    "NOT_STARTED",
+    "Never-started expired participant restored",
+  );
+  assertEqual(
+    database.state.cycles[0].participants[1].status,
+    "IN_PROGRESS",
+    "Started expired participant restored",
+  );
+  assertEqual(
+    database.state.cycles[0].participants[0].expiredAt,
+    null,
+    "Reopened participant expiry cleared",
+  );
   assertEqual(database.state.audits.length, 4, "Reopen audit added");
 
   const duplicateFixture = makeFixture();
@@ -457,6 +507,7 @@ async function main() {
   console.log("Superadmin identity access  : contract-only, audited later");
   console.log("Director extend/reopen      : forbidden");
   console.log("Superadmin extend/reopen    : reason + audit required");
+  console.log("Expired participant restore : controlled reopen verified");
   console.log("Duplicate cycles            : idempotently prevented");
   console.log("Duplicate head assignments  : fail closed");
   console.log("Free-text comments          : disabled");

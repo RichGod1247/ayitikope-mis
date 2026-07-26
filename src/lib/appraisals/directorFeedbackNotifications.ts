@@ -31,6 +31,7 @@ const ACTIVE_DIRECTOR_FEEDBACK_STATUSES: AppraisalCycleStatus[] = [
   AppraisalCycleStatus.DRAFT,
   AppraisalCycleStatus.PENDING_APPROVAL,
   AppraisalCycleStatus.OPEN,
+  AppraisalCycleStatus.CLOSED,
   AppraisalCycleStatus.UNDER_REVIEW,
 ];
 
