@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import DirectorFeedbackPetalChart from "./DirectorFeedbackPetalChart";
+import DirectorFeedbackMaskedRespondents from "./DirectorFeedbackMaskedRespondents";
 
 type Section = {
   sectionKey: string;
@@ -147,7 +148,7 @@ type Workspace = {
     submissionTimesIncluded: false;
     responseOrderIncluded: false;
     individualAnswersIncluded: false;
-    individualFormsAvailable: false;
+    individualFormsAvailable: boolean;
   };
 };
 
@@ -543,8 +544,9 @@ export default function DirectorFeedbackReviewClient() {
 
             <div className="mt-5 rounded-2xl border border-cyan-300/20 bg-cyan-400/8 p-4 text-sm leading-6 text-cyan-50">
               You will never see respondent names, schools, contact details,
-              submission times, response order or individual answers in this
-              workspace.
+              submission times or response order. Complete finalized forms are
+              available only under randomized masked labels inside circuits that
+              independently meet the privacy threshold.
             </div>
 
             <button
@@ -742,7 +744,8 @@ export default function DirectorFeedbackReviewClient() {
                     <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
                       Average scores use only valid 1–5 ratings. N/A responses
                       are shown separately and are excluded from the score
-                      denominator. Individual answers remain unavailable.
+                      denominator. Masked individual forms are separate from this
+                      aggregate analysis.
                     </p>
 
                     <div className="mt-5 space-y-3">
@@ -874,6 +877,14 @@ export default function DirectorFeedbackReviewClient() {
                               </div>
                             ))}
                           </div>
+                        ) : null}
+
+                        {workspace?.privacy.individualFormsAvailable ? (
+                          <DirectorFeedbackMaskedRespondents
+                            cycleId={cycle.id}
+                            circuitZoneId={circuit.circuitZoneId}
+                            circuitName={circuit.circuitName}
+                          />
                         ) : null}
                       </article>
                     ))

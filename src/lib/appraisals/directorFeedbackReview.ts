@@ -24,7 +24,9 @@ export const DIRECTOR_FEEDBACK_REVIEW_POLICY = {
   reviewerRole: "DISTRICT_DIRECTOR",
   transactionMaxWaitMs: 5_000,
   transactionTimeoutMs: 15_000,
-  individualFormsAvailable: false,
+  individualFormsAvailable: true,
+  individualFormsRequireVisibleCircuit: true,
+  maskedRespondentLabelsGeneratedAfterClosure: true,
   interimSupervisoryAssessmentRequired: false,
   respondentIdentityVisible: false,
   schoolIdentityVisible: false,
@@ -128,7 +130,7 @@ export type DirectorFeedbackReviewWorkspace = {
     submissionTimesIncluded: false;
     responseOrderIncluded: false;
     individualAnswersIncluded: false;
-    individualFormsAvailable: false;
+    individualFormsAvailable: boolean;
   };
 };
 
@@ -247,7 +249,7 @@ function parseCircuitDisclosure(value: unknown) {
   };
 }
 
-function privacyContract() {
+function privacyContract(individualFormsAvailable = false) {
   return {
     respondentNamesIncluded: false as const,
     schoolNamesIncluded: false as const,
@@ -255,7 +257,7 @@ function privacyContract() {
     submissionTimesIncluded: false as const,
     responseOrderIncluded: false as const,
     individualAnswersIncluded: false as const,
-    individualFormsAvailable: false as const,
+    individualFormsAvailable,
   };
 }
 
@@ -274,7 +276,7 @@ export function buildDirectorFeedbackReviewWorkspace(
         releaseReasons: ["DIRECTOR_FEEDBACK_CYCLE_NOT_FOUND"],
       },
       aggregate: null,
-      privacy: privacyContract(),
+      privacy: privacyContract(false),
     };
   }
 
@@ -338,6 +340,13 @@ export function buildDirectorFeedbackReviewWorkspace(
     thresholdMet &&
     releaseEvaluation.ready;
 
+  const circuitDisclosure = snapshot
+    ? parseCircuitDisclosure(snapshot.metadata)
+    : null;
+  const individualFormsAvailable =
+    canViewScores &&
+    Boolean(circuitDisclosure?.visibleCircuits.length);
+
   return {
     cycle: {
       id: cycle.id,
@@ -389,7 +398,7 @@ export function buildDirectorFeedbackReviewWorkspace(
             municipalBand: municipalBand(snapshot.finalizedResponses),
           }),
           circuits: canViewScores
-            ? parseCircuitDisclosure(snapshot.metadata)
+            ? circuitDisclosure!
             : {
                 threshold:
                   DIRECTOR_FEEDBACK_REVIEW_POLICY.circuitDisclosureThreshold,
@@ -400,7 +409,7 @@ export function buildDirectorFeedbackReviewWorkspace(
               },
         }
       : null,
-    privacy: privacyContract(),
+    privacy: privacyContract(individualFormsAvailable),
   };
 }
 

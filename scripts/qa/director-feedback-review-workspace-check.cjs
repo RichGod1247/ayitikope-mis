@@ -193,7 +193,7 @@ function main() {
   contains(service, "releaseEligible", "service:threshold-gate");
   contains(service, "reviewStartedAt: now", "service:review-started-at");
   contains(service, "scoreValuesRecordedInAudit: false", "service:no-score-audit");
-  contains(service, "individualFormsAvailable: false", "service:no-forms-yet");
+  contains(service, "individualFormsAvailable: true", "service:threshold-safe-forms");
   contains(service, "visibleCircuits", "service:threshold-circuits");
   contains(service, "hiddenCircuitCount", "service:hidden-circuit-summary");
 
@@ -219,7 +219,7 @@ function main() {
   contains(client, "navigator.onLine", "ui:offline-awareness");
   excludes(client, "localStorage", "ui:no-local-storage");
   excludes(client, "sessionStorage", "ui:no-session-storage");
-  excludes(client, "masked respondent", "ui:no-individual-forms");
+  contains(client, "DirectorFeedbackMaskedRespondents", "ui:masked-form-component");
 
   contains(
     requestClient,
@@ -245,6 +245,11 @@ function main() {
     0,
     "Circuits hidden before entry",
   );
+  assertEqual(
+    closedReady.privacy.individualFormsAvailable,
+    false,
+    "Masked forms hidden before audited review entry",
+  );
 
   const reviewing = buildDirectorFeedbackReviewWorkspace(
     cycle("UNDER_REVIEW", snapshot()),
@@ -267,6 +272,11 @@ function main() {
     1,
     "Hidden circuit count retained without response count",
   );
+  assertEqual(
+    reviewing.privacy.individualFormsAvailable,
+    true,
+    "Threshold-qualified masked forms available after review entry",
+  );
 
   const blocked = buildDirectorFeedbackReviewWorkspace(
     cycle("CLOSED", snapshot({ finalized: 4, releaseEligible: false })),
@@ -279,6 +289,11 @@ function main() {
     blocked.aggregate.circuits.visibleCircuits.length,
     0,
     "Blocked circuits hidden",
+  );
+  assertEqual(
+    blocked.privacy.individualFormsAvailable,
+    false,
+    "Blocked cycles expose no masked forms",
   );
 
   const open = buildDirectorFeedbackReviewWorkspace(cycle("OPEN", null));
@@ -296,7 +311,7 @@ function main() {
   console.log("Circuit disclosure threshold  : 5");
   console.log("Hidden circuit contribution   : retained");
   console.log("Respondent/school identity     : absent");
-  console.log("Individual forms               : deferred");
+  console.log("Individual forms               : masked + threshold-safe");
   console.log("AppraisalReview row            : not misused");
   console.log("Schema change                   : false");
   console.log("Database accessed               : false");
