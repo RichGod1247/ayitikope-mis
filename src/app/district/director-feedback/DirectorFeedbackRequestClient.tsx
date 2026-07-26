@@ -393,6 +393,17 @@ export default function DirectorFeedbackRequestClient() {
           >
             Refresh safe totals
           </button>
+
+          {["CLOSED", "UNDER_REVIEW"].includes(cycle.status) ? (
+            <Link
+              href="/district/director-feedback/review"
+              className="mt-4 inline-flex min-h-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#D4AF37,#E8C96A)] px-5 py-3 text-sm font-bold text-[#071A3D]"
+            >
+              {cycle.status === "UNDER_REVIEW"
+                ? "Continue Private Review"
+                : "Open Review Readiness"}
+            </Link>
+          ) : null}
         </section>
       ) : null}
 

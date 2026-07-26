@@ -10,3 +10,4 @@ export * from "./publication";
 export * from "./scoring";
 export * from "./workflow";
 export * from "./directorFeedbackClosure";
+export * from "./directorFeedbackReview";
