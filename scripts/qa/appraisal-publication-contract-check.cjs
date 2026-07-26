@@ -334,6 +334,9 @@ async function main() {
   const supervisoryCode =
     APPRAISAL_INSTRUMENT_CODES.HEADTEACHER_SUPERVISORY_ASSESSMENT_V1;
   const director = APPRAISAL_INSTRUMENT_DEFINITIONS[directorCode];
+  const staff = APPRAISAL_INSTRUMENT_DEFINITIONS[staffCode];
+  const supervisory =
+    APPRAISAL_INSTRUMENT_DEFINITIONS[supervisoryCode];
 
   const canonical = canonicalAppraisalInstrumentDefinition(director);
   const serialized = serializeCanonicalAppraisalInstrumentDefinition(director);
@@ -510,36 +513,136 @@ async function main() {
     "Idempotent reads must not create publication audits",
   );
 
-  const blockedDatabase = new FakePublicationDatabase();
+  const headteacherDatabase = new FakePublicationDatabase();
 
-  await expectError(
-    () =>
-      publishAppraisalInstrumentVersion({
-        code: staffCode,
-        actorUserId: "director-user-1",
-        reqId: "req-blocked-staff",
-        database: blockedDatabase,
-      }),
-    "APPRAISAL_INSTRUMENT_DEFINITION_INVALID",
-    "Staff-feedback instrument must remain blocked",
-  );
+  const staffCreated = await publishAppraisalInstrumentVersion({
+    code: staffCode,
+    actorUserId: "director-user-1",
+    reqId: "req-headteacher-staff-publication",
+    now,
+    database: headteacherDatabase,
+  });
 
-  await expectError(
-    () =>
-      publishAppraisalInstrumentVersion({
-        code: supervisoryCode,
-        actorUserId: "director-user-1",
-        reqId: "req-blocked-supervisory",
-        database: blockedDatabase,
-      }),
-    "APPRAISAL_INSTRUMENT_DEFINITION_INVALID",
-    "Supervisory instrument must remain blocked",
-  );
+  const supervisoryCreated = await publishAppraisalInstrumentVersion({
+    code: supervisoryCode,
+    actorUserId: "director-user-1",
+    reqId: "req-headteacher-supervisory-publication",
+    now,
+    database: headteacherDatabase,
+  });
 
   assertEqual(
-    blockedDatabase.transactionCalls,
-    0,
-    "Blocked instruments must fail before database access",
+    staffCreated.outcome,
+    "CREATED",
+    "Staff-feedback publication outcome",
+  );
+  assertEqual(
+    supervisoryCreated.outcome,
+    "CREATED",
+    "Supervisory publication outcome",
+  );
+  assertEqual(
+    staffCreated.sectionCount,
+    4,
+    "Staff-feedback published section count",
+  );
+  assertEqual(
+    staffCreated.itemCount,
+    34,
+    "Staff-feedback published item count",
+  );
+  assertEqual(
+    supervisoryCreated.sectionCount,
+    4,
+    "Supervisory published section count",
+  );
+  assertEqual(
+    supervisoryCreated.itemCount,
+    34,
+    "Supervisory published item count",
+  );
+  assertEqual(
+    staffCreated.status,
+    "ACTIVE",
+    "Staff-feedback published status",
+  );
+  assertEqual(
+    supervisoryCreated.status,
+    "ACTIVE",
+    "Supervisory published status",
+  );
+  assertEqual(
+    headteacherDatabase.instrumentsByCode.size,
+    2,
+    "Headteacher instrument row count",
+  );
+  assertEqual(
+    headteacherDatabase.versionsByInstrumentVersion.size,
+    2,
+    "Headteacher instrument-version row count",
+  );
+  assertEqual(
+    headteacherDatabase.sections.length,
+    8,
+    "Headteacher published section rows",
+  );
+  assertEqual(
+    headteacherDatabase.items.length,
+    68,
+    "Headteacher published item rows",
+  );
+  assertEqual(
+    headteacherDatabase.auditLogs.length,
+    2,
+    "Headteacher publication audit count",
+  );
+  assertEqual(
+    headteacherDatabase.transactionCalls,
+    2,
+    "Headteacher publication transaction count",
+  );
+  assertEqual(
+    JSON.stringify(headteacherDatabase.versionStatusTransitions),
+    JSON.stringify(["DRAFT", "ACTIVE", "DRAFT", "ACTIVE"]),
+    "Both Headteacher instruments must build in DRAFT before activation",
+  );
+  assertEqual(
+    headteacherDatabase.auditLogs[0].metadata.contentHash,
+    hashAppraisalInstrumentDefinition(staff),
+    "Staff-feedback publication audit hash",
+  );
+  assertEqual(
+    headteacherDatabase.auditLogs[1].metadata.contentHash,
+    hashAppraisalInstrumentDefinition(supervisory),
+    "Supervisory publication audit hash",
+  );
+  assert(
+    staffCreated.contentHash !== supervisoryCreated.contentHash,
+    "Distinct Headteacher purposes and headers must retain distinct hashes",
+  );
+
+  const staffExisting = await publishAppraisalInstrumentVersion({
+    code: staffCode,
+    actorUserId: "director-user-1",
+    reqId: "req-headteacher-staff-idempotent",
+    now,
+    database: headteacherDatabase,
+  });
+
+  assertEqual(
+    staffExisting.outcome,
+    "EXISTING_MATCH",
+    "Staff-feedback publication must be idempotent",
+  );
+  assertEqual(
+    headteacherDatabase.versionsByInstrumentVersion.size,
+    2,
+    "Headteacher idempotency must not add a version",
+  );
+  assertEqual(
+    headteacherDatabase.auditLogs.length,
+    2,
+    "Headteacher idempotency must not duplicate an audit",
   );
 
   const driftDatabase = new FakePublicationDatabase();
@@ -655,7 +758,7 @@ async function main() {
   console.log("Changed-hash drift rejection : verified");
   console.log("Identity drift rejection     : verified");
   console.log("Concurrent race recovery     : verified");
-  console.log("Headteacher instruments      : blocked before DB access");
+  console.log("Headteacher instruments      : activation-ready, fake publication verified");
   console.log("");
   console.log("RESULT: D3.2 APPRAISAL PUBLICATION CONTRACT PROOF GREEN");
 }

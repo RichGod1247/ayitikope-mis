@@ -146,6 +146,7 @@ function main() {
     APPRAISAL_INSTRUMENT_CODES,
     APPRAISAL_INSTRUMENT_DEFINITIONS,
     APPRAISAL_INSTRUMENT_SPECIFICATIONS,
+    HEADTEACHER_ITEM_4_5_POLICY,
     validateInstrumentDefinition,
     instrumentActivationIsBlocked,
     resolveJurisdictionScopedOfficialHeading,
@@ -175,6 +176,7 @@ function main() {
     APPRAISAL_INSTRUMENT_CODES,
     APPRAISAL_INSTRUMENT_DEFINITIONS,
     APPRAISAL_INSTRUMENT_SPECIFICATIONS,
+    HEADTEACHER_ITEM_4_5_POLICY,
     APPRAISAL_WORKFLOW_RULES,
     getAppraisalCapabilities,
     decideAppraisalAuthority,
@@ -307,25 +309,51 @@ function main() {
 
   assert(headteacherItem45, "Headteacher item 4.5 must exist");
   assertEqual(
-    headteacherItem45.label,
+    HEADTEACHER_ITEM_4_5_POLICY.originalWording,
     "Presence of broken furniture",
-    "Headteacher item 4.5 source wording",
+    "Headteacher item 4.5 original wording must remain traceable",
+  );
+  assertEqual(
+    HEADTEACHER_ITEM_4_5_POLICY.adoptedWording,
+    "Ensures broken furniture is repaired, replaced, or safely removed promptly.",
+    "Headteacher item 4.5 provisional wording",
+  );
+  assertEqual(
+    HEADTEACHER_ITEM_4_5_POLICY.status,
+    "PROVISIONAL_PENDING_DIRECTOR_RATIFICATION",
+    "Headteacher item 4.5 policy status",
+  );
+  assertEqual(
+    HEADTEACHER_ITEM_4_5_POLICY.ratified,
+    false,
+    "Headteacher item 4.5 must remain visibly provisional",
+  );
+  assertEqual(
+    headteacherItem45.label,
+    HEADTEACHER_ITEM_4_5_POLICY.adoptedWording,
+    "Headteacher item 4.5 adopted wording",
   );
   assertEqual(
     headteacherItem45.scoringDirection,
-    "REQUIRES_POLICY_CONFIRMATION",
-    "Headteacher item 4.5 must remain policy-blocked",
+    "POSITIVE_HIGHER_IS_BETTER",
+    "Headteacher item 4.5 positive scoring direction",
+  );
+  assert(
+    headteacherItem45.sourceNotes?.some((note) =>
+      String(note).includes("PROVISIONAL_PENDING_DIRECTOR_RATIFICATION"),
+    ),
+    "Headteacher item 4.5 must carry the provisional policy marker",
   );
 
   assertEqual(
     instrumentActivationIsBlocked(staffCode),
-    true,
-    "Staff-feedback instrument must remain blocked",
+    false,
+    "Staff-feedback instrument should be activation-ready",
   );
   assertEqual(
     instrumentActivationIsBlocked(supervisoryCode),
-    true,
-    "Supervisory instrument must remain blocked",
+    false,
+    "Supervisory instrument should be activation-ready",
   );
   assertEqual(
     instrumentActivationIsBlocked(directorCode),
@@ -671,7 +699,8 @@ function main() {
   console.log("Workflow transitions         : verified");
   console.log("N/A-aware scoring            : verified");
   console.log("Multi-response aggregation   : verified");
-  console.log("Headteacher item 4.5         : policy-blocked");
+  console.log("Headteacher item 4.5         : provisional positive wording");
+  console.log("Headteacher instruments      : activation-ready");
   console.log("Director instrument          : activation-ready");
   console.log("");
   console.log("RESULT: D3.1C APPRAISAL CONTRACT PROOF GREEN");

@@ -47,8 +47,14 @@ export type AppraisalInstrumentSpecification = {
   activationBlockedReason: string | null;
 };
 
-const HEADTEACHER_ITEM_4_5_BLOCKER =
-  "The source form item 4.5 is phrased as 'Presence of broken furniture'. The Director must confirm whether higher scores mean fewer/no broken items before this instrument is activated.";
+export const HEADTEACHER_ITEM_4_5_POLICY = {
+  status: "PROVISIONAL_PENDING_DIRECTOR_RATIFICATION",
+  ratified: false,
+  originalWording: "Presence of broken furniture",
+  adoptedWording:
+    "Ensures broken furniture is repaired, replaced, or safely removed promptly.",
+  scoringDirection: "POSITIVE_HIGHER_IS_BETTER",
+} as const;
 
 export const APPRAISAL_INSTRUMENT_SPECIFICATIONS = {
   HEADTEACHER_STAFF_FEEDBACK_V1: {
@@ -71,7 +77,7 @@ export const APPRAISAL_INSTRUMENT_SPECIFICATIONS = {
     responseWindowDays: 7,
     minimumResponses: 1,
     sourceState: "TRANSCRIBED_AND_VERIFIED",
-    activationBlockedReason: HEADTEACHER_ITEM_4_5_BLOCKER,
+    activationBlockedReason: null,
   },
 
   HEADTEACHER_SUPERVISORY_ASSESSMENT_V1: {
@@ -95,7 +101,7 @@ export const APPRAISAL_INSTRUMENT_SPECIFICATIONS = {
     responseWindowDays: null,
     minimumResponses: null,
     sourceState: "TRANSCRIBED_AND_VERIFIED",
-    activationBlockedReason: HEADTEACHER_ITEM_4_5_BLOCKER,
+    activationBlockedReason: null,
   },
 
   DIRECTOR_GOVERNANCE_APPRAISAL_V1: {
@@ -337,11 +343,13 @@ const HEADTEACHER_SHARED_SECTIONS = [
       item("4.2", 2, "Accurate keeping of financial records"),
       item("4.3", 3, "Mobilization, storage and effective use of TLRs"),
       item("4.4", 4, "Availability of adequate furniture"),
-      item("4.5", 5, "Presence of broken furniture", {
-        scoringDirection: "REQUIRES_POLICY_CONFIRMATION",
+      item("4.5", 5, HEADTEACHER_ITEM_4_5_POLICY.adoptedWording, {
+        scoringDirection: HEADTEACHER_ITEM_4_5_POLICY.scoringDirection,
         sourceNotes: [
-          "The wording is negative while the form uses a positive 1–5 competence scale.",
-          "Activation remains blocked until the Director confirms whether higher scores mean fewer/no broken furniture items.",
+          `Original printed wording: "${HEADTEACHER_ITEM_4_5_POLICY.originalWording}".`,
+          `Policy status: ${HEADTEACHER_ITEM_4_5_POLICY.status}.`,
+          "Positive scoring direction: higher scores mean stronger evidence that broken furniture is promptly repaired, replaced, or safely removed.",
+          "This provisional correction may be replaced after Director ratification without changing the item key, section order, or scoring scale.",
         ],
       }),
       item(
@@ -665,7 +673,7 @@ export const APPRAISAL_INSTRUMENT_DEFINITIONS = {
       "Visit-only paper fields are not collected from teachers; school, circuit and headteacher identity are resolved as immutable snapshots.",
       "The printed item numbering skips 1.10 and the source keys are preserved.",
       "The printed item 2.8 says 'Lesson Note Vetting Chat' and is preserved verbatim.",
-      "Item 4.5 requires scoring-direction confirmation before activation.",
+      "Item 4.5 uses a provisional positive wording pending Director ratification; the item key and 1–5 scale remain unchanged.",
       "The directorate heading must be resolved from the active governance jurisdiction at runtime and must never be hardcoded.",
     ],
     sections: HEADTEACHER_SHARED_SECTIONS,
@@ -687,7 +695,7 @@ export const APPRAISAL_INSTRUMENT_DEFINITIONS = {
       "The same official 34-item headteacher instrument is reused for confidential staff feedback and governance supervisory assessment.",
       "The printed item numbering skips 1.10 and the source keys are preserved.",
       "The printed item 2.8 says 'Lesson Note Vetting Chat' and is preserved verbatim.",
-      "Item 4.5 requires scoring-direction confirmation before activation.",
+      "Item 4.5 uses a provisional positive wording pending Director ratification; the item key and 1–5 scale remain unchanged.",
       "The directorate heading must be resolved from the assessor’s active governance jurisdiction at runtime and must never be hardcoded.",
     ],
     sections: HEADTEACHER_SHARED_SECTIONS,
