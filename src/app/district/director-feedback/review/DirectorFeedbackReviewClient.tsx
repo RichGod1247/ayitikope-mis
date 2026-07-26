@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import DirectorFeedbackPetalChart from "./DirectorFeedbackPetalChart";
 
 type Section = {
   sectionKey: string;
@@ -10,6 +11,84 @@ type Section = {
   sectionOrder: number | null;
   averagePercentage: number | null;
   validResponses: number;
+};
+
+type AnalysisItem = {
+  itemKey: string;
+  itemLabel: string;
+  itemOrder: number;
+  maxScore: number;
+  averageScore: number | null;
+  averagePercentage: number | null;
+  validResponses: number;
+  notApplicableResponses: number;
+  band: string;
+  bandLabel: string;
+};
+
+type AnalysisSection = {
+  sectionKey: string;
+  sectionTitle: string;
+  sectionOrder: number;
+  maxScore: number;
+  averagePercentage: number | null;
+  validResponses: number;
+  band: string;
+  bandLabel: string;
+  interpretation: string;
+  strongestItemKey: string | null;
+  lowestItemKey: string | null;
+  items: AnalysisItem[];
+};
+
+type Analysis = {
+  instrument: {
+    code: string;
+    version: number;
+    title: string;
+    sectionCount: number;
+    itemCount: number;
+    scale: {
+      minimum: number;
+      maximum: number;
+      notApplicableAllowed: true;
+      labels: Record<string, string>;
+    };
+  };
+  overall: {
+    percentage: number | null;
+    band: string;
+    bandLabel: string;
+    interpretation: string;
+  };
+  participation: {
+    eligibleResponses: number;
+    finalizedResponses: number;
+    expiredResponses: number;
+    participationPercentage: number | null;
+  };
+  evidence: {
+    snapshotVersion: number;
+    generatedAt: string;
+    sourceFingerprint: string;
+    municipalBand: "BLOCKED" | "LIMITED" | "PREFERRED";
+  };
+  guide: Array<{
+    band: string;
+    label: string;
+    minimumPercentage: number | null;
+    maximumPercentage: number | null;
+    interpretation: string;
+  }>;
+  strongestSectionKey: string | null;
+  lowestSectionKey: string | null;
+  sections: AnalysisSection[];
+  limitations: {
+    individualAnswersAvailable: false;
+    scoreFrequencyDistributionAvailable: false;
+    rawResponsesQueried: false;
+    presentationBandsAreOfficialGrades: false;
+  };
 };
 
 type Circuit = {
@@ -52,6 +131,7 @@ type Workspace = {
     sourceFingerprint: string;
     overallPercentage: number | null;
     sections: Section[];
+    analysis: Analysis | null;
     circuits: {
       threshold: number;
       visibleCircuits: Circuit[];
@@ -108,6 +188,16 @@ function formatDate(value: string | null | undefined) {
 function percentage(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${value.toFixed(1)}%`;
+}
+
+function scoreOutOfFive(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${value.toFixed(2)} / 5`;
+}
+
+function widthPercentage(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
 }
 
 function friendlyError(code: string) {
@@ -346,6 +436,7 @@ export default function DirectorFeedbackReviewClient() {
 
   const cycle = workspace?.cycle ?? null;
   const aggregate = workspace?.aggregate ?? null;
+  const analysis = aggregate?.analysis ?? null;
   const readiness = workspace?.readiness ?? null;
 
   return (
@@ -576,6 +667,169 @@ export default function DirectorFeedbackReviewClient() {
                 </div>
               </section>
 
+              {analysis ? (
+                <>
+                  <section className={panel("p-5")}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#57D6C4]">
+                          Seven-section leadership profile
+                        </div>
+                        <h2 className="mt-2 text-xl font-bold">
+                          Leadership profile
+                        </h2>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+                          Each petal represents one official section. A longer
+                          petal means a stronger municipal aggregate rating.
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-[#0A1628] px-4 py-3 text-sm">
+                        <div className="text-[11px] uppercase tracking-[0.12em] text-[#8F98A8]">
+                          Participation
+                        </div>
+                        <div className="mt-1 text-xl font-bold text-[#E8C96A]">
+                          {percentage(
+                            analysis.participation.participationPercentage,
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5">
+                      <DirectorFeedbackPetalChart
+                        overallPercentage={analysis.overall.percentage}
+                        sections={analysis.sections}
+                      />
+                    </div>
+
+                    <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4 text-sm leading-6 text-amber-100">
+                      The labels below are developmental guides, not official
+                      disciplinary grades. This analysis explains the sealed
+                      aggregate and does not recalculate confidential answers.
+                    </div>
+
+                    <h3 className="mt-5 text-sm font-bold uppercase tracking-[0.12em] text-[#E8C96A]">
+                      Developmental guide
+                    </h3>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      {analysis.guide
+                        .filter((entry) => entry.band !== "NO_DATA")
+                        .map((entry) => (
+                          <div
+                            key={entry.band}
+                            className="rounded-2xl border border-white/10 bg-[#0A1628] p-4"
+                          >
+                            <div className="text-sm font-bold">{entry.label}</div>
+                            <div className="mt-1 text-xs text-[#E8C96A]">
+                              {entry.minimumPercentage ?? 0}%–
+                              {entry.maximumPercentage ?? 100}%
+                            </div>
+                            <p className="mt-2 text-xs leading-5 text-[#C9CDD6]">
+                              {entry.interpretation}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                  </section>
+
+                  <section className={panel("p-5")}>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#57D6C4]">
+                      Official 35-item form
+                    </div>
+                    <h2 className="mt-2 text-xl font-bold">
+                      Question-by-question analysis
+                    </h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-[#C9CDD6]">
+                      Average scores use only valid 1–5 ratings. N/A responses
+                      are shown separately and are excluded from the score
+                      denominator. Individual answers remain unavailable.
+                    </p>
+
+                    <div className="mt-5 space-y-3">
+                      {analysis.sections.map((section) => (
+                        <details
+                          key={section.sectionKey}
+                          className="group rounded-2xl border border-white/10 bg-[#0A1628] open:border-[#E8C96A]/35"
+                        >
+                          <summary className="cursor-pointer list-none p-4 sm:p-5">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#8F98A8]">
+                                  Section {section.sectionOrder} • {section.items.length} items
+                                </div>
+                                <h3 className="mt-1 font-bold leading-6">
+                                  {section.sectionTitle}
+                                </h3>
+                                <p className="mt-2 text-xs leading-5 text-[#C9CDD6]">
+                                  {section.interpretation}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-3">
+                                <div className="text-right">
+                                  <div className="text-2xl font-bold text-[#E8C96A]">
+                                    {percentage(section.averagePercentage)}
+                                  </div>
+                                  <div className="text-xs text-[#C9CDD6]">
+                                    {section.bandLabel}
+                                  </div>
+                                </div>
+                                <span className="text-xl text-[#C9CDD6] group-open:rotate-180">⌄</span>
+                              </div>
+                            </div>
+                          </summary>
+
+                          <div className="border-t border-white/10 p-4 sm:p-5">
+                            <div className="space-y-3">
+                              {section.items.map((item) => (
+                                <article
+                                  key={item.itemKey}
+                                  className="rounded-2xl border border-white/8 bg-[#06101F] p-4"
+                                >
+                                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div className="min-w-0">
+                                      <div className="text-xs font-bold text-[#E8C96A]">
+                                        {item.itemKey}
+                                      </div>
+                                      <p className="mt-1 text-sm leading-6 text-[#F7F4ED]">
+                                        {item.itemLabel}
+                                      </p>
+                                    </div>
+                                    <div className="shrink-0 text-left sm:text-right">
+                                      <div className="text-lg font-bold">
+                                        {scoreOutOfFive(item.averageScore)}
+                                      </div>
+                                      <div className="text-xs text-[#C9CDD6]">
+                                        {percentage(item.averagePercentage)} • {item.bandLabel}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/8">
+                                    <div
+                                      className="h-full rounded-full bg-[linear-gradient(90deg,#57D6C4,#E8C96A)]"
+                                      style={{
+                                        width: `${widthPercentage(
+                                          item.averagePercentage,
+                                        )}%`,
+                                      }}
+                                    />
+                                  </div>
+
+                                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#C9CDD6]">
+                                    <span>{item.validResponses} valid response(s)</span>
+                                    <span>{item.notApplicableResponses} N/A</span>
+                                  </div>
+                                </article>
+                              ))}
+                            </div>
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              ) : null}
+
               <section className={panel("p-5")}>
                 <h2 className="text-lg font-bold">Threshold-safe circuits</h2>
                 <p className="mt-2 text-sm leading-6 text-[#C9CDD6]">
@@ -603,6 +857,24 @@ export default function DirectorFeedbackReviewClient() {
                             {percentage(circuit.overallPercentage)}
                           </div>
                         </div>
+
+                        {circuit.sections.length ? (
+                          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                            {circuit.sections.map((section) => (
+                              <div
+                                key={section.sectionKey}
+                                className="rounded-xl border border-white/8 bg-[#06101F] p-3"
+                              >
+                                <div className="text-xs leading-5 text-[#C9CDD6]">
+                                  {section.sectionOrder ?? "—"}. {section.sectionTitle}
+                                </div>
+                                <div className="mt-1 font-bold text-[#E8C96A]">
+                                  {percentage(section.averagePercentage)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </article>
                     ))
                   ) : (

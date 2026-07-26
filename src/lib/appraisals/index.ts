@@ -13,3 +13,4 @@ export * from "./directorFeedbackClosure";
 export * from "./directorFeedbackReview";
 
 export * from "./directorFeedbackRelease";
+export * from "./directorFeedbackAnalysis";

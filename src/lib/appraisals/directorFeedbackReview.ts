@@ -5,6 +5,10 @@ import { APPRAISAL_AUDIT_ACTIONS } from "@/lib/appraisals/audit";
 import { assertAppraisalAuthority } from "@/lib/appraisals/authority";
 import { DIRECTOR_FEEDBACK_POLICY } from "@/lib/appraisals/directorFeedback";
 import {
+  buildDirectorFeedbackAnalysis,
+  type DirectorFeedbackAnalysis,
+} from "@/lib/appraisals/directorFeedbackAnalysis";
+import {
   appraisalReleaseReadiness,
   assertAppraisalCycleTransition,
 } from "@/lib/appraisals/workflow";
@@ -37,6 +41,7 @@ type ReviewSnapshotSource = {
   releaseEligible: boolean;
   overallPercentage: number | null;
   sectionAveragesJson: unknown;
+  itemAveragesJson: unknown;
   sourceHash: string;
   generatedAt: Date;
   metadata: unknown;
@@ -107,6 +112,7 @@ export type DirectorFeedbackReviewWorkspace = {
     sourceFingerprint: string;
     overallPercentage: number | null;
     sections: DirectorFeedbackReviewSection[];
+    analysis: DirectorFeedbackAnalysis | null;
     circuits: {
       threshold: number;
       visibleCircuits: DirectorFeedbackReviewCircuit[];
@@ -369,6 +375,19 @@ export function buildDirectorFeedbackReviewWorkspace(
           sections: canViewScores
             ? parseSections(snapshot.sectionAveragesJson)
             : [],
+          analysis: buildDirectorFeedbackAnalysis({
+            canViewScores,
+            overallPercentage: numeric(snapshot.overallPercentage),
+            sectionAveragesJson: snapshot.sectionAveragesJson,
+            itemAveragesJson: snapshot.itemAveragesJson,
+            eligibleResponses: snapshot.eligibleResponses,
+            finalizedResponses: snapshot.finalizedResponses,
+            expiredResponses: snapshot.expiredResponses,
+            snapshotVersion: snapshot.version,
+            generatedAt: snapshot.generatedAt.toISOString(),
+            sourceFingerprint: clean(snapshot.sourceHash).slice(0, 12),
+            municipalBand: municipalBand(snapshot.finalizedResponses),
+          }),
           circuits: canViewScores
             ? parseCircuitDisclosure(snapshot.metadata)
             : {
@@ -411,6 +430,7 @@ const REVIEW_CYCLE_SELECT = {
       releaseEligible: true,
       overallPercentage: true,
       sectionAveragesJson: true,
+      itemAveragesJson: true,
       sourceHash: true,
       generatedAt: true,
       metadata: true,
