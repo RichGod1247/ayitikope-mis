@@ -17,3 +17,4 @@ export * from "./directorFeedbackAnalysis";
 export * from "./headteacherFeedback";
 export * from "./headteacherFeedbackRequest";
 export * from "./headteacherFeedbackApproval";
+export * from "./headteacherFeedbackDirectOpen";
