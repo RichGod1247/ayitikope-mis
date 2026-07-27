@@ -3,6 +3,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireServerUserContext } from "@/lib/serverAuth";
 import OfficialNoticeSummaryCard from "@/components/governance/OfficialNoticeSummaryCard";
+import {
+  readTeacherHeadteacherAppraisalAssignmentState,
+  type TeacherHeadteacherAppraisalAssignmentReadState,
+} from "@/lib/appraisals/headteacherFeedbackReadStates";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,6 +25,64 @@ function normalizeRole(value: unknown) {
     .trim()
     .toUpperCase()
     .replace(/[\s-]/g, "_");
+}
+
+type HeadteacherAppraisalDashboardTile = {
+  subtitle: string;
+  desc: string;
+  pill: string;
+  enabled: boolean;
+  pillCls: string;
+  disabledReason?: string;
+};
+
+function buildHeadteacherAppraisalDashboardTile(
+  state: TeacherHeadteacherAppraisalAssignmentReadState | null,
+): HeadteacherAppraisalDashboardTile {
+  switch (state?.state) {
+    case "AVAILABLE":
+      return {
+        subtitle: "Confidential staff feedback is open",
+        desc: "Your Headteacher appraisal assignment is ready. Complete the official 34-item form before the response window closes.",
+        pill: "Available",
+        enabled: true,
+        pillCls: "border-emerald-300/25 bg-emerald-400/14 text-emerald-100",
+      };
+    case "CONTINUE":
+      return {
+        subtitle: "Continue your confidential response",
+        desc: "Some answers are already saved. Continue the official form and finalize it before the response window closes.",
+        pill: "Continue",
+        enabled: true,
+        pillCls: "border-sky-300/25 bg-sky-400/14 text-sky-100",
+      };
+    case "SUBMITTED_READ_ONLY":
+      return {
+        subtitle: "Your response is finalized",
+        desc: "Your confidential feedback was submitted successfully and is now read-only.",
+        pill: "Submitted",
+        enabled: true,
+        pillCls: "border-indigo-300/25 bg-indigo-400/14 text-indigo-100",
+      };
+    case "CLOSED":
+      return {
+        subtitle: "The response window is closed",
+        desc: "This Headteacher appraisal assignment is closed. Open it to view the final assignment status.",
+        pill: "Closed",
+        enabled: true,
+        pillCls: "border-amber-300/25 bg-amber-400/14 text-amber-100",
+      };
+    case "LOCKED":
+    default:
+      return {
+        subtitle: "No authorized request is open",
+        desc: "This becomes available only when an authorized Headteacher appraisal request is open.",
+        pill: "Locked",
+        enabled: false,
+        pillCls: "border-slate-300/20 bg-white/8 text-slate-200",
+        disabledReason: "Awaiting an authorized appraisal request.",
+      };
+  }
 }
 
 export default async function TeacherDashboardPage() {
@@ -99,6 +161,17 @@ export default async function TeacherDashboardPage() {
 
   const normalizedRole = normalizeRole(safe.roleName);
   const isTeacherOnly = normalizedRole === "TEACHER";
+
+  const headteacherAppraisalState = isTeacherOnly
+    ? await readTeacherHeadteacherAppraisalAssignmentState({
+        actorUserId: safe.userId,
+        actorRoleName: safe.roleName,
+        tenantId: safe.tenantId,
+      })
+    : null;
+
+  const headteacherAppraisalTile =
+    buildHeadteacherAppraisalDashboardTile(headteacherAppraisalState);
 
   const tiles: Array<{
     title: string;
@@ -183,17 +256,16 @@ export default async function TeacherDashboardPage() {
     },
     {
       title: "Headteacher Appraisal",
-      subtitle: "Confidential feedback when requested",
-      desc: "This becomes available only during an authorized appraisal request.",
-      pill: "Locked",
+      subtitle: headteacherAppraisalTile.subtitle,
+      desc: headteacherAppraisalTile.desc,
+      pill: headteacherAppraisalTile.pill,
       icon: "🏫",
       href: "/teacher/headteacher-appraisal",
-      enabled: false,
+      enabled: headteacherAppraisalTile.enabled,
       grad: "from-[#101A27] via-[#17283B] to-[#0C1320]",
       border: "border-slate-300/20",
-      pillCls: "border-slate-300/20 bg-white/8 text-slate-200",
-      disabledReason:
-        "Available only when an authorized appraisal request is open.",
+      pillCls: headteacherAppraisalTile.pillCls,
+      disabledReason: headteacherAppraisalTile.disabledReason,
     },
     {
       title: "Health",
