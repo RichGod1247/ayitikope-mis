@@ -18,7 +18,12 @@ type DeliveryPayload = {
   destination: string;
   text: string;
   subject?: string;
+  template?: string;
 };
+
+const DEFAULT_APPRAISAL_SMS_DELIVERY = {
+  template: "director-feedback-cycle-opened",
+} as const;
 
 export type AppraisalNotificationWorkerResult = {
   claimed: number;
@@ -62,6 +67,7 @@ function deliveryPayload(
   );
   const text = readString(payload.delivery, "text");
   const subject = readString(payload.delivery, "subject");
+  const template = readString(payload.delivery, "template");
 
   if (!destination) {
     throw new Error(
@@ -79,6 +85,7 @@ function deliveryPayload(
     destination,
     text,
     subject: subject ?? undefined,
+    template: template ?? undefined,
   };
 }
 
@@ -98,7 +105,7 @@ async function deliverSms(
     actorId: null,
     to: delivery.destination,
     message: delivery.text,
-    template: "director-feedback-cycle-opened",
+    template: delivery.template ?? DEFAULT_APPRAISAL_SMS_DELIVERY.template,
     payload: {
       notificationId: notification.id,
       cycleId: notification.cycleId,
