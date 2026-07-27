@@ -15,3 +15,4 @@ export * from "./directorFeedbackReview";
 export * from "./directorFeedbackRelease";
 export * from "./directorFeedbackAnalysis";
 export * from "./headteacherFeedback";
+export * from "./headteacherFeedbackRequest";
