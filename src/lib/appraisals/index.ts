@@ -20,3 +20,4 @@ export * from "./headteacherFeedbackApproval";
 export * from "./headteacherFeedbackDirectOpen";
 export * from "./headteacherFeedbackReadStates";
 export * from "./headteacherFeedbackResponse";
+export * from "./headteacherFeedbackDeadlineClosure";
