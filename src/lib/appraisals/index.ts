@@ -26,3 +26,4 @@ export * from "./headteacherFeedbackAggregateSnapshot";
 export * from "./headteacherFeedbackAggregateReadiness";
 export * from "./headteacherFeedbackNotifications";
 export * from "./headteacherSupervisoryAssessment";
+export * from "./headteacherSupervisoryAssessmentDraft";
