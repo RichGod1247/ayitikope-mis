@@ -22,3 +22,4 @@ export * from "./headteacherFeedbackReadStates";
 export * from "./headteacherFeedbackResponse";
 export * from "./headteacherFeedbackDeadlineClosure";
 export * from "./headteacherFeedbackAggregateContract";
+export * from "./headteacherFeedbackAggregateSnapshot";
