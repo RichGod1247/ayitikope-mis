@@ -28,3 +28,4 @@ export * from "./headteacherFeedbackNotifications";
 export * from "./headteacherSupervisoryAssessment";
 export * from "./headteacherSupervisoryAssessmentDraft";
 export * from "./headteacherSupervisoryAssessmentScoring";
+export * from "@/lib/appraisals/headteacherSupervisoryAssessmentRevision";
