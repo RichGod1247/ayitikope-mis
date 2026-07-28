@@ -30,7 +30,8 @@ export const HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_POLICY = {
   audience: "DISTRICT_DIRECTOR",
   requiredCapability: HEADTEACHER_DIRECTOR_REVIEW_POLICY.requiredCapability,
   requiredCycleStatus: "UNDER_REVIEW",
-  requiredReviewStage: 1,
+  minimumReviewStage: 1,
+  currentReviewStageMode: "LATEST_PENDING",
   requiredReviewDecision: "PENDING",
   aggregateSnapshotVersion: 1,
   expectedSectionCount: 4,
@@ -59,6 +60,7 @@ export const HEADTEACHER_DIRECTOR_REVIEW_DECISION_POLICY = {
   returnReasonRequired: true,
   holdReasonRequired: true,
   releaseNoteRequired: false,
+  minimumReasonLength: 3,
   maximumNoteLength: 2_000,
   reviewerMayRewriteScores: false,
   scoreMutationAllowed: false,
@@ -136,7 +138,7 @@ export type HeadteacherDirectorReviewPackage = {
   };
   review: {
     id: string;
-    stage: 1;
+    stage: number;
     decision: "PENDING";
     reviewerUserId: string;
     reviewerAssignmentId: string;
@@ -469,7 +471,7 @@ export type HeadteacherDirectorReviewPackageDatabase = {
     findMany(args: unknown): Promise<AssessmentRecord[]>;
   };
   appraisalReview: {
-    findUnique(args: unknown): Promise<ReviewRecord | null>;
+    findMany(args: unknown): Promise<ReviewRecord[]>;
   };
 };
 
@@ -1175,6 +1177,65 @@ function reviewEvidenceHash(input: {
   });
 }
 
+function resolveCurrentPendingReview(input: {
+  reviews: ReviewRecord[];
+  cycleId: string;
+  assessmentId: string;
+  actorUserId: string;
+  assignmentId: string;
+}) {
+  const reviews = [...input.reviews].sort(
+    (left, right) =>
+      left.stage - right.stage ||
+      left.createdAt.getTime() - right.createdAt.getTime(),
+  );
+  if (reviews.length === 0) {
+    fail("HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_REVIEW_RECORD_MISSING", 409);
+  }
+  for (let index = 0; index < reviews.length; index += 1) {
+    const review = reviews[index];
+    const expectedStage = index + 1;
+    if (
+      review.cycleId !== input.cycleId ||
+      review.assessmentId !== input.assessmentId ||
+      review.reviewerUserId !== input.actorUserId ||
+      review.reviewerAssignmentId !== input.assignmentId ||
+      review.stage !== expectedStage
+    ) {
+      fail("HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_REVIEW_CHAIN_DRIFT", 409, {
+        expectedStage,
+        actualStage: review.stage,
+      });
+    }
+    const isLatest = index === reviews.length - 1;
+    if (isLatest) {
+      if (
+        normalized(review.decision) !== "PENDING" ||
+        clean(review.note) ||
+        review.decidedAt
+      ) {
+        fail("HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_CURRENT_STAGE_INVALID", 409, {
+          stage: review.stage,
+          decision: normalized(review.decision),
+        });
+      }
+      continue;
+    }
+    if (
+      normalized(review.decision) !== "HELD" ||
+      clean(review.note).length <
+        HEADTEACHER_DIRECTOR_REVIEW_DECISION_POLICY.minimumReasonLength ||
+      !review.decidedAt
+    ) {
+      fail("HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_PRIOR_STAGE_INVALID", 409, {
+        stage: review.stage,
+        decision: normalized(review.decision),
+      });
+    }
+  }
+  return reviews[reviews.length - 1];
+}
+
 function assertReviewRecord(input: {
   cycle: CycleRecord;
   review: ReviewRecord | null;
@@ -1232,7 +1293,8 @@ function assertReviewRecord(input: {
     review.assessmentId !== input.assessment.id ||
     review.reviewerUserId !== input.actorUserId ||
     review.reviewerAssignmentId !== input.assignmentId ||
-    review.stage !== 1 ||
+    !Number.isInteger(review.stage) ||
+    review.stage < HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_POLICY.minimumReviewStage ||
     normalized(review.decision) !== "PENDING" ||
     clean(review.note) ||
     review.decidedAt ||
@@ -1733,14 +1795,17 @@ export async function readHeadteacherDirectorReviewPackage(
   }
   const verifiedAssessment = verifySupervisoryAssessment(assessment);
 
-  const review = await database.appraisalReview.findUnique({
-    where: {
-      assessmentId_stage: {
-        assessmentId: assessment.id,
-        stage: 1,
-      },
-    },
+  const reviews = await database.appraisalReview.findMany({
+    where: { assessmentId: assessment.id },
     select: REVIEW_SELECT,
+    orderBy: [{ stage: "asc" }, { createdAt: "asc" }],
+  });
+  const review = resolveCurrentPendingReview({
+    reviews,
+    cycleId: cycle.id,
+    assessmentId: assessment.id,
+    actorUserId,
+    assignmentId: assignment.id,
   });
   const verifiedReview = assertReviewRecord({
     cycle,
@@ -1792,7 +1857,7 @@ export async function readHeadteacherDirectorReviewPackage(
     },
     review: {
       id: verifiedReview.review.id,
-      stage: 1,
+      stage: verifiedReview.review.stage,
       decision: "PENDING",
       reviewerUserId: actorUserId,
       reviewerAssignmentId: assignment.id,
@@ -1845,7 +1910,7 @@ function decisionNote(input: {
   }
   if (
     ["RETURN", "HOLD"].includes(input.decision) &&
-    note.length === 0
+    note.length < HEADTEACHER_DIRECTOR_REVIEW_DECISION_POLICY.minimumReasonLength
   ) {
     fail("HEADTEACHER_DIRECTOR_REVIEW_DECISION_REASON_REQUIRED", 400, {
       decision: input.decision,
@@ -1860,7 +1925,9 @@ function assertDecisionPackage(reviewPackage: HeadteacherDirectorReviewPackage) 
     reviewPackage.audience !== "DISTRICT_DIRECTOR" ||
     reviewPackage.lifecycleState !== "READY_FOR_DECISION" ||
     reviewPackage.cycle.status !== "UNDER_REVIEW" ||
-    reviewPackage.review.stage !== 1 ||
+    !Number.isInteger(reviewPackage.review.stage) ||
+    reviewPackage.review.stage <
+      HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_POLICY.minimumReviewStage ||
     reviewPackage.review.decision !== "PENDING" ||
     !/^[a-f0-9]{64}$/.test(reviewPackage.review.reviewEvidenceHash) ||
     !/^[a-f0-9]{64}$/.test(reviewPackage.staffFeedback.sourceHash) ||

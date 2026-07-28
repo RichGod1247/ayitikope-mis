@@ -602,7 +602,7 @@ function createDatabase(options = {}) {
     assignments: options.assignments ?? [makeAssignment()],
     snapshots: options.snapshots ?? [makeSnapshot()],
     assessments: options.assessments ?? [assessment],
-    review: options.review ?? makeReview(assessment),
+    reviews: options.reviews ?? [options.review ?? makeReview(assessment)],
     reads: [],
     writes: 0,
   };
@@ -639,9 +639,9 @@ function createDatabase(options = {}) {
       },
     },
     appraisalReview: {
-      async findUnique(args) {
-        state.reads.push(["appraisalReview.findUnique", args]);
-        return state.review;
+      async findMany(args) {
+        state.reads.push(["appraisalReview.findMany", args]);
+        return state.reviews;
       },
     },
   };
@@ -681,6 +681,16 @@ async function main() {
     HEADTEACHER_DIRECTOR_REVIEW_DECISION_POLICY.executionPerformed,
     false,
     "G2 decision contract must not execute decisions",
+  );
+  assertEqual(
+    HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_POLICY.currentReviewStageMode,
+    "LATEST_PENDING",
+    "G2 must resolve the latest pending review stage",
+  );
+  assertEqual(
+    HEADTEACHER_DIRECTOR_REVIEW_DECISION_POLICY.minimumReasonLength,
+    3,
+    "Return/hold reasons must satisfy the revision contract",
   );
 
   const fixture = createDatabase();
@@ -857,7 +867,7 @@ async function main() {
         }).db,
       });
     },
-    "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_REVIEW_RECORD_DRIFT",
+    "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_CURRENT_STAGE_INVALID",
     "Only pending review may expose a decision package",
   );
 
@@ -877,6 +887,37 @@ async function main() {
     },
     "HEADTEACHER_DIRECTOR_REVIEW_PACKAGE_REVIEW_RECORD_DRIFT",
     "Review evidence hash drift must fail closed",
+  );
+
+  const heldReview = makeReview(fixture.state.assessments[0]);
+  heldReview.decision = "HELD";
+  heldReview.note = "Awaiting accountable clarification.";
+  heldReview.decidedAt = new Date("2026-07-29T14:00:00.000Z");
+  const continuedReview = deepClone(heldReview);
+  continuedReview.id = "review-002";
+  continuedReview.stage = 2;
+  continuedReview.decision = "PENDING";
+  continuedReview.note = null;
+  continuedReview.decidedAt = null;
+  continuedReview.createdAt = new Date("2026-07-29T14:00:01.000Z");
+  continuedReview.metadata = {
+    ...continuedReview.metadata,
+    reviewStage: 2,
+    continuedFromReviewId: heldReview.id,
+    continuedFromStage: 1,
+    priorDecision: "HELD",
+  };
+  const continuedFixture = createDatabase({
+    reviews: [heldReview, continuedReview],
+  });
+  const continuedPackage = await readHeadteacherDirectorReviewPackage({
+    ...baseInput(),
+    database: continuedFixture.db,
+  });
+  assertEqual(
+    continuedPackage.review.stage,
+    2,
+    "Latest pending hold-continuation stage must be selected",
   );
 
   const returnPlan = planHeadteacherDirectorReviewDecision({
@@ -977,12 +1018,20 @@ async function main() {
     serviceSource.includes("canonicalHeadteacherSupervisoryAssessorRole"),
     "SISSO must remain the canonical circuit office",
   );
+  assert(
+    serviceSource.includes("resolveCurrentPendingReview"),
+    "Latest pending review-stage resolution must be explicit",
+  );
+  assert(
+    serviceSource.includes("appraisalReview.findMany"),
+    "Review-stage chain must be read without a hard-coded stage",
+  );
 
   console.log("");
   console.log("=== D3.4G2 DIRECTOR READ-ONLY REVIEW PACKAGE + DECISION CONTRACT ===");
   console.log("");
   console.log("Review audience                 : District Director only");
-  console.log("Lifecycle boundary              : UNDER_REVIEW + stage-1 PENDING");
+  console.log("Lifecycle boundary              : UNDER_REVIEW + latest-stage PENDING");
   console.log("Staff evidence                  : immutable aggregate snapshot V1");
   console.log("Supervisory evidence            : one finalized current assessment");
   console.log("Supervisory scores/hash          : recalculated and verified");
