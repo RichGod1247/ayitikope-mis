@@ -126,6 +126,7 @@ function main() {
   const supervisoryModule = require(sourcePath);
   const {
     HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY,
+    canonicalHeadteacherSupervisoryAssessorRole,
     inspectHeadteacherSupervisoryInstrument,
     decideHeadteacherSupervisoryAssessmentAuthority,
     canTransitionHeadteacherSupervisoryAssessment,
@@ -218,6 +219,21 @@ function main() {
     ]),
   );
   assert(aliasResult.allowed, "SISSO/Circuit Supervisor alias should preserve circuit authority", aliasResult);
+  assertEqual(
+    aliasResult.effectiveRole,
+    "SISSO",
+    "Circuit Supervisor legacy alias must canonicalize to the single SISSO office",
+  );
+  assertEqual(
+    canonicalHeadteacherSupervisoryAssessorRole("Circuit Supervisor"),
+    "SISSO",
+    "Circuit Supervisor must be a legacy alias, not a separate office",
+  );
+  assertEqual(
+    HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.circuitOffice.distinctOfficeCount,
+    1,
+    "SISSO and Circuit Supervisor must not be counted as separate offices",
+  );
 
   expectDenied(
     decideHeadteacherSupervisoryAssessmentAuthority,
@@ -417,7 +433,7 @@ function main() {
   console.log("Evidence stream                 : separate from staff feedback");
   console.log("Combined weighting              : undefined");
   console.log("District assessors              : Director / HOS / BSC");
-  console.log("Circuit assessors               : SISSO / Circuit Supervisor");
+  console.log("Circuit office                  : SISSO (Circuit Supervisor is a legacy alias)");
   console.log("Capability + active assignment  : both required");
   console.log("District/circuit jurisdiction   : verified");
   console.log("Cross-scope/self assessment     : forbidden");

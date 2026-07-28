@@ -22,6 +22,17 @@ export const HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY = {
     "SISSO",
     "CIRCUIT_SUPERVISOR",
   ] as const,
+  distinctOperationalOffices: [
+    "DISTRICT_DIRECTOR",
+    "HEAD_OF_SUPERVISION",
+    "BASIC_SCHOOL_COORDINATOR",
+    "SISSO",
+  ] as const,
+  circuitOffice: {
+    canonicalRole: "SISSO",
+    legacyRoleAliases: ["CIRCUIT_SUPERVISOR"] as const,
+    distinctOfficeCount: 1,
+  },
   districtWideAssessorRoles: [
     "DISTRICT_DIRECTOR",
     "HEAD_OF_SUPERVISION",
@@ -198,9 +209,7 @@ const ASSESSMENT_TRANSITIONS = {
 const DISTRICT_ROLES = new Set<string>(
   HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.districtWideAssessorRoles,
 );
-const CIRCUIT_ROLES = new Set<string>(
-  HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.circuitAssessorRoles,
-);
+const CIRCUIT_ROLES = new Set<string>(["SISSO"]);
 const OPERATIONAL_ROLES = new Set<string>(
   HEADTEACHER_SUPERVISORY_ASSESSMENT_POLICY.operationalAssessorRoles,
 );
@@ -211,6 +220,11 @@ function clean(value: unknown) {
 
 function normalized(value: unknown) {
   return clean(value).toUpperCase().replace(/[\s-]+/g, "_");
+}
+
+export function canonicalHeadteacherSupervisoryAssessorRole(value: unknown) {
+  const role = normalized(value);
+  return role === "CIRCUIT_SUPERVISOR" ? "SISSO" : role;
 }
 
 function normalizedName(value: unknown) {
@@ -240,13 +254,9 @@ function assignmentIsActive(
 }
 
 function rolesEquivalent(left: string, right: string) {
-  const normalizedLeft = normalized(left);
-  const normalizedRight = normalized(right);
-  if (normalizedLeft === normalizedRight) return true;
-
-  const circuitAliases = new Set(["SISSO", "CIRCUIT_SUPERVISOR"]);
   return (
-    circuitAliases.has(normalizedLeft) && circuitAliases.has(normalizedRight)
+    canonicalHeadteacherSupervisoryAssessorRole(left) ===
+    canonicalHeadteacherSupervisoryAssessorRole(right)
   );
 }
 
@@ -388,7 +398,9 @@ export function decideHeadteacherSupervisoryAssessmentAuthority(
     },
     "ASSESS_HEADTEACHER",
   );
-  const effectiveRole = normalized(capability.effectiveRole);
+  const effectiveRole = canonicalHeadteacherSupervisoryAssessorRole(
+    capability.effectiveRole,
+  );
   if (!capability.allowed) {
     return authorityFailure(mapCapabilityFailure(capability), effectiveRole);
   }
