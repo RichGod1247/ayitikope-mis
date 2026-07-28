@@ -33,3 +33,4 @@ export * from "./headteacherDirectorReview";
 export * from "./headteacherDirectorReviewPackage";
 export * from "./headteacherDirectorReviewDecision";
 export * from "./headteacherDirectorReviewRelease";
+export * from "./headteacherDirectorReleaseNotifications";

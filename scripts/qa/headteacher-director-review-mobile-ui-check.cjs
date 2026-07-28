@@ -105,7 +105,8 @@ function main() {
   );
   contains(
     client,
-    "notificationSeedingIncluded: false",
+    "notificationSeedingIncluded: true",
+    "providerDeliveryIncluded: false",
     "notification deferral",
   );
 
@@ -142,6 +143,21 @@ function main() {
     "Do not repeat the decision blindly",
     "idempotency safety guidance",
   );
+  contains(
+    client,
+    "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
+    "truthful partial-success retry state",
+  );
+  contains(
+    client,
+    "The release will not be duplicated.",
+    "safe notification retry guidance",
+  );
+  contains(
+    client,
+    "The Headteacher notification was queued safely.",
+    "successful queue confirmation",
+  );
 
   excludes(client, "localStorage", "local storage");
   excludes(client, "sessionStorage", "session storage");
@@ -176,7 +192,8 @@ function main() {
   console.log("Reviewer score rewriting       : absent");
   console.log("Respondent identities/forms    : absent");
   console.log("Persistent browser storage     : absent");
-  console.log("Notifications/providers        : absent");
+  console.log("Notification seeding           : release-only, idempotent");
+  console.log("Provider delivery               : absent");
   console.log("Dashboard modification         : absent");
   console.log("Database accessed              : false");
   console.log("");

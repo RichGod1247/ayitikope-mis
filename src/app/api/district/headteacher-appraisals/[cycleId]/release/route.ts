@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { executeHeadteacherDirectorRelease } from "@/lib/appraisals/headteacherDirectorReviewRelease";
+import { ensureHeadteacherDirectorReleaseNotifications } from "@/lib/appraisals/headteacherDirectorReleaseNotifications";
 import {
   clean,
   directorReviewApiError,
@@ -65,11 +66,54 @@ export async function POST(req: NextRequest, context: RouteContext) {
       userAgent: meta.userAgent,
     });
 
-    return jsonNoStore(200, {
-      ok: true,
-      reqId: meta.reqId,
-      result,
-    });
+    try {
+      const notifications =
+        await ensureHeadteacherDirectorReleaseNotifications({
+          cycleId,
+          actorUserId: auth.ctx.userId,
+          releaseProofHash: result.releaseProofHash,
+          releasedAt: result.releasedAt,
+          reqId: meta.reqId,
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+        });
+
+      return jsonNoStore(200, {
+        ok: true,
+        reqId: meta.reqId,
+        result,
+        notifications,
+      });
+    } catch (notificationError) {
+      const notificationFailure = notificationError as Error & {
+        code?: unknown;
+        status?: unknown;
+      };
+      console.error(
+        "[HEADTEACHER_DIRECTOR_RELEASE_NOTIFICATION_SEEDING_ERROR]",
+        {
+          reqId: meta.reqId,
+          cycleId,
+          releaseProofHash: result.releaseProofHash,
+          error: clean(notificationFailure.code || notificationFailure.message),
+          status: Number(notificationFailure.status) || null,
+        },
+      );
+
+      return jsonNoStore(503, {
+        ok: false,
+        reqId: meta.reqId,
+        error:
+          "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED",
+        releaseCommitted: true,
+        retrySafe: true,
+        result,
+        notifications: {
+          outcome: "RETRY_REQUIRED",
+          providerCalled: false,
+        },
+      });
+    }
   } catch (error) {
     return directorReviewApiError({
       error,

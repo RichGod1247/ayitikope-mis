@@ -56,7 +56,8 @@ const BBC_REVIEW_POLICY = Object.freeze({
   respondentIdentitiesIncluded: false,
   individualStaffResponsesIncluded: false,
   reviewerMayRewriteScores: false,
-  notificationSeedingIncluded: false,
+  notificationSeedingIncluded: true,
+  providerDeliveryIncluded: false,
 });
 
 function record(value: unknown): JsonRecord {
@@ -707,6 +708,18 @@ export default function HeadteacherDirectorReviewClient({
       const data = await readJson(response);
 
       if (!response.ok) {
+        const responseBody = record(data);
+        if (
+          text(responseBody.error) ===
+            "HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED" &&
+          boolean(responseBody.releaseCommitted)
+        ) {
+          setFailure(
+            "The appraisal was released, but the Headteacher notification was not queued. Keep this page open and press Confirm official release again after the connection recovers. The release will not be duplicated.",
+          );
+          return;
+        }
+
         setFailure(
           errorMessage(data, "The Director decision was not recorded."),
         );
@@ -718,7 +731,7 @@ export default function HeadteacherDirectorReviewClient({
           ? "Assessment returned. The assessor must create a correction revision."
           : decisionMode === "HOLD"
             ? "Appraisal held. The next Director review stage is ready."
-            : "Appraisal released with an immutable release proof.";
+            : "Appraisal released. The Headteacher notification was queued safely.";
 
       setNotice(completed);
       setDecisionMode(null);

@@ -11,7 +11,7 @@ export const HEADTEACHER_DIRECTOR_REVIEW_API_POLICY = {
   respondentIdentitiesReturned: false,
   individualStaffResponsesReturned: false,
   reviewerScoreMutationAllowed: false,
-  notificationsSeeded: false,
+  notificationSeedingMode: "RELEASE_ONLY_POST_TRANSACTION",
   providerCallsAllowed: false,
 } as const;
 

@@ -71,6 +71,7 @@ assert(source.shared.includes('Pragma: "no-cache"'), "Pragma no-cache header mis
 assert(source.shared.includes('"X-Content-Type-Options": "nosniff"'), "Nosniff header missing");
 assert(source.shared.includes('"Referrer-Policy": "no-referrer"'), "Referrer policy missing");
 assert(source.shared.includes("maximumJsonBodyBytes: 16_384"), "Bounded JSON body policy missing");
+assert(source.shared.includes('notificationSeedingMode: "RELEASE_ONLY_POST_TRANSACTION"'), "Release-only notification-seeding mode missing");
 assert(source.shared.includes("requireGovernanceApiContext"), "Governance API auth missing");
 assert(source.shared.includes("allowedRoles"), "Allowed role gate missing");
 assert(source.shared.includes("allowedZoneLevels"), "Allowed zone gate missing");
@@ -96,6 +97,10 @@ assert(source.returnHold.includes("executeHeadteacherDirectorReturnOrHold"), "G3
 assert(source.returnHold.includes('decision !== "RETURN" && decision !== "HOLD"'), "Return/hold decision allowlist missing");
 assert(source.returnHold.includes("parsed.body.confirm === true"), "Return/hold confirmation not explicit");
 assert(source.release.includes("executeHeadteacherDirectorRelease"), "G3B release transaction not wired");
+assert(source.release.includes("ensureHeadteacherDirectorReleaseNotifications"), "G4C post-release notification seeding not wired");
+assert(source.release.includes("HEADTEACHER_RELEASE_NOTIFICATION_SEEDING_RETRY_REQUIRED"), "Truthful notification retry state missing");
+assert(source.release.includes("releaseCommitted: true"), "Partial-success release proof missing");
+assert(source.release.includes("retrySafe: true"), "Idempotent notification retry marker missing");
 assert(source.release.includes("parsed.body.confirm === true"), "Release confirmation not explicit");
 assert(!source.release.includes('decision: "RELEASE"'), "Release route must use the dedicated G3B transaction");
 
@@ -126,8 +131,8 @@ console.log("Safe error details             : allowlisted only");
 console.log("Respondent identities/forms    : absent");
 console.log("Reviewer score rewriting       : absent");
 console.log("BBC interface                  : deferred to G4B");
-console.log("Notification seeding           : deferred to G4C");
-console.log("Providers                      : absent");
+console.log("Notification seeding           : release-only G4C post-transaction");
+console.log("Provider delivery              : absent");
 console.log("Database accessed              : false");
 console.log("");
 console.log("RESULT: D3.4G4A DIRECTOR REVIEW API GREEN");
