@@ -632,12 +632,12 @@ export default function HeadteacherDashboardClient() {
 
         <MajorTile
           title="My Appraisal"
-          desc="Request and view your own appraisal after the authorized Director-approved workflow is opened."
-          cta="Available after Director approval"
-          badge="Locked"
-          disabled
-          toneClass="border-slate-300/20 from-[#121722] via-[#1A2230] to-[#0C1320]"
-          accentClass="border-slate-300/20 bg-white/8 text-slate-200"
+          desc="Check your appraisal status and view the official released result when available."
+          cta="Open my appraisal"
+          badge="Open"
+          toneClass="border-violet-300/20 from-[#171126] via-[#22183A] to-[#0C1320]"
+          accentClass="border-violet-300/25 bg-violet-400/12 text-violet-100"
+          onClick={() => router.push("/headteacher/my-appraisal")}
         />
 
         <MajorTile
