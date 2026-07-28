@@ -1,41 +1,95 @@
 // scripts/finance-sprint9-qa-gate.mjs
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const isWindows = process.platform === "win32";
+const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = path.resolve(scriptDirectory, "..");
+
+function requiredPath(relativePath, label) {
+  const absolutePath = path.join(repositoryRoot, relativePath);
+
+  if (!existsSync(absolutePath)) {
+    console.error(`\n✖ REQUIRED TOOL MISSING: ${label}`);
+    console.error(relativePath);
+    process.exit(1);
+  }
+
+  return absolutePath;
+}
+
+const prismaCli = requiredPath(
+  "node_modules/prisma/build/index.js",
+  "Prisma CLI",
+);
+const typescriptCli = requiredPath(
+  "node_modules/typescript/bin/tsc",
+  "TypeScript CLI",
+);
+const nextCli = requiredPath(
+  "node_modules/next/dist/bin/next",
+  "Next.js CLI",
+);
+const lfsScript = requiredPath(
+  "scripts/lfs-pull-optional.mjs",
+  "optional Git LFS script",
+);
 
 const commands = [
   {
     label: "Prisma schema validation",
-    command: "npx prisma validate",
+    executable: process.execPath,
+    args: [prismaCli, "validate"],
+    display: "prisma validate",
   },
   {
     label: "Prisma client generation",
-    command: "npx prisma generate",
+    executable: process.execPath,
+    args: [prismaCli, "generate"],
+    display: "prisma generate",
   },
   {
     label: "TypeScript typecheck",
-    command: "npm run typecheck",
+    executable: process.execPath,
+    args: [typescriptCli, "-p", "tsconfig.json", "--noEmit"],
+    display: "tsc -p tsconfig.json --noEmit",
+  },
+  {
+    label: "Optional Git LFS pull",
+    executable: process.execPath,
+    args: [lfsScript],
+    display: "node scripts/lfs-pull-optional.mjs",
+  },
+  {
+    label: "Build-time Prisma generation",
+    executable: process.execPath,
+    args: [prismaCli, "generate"],
+    display: "prisma generate",
   },
   {
     label: "Next.js production build",
-    command: "npm run build",
+    executable: process.execPath,
+    args: [nextCli, "build"],
+    display: "next build",
   },
 ];
 
 function run(step) {
   console.log(`\n▶ ${step.label}`);
-  console.log(`$ ${step.command}\n`);
+  console.log(`$ ${step.display}\n`);
 
-  const result = spawnSync(step.command, {
+  const result = spawnSync(step.executable, step.args, {
+    cwd: repositoryRoot,
     stdio: "inherit",
-    shell: true,
+    shell: false,
     env: process.env,
-    windowsHide: false,
+    windowsHide: true,
   });
 
   if (result.error) {
     console.error(`\n✖ EXECUTION ERROR: ${step.label}`);
-    console.error(result.error.message);
+    console.error(result.error.code ?? "CHILD_PROCESS_SPAWN_FAILED");
     process.exit(1);
   }
 
@@ -50,11 +104,9 @@ function run(step) {
 
 console.log("\nEduLife OS — Sprint 9 Finance QA Gate");
 console.log("=====================================");
-console.log("This gate verifies the technical build chain before manual finance proof.\n");
-
-if (isWindows) {
-  console.log("Running on Windows shell mode for reliable npm/npx execution.\n");
-}
+console.log(
+  "This gate verifies the technical build chain before manual finance proof.\n",
+);
 
 for (const step of commands) {
   run(step);

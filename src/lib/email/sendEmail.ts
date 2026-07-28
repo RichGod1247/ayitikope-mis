@@ -42,18 +42,27 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
     (process.env.EMAIL_TEST_MODE ?? "false").toLowerCase() === "true";
   const testTo = cleanStr(process.env.EMAIL_TEST_TO || "");
 
-  let to = toRaw;
-  if (testMode && testTo) to = testTo;
-
-  if (!to || !isEmailLike(to) || !subject || !text) {
+  if (!toRaw || !isEmailLike(toRaw) || !subject || !text) {
     return {
       ok: false,
       provider: "DISABLED",
-      to,
+      to: testMode ? testTo : toRaw,
       testMode,
       error: "INVALID_EMAIL_PAYLOAD",
     };
   }
+
+  if (testMode && (!testTo || !isEmailLike(testTo))) {
+    return {
+      ok: false,
+      provider: "DISABLED",
+      to: testTo,
+      testMode,
+      error: "EMAIL_TEST_RECIPIENT_NOT_CONFIGURED",
+    };
+  }
+
+  const to = testMode ? testTo : toRaw;
 
   const apiKey = cleanStr(process.env.RESEND_API_KEY || "");
   const from = cleanStr(process.env.EMAIL_FROM || "");
